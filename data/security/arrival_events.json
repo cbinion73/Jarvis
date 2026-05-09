@@ -1,0 +1,26 @@
+[
+  {
+    "event_id": "c2ef7da8-bb09-4cc5-8d14-08e66cc0b075",
+    "actor": "Caleb",
+    "location": "front door",
+    "status": "home",
+    "detail": "Backpack dropped by the mudroom door and snack requested immediately. Notes: Keep arrival summaries calm and factual. Do not infer danger from normal lateness without a stated reason.",
+    "next_steps": [
+      "Confirm bag, shoes, and immediate needs.",
+      "Keep the summary calm and factual for parents."
+    ],
+    "timestamp": "2026-05-06T08:34:43.097690+00:00"
+  },
+  {
+    "event_id": "24e9ec5c-8650-4f99-9ec8-0bb0d2fd0472",
+    "actor": "Anna",
+    "location": "front door",
+    "status": "home",
+    "detail": "Chromebook in hand and project materials still with her. Notes: Keep arrival summaries calm and factual. Do not infer danger from normal lateness without a stated reason.",
+    "next_steps": [
+      "Confirm bag, shoes, and immediate needs.",
+      "Keep the summary calm and factual for parents."
+    ],
+    "timestamp": "2026-05-06T08:36:03.295640+00:00"
+  }
+]

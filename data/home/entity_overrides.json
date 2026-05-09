@@ -1,0 +1,40 @@
+{
+  "scene.kitchen_dinner_mode": {},
+  "light.kitchen_island": {
+    "state": "on",
+    "attributes": {
+      "brightnessPercent": 52,
+      "colorTemp": "warm"
+    }
+  },
+  "light.dining_table": {
+    "state": "on",
+    "attributes": {
+      "brightnessPercent": 52,
+      "colorTemp": "warm"
+    }
+  },
+  "switch.work_displays": {
+    "state": "on",
+    "attributes": {
+      "brightnessPercent": 52,
+      "colorTemp": "warm"
+    }
+  },
+  "climate.main_floor_nest": {
+    "state": "heat_cool",
+    "attributes": {
+      "hvacMode": "heat_cool",
+      "targetTemperature": 69.0
+    }
+  },
+  "cover.myq_main_garage": {
+    "state": "closed",
+    "attributes": {
+      "lastSafeClose": "2026-05-06T13:10:18.392074+00:00"
+    }
+  },
+  "lock.front_door": {
+    "state": "locked"
+  }
+}

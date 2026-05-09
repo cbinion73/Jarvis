@@ -1,0 +1,13 @@
+[
+  {
+    "event_id": "89483539-456e-4dec-a2b6-38554a1ac2b1",
+    "category": "freezer",
+    "source": "garage freezer",
+    "reading": "3 degrees warmer than baseline",
+    "baseline": "0 to 3 degrees above baseline variance",
+    "severity": "elevated",
+    "detail": "Still safe, but outside the household norm.",
+    "recommendation": "Check seal, airflow, and the last door-open interval.",
+    "timestamp": "2026-05-06T13:16:56.601445+00:00"
+  }
+]

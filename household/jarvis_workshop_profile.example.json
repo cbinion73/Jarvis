@@ -1,0 +1,183 @@
+{
+  "printers": [
+    {
+      "id": "creality-k2-pro-combo",
+      "name": "Creality K2 Pro Combo",
+      "status": "idle",
+      "material": "PETG-CF",
+      "activeJob": "Prototype bracket validation queue",
+      "progressPercent": 100,
+      "note": "Primary FDM fleet target with multicolor CFS and dual AI camera; using local simulated status until a live adapter is wired.",
+      "profiles": [
+        "fit-check-fast",
+        "functional-prototype",
+        "carbon-nylon-careful",
+        "multicolor-signage"
+      ],
+      "capabilities": [
+        "fdm",
+        "multicolor",
+        "ai-camera",
+        "heated-chamber"
+      ]
+    },
+    {
+      "id": "halot-one-cl60",
+      "name": "Creality HALOT-ONE (CL-60)",
+      "status": "idle",
+      "material": "standard resin",
+      "activeJob": "No active resin job",
+      "progressPercent": 0,
+      "note": "Fine-detail resin path for small precision parts, molds, and detail prototypes.",
+      "profiles": [
+        "fine-detail-prototype",
+        "small-part-precision",
+        "mold-master"
+      ],
+      "capabilities": [
+        "resin",
+        "high-detail",
+        "wifi-control"
+      ]
+    },
+    {
+      "id": "falcon-5w-laser",
+      "name": "Creality Falcon 5W Laser",
+      "status": "idle",
+      "material": "wood, leather, acrylic, glass",
+      "activeJob": "No active laser job",
+      "progressPercent": 0,
+      "note": "Laser path for engraving, templates, masking, light cutting, and signage.",
+      "profiles": [
+        "engrave-light",
+        "mask-template",
+        "signage-pass"
+      ],
+      "capabilities": [
+        "laser",
+        "engraving",
+        "offline-usage"
+      ]
+    },
+    {
+      "id": "titoe-4540-cnc",
+      "name": "Titoe 4540 CNC Router",
+      "status": "idle",
+      "material": "wood, aluminum, soft metals",
+      "activeJob": "No active CNC job",
+      "progressPercent": 0,
+      "note": "CNC path for stock removal, cut paths, fixture planning, and stronger final fabrication work.",
+      "profiles": [
+        "wood-routing",
+        "aluminum-light-pass",
+        "fixture-and-jig"
+      ],
+      "capabilities": [
+        "cnc",
+        "routing",
+        "milling"
+      ]
+    },
+    {
+      "id": "cricut-joy-xtra",
+      "name": "Cricut Joy Xtra",
+      "status": "idle",
+      "material": "vinyl, cardstock, labels, stencil stock",
+      "activeJob": "No active cutter job",
+      "progressPercent": 0,
+      "note": "Craft-cutter path for labels, vinyl masks, stencils, and household organization support.",
+      "profiles": [
+        "label-sheet",
+        "vinyl-mask",
+        "stencil-cut"
+      ],
+      "capabilities": [
+        "craft-cutter",
+        "labels",
+        "vinyl",
+        "stencils"
+      ]
+    }
+  ],
+  "materials": [
+    "PETG-CF",
+    "PLA",
+    "carbon-fiber nylon",
+    "standard resin",
+    "tough resin",
+    "basswood sheets",
+    "masking stock",
+    "vinyl sheets",
+    "stainless reinforcement",
+    "epoxy",
+    "steel flat bar"
+  ],
+  "safetyNotes": [
+    "Require eye protection for cutting, sanding, and CNC-adjacent work.",
+    "Require machine-specific ventilation and fire-awareness for laser and resin workflows.",
+    "Treat resin, laser, and CNC jobs as higher-risk workflows than ordinary FDM prototyping.",
+    "Treat vendor uploads as staged until explicit approval.",
+    "Prototype with forgiving materials before committing to expensive fabrication."
+  ],
+  "vendorTargets": [
+    "local machine shop",
+    "carbon-fiber service bureau",
+    "online fabrication quote"
+  ],
+  "designNotes": [
+    "Prefer overbuilt outdoor replacements with drain paths and fatigue-aware geometry.",
+    "Scout motif is welcome as long as it does not weaken the load path.",
+    "Use printed prototypes to validate hole spacing and fit before final material selection.",
+    "Route work by machine class: FDM for fit and speed, resin for detail, laser for masks/templates, CNC for stronger final geometry, Cricut for labels and stencils."
+  ],
+  "cadNotes": [
+    "Prefer parameter-driven geometry for brackets, hole spacing, offsets, and bend relief.",
+    "Generate OpenSCAD-style stubs that are easy to adjust by hand later."
+  ],
+  "printPrepNotes": [
+    "Start with fit-check settings before structural settings.",
+    "Orient parts so critical stress regions do not rely only on weak layer adhesion."
+  ],
+  "safetyInterlocks": [
+    "eye protection",
+    "dust collection or ventilation",
+    "manual review before live machine run",
+    "laser fire watch",
+    "resin gloves and filtration",
+    "CNC workholding check"
+  ],
+  "inventory": [
+    {
+      "id": "mat-petg-cf",
+      "name": "PETG-CF spool",
+      "category": "filament",
+      "quantity": "0.7 spool",
+      "status": "healthy",
+      "restockNote": "Enough for bracket prototypes."
+    },
+    {
+      "id": "mat-cf-nylon",
+      "name": "Carbon-fiber nylon spool",
+      "category": "filament",
+      "quantity": "0.2 spool",
+      "status": "watch",
+      "restockNote": "Low for repeated prototype attempts."
+    },
+    {
+      "id": "shop-epoxy-cups",
+      "name": "Epoxy mixing cups",
+      "category": "consumable",
+      "quantity": "12",
+      "status": "healthy",
+      "restockNote": "No urgent action."
+    },
+    {
+      "id": "shop-fasteners",
+      "name": "Stainless fasteners pack",
+      "category": "hardware",
+      "quantity": "low",
+      "status": "restock",
+      "restockNote": "Buy another pack on the next supply run."
+    }
+  ]
+}

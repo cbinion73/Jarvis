@@ -1,0 +1,33 @@
+{
+  "preferred_location_id": "qa-location-1778211826193",
+  "saved_locations": [
+    {
+      "id": "household-home",
+      "label": "Kentucky Home",
+      "geography": "Kentucky Home",
+      "latitude": null,
+      "longitude": null,
+      "source": "household-profile",
+      "notes": "Default household location."
+    },
+    {
+      "id": "qa-location-1778211592942",
+      "label": "QA Location 1778211592942",
+      "geography": "Alexandria, Kentucky",
+      "latitude": 38.9598,
+      "longitude": -84.3877,
+      "source": "manual",
+      "notes": "Automated QA location check."
+    },
+    {
+      "id": "qa-location-1778211826193",
+      "label": "QA Location 1778211826193",
+      "geography": "Alexandria, Kentucky",
+      "latitude": 38.9598,
+      "longitude": -84.3877,
+      "source": "manual",
+      "notes": "Automated QA location check."
+    }
+  ],
+  "device_location": null
+}

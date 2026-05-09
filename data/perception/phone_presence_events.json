@@ -1,0 +1,11 @@
+[
+  {
+    "event_id": "ea2a7921-7457-42c9-8b98-f3a5bc4e9aa9",
+    "actor": "Anna",
+    "device": "Anna iPhone",
+    "state": "arriving",
+    "zone": "home-boundary",
+    "detail": "Anna is approaching the house after school.",
+    "timestamp": "2026-05-06T13:16:56.469655+00:00"
+  }
+]

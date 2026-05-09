@@ -1,0 +1,79 @@
+[
+  {
+    "action_id": "8c0a2269-c00f-41ee-ac49-384545ddda96",
+    "actor": "Chris",
+    "category": "scene",
+    "target": "scene.kitchen_dinner_mode",
+    "action": "scene.turn_on",
+    "outcome": "simulated",
+    "detail": "No live Home Assistant credentials are configured, so the change was staged locally.",
+    "live_attempted": false,
+    "timestamp": "2026-05-06T13:09:19.092031+00:00"
+  },
+  {
+    "action_id": "6e859a92-3193-4d84-ab8c-cd829b795a99",
+    "actor": "Chris",
+    "category": "climate",
+    "target": "climate.main_floor_nest",
+    "action": "climate.set_hvac_mode",
+    "outcome": "simulated",
+    "detail": "No live Home Assistant credentials are configured, so the change was staged locally.",
+    "live_attempted": false,
+    "timestamp": "2026-05-06T13:09:19.931714+00:00"
+  },
+  {
+    "action_id": "cfc9049e-c5c8-4b83-a752-cf94e7abda50",
+    "actor": "Chris",
+    "category": "climate",
+    "target": "climate.main_floor_nest",
+    "action": "climate.set_temperature",
+    "outcome": "simulated",
+    "detail": "No live Home Assistant credentials are configured, so the change was staged locally.",
+    "live_attempted": false,
+    "timestamp": "2026-05-06T13:09:19.931959+00:00"
+  },
+  {
+    "action_id": "a9ac9dbb-b05b-4bed-a5d9-95065a842a48",
+    "actor": "Chris",
+    "category": "garage",
+    "target": "cover.myq_main_garage",
+    "action": "cover.close_cover",
+    "outcome": "simulated",
+    "detail": "No live Home Assistant credentials are configured, so the change was staged locally.",
+    "live_attempted": false,
+    "timestamp": "2026-05-06T13:09:40.269238+00:00"
+  },
+  {
+    "action_id": "54d43efb-1bb9-4e28-bf43-408422871dc4",
+    "actor": "Chris",
+    "category": "lock",
+    "target": "lock.front_door",
+    "action": "lock.lock",
+    "outcome": "simulated",
+    "detail": "No live Home Assistant credentials are configured, so the change was staged locally.",
+    "live_attempted": false,
+    "timestamp": "2026-05-06T13:09:59.837794+00:00"
+  },
+  {
+    "action_id": "812a20c7-1a2e-43fe-9978-714175559a99",
+    "actor": "Chris",
+    "category": "garage",
+    "target": "cover.myq_main_garage",
+    "action": "cover.close_cover",
+    "outcome": "simulated",
+    "detail": "No live Home Assistant credentials are configured, so the change was staged locally.",
+    "live_attempted": false,
+    "timestamp": "2026-05-06T13:10:18.391845+00:00"
+  },
+  {
+    "action_id": "84cebdef-87d8-4071-aeab-e1219f2c503b",
+    "actor": "Chris",
+    "category": "scene",
+    "target": "scene.kitchen_dinner_mode",
+    "action": "scene.turn_on",
+    "outcome": "simulated",
+    "detail": "No live Home Assistant credentials are configured, so the change was staged locally.",
+    "live_attempted": false,
+    "timestamp": "2026-05-06T13:10:18.419787+00:00"
+  }
+]

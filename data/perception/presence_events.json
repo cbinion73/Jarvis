@@ -1,0 +1,11 @@
+[
+  {
+    "event_id": "ddf20535-2621-43b9-9f03-5cd2648fb010",
+    "sensor": "Kitchen Presence",
+    "sensor_id": "kitchen-presence",
+    "room": "kitchen",
+    "occupied": true,
+    "detail": "Kids entered the kitchen for breakfast.",
+    "timestamp": "2026-05-06T13:16:38.579040+00:00"
+  }
+]

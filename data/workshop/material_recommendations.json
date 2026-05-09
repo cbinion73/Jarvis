@@ -1,0 +1,41 @@
+[
+  {
+    "recommendation_id": "ff988e68-82a1-4860-a1af-94bff6b79de4",
+    "actor": "Chris",
+    "part_name": "Garden bench bracket",
+    "use_case": "Outdoor prototype and final fabrication decision",
+    "recommended_material": "PETG-CF\n\nRationale: Best fit for an outdoor bracket prototype that may also inform the final part. PETG-CF gives good weather resistance, better heat tolerance and stiffness than PLA, and is much faster to iterate than nylon or metal fabrication. It is practical for validating fit, drain paths, and load geometry outdoors, while acknowledging that a final bench bracket should likely be overbuilt with metal if the load is significant.\n\nBackup Materials: Carbon-fiber nylon, steel flat bar, PLA, stainless reinforcement, epoxy",
+    "rationale": "Best fit for an outdoor bracket prototype that may also inform the final part. PETG-CF gives good weather resistance, better heat tolerance and stiffness than PLA, and is much faster to iterate than nylon or metal fabrication. It is practical for validating fit, drain paths, and load geometry outdoors, while acknowledging that a final bench bracket should likely be overbuilt with metal if the load is significant.\n\nBackup Materials: Carbon-fiber nylon, steel flat bar, PLA, stainless reinforcement, epoxy",
+    "backup_materials": [
+      "Carbon-fiber nylon, steel flat bar, PLA, stainless reinforcement, epoxy"
+    ],
+    "timestamp": "2026-05-06T08:23:32.063664+00:00"
+  },
+  {
+    "recommendation_id": "af139f6f-8abc-42d1-9bd8-1c0483cb52bf",
+    "actor": "Chris",
+    "part_name": "Garden bench bracket",
+    "use_case": "Outdoor prototype and final fabrication decision",
+    "recommended_material": "PETG-CF\n\nRationale: Best fit for a fast outdoor prototype that can also inform final design. PETG-CF offers good stiffness, decent weather resistance, and faster iteration than metal fabrication. It\u2019s suitable for moderate load brackets if the design includes proper thickness, fillets, and drainage. For final use, verify UV exposure and long-term creep; if the bracket is highly loaded or permanently structural, move to a metal solution.\n\nBackup Materials: Carbon-fiber nylon, steel flat bar, epoxy, stainless reinforcement",
+    "rationale": "Best fit for a fast outdoor prototype that can also inform final design. PETG-CF offers good stiffness, decent weather resistance, and faster iteration than metal fabrication. It\u2019s suitable for moderate load brackets if the design includes proper thickness, fillets, and drainage. For final use, verify UV exposure and long-term creep; if the bracket is highly loaded or permanently structural, move to a metal solution.\n\nBackup Materials: Carbon-fiber nylon, steel flat bar, epoxy, stainless reinforcement",
+    "backup_materials": [
+      "Carbon-fiber nylon, steel flat bar, epoxy, stainless reinforcement"
+    ],
+    "timestamp": "2026-05-06T08:25:03.688914+00:00"
+  },
+  {
+    "recommendation_id": "69baa21d-6a28-4255-a526-84af689a1396",
+    "actor": "Chris",
+    "part_name": "Garden bench bracket",
+    "use_case": "Outdoor prototype and final fabrication decision",
+    "recommended_material": "PETG-CF\n\nRationale: Best balance for an outdoor bracket prototype that may become a final part. It prints faster and more reliably than carbon-fiber nylon, holds shape better than PLA in heat and weather, and offers improved stiffness for a moderate-load bracket. For outdoor use, it is a solid prototype-to-final candidate if the bracket is not seeing extreme structural stress.\n\nBackup Materials:\n- Carbon-fiber nylon \u2014 stronger and more durable for a final outdoor part, but slower/more demanding to print and more moisture-sensitive.\n- Steel flat bar \u2014 best for a final load-bearing bracket if you can fabricate metal; less ideal for fast iteration.\n- Epoxy \u2014 useful as a coating or sealant to improve water resistance, not as the main structural material.\n- Stainless reinforcement \u2014 good as an insert or reinforcement strategy if the bracket needs localized strength and corrosion resistance.",
+    "rationale": "Best balance for an outdoor bracket prototype that may become a final part. It prints faster and more reliably than carbon-fiber nylon, holds shape better than PLA in heat and weather, and offers improved stiffness for a moderate-load bracket. For outdoor use, it is a solid prototype-to-final candidate if the bracket is not seeing extreme structural stress.\n\nBackup Materials:\n- Carbon-fiber nylon \u2014 stronger and more durable for a final outdoor part, but slower/more demanding to print and more moisture-sensitive.\n- Steel flat bar \u2014 best for a final load-bearing bracket if you can fabricate metal; less ideal for fast iteration.\n- Epoxy \u2014 useful as a coating or sealant to improve water resistance, not as the main structural material.\n- Stainless reinforcement \u2014 good as an insert or reinforcement strategy if the bracket needs localized strength and corrosion resistance.",
+    "backup_materials": [
+      "Carbon-fiber nylon \u2014 stronger and more durable for a final outdoor part, but slower/more demanding to print and more moisture-sensitive.",
+      "Steel flat bar \u2014 best for a final load-bearing bracket if you can fabricate metal; less ideal for fast iteration.",
+      "Epoxy \u2014 useful as a coating or sealant to improve water resistance, not as the main structural material.",
+      "Stainless reinforcement \u2014 good as an insert or reinforcement strategy if the bracket needs localized strength and corrosion resistance."
+    ],
+    "timestamp": "2026-05-06T08:27:37.587824+00:00"
+  }
+]

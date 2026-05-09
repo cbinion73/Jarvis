@@ -1,0 +1,46 @@
+[
+  {
+    "draft_id": "f4640427-ed4a-48de-9b13-47cdda53704c",
+    "actor": "Rebekah",
+    "audience": "Troop parents",
+    "purpose": "Indoor backup update",
+    "tone": "warm",
+    "context": "Rain may affect arrival, but the meeting is still on. Ask families to bring indoor shoes and confirm attendance.",
+    "body": "Hi families \u2014 quick update for tonight\u2019s meeting: rain may affect arrival, but we\u2019re still planning to meet as scheduled.\n\nPlease have the girls bring indoor shoes if they have them, and let me know if your child will be attending.\n\nThanks!",
+    "status": "staged",
+    "timestamp": "2026-05-06T07:37:48.629323+00:00"
+  },
+  {
+    "draft_id": "bb10edc9-256f-44b2-ac06-86cefd36060c",
+    "actor": "Rebekah",
+    "audience": "Troop parents",
+    "purpose": "Indoor backup update",
+    "tone": "warm",
+    "context": "Rain may affect arrival, but the meeting is still on. Ask families to bring indoor shoes and confirm attendance.",
+    "body": "Hi troop parents,\n\nA quick update: rain may affect arrival, but our meeting is still on as planned. Please have your child bring indoor shoes in case we need to come inside right away.\n\nPlease reply to confirm attendance. Thank you!",
+    "status": "staged",
+    "timestamp": "2026-05-06T07:39:41.135414+00:00"
+  },
+  {
+    "draft_id": "e1099fe0-c7df-48d1-8fdb-8ecb426c080e",
+    "actor": "Rebekah",
+    "audience": "Troop parents",
+    "purpose": "Indoor backup update",
+    "tone": "warm",
+    "context": "Rain may affect arrival, but the meeting is still on. Ask families to bring indoor shoes and confirm attendance.",
+    "body": "Hi Troop families \u2014 a quick update for tonight\u2019s meeting. Since rain may affect arrival, we\u2019re still on as planned, and we may move indoors if needed. Please have your Scout bring indoor shoes, and reply to confirm whether your Scout will be attending. Thanks so much!",
+    "status": "pending-approval",
+    "timestamp": "2026-05-06T08:08:00.915296+00:00"
+  },
+  {
+    "draft_id": "200b777a-17c9-49a3-a401-ff8a0c70dc94",
+    "actor": "Rebekah",
+    "audience": "Troop parents",
+    "purpose": "Indoor backup update",
+    "tone": "warm",
+    "context": "Rain may affect arrival, but the meeting is still on. Ask families to bring indoor shoes and confirm attendance.",
+    "body": "Hi Troop families,\n\nA quick update: rain may affect arrival tomorrow, but our meeting is still on as planned.\n\nPlease have your child bring indoor shoes, and if possible, confirm whether they\u2019ll be attending.\n\nThanks so much!",
+    "status": "pending-approval",
+    "timestamp": "2026-05-06T08:09:05.595613+00:00"
+  }
+]

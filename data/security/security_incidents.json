@@ -1,0 +1,57 @@
+[
+  {
+    "incident_id": "d2231896-434b-4005-80af-d1ecc9ddcd03",
+    "category": "package",
+    "severity": "watch",
+    "source": "porch-camera",
+    "headline": "Package zone still uncalibrated for rain-side dropoffs",
+    "detail": "Deliveries can land too close to the exposed side during rain.",
+    "recommended_action": "Tune the porch delivery rule before the next wet-weather shipment.",
+    "needs_ack": false,
+    "timestamp": "2026-05-06T08:34:42.986836+00:00"
+  },
+  {
+    "incident_id": "3a1ff203-5639-4fca-aca0-d77c35a2fb95",
+    "category": "environment",
+    "severity": "elevated",
+    "source": "freezer-monitor",
+    "headline": "Garage freezer remains above baseline",
+    "detail": "Temperature variance is still within safe range, but it is warmer than the household norm.",
+    "recommended_action": "Recheck seal and airflow during the next workshop pass.",
+    "needs_ack": false,
+    "timestamp": "2026-05-06T08:34:42.988723+00:00"
+  },
+  {
+    "incident_id": "1c903224-8a8c-41b2-938a-8fcf50330d73",
+    "category": "package",
+    "severity": "watch",
+    "source": "front porch-package",
+    "headline": "Package activity noted at front porch",
+    "detail": "Package delivered near the rain-exposed edge of the porch.",
+    "recommended_action": "Check the delivery zone and confirm whether the drop location is acceptable.",
+    "needs_ack": false,
+    "timestamp": "2026-05-06T08:34:42.989923+00:00"
+  },
+  {
+    "incident_id": "6368b642-f4d4-4a77-985e-bc004b34b3d5",
+    "category": "motion",
+    "severity": "elevated",
+    "source": "driveway-motion",
+    "headline": "Unusual motion noted at driveway",
+    "detail": "Motion detected after quiet hours with no expected arrival noted.",
+    "recommended_action": "Review the zone, timing, and whether this motion matches expected household activity.",
+    "needs_ack": true,
+    "timestamp": "2026-05-06T08:34:43.125872+00:00"
+  },
+  {
+    "incident_id": "583c43fd-0e43-4e1b-85c3-96ac2262dcfa",
+    "category": "leak",
+    "severity": "critical",
+    "source": "garage freezer area",
+    "headline": "LEAK alert from garage freezer area",
+    "detail": "Water pooling detected near the freezer line.",
+    "recommended_action": "Stop water flow if known and safe, then check damage risk and containment.",
+    "needs_ack": true,
+    "timestamp": "2026-05-06T08:34:43.203989+00:00"
+  }
+]

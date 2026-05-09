@@ -1,0 +1,45 @@
+[
+  {
+    "run_id": "023b5f15-e651-4d0c-aa31-c0db0f529446",
+    "actor": "Chris",
+    "subject": "Need a quick decision on Friday agenda",
+    "sender": "Jane Doe <jane@example.com>",
+    "importance": "high  \nscore: 7/10",
+    "score": 0.68,
+    "signals": [
+      "Time-sensitive: reply requested by tomorrow noon",
+      "Decision needed: agenda change for Friday",
+      "Potential workflow impact: strategy block timing and deck review dependencies",
+      "Sender indicates default action will proceed without reply"
+    ],
+    "requires_action": false,
+    "actions": [
+      "Decide on agenda change",
+      "Confirm reviewers for the deck",
+      "Reply before tomorrow noon, or expect Jane to lock the current agenda"
+    ],
+    "suggested_reply": "Hi Jane,  \nYes \u2014 please move the strategy block to Friday afternoon. For the deck, please have [names] review it before then. Thanks for locking the agenda once that is updated.",
+    "raw_output": "Importance: High  \nScore: 7/10  \nSignals:\n- Time-sensitive: reply requested by tomorrow noon\n- Decision needed: agenda change for Friday\n- Potential workflow impact: strategy block timing and deck review dependencies\n- Sender indicates default action will proceed without reply\n\nRequires Action:\n- Chris should confirm whether to move the strategy block to Friday afternoon\n- Chris should identify who must review the deck before then\n- If uncertain, a brief holding reply is advisable before the deadline\n\nActions:\n- Decide on agenda change\n- Confirm reviewers for the deck\n- Reply before tomorrow noon, or expect Jane to lock the current agenda\n\nSuggested Reply:\nHi Jane,  \nYes \u2014 please move the strategy block to Friday afternoon. For the deck, please have [names] review it before then. Thanks for locking the agenda once that is updated.  \n\nBest,  \nChris",
+    "timestamp": "2026-05-07T04:15:02.441765+00:00"
+  },
+  {
+    "run_id": "a37144c6-7934-4d86-bfdf-63fdb41f4934",
+    "actor": "Chris",
+    "subject": "Need a quick decision on Friday agenda",
+    "sender": "Jane Doe <jane@example.com>",
+    "importance": "medium",
+    "score": 0.68,
+    "signals": [
+      "Time-sensitive; agenda needs confirmation by tomorrow noon; asks for a scheduling decision and reviewer list; low ambiguity, moderate coordination impact."
+    ],
+    "requires_action": true,
+    "actions": [
+      "Confirm whether the strategy block should move to Friday afternoon.",
+      "Identify who must review the deck before then.",
+      "Reply by tomorrow noon, or the current agenda will be locked."
+    ],
+    "suggested_reply": "Hi Jane \u2014 yes, please move the strategy block to Friday afternoon. For deck review, please send it to [names] before then. If anything changes, I\u2019ll let you know before tomorrow noon.",
+    "raw_output": "Importance: Medium  \nScore: 6/10  \nSignals: Time-sensitive; agenda needs confirmation by tomorrow noon; asks for a scheduling decision and reviewer list; low ambiguity, moderate coordination impact.  \nRequires Action: Yes \u2014 Chris needs to decide whether to move the strategy block and identify reviewers for the deck before the deadline.  \n\nActions:  \n- Confirm whether the strategy block should move to Friday afternoon.  \n- Identify who must review the deck before then.  \n- Reply by tomorrow noon, or the current agenda will be locked.  \n\nSuggested Reply:  \nHi Jane \u2014 yes, please move the strategy block to Friday afternoon. For deck review, please send it to [names] before then. If anything changes, I\u2019ll let you know before tomorrow noon.",
+    "timestamp": "2026-05-07T04:16:10.617284+00:00"
+  }
+]

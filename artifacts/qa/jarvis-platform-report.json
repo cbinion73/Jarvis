@@ -1,0 +1,72 @@
+{
+  "started_at": "2026-05-08T03:43:17.808Z",
+  "base_url": "http://127.0.0.1:8787",
+  "checks": [
+    {
+      "name": "HTTP root responds",
+      "status": "passed",
+      "details": null,
+      "screenshot": null
+    },
+    {
+      "name": "Core API smoke",
+      "status": "passed",
+      "details": null,
+      "screenshot": null
+    },
+    {
+      "name": "Voice shell loads",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/voice-shell-home.png"
+    },
+    {
+      "name": "Packet rail expands",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/packet-strip-expanded.png"
+    },
+    {
+      "name": "Settings modal opens with platform controls",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/settings-modal.png"
+    },
+    {
+      "name": "Mode panel can change household mode",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/mode-panel-updated.png"
+    },
+    {
+      "name": "Location settings persist a saved location",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/location-settings-saved.png"
+    },
+    {
+      "name": "Catalyst workspace opens as modal app",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/catalyst-workspace.png"
+    },
+    {
+      "name": "Modal state hides packet rail and shrinks core",
+      "status": "passed",
+      "details": "Core transform during modal: matrix(0.1, 0, 0, 0.1, 0, 0)",
+      "screenshot": null
+    },
+    {
+      "name": "Talk button remains interactive",
+      "status": "passed",
+      "details": "State after Talk click: idle",
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/talk-button-state.png"
+    }
+  ],
+  "failures": [],
+  "summary": {
+    "passed": 10,
+    "failed": 0
+  },
+  "finished_at": "2026-05-08T03:44:02.866Z"
+}

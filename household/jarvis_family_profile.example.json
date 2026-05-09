@@ -1,0 +1,139 @@
+{
+  "modeSchedule": [
+    {"mode": "watchtower", "start": "00:00", "end": "05:29"},
+    {"mode": "dawn-protocol", "start": "05:30", "end": "06:29"},
+    {"mode": "family-morning", "start": "06:30", "end": "07:59"},
+    {"mode": "work-mode", "start": "08:00", "end": "17:14"},
+    {"mode": "dinner-mode", "start": "17:15", "end": "19:29"},
+    {"mode": "chronicle-mode", "start": "19:30", "end": "21:14"},
+    {"mode": "goodnight", "start": "21:15", "end": "23:59"}
+  ],
+  "departureChecklist": [
+    "Backpacks by the door",
+    "Charged school devices",
+    "Permission slips signed",
+    "Water bottles filled",
+    "Right folders packed"
+  ],
+  "messageStyleNotes": {
+    "warm": "Sound calm, human, and low-fuss.",
+    "clear": "Be direct and organized without sounding stiff.",
+    "encouraging": "Use a reassuring tone that still gets to the point."
+  },
+  "familyPlanningNotes": [
+    "Prefer calmer sequencing over optimization theater.",
+    "Surface conflicts and suggest alternatives.",
+    "Group errands and reminders into a low-friction plan."
+  ],
+  "troopPlanningNotes": [
+    "Default to indoor backup rather than cancellation when weather is merely annoying.",
+    "Keep parent communication warm, brief, and decision-ready.",
+    "Stage roster, activity sheet, and supplies before departure."
+  ],
+  "groceryZones": {
+    "produce": ["lettuce", "tomatoes", "onions", "avocados"],
+    "protein": ["ground beef", "chicken", "cheese"],
+    "pantry": ["taco shells", "beans", "rice", "pasta"],
+    "household": ["paper towels", "trash bags"]
+  },
+  "mealTemplates": [
+    "tacos",
+    "sheet-pan chicken",
+    "breakfast-for-dinner",
+    "pasta with salad"
+  ],
+  "modeDetails": {
+    "watchtower": {
+      "title": "Watchtower",
+      "purpose": "Keep the house secure, quiet, and ready for a gentle morning handoff.",
+      "actions": ["monitor overnight alerts", "carry forward only urgent anomalies", "prepare coffee and climate runway"],
+      "guardrails": ["no non-urgent notifications", "no family-facing chatter"],
+      "signals": ["overnight safety events", "freezer variance", "weather shift before dawn"],
+      "automationTargets": ["locks", "garage", "freezer watch", "quiet lighting"]
+    },
+    "dawn-protocol": {
+      "title": "Dawn Protocol",
+      "purpose": "Start the day softly with body, home, and mission context in the right order.",
+      "actions": ["stage coffee", "surface weather and health cues", "hold heavy briefing until caffeine lands"],
+      "guardrails": ["do not over-brief before coffee", "keep the room calm"],
+      "signals": ["wake time", "weather timing", "first meeting pressure"],
+      "automationTargets": ["bedroom lights", "audio", "kitchen briefing"]
+    },
+    "family-morning": {
+      "title": "Family Morning",
+      "purpose": "Reduce friction around breakfast, school prep, and departure timing.",
+      "actions": ["simplify screens", "surface school reminders", "run departure checklist"],
+      "guardrails": ["coach kids without doing work for them", "prefer one reminder at a time"],
+      "signals": ["kids awake", "school deadlines", "device charge state"],
+      "automationTargets": ["kitchen display", "mudroom reminders", "family notifications"]
+    },
+    "steward-mode": {
+      "title": "Steward Mode",
+      "purpose": "Reset the house after departure and prepare the workday quietly.",
+      "actions": ["power down unused lights", "queue low-cost appliance windows", "prepare office posture"],
+      "guardrails": ["respect privacy boundaries", "skip rooms with active projects"],
+      "signals": ["house empty", "utility windows", "office occupancy"],
+      "automationTargets": ["thermostat", "vacuum", "dishwasher", "office scene"]
+    },
+    "work-mode": {
+      "title": "Work Mode",
+      "purpose": "Support meetings, writing, and focused work without household noise bleeding in.",
+      "actions": ["prepare meeting context", "load active documents", "filter interruptions"],
+      "guardrails": ["do not surface family noise unless it matters", "preserve confidentiality"],
+      "signals": ["office occupancy", "calendar load", "manuscript work"],
+      "automationTargets": ["office display", "calendar", "research queue"]
+    },
+    "deep-work": {
+      "title": "Deep Work",
+      "purpose": "Protect a focused block and let only meaningful interruptions through.",
+      "actions": ["mute non-urgent alerts", "hold household loops", "keep one escalation lane open"],
+      "guardrails": ["family and safety still override", "no notification spray"],
+      "signals": ["focus block", "active writing", "high-stakes prep"],
+      "automationTargets": ["focus notifications", "office scene", "quiet mode"]
+    },
+    "dinner-mode": {
+      "title": "Dinner Mode",
+      "purpose": "Lower the household volume and protect family dinner as a real boundary.",
+      "actions": ["sleep work displays", "warm lights", "suppress non-urgent loops"],
+      "guardrails": ["avoid work spillover", "do not reopen the whole day at the table"],
+      "signals": ["meal prep", "family gathered", "evening logistics"],
+      "automationTargets": ["kitchen lights", "music", "work notifications"]
+    },
+    "chronicle-mode": {
+      "title": "Chronicle Mode",
+      "purpose": "Make room for reflection, Scripture, and the memory of what God is doing over time.",
+      "actions": ["surface Scripture and prayer themes", "offer quiet reflection", "capture notes cleanly"],
+      "guardrails": ["distinguish Scripture from interpretation", "avoid manipulative tone"],
+      "signals": ["devotional pause", "reflection request", "family study prep"],
+      "automationTargets": ["living room display", "Chronicle notes", "quiet lighting"]
+    },
+    "goodnight": {
+      "title": "Goodnight",
+      "purpose": "Close the house well and leave tomorrow gentler than today.",
+      "actions": ["lock doors", "stage coffee", "dock devices", "prepare tomorrow basics"],
+      "guardrails": ["do not reopen unresolved loops unless safety-related"],
+      "signals": ["bedtime", "device dock", "garage closure"],
+      "automationTargets": ["locks", "thermostat", "garage", "coffee prep"]
+    }
+  },
+  "vehicleDefaults": {
+    "defaultVehicle": "car",
+    "familyLogisticsVehicle": "van",
+    "routePriority": "Favor the calmer route and avoid unnecessary zig-zagging across town.",
+    "defaultLoadout": ["keys", "water bottle", "charging cable", "weather layer"]
+  },
+  "weatherPlanningNotes": [
+    "Prefer indoor backup over emotional cancellation when weather is only mildly annoying.",
+    "Only send the parent update that changes the decision or timing.",
+    "Treat loading windows and school departure as first-class constraints."
+  ],
+  "departureNotes": [
+    "Use the mudroom like a flight deck, not a pile zone.",
+    "Call out only the items that change the departure outcome.",
+    "When timing is tight, simplify rather than stacking extra reminders."
+  ],
+  "voiceNoteNotes": [
+    "Convert short van notes into clear follow-up items without adding drama.",
+    "Prefer tasks that can be checked off by a parent later."
+  ]
+}

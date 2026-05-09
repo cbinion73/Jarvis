@@ -1,0 +1,14 @@
+[
+  {
+    "event_id": "759f09bc-9573-417c-ace4-4a91b7e32117",
+    "microphone": "Kitchen Alexa Dot",
+    "microphone_id": "kitchen-alexa-dot",
+    "room": "kitchen",
+    "device_name": "Kitchen Alexa Dot",
+    "actor_hint": "Rebekah",
+    "transcript": "Jarvis, what does the family need to know this morning?",
+    "wake_word_detected": true,
+    "ingress_type": "far-field",
+    "timestamp": "2026-05-06T13:16:38.372443+00:00"
+  }
+]

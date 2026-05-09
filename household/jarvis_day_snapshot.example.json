@@ -1,0 +1,90 @@
+{
+  "dayLabel": "Wednesday, May 6",
+  "weather": "Light rain by 8:20 a.m., clearing toward dinner.",
+  "houseNote": "The house is calm, watchful, and trying not to bother anyone before coffee.",
+  "cards": {
+    "body": {
+      "title": "Body",
+      "status": "Steady",
+      "summary": "Recovery looks solid enough for focused work, but hydration and light mobility still matter.",
+      "details": [
+        "Sleep duration: adequate",
+        "Recommended: water first, then coffee",
+        "Keep late-night manuscript heroics to a dull roar"
+      ]
+    },
+    "home": {
+      "title": "Home",
+      "status": "Watchful",
+      "summary": "Rain, departure choreography, and freezer variance are the only meaningful household tensions right now.",
+      "details": [
+        "Garage freezer is 3 degrees warmer than baseline",
+        "Anna Chromebook battery needs intervention",
+        "Mudroom departure loop should run before 7:10"
+      ]
+    },
+    "mission": {
+      "title": "Mission",
+      "status": "Loaded",
+      "summary": "The day leans toward strategy, manuscript tightening, and one useful workshop win.",
+      "details": [
+        "9:00 strategy block",
+        "Thermo Fisher prep and evidence brief",
+        "Garden of Hope bracket prototype"
+      ]
+    }
+  },
+  "events": [
+    {
+      "time": "06:07",
+      "owner": "House",
+      "title": "Coffee ready",
+      "note": "Hold the dense briefing until caffeine has entered the bloodstream."
+    },
+    {
+      "time": "08:55",
+      "owner": "Chris",
+      "title": "Strategy session",
+      "note": "JARVIS should supply decision criteria, likely objections, and one clean question."
+    },
+    {
+      "time": "12:05",
+      "owner": "Chris",
+      "title": "Supply run window",
+      "note": "Rain pause and lower traffic make this the clean errand slot."
+    },
+    {
+      "time": "18:30",
+      "owner": "Rebekah",
+      "title": "Troop meeting",
+      "note": "Indoor backup stays on standby; keep the parent text warm and calm."
+    }
+  ],
+  "familyFocus": {
+    "Chris": [
+      "Meeting prep with discretion",
+      "Chapter 4 voice tightening",
+      "Workshop bracket overbuild"
+    ],
+    "Rebekah": [
+      "Troop logistics",
+      "Grocery pickup timing",
+      "Quiet family coordination"
+    ],
+    "Caleb": [
+      "Math quiz confidence",
+      "Permission slip",
+      "Backpack readiness"
+    ],
+    "Anna": [
+      "Project pacing",
+      "Chromebook charge recovery",
+      "Homework station reset"
+    ]
+  },
+  "watchItems": [
+    "Home Assistant still not wired",
+    "No live garage or freezer entity map yet",
+    "Workshop integrations remain simulated"
+  ]
+}

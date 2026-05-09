@@ -1,0 +1,89 @@
+{
+  "schemas": {
+    "household": {
+      "examples": [
+        "morning coffee preference",
+        "device locations",
+        "preferred dinner rhythm"
+      ],
+      "defaultTags": [
+        "household",
+        "routine"
+      ]
+    },
+    "personal": {
+      "examples": [
+        "Chris prefers the executive brief after coffee",
+        "Anna likes reminders after breakfast",
+        "Caleb responds better to quiz-style coaching"
+      ],
+      "defaultTags": [
+        "personal",
+        "preference"
+      ]
+    },
+    "project": {
+      "examples": [
+        "Chronicle product insight",
+        "Garden of Hope bracket notes",
+        "Scouts 95 planning context"
+      ],
+      "defaultTags": [
+        "project",
+        "continuity"
+      ]
+    },
+    "safety": {
+      "examples": [
+        "allergy notes",
+        "emergency contacts",
+        "security rules"
+      ],
+      "defaultTags": [
+        "safety",
+        "restricted"
+      ]
+    }
+  },
+  "boundaries": {
+    "adultCanViewAll": true,
+    "childCanViewOwnPersonal": true,
+    "childCanViewHousehold": false,
+    "childCanViewProject": false,
+    "childCanViewSafety": false
+  },
+  "sensitiveApprovalRules": {
+    "typesRequiringApproval": [
+      "safety"
+    ],
+    "keywordsRequiringApproval": [
+      "allergy",
+      "medical",
+      "security code",
+      "garage code",
+      "password",
+      "emergency contact",
+      "confidential"
+    ]
+  },
+  "cloudExclusion": {
+    "excludeSensitive": true,
+    "excludedTags": [
+      "restricted",
+      "thermo-confidential",
+      "child-private"
+    ],
+    "notes": [
+      "Sensitive or restricted memory stays local only.",
+      "Exports should clearly mark cloud-excluded entries."
+    ]
+  },
+  "encryption": {
+    "algorithm": "fernet",
+    "keyPath": "data/memory/fernet.key"
+  },
+  "reviewNotes": [
+    "Memory should be inspectable, editable by deletion and replacement, and never feel creepy.",
+    "Store helpful continuity, not surveillance theater."
+  ]
+}

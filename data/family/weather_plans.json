@@ -1,0 +1,21 @@
+[
+  {
+    "plan_id": "9c43b8f7-b1f8-4bb1-9855-ae2333aad42c",
+    "actor": "Rebekah",
+    "request": "Light rain may affect school departure and troop arrival tonight.",
+    "active_mode": "family-morning",
+    "weather": "Light rain by 8:20 a.m., clearing toward dinner.",
+    "risk_level": "moderate",
+    "actions": [
+      "Pull forward anything that needs a dry loading window.",
+      "Keep one indoor fallback ready instead of rewriting the whole evening.",
+      "Send only the parent update that changes the decision."
+    ],
+    "notes": [
+      "Prefer indoor backup over emotional cancellation when weather is only mildly annoying.",
+      "Only send the parent update that changes the decision or timing.",
+      "Treat loading windows and school departure as first-class constraints."
+    ],
+    "timestamp": "2026-05-06T13:34:44.108739+00:00"
+  }
+]

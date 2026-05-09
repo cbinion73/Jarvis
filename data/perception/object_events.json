@@ -1,0 +1,35 @@
+[
+  {
+    "event_id": "eaf3bbac-1cb0-4392-89cf-7424799673bd",
+    "source": "porch-camera",
+    "room": "front porch",
+    "observed_object": "package",
+    "normalized_label": "package",
+    "detail": "Package dropped near the exposed edge during light rain.",
+    "confidence": "high",
+    "recognized_as_workshop_part": false,
+    "timestamp": "2026-05-06T13:16:56.489035+00:00"
+  },
+  {
+    "event_id": "90139ece-f6c1-4492-80e9-641001bd2c90",
+    "source": "Workshop Overhead Camera",
+    "room": "workshop",
+    "observed_object": "garden bench bracket",
+    "normalized_label": "bench bracket",
+    "detail": "Bracket on the bench with visible crack near bend radius.",
+    "confidence": "high",
+    "recognized_as_workshop_part": true,
+    "timestamp": "2026-05-06T13:16:56.603665+00:00"
+  },
+  {
+    "event_id": "4a6999ed-493d-48d2-a46f-184e9f80d1ee",
+    "source": "porch-camera",
+    "room": "front porch",
+    "observed_object": "package",
+    "normalized_label": "package",
+    "detail": "Package dropped near the exposed edge during light rain.",
+    "confidence": "high",
+    "recognized_as_workshop_part": false,
+    "timestamp": "2026-05-06T13:18:07.498123+00:00"
+  }
+]

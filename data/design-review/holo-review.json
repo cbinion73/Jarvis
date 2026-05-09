@@ -1,0 +1,143 @@
+{
+  "active_page": "settings",
+  "page_settings": {
+    "shell": {
+      "enabled": false
+    },
+    "briefing": {
+      "enabled": false
+    },
+    "brains": {
+      "enabled": false
+    },
+    "agents": {
+      "enabled": false
+    },
+    "home": {
+      "enabled": false
+    },
+    "family": {
+      "enabled": false
+    },
+    "security": {
+      "enabled": false
+    },
+    "chronicle": {
+      "enabled": false
+    },
+    "workshop": {
+      "enabled": false
+    },
+    "catalyst": {
+      "enabled": false
+    },
+    "approvals": {
+      "enabled": false
+    },
+    "settings": {
+      "enabled": false
+    }
+  },
+  "pages": {
+    "shell": {
+      "removed": [
+        "pulse-glow",
+        "link-lines"
+      ],
+      "notes": {
+        "pulse-core": "Increase the particle effect density by 10x",
+        "orbit-1": "Increase particle density by 20x. Looking for particle rings.",
+        "orbit-2": "Increase particle density by 20x. Looking for particle rings.",
+        "orbit-3": "Increase particle density by 20x. Looking for particle rings.",
+        "particle-cloud": "These should vibrate in and out while jarvis is talking.  Not alot but a visual indicator that he is talking with me."
+      },
+      "overrides": {
+        "pulse-core": {
+          "opacityScale": 1,
+          "speedScale": 1,
+          "scale": 1,
+          "density": 1
+        },
+        "orbit-1": {
+          "opacityScale": 1,
+          "speedScale": 1,
+          "scale": 1,
+          "density": 1
+        },
+        "orbit-2": {
+          "opacityScale": 1,
+          "speedScale": 1,
+          "scale": 1,
+          "density": 1
+        },
+        "orbit-3": {
+          "opacityScale": 1,
+          "speedScale": 1,
+          "scale": 1,
+          "density": 1
+        },
+        "particle-cloud": {
+          "opacityScale": 1,
+          "speedScale": 1,
+          "scale": 1,
+          "density": 1
+        }
+      }
+    },
+    "briefing": {
+      "removed": [],
+      "notes": {},
+      "overrides": {}
+    },
+    "brains": {
+      "removed": [],
+      "notes": {},
+      "overrides": {}
+    },
+    "agents": {
+      "removed": [],
+      "notes": {},
+      "overrides": {}
+    },
+    "home": {
+      "removed": [],
+      "notes": {},
+      "overrides": {}
+    },
+    "family": {
+      "removed": [],
+      "notes": {},
+      "overrides": {}
+    },
+    "security": {
+      "removed": [],
+      "notes": {},
+      "overrides": {}
+    },
+    "chronicle": {
+      "removed": [],
+      "notes": {},
+      "overrides": {}
+    },
+    "workshop": {
+      "removed": [],
+      "notes": {},
+      "overrides": {}
+    },
+    "catalyst": {
+      "removed": [],
+      "notes": {},
+      "overrides": {}
+    },
+    "approvals": {
+      "removed": [],
+      "notes": {},
+      "overrides": {}
+    },
+    "settings": {
+      "removed": [],
+      "notes": {},
+      "overrides": {}
+    }
+  }
+}

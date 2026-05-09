@@ -1,0 +1,278 @@
+{
+  "last_tick_at": "2026-05-09T01:51:04.260072+00:00",
+  "quiet_hours_active": true,
+  "active_mode": "chronicle-mode",
+  "agents": {
+    "ambient-router": {
+      "state": "awake",
+      "last_run_at": "2026-05-07T03:35:47.362397+00:00",
+      "next_run_at": "2026-05-07T03:36:47.362397+00:00"
+    },
+    "family-logistics": {
+      "state": "idle",
+      "last_run_at": "2026-05-07T03:35:47.362397+00:00",
+      "next_run_at": "2026-05-07T03:45:47.362397+00:00"
+    },
+    "executive-watch": {
+      "state": "blocked",
+      "last_run_at": "2026-05-07T03:35:47.362397+00:00",
+      "next_run_at": "2026-05-07T03:55:47.362397+00:00"
+    },
+    "chronicle-curator": {
+      "state": "blocked",
+      "last_run_at": "2026-05-07T03:35:47.362397+00:00",
+      "next_run_at": "2026-05-07T04:05:47.362397+00:00"
+    },
+    "workshop-watch": {
+      "state": "idle",
+      "last_run_at": "2026-05-07T03:35:47.362397+00:00",
+      "next_run_at": "2026-05-07T03:50:47.362397+00:00"
+    },
+    "home-ops": {
+      "state": "blocked",
+      "last_run_at": "2026-05-07T03:35:47.362397+00:00",
+      "next_run_at": "2026-05-07T03:40:47.362397+00:00"
+    },
+    "watchtower": {
+      "state": "blocked",
+      "last_run_at": "2026-05-07T03:35:47.362397+00:00",
+      "next_run_at": "2026-05-07T03:40:47.362397+00:00"
+    },
+    "memory-curator": {
+      "state": "idle",
+      "last_run_at": "2026-05-07T03:35:47.362397+00:00",
+      "next_run_at": "2026-05-07T03:50:47.362397+00:00"
+    },
+    "catalyst-personal": {
+      "state": "blocked",
+      "last_run_at": "2026-05-07T04:18:23.640323+00:00",
+      "next_run_at": "2026-05-07T04:38:23.640323+00:00"
+    }
+  },
+  "awake_count": 1,
+  "idle_count": 3,
+  "blocked_count": 5,
+  "statuses": [
+    {
+      "agent_id": "ambient-router",
+      "label": "Ambient Router",
+      "state": "awake",
+      "reason": "Front-door routing stays available.",
+      "cadence_minutes": 1,
+      "dependencies": [],
+      "blocked_dependencies": [],
+      "owns": [
+        "voice shell",
+        "request routing",
+        "wake-word posture"
+      ],
+      "memory_scope": [
+        "session",
+        "routing"
+      ],
+      "last_run_at": "2026-05-07T03:35:47.362397+00:00",
+      "next_run_at": "2026-05-07T03:36:47.362397+00:00",
+      "due_now": true,
+      "priority": "high"
+    },
+    {
+      "agent_id": "family-logistics",
+      "label": "Family Logistics",
+      "state": "idle",
+      "reason": "Quiet hours posture in effect.",
+      "cadence_minutes": 10,
+      "dependencies": [],
+      "blocked_dependencies": [],
+      "owns": [
+        "family plans",
+        "meal timing",
+        "departure checklists"
+      ],
+      "memory_scope": [
+        "household",
+        "personal"
+      ],
+      "last_run_at": "2026-05-07T03:35:47.362397+00:00",
+      "next_run_at": "2026-05-07T03:45:47.362397+00:00",
+      "due_now": true,
+      "priority": "low"
+    },
+    {
+      "agent_id": "executive-watch",
+      "label": "Executive Watch",
+      "state": "blocked",
+      "reason": "Waiting on openai",
+      "cadence_minutes": 20,
+      "dependencies": [
+        "openai"
+      ],
+      "blocked_dependencies": [
+        "openai"
+      ],
+      "owns": [
+        "briefs",
+        "follow-ups",
+        "research staging"
+      ],
+      "memory_scope": [
+        "project",
+        "personal"
+      ],
+      "last_run_at": "2026-05-07T03:35:47.362397+00:00",
+      "next_run_at": "2026-05-07T03:55:47.362397+00:00",
+      "due_now": true,
+      "priority": "hold"
+    },
+    {
+      "agent_id": "catalyst-personal",
+      "label": "Catalyst Personal",
+      "state": "blocked",
+      "reason": "Waiting on openai",
+      "cadence_minutes": 20,
+      "dependencies": [
+        "openai"
+      ],
+      "blocked_dependencies": [
+        "openai"
+      ],
+      "owns": [
+        "workflow runs",
+        "signal triage",
+        "briefing recommendations"
+      ],
+      "memory_scope": [
+        "project",
+        "personal"
+      ],
+      "last_run_at": "2026-05-07T04:18:23.640323+00:00",
+      "next_run_at": "2026-05-07T04:38:23.640323+00:00",
+      "due_now": true,
+      "priority": "hold"
+    },
+    {
+      "agent_id": "chronicle-curator",
+      "label": "Chronicle Curator",
+      "state": "blocked",
+      "reason": "Waiting on openai",
+      "cadence_minutes": 30,
+      "dependencies": [
+        "openai"
+      ],
+      "blocked_dependencies": [
+        "openai"
+      ],
+      "owns": [
+        "Chronicle entries",
+        "theme summaries",
+        "devotional staging"
+      ],
+      "memory_scope": [
+        "project",
+        "personal"
+      ],
+      "last_run_at": "2026-05-07T03:35:47.362397+00:00",
+      "next_run_at": "2026-05-07T04:05:47.362397+00:00",
+      "due_now": true,
+      "priority": "hold"
+    },
+    {
+      "agent_id": "workshop-watch",
+      "label": "Workshop Watch",
+      "state": "idle",
+      "reason": "Quiet hours posture in effect.",
+      "cadence_minutes": 15,
+      "dependencies": [],
+      "blocked_dependencies": [],
+      "owns": [
+        "workshop plans",
+        "print staging",
+        "vendor prep"
+      ],
+      "memory_scope": [
+        "project",
+        "safety"
+      ],
+      "last_run_at": "2026-05-07T03:35:47.362397+00:00",
+      "next_run_at": "2026-05-07T03:50:47.362397+00:00",
+      "due_now": true,
+      "priority": "low"
+    },
+    {
+      "agent_id": "home-ops",
+      "label": "Home Ops",
+      "state": "blocked",
+      "reason": "Waiting on home_assistant",
+      "cadence_minutes": 5,
+      "dependencies": [
+        "home_assistant"
+      ],
+      "blocked_dependencies": [
+        "home_assistant"
+      ],
+      "owns": [
+        "home actions",
+        "scene posture",
+        "core routines"
+      ],
+      "memory_scope": [
+        "household",
+        "safety"
+      ],
+      "last_run_at": "2026-05-07T03:35:47.362397+00:00",
+      "next_run_at": "2026-05-07T03:40:47.362397+00:00",
+      "due_now": true,
+      "priority": "hold"
+    },
+    {
+      "agent_id": "watchtower",
+      "label": "Watchtower",
+      "state": "blocked",
+      "reason": "Waiting on home_assistant",
+      "cadence_minutes": 5,
+      "dependencies": [
+        "perception",
+        "home_assistant"
+      ],
+      "blocked_dependencies": [
+        "home_assistant"
+      ],
+      "owns": [
+        "incident review",
+        "overnight watch",
+        "anomaly triage"
+      ],
+      "memory_scope": [
+        "safety",
+        "household"
+      ],
+      "last_run_at": "2026-05-07T03:35:47.362397+00:00",
+      "next_run_at": "2026-05-07T03:40:47.362397+00:00",
+      "due_now": true,
+      "priority": "hold"
+    },
+    {
+      "agent_id": "memory-curator",
+      "label": "Memory Curator",
+      "state": "idle",
+      "reason": "Quiet hours posture in effect.",
+      "cadence_minutes": 15,
+      "dependencies": [],
+      "blocked_dependencies": [],
+      "owns": [
+        "memory proposals",
+        "forget posture",
+        "curation rules"
+      ],
+      "memory_scope": [
+        "household",
+        "personal",
+        "project",
+        "safety"
+      ],
+      "last_run_at": "2026-05-07T03:35:47.362397+00:00",
+      "next_run_at": "2026-05-07T03:50:47.362397+00:00",
+      "due_now": true,
+      "priority": "low"
+    }
+  ]
+}

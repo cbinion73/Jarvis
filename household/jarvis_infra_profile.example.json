@@ -1,0 +1,101 @@
+{
+  "runtimeHost": {
+    "role": "primary-household-runtime",
+    "platform": "macOS mini or always-on workstation",
+    "hostname": "jarvis-core",
+    "workingDirectory": "/Users/chris/Desktop/CODE/JARVIS",
+    "pythonPath": "/Users/chris/Desktop/CODE/JARVIS/.venv/bin/python",
+    "dashboardUrl": "http://127.0.0.1:8787",
+    "openclawGatewayUrl": "ws://127.0.0.1:18789"
+  },
+  "voiceSatellites": [
+    {
+      "satelliteId": "kitchen-sat",
+      "room": "kitchen",
+      "hardware": "Alexa Dot plus optional local satellite node",
+      "microphone": "Alexa far-field mic array first, dedicated local array later if needed",
+      "speaker": "Alexa Dot or nearby powered speaker",
+      "mode": "ambient family interaction first, deeper local wake-word later"
+    },
+    {
+      "satelliteId": "office-sat",
+      "room": "office",
+      "hardware": "Mac or Pi client with better mic chain and optional Alexa endpoint",
+      "microphone": "USB conference mic or headset fallback",
+      "speaker": "desk speaker or Apple TV-adjacent output",
+      "mode": "higher-trust work and executive voice surface"
+    }
+  ],
+  "displaySurfaces": [
+    {
+      "surfaceId": "kitchen-display",
+      "location": "kitchen island, wall display, or Apple TV screen",
+      "mode": "family",
+      "launchUrl": "http://127.0.0.1:8787",
+      "notes": "Default to low-clutter family mode."
+    },
+    {
+      "surfaceId": "office-display",
+      "location": "office monitor",
+      "mode": "full",
+      "launchUrl": "http://127.0.0.1:8787",
+      "notes": "Keep explainability, approvals, and workshop panels available."
+    },
+    {
+      "surfaceId": "living-room-tv",
+      "location": "living room Apple TV or AirPlay target",
+      "mode": "family",
+      "launchUrl": "http://127.0.0.1:8787",
+      "notes": "Useful for Chronicle review, family agenda, or design-wall moments."
+    }
+  ],
+  "storagePlan": {
+    "primaryLocalData": "data/",
+    "nasMount": "/Volumes/JARVIS-Archive",
+    "encryptedBackups": true,
+    "includePaths": [
+      "data/chronicle",
+      "data/family",
+      "data/security",
+      "data/tutoring",
+      "data/workshop",
+      "docs"
+    ],
+    "excludePaths": [
+      ".venv",
+      "__pycache__"
+    ]
+  },
+  "powerPlan": {
+    "upsRequired": true,
+    "criticalLoads": [
+      "runtime host",
+      "network gateway",
+      "switch",
+      "Home Assistant host"
+    ],
+    "minimumRuntimeMinutes": 30,
+    "notes": "Shutdown gracefully if the UPS projects less than 10 minutes."
+  },
+  "networkPlan": {
+    "segments": [
+      {
+        "name": "trusted-admin",
+        "purpose": "household admin devices and runtime host"
+      },
+      {
+        "name": "iot-home",
+        "purpose": "Home Assistant devices, cameras, sensors, voice endpoints, and garage/climate gear"
+      },
+      {
+        "name": "guest",
+        "purpose": "untrusted visitors and temporary devices"
+      }
+    ],
+    "remoteAccess": "VPN only",
+    "notes": [
+      "Do not expose Home Assistant or JARVIS directly to the public internet.",
+      "Use MFA on the VPN and admin dashboards."
+    ]
+  }
+}

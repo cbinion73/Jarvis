@@ -1,0 +1,62 @@
+{
+  "packageZones": [
+    "front porch",
+    "garage side door",
+    "workshop entry"
+  ],
+  "motionZones": [
+    "porch",
+    "driveway",
+    "garage",
+    "backyard gate"
+  ],
+  "hazardContacts": [
+    "Chris",
+    "Rebekah"
+  ],
+  "safeArrivalNotes": [
+    "Keep arrival summaries calm and factual.",
+    "Do not infer danger from normal lateness without a stated reason."
+  ],
+  "weatherTimingNotes": [
+    "Prefer indoor backup to cancellation when weather is merely annoying.",
+    "Call out short clear windows when departure timing matters."
+  ],
+  "unlockPolicy": {
+    "voiceOnlyDenied": true,
+    "secondFactorOptions": [
+      "trusted device confirmation",
+      "admin dashboard confirmation"
+    ],
+    "highRiskTargets": [
+      "front door",
+      "back door",
+      "garage service door",
+      "garage door"
+    ]
+  },
+  "overnightReviewNotes": [
+    "Keep the night review brief, factual, and low-drama.",
+    "Separate resolved watch items from anything that still needs morning action."
+  ],
+  "baselineIncidents": [
+    {
+      "category": "package",
+      "severity": "watch",
+      "source": "porch-camera",
+      "headline": "Package zone still uncalibrated for rain-side dropoffs",
+      "detail": "Deliveries can land too close to the exposed side during rain.",
+      "recommended_action": "Tune the porch delivery rule before the next wet-weather shipment.",
+      "needs_ack": false
+    },
+    {
+      "category": "environment",
+      "severity": "elevated",
+      "source": "freezer-monitor",
+      "headline": "Garage freezer remains above baseline",
+      "detail": "Temperature variance is still within safe range, but it is warmer than the household norm.",
+      "recommended_action": "Recheck seal and airflow during the next workshop pass.",
+      "needs_ack": false
+    }
+  ]
+}

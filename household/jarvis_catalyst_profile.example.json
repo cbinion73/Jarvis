@@ -1,0 +1,49 @@
+{
+  "name": "Catalyst Personal",
+  "connectors": [
+    {
+      "id": "manual",
+      "label": "Manual Capture",
+      "status": "ready",
+      "notes": "Text-first workflow capture is live inside JARVIS."
+    },
+    {
+      "id": "gmail",
+      "label": "Gmail",
+      "status": "planned",
+      "notes": "Personal Gmail triage wiring will come later."
+    },
+    {
+      "id": "google_calendar",
+      "label": "Google Calendar",
+      "status": "planned",
+      "notes": "Personal calendar sync is intentionally deferred until credentials are wired."
+    },
+    {
+      "id": "local_memory",
+      "label": "Local Memory And Notes",
+      "status": "ready",
+      "notes": "Catalyst can already use locally captured signals, memory, and workflow runs."
+    }
+  ],
+  "enabledWorkflows": [
+    "email triage",
+    "meeting prep",
+    "meeting extraction",
+    "briefing generation",
+    "draft composition",
+    "project planning",
+    "proactive surfacing"
+  ],
+  "workflowNotes": [
+    "Run as a specialist backend under JARVIS rather than as a separate persona.",
+    "Keep the workflow personal, local-first, and explicit about disconnected systems.",
+    "Prefer manual capture and local notes until personal mail and calendar are wired."
+  ],
+  "personalDataPolicy": [
+    "No legacy work database dependencies.",
+    "No Microsoft Graph assumptions.",
+    "No Databricks-specific logic.",
+    "Store only local workflow artifacts and user-provided signals."
+  ]
+}

@@ -1,0 +1,9 @@
+{"mode": "watchtower", "status": "scheduled", "reason": "Time-based household rhythm", "actor": "system", "timestamp": "2026-05-06T07:37:44.277908+00:00"}
+{"mode": "family-morning", "status": "manual", "reason": "Kids are up and breakfast flow has started.", "actor": "Rebekah", "timestamp": "2026-05-06T07:37:44.575200+00:00"}
+{"mode": "dawn-protocol", "status": "manual", "reason": "Automated E2E mode transition check.", "actor": "Chris", "timestamp": "2026-05-08T03:39:44.761133+00:00"}
+{"mode": "family-morning", "status": "manual", "reason": "Automated E2E mode transition check.", "actor": "Chris", "timestamp": "2026-05-08T03:43:40.465656+00:00"}
+{"mode": "dawn-protocol", "status": "manual", "reason": "Manual mode update from JARVIS shell.", "actor": "Chris", "timestamp": "2026-05-09T00:54:05.912264+00:00"}
+{"mode": "steward-mode", "status": "manual", "reason": "Manual mode update from JARVIS shell.", "actor": "Chris", "timestamp": "2026-05-09T00:54:18.217770+00:00"}
+{"mode": "work-mode", "status": "manual", "reason": "Manual mode update from JARVIS shell.", "actor": "Chris", "timestamp": "2026-05-09T00:54:29.668677+00:00"}
+{"mode": "deep-work", "status": "manual", "reason": "Manual mode update from JARVIS shell.", "actor": "Chris", "timestamp": "2026-05-09T00:58:22.656710+00:00"}
+{"mode": "chronicle-mode", "status": "manual", "reason": "Manual mode update from JARVIS shell.", "actor": "Chris", "timestamp": "2026-05-09T00:58:33.721992+00:00"}

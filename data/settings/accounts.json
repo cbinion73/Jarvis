@@ -1,0 +1,13 @@
+[
+  {
+    "account_id": "7d04d6dc-3346-4aa7-8ae4-7ea2354e0d8b",
+    "owner_user_id": "chris",
+    "owner_display_name": "Chris",
+    "provider": "google",
+    "service_scope": "mail_calendar",
+    "label": "Chris Gmail",
+    "login_hint": "73",
+    "status": "connected",
+    "notes": "Google login complete."
+  }
+]

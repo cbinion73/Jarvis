@@ -1,0 +1,56 @@
+[
+  {
+    "run_id": "b2609041-13a5-43c8-b519-db4ba95b4e70",
+    "actor": "Rebekah",
+    "context": "School drop-off and troop handoff both touch tonight.",
+    "headline": "Departure plan staged.",
+    "weather_hold": "Watch for rain timing before loading the car.",
+    "garage_note": "Main Garage Door is closed.",
+    "focus_calls": [
+      "Chris: Meeting prep with discretion",
+      "Rebekah: Troop logistics",
+      "Caleb: Math quiz confidence",
+      "Anna: Project pacing"
+    ],
+    "checklist": [
+      "Backpacks by the door",
+      "Charged school devices",
+      "Permission slips signed",
+      "Water bottles filled",
+      "Right folders packed"
+    ],
+    "notes": [
+      "Use the mudroom like a flight deck, not a pile zone.",
+      "Call out only the items that change the departure outcome.",
+      "When timing is tight, simplify rather than stacking extra reminders."
+    ],
+    "timestamp": "2026-05-06T13:35:23.369116+00:00"
+  },
+  {
+    "run_id": "f93e73ee-5529-4068-9d33-4fb1bd89225e",
+    "actor": "Rebekah",
+    "context": "School drop-off and troop handoff both touch tonight.",
+    "headline": "Departure plan staged.",
+    "weather_hold": "Watch for rain timing before loading the car.",
+    "garage_note": "Main Garage Door is closed.",
+    "focus_calls": [
+      "Chris: Meeting prep with discretion",
+      "Rebekah: Troop logistics",
+      "Caleb: Math quiz confidence",
+      "Anna: Project pacing"
+    ],
+    "checklist": [
+      "Backpacks by the door",
+      "Charged school devices",
+      "Permission slips signed",
+      "Water bottles filled",
+      "Right folders packed"
+    ],
+    "notes": [
+      "Use the mudroom like a flight deck, not a pile zone.",
+      "Call out only the items that change the departure outcome.",
+      "When timing is tight, simplify rather than stacking extra reminders."
+    ],
+    "timestamp": "2026-05-06T13:36:36.136292+00:00"
+  }
+]

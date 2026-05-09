@@ -1,0 +1,14 @@
+[
+  {
+    "zone": "front porch",
+    "preferredDrop": "left side under cover",
+    "rainSensitive": true,
+    "note": "Avoid the exposed edge when rain is likely."
+  },
+  {
+    "zone": "garage side door",
+    "preferredDrop": "dry side near the wall",
+    "rainSensitive": false,
+    "note": "Acceptable for bulky workshop deliveries."
+  }
+]
