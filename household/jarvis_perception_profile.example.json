@@ -1,0 +1,179 @@
+{
+  "microphones": [
+    {
+      "id": "kitchen-alexa-dot",
+      "name": "Kitchen Alexa Dot",
+      "deviceName": "Kitchen Alexa Dot",
+      "room": "kitchen",
+      "defaultSpeaker": "Rebekah",
+      "indicator": "led",
+      "mutedByDefault": false
+    },
+    {
+      "id": "office-mic",
+      "name": "Office Voice Edge",
+      "deviceName": "Chris Work Phone Microphone",
+      "room": "office",
+      "defaultSpeaker": "Chris",
+      "indicator": "led",
+      "mutedByDefault": false
+    },
+    {
+      "id": "workshop-headset",
+      "name": "Workshop Voice Edge",
+      "deviceName": "DualSense Wireless Controller",
+      "room": "workshop",
+      "defaultSpeaker": "Chris",
+      "indicator": "led",
+      "mutedByDefault": false
+    }
+  ],
+  "presenceSensors": [
+    {
+      "id": "bedroom-presence",
+      "name": "Bedroom Presence",
+      "room": "bedroom"
+    },
+    {
+      "id": "kitchen-presence",
+      "name": "Kitchen Presence",
+      "room": "kitchen"
+    },
+    {
+      "id": "office-presence",
+      "name": "Office Presence",
+      "room": "office"
+    },
+    {
+      "id": "workshop-presence",
+      "name": "Workshop Presence",
+      "room": "workshop"
+    }
+  ],
+  "phonePresence": [
+    {
+      "actor": "Chris",
+      "device": "Chris iPhone",
+      "homeZone": "home"
+    },
+    {
+      "actor": "Rebekah",
+      "device": "Rebekah iPhone",
+      "homeZone": "home"
+    },
+    {
+      "actor": "Caleb",
+      "device": "Caleb iPhone",
+      "homeZone": "home"
+    },
+    {
+      "actor": "Anna",
+      "device": "Anna iPhone",
+      "homeZone": "home"
+    }
+  ],
+  "cameras": [
+    {
+      "id": "workshop-overhead",
+      "name": "Workshop Overhead Camera",
+      "zone": "workshop",
+      "enabledByDefault": true,
+      "indicator": "led"
+    },
+    {
+      "id": "garage-camera",
+      "name": "Kasa Garage Camera",
+      "zone": "garage",
+      "provider": "kasa",
+      "enabledByDefault": true,
+      "indicator": "led"
+    },
+    {
+      "id": "porch-camera",
+      "name": "Kasa Porch Camera",
+      "zone": "front porch",
+      "provider": "kasa",
+      "enabledByDefault": true,
+      "indicator": "led"
+    }
+  ],
+  "packageRules": [
+    {
+      "zone": "front porch",
+      "preferredDrop": "left side under cover",
+      "rainSensitive": true,
+      "note": "Avoid the exposed edge when rain is likely."
+    },
+    {
+      "zone": "garage side door",
+      "preferredDrop": "dry side near the wall",
+      "rainSensitive": false,
+      "note": "Acceptable for bulky workshop deliveries."
+    }
+  ],
+  "objectVocabulary": [
+    {
+      "label": "bench bracket",
+      "synonyms": [
+        "garden bench bracket",
+        "metal bracket",
+        "support bracket"
+      ]
+    },
+    {
+      "label": "epoxy cup",
+      "synonyms": [
+        "mixing cup",
+        "epoxy mixing cup"
+      ]
+    },
+    {
+      "label": "filament spool",
+      "synonyms": [
+        "petg-cf spool",
+        "spool"
+      ]
+    }
+  ],
+  "anomalyBaselines": [
+    {
+      "category": "freezer",
+      "source": "garage freezer",
+      "normalRange": "0 to 3 degrees above baseline variance"
+    },
+    {
+      "category": "motion",
+      "source": "driveway",
+      "normalRange": "family arrival windows and known deliveries"
+    },
+    {
+      "category": "network",
+      "source": "eero",
+      "normalRange": "steady connectivity with brief IoT reconnections"
+    }
+  ],
+  "privacyZones": [
+    {
+      "zone": "bedroom",
+      "cameraAllowed": false,
+      "microphoneAllowed": true
+    },
+    {
+      "zone": "bathroom",
+      "cameraAllowed": false,
+      "microphoneAllowed": false
+    },
+    {
+      "zone": "workshop",
+      "cameraAllowed": true,
+      "microphoneAllowed": true
+    }
+  ],
+  "privacyDefaults": {
+    "physicalMuteRequired": true,
+    "sensitiveZones": [
+      "bedroom",
+      "bathroom"
+    ]
+  }
+}

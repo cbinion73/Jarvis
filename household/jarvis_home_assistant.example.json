@@ -1,0 +1,345 @@
+{
+  "providerNotes": {
+    "primaryActuatorBoundary": "Home Assistant",
+    "lightingProvider": "Kasa via Home Assistant",
+    "climateProvider": "Nest via Home Assistant",
+    "garageProvider": "MyQ via Home Assistant",
+    "safetyProvider": "X-Sense alerts surfaced separately through JARVIS security flows"
+  },
+  "scenes": [
+    {
+      "id": "dawn-protocol",
+      "name": "Dawn Protocol",
+      "room": "bedroom",
+      "entityId": "scene.bedroom_dawn_protocol",
+      "affects": [
+        "light.master_bedroom_ceiling",
+        "switch.bedroom_soundscape"
+      ],
+      "desiredState": "on",
+      "brightnessPercent": 34,
+      "colorTemp": "warm-amber",
+      "note": "Slow amber wake-up with low-volume soundscape."
+    },
+    {
+      "id": "family-morning",
+      "name": "Family Morning",
+      "room": "kitchen",
+      "entityId": "scene.kitchen_family_morning",
+      "affects": [
+        "light.kitchen_island",
+        "light.kitchen_sink",
+        "switch.kitchen_coffee_station"
+      ],
+      "desiredState": "on",
+      "brightnessPercent": 78,
+      "colorTemp": "daylight-warm",
+      "note": "Bright practical kitchen scene with coffee station power."
+    },
+    {
+      "id": "dinner-mode",
+      "name": "Dinner Mode",
+      "room": "kitchen",
+      "entityId": "scene.kitchen_dinner_mode",
+      "affects": [
+        "light.kitchen_island",
+        "light.dining_table",
+        "switch.work_displays"
+      ],
+      "desiredState": "on",
+      "brightnessPercent": 52,
+      "colorTemp": "warm",
+      "note": "Warm dining light and work-distraction reduction."
+    },
+    {
+      "id": "workshop-support",
+      "name": "Workshop Support",
+      "room": "workshop",
+      "entityId": "scene.workshop_support",
+      "affects": [
+        "light.workbench_overhead",
+        "switch.workshop_extractor"
+      ],
+      "desiredState": "on",
+      "brightnessPercent": 92,
+      "colorTemp": "task-white",
+      "note": "High-visibility workbench light plus extractor assist."
+    }
+  ],
+  "lights": [
+    {
+      "entityId": "light.master_bedroom_ceiling",
+      "name": "Master Bedroom Ceiling",
+      "room": "bedroom",
+      "provider": "kasa",
+      "state": "off",
+      "attributes": {
+        "brightnessPercent": 0,
+        "colorTemp": "off"
+      }
+    },
+    {
+      "entityId": "light.kitchen_island",
+      "name": "Kitchen Island",
+      "room": "kitchen",
+      "provider": "kasa",
+      "state": "on",
+      "attributes": {
+        "brightnessPercent": 72,
+        "colorTemp": "daylight-warm"
+      }
+    },
+    {
+      "entityId": "light.kitchen_sink",
+      "name": "Kitchen Sink",
+      "room": "kitchen",
+      "provider": "kasa",
+      "state": "on",
+      "attributes": {
+        "brightnessPercent": 58,
+        "colorTemp": "neutral"
+      }
+    },
+    {
+      "entityId": "light.dining_table",
+      "name": "Dining Table",
+      "room": "kitchen",
+      "provider": "kasa",
+      "state": "off",
+      "attributes": {
+        "brightnessPercent": 0,
+        "colorTemp": "warm"
+      }
+    },
+    {
+      "entityId": "light.office_desk",
+      "name": "Office Desk",
+      "room": "office",
+      "provider": "kasa",
+      "state": "on",
+      "attributes": {
+        "brightnessPercent": 64,
+        "colorTemp": "neutral"
+      }
+    },
+    {
+      "entityId": "light.workbench_overhead",
+      "name": "Workbench Overhead",
+      "room": "workshop",
+      "provider": "kasa",
+      "state": "off",
+      "attributes": {
+        "brightnessPercent": 0,
+        "colorTemp": "task-white"
+      }
+    }
+  ],
+  "switches": [
+    {
+      "entityId": "switch.bedroom_soundscape",
+      "name": "Bedroom Soundscape",
+      "room": "bedroom",
+      "provider": "kasa",
+      "state": "off",
+      "attributes": {
+        "purpose": "Rainforest audio"
+      }
+    },
+    {
+      "entityId": "switch.kitchen_coffee_station",
+      "name": "Kitchen Coffee Station",
+      "room": "kitchen",
+      "provider": "kasa",
+      "state": "on",
+      "attributes": {
+        "purpose": "Coffee prep"
+      }
+    },
+    {
+      "entityId": "switch.work_displays",
+      "name": "Work Displays",
+      "room": "office",
+      "provider": "kasa",
+      "state": "on",
+      "attributes": {
+        "purpose": "Desk displays and work monitor"
+      }
+    },
+    {
+      "entityId": "switch.workshop_extractor",
+      "name": "Workshop Extractor",
+      "room": "workshop",
+      "provider": "kasa",
+      "state": "off",
+      "attributes": {
+        "purpose": "Dust and fume assist"
+      }
+    }
+  ],
+  "climate": [
+    {
+      "entityId": "climate.main_floor_nest",
+      "name": "Main Floor Nest",
+      "zone": "main floor",
+      "provider": "nest",
+      "state": "heat_cool",
+      "attributes": {
+        "currentTemperature": 70,
+        "targetTemperature": 71,
+        "hvacMode": "heat_cool"
+      }
+    }
+  ],
+  "locks": [
+    {
+      "entityId": "lock.front_door",
+      "name": "Front Door Lock",
+      "location": "front door",
+      "provider": "home-assistant",
+      "state": "locked",
+      "attributes": {
+        "battery": 82
+      }
+    },
+    {
+      "entityId": "lock.garage_side_door",
+      "name": "Garage Side Door Lock",
+      "location": "garage side door",
+      "provider": "home-assistant",
+      "state": "locked",
+      "attributes": {
+        "battery": 74
+      }
+    }
+  ],
+  "doors": [
+    {
+      "entityId": "binary_sensor.interior_garage_door",
+      "name": "Interior Garage Door",
+      "location": "garage interior door",
+      "provider": "home-assistant",
+      "state": "closed",
+      "attributes": {
+        "monitored": true
+      }
+    }
+  ],
+  "garage": [
+    {
+      "entityId": "cover.myq_main_garage",
+      "name": "Main Garage Door",
+      "location": "garage",
+      "provider": "myq",
+      "state": "closed",
+      "attributes": {
+        "vehicleClear": true,
+        "interiorDoorClosed": true,
+        "dogClear": true,
+        "motionClear": true
+      }
+    }
+  ],
+  "leakSensors": [
+    {
+      "entityId": "binary_sensor.freezer_leak",
+      "name": "Garage Freezer Leak Sensor",
+      "location": "garage freezer area",
+      "provider": "home-assistant",
+      "state": "dry",
+      "attributes": {
+        "lastChecked": "2026-05-06T01:42:00Z"
+      }
+    },
+    {
+      "entityId": "binary_sensor.utility_sink_leak",
+      "name": "Utility Sink Leak Sensor",
+      "location": "utility sink",
+      "provider": "home-assistant",
+      "state": "dry",
+      "attributes": {
+        "lastChecked": "2026-05-06T01:42:00Z"
+      }
+    }
+  ],
+  "coldStorage": [
+    {
+      "entityId": "sensor.garage_freezer_temperature",
+      "name": "Garage Freezer",
+      "location": "garage freezer area",
+      "provider": "home-assistant",
+      "state": "watch",
+      "attributes": {
+        "currentTemperature": 5,
+        "baselineTemperature": 2,
+        "varianceDegrees": 3,
+        "varianceAlertThreshold": 3,
+        "criticalThreshold": 6,
+        "safeRange": "0F to 10F equivalent staging band",
+        "recommendedAction": "Check seal, airflow, and load balance before the next overnight cycle.",
+        "lastChecked": "2026-05-06T02:13:00Z"
+      }
+    },
+    {
+      "entityId": "sensor.kitchen_fridge_temperature",
+      "name": "Kitchen Fridge",
+      "location": "kitchen",
+      "provider": "home-assistant",
+      "state": "stable",
+      "attributes": {
+        "currentTemperature": 38,
+        "baselineTemperature": 37,
+        "varianceDegrees": 1,
+        "varianceAlertThreshold": 3,
+        "criticalThreshold": 5,
+        "safeRange": "34F to 40F staging band",
+        "recommendedAction": "No action needed unless variance grows or food load changes sharply.",
+        "lastChecked": "2026-05-06T02:13:00Z"
+      }
+    }
+  ],
+  "energyWindows": [
+    {
+      "appliance": "dishwasher",
+      "preferredWindow": "13:00-16:00",
+      "fallbackWindow": "20:30-22:00",
+      "reason": "Lower utility period and low kitchen traffic."
+    },
+    {
+      "appliance": "laundry",
+      "preferredWindow": "10:00-14:00",
+      "fallbackWindow": "19:30-21:00",
+      "reason": "Avoids evening contention and supports quieter night mode."
+    },
+    {
+      "appliance": "garage freezer defrost check",
+      "preferredWindow": "11:30-13:00",
+      "fallbackWindow": "15:00-16:30",
+      "reason": "Best daylight window for manual review without disrupting dinner prep."
+    }
+  ],
+  "outagePlan": {
+    "criticalLoads": [
+      "JARVIS runtime host",
+      "router and switch",
+      "Home Assistant host",
+      "garage and safety alert path"
+    ],
+    "minimumRuntimeMinutes": 30,
+    "degradeOrder": [
+      "shared displays",
+      "voice satellites",
+      "nonessential workshop outlets"
+    ],
+    "manualFallbacks": [
+      "Wall switches still control lighting if automation drops.",
+      "Garage can be checked manually before bedtime.",
+      "Security and leak alerts should still escalate through dedicated devices."
+    ],
+    "networkSegments": [
+      "trusted-admin",
+      "iot-home",
+      "guest"
+    ],
+    "remoteAccess": "VPN only with MFA"
+  }
+}

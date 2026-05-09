@@ -1,0 +1,54 @@
+[
+  {
+    "signal_id": "0b2b3223-f017-4843-8fe6-bff2e7874372",
+    "actor": "Chris",
+    "source": "manual",
+    "title": "Thermo follow-up idea",
+    "content": "Need a personal-safe follow-up workflow that can draft next steps after a strategy meeting.",
+    "sender": "",
+    "tags": [
+      "catalyst",
+      "meeting"
+    ],
+    "timestamp": "2026-05-07T04:14:40.816081+00:00"
+  },
+  {
+    "signal_id": "1e0883ac-8312-45ab-9741-41ac40630e8b",
+    "actor": "Chris",
+    "source": "email",
+    "title": "Need a quick decision on Friday agenda",
+    "content": "Can you confirm whether we should move the strategy block to Friday afternoon and who needs to review the deck before then? If I do not hear back by tomorrow noon I will lock the current agenda.",
+    "sender": "Jane Doe <jane@example.com>",
+    "tags": [
+      "catalyst",
+      "email"
+    ],
+    "timestamp": "2026-05-07T04:15:02.442178+00:00"
+  },
+  {
+    "signal_id": "f03bf994-9287-46ed-85f7-4bbd02e818d2",
+    "actor": "Chris",
+    "source": "email",
+    "title": "Need a quick decision on Friday agenda",
+    "content": "Can you confirm whether we should move the strategy block to Friday afternoon and who needs to review the deck before then? If I do not hear back by tomorrow noon I will lock the current agenda.",
+    "sender": "Jane Doe <jane@example.com>",
+    "tags": [
+      "catalyst",
+      "email"
+    ],
+    "timestamp": "2026-05-07T04:16:10.617638+00:00"
+  },
+  {
+    "signal_id": "137c294e-49d2-4627-933f-17cfb4e7d207",
+    "actor": "Chris",
+    "source": "manual",
+    "title": "Morning capture",
+    "content": "Remember to keep Catalyst personal and connector-honest.",
+    "sender": "",
+    "tags": [
+      "catalyst",
+      "policy"
+    ],
+    "timestamp": "2026-05-07T04:18:37.097589+00:00"
+  }
+]

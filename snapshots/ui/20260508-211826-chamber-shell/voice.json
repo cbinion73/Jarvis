@@ -1,0 +1,6 @@
+{
+  "tts_provider": "elevenlabs",
+  "elevenlabs_voice": "JBFqnCBsd6RMkjVDRZzb",
+  "piper_model_path": "/Users/chris/Desktop/CODE/JARVIS/assets/piper/voices/jarvis-hf/jarvis-medium.onnx",
+  "piper_speaker": ""
+}

@@ -1,0 +1,46 @@
+[
+  {
+    "run_id": "dc09cacf-f100-4a7f-ad3b-5f0d9208b77c",
+    "actor": "Chris",
+    "project_name": "Personal Catalyst for Jarvis",
+    "situation": "Chris wants a personal Catalyst for JARVIS: a household-safe workflow backend that supports triage, meeting prep, drafting, and project planning. The present Catalyst is built around work systems, which is rather like bringing an office filing cabinet into the sitting room and acting surprised when it blocks the door.",
+    "problem": "The current setup depends on enterprise integrations\u2014legacy work systems and Microsoft Graph\u2014that are unsuitable for a personal/home context. That creates three problems:\n1. The system is overcoupled to work infrastructure.\n2. It cannot honestly operate as a local-first personal assistant.\n3. The workflow engine and the JARVIS persona/approval model are not cleanly separated, which makes the whole arrangement harder to trust and easier to misuse.",
+    "goal": "Build a personal, local-first workflow backend for JARVIS that:\n- Handles triage, meeting prep, drafting, and project planning\n- Works without legacy work systems or Microsoft Graph\n- Is explicit about what is connected and what is not\n- Preserves JARVIS voice, approvals, and household stewardship\n- Supports personal use without pretending enterprise capabilities exist",
+    "in_scope": [
+      "Local-first task/workflow backend",
+      "Inbox triage logic",
+      "Meeting prep packet generation",
+      "Drafting support for notes, messages, plans, and summaries",
+      "Personal project planning and decomposition",
+      "Approval gates for consequential actions",
+      "Connector abstraction with honest disconnected states",
+      "Data model for people, projects, tasks, context, and permissions",
+      "Persona layer that keeps JARVIS\u2019 tone and operating rules intact",
+      "Minimal local storage and audit trail",
+      "Export/import of personal notes and project artifacts"
+    ],
+    "out_of_scope": [
+      "Legacy work database integration",
+      "Microsoft Graph integration",
+      "Any reliance on enterprise identity, mail, calendar, or document systems",
+      "Automatic sending, purchasing, or external submission without explicit approval",
+      "Full household automation beyond planning and drafting support",
+      "Pretending unavailable connectors are available",
+      "Rebuilding all of work Catalyst, which would be an excellent way to recreate the original problem with more enthusiasm"
+    ],
+    "first_release": [
+      "1. Local core",
+      "Store projects, tasks, notes, contexts, and approvals locally",
+      "Provide simple create/read/update/search operations"
+    ],
+    "risks": [
+      "Scope creep: it will be tempting to turn a personal backend into a small cathedral. Resist.",
+      "Hidden coupling: old work assumptions may leak into personal workflows.",
+      "False capability: integrations may appear to exist when they are only mocked or partially wired.",
+      "Approval ambiguity: if draft and execution are not"
+    ],
+    "recommendation": "",
+    "raw_output": "Situation:\nChris wants a personal Catalyst for JARVIS: a household-safe workflow backend that supports triage, meeting prep, drafting, and project planning. The present Catalyst is built around work systems, which is rather like bringing an office filing cabinet into the sitting room and acting surprised when it blocks the door.\n\nProblem:\nThe current setup depends on enterprise integrations\u2014legacy work systems and Microsoft Graph\u2014that are unsuitable for a personal/home context. That creates three problems:\n1. The system is overcoupled to work infrastructure.\n2. It cannot honestly operate as a local-first personal assistant.\n3. The workflow engine and the JARVIS persona/approval model are not cleanly separated, which makes the whole arrangement harder to trust and easier to misuse.\n\nGoal:\nBuild a personal, local-first workflow backend for JARVIS that:\n- Handles triage, meeting prep, drafting, and project planning\n- Works without legacy work systems or Microsoft Graph\n- Is explicit about what is connected and what is not\n- Preserves JARVIS voice, approvals, and household stewardship\n- Supports personal use without pretending enterprise capabilities exist\n\nIn Scope:\n- Local-first task/workflow backend\n- Inbox triage logic\n- Meeting prep packet generation\n- Drafting support for notes, messages, plans, and summaries\n- Personal project planning and decomposition\n- Approval gates for consequential actions\n- Connector abstraction with honest disconnected states\n- Data model for people, projects, tasks, context, and permissions\n- Persona layer that keeps JARVIS\u2019 tone and operating rules intact\n- Minimal local storage and audit trail\n- Export/import of personal notes and project artifacts\n\nOut Of Scope:\n- Legacy work database integration\n- Microsoft Graph integration\n- Any reliance on enterprise identity, mail, calendar, or document systems\n- Automatic sending, purchasing, or external submission without explicit approval\n- Full household automation beyond planning and drafting support\n- Pretending unavailable connectors are available\n- Rebuilding all of work Catalyst, which would be an excellent way to recreate the original problem with more enthusiasm\n\nFirst Release:\n1. Local core\n   - Store projects, tasks, notes, contexts, and approvals locally\n   - Provide simple create/read/update/search operations\n\n2. Triage workflow\n   - Classify incoming items into: action, waiting, reference, defer, draft\n   - Produce a short recommended next step for each item\n\n3. Drafting workflow\n   - Generate structured drafts for emails, notes, plans, and meeting prep\n   - Keep a clear \u201cdraft only\u201d status\n\n4. Meeting prep\n   - Assemble agenda, context, open questions, prior actions, and risks\n   - Mark missing data explicitly\n\n5. Project planning\n   - Break objectives into milestones, tasks, dependencies, and risks\n   - Support quick A3-style briefs and next-actions lists\n\n6. Approval model\n   - Require explicit approval for external actions\n   - Log approval state separately from draft state\n\n7. Connector honesty\n   - If a connector is absent, show \u201cdisconnected\u201d rather than inventing a result\n   - Distinguish local data from external data\n\nRisks:\n- Scope creep: it will be tempting to turn a personal backend into a small cathedral. Resist.\n- Hidden coupling: old work assumptions may leak into personal workflows.\n- False capability: integrations may appear to exist when they are only mocked or partially wired.\n- Approval ambiguity: if draft and execution are not",
+    "timestamp": "2026-05-07T04:15:06.735795+00:00"
+  }
+]

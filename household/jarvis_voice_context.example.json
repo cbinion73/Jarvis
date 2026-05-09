@@ -1,0 +1,17 @@
+{
+  "wakeWords": ["jarvis"],
+  "satellites": [
+    {
+      "id": "office-mic",
+      "deviceName": "Chris Work Phone Microphone",
+      "room": "office",
+      "defaultSpeaker": "Chris"
+    },
+    {
+      "id": "workshop-headset",
+      "deviceName": "DualSense Wireless Controller",
+      "room": "workshop",
+      "defaultSpeaker": "Chris"
+    }
+  ]
+}

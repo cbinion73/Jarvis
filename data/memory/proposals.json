@@ -1,0 +1,30 @@
+[
+  {
+    "proposal_id": "35f57b9a-dcab-432d-b5e4-cd445316bd55",
+    "actor": "Chris",
+    "memory_type": "safety",
+    "scope": "safety",
+    "owner": "Chris",
+    "project": "",
+    "title": "Emergency allergy note for household",
+    "summary": "Emergency allergy note for household",
+    "tags": [
+      "safety",
+      "restricted",
+      "allergy"
+    ],
+    "sensitivity": "sensitive",
+    "payload": {
+      "detail": "Document a food allergy and emergency handling note for household safety.",
+      "owner": "Chris",
+      "project": "",
+      "captured_by": "Chris",
+      "scope": "safety",
+      "memory_type": "safety",
+      "hash": "f0783cb6b4117a163b1dad3724bac38aec0b337224c1f2c69a0ea2fe8724f1ca"
+    },
+    "status": "approved",
+    "rationale": "Memory type 'safety' requires approval before storage.",
+    "created_at": "2026-05-06T13:24:03.286899+00:00"
+  }
+]

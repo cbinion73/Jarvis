@@ -1,0 +1,72 @@
+[
+  {
+    "request_id": "68ce678a-50b5-46f0-9f5e-52fd3bc511aa",
+    "actor": "Chris",
+    "room": "office",
+    "request": "Draft a parent message about tonight's troop meeting",
+    "action_class": "EXECUTE_MEDIUM_RISK",
+    "second_factor_required": false,
+    "status": "pending",
+    "rationale": "Mode 'work-mode' maps to module 'executive-work' using model 'gpt-5.4-mini'. Permission class is EXECUTE_MEDIUM_RISK."
+  },
+  {
+    "request_id": "37bd75b1-96c8-4346-8dbb-60aaffdf6718",
+    "actor": "Rebekah",
+    "room": "kitchen",
+    "request": "Move the grocery pickup and draft a parent text",
+    "action_class": "EXECUTE_MEDIUM_RISK",
+    "second_factor_required": false,
+    "status": "approved",
+    "rationale": "Mode 'family-morning' maps to module 'family-logistics' using model 'gpt-5.4-nano'. Permission class is EXECUTE_MEDIUM_RISK."
+  },
+  {
+    "request_id": "82029f24-d8d7-4e8f-9894-77beedca89ad",
+    "actor": "Chris",
+    "room": "office",
+    "request": "Unlock the front door",
+    "action_class": "EXECUTE_HIGH_RISK",
+    "second_factor_required": true,
+    "status": "pending",
+    "rationale": "Mode 'work-mode' maps to module 'executive-work' using model 'gpt-5.4-mini'. Permission class is EXECUTE_HIGH_RISK."
+  },
+  {
+    "request_id": "b31a6101-ec76-410a-8f8a-86cfaaf4cc3d",
+    "actor": "Chris",
+    "room": "workshop",
+    "request": "Approve vendor package for Garden bench bracket to carbon-fiber service bureau",
+    "action_class": "EXECUTE_MEDIUM_RISK",
+    "second_factor_required": false,
+    "status": "pending",
+    "rationale": "External vendor submission requires explicit approval before any quote request is sent."
+  },
+  {
+    "request_id": "7cac83d3-f032-4c2c-bce4-7adc81ec0ed6",
+    "actor": "Chris",
+    "room": "workshop",
+    "request": "Approve vendor package for Garden bench bracket to carbon-fiber service bureau",
+    "action_class": "EXECUTE_MEDIUM_RISK",
+    "second_factor_required": false,
+    "status": "pending",
+    "rationale": "External vendor submission requires explicit approval before any quote request is sent."
+  },
+  {
+    "request_id": "b95daf6d-1aaf-46b8-8f1a-b1a782efc665",
+    "actor": "Rebekah",
+    "room": "family",
+    "request": "Approve parent message to Troop parents about Indoor backup update",
+    "action_class": "EXECUTE_MEDIUM_RISK",
+    "second_factor_required": false,
+    "status": "pending",
+    "rationale": "Parent-facing communication must be reviewed before sending."
+  },
+  {
+    "request_id": "3126c4bf-4da1-4d63-8b6a-73e2055c9cf0",
+    "actor": "Rebekah",
+    "room": "family",
+    "request": "Approve parent message to Troop parents about Indoor backup update",
+    "action_class": "EXECUTE_MEDIUM_RISK",
+    "second_factor_required": false,
+    "status": "pending",
+    "rationale": "Parent-facing communication must be reviewed before sending."
+  }
+]

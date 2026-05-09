@@ -1,0 +1,91 @@
+{
+  "householdName": "The Director and the Associate",
+  "locationLabel": "Kentucky Home",
+  "quietHours": {
+    "start": "21:30",
+    "end": "06:00"
+  },
+  "users": [
+    {
+      "id": "chris",
+      "displayName": "Chris",
+      "addressAs": "Sir",
+      "role": "director",
+      "permissions": "adult",
+      "priorities": [
+        "executive-briefing",
+        "manuscript-editing",
+        "workshop-copilot",
+        "faith-formation"
+      ]
+    },
+    {
+      "id": "rebekah",
+      "displayName": "Rebekah",
+      "addressAs": "Ma'am",
+      "role": "household-coordinator",
+      "permissions": "adult",
+      "priorities": [
+        "family-logistics",
+        "groceries",
+        "troop-planning"
+      ]
+    },
+    {
+      "id": "caleb",
+      "displayName": "Caleb",
+      "addressAs": "Caleb",
+      "role": "student",
+      "permissions": "child",
+      "priorities": [
+        "homework-coaching",
+        "morning-readiness"
+      ]
+    },
+    {
+      "id": "anna",
+      "displayName": "Anna",
+      "addressAs": "Miss Anna",
+      "role": "student",
+      "permissions": "child",
+      "priorities": [
+        "project-organization",
+        "presentation-practice"
+      ]
+    }
+  ],
+  "rooms": [
+    {
+      "id": "bedroom",
+      "modeBias": "dawn"
+    },
+    {
+      "id": "kitchen",
+      "modeBias": "family"
+    },
+    {
+      "id": "office",
+      "modeBias": "work"
+    },
+    {
+      "id": "workshop",
+      "modeBias": "maker"
+    },
+    {
+      "id": "living-room",
+      "modeBias": "family"
+    }
+  ],
+  "modes": [
+    "dawn-protocol",
+    "family-morning",
+    "steward-mode",
+    "work-mode",
+    "deep-work",
+    "workshop-mode",
+    "dinner-mode",
+    "chronicle-mode",
+    "goodnight",
+    "watchtower"
+  ]
+}

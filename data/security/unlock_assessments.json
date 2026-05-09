@@ -1,0 +1,35 @@
+[
+  {
+    "assessment_id": "c86b4f5d-94d9-41fa-93aa-1989f3fc0e6e",
+    "actor": "Chris",
+    "target": "front door",
+    "requested_by_voice": true,
+    "second_factor_present": false,
+    "allowed": false,
+    "rationale": "Voice-only unlock requests are denied until a second factor is confirmed.",
+    "required_next_step": "Use one of the configured second factors: trusted device confirmation, admin dashboard confirmation.",
+    "timestamp": "2026-05-06T08:34:43.330481+00:00"
+  },
+  {
+    "assessment_id": "b4974609-310c-44b8-bbe3-a1cdec2cc36e",
+    "actor": "Chris",
+    "target": "front door",
+    "requested_by_voice": true,
+    "second_factor_present": true,
+    "allowed": true,
+    "rationale": "Voice request meets the second-factor gate, but still requires explicit approval.",
+    "required_next_step": "Review the request in the dashboard approval queue before execution.",
+    "timestamp": "2026-05-06T08:35:35.064278+00:00"
+  },
+  {
+    "assessment_id": "9e63cbda-bfae-4237-98ec-aca028700c33",
+    "actor": "Chris",
+    "target": "front door",
+    "requested_by_voice": true,
+    "second_factor_present": false,
+    "allowed": false,
+    "rationale": "Voice-only unlock requests are denied until a second factor is confirmed.",
+    "required_next_step": "Use one of the configured second factors: trusted device confirmation, admin dashboard confirmation.",
+    "timestamp": "2026-05-06T08:36:03.238193+00:00"
+  }
+]

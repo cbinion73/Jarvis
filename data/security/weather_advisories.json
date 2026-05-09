@@ -1,0 +1,28 @@
+[
+  {
+    "advisory_id": "c156324b-d2dd-4979-ae95-c62c61757ae9",
+    "actor": "Rebekah",
+    "context": "Troop meeting arrival and school departure both depend on a short rain break.",
+    "current_weather": "Light rain by 8:20 a.m., clearing toward dinner.",
+    "risk_level": "Moderate\u2014light rain may complicate both troop meeting arrival and school departure, but it is not severe.",
+    "safe_timing": "Best departure window is the short rain break before 8:20 a.m.; conditions improve further toward dinner.",
+    "recommendation": "Aim to travel during the brief dry window if possible; if timing slips, use indoor backup for the troop meeting rather than canceling.",
+    "follow_ups": [
+      "Keep umbrellas/rain gear ready, build in a few extra minutes, and expect calmer conditions later in the day."
+    ],
+    "timestamp": "2026-05-06T08:34:45.548711+00:00"
+  },
+  {
+    "advisory_id": "029c0a40-9ea9-424d-a54e-50db5f041528",
+    "actor": "Rebekah",
+    "context": "Troop meeting arrival and school departure both depend on a short rain break.",
+    "current_weather": "Light rain by 8:20 a.m., clearing toward dinner.",
+    "risk_level": "Moderate\u2014light rain may disrupt transit, but conditions improve later.",
+    "safe_timing": "Target the next short dry window before 8:20 a.m.; if missed, expect the better window near dinner.",
+    "recommendation": "Depart only during a clear break for troop meeting arrival and school departure; if rain persists, use an indoor backup or brief covered wait rather than canceling.",
+    "follow_ups": [
+      "Keep umbrellas/rain gear ready, monitor for a short lull, and stay calm\u2014this is timing-sensitive but not a cancel-the-plan weather day."
+    ],
+    "timestamp": "2026-05-06T08:36:06.024844+00:00"
+  }
+]

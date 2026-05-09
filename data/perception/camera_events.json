@@ -1,0 +1,26 @@
+[
+  {
+    "event_id": "17f84cdb-b5c4-42d2-9a8a-643542e581c1",
+    "camera": "Porch Camera",
+    "camera_id": "porch-camera",
+    "zone": "front porch",
+    "event_type": "package",
+    "detail": "Package dropped near the exposed edge during light rain.",
+    "detected_object": "package",
+    "confidence": "high",
+    "privacy_enabled": true,
+    "timestamp": "2026-05-06T13:16:56.488471+00:00"
+  },
+  {
+    "event_id": "17c0ca9e-7898-490c-a524-6bc83fc3e0b8",
+    "camera": "Porch Camera",
+    "camera_id": "porch-camera",
+    "zone": "front porch",
+    "event_type": "package",
+    "detail": "Package dropped near the exposed edge during light rain.",
+    "detected_object": "package",
+    "confidence": "high",
+    "privacy_enabled": true,
+    "timestamp": "2026-05-06T13:18:07.497803+00:00"
+  }
+]

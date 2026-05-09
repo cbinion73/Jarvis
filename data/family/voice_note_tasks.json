@@ -1,0 +1,29 @@
+[
+  {
+    "note_id": "36b5eed6-8302-4292-9a1b-e550b462befc",
+    "actor": "Rebekah",
+    "source": "van",
+    "note": "Permission forms, snack rotation, and summer camp shirt sizes need follow-up.",
+    "tasks": [
+      "Follow up on permission forms",
+      "Confirm snack rotation schedule",
+      "Collect summer camp shirt sizes"
+    ],
+    "status": "open",
+    "timestamp": "2026-05-06T08:08:00.636889+00:00"
+  },
+  {
+    "note_id": "ae9b8279-4c37-4bb1-af14-ba6242b45279",
+    "actor": "Rebekah",
+    "source": "van",
+    "note": "Summer camp shirt sizes, permission forms, and snack rotation need follow-up.",
+    "tasks": [
+      "Confirm summer camp shirt sizes for Rebekah.",
+      "Collect and return completed permission forms.",
+      "Set up the snack rotation schedule.",
+      "Share the follow-up list with the parent."
+    ],
+    "status": "open",
+    "timestamp": "2026-05-06T08:09:06.170095+00:00"
+  }
+]

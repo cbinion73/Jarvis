@@ -1,0 +1,2 @@
+"""JARVIS household runtime scaffold."""
+

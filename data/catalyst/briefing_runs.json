@@ -1,0 +1,25 @@
+[
+  {
+    "run_id": "caf0f174-e847-478c-97d1-610315d675ad",
+    "actor": "Chris",
+    "signal_count": 1,
+    "open_commitments": 0,
+    "overdue_count": 0,
+    "recommendation": "Adopt a **manual-safe meeting follow-up workflow** inside JARVIS that drafts next steps from the strategy meeting, then pauses for your approval before anything is sent or scheduled.",
+    "reasoning": "The signal is modest but useful: follow-up work after strategy meetings tends to drift into either forgotten tasks or overconfident automation. The strongest opportunity here is not to \u201cdo more,\u201d but to **reduce friction while preserving control**.",
+    "confidence": 0.68,
+    "action_items": [
+      "1. Use a simple template for each strategy meeting:",
+      "Decisions",
+      "Open questions",
+      "Action items",
+      "Owner",
+      "Due date",
+      "2. Ask JARVIS to produce a draft follow-up summary after the meeting.",
+      "3. Review and approve before any message is sent or any calendar/task update is made.",
+      "4. If you want, I can help you define the exact template for \u201cstrategy meeting follow-up\u201d next."
+    ],
+    "raw_output": "Recommendation:\nAdopt a **manual-safe meeting follow-up workflow** inside JARVIS that drafts next steps from the strategy meeting, then pauses for your approval before anything is sent or scheduled.\n\nReasoning:\nThe signal is modest but useful: follow-up work after strategy meetings tends to drift into either forgotten tasks or overconfident automation. The strongest opportunity here is not to \u201cdo more,\u201d but to **reduce friction while preserving control**.\n\nA personal-safe workflow should:\n1. Capture the meeting\u2019s decisions, open questions, and owners.\n2. Draft a concise follow-up note with proposed next steps.\n3. Present it to you for review.\n4. Only after approval, prepare any downstream actions.\n\nThis is the sort of task where a steward should be helpful, not presumptuous. Automation that drafts is useful; automation that decides is how one ends up apologizing to three people and a calendar.\n\nConfidence:\nHigh. The signal is clear, low-risk, and well matched to a draft-only workflow.\n\nAction Items:\n1. Use a simple template for each strategy meeting:\n   - Decisions\n   - Open questions\n   - Action items\n   - Owner\n   - Due date\n2. Ask JARVIS to produce a draft follow-up summary after the meeting.\n3. Review and approve before any message is sent or any calendar/task update is made.\n4. If you want, I can help you define the exact template for \u201cstrategy meeting follow-up\u201d next.",
+    "timestamp": "2026-05-07T04:15:07.637452+00:00"
+  }
+]

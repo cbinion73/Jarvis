@@ -1,0 +1,46 @@
+[
+  {
+    "plan_id": "314449cc-24f5-4f69-895a-78811920b51e",
+    "actor": "Rebekah",
+    "request": "Group the grocery pickup and keep dinner easy with tacos, avocados, cheese, and ground beef.",
+    "meal_suggestion": "tacos",
+    "grocery_groups": {
+      "produce": [
+        "avocados"
+      ],
+      "protein": [
+        "ground beef",
+        "cheese"
+      ]
+    },
+    "timing": [
+      "Batch the pickup into one stop if possible.",
+      "Stage ingredients before the after-school rush.",
+      "Keep dinner to a low-complexity lane tonight."
+    ],
+    "gaps": [
+      "Confirm whether any missing produce or protein items need adding."
+    ],
+    "timestamp": "2026-05-06T13:34:43.761382+00:00"
+  },
+  {
+    "plan_id": "4436b48b-3225-485f-8fdd-e7206b516154",
+    "actor": "Rebekah",
+    "request": "Group the pickup and keep dinner easy with tacos and avocados.",
+    "meal_suggestion": "tacos",
+    "grocery_groups": {
+      "produce": [
+        "avocados"
+      ]
+    },
+    "timing": [
+      "Batch the pickup into one stop if possible.",
+      "Stage ingredients before the after-school rush.",
+      "Keep dinner to a low-complexity lane tonight."
+    ],
+    "gaps": [
+      "Confirm whether any missing produce or protein items need adding."
+    ],
+    "timestamp": "2026-05-06T13:36:36.158734+00:00"
+  }
+]

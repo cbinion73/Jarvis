@@ -1,0 +1,104 @@
+{
+  "policyNotes": [
+    "Coach the child toward their own thinking instead of producing finished schoolwork.",
+    "Ask brief follow-up questions that reveal understanding.",
+    "Keep encouragement calm and specific rather than sugary."
+  ],
+  "parentViewNotes": [
+    "Parent summaries should show patterns, confidence, and friction without replaying every line.",
+    "Escalate only when frustration, avoidance, or repeated confusion starts to pile up."
+  ],
+  "adultKeywords": [
+    "thermo",
+    "confidential",
+    "manuscript",
+    "meeting notes",
+    "research brief",
+    "executive brief",
+    "parent message",
+    "adult calendar"
+  ],
+  "children": {
+    "Caleb": {
+      "studySupports": [
+        "math",
+        "reading"
+      ],
+      "notes": [
+        "Use one step at a time and ask him to show his work.",
+        "Confidence often outruns explanation, so check reasoning."
+      ],
+      "blockedTopics": [
+        "dad's meeting",
+        "thermo notes",
+        "write this for me",
+        "do my homework"
+      ],
+      "allowedModules": [
+        "child-tutor",
+        "faith-and-formation",
+        "family-logistics",
+        "household-associate"
+      ],
+      "forbiddenModules": [
+        "executive-work",
+        "workshop-copilot",
+        "perception-mesh"
+      ],
+      "parentVisibility": "summary-only",
+      "redirectPrompt": "I can quiz you, help you organize it, or help you explain your own reasoning.",
+      "deviceBoundary": {
+        "windowLabel": "After-school reset",
+        "studyChecklist": [
+          "Shoes off and snack first",
+          "Backpack opened and papers sorted",
+          "Math and reading materials on the island",
+          "Water bottle filled",
+          "Device docked after homework block"
+        ],
+        "deviceExpectation": "Chromebook or tablet stays docked once homework and review are done.",
+        "reminderText": "Finish the checklist, then dock the device before free time."
+      }
+    },
+    "Anna": {
+      "studySupports": [
+        "presentation",
+        "project organization"
+      ],
+      "notes": [
+        "Preserve her own phrasing and help her practice out loud.",
+        "Encourage outline-first thinking before polishing."
+      ],
+      "blockedTopics": [
+        "dad's manuscript",
+        "rewrite this as my final answer",
+        "do my project"
+      ],
+      "allowedModules": [
+        "child-tutor",
+        "faith-and-formation",
+        "family-logistics",
+        "household-associate"
+      ],
+      "forbiddenModules": [
+        "executive-work",
+        "workshop-copilot",
+        "perception-mesh"
+      ],
+      "parentVisibility": "summary-only",
+      "redirectPrompt": "I can help you build the outline, rehearse the slides, or strengthen your own explanation.",
+      "deviceBoundary": {
+        "windowLabel": "Evening study close",
+        "studyChecklist": [
+          "Homework station reset",
+          "Project materials back in one place",
+          "Chromebook charging",
+          "Slides or notes ready for tomorrow",
+          "Planner checked for next-day reminders"
+        ],
+        "deviceExpectation": "Chromebook docks for charging once schoolwork is complete.",
+        "reminderText": "Wrap the project work, plug in the Chromebook, and leave tomorrow's materials ready."
+      }
+    }
+  }
+}

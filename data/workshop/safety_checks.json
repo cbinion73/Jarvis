@@ -1,0 +1,59 @@
+[
+  {
+    "check_id": "66a958e0-b6ef-46b8-907a-3ff6227ebcfb",
+    "actor": "Chris",
+    "operation": "Cut and drill steel bracket replacement",
+    "allowed": true,
+    "warnings": [
+      "Wear eye protection during cutting, drilling, and cleanup.",
+      "Validate fit with a low-stakes prototype before structural testing.",
+      "Treat any vendor handoff as staged until explicit approval is given.",
+      "Review the operation before running anything that throws debris, dust, or fumes."
+    ],
+    "required_interlocks": [
+      "eye protection",
+      "dust collection or ventilation",
+      "manual review before live machine run"
+    ],
+    "recommendation": "Proceed only after the listed interlocks are satisfied.",
+    "timestamp": "2026-05-06T08:23:30.295048+00:00"
+  },
+  {
+    "check_id": "05519ea3-9b53-44e5-96ec-71cf00fa7515",
+    "actor": "Chris",
+    "operation": "Cut and drill steel bracket replacement",
+    "allowed": true,
+    "warnings": [
+      "Wear eye protection during cutting, drilling, and cleanup.",
+      "Validate fit with a low-stakes prototype before structural testing.",
+      "Treat any vendor handoff as staged until explicit approval is given.",
+      "Review the operation before running anything that throws debris, dust, or fumes."
+    ],
+    "required_interlocks": [
+      "eye protection",
+      "dust collection or ventilation",
+      "manual review before live machine run"
+    ],
+    "recommendation": "Proceed only after the listed interlocks are satisfied.",
+    "timestamp": "2026-05-06T08:25:01.320799+00:00"
+  },
+  {
+    "check_id": "60ebd85f-8b2a-4852-b3b2-562980abec1d",
+    "actor": "Chris",
+    "operation": "Cut and drill steel bracket replacement",
+    "allowed": true,
+    "warnings": [
+      "Wear eye protection during cutting, drilling, and cleanup.",
+      "Validate fit with a low-stakes prototype before structural testing.",
+      "Treat any vendor handoff as staged until explicit approval is given.",
+      "Review the operation before running anything that throws debris, dust, or fumes."
+    ],
+    "required_interlocks": [
+      "eye protection",
+      "dust collection or ventilation",
+      "manual review before live machine run"
+    ],
+    "recommendation": "Proceed only after the listed interlocks are satisfied.",
+    "timestamp": "2026-05-06T08:26:46.916749+00:00"
+  }
+]

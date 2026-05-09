@@ -1,0 +1,50 @@
+[
+  {
+    "routine_id": "495f72a9-9dd3-4771-8e26-d772d535feca",
+    "actor": "Caleb",
+    "window_label": "After-school reset",
+    "checklist": [
+      "Shoes off and snack first",
+      "Backpack opened and papers sorted",
+      "Math and reading materials on the island",
+      "Water bottle filled",
+      "Device docked after homework block"
+    ],
+    "device_expectation": "Chromebook or tablet stays docked once homework and review are done.",
+    "reminder_text": "Finish the checklist, then dock the device before free time.",
+    "status": "open",
+    "timestamp": "2026-05-06T08:17:45.502421+00:00"
+  },
+  {
+    "routine_id": "81d625d7-05d1-4ca6-af53-1d57211e522c",
+    "actor": "Anna",
+    "window_label": "Evening study close",
+    "checklist": [
+      "Homework station reset",
+      "Project materials back in one place",
+      "Chromebook charging",
+      "Slides or notes ready for tomorrow",
+      "Planner checked for next-day reminders"
+    ],
+    "device_expectation": "Chromebook docks for charging once schoolwork is complete.",
+    "reminder_text": "Wrap the project work, plug in the Chromebook, and leave tomorrow's materials ready.",
+    "status": "open",
+    "timestamp": "2026-05-06T08:17:45.598240+00:00"
+  },
+  {
+    "routine_id": "dbb7e848-d43f-4114-818e-a8e91f5a8ea0",
+    "actor": "Caleb",
+    "window_label": "Evening dock",
+    "checklist": [
+      "Shoes off and snack first",
+      "Backpack opened and papers sorted",
+      "Math and reading materials on the island",
+      "Water bottle filled",
+      "Device docked after homework block"
+    ],
+    "device_expectation": "Chromebook or tablet stays docked once homework and review are done.",
+    "reminder_text": "Finish the checklist, then dock the device before free time.",
+    "status": "open",
+    "timestamp": "2026-05-06T08:18:30.154830+00:00"
+  }
+]

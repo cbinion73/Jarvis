@@ -1,0 +1,20 @@
+[
+  {
+    "plan_id": "ca851fa2-380c-41c9-8c4d-359952cc70de",
+    "actor": "Chris",
+    "request": "Rebekah needs the van tonight, and I still need a lunch-window supply run.",
+    "vehicle": "car",
+    "driver": "Chris",
+    "route_notes": [
+      "Favor the calmer route and avoid unnecessary zig-zagging across town.",
+      "Pad departure slightly to account for wet-weather loading."
+    ],
+    "loadout": [
+      "keys",
+      "water bottle",
+      "charging cable",
+      "weather layer"
+    ],
+    "timestamp": "2026-05-06T13:34:43.853404+00:00"
+  }
+]

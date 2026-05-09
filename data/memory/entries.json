@@ -1,0 +1,65 @@
+[
+  {
+    "entry_id": "79ccf317-40ea-46c0-befe-ce7a04edcc86",
+    "memory_type": "personal",
+    "scope": "personal",
+    "owner": "Chris",
+    "project": "",
+    "title": "Chris prefers the executive brief after coffee",
+    "summary": "Chris prefers the executive brief after coffee.",
+    "tags": [
+      "personal",
+      "preference",
+      "morning",
+      "executive"
+    ],
+    "sensitivity": "normal",
+    "approval_status": "approved",
+    "cloud_excluded": false,
+    "encrypted_payload": "gAAAAABp-0DzupadWkH4h65sfCMtQdbzDgYvV0K5_Pd8HsD3ZZcKHhDMYrLARfxteaCy1sp796jw2cqb9KwdiuGkC_-mC6DzXTnzY_8fH_LOrJgqqkCotMQLW3KyfPlkPyPpTgnmIvNc7wcqmQugoCgWUwLgQXrzToCZCLCtuvg0iVoA_Ck0HcoWALZNDL6y5D8YCDoX1vX6L4o7MUslvpihqDpeY-PCGJvOtqhbDklvsq6RnggszkFd2qG_oTmMtMW3VSh0EnEtkjAKMOxzS39fBmZpFUJqtxwxU0VZJ8h1Fr5BHRR4nncLvJe4l7ElFBM0nBJSUxkZHTZZncwEK9WQjSUTpkfoGApSQI2e9xcNXihYTJODGfJzddEMiEQylyvB35TxMDakEvz3eK2I5Mqg3q5YObk26zdp7ab0xYUv635Zyw6_Tis=",
+    "created_at": "2026-05-06T13:24:03.292217+00:00",
+    "updated_at": "2026-05-06T13:24:03.292581+00:00"
+  },
+  {
+    "entry_id": "96437703-a375-4a1a-aabb-2a8aec67d701",
+    "memory_type": "safety",
+    "scope": "safety",
+    "owner": "Chris",
+    "project": "",
+    "title": "Emergency allergy note for household",
+    "summary": "Emergency allergy note for household",
+    "tags": [
+      "safety",
+      "restricted",
+      "allergy"
+    ],
+    "sensitivity": "sensitive",
+    "approval_status": "approved",
+    "cloud_excluded": true,
+    "encrypted_payload": "gAAAAABp-0EUqH93pJfTiu7F-kCSiNrBfkaJK-A4jyO0IWQlmvPULeFQwW6vk7PzVOIHj2uVt0t2PLXSc4nBeqoFCyCg1ipbAFxdmvt-B6eG_gONe0W9dSbf6TI4w2XHRuVsB0dwuYUFQtav_Rv2crP1L4MuyPbCVs_133G8NXpi3NOEy2gxPzbT-QN1aQZY1xuNRMu-g7xVeT2xHJNbYXPxV4xxeByHC8umm_YRsoRCC_944k-FlGNrxrTfOcxznB7n5Wor4XtPvel1V-rfhA0Odq1nSPNnbrBY9WvfAzk7g694F0zaU3zhYl3guO4baJrBJvNOh0HtVM3_v3FznvxDL0JvwT-QAGO4O_LTWeNKu1BSVfTYvJ7WmNSrgo-agh0RlKpEaQQ9jzfTEf8ZV4hwIETE50GEeam21zIF-CTJlLocs_MONRo=",
+    "created_at": "2026-05-06T13:24:36.601678+00:00",
+    "updated_at": "2026-05-06T13:24:36.601685+00:00"
+  },
+  {
+    "entry_id": "06f86d06-1550-40fe-baa1-ec61cf493c61",
+    "memory_type": "project",
+    "scope": "project",
+    "owner": "Chris",
+    "project": "Chronicle",
+    "title": "Chronicle should emphasize spiritual record, not just answer retrieval",
+    "summary": "Chronicle should emphasize spiritual record, not just answer retrieval.",
+    "tags": [
+      "project",
+      "continuity",
+      "chronicle",
+      "product",
+      "insight"
+    ],
+    "sensitivity": "normal",
+    "approval_status": "approved",
+    "cloud_excluded": false,
+    "encrypted_payload": "gAAAAABp-0GGjzHOTy_9CvamrGyfzg0kHzyszlY8hqUM92IxZjra25vuD7VrMZTaktZqvaUYyxc2kS9kXCDirAq0zL_yRUjZelv7d6eH4kgaQeMBtTw9_coSOXYMe2x2NdSDwaWsggPKrcErl_iRuLSgO6MypTjRpTQYVuFgLa3FgK2FjSBuVt7_YRrFkqFIYTh7XYs6jzbzAFD0TiEOlqTy1gZbbw8hpShyvZCH-Pby8zbhfMSzf4D0hhaXrHbSb4DA9CXdQ_G2FSafVwnLR3uq-k5ALHZ1stTu-pNQrv2h-w2OXzdGJnfHxRZvoNZdSvsuVD5wOy8dPavSCmq7U3OGP6hTCbtsnExZ_TgQxBJW_OeUieV-ATJ10-zcz5Khv6TV5xOGpfg2LkJhir4gdx43TiqqmX_Ppadl_om_VXgAdQVPCRr3irILB_o6WDK7TcEUdMucqHkU",
+    "created_at": "2026-05-06T13:26:30.369971+00:00",
+    "updated_at": "2026-05-06T13:26:30.369988+00:00"
+  }
+]

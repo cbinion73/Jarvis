@@ -1,0 +1,42 @@
+{
+  "cameras": {
+    "workshop-overhead": {
+      "enabled": true,
+      "indicator": "led",
+      "zone": "workshop"
+    },
+    "garage-camera": {
+      "enabled": true,
+      "indicator": "led",
+      "zone": "garage"
+    },
+    "porch-camera": {
+      "enabled": true,
+      "indicator": "led",
+      "zone": "front porch"
+    }
+  },
+  "microphones": {
+    "kitchen-alexa-dot": {
+      "muted": false,
+      "indicator": "led",
+      "zone": "kitchen"
+    },
+    "office-mic": {
+      "muted": false,
+      "indicator": "led",
+      "zone": "office"
+    },
+    "workshop-headset": {
+      "muted": false,
+      "indicator": "led",
+      "zone": "workshop"
+    }
+  },
+  "physicalMuteRequired": true,
+  "sensitiveZones": [
+    "bedroom",
+    "bathroom"
+  ],
+  "lastUpdated": "2026-05-06T13:18:07.509020+00:00"
+}

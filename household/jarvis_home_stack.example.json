@@ -1,0 +1,96 @@
+{
+  "voiceEndpoints": [
+    {
+      "id": "alexa-dot-fleet",
+      "type": "Amazon Alexa Dot",
+      "role": "whole-home ambient voice endpoint",
+      "integrationPriority": "high",
+      "notes": "Best near-term room voice reach while JARVIS remains the orchestration layer."
+    }
+  ],
+  "displayEndpoints": [
+    {
+      "id": "apple-tv-fleet",
+      "type": "Apple TV",
+      "role": "shared display and family-mode output surface",
+      "integrationPriority": "high",
+      "notes": "Strong target for family dashboard, Chronicle, and evening review surfaces."
+    }
+  ],
+  "environment": [
+    {
+      "id": "nest-thermostat",
+      "type": "Nest thermostat",
+      "role": "climate control and comfort orchestration",
+      "integrationPriority": "high",
+      "notes": "Primary HVAC integration target."
+    },
+    {
+      "id": "kasa-lights-outlets",
+      "type": "Kasa lights and outlet controls",
+      "role": "lighting scenes, room controls, and plug automation",
+      "integrationPriority": "high",
+      "notes": "Strong target for Dawn Protocol, Dinner Mode, and practical room-level automations."
+    },
+    {
+      "id": "kasa-cameras",
+      "type": "Kasa cameras",
+      "role": "porch, garage, and room-adjacent video feeds for perception and security context",
+      "integrationPriority": "high",
+      "notes": "Strong early perception target for package detection, garage context, and privacy-governed camera events."
+    },
+    {
+      "id": "eero-wifi",
+      "type": "Eero Wi-Fi",
+      "role": "network foundation and possible device-presence signal",
+      "integrationPriority": "medium",
+      "notes": "Useful for network-aware presence and segmented rollout planning."
+    }
+  ],
+  "accessAndArrival": [
+    {
+      "id": "myq-garage",
+      "type": "MyQ garage door openers",
+      "role": "garage state, departure choreography, and arrival context",
+      "integrationPriority": "high",
+      "notes": "One of the most valuable early real-world integrations."
+    }
+  ],
+  "safetySystems": [
+    {
+      "id": "xsense-xp0a-mr31",
+      "type": "X-Sense smoke and CO system",
+      "role": "smoke, carbon monoxide, and voice-location alerts",
+      "integrationPriority": "high",
+      "notes": "Major E12 asset for moving from simulated hazard flows to real alerts."
+    }
+  ],
+  "identityAndPresence": [
+    {
+      "id": "family-iphones",
+      "type": "iPhone",
+      "role": "identity, presence, approval second factor, and personal notifications",
+      "integrationPriority": "highest",
+      "notes": "Best near-term source for arrival detection and explicit approvals."
+    },
+    {
+      "id": "family-apple-watches",
+      "type": "Apple Watch",
+      "role": "subtle alerts, approvals, and personal nudges",
+      "integrationPriority": "medium",
+      "notes": "Useful for quiet notifications and second-factor confirmations."
+    }
+  ],
+  "priorityOrder": [
+    "family-iphones",
+    "myq-garage",
+    "nest-thermostat",
+    "kasa-lights-outlets",
+    "kasa-cameras",
+    "xsense-xp0a-mr31",
+    "apple-tv-fleet",
+    "alexa-dot-fleet",
+    "eero-wifi",
+    "family-apple-watches"
+  ]
+}

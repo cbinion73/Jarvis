@@ -1,0 +1,42 @@
+{
+  "confidentialTerms": [
+    "Thermo Fisher",
+    "Lab of the Future",
+    "Chronicle roadmap",
+    "Garden of Hope"
+  ],
+  "meetingBriefStyle": {
+    "sections": [
+      "Meeting",
+      "Purpose",
+      "What matters",
+      "Likely objections",
+      "Decisions needed",
+      "One clean question",
+      "Next moves"
+    ]
+  },
+  "evidenceTiers": {
+    "A": "Primary source, direct documentation, or first-party record.",
+    "B": "Credible secondary reporting or internally summarized source.",
+    "C": "Speculation, weak signal, or unverified claim."
+  },
+  "ironCladEditor": {
+    "principles": [
+      "Cut vague corporate phrasing.",
+      "Preserve the strongest human line if it carries real truth.",
+      "Flag claims that outrun evidence.",
+      "Prefer crisp executive prose over abstract alignment language."
+    ]
+  },
+  "ventureBriefStyle": {
+    "sections": [
+      "Pattern",
+      "What changed",
+      "Evidence tiers",
+      "Why it matters",
+      "Vendor fog check",
+      "Next moves"
+    ]
+  }
+}
