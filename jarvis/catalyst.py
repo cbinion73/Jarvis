@@ -4,6 +4,7 @@ import json
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from .config import AppConfig
 from .openai_tasks import JarvisOpenAIClient
@@ -27,6 +28,8 @@ class CatalystStore:
         self.project_briefs_path = self.root / "project_briefs.json"
         self.implementation_plans_path = self.root / "implementation_plans.json"
         self.proactive_path = self.root / "proactive_surfacing_runs.json"
+        self.pipeline_state_path = self.root / "pipeline_state.json"
+        self.pipeline_review_path = self.root / "pipeline_reviews.json"
 
     def _load_records(self, path: Path) -> list[dict]:
         if not path.exists():
@@ -50,6 +53,54 @@ class CatalystStore:
 
     def list_signals(self, limit: int = 20) -> list[dict]:
         return self.list_records(self.signals_path, limit=limit)
+
+    def _load_json(self, path: Path, *, default: Any) -> Any:
+        if not path.exists():
+            return default
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return default
+        return payload
+
+    def _save_json(self, path: Path, payload: Any) -> None:
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    def pipeline_state(self) -> dict[str, Any]:
+        payload = self._load_json(self.pipeline_state_path, default={})
+        return payload if isinstance(payload, dict) else {}
+
+    def save_pipeline_state(self, payload: dict[str, Any]) -> dict[str, Any]:
+        self._save_json(self.pipeline_state_path, payload)
+        return payload
+
+    def update_pipeline_state(self, patch: dict[str, Any]) -> dict[str, Any]:
+        current = self.pipeline_state()
+
+        def _merge(base: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
+            merged = dict(base)
+            for key, value in incoming.items():
+                if isinstance(value, dict) and isinstance(base.get(key), dict):
+                    merged[key] = _merge(dict(base.get(key) or {}), value)
+                else:
+                    merged[key] = value
+            return merged
+
+        updated = _merge(current, patch)
+        self.save_pipeline_state(updated)
+        return updated
+
+    def recent_pipeline_reviews(self, limit: int = 12) -> list[dict[str, Any]]:
+        payload = self._load_json(self.pipeline_review_path, default=[])
+        records = payload if isinstance(payload, list) else []
+        return list(reversed(records[-limit:]))
+
+    def append_pipeline_review(self, record: dict[str, Any]) -> dict[str, Any]:
+        payload = self._load_json(self.pipeline_review_path, default=[])
+        records = payload if isinstance(payload, list) else []
+        records.append(record)
+        self._save_json(self.pipeline_review_path, records)
+        return record
 
 
 class CatalystSupport:
@@ -92,6 +143,64 @@ class CatalystSupport:
 
     def connector_status(self) -> list[dict]:
         return list(self.profile.get("connectors", []))
+
+    def default_pipeline_state(self) -> dict[str, Any]:
+        return {
+            "updated_at": _now_iso(),
+            "crm": {
+                "active_opportunity_target": 3,
+                "weekly_followup_target": 5,
+                "average_deal_value": None,
+            },
+            "opportunities": [],
+            "thresholds": {
+                "stalled_after_days": 7,
+                "hot_followup_within_days": 2,
+                "minimum_active_opportunities": 3,
+            },
+            "notes": [
+                "Pipeline state is currently inferred from Catalyst signals, project briefs, and implementation plans until a live CRM connector is wired.",
+            ],
+        }
+
+    def pipeline_state(self) -> dict[str, Any]:
+        saved = self.store.pipeline_state()
+        defaults = self.default_pipeline_state()
+        if not saved:
+            self.store.save_pipeline_state(defaults)
+            return defaults
+        merged = dict(defaults)
+        for key, value in saved.items():
+            if isinstance(value, dict) and isinstance(merged.get(key), dict):
+                merged[key] = {**dict(merged.get(key) or {}), **value}
+            else:
+                merged[key] = value
+        if merged != saved:
+            self.store.save_pipeline_state(merged)
+        return merged
+
+    def update_pipeline_state(self, patch: dict[str, Any]) -> dict[str, Any]:
+        current = self.pipeline_state()
+        current["updated_at"] = _now_iso()
+        merged = self.store.update_pipeline_state({**patch, "updated_at": current["updated_at"]})
+        return self.pipeline_state() if merged else current
+
+    def recent_pipeline_reviews(self, limit: int = 12) -> list[dict[str, Any]]:
+        return self.store.recent_pipeline_reviews(limit=limit)
+
+    def complete_pipeline_review(self, actor: str, payload: dict[str, Any]) -> dict[str, Any]:
+        review = {
+            "review_id": str(uuid.uuid4()),
+            "actor": actor,
+            "review_type": str(payload.get("review_type", "weekly")).strip() or "weekly",
+            "completed_at": _now_iso(),
+            "summary": str(payload.get("summary", "")).strip(),
+            "score": payload.get("score"),
+            "band": str(payload.get("band", "")).strip(),
+            "note": str(payload.get("note", "")).strip(),
+        }
+        self.store.append_pipeline_review(review)
+        return review
 
     def capture_signal(
         self,

@@ -1,9 +1,9 @@
 {
   "users": {
     "chris": {
-      "last_presented_local_date": "2026-05-10",
-      "last_presented_at": "2026-05-10T06:16:23.471119+00:00",
-      "last_packet_id": "89c5a9bc-e54f-4b3d-89a4-3d09525a1145"
+      "last_presented_local_date": "2026-05-11",
+      "last_presented_at": "2026-05-11T12:07:57.297544+00:00",
+      "last_packet_id": "95776ff0-51f0-4368-867e-846c17b74460"
     }
   },
   "history": [
@@ -132,6 +132,196 @@
           "id": "formation",
           "title": "Formation",
           "summary": "Stewardship under pressure \u2014 move with restraint, choose the one necessary action, and let the rest wait.",
+          "details": [
+            "stewardship under pressure \u00b7 2 mention(s)"
+          ],
+          "truth_state": "interpreted"
+        }
+      ]
+    },
+    {
+      "packet_id": "95776ff0-51f0-4368-867e-846c17b74460",
+      "user_id": "chris",
+      "actor": "Chris",
+      "device_id": "jarvis-device-1778501232485-7db7325ddc309",
+      "generated_at": "2026-05-11T12:07:57.296719+00:00",
+      "local_time": "2026-05-11T08:07:27.219449-04:00",
+      "title": "First Light",
+      "opening": "Good morning, Chris. The day is steady, and the clearest win is to front-load one calm decision before the household and calendar start adding noise.",
+      "spoken_summary": "Good morning, Chris. The day is steady, and the clearest win is to front-load one calm decision before the household and calendar start adding noise. Schedule: Chris: Stag Setup \u00b7 2026-05-15T15:00:00 Watch: Rain may affect troop arrival later; also keep an eye on the Friday agenda question and the two aged workshop approvals so they do not keep drifting.",
+      "what_changed": [
+        "World model picked up new pressure: Need a quick decision on Friday agenda; Personal Catalyst for Jarvis",
+        "Growth review wants attention in: Financial Independence; Content and Marketing Engine"
+      ],
+      "first_20_minutes": [
+        "clear one workshop vendor decision",
+        "scan the 6 unread emails for anything time-sensitive",
+        "do a 5-minute chapter 4 tighten pass",
+        "check unread emails and flag the two most time-sensitive"
+      ],
+      "formation_cue": "Keep the morning in a low-friction lane: approvals first, then one brief writing cleanup, then a single growth follow-up if there is still room.",
+      "watch_line": "Rain may affect troop arrival later; also keep an eye on the Friday agenda question and the two aged workshop approvals so they do not keep drifting.",
+      "unread_emails": 6,
+      "calendar_events": [
+        {
+          "id": "e8e6d49c-95bd-4c22-816e-02e2e734a149@cozi.com",
+          "summary": "Chris: Stag Setup",
+          "start": "2026-05-15T15:00:00",
+          "end": "2026-05-15T16:00:00",
+          "location": "",
+          "description": "",
+          "all_day": false,
+          "source": "cozi",
+          "source_label": "Cozi Family Calendar"
+        },
+        {
+          "id": "094ac29f-ab6a-469c-96c1-1f1ba886b7b9@cozi.com",
+          "summary": "Chris: Stag",
+          "start": "2026-05-16T15:00:00",
+          "end": "2026-05-16T16:00:00",
+          "location": "",
+          "description": "",
+          "all_day": false,
+          "source": "cozi",
+          "source_label": "Cozi Family Calendar"
+        },
+        {
+          "id": "a2d7ab19-5383-40ca-83d4-8635b6fc5925@cozi.com",
+          "summary": "Rebekah/Chris: Anniversary",
+          "start": "2026-05-20",
+          "end": "2026-05-21",
+          "location": "",
+          "description": "",
+          "all_day": false,
+          "source": "cozi",
+          "source_label": "Cozi Family Calendar"
+        },
+        {
+          "id": "b3e17263-2ab1-477a-a940-2a95c3e443d8@cozi.com",
+          "summary": "Chris: Hunter Education",
+          "start": "2026-05-30T15:00:00",
+          "end": "2026-05-30T16:00:00",
+          "location": "",
+          "description": "",
+          "all_day": false,
+          "source": "cozi",
+          "source_label": "Cozi Family Calendar"
+        }
+      ],
+      "sections": [
+        {
+          "id": "day-shape",
+          "title": "Day Shape",
+          "summary": "Good morning, Chris. The day is steady, and the clearest win is to front-load one calm decision before the household and calendar start adding noise.",
+          "details": [
+            "World model picked up new pressure: Need a quick decision on Friday agenda; Personal Catalyst for Jarvis",
+            "Growth review wants attention in: Financial Independence; Content and Marketing Engine"
+          ],
+          "truth_state": "interpreted"
+        },
+        {
+          "id": "weather",
+          "title": "Weather",
+          "summary": "Depart only during a clear break for troop meeting arrival and school departure; if rain persists, use an indoor backup or brief covered wait rather than canceling.",
+          "details": [
+            "Source: staged advisory, not a live weather connector."
+          ],
+          "truth_state": "staged"
+        },
+        {
+          "id": "schedule",
+          "title": "Schedule",
+          "summary": "Chris: Stag Setup \u00b7 2026-05-15T15:00:00",
+          "details": [
+            "Chris: Stag \u00b7 2026-05-16T15:00:00",
+            "Rebekah/Chris: Anniversary \u00b7 2026-05-20",
+            "Chris: Hunter Education \u00b7 2026-05-30T15:00:00"
+          ],
+          "truth_state": "live"
+        },
+        {
+          "id": "family",
+          "title": "Family",
+          "summary": "Meeting prep with discretion",
+          "details": [
+            "Chapter 4 voice tightening",
+            "Workshop bracket overbuild",
+            "Backpacks by the door",
+            "Charged school devices",
+            "Permission slips signed"
+          ],
+          "truth_state": "mixed"
+        },
+        {
+          "id": "mission",
+          "title": "Mission",
+          "summary": "What matters now: the only live decisions are the pending approvals\u2014draft the troop-parent message, the vendor package, and the Rebekah approval flow\u2014while the calendar pressure is still a few days out.  \nWhat can wait: front-door unlock is high-risk and needs second factor, and the May 15\u201317 events only need light prep until the week of.  \nClean next move: clear the medium-risk approvals first, then handle the high-risk door only with explicit second-factor confirmation.",
+          "details": [
+            "The biggest cross-domain effect today is timing: \u201cdawn-protocol\u201d is active, but the calendar is mostly later-day family logistics, so the immediate win is using this quiet morning window to front-load Chris\u2019s brief, Chapter 4 tightening, and workshop-bracket cleanup before the household schedule gets noisy. That also reduces collision risk with Rebekah\u2019s coordination load and keeps Caleb/Anna support from getting squeezed by your own prep work later.",
+            "Active loop: First Light - Interpret the day and stage the morning.",
+            "Morning Leverage Check: Choose one leverage-bearing move before the day fragments."
+          ],
+          "truth_state": "interpreted"
+        },
+        {
+          "id": "assistant-core",
+          "title": "Assistant Core",
+          "summary": "11 item(s) are waiting on you. 7 need a revisit.",
+          "details": [
+            "Rocket should bring back for approval on Garden bench bracket \u00b7 carbon-fiber service bureau.",
+            "Rocket should bring back for approval on Garden bench bracket \u00b7 carbon-fiber service bureau.",
+            "Pepper should bring back for approval on Troop parents \u00b7 Indoor backup update."
+          ],
+          "truth_state": "live"
+        },
+        {
+          "id": "growth-review",
+          "title": "Growth Review",
+          "summary": "Morning Leverage Check \u00b7 active",
+          "details": [
+            "Choose one leverage-bearing move before the day fragments.",
+            "run a **30-day ROI sprint** with 3 small bets, each designed to answer",
+            "Pick **3 assets** and run a tiny ROI test on each:",
+            "Follow up on Morning capture."
+          ],
+          "truth_state": "interpreted"
+        },
+        {
+          "id": "active-loop",
+          "title": "Active Loop",
+          "summary": "First Light \u00b7 steady",
+          "details": [
+            "Interpret the day and stage the morning.",
+            "Completion: Morning loop is settled when the first 20 minutes are clear, 11 waiting item(s) feel intentional, and inbox pressure (1) is understood.",
+            "New signal: Need a quick decision on Friday agenda",
+            "New signal: Personal Catalyst for Jarvis"
+          ],
+          "truth_state": "interpreted"
+        },
+        {
+          "id": "assistant-inbox",
+          "title": "Assistant Inbox",
+          "summary": "1 unread assistant item(s) are staged.",
+          "details": [
+            "Morning Operating Review \u00b7 Morning operating review: pick one leverage move early - run a **30-day ROI sprint** with 3 small bets, each designed to answer Morning loop is settled when the first 20 minutes are clear, 11 waiting item(s) feel intentional, and inbox pressure (0) is understood."
+          ],
+          "truth_state": "live"
+        },
+        {
+          "id": "completion-criteria",
+          "title": "Completion Criteria",
+          "summary": "Morning loop is settled when the first 20 minutes are clear, 11 waiting item(s) feel intentional, and inbox pressure (1) is understood.",
+          "details": [
+            "First Light is visible and the first 20 minutes are staged.",
+            "The morning blocker around Garden bench bracket \u00b7 carbon-fiber service bureau is either acted on or intentionally deferred.",
+            "Assistant inbox pressure is understood before the day fragments."
+          ],
+          "truth_state": "interpreted"
+        },
+        {
+          "id": "formation",
+          "title": "Formation",
+          "summary": "Keep the morning in a low-friction lane: approvals first, then one brief writing cleanup, then a single growth follow-up if there is still room.",
           "details": [
             "stewardship under pressure \u00b7 2 mention(s)"
           ],

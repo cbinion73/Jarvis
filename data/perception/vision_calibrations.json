@@ -1,0 +1,20 @@
+[
+  {
+    "calibration_id": "5ed46d7d-9d2d-4118-839f-92e8765f1169",
+    "actor": "Chris",
+    "actor_key": "chris",
+    "camera_label": "USB Camera (0c45:632e)",
+    "camera_key": "usb camera (0c45:632e)",
+    "pixels_per_unit": 42.5,
+    "reference_pixels": 425.0,
+    "reference_length": 10.0,
+    "unit": "cm",
+    "selection": {
+      "x": 10,
+      "y": 12,
+      "width": 100,
+      "height": 20
+    },
+    "updated_at": "2026-05-11T07:30:00+00:00"
+  }
+]

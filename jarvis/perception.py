@@ -4,6 +4,7 @@ import json
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from .config import AppConfig
 
@@ -24,6 +25,8 @@ class PerceptionStore:
         self.anomalies_path = self.root / "environmental_anomalies.json"
         self.package_rules_path = self.root / "package_rules.json"
         self.privacy_state_path = self.root / "privacy_state.json"
+        self.vision_calibrations_path = self.root / "vision_calibrations.json"
+        self.vision_observations_path = self.root / "vision_observations.json"
 
     def _load_json(self, path: Path, default: object) -> object:
         if not path.exists():
@@ -59,6 +62,14 @@ class PerceptionStore:
 
     def save_package_rules(self, payload: list[dict]) -> list[dict]:
         self._save_json(self.package_rules_path, payload)
+        return payload
+
+    def load_vision_calibrations(self) -> list[dict]:
+        payload = self._load_json(self.vision_calibrations_path, [])
+        return payload if isinstance(payload, list) else []
+
+    def save_vision_calibrations(self, payload: list[dict]) -> list[dict]:
+        self._save_json(self.vision_calibrations_path, payload)
         return payload
 
 
@@ -125,6 +136,20 @@ class PerceptionSupport:
                 if value and lowered in value:
                     return item
         return None
+
+    def camera_profile(self, camera: str) -> dict[str, Any]:
+        profile = self._find_profile_item("cameras", camera)
+        if not profile:
+            return {
+                "camera_id": camera,
+                "label": camera,
+                "zone": "unknown",
+            }
+        return {
+            "camera_id": profile.get("id", camera),
+            "label": profile.get("name", camera) or profile.get("id", camera) or camera,
+            "zone": profile.get("zone", "unknown"),
+        }
 
     def far_field_microphone_ingress(
         self,
@@ -203,6 +228,93 @@ class PerceptionSupport:
         if detected_object:
             self._object_recognition_from_camera(camera_id, zone, detected_object, detail, confidence)
         return saved
+
+    def save_vision_calibration(self, actor: str, camera_label: str, calibration: dict[str, Any]) -> dict[str, Any]:
+        records = self.store.load_vision_calibrations()
+        actor_key = str(actor).strip().lower()
+        camera_key = str(camera_label).strip().lower()
+        payload = {
+            "calibration_id": str(uuid.uuid4()),
+            "actor": actor,
+            "actor_key": actor_key,
+            "camera_label": camera_label,
+            "camera_key": camera_key,
+            "pixels_per_unit": float(calibration.get("pixelsPerUnit", 0) or 0),
+            "reference_pixels": float(calibration.get("referencePixels", 0) or 0),
+            "reference_length": float(calibration.get("referenceLength", 0) or 0),
+            "unit": str(calibration.get("unit", "cm")).strip() or "cm",
+            "selection": dict(calibration.get("selection") or {}),
+            "updated_at": str(calibration.get("updatedAt", "")).strip() or _now_iso(),
+        }
+        next_records: list[dict[str, Any]] = []
+        replaced = False
+        for item in records:
+            if (
+                str(item.get("actor_key", "")).strip().lower() == actor_key
+                and str(item.get("camera_key", "")).strip().lower() == camera_key
+            ):
+                next_records.append({**item, **payload, "calibration_id": str(item.get("calibration_id", "")) or payload["calibration_id"]})
+                replaced = True
+            else:
+                next_records.append(item)
+        if not replaced:
+            next_records.append(payload)
+        self.store.save_vision_calibrations(next_records[-120:])
+        return payload
+
+    def latest_vision_calibration(self, actor: str = "", camera_label: str = "") -> dict[str, Any] | None:
+        records = self.store.load_vision_calibrations()
+        actor_key = str(actor).strip().lower()
+        camera_key = str(camera_label).strip().lower()
+        filtered = []
+        for item in records:
+            if actor_key and str(item.get("actor_key", "")).strip().lower() != actor_key:
+                continue
+            if camera_key and str(item.get("camera_key", "")).strip().lower() != camera_key:
+                continue
+            filtered.append(item)
+        if not filtered:
+            return None
+        filtered.sort(key=lambda item: str(item.get("updated_at", "")), reverse=True)
+        return dict(filtered[0])
+
+    def record_visual_observation(
+        self,
+        actor: str,
+        camera_label: str,
+        mode: str,
+        summary: str,
+        *,
+        detail: str = "",
+        confidence: str = "medium",
+        capture_id: str = "",
+        image_path: str = "",
+        observation_type: str = "analysis",
+        zone: str = "",
+        observed_object: str = "",
+        measurement: dict[str, Any] | None = None,
+        evidence: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        camera = self.camera_profile(camera_label)
+        record = {
+            "observation_id": str(uuid.uuid4()),
+            "actor": actor,
+            "camera_label": camera_label,
+            "camera_id": str(camera.get("camera_id", "")).strip(),
+            "zone": zone or str(camera.get("zone", "unknown")).strip() or "unknown",
+            "mode": str(mode or "describe").strip().lower() or "describe",
+            "observation_type": str(observation_type or "analysis").strip().lower() or "analysis",
+            "summary": str(summary).strip(),
+            "detail": str(detail).strip(),
+            "confidence": str(confidence or "medium").strip().lower() or "medium",
+            "capture_id": str(capture_id).strip(),
+            "image_path": str(image_path).strip(),
+            "observed_object": str(observed_object).strip(),
+            "measurement": dict(measurement or {}),
+            "evidence": dict(evidence or {}),
+            "timestamp": _now_iso(),
+        }
+        return self.store.append_record(self.store.vision_observations_path, record)
 
     def update_package_rule(
         self,
@@ -332,6 +444,8 @@ class PerceptionSupport:
         object_events = self.store.list_records(self.store.object_events_path, limit=20)
         anomalies = self.store.list_records(self.store.anomalies_path, limit=20)
         mics = self.store.list_records(self.store.microphone_events_path, limit=20)
+        visual_observations = self.store.list_records(self.store.vision_observations_path, limit=20)
+        vision_calibrations = self.store.load_vision_calibrations()
         room_presence: dict[str, bool] = {}
         for event in reversed(presence_events):
             room_presence[event["room"]] = bool(event["occupied"])
@@ -349,6 +463,8 @@ class PerceptionSupport:
             "package_rules": package_rules,
             "object_events": object_events[:8],
             "workshop_objects": workshop_objects[:6],
+            "visual_observations": visual_observations[:8],
+            "vision_calibrations": vision_calibrations[-8:],
             "anomalies": anomalies[:8],
             "room_presence": room_presence,
             "actor_presence": actor_presence,
@@ -357,6 +473,7 @@ class PerceptionSupport:
                 f"Occupied rooms: {', '.join([room for room, occupied in room_presence.items() if occupied]) or 'none'}",
                 f"Recently heard via microphones: {mics[0]['room'] if mics else 'none'}",
                 f"Recent camera zones: {', '.join(dict.fromkeys(item['zone'] for item in camera_events if item.get('zone'))) or 'none'}",
+                f"Recent visual observations: {len(visual_observations[:8])}",
                 f"Active anomalies: {len([item for item in anomalies if item.get('severity') in {'elevated', 'critical'}])}",
             ],
         }

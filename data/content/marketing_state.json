@@ -1,0 +1,15 @@
+{
+  "updated_at": "2026-05-11T05:32:06.677708+00:00",
+  "campaigns": [],
+  "offer_links": [],
+  "audience_signals": [],
+  "thresholds": {
+    "minimum_live_assets": 1,
+    "minimum_exported_assets": 2,
+    "stale_campaign_after_days": 10,
+    "minimum_leverage_score": 55
+  },
+  "notes": [
+    "Marketing state is currently a local operating model until live audience-growth and performance connectors are wired."
+  ]
+}
