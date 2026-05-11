@@ -59,6 +59,177 @@ def _select_signal_labels(ids: list[str], labels: dict[str, str], node_types: di
     return results
 
 
+def _merge_unique_labels(existing: list[str], incoming: list[str], *, limit: int = 8) -> list[str]:
+    merged: list[str] = []
+    seen: set[str] = set()
+    for raw in list(existing) + list(incoming):
+        label = str(raw or "").strip()
+        normalized = _normalized_label(label)
+        if not label or not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        merged.append(label)
+        if len(merged) >= limit:
+            break
+    return merged
+
+
+def _world_count_event_allowed(scope: str, key: str, delta_value: int) -> bool:
+    magnitude = abs(int(delta_value or 0))
+    normalized_scope = str(scope or "").strip().lower()
+    normalized_key = str(key or "").strip().lower()
+    if magnitude <= 0:
+        return False
+    if normalized_scope == "summary" and normalized_key in {"devices", "notifications", "edges"} and magnitude <= 1:
+        return False
+    if normalized_scope == "entity_counts" and normalized_key in {"device", "notification"} and magnitude <= 1:
+        return False
+    if normalized_scope == "edge_counts" and normalized_key in {"owns", "located-in", "needs-attention"} and magnitude <= 1:
+        return False
+    return True
+
+
+def _world_event_significance(scope: str, key: str, delta_value: int) -> str:
+    magnitude = abs(int(delta_value or 0))
+    normalized_scope = str(scope or "").strip().lower()
+    normalized_key = str(key or "").strip().lower()
+    if magnitude >= 4:
+        return "high"
+    if normalized_scope == "entity_counts" and normalized_key in {"risk", "lead", "asset", "approval"} and magnitude >= 1:
+        return "high"
+    if normalized_scope == "edge_counts" and normalized_key in {"at-risk-from", "must-decide", "belongs-to-lane"} and magnitude >= 1:
+        return "high"
+    if magnitude >= 2:
+        return "medium"
+    return "low"
+
+
+def _world_event_title(scope: str, key: str, delta_value: int) -> str:
+    direction = "up" if int(delta_value or 0) > 0 else "down"
+    words = str(key or "").strip().replace("-", " ").replace("_", " ")
+    if scope == "summary":
+        return f"Summary {words} shifted {direction}"
+    if scope == "entity_counts":
+        return f"World graph {words} count shifted {direction}"
+    if scope == "edge_counts":
+        return f"World graph {words} relationship count shifted {direction}"
+    return f"World graph {words} shifted {direction}"
+
+
+def _world_event_detail(scope: str, key: str, delta_value: int) -> str:
+    direction = "increased" if int(delta_value or 0) > 0 else "decreased"
+    words = str(key or "").strip().replace("-", " ").replace("_", " ")
+    return f"{scope.replace('_', ' ')} {words} {direction} by {abs(int(delta_value or 0))}."
+
+
+def _world_event_signature(event: dict[str, Any]) -> str:
+    event_type = str(event.get("event_type", "")).strip().lower()
+    actor = str(event.get("actor", "")).strip().lower()
+    scope = str(event.get("scope", "")).strip().lower()
+    key = str(event.get("key", "")).strip().lower()
+    direction = str(event.get("direction", "")).strip().lower()
+    labels = [
+        _normalized_label(label)
+        for label in list(event.get("labels", []))
+        if _normalized_label(label)
+    ]
+    if labels:
+        return "|".join([actor, event_type, scope, key, direction, ",".join(sorted(labels))])
+    return "|".join([actor, event_type, scope, key, direction, str(abs(int(event.get("delta_value", 0) or 0)))])
+
+
+def _upsert_world_event(events: list[dict[str, Any]], candidate: dict[str, Any], *, dedupe_window_minutes: int = 180) -> None:
+    now = _now_utc()
+    signature = _world_event_signature(candidate)
+    candidate["signature"] = signature
+    candidate.setdefault("occurrence_count", 1)
+    candidate.setdefault("first_seen_at", candidate.get("captured_at", now.isoformat()))
+    candidate.setdefault("last_seen_at", candidate.get("captured_at", now.isoformat()))
+    window_start = now - timedelta(minutes=max(int(dedupe_window_minutes or 0), 1))
+    for item in reversed(events):
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("signature", "")).strip() != signature:
+            continue
+        last_seen = _parse_iso_datetime(str(item.get("last_seen_at", "")) or str(item.get("captured_at", "")))
+        if last_seen is None or last_seen < window_start:
+            break
+        item["last_seen_at"] = candidate["last_seen_at"]
+        item["captured_at"] = candidate["captured_at"]
+        item["occurrence_count"] = int(item.get("occurrence_count", 1) or 1) + 1
+        item["significance"] = candidate.get("significance", item.get("significance", "medium"))
+        item["delta_value"] = candidate.get("delta_value", item.get("delta_value", 0))
+        if "count_delta" in candidate:
+            item["count_delta"] = dict(candidate.get("count_delta") or {})
+        if candidate.get("labels"):
+            item["labels"] = _merge_unique_labels(list(item.get("labels", [])), list(candidate.get("labels", [])))
+        if candidate.get("added_labels"):
+            item["added_labels"] = _merge_unique_labels(list(item.get("added_labels", [])), list(candidate.get("added_labels", [])))
+        if candidate.get("removed_labels"):
+            item["removed_labels"] = _merge_unique_labels(list(item.get("removed_labels", [])), list(candidate.get("removed_labels", [])))
+        if candidate.get("summary"):
+            item["summary"] = dict(candidate.get("summary") or {})
+        return
+    events.append(candidate)
+
+
+def _normalize_world_event(item: dict[str, Any]) -> dict[str, Any]:
+    event = dict(item)
+    added_labels = [str(label).strip() for label in list(event.get("added_labels", [])) if str(label).strip()]
+    removed_labels = [str(label).strip() for label in list(event.get("removed_labels", [])) if str(label).strip()]
+    labels = [str(label).strip() for label in list(event.get("labels", [])) if str(label).strip()]
+    if not labels:
+        labels = _merge_unique_labels(added_labels, removed_labels)
+    event_type = str(event.get("event_type", "")).strip()
+    if not event_type:
+        if added_labels:
+            event_type = "world.signal.added"
+        elif removed_labels:
+            event_type = "world.signal.removed"
+        else:
+            event_type = "world.summary.changed"
+    category = str(event.get("category", "")).strip()
+    if not category:
+        category = "signal" if added_labels or removed_labels else "count-change"
+    scope = str(event.get("scope", "")).strip()
+    if not scope:
+        scope = "labels" if added_labels or removed_labels else "summary"
+    key = str(event.get("key", "")).strip()
+    if not key:
+        key = "added" if added_labels else ("removed" if removed_labels else "summary")
+    direction = str(event.get("direction", "")).strip()
+    if not direction:
+        direction = "up" if added_labels else ("down" if removed_labels else "changed")
+    significance = str(event.get("significance", "")).strip()
+    if not significance:
+        if added_labels or removed_labels:
+            significance = "medium"
+        else:
+            count_delta = dict(event.get("count_delta", {})) if isinstance(event.get("count_delta", {}), dict) else {}
+            delta_value = next((int(value) for value in count_delta.values() if isinstance(value, (int, float))), 0)
+            significance = _world_event_significance(scope, key, delta_value)
+    event["labels"] = labels
+    event["added_labels"] = added_labels
+    event["removed_labels"] = removed_labels
+    event["event_type"] = event_type
+    event["category"] = category
+    event["scope"] = scope
+    event["key"] = key
+    event["direction"] = direction
+    event["significance"] = significance
+    event["occurrence_count"] = int(event.get("occurrence_count", 1) or 1)
+    event["first_seen_at"] = str(event.get("first_seen_at", "") or event.get("captured_at", "")).strip()
+    event["last_seen_at"] = str(event.get("last_seen_at", "") or event.get("captured_at", "")).strip()
+    if not str(event.get("title", "")).strip():
+        event["title"] = "New world signals detected" if added_labels else (
+            "World signals fell away" if removed_labels else _world_event_title(scope, key, 0)
+        )
+    if not str(event.get("detail", "")).strip():
+        event["detail"] = "World-state delta captured from the latest graph snapshot."
+    event["signature"] = str(event.get("signature", "")).strip() or _world_event_signature(event)
+    return event
+
+
 def _normalize_notification_status(value: str) -> str:
     normalized = str(value or "").strip().lower()
     aliases = {
@@ -85,6 +256,7 @@ class AssistantCoreStore:
             "sweeps": {},
             "surface_history": [],
             "notifications": [],
+            "outcomes": [],
             "world_graphs": {},
             "world_events": [],
             "surface_snapshots": {},
@@ -105,6 +277,7 @@ class AssistantCoreStore:
         payload.setdefault("sweeps", {})
         payload.setdefault("surface_history", [])
         payload.setdefault("notifications", [])
+        payload.setdefault("outcomes", [])
         payload.setdefault("world_graphs", {})
         payload.setdefault("world_events", [])
         payload.setdefault("surface_snapshots", {})
@@ -189,9 +362,29 @@ class AssistantCoreStore:
         added_ids = sorted(current_ids - previous_ids)
         removed_ids = sorted(previous_ids - current_ids)
         previous_summary = dict(previous.get("summary", {})) if isinstance(previous.get("summary", {}), dict) else {}
+        current_entity_counts = dict(summary.get("entity_counts", {})) if isinstance(summary.get("entity_counts", {}), dict) else {}
+        previous_entity_counts = dict(previous_summary.get("entity_counts", {})) if isinstance(previous_summary.get("entity_counts", {}), dict) else {}
+        current_edge_counts = dict(summary.get("edge_counts", {})) if isinstance(summary.get("edge_counts", {}), dict) else {}
+        previous_edge_counts = dict(previous_summary.get("edge_counts", {})) if isinstance(previous_summary.get("edge_counts", {}), dict) else {}
+        def _summary_int(value: Any) -> int | None:
+            if isinstance(value, bool):
+                return int(value)
+            if isinstance(value, (int, float)):
+                return int(value)
+            if value in ("", None):
+                return 0
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return None
+
         count_delta: dict[str, int] = {}
         for key in sorted(set(previous_summary) | set(summary)):
-            delta = int(summary.get(key, 0) or 0) - int(previous_summary.get(key, 0) or 0)
+            current_value = _summary_int(summary.get(key, 0))
+            previous_value = _summary_int(previous_summary.get(key, 0))
+            if current_value is None or previous_value is None:
+                continue
+            delta = current_value - previous_value
             if delta:
                 count_delta[key] = delta
         record = {
@@ -224,17 +417,98 @@ class AssistantCoreStore:
             }
         )
         if count_delta or record["delta"]["added_labels"] or record["delta"]["removed_labels"]:
-            world_events.append(
-                {
-                    "event_id": f"world-{_now_utc().timestamp()}-{actor_key}",
-                    "actor": actor.strip(),
-                    "captured_at": record["captured_at"],
-                    "count_delta": count_delta,
-                    "added_labels": list(record["delta"]["added_labels"]),
-                    "removed_labels": list(record["delta"]["removed_labels"]),
-                    "summary": summary,
-                }
-            )
+            base_event = {
+                "actor": actor.strip(),
+                "captured_at": record["captured_at"],
+                "summary": summary,
+            }
+            if record["delta"]["added_labels"]:
+                _upsert_world_event(
+                    world_events,
+                    {
+                        **base_event,
+                        "event_id": f"world-signal-add-{_now_utc().timestamp()}-{actor_key}",
+                        "event_type": "world.signal.added",
+                        "category": "signal",
+                        "scope": "labels",
+                        "key": "added",
+                        "direction": "up",
+                        "title": "New world signals detected",
+                        "detail": "New world-graph labels appeared in the latest snapshot.",
+                        "significance": "medium",
+                        "labels": list(record["delta"]["added_labels"]),
+                        "added_labels": list(record["delta"]["added_labels"]),
+                    },
+                )
+            if record["delta"]["removed_labels"]:
+                _upsert_world_event(
+                    world_events,
+                    {
+                        **base_event,
+                        "event_id": f"world-signal-remove-{_now_utc().timestamp()}-{actor_key}",
+                        "event_type": "world.signal.removed",
+                        "category": "signal",
+                        "scope": "labels",
+                        "key": "removed",
+                        "direction": "down",
+                        "title": "World signals fell away",
+                        "detail": "Previously visible world-graph labels disappeared from the latest snapshot.",
+                        "significance": "medium",
+                        "labels": list(record["delta"]["removed_labels"]),
+                        "removed_labels": list(record["delta"]["removed_labels"]),
+                    },
+                )
+            for scope, current_counts, previous_counts in (
+                ("entity_counts", current_entity_counts, previous_entity_counts),
+                ("edge_counts", current_edge_counts, previous_edge_counts),
+            ):
+                for key in sorted(set(current_counts) | set(previous_counts)):
+                    current_value = _summary_int(current_counts.get(key, 0))
+                    previous_value = _summary_int(previous_counts.get(key, 0))
+                    if current_value is None or previous_value is None:
+                        continue
+                    delta_value = current_value - previous_value
+                    if not _world_count_event_allowed(scope, key, delta_value):
+                        continue
+                    _upsert_world_event(
+                        world_events,
+                        {
+                            **base_event,
+                            "event_id": f"world-{scope}-{key}-{_now_utc().timestamp()}-{actor_key}",
+                            "event_type": f"world.{scope}.changed",
+                            "category": "count-change",
+                            "scope": scope,
+                            "key": str(key),
+                            "direction": "up" if delta_value > 0 else "down",
+                            "delta_value": delta_value,
+                            "count_delta": {str(key): delta_value},
+                            "title": _world_event_title(scope, str(key), delta_value),
+                            "detail": _world_event_detail(scope, str(key), delta_value),
+                            "significance": _world_event_significance(scope, str(key), delta_value),
+                        },
+                    )
+            for key, delta_value in count_delta.items():
+                if key in {"entity_counts", "edge_counts"}:
+                    continue
+                if not _world_count_event_allowed("summary", key, delta_value):
+                    continue
+                _upsert_world_event(
+                    world_events,
+                    {
+                        **base_event,
+                        "event_id": f"world-summary-{key}-{_now_utc().timestamp()}-{actor_key}",
+                        "event_type": "world.summary.changed",
+                        "category": "count-change",
+                        "scope": "summary",
+                        "key": str(key),
+                        "direction": "up" if delta_value > 0 else "down",
+                        "delta_value": delta_value,
+                        "count_delta": {str(key): delta_value},
+                        "title": _world_event_title("summary", str(key), delta_value),
+                        "detail": _world_event_detail("summary", str(key), delta_value),
+                        "significance": _world_event_significance("summary", str(key), delta_value),
+                    },
+                )
         graphs[actor_key] = record
         state["world_graphs"] = graphs
         state["world_events"] = world_events[-120:]
@@ -256,7 +530,7 @@ class AssistantCoreStore:
                 continue
             if actor_key and str(item.get("actor", "")).strip().lower() != actor_key:
                 continue
-            results.append(dict(item))
+            results.append(_normalize_world_event(item))
             if len(results) >= limit:
                 break
         return results
@@ -444,6 +718,111 @@ class AssistantCoreStore:
         state["surface_history"] = history[-120:]
         self.save(state)
         return record
+
+    def record_outcome(
+        self,
+        actor: str,
+        *,
+        source: str,
+        initiator: str,
+        status: str,
+        domain: str = "",
+        item_id: str = "",
+        notification_id: str = "",
+        action: str = "",
+        action_class: str = "",
+        surface_key: str = "",
+        detail: str = "",
+        device_id: str = "",
+        timing_quality: str = "",
+        succeeded: bool | None = None,
+        caused_friction: bool | None = None,
+        friction_reason: str = "",
+    ) -> dict[str, Any]:
+        state = self.load()
+        outcomes = list(state.get("outcomes", []))
+        now = _now_utc()
+        record = {
+            "outcome_id": f"outcome-{now.timestamp()}-{source.strip().lower() or 'event'}",
+            "actor": actor.strip(),
+            "source": source.strip() or "general",
+            "initiator": initiator.strip() or "system",
+            "status": status.strip() or "recorded",
+            "domain": domain.strip(),
+            "item_id": item_id.strip(),
+            "notification_id": notification_id.strip(),
+            "action": action.strip(),
+            "action_class": action_class.strip(),
+            "surface_key": surface_key.strip(),
+            "detail": detail.strip(),
+            "device_id": device_id.strip(),
+            "timing_quality": timing_quality.strip(),
+            "timestamp": now.isoformat(),
+        }
+        if succeeded is not None:
+            record["succeeded"] = bool(succeeded)
+        if caused_friction is not None:
+            record["caused_friction"] = bool(caused_friction)
+        if friction_reason.strip():
+            record["friction_reason"] = friction_reason.strip()
+        outcomes.append(record)
+        state["outcomes"] = outcomes[-500:]
+        self.save(state)
+        return record
+
+    def outcome_history(
+        self,
+        actor: str = "",
+        *,
+        limit: int = 25,
+        source: str = "",
+    ) -> list[dict[str, Any]]:
+        state = self.load()
+        actor_key = actor.strip().lower()
+        source_key = source.strip().lower()
+        results: list[dict[str, Any]] = []
+        for item in reversed(list(state.get("outcomes", []))):
+            if not isinstance(item, dict):
+                continue
+            if actor_key and str(item.get("actor", "")).strip().lower() != actor_key:
+                continue
+            if source_key and str(item.get("source", "")).strip().lower() != source_key:
+                continue
+            results.append(dict(item))
+            if len(results) >= limit:
+                break
+        return results
+
+    def outcome_summary(self, actor: str = "", *, limit: int = 200) -> dict[str, Any]:
+        outcomes = self.outcome_history(actor, limit=limit)
+        summary = {
+            "total": len(outcomes),
+            "by_status": {},
+            "by_source": {},
+            "by_initiator": {},
+            "by_timing_quality": {},
+            "autonomous_successful": 0,
+            "autonomous_failed": 0,
+            "autonomous_friction": 0,
+        }
+        for item in outcomes:
+            status = str(item.get("status", "recorded")).strip().lower() or "recorded"
+            source = str(item.get("source", "general")).strip().lower() or "general"
+            initiator = str(item.get("initiator", "system")).strip().lower() or "system"
+            timing_quality = str(item.get("timing_quality", "")).strip().lower()
+            summary["by_status"][status] = int(summary["by_status"].get(status, 0) or 0) + 1
+            summary["by_source"][source] = int(summary["by_source"].get(source, 0) or 0) + 1
+            summary["by_initiator"][initiator] = int(summary["by_initiator"].get(initiator, 0) or 0) + 1
+            if timing_quality:
+                summary["by_timing_quality"][timing_quality] = int(summary["by_timing_quality"].get(timing_quality, 0) or 0) + 1
+            if source == "assistant-action":
+                if item.get("succeeded") is True:
+                    summary["autonomous_successful"] += 1
+                if item.get("succeeded") is False:
+                    summary["autonomous_failed"] += 1
+                if item.get("caused_friction") is True:
+                    summary["autonomous_friction"] += 1
+        return summary
 
     def list_notifications(self, actor: str = "", *, unread_only: bool = False, limit: int = 20) -> list[dict[str, Any]]:
         self.expire_notifications(actor or "")

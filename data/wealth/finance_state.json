@@ -1,0 +1,27 @@
+{
+  "updated_at": "2026-05-11T04:54:44.188984+00:00",
+  "cash": {
+    "available": null,
+    "reserve_target": null,
+    "monthly_revenue": null,
+    "monthly_burn": null,
+    "obligations_due_30d": null
+  },
+  "goals": {
+    "financial_independence_target": null,
+    "current_financial_independence_value": null,
+    "passive_income_target_monthly": null,
+    "current_passive_income_monthly": null,
+    "compounding_asset_target": null,
+    "compounding_assets_live": null
+  },
+  "thresholds": {
+    "low_cash_runway_months": 3.0,
+    "unusual_spend_amount": 1000.0,
+    "goal_progress_min_ratio": 0.25
+  },
+  "spend_events": [],
+  "notes": [
+    "Finance state is currently a local planning model until live financial connectors are wired."
+  ]
+}

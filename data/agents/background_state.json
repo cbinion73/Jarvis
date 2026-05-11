@@ -1,6 +1,6 @@
 {
-  "last_tick_at": "2026-05-11T04:35:55.432734+00:00",
-  "quiet_hours_active": true,
+  "last_tick_at": "2026-05-11T13:21:44.151293+00:00",
+  "quiet_hours_active": false,
   "active_mode": "dawn-protocol",
   "agents": {
     "ambient-router": {
@@ -9,7 +9,7 @@
       "next_run_at": "2026-05-07T03:36:47.362397+00:00"
     },
     "family-logistics": {
-      "state": "idle",
+      "state": "awake",
       "last_run_at": "2026-05-07T03:35:47.362397+00:00",
       "next_run_at": "2026-05-07T03:45:47.362397+00:00"
     },
@@ -39,7 +39,7 @@
       "next_run_at": "2026-05-07T03:40:47.362397+00:00"
     },
     "memory-curator": {
-      "state": "idle",
+      "state": "awake",
       "last_run_at": "2026-05-07T03:35:47.362397+00:00",
       "next_run_at": "2026-05-07T03:50:47.362397+00:00"
     },
@@ -49,8 +49,8 @@
       "next_run_at": "2026-05-07T04:38:23.640323+00:00"
     }
   },
-  "awake_count": 1,
-  "idle_count": 6,
+  "awake_count": 3,
+  "idle_count": 4,
   "blocked_count": 2,
   "statuses": [
     {
@@ -78,8 +78,8 @@
     {
       "agent_id": "family-logistics",
       "label": "Family Logistics",
-      "state": "idle",
-      "reason": "Quiet hours posture in effect.",
+      "state": "awake",
+      "reason": "Current mode 'dawn-protocol' or recent work makes this agent relevant.",
       "cadence_minutes": 10,
       "dependencies": [],
       "blocked_dependencies": [],
@@ -95,13 +95,13 @@
       "last_run_at": "2026-05-07T03:35:47.362397+00:00",
       "next_run_at": "2026-05-07T03:45:47.362397+00:00",
       "due_now": true,
-      "priority": "low"
+      "priority": "high"
     },
     {
       "agent_id": "executive-watch",
       "label": "Executive Watch",
       "state": "idle",
-      "reason": "Quiet hours posture in effect.",
+      "reason": "Standing by until its next useful window.",
       "cadence_minutes": 20,
       "dependencies": [
         "openai"
@@ -119,13 +119,13 @@
       "last_run_at": "2026-05-07T03:35:47.362397+00:00",
       "next_run_at": "2026-05-07T03:55:47.362397+00:00",
       "due_now": true,
-      "priority": "low"
+      "priority": "medium"
     },
     {
       "agent_id": "catalyst-personal",
       "label": "Catalyst Personal",
       "state": "idle",
-      "reason": "Quiet hours posture in effect.",
+      "reason": "Standing by until its next useful window.",
       "cadence_minutes": 20,
       "dependencies": [
         "openai"
@@ -143,13 +143,13 @@
       "last_run_at": "2026-05-07T04:18:23.640323+00:00",
       "next_run_at": "2026-05-07T04:38:23.640323+00:00",
       "due_now": true,
-      "priority": "low"
+      "priority": "medium"
     },
     {
       "agent_id": "chronicle-curator",
       "label": "Chronicle Curator",
       "state": "idle",
-      "reason": "Quiet hours posture in effect.",
+      "reason": "Standing by until its next useful window.",
       "cadence_minutes": 30,
       "dependencies": [
         "openai"
@@ -167,13 +167,13 @@
       "last_run_at": "2026-05-07T03:35:47.362397+00:00",
       "next_run_at": "2026-05-07T04:05:47.362397+00:00",
       "due_now": true,
-      "priority": "low"
+      "priority": "medium"
     },
     {
       "agent_id": "workshop-watch",
       "label": "Workshop Watch",
       "state": "idle",
-      "reason": "Quiet hours posture in effect.",
+      "reason": "Standing by until its next useful window.",
       "cadence_minutes": 15,
       "dependencies": [],
       "blocked_dependencies": [],
@@ -189,7 +189,7 @@
       "last_run_at": "2026-05-07T03:35:47.362397+00:00",
       "next_run_at": "2026-05-07T03:50:47.362397+00:00",
       "due_now": true,
-      "priority": "low"
+      "priority": "medium"
     },
     {
       "agent_id": "home-ops",
@@ -248,8 +248,8 @@
     {
       "agent_id": "memory-curator",
       "label": "Memory Curator",
-      "state": "idle",
-      "reason": "Quiet hours posture in effect.",
+      "state": "awake",
+      "reason": "Recent activity gives the curator something to sort.",
       "cadence_minutes": 15,
       "dependencies": [],
       "blocked_dependencies": [],
@@ -267,7 +267,7 @@
       "last_run_at": "2026-05-07T03:35:47.362397+00:00",
       "next_run_at": "2026-05-07T03:50:47.362397+00:00",
       "due_now": true,
-      "priority": "low"
+      "priority": "medium"
     }
   ]
 }

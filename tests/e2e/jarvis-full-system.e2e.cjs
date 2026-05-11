@@ -19,6 +19,7 @@ const API_WARN_THRESHOLDS_MS = {
   "/api/dashboard?actor=Caleb": 12000,
   "/api/today-board?actor=Chris": 8000,
   "/api/cadence-review?actor=Chris": 8000,
+  "/api/cognitive?actor=Chris": 20000,
   "/api/cognitive?actor=Chris&include_graph=false": 12000,
   "/api/cognitive/world-state?actor=Chris": 6000,
   "/api/first-light?actor=Chris&force=true": 15000,
@@ -311,7 +312,22 @@ async function run() {
       }],
       ["/api/connected-devices", (data) => {
         assert(data.summary && typeof data.summary.total === "number", "Connected devices missing summary");
+        assert(typeof data.summary.high_confidence === "number", "Connected devices missing high-confidence count");
+        assert(typeof data.summary.medium_confidence === "number", "Connected devices missing medium-confidence count");
+        assert(typeof data.summary.low_confidence === "number", "Connected devices missing low-confidence count");
         assert(Array.isArray(data.devices), "Connected devices missing devices array");
+        if (data.devices.length) {
+          assert(Boolean(data.devices[0].owner_confidence), "Connected devices missing owner_confidence");
+          assert(typeof data.devices[0].owner_confidence.confidence === "string", "Connected device owner_confidence missing confidence");
+          assert(Array.isArray(data.devices[0].owner_confidence.evidence), "Connected device owner_confidence missing evidence");
+        }
+      }],
+      ["/api/vision-state?actor=Chris", (data) => {
+        assert(Boolean(data.summary), "Vision state missing summary");
+        assert(typeof data.summary.has_calibration === "boolean", "Vision state missing calibration flag");
+        assert(Array.isArray(data.recent_observations), "Vision state missing recent observations");
+        assert(Array.isArray(data.recent_captures), "Vision state missing recent captures");
+        assert(Array.isArray(data.evidence_items), "Vision state missing evidence items");
       }],
       ["/api/runtime-service", (data) => {
         assert(data.runtime && data.openviking && data.assistant_autonomy, "Runtime service missing launch-agent status");
@@ -325,11 +341,22 @@ async function run() {
         assert(Array.isArray(data.latest_reasons), "Explainability missing latest_reasons");
         assert(Boolean(data.assistant_action_summary), "Explainability missing assistant_action_summary");
         assert(Array.isArray(data.assistant_actions), "Explainability missing assistant_actions");
+        assert(Boolean(data.assistant_outcome_summary), "Explainability missing assistant_outcome_summary");
+        assert(Array.isArray(data.assistant_outcomes), "Explainability missing assistant_outcomes");
+        assert(Boolean(data.assistant_tuning_summary), "Explainability missing assistant_tuning_summary");
+        assert(Boolean(data.assistant_tuning_summary.summary), "Explainability missing assistant_tuning_summary.summary");
+        assert(Boolean(data.assistant_tuning_summary.domains), "Explainability missing assistant_tuning_summary.domains");
         if (data.assistant_actions.length) {
           assert(typeof data.assistant_actions[0].action_class === "string", "Explainability assistant action missing action_class");
           assert(typeof data.assistant_actions[0].policy_basis === "string", "Explainability assistant action missing policy_basis");
           assert(typeof data.assistant_actions[0].confidence === "string", "Explainability assistant action missing confidence");
           assert(typeof data.assistant_actions[0].result_summary === "string", "Explainability assistant action missing result_summary");
+        }
+        if (data.assistant_outcomes.length) {
+          assert(typeof data.assistant_outcomes[0].source === "string", "Explainability assistant outcome missing source");
+          assert(typeof data.assistant_outcomes[0].initiator === "string", "Explainability assistant outcome missing initiator");
+          assert(typeof data.assistant_outcomes[0].status === "string", "Explainability assistant outcome missing status");
+          assert(typeof data.assistant_outcomes[0].detail === "string", "Explainability assistant outcome missing detail");
         }
       }],
       ["/api/open-loops", (data) => {
@@ -337,6 +364,12 @@ async function run() {
         assert(Array.isArray(data.items), "Open loops missing items array");
         assert(Array.isArray(data.task_lanes), "Open loops missing task_lanes");
         assert(data.task_lanes.some((item) => item.domain === "growth"), "Open loops missing growth task lane");
+        const growthItems = Array.isArray(data.items) ? data.items.filter((item) => item.domain === "growth") : [];
+        if (growthItems.length) {
+          assert(growthItems.every((item) => typeof item.growth_review_due === "boolean"), "Growth open loop missing growth_review_due");
+          assert(growthItems.every((item) => typeof item.growth_high_pressure === "boolean"), "Growth open loop missing growth_high_pressure");
+          assert(growthItems.some((item) => ["finance", "pipeline", "marketing", "review"].includes(String(item.suggested_packet || "").trim())), "Growth open loops missing lane-specific packet routing");
+        }
         if (data.items.length) {
           assert(Array.isArray(data.items[0].available_actions), "Open loop item missing available actions");
           assert(typeof data.items[0].auto_execution?.summary === "string", "Open loop item missing auto_execution summary");
@@ -354,6 +387,9 @@ async function run() {
         if (data.assistant_surface?.top_item) {
           assert(typeof data.assistant_surface.top_item.why_this_surfaced_now === "string", "Assistant tick top_item missing why_this_surfaced_now");
           assert(typeof data.assistant_surface.top_item.auto_execution?.summary === "string", "Assistant tick top_item missing auto_execution summary");
+          if (data.assistant_surface.top_item.domain === "growth") {
+            assert(["finance", "pipeline", "marketing", "review"].includes(String(data.assistant_surface.top_item.suggested_packet || "").trim()), "Growth top item missing lane-specific suggested packet");
+          }
         }
       }],
       ["/api/assistant-core/notifications", (data) => {
@@ -367,6 +403,10 @@ async function run() {
           assert(typeof data.items[0].why_this_surfaced_now === "string", "Assistant notification missing why_this_surfaced_now");
           assert(typeof data.items[0].status === "string", "Assistant notification missing status");
           assert(typeof data.items[0].interrupt_eligible === "boolean", "Assistant notification missing interrupt_eligible");
+        }
+        const growthNotifications = Array.isArray(data.items) ? data.items.filter((item) => item.domain === "growth") : [];
+        if (growthNotifications.length) {
+          assert(growthNotifications.some((item) => ["finance", "pipeline", "marketing", "review"].includes(String(item.packet || "").trim())), "Growth notifications missing lane-specific packet routing");
         }
       }],
       ["/api/assistant-core/browser-alerts", (data) => {
@@ -397,6 +437,9 @@ async function run() {
       ["/api/today-board?actor=Chris", (data) => {
         assert(Array.isArray(data.priorities), "Today Board missing priorities");
         assert(Boolean(data.cognition), "Today Board missing cognition");
+        assert(Array.isArray(data.cognition?.world_state?.blocked_work), "Today Board world state missing blocked_work");
+        assert(Array.isArray(data.cognition?.world_state?.conflicts), "Today Board world state missing conflicts");
+        assert(Array.isArray(data.cognition?.world_state?.likely_next), "Today Board world state missing likely_next");
         assert(Boolean(data.freshness), "Today Board missing freshness metadata");
         assert(data.freshness.surface === "today_board", "Today Board freshness surface mismatch");
       }],
@@ -407,11 +450,18 @@ async function run() {
         assert(Array.isArray(data.completion_criteria) && data.completion_criteria.length > 0, "Cadence review missing completion criteria");
         assert(Array.isArray(data.history), "Cadence review missing recurrence history");
         assert(Array.isArray(data.sections), "Cadence review missing sections");
+        assert(data.sections.some((item) => item.id === "world-friction"), "Cadence review missing world-friction section");
         assert(Boolean(data.freshness), "Cadence review missing freshness metadata");
         assert(data.freshness.surface === "cadence_review", "Cadence review freshness surface mismatch");
       }],
       ["/api/cognitive?actor=Chris&include_graph=false", (data) => {
         assert(Boolean(data.self_model), "Cognitive snapshot missing self_model");
+        assert(Array.isArray(data.self_model.tools?.readiness), "Self model missing tool readiness");
+        assert(Boolean(data.self_model.domain_confidence), "Self model missing domain_confidence");
+        assert(Array.isArray(data.self_model.action_constraints), "Self model missing action_constraints");
+        assert(Array.isArray(data.self_model.known_failure_modes), "Self model missing known_failure_modes");
+        assert(Array.isArray(data.self_model.recent_failed_actions), "Self model missing recent_failed_actions");
+        assert(Array.isArray(data.self_model.uncertainty_model), "Self model missing uncertainty_model");
         assert(Boolean(data.world_state), "Cognitive snapshot missing world_state");
         assert(Boolean(data.growth_state), "Cognitive snapshot missing growth_state");
         assert(Boolean(data.growth_state.schema), "Growth state missing schema");
@@ -420,7 +470,12 @@ async function run() {
         assert(Array.isArray(data.cadence.loops), "Cognitive cadence missing loops");
         assert(data.cadence.loops.every((item) => Array.isArray(item.completion_criteria) && item.completion_criteria.length > 0), "Cognitive cadence loops missing completion criteria");
         assert(Boolean(data.deliberation), "Cognitive snapshot missing deliberation");
+        assert(Boolean(data.deliberation.scores), "Deliberation missing scores");
+        assert(Array.isArray(data.deliberation.mode_candidates) && data.deliberation.mode_candidates.length > 0, "Deliberation missing mode candidates");
+        assert(Boolean(data.deliberation.decision_record), "Deliberation missing decision_record");
+        assert(Boolean(data.deliberation.council_trace), "Deliberation missing council_trace");
         assert(Boolean(data.internal_council), "Cognitive snapshot missing internal_council");
+        assert(Boolean(data.internal_council.tally), "Internal council missing tally");
         assert(Array.isArray(data.growth_state.lanes), "Growth state missing lanes");
         assert(Array.isArray(data.growth_state.domains) && data.growth_state.domains.length >= 6, "Growth state missing canonical domains");
         assert(Array.isArray(data.growth_state.adapters) && data.growth_state.adapters.length >= 6, "Growth state missing source adapters");
@@ -432,6 +487,21 @@ async function run() {
         assert(data.growth_state.domains.some((item) => item.id === "offers"), "Growth domains missing offers");
         assert(Boolean(data.freshness), "Cognitive snapshot missing freshness metadata");
         assert(data.freshness.surface === "cognitive", "Cognitive freshness surface mismatch");
+      }],
+      ["/api/cognitive?actor=Chris", (data) => {
+        assert(Boolean(data.world_graph), "Cognitive snapshot with graph missing world_graph");
+        assert(Boolean(data.world_graph.schema), "World graph missing schema");
+        assert(Array.isArray(data.world_graph.schema.entity_types) && data.world_graph.schema.entity_types.length >= 12, "World graph missing formal entity types");
+        assert(Array.isArray(data.world_graph.schema.edge_types) && data.world_graph.schema.edge_types.length >= 10, "World graph missing formal edge types");
+        assert(Array.isArray(data.world_graph.nodes) && data.world_graph.nodes.length > 0, "World graph missing nodes");
+        assert(Array.isArray(data.world_graph.edges), "World graph missing edges");
+        assert(data.world_graph.nodes.every((item) => typeof item.entity_type === "string" && item.entity_type.length > 0), "World graph node missing entity_type");
+        assert(data.world_graph.nodes.every((item) => typeof item.truth_status === "string" && item.truth_status.length > 0), "World graph node missing truth_status");
+        assert(data.world_graph.nodes.every((item) => typeof item.confidence === "string" && item.confidence.length > 0), "World graph node missing confidence");
+        assert(data.world_graph.edges.every((item) => typeof item.edge_type === "string" && item.edge_type.length > 0), "World graph edge missing edge_type");
+        assert(data.world_graph.edges.every((item) => typeof item.truth_status === "string" && item.truth_status.length > 0), "World graph edge missing truth_status");
+        assert(Boolean(data.world_graph.summary?.entity_counts), "World graph summary missing entity_counts");
+        assert(Boolean(data.world_graph.summary?.edge_counts), "World graph summary missing edge_counts");
       }],
       ["/api/growth-schema", (data) => {
         assert(typeof data.version === "string" && data.version.length > 0, "Growth schema missing version");
@@ -446,9 +516,93 @@ async function run() {
         assert(Array.isArray(data.lanes) && data.lanes.length >= 3, "Growth state endpoint missing lanes");
         assert(typeof data.summary?.tracked_domain_count === "number", "Growth state endpoint missing tracked domain count");
       }],
+      ["/api/finance-state?actor=Chris", (data) => {
+        assert(Boolean(data.scorecard), "Finance state missing scorecard");
+        assert(Boolean(data.weekly_review), "Finance state missing weekly review");
+        assert(Boolean(data.thresholds), "Finance state missing thresholds");
+        assert(typeof data.scorecard.score === "number", "Finance scorecard missing score");
+        assert(typeof data.weekly_review.due === "boolean", "Finance weekly review missing due flag");
+        assert(Boolean(data.thresholds.low_cash_warning), "Finance thresholds missing low cash warning");
+        assert(Boolean(data.thresholds.unusual_spend), "Finance thresholds missing unusual spend");
+        assert(Boolean(data.thresholds.goal_progress), "Finance thresholds missing goal progress");
+      }],
+      ["/api/finance-review?actor=Chris", (data) => {
+        assert(typeof data.title === "string" && data.title.length > 0, "Finance review missing title");
+        assert(Boolean(data.scorecard), "Finance review missing scorecard");
+        assert(Boolean(data.weekly_review), "Finance review missing weekly review");
+        assert(Array.isArray(data.sections) && data.sections.length >= 4, "Finance review missing sections");
+        assert(typeof data.recommended_next_move === "string" && data.recommended_next_move.length > 0, "Finance review missing recommended next move");
+      }],
+      ["/api/marketing-state?actor=Chris", (data) => {
+        assert(Boolean(data.scorecard), "Marketing state missing scorecard");
+        assert(Boolean(data.weekly_review), "Marketing state missing weekly review");
+        assert(Boolean(data.performance), "Marketing state missing performance summary");
+        assert(Array.isArray(data.state?.campaigns), "Marketing state missing campaigns");
+        assert(typeof data.scorecard.score === "number", "Marketing scorecard missing score");
+        assert(typeof data.weekly_review.due === "boolean", "Marketing weekly review missing due flag");
+      }],
+      ["/api/marketing-review?actor=Chris", (data) => {
+        assert(typeof data.title === "string" && data.title.length > 0, "Marketing review missing title");
+        assert(Boolean(data.scorecard), "Marketing review missing scorecard");
+        assert(Boolean(data.weekly_review), "Marketing review missing weekly review");
+        assert(Boolean(data.performance), "Marketing review missing performance summary");
+        assert(Array.isArray(data.sections) && data.sections.length >= 4, "Marketing review missing sections");
+        assert(typeof data.recommended_next_move === "string" && data.recommended_next_move.length > 0, "Marketing review missing recommended next move");
+      }],
+      ["/api/pipeline-state?actor=Chris", (data) => {
+        assert(Boolean(data.scorecard), "Pipeline state missing scorecard");
+        assert(Boolean(data.daily_followup_loop), "Pipeline state missing daily follow-up loop");
+        assert(Boolean(data.weekly_review), "Pipeline state missing weekly review");
+        assert(Array.isArray(data.state?.opportunities), "Pipeline state missing opportunities");
+        assert(typeof data.scorecard.score === "number", "Pipeline scorecard missing score");
+        assert(typeof data.daily_followup_loop.due === "boolean", "Pipeline daily follow-up missing due flag");
+        assert(typeof data.weekly_review.due === "boolean", "Pipeline weekly review missing due flag");
+      }],
+      ["/api/pipeline-review?actor=Chris", (data) => {
+        assert(typeof data.title === "string" && data.title.length > 0, "Pipeline review missing title");
+        assert(Boolean(data.scorecard), "Pipeline review missing scorecard");
+        assert(Boolean(data.daily_followup_loop), "Pipeline review missing daily follow-up loop");
+        assert(Boolean(data.weekly_review), "Pipeline review missing weekly review");
+        assert(Array.isArray(data.sections) && data.sections.length >= 4, "Pipeline review missing sections");
+        assert(typeof data.recommended_next_move === "string" && data.recommended_next_move.length > 0, "Pipeline review missing recommended next move");
+      }],
+      ["/api/environment-status?actor=Chris", (data) => {
+        assert(typeof data.status === "string" && data.status.length > 0, "Environment status missing overall status");
+        assert(Boolean(data.status_summary), "Environment status missing status summary");
+        assert(Array.isArray(data.summary) && data.summary.length > 0, "Environment status missing summary lines");
+        assert(Array.isArray(data.adapters) && data.adapters.length >= 3, "Environment status missing adapters");
+        assert(Boolean(data.host_signals?.battery), "Environment status missing battery signal");
+        assert(Boolean(data.host_signals?.network), "Environment status missing network signal");
+        assert(Boolean(data.host_signals?.system), "Environment status missing system signal");
+        assert(Boolean(data.device_status?.summary), "Environment status missing device summary");
+        assert(Boolean(data.physical_systems?.home), "Environment status missing home systems");
+        assert(Boolean(data.physical_systems?.climate), "Environment status missing climate systems");
+        assert(Boolean(data.physical_systems?.garage), "Environment status missing garage systems");
+        assert(Boolean(data.physical_systems?.leak), "Environment status missing leak systems");
+        assert(Boolean(data.physical_systems?.cold_storage), "Environment status missing cold storage systems");
+        assert(Boolean(data.physical_systems?.outage), "Environment status missing outage systems");
+        assert(Boolean(data.anomaly_escalation), "Environment status missing anomaly escalation");
+        assert(Array.isArray(data.anomaly_escalation.escalation_candidates), "Environment status missing escalation candidates");
+        assert(Array.isArray(data.recent_anomalies), "Environment status missing recent anomalies");
+        assert(Boolean(data.freshness), "Environment status missing freshness metadata");
+        assert(data.freshness.surface === "environment_status", "Environment status freshness surface mismatch");
+      }],
       ["/api/cognitive/world-state?actor=Chris", (data) => {
         assert(Boolean(data.summary), "World state missing summary");
         assert(Boolean(data.delta), "World state missing delta");
+        assert(Boolean(data.event_summary), "World state missing event_summary");
+        assert(Array.isArray(data.events), "World state missing events");
+        assert(Array.isArray(data.blocked_work), "World state missing blocked_work");
+        assert(Array.isArray(data.hidden_load), "World state missing hidden_load");
+        assert(Array.isArray(data.pressure_clusters), "World state missing pressure_clusters");
+        assert(Array.isArray(data.conflicts), "World state missing conflicts");
+        assert(Array.isArray(data.likely_next), "World state missing likely_next");
+        if (data.events.length) {
+          assert(data.events.every((item) => typeof item.event_type === "string" && item.event_type.length > 0), "World event missing event_type");
+          assert(data.events.every((item) => typeof item.category === "string" && item.category.length > 0), "World event missing category");
+          assert(data.events.every((item) => typeof item.significance === "string" && item.significance.length > 0), "World event missing significance");
+          assert(data.events.every((item) => typeof item.actor === "string" && item.actor.toLowerCase() === "chris"), "World event actor filter failed");
+        }
       }],
     ];
 
@@ -462,14 +616,34 @@ async function run() {
       assert(data.packet || data.status, "First Light response missing packet/status");
       assert(Boolean(data.freshness), "First Light missing freshness metadata");
       assert(data.freshness.surface === "first_light", "First Light freshness surface mismatch");
+      if (data.packet) {
+        assert(Array.isArray(data.packet.what_changed), "First Light packet missing what_changed lines");
+        assert(Array.isArray(data.packet.sections), "First Light packet missing sections");
+        assert(data.packet.sections.some((section) => section.id === "growth-review"), "First Light packet missing growth review section");
+      }
     });
 
     await checkApiResponse("/api/persona-snapshot?actor=Chris&refresh=true", (data) => {
       assert(data.digital_twin, "Persona snapshot missing digital_twin");
+      assert(Boolean(data.presence_identity), "Persona snapshot missing presence_identity");
+      assert(Boolean(data.personalization), "Persona snapshot missing personalization");
+      assert(Boolean(data.personalization.settings), "Persona snapshot missing personalization settings");
+      assert(Array.isArray(data.personalization.insights), "Persona snapshot missing personalization insights");
+      assert(Array.isArray(data.personalization.learned_preferences), "Persona snapshot missing learned_preferences");
+      assert(Boolean(data.presence_identity.active_user_resolution), "Persona snapshot missing active_user_resolution");
+      assert(Array.isArray(data.presence_identity.room_confidence), "Persona snapshot missing room_confidence");
+      assert(Array.isArray(data.presence_identity.presence_event_history), "Persona snapshot missing presence_event_history");
+      assert(Array.isArray(data.presence_identity.likely_here_now), "Persona snapshot missing likely_here_now");
+      assert(Boolean(data.presence_identity.device_owner_confidence), "Persona snapshot missing device_owner_confidence");
     });
 
     await checkApiResponse("/api/learning-review?viewer=Chris&subject_user_id=chris", (data) => {
       assert(Array.isArray(data.profile_facts), "Learning review missing profile_facts");
+      assert(Boolean(data.personalization), "Learning review missing personalization");
+      assert(Boolean(data.personalization.settings), "Learning review missing personalization settings");
+      assert(Array.isArray(data.personalization.insights), "Learning review missing personalization insights");
+      assert(Array.isArray(data.personalization.history), "Learning review missing personalization history");
+      assert(data.governance && typeof data.governance.can_manage_personalization === "boolean", "Learning review missing personalization governance flag");
     });
   });
 
@@ -546,12 +720,18 @@ async function run() {
   });
 
   await check("Settings modal opens with identity controls", async (entry) => {
-    await page.click("#open-settings");
+    await page.click("#open-settings", { force: true });
     await page.waitForSelector("#modal-layer.open");
     await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("Settings"));
     await page.waitForSelector("#save-identity-member");
     await page.waitForSelector("#save-identity-device");
     await page.waitForSelector("#save-identity-service");
+    await page.waitForFunction(() => {
+      const adaptation = document.getElementById("identity-member-adaptation")?.textContent || "";
+      const learning = document.getElementById("identity-member-learning-review")?.textContent || "";
+      return /Headline|Adaptive persona snapshot unavailable/i.test(adaptation)
+        && /Learning governance|Learning review unavailable/i.test(learning);
+    });
     entry.screenshot = await recordShot(page, "full-system-settings-modal");
   });
 
@@ -570,6 +750,7 @@ async function run() {
     const bodyText = (await page.locator("#modal-body").textContent()) || "";
     assert(/Total known devices/i.test(bodyText), "Connected devices summary did not render");
     assert(/Save Mapping|No device sessions have been registered yet/i.test(bodyText), "Connected devices registry did not render actionable content");
+    assert(/Owner confidence/i.test(bodyText), "Connected devices registry did not render owner confidence");
     entry.screenshot = await recordShot(page, "full-system-connected-devices");
   });
 
@@ -585,6 +766,8 @@ async function run() {
     assert(/Proactive Surface/i.test(bodyText), "Tasks packet did not render proactive surface");
     assert(/Task Lanes/i.test(bodyText), "Tasks packet did not render task lanes");
     assert(/Autonomy Audit/i.test(bodyText), "Tasks packet did not render autonomy audit");
+    assert(/Outcome Capture/i.test(bodyText), "Tasks packet did not render outcome capture");
+    assert(/Recommendation Tuning/i.test(bodyText), "Tasks packet did not render recommendation tuning");
     assert(/Waiting on you|Needs revisit|Staged/i.test(bodyText), "Tasks packet did not render queue metrics");
     entry.screenshot = await recordShot(page, "full-system-tasks-packet");
   });
@@ -600,8 +783,101 @@ async function run() {
     assert(/Pending/i.test(bodyText), "Approval Queue did not render pending approvals");
     assert(/Explainability/i.test(bodyText), "Approval Queue did not render explainability");
     assert(/Autonomy Audit/i.test(bodyText), "Approval Queue did not render autonomy audit");
+    assert(/Outcome Capture/i.test(bodyText), "Approval Queue did not render outcome capture");
+    assert(/Recommendation Tuning/i.test(bodyText), "Approval Queue did not render recommendation tuning");
     assert(/Total actions|No recent autonomous actions/i.test(bodyText), "Approval Queue did not render audit detail");
     entry.screenshot = await recordShot(page, "full-system-approval-queue");
+  });
+
+  await check("Finance packet opens and renders weekly money review", async (entry) => {
+    await closeModalIfVisible(page);
+    await page.locator('[data-packet="finance"]').click({ force: true });
+    await page.waitForSelector("#modal-layer.open");
+    await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("Finance Review"));
+    const body = page.locator("#modal-body");
+    await body.waitFor();
+    await page.waitForFunction(() => {
+      const text = document.getElementById("modal-body")?.textContent || "";
+      return /Financial Independence Scorecard/i.test(text) && /Weekly Money Review/i.test(text);
+    });
+    const bodyText = (await body.textContent()) || "";
+    assert(/Financial Independence Scorecard/i.test(bodyText), "Finance packet did not render scorecard");
+    assert(/Weekly Money Review/i.test(bodyText), "Finance packet did not render weekly money review");
+    assert(/Threshold Watch/i.test(bodyText), "Finance packet did not render thresholds");
+    assert(/Finance State/i.test(bodyText), "Finance packet did not render finance state");
+    entry.screenshot = await recordShot(page, "full-system-finance-review");
+  });
+
+  await check("Marketing packet opens and renders weekly marketing review", async (entry) => {
+    await closeModalIfVisible(page);
+    await page.locator('[data-packet="marketing"]').click({ force: true });
+    await page.waitForSelector("#modal-layer.open");
+    await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("Marketing Review"));
+    const body = page.locator("#modal-body");
+    await body.waitFor();
+    await page.waitForFunction(() => {
+      const text = document.getElementById("modal-body")?.textContent || "";
+      return /Content and Marketing Scorecard/i.test(text) && /Weekly Marketing Review/i.test(text);
+    });
+    const bodyText = (await body.textContent()) || "";
+    assert(/Content and Marketing Scorecard/i.test(bodyText), "Marketing packet did not render scorecard");
+    assert(/Weekly Marketing Review/i.test(bodyText), "Marketing packet did not render weekly review");
+    assert(/Campaign Health/i.test(bodyText), "Marketing packet did not render campaign health");
+    assert(/Performance Summary/i.test(bodyText), "Marketing packet did not render performance summary");
+    entry.screenshot = await recordShot(page, "full-system-marketing-review");
+  });
+
+  await check("Pipeline packet opens and renders daily and weekly review state", async (entry) => {
+    await closeModalIfVisible(page);
+    await page.locator('[data-packet="pipeline"]').click({ force: true });
+    await page.waitForSelector("#modal-layer.open");
+    await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("Pipeline Review"));
+    const body = page.locator("#modal-body");
+    await body.waitFor();
+    await page.waitForFunction(() => {
+      const text = document.getElementById("modal-body")?.textContent || "";
+      return /Sales and Pipeline Scorecard/i.test(text) && /Daily and Weekly Reviews/i.test(text);
+    });
+    const bodyText = (await body.textContent()) || "";
+    assert(/Sales and Pipeline Scorecard/i.test(bodyText), "Pipeline packet did not render scorecard");
+    assert(/Daily and Weekly Reviews/i.test(bodyText), "Pipeline packet did not render review loops");
+    assert(/Stalled Opportunities/i.test(bodyText), "Pipeline packet did not render stalled opportunities");
+    assert(/Stage Map/i.test(bodyText), "Pipeline packet did not render stage map");
+    entry.screenshot = await recordShot(page, "full-system-pipeline-review");
+  });
+
+  await check("Vision packet opens and renders evidence layer", async (entry) => {
+    await closeModalIfVisible(page);
+    await page.locator('[data-packet="vision"]').click({ force: true });
+    await page.waitForSelector("#modal-layer.open");
+    await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("Vision"));
+    const body = page.locator("#modal-body");
+    await body.waitFor();
+    await page.waitForSelector("#vision-evidence");
+    const bodyText = (await body.textContent()) || "";
+    assert(/Evidence Layer/i.test(bodyText), "Vision packet did not render evidence layer");
+    assert(/Calibration|Observation|Capture/i.test(bodyText), "Vision packet did not render reviewable evidence");
+    entry.screenshot = await recordShot(page, "full-system-vision-evidence");
+  });
+
+  await check("House packet opens and renders environment status", async (entry) => {
+    await closeModalIfVisible(page);
+    await page.locator('[data-packet="home"]').click({ force: true });
+    await page.waitForSelector("#modal-layer.open");
+    await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("House Packet"));
+    const body = page.locator("#modal-body");
+    await body.waitFor();
+    await page.waitForFunction(() => {
+      const text = document.getElementById("modal-body")?.textContent || "";
+      return /Environment Status/i.test(text) && /Host Signals/i.test(text) && /Anomaly Escalation/i.test(text);
+    });
+    const bodyText = (await body.textContent()) || "";
+    assert(/Environment Status/i.test(bodyText), "House packet did not render environment status");
+    assert(/Live adapters|Known devices/i.test(bodyText), "House packet did not render environment status metrics");
+    assert(/Host Signals/i.test(bodyText), "House packet did not render host signals");
+    assert(/Battery|Network|System/i.test(bodyText), "House packet did not render host signal details");
+    assert(/Anomaly Escalation/i.test(bodyText), "House packet did not render anomaly escalation");
+    entry.screenshot = await recordShot(page, "full-system-house-environment");
   });
 
   await check("Today Board packet opens and renders autonomy surface", async (entry) => {

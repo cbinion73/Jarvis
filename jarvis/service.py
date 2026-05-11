@@ -582,8 +582,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_assistant_core_notification_action(notification_id: str, payload: dict[str, Any]) -> JSONResponse:
         actor = str(payload.get("actor", "Chris"))
         status = str(payload.get("status", "read"))
+        device_id = str(payload.get("device_id", ""))
         try:
-            result = runtime.mark_assistant_notification(actor, notification_id, status)
+            result = runtime.mark_assistant_notification(actor, notification_id, status, device_id=device_id)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         await _broadcast_dashboard("assistant-notifications.updated")
@@ -767,6 +768,30 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_growth_state(actor: str = "Chris") -> JSONResponse:
         return _json(runtime.growth_state_snapshot(actor))
 
+    @app.get("/api/finance-state")
+    async def api_finance_state(actor: str = "Chris") -> JSONResponse:
+        return _json(runtime.finance_state_snapshot(actor))
+
+    @app.get("/api/finance-review")
+    async def api_finance_review(actor: str = "Chris") -> JSONResponse:
+        return _json(runtime.finance_review(actor))
+
+    @app.get("/api/marketing-state")
+    async def api_marketing_state(actor: str = "Chris") -> JSONResponse:
+        return _json(runtime.marketing_state_snapshot(actor))
+
+    @app.get("/api/marketing-review")
+    async def api_marketing_review(actor: str = "Chris") -> JSONResponse:
+        return _json(runtime.marketing_review(actor))
+
+    @app.get("/api/pipeline-state")
+    async def api_pipeline_state(actor: str = "Chris") -> JSONResponse:
+        return _json(runtime.pipeline_state_snapshot(actor))
+
+    @app.get("/api/pipeline-review")
+    async def api_pipeline_review(actor: str = "Chris") -> JSONResponse:
+        return _json(runtime.pipeline_review(actor))
+
     @app.get("/api/agent-workspace/{agent_id}")
     async def api_agent_workspace(agent_id: str) -> JSONResponse:
         if agent_id == "herald":
@@ -812,8 +837,8 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         return _json(runtime.google_account_snapshot(account_id))
 
     @app.get("/api/explainability")
-    async def api_explainability() -> JSONResponse:
-        return _json(runtime.explainability_snapshot())
+    async def api_explainability(actor: str = "Chris") -> JSONResponse:
+        return _json(runtime.explainability_snapshot(actor))
 
     @app.get("/api/approval-history")
     async def api_approval_history() -> JSONResponse:
@@ -847,6 +872,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_home_overview() -> JSONResponse:
         return _json(runtime.home_overview())
 
+    @app.get("/api/environment-status")
+    async def api_environment_status(actor: str = "Chris") -> JSONResponse:
+        return _json(runtime.environment_status_snapshot(actor))
+
     @app.get("/api/leak-monitor")
     async def api_leak_monitor() -> JSONResponse:
         return _json(runtime.leak_monitor())
@@ -863,6 +892,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_perception_overview() -> JSONResponse:
         return _json(runtime.perception_overview())
 
+    @app.get("/api/vision-state")
+    async def api_vision_state(actor: str = "Chris") -> JSONResponse:
+        return _json(runtime.vision_state_snapshot(actor))
+
     @app.post("/api/vision/analyze")
     async def api_vision_analyze(payload: dict[str, Any]) -> JSONResponse:
         try:
@@ -875,6 +908,44 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 compare_to_capture_id=str(payload.get("compare_to_capture_id", "")),
             )
         except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _json(result)
+
+    @app.post("/api/vision/calibration")
+    async def api_vision_calibration(payload: dict[str, Any]) -> JSONResponse:
+        calibration = dict(payload.get("calibration") or {})
+        if not calibration:
+            raise HTTPException(status_code=400, detail="calibration is required")
+        try:
+            result = runtime.save_vision_calibration(
+                str(payload.get("actor", "Chris")),
+                str(payload.get("camera_label", "Desk Camera")),
+                calibration,
+            )
+        except (ValueError, KeyError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _json(result)
+
+    @app.post("/api/vision/measure")
+    async def api_vision_measure(payload: dict[str, Any]) -> JSONResponse:
+        measurement = dict(payload.get("measurement") or {})
+        calibration = dict(payload.get("calibration") or {})
+        if not measurement:
+            raise HTTPException(status_code=400, detail="measurement is required")
+        if not calibration:
+            raise HTTPException(status_code=400, detail="calibration is required")
+        try:
+            result = runtime.measure_camera_frame(
+                str(payload.get("actor", "Chris")),
+                str(payload.get("image_data_url", "")),
+                str(payload.get("camera_label", "Desk Camera")),
+                calibration,
+                measurement,
+                object_label=str(payload.get("object_label", "")),
+                detail=str(payload.get("detail", "")),
+                selection=dict(payload.get("selection") or {}),
+            )
+        except (ValueError, KeyError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return _json(result)
 
@@ -1104,6 +1175,20 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         status = str(payload.get("status", "retired"))
         return _json(runtime.update_profile_fact_status(viewer, fact_id, status))
 
+    @app.post("/api/personalization/settings")
+    async def api_personalization_settings(payload: dict[str, Any]) -> JSONResponse:
+        viewer = str(payload.get("viewer", "Chris"))
+        subject_user_id = str(payload.get("subject_user_id", ""))
+        updates = dict(payload.get("updates", {}))
+        return _json(runtime.update_personalization_settings(viewer, subject_user_id, updates))
+
+    @app.post("/api/personalization/insights/{insight_id}")
+    async def api_personalization_insight_status(insight_id: str, payload: dict[str, Any]) -> JSONResponse:
+        viewer = str(payload.get("viewer", "Chris"))
+        subject_user_id = str(payload.get("subject_user_id", ""))
+        status = str(payload.get("status", "suppressed"))
+        return _json(runtime.update_personalization_insight_status(viewer, subject_user_id, insight_id, status))
+
     @app.post("/api/google/client-secret")
     async def api_google_client_secret(payload: dict[str, Any]) -> JSONResponse:
         return _json(runtime.google_save_client_secret(str(payload.get("client_secret_json", ""))))
@@ -1141,6 +1226,55 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             str(payload.get("room", "office")),
             str(payload.get("request", "")),
         )
+        return _json(result)
+
+    @app.post("/api/finance-state")
+    async def api_save_finance_state(payload: dict[str, Any]) -> JSONResponse:
+        actor = str(payload.get("actor", "Chris"))
+        patch = dict(payload.get("state", {})) if isinstance(payload.get("state", {}), dict) else {}
+        result = runtime.wealth_support.update_finance_state(patch)
+        runtime._invalidate_snapshot_cache(actor, surfaces=("finance_review", "finance_state", "dashboard", "today_board", "cognitive"))
+        return _json({"ok": True, "state": result, "finance_state": runtime.finance_state_snapshot(actor)})
+
+    @app.post("/api/finance-review/complete")
+    async def api_complete_finance_review(payload: dict[str, Any]) -> JSONResponse:
+        actor = str(payload.get("actor", "Chris"))
+        note = str(payload.get("note", ""))
+        result = runtime.complete_finance_review(actor, note)
+        await _broadcast_dashboard("finance-review.completed")
+        return _json(result)
+
+    @app.post("/api/marketing-state")
+    async def api_save_marketing_state(payload: dict[str, Any]) -> JSONResponse:
+        actor = str(payload.get("actor", "Chris"))
+        patch = dict(payload.get("state", {})) if isinstance(payload.get("state", {}), dict) else {}
+        result = runtime.content_ops.update_marketing_state(patch)
+        runtime._invalidate_snapshot_cache(actor, surfaces=("marketing_review", "marketing_state", "dashboard", "today_board", "cognitive"))
+        return _json({"ok": True, "state": result, "marketing_state": runtime.marketing_state_snapshot(actor)})
+
+    @app.post("/api/marketing-review/complete")
+    async def api_complete_marketing_review(payload: dict[str, Any]) -> JSONResponse:
+        actor = str(payload.get("actor", "Chris"))
+        note = str(payload.get("note", ""))
+        result = runtime.complete_marketing_review(actor, note)
+        await _broadcast_dashboard("marketing-review.completed")
+        return _json(result)
+
+    @app.post("/api/pipeline-state")
+    async def api_save_pipeline_state(payload: dict[str, Any]) -> JSONResponse:
+        actor = str(payload.get("actor", "Chris"))
+        patch = dict(payload.get("state", {})) if isinstance(payload.get("state", {}), dict) else {}
+        result = runtime.catalyst_support.update_pipeline_state(patch)
+        runtime._invalidate_snapshot_cache(actor, surfaces=("pipeline_review", "pipeline_state", "dashboard", "today_board", "cognitive", "cadence_review"))
+        return _json({"ok": True, "state": result, "pipeline_state": runtime.pipeline_state_snapshot(actor)})
+
+    @app.post("/api/pipeline-review/complete")
+    async def api_complete_pipeline_review(payload: dict[str, Any]) -> JSONResponse:
+        actor = str(payload.get("actor", "Chris"))
+        review_type = str(payload.get("review_type", "weekly"))
+        note = str(payload.get("note", ""))
+        result = runtime.complete_pipeline_review(actor, review_type, note)
+        await _broadcast_dashboard("pipeline-review.completed")
         return _json(result)
 
     @app.post("/api/herald/prepare")

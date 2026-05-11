@@ -58,6 +58,8 @@ class AuditLog:
         surface_key: str = "",
         result_summary: str = "",
         succeeded: bool | None = None,
+        caused_friction: bool | None = None,
+        friction_reason: str = "",
     ) -> None:
         entry = {
             "entry_type": "assistant-action",
@@ -81,6 +83,10 @@ class AuditLog:
             entry["quiet_hours_active"] = bool(quiet_hours_active)
         if succeeded is not None:
             entry["succeeded"] = bool(succeeded)
+        if caused_friction is not None:
+            entry["caused_friction"] = bool(caused_friction)
+        if friction_reason.strip():
+            entry["friction_reason"] = friction_reason.strip()
         with self.actions_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(entry) + "\n")
 
