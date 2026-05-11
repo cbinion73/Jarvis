@@ -1194,7 +1194,7 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
     .packet-block p,
     .packet-block li {{
       margin: 0;
-      color: #d9e7f7;
+      color: var(--muted);
       line-height: 1.55;
       font-size: 14px;
     }}
@@ -1213,8 +1213,8 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       gap: 10px;
     }}
     .line-item {{
-      padding: 12px 0;
-      border-top: 1px solid rgba(111, 229, 255, 0.12);
+      padding: 14px 0;
+      border-top: 1px solid var(--line-soft);
     }}
     .line-item:first-child {{
       border-top: none;
@@ -1234,72 +1234,92 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
     }}
     .settings-grid {{
       display: grid;
-      gap: 14px;
+      gap: 18px;
     }}
     .settings-grid label {{
       display: grid;
       gap: 8px;
-      color: #d9e7f7;
+      color: var(--muted);
       font-size: 13px;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.02em;
+      padding: 16px 18px;
+      border-radius: 24px;
+      background: var(--bg-3);
+      border: 1px solid var(--line-soft);
+    }}
+    .settings-grid input,
+    .settings-grid select,
+    .settings-grid textarea {{
+      min-height: 48px;
+      padding: 0 14px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--ink);
+      outline: none;
+      width: 100%;
     }}
     .inline-actions {{
       display: flex;
-      gap: 10px;
+      gap: 12px;
       flex-wrap: wrap;
     }}
     .settings-note {{
-      color: var(--muted);
+      color: var(--muted-2);
       font-size: 13px;
-      line-height: 1.5;
+      line-height: 1.55;
     }}
     .empty {{
-      color: var(--muted);
+      color: var(--muted-2);
       font-size: 14px;
     }}
     .workspace-shell {{
       display: grid;
-      gap: 14px;
+      gap: 18px;
     }}
     .workspace-summary {{
       display: flex;
-      gap: 10px;
+      gap: 12px;
       flex-wrap: wrap;
     }}
     .workspace-summary .tag {{
-      padding: 8px 12px;
+      padding: 10px 14px;
       border-radius: 999px;
       border: 1px solid var(--line-soft);
       color: var(--muted);
       font-size: 12px;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
-      background: rgba(8, 18, 32, 0.82);
+      background: var(--bg-3);
     }}
     .workspace-tabs {{
       display: flex;
-      gap: 10px;
+      gap: 12px;
       flex-wrap: wrap;
     }}
     .workspace-tab {{
-      padding: 10px 14px;
+      padding: 12px 16px;
+      border-radius: 18px;
       border: 1px solid var(--line-soft);
       color: var(--muted);
-      background: rgba(8, 18, 32, 0.82);
+      background: var(--bg-3);
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.04em;
       font-size: 12px;
     }}
     .workspace-tab.active {{
-      color: var(--cyan);
-      background: linear-gradient(135deg, rgba(111, 229, 255, 0.18), rgba(76, 160, 255, 0.18));
-      box-shadow: 0 0 20px rgba(111, 229, 255, 0.12);
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-color: rgba(208, 188, 255, 0.36);
+      box-shadow: inset 0 0 0 1px rgba(208, 188, 255, 0.14);
     }}
     .workspace-frame {{
       border: 1px solid var(--line-soft);
-      background: rgba(5, 12, 22, 0.92);
+      border-radius: 28px;
+      background: var(--bg-3);
       min-height: 72vh;
       overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
     }}
     .workspace-frame iframe {{
       width: 100%;
@@ -1310,7 +1330,7 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
     }}
     .vision-shell {{
       display: grid;
-      gap: 14px;
+      gap: 18px;
     }}
     .vision-grid {{
       display: grid;
@@ -1325,10 +1345,11 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
     }}
     .vision-measure-panel {{
       display: grid;
-      gap: 10px;
-      padding: 12px;
-      border: 1px solid rgba(111, 229, 255, 0.12);
-      background: rgba(8, 18, 32, 0.68);
+      gap: 12px;
+      padding: 18px;
+      border-radius: 24px;
+      border: 1px solid var(--line-soft);
+      background: var(--bg-3);
     }}
     .vision-measure-grid {{
       display: grid;
@@ -1361,8 +1382,9 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
     .vision-feed {{
       position: relative;
       overflow: hidden;
-      border: 1px solid rgba(111, 229, 255, 0.16);
-      background: rgba(5, 12, 22, 0.92);
+      border: 1px solid var(--line-soft);
+      border-radius: 28px;
+      background: var(--bg-3);
       min-height: 320px;
       display: grid;
       place-items: center;
@@ -1396,11 +1418,11 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
     }}
     .model-forge-stage {{
       min-height: 420px;
-      border-radius: 22px;
-      border: 1px solid rgba(111, 229, 255, 0.18);
+      border-radius: 28px;
+      border: 1px solid var(--line-soft);
       background:
-        linear-gradient(180deg, rgba(11, 22, 38, 0.92), rgba(5, 11, 18, 0.96)),
-        radial-gradient(circle at top, rgba(111, 229, 255, 0.16), transparent 48%);
+        linear-gradient(180deg, rgba(33, 31, 38, 0.98), rgba(20, 18, 24, 1)),
+        radial-gradient(circle at top, rgba(208, 188, 255, 0.12), transparent 48%);
       box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02), 0 24px 60px rgba(0, 0, 0, 0.35);
       overflow: hidden;
       position: relative;
@@ -1416,7 +1438,7 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       display: grid;
       place-items: center;
       text-align: center;
-      color: var(--muted);
+      color: var(--muted-2);
       padding: 28px;
       pointer-events: none;
     }}
@@ -1430,19 +1452,29 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       gap: 8px;
       color: var(--muted);
       font-size: 0.9rem;
+      padding: 16px 18px;
+      border-radius: 24px;
+      background: var(--bg-3);
+      border: 1px solid var(--line-soft);
     }}
     .model-forge-panel select,
     .model-forge-panel textarea,
     .model-forge-panel input {{
       width: 100%;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--ink);
+      min-height: 48px;
+      padding: 0 14px;
     }}
     .model-forge-meta {{
       display: grid;
-      gap: 10px;
-      padding: 14px 16px;
-      border-radius: 18px;
-      border: 1px solid rgba(111, 229, 255, 0.14);
-      background: rgba(8, 17, 28, 0.88);
+      gap: 12px;
+      padding: 18px 20px;
+      border-radius: 24px;
+      border: 1px solid var(--line-soft);
+      background: var(--bg-3);
     }}
     .model-forge-meta .metric {{
       display: grid;
@@ -1451,7 +1483,7 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
     .model-forge-actions {{
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 12px;
     }}
     .model-forge-script {{
       max-height: 240px;
@@ -1462,7 +1494,7 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       line-height: 1.45;
     }}
     .vision-helper {{
-      color: var(--muted);
+      color: var(--muted-2);
       font-size: 12px;
       line-height: 1.45;
     }}
@@ -1471,35 +1503,36 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
     }}
     .vision-status,
     .vision-note {{
-      color: var(--muted);
+      color: var(--muted-2);
       font-size: 13px;
       line-height: 1.5;
     }}
     .vision-preview-card img {{
       width: 100%;
       min-height: 140px;
-      border: 1px solid rgba(111, 229, 255, 0.16);
-      background: rgba(5, 12, 22, 0.92);
+      border: 1px solid var(--line-soft);
+      border-radius: 24px;
+      background: var(--bg-3);
       object-fit: cover;
     }}
     .brains-shell {{
       display: grid;
-      gap: 16px;
+      gap: 18px;
     }}
     .brains-summary {{
       display: flex;
-      gap: 10px;
+      gap: 12px;
       flex-wrap: wrap;
     }}
     .brains-summary .tag {{
-      padding: 8px 12px;
+      padding: 10px 14px;
       border-radius: 999px;
       border: 1px solid var(--line-soft);
       color: var(--muted);
       font-size: 12px;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
-      background: rgba(8, 18, 32, 0.82);
+      background: var(--bg-3);
     }}
     .brains-layout {{
       display: grid;
@@ -1509,8 +1542,9 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
     }}
     .brain-network-shell {{
       border: 1px solid var(--line-soft);
-      padding: 16px;
-      background: rgba(9, 20, 34, 0.68);
+      padding: 20px;
+      border-radius: 28px;
+      background: var(--bg-3);
     }}
     .brain-network-head {{
       display: flex;
@@ -1520,40 +1554,41 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       margin-bottom: 14px;
     }}
     .brain-network-head strong {{
-      color: var(--cyan);
-      letter-spacing: 0.16em;
+      color: var(--primary);
+      letter-spacing: 0.08em;
       text-transform: uppercase;
       font-size: 13px;
     }}
     .brain-network-head span {{
-      color: var(--muted);
+      color: var(--muted-2);
       font-size: 12px;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.04em;
     }}
     .brain-mesh-modal-stage.hero {{
       min-height: 620px;
       border-radius: 12px;
       background:
-        radial-gradient(circle at center, rgba(111, 229, 255, 0.05), transparent 32%),
-        linear-gradient(180deg, rgba(8, 18, 30, 0.94), rgba(6, 12, 22, 0.98));
+        radial-gradient(circle at center, rgba(208, 188, 255, 0.08), transparent 32%),
+        linear-gradient(180deg, rgba(29, 27, 32, 0.98), rgba(20, 18, 24, 1));
     }}
     .brains-sidebar {{
       display: grid;
-      gap: 14px;
+      gap: 16px;
     }}
     .brains-sidecard {{
       border: 1px solid var(--line-soft);
-      padding: 16px;
-      background: rgba(10, 22, 36, 0.56);
+      border-radius: 24px;
+      padding: 18px 20px;
+      background: var(--bg-3);
       min-height: 112px;
     }}
     .brains-sidecard h3 {{
       margin: 0 0 10px;
       font-size: 13px;
-      letter-spacing: 0.18em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
-      color: var(--cyan);
+      color: var(--primary);
     }}
     .brain-route {{
       display: flex;
@@ -1562,14 +1597,14 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
     }}
     .brain-route span,
     .brain-legend span {{
-      padding: 6px 10px;
+      padding: 8px 12px;
       border-radius: 999px;
       border: 1px solid var(--line-soft);
       color: var(--muted);
       font-size: 12px;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.03em;
       text-transform: uppercase;
-      background: rgba(8, 18, 32, 0.82);
+      background: rgba(255,255,255,0.04);
     }}
     .brain-legend {{
       display: flex;
@@ -1582,7 +1617,7 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
     }}
     .brain-side-row {{
       padding-top: 10px;
-      border-top: 1px solid rgba(111, 229, 255, 0.1);
+      border-top: 1px solid var(--line-soft);
       color: #d9e7f7;
       font-size: 13px;
       line-height: 1.45;
@@ -8420,7 +8455,7 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       syncTranscriptRail();
       const ambientSubtitle = document.getElementById("ambient-subtitle");
       if (ambientSubtitle) ambientSubtitle.textContent = output;
-      await refreshDashboard();
+      refreshDashboard().catch((error) => console.warn("Dashboard refresh failed", error));
       const suggestedPacket = packetFromRequest(request);
       if (suggestedPacket) {{
         if (suggestedPacket === "catalyst") {{
