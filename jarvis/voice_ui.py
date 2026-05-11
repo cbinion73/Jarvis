@@ -20,15 +20,22 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
     )
     packet_presets = json.dumps(
         [
+            {"id": "today", "label": "Today"},
+            {"id": "review", "label": "Review"},
+            
             {"id": "briefing", "label": "Briefing"},
             {"id": "brains", "label": "Brains"},
             {"id": "agents", "label": "Agents"},
+            {"id": "connected-devices", "label": "Devices"},
+            {"id": "vision", "label": "Vision"},
+            {"id": "model-forge", "label": "Model Forge"},
             {"id": "home", "label": "Home"},
             {"id": "family", "label": "Family"},
             {"id": "security", "label": "Security"},
             {"id": "chronicle", "label": "Chronicle"},
             {"id": "workshop", "label": "Workshop"},
             {"id": "catalyst", "label": "Catalyst"},
+            {"id": "tasks", "label": "Tasks"},
             {"id": "approvals", "label": "Approvals"},
         ]
     )
@@ -73,10 +80,10 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
     body::after {{
       display: none;
     }}
-    body[data-voice-state="idle"] {{ --energy: 0.35; }}
-    body[data-voice-state="listening"] {{ --energy: 0.8; --motion-rate: 1.35; }}
-    body[data-voice-state="responding"] {{ --energy: 0.6; --motion-rate: 1.15; }}
-    body[data-voice-state="speaking"] {{ --energy: 1; --motion-rate: 1.75; }}
+    body[data-voice-state="idle"] {{ --energy: 0.35; --motion-rate: 1; }}
+    body[data-voice-state="listening"] {{ --energy: 0.35; --motion-rate: 1; }}
+    body[data-voice-state="responding"] {{ --energy: 0.35; --motion-rate: 1; }}
+    body[data-voice-state="speaking"] {{ --energy: 0.35; --motion-rate: 1; }}
     .shell {{
       position: relative;
       display: grid;
@@ -126,6 +133,43 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       text-transform: uppercase;
       color: var(--cyan);
     }}
+    .state-source-indicator {{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 18px;
+      padding: 0 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(108, 214, 255, 0.16);
+      background: rgba(8, 16, 28, 0.34);
+      color: rgba(210, 243, 255, 0.72);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      line-height: 1;
+      white-space: nowrap;
+    }}
+    .state-source-indicator::before {{
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(108, 214, 255, 0.5);
+      box-shadow: 0 0 10px rgba(108, 214, 255, 0.28);
+      flex: 0 0 auto;
+    }}
+    .state-source-indicator[data-provider="ollama"]::before {{
+      background: rgba(124, 244, 198, 0.62);
+      box-shadow: 0 0 10px rgba(124, 244, 198, 0.3);
+    }}
+    .state-source-indicator[data-provider="openai"]::before {{
+      background: rgba(108, 214, 255, 0.62);
+    }}
+    .state-source-indicator[data-provider="fallback"]::before,
+    .state-source-indicator[data-provider="policy"]::before {{
+      background: rgba(255, 206, 109, 0.62);
+      box-shadow: 0 0 10px rgba(255, 206, 109, 0.26);
+    }}
     .meta-rail {{
       justify-self: end;
       display: flex;
@@ -152,6 +196,32 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
     .signal-chip {{
       padding: 6px 12px;
       white-space: nowrap;
+    }}
+    .meta-chip.hidden {{
+      display: none;
+    }}
+    .meta-chip.warn {{
+      color: var(--warn);
+      border-color: rgba(255, 204, 112, 0.4);
+      background: rgba(48, 34, 10, 0.46);
+    }}
+    .meta-chip.alert {{
+      color: var(--alert);
+      border-color: rgba(255, 123, 123, 0.42);
+      background: rgba(54, 16, 16, 0.5);
+    }}
+    .freshness-banner {{
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 204, 112, 0.24);
+      background: rgba(48, 34, 10, 0.34);
+      color: rgba(255, 236, 198, 0.92);
+      font-size: 13px;
+      line-height: 1.45;
+    }}
+    .freshness-banner strong {{
+      color: var(--warn);
     }}
     .viewport {{
       position: relative;
@@ -760,9 +830,10 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       color: var(--amber);
     }}
     .packet-strip {{
-      position: absolute;
-      right: 0;
-      bottom: 148px;
+      position: fixed;
+      right: 22px;
+      bottom: 170px;
+      z-index: 6;
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -783,9 +854,9 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       transform: translateY(10px) scale(0.98);
     }}
     .packet-strip-toggle {{
-      position: absolute;
-      right: 0;
-      bottom: 148px;
+      position: fixed;
+      right: 22px;
+      bottom: 170px;
       z-index: 4;
       min-width: 132px;
       border-radius: 999px;
@@ -1185,6 +1256,180 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       background: transparent;
       display: block;
     }}
+    .vision-shell {{
+      display: grid;
+      gap: 14px;
+    }}
+    .vision-grid {{
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+      gap: 14px;
+      align-items: start;
+    }}
+    .vision-stage,
+    .vision-preview-card {{
+      display: grid;
+      gap: 10px;
+    }}
+    .vision-measure-panel {{
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid rgba(111, 229, 255, 0.12);
+      background: rgba(8, 18, 32, 0.68);
+    }}
+    .vision-measure-grid {{
+      display: grid;
+      grid-template-columns: minmax(120px, 0.8fr) minmax(0, 1fr);
+      gap: 10px;
+      align-items: end;
+    }}
+    .vision-measure-grid input,
+    .vision-measure-grid select {{
+      width: 100%;
+    }}
+    .vision-measure-summary {{
+      color: #d7e8fa;
+      font-size: 13px;
+      line-height: 1.5;
+      min-height: 38px;
+    }}
+    .vision-controls {{
+      display: grid;
+      gap: 10px;
+    }}
+    .vision-stage label,
+    .vision-preview-card label,
+    .vision-controls label {{
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }}
+    .vision-feed {{
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(111, 229, 255, 0.16);
+      background: rgba(5, 12, 22, 0.92);
+      min-height: 320px;
+      display: grid;
+      place-items: center;
+    }}
+    .vision-feed video,
+    .vision-feed img {{
+      width: 100%;
+      height: min(62vh, 520px);
+      object-fit: cover;
+      display: block;
+      background: #02060b;
+    }}
+    .vision-crop-box {{
+      position: absolute;
+      border: 2px solid rgba(111, 229, 255, 0.9);
+      box-shadow: 0 0 0 9999px rgba(2, 8, 15, 0.28);
+      pointer-events: none;
+      display: none;
+    }}
+    .vision-crop-box.active {{
+      display: block;
+    }}
+    .model-forge-shell {{
+      display: grid;
+      gap: 18px;
+    }}
+    .model-forge-grid {{
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+      gap: 18px;
+    }}
+    .model-forge-stage {{
+      min-height: 420px;
+      border-radius: 22px;
+      border: 1px solid rgba(111, 229, 255, 0.18);
+      background:
+        linear-gradient(180deg, rgba(11, 22, 38, 0.92), rgba(5, 11, 18, 0.96)),
+        radial-gradient(circle at top, rgba(111, 229, 255, 0.16), transparent 48%);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02), 0 24px 60px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+      position: relative;
+    }}
+    .model-forge-viewer {{
+      width: 100%;
+      height: 100%;
+      min-height: 420px;
+    }}
+    .model-forge-empty {{
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      padding: 28px;
+      pointer-events: none;
+    }}
+    .model-forge-panel {{
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }}
+    .model-forge-panel label {{
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }}
+    .model-forge-panel select,
+    .model-forge-panel textarea,
+    .model-forge-panel input {{
+      width: 100%;
+    }}
+    .model-forge-meta {{
+      display: grid;
+      gap: 10px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(111, 229, 255, 0.14);
+      background: rgba(8, 17, 28, 0.88);
+    }}
+    .model-forge-meta .metric {{
+      display: grid;
+      gap: 4px;
+    }}
+    .model-forge-actions {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }}
+    .model-forge-script {{
+      max-height: 240px;
+      overflow: auto;
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 0.84rem;
+      line-height: 1.45;
+    }}
+    .vision-helper {{
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }}
+    .vision-feed canvas {{
+      display: none;
+    }}
+    .vision-status,
+    .vision-note {{
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }}
+    .vision-preview-card img {{
+      width: 100%;
+      min-height: 140px;
+      border: 1px solid rgba(111, 229, 255, 0.16);
+      background: rgba(5, 12, 22, 0.92);
+      object-fit: cover;
+    }}
     .brains-shell {{
       display: grid;
       gap: 16px;
@@ -1368,6 +1613,9 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       .packet-grid {{
         grid-template-columns: 1fr;
       }}
+      .vision-grid {{
+        grid-template-columns: 1fr;
+      }}
     }}
   </style>
 </head>
@@ -1380,9 +1628,11 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
           {''.join(f'<span style="--i:{index};"></span>' for index in range(24))}
         </div>
         <div class="state-label" id="state-label">Idle</div>
+        <div class="state-source-indicator" id="state-source-indicator" data-provider="standby" title="Response source standby">Standby</div>
       </div>
       <div class="meta-rail">
         <span class="meta-chip" id="meta-time">--:--</span>
+        <span class="meta-chip hidden" id="runtime-freshness">Live</span>
         <button class="meta-icon-button" id="mode-toggle" type="button" title="Household mode">⌂</button>
         <button class="ghost-toggle" id="open-settings" type="button">Settings</button>
       </div>
@@ -1557,8 +1807,16 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
     </div>
   </div>
 
+  <script type="importmap">
+    {{
+      "imports": {{
+        "three": "https://unpkg.com/three@0.174.0/build/three.module.js"
+      }}
+    }}
+  </script>
   <script type="module">
     import * as THREE from "https://unpkg.com/three@0.174.0/build/three.module.js";
+    import {{ STLLoader }} from "https://unpkg.com/three@0.174.0/examples/jsm/loaders/STLLoader.js";
 
     const packetPresets = {packet_presets};
     const availableModes = {available_modes};
@@ -1566,6 +1824,8 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       dashboard: null,
       lastBriefing: "",
       packet: "",
+      packetHydrationToken: 0,
+      packetHydrationPending: "",
       speechEnabled: true,
       speakingTimer: null,
       energyTimer: null,
@@ -1573,6 +1833,11 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       currentAudioUrl: "",
       recognizer: null,
       recognizing: false,
+      alwaysOnMicEnabled: true,
+      wakeWord: "hey jarvis",
+      followUpWindowMs: 60000,
+      followUpUntil: 0,
+      recognitionRestartTimer: null,
       energyCurrent: 0.35,
       energyTarget: 0.35,
       catalystPage: "home",
@@ -1598,6 +1863,9 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       voiceSettings: null,
       voiceOptions: null,
       accountRegistry: null,
+      identity: null,
+      connectedDevices: null,
+      sessionIdentity: null,
       locationSettings: null,
       settingsMessage: "",
       brainMeshScenes: new Map(),
@@ -1607,7 +1875,31 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       audioSourceNode: null,
       audioReactiveFrame: null,
       audioReactive: false,
+      visionStream: null,
+      visionDeviceId: "",
+      visionDevices: [],
+      lastVisionCapture: null,
+      visionCropEnabled: false,
+      visionCropRect: null,
+      visionDragStart: null,
+      visionCalibration: null,
+      modelForgeScene: null,
+      modelForgeOptions: null,
+      shellDeviceId: "",
+      firstLight: null,
+      sessionActorOverride: "",
+      lastAssistantSurfaceKey: "",
+      browserAlertsEnabled: false,
+      browserAlertsPermission: "default",
+      autonomyTickTimer: null,
+      autonomyBackgroundTimer: null,
     }};
+
+    const VISION_CALIBRATION_KEY = "jarvis-vision-calibration-v1";
+    const SHELL_DEVICE_ID_KEY = "jarvis-shell-device-id-v1";
+    const SESSION_ACTOR_OVERRIDE_KEY = "jarvis-session-actor-override-v1";
+    const ASSISTANT_SURFACE_KEY = "jarvis-assistant-surface-last-v1";
+    const BROWSER_ALERTS_ENABLED_KEY = "jarvis-browser-alerts-enabled-v1";
 
     function escapeHtml(value) {{
       return String(value ?? "")
@@ -1617,16 +1909,1139 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
         .replaceAll('"', "&quot;");
     }}
 
-    async function loadJSON(url, options = undefined) {{
-      const response = await fetch(url, options);
-      if (!response.ok) {{
-        throw new Error(`Request failed: ${{response.status}}`);
+    function browserAlertsSupported() {{
+      return typeof window !== "undefined" && "Notification" in window;
+    }}
+
+    function loadBrowserAlertsEnabled() {{
+      try {{
+        return window.localStorage.getItem(BROWSER_ALERTS_ENABLED_KEY) === "true";
+      }} catch (error) {{
+        return false;
       }}
-      return response.json();
+    }}
+
+    function saveBrowserAlertsEnabled(value) {{
+      state.browserAlertsEnabled = !!value;
+      try {{
+        window.localStorage.setItem(BROWSER_ALERTS_ENABLED_KEY, value ? "true" : "false");
+      }} catch (error) {{
+        console.warn("Failed to persist browser alert setting", error);
+      }}
+    }}
+
+    function browserAlertsReady() {{
+      return browserAlertsSupported() && state.browserAlertsEnabled && state.browserAlertsPermission === "granted";
+    }}
+
+    async function loadJSON(url, options = undefined) {{
+      const method = String(options?.method || "GET").toUpperCase();
+      const retryable =
+        typeof url === "string" &&
+        (
+          url.includes("/api/assistant-core/notifications/") ||
+          url.includes("/api/assistant-core/background-run")
+        );
+      const attempts = retryable ? 3 : 1;
+      let lastError = null;
+      for (let attempt = 1; attempt <= attempts; attempt += 1) {{
+        try {{
+          const response = await fetch(url, options);
+          const text = await response.text();
+          let payload = null;
+          try {{
+            payload = text ? JSON.parse(text) : null;
+          }} catch (_error) {{
+            payload = null;
+          }}
+          if (!response.ok) {{
+            const detail = payload?.detail || text || `Request failed: ${{response.status}}`;
+            throw new Error(String(detail));
+          }}
+          return payload;
+        }} catch (error) {{
+          lastError = error;
+          if (attempt >= attempts) {{
+            throw error;
+          }}
+          const delay = 200 * attempt;
+          await new Promise((resolve) => window.setTimeout(resolve, delay));
+        }}
+      }}
+      throw lastError || new Error(`${{method}} request failed.`);
+    }}
+
+    function freshnessInfo(payload) {{
+      return payload?.freshness || {{}};
+    }}
+
+    function degradedInfo(payload) {{
+      return payload?.degraded || null;
+    }}
+
+    function renderFreshnessBanner(payload, label = "Assistant surface") {{
+      const degraded = degradedInfo(payload);
+      const freshness = freshnessInfo(payload);
+      if (!degraded?.active && !freshness?.fallback) {{
+        return "";
+      }}
+      const age = Number.isFinite(Number(freshness.age_seconds)) ? Number(freshness.age_seconds) : 0;
+      const ageLabel = age >= 60 ? `${{Math.round(age / 60)}} min old` : `${{Math.round(age)}} sec old`;
+      return `
+        <div class="freshness-banner">
+          <strong>${{escapeHtml(label)}} is running in degraded mode.</strong><br>
+          ${{escapeHtml(degraded?.reason || "JARVIS fell back to the last good snapshot.")}}
+          ${{degraded?.detail ? `<br>${{escapeHtml(degraded.detail)}}` : ""}}
+          <br>Snapshot age: ${{escapeHtml(ageLabel)}}.
+        </div>
+      `;
+    }}
+
+    function updateRuntimeFreshness(data) {{
+      const chip = document.getElementById("runtime-freshness");
+      if (!chip) {{
+        return;
+      }}
+      const degraded = degradedInfo(data);
+      const freshness = freshnessInfo(data);
+      chip.className = "meta-chip hidden";
+      chip.textContent = "Live";
+      chip.removeAttribute("title");
+      if (degraded?.active || freshness?.fallback) {{
+        const age = Number.isFinite(Number(freshness.age_seconds)) ? Number(freshness.age_seconds) : 0;
+        chip.className = "meta-chip warn";
+        chip.textContent = age >= 60 ? `Stale ${{Math.round(age / 60)}}m` : `Stale ${{Math.round(age)}}s`;
+        chip.title = degraded?.detail || degraded?.reason || "JARVIS is using the last good snapshot.";
+      }} else if (freshness?.cached) {{
+        chip.className = "meta-chip";
+        chip.textContent = "Cached";
+        chip.title = "JARVIS is serving a recent cached summary.";
+      }}
+      if (chip.textContent === "Live") {{
+        chip.classList.add("hidden");
+      }}
+    }}
+
+    function loadVisionCalibration() {{
+      try {{
+        const raw = window.localStorage.getItem(VISION_CALIBRATION_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Number.isFinite(parsed.pixelsPerUnit) || parsed.pixelsPerUnit <= 0) {{
+          return null;
+        }}
+        return parsed;
+      }} catch (_error) {{
+        return null;
+      }}
+    }}
+
+    function saveVisionCalibration(calibration) {{
+      state.visionCalibration = calibration;
+      try {{
+        if (calibration) {{
+          window.localStorage.setItem(VISION_CALIBRATION_KEY, JSON.stringify(calibration));
+        }} else {{
+          window.localStorage.removeItem(VISION_CALIBRATION_KEY);
+        }}
+      }} catch (_error) {{
+        return;
+      }}
+    }}
+
+    function loadAssistantSurfaceKey() {{
+      try {{
+        return window.localStorage.getItem(ASSISTANT_SURFACE_KEY) || "";
+      }} catch (_error) {{
+        return "";
+      }}
+    }}
+
+    function saveAssistantSurfaceKey(value) {{
+      state.lastAssistantSurfaceKey = value || "";
+      try {{
+        if (value) {{
+          window.localStorage.setItem(ASSISTANT_SURFACE_KEY, value);
+        }} else {{
+          window.localStorage.removeItem(ASSISTANT_SURFACE_KEY);
+        }}
+      }} catch (_error) {{
+        return;
+      }}
+    }}
+
+    function mergeDashboardState(nextData) {{
+      const previous = state.dashboard || {{}};
+      const next = nextData || {{}};
+      state.dashboard = {{
+        ...previous,
+        ...next,
+        today_board: next.today_board || previous.today_board || null,
+        cadence_review: next.cadence_review || previous.cadence_review || null,
+        open_loops: next.open_loops || previous.open_loops || null,
+        cognitive: next.cognitive || previous.cognitive || null,
+        assistant_notifications: next.assistant_notifications || previous.assistant_notifications || null,
+      }};
+      return state.dashboard;
+    }}
+
+    function setModalVisibility(isOpen) {{
+      const modal = document.getElementById("modal-layer");
+      if (!modal) {{
+        return;
+      }}
+      modal.classList.toggle("open", !!isOpen);
+      modal.setAttribute("aria-hidden", isOpen ? "false" : "true");
+    }}
+
+    async function maybeAutoOpenCadenceReview(notificationsPayload) {{
+      const notifications = notificationsPayload || state.dashboard?.assistant_notifications || {{}};
+      const items = Array.isArray(notifications.items) ? notifications.items : [];
+      const reviewItem = items.find((item) =>
+        (item.packet || "") === "review" &&
+        ["unseen", "surfaced"].includes((item.status || "unseen")) &&
+        (item.priority_class || "normal") !== "quiet" &&
+        (item.surface_key || "") &&
+        state.lastAssistantSurfaceKey !== (item.surface_key || "")
+      );
+      if (!reviewItem) {{
+        return false;
+      }}
+      if (document.body.classList.contains("modal-open") || state.packet) {{
+        return false;
+      }}
+      const actor = preferredActorLabel();
+      saveAssistantSurfaceKey(reviewItem.surface_key || "");
+      state.lastBriefing = reviewItem.detail || "JARVIS prepared the next review loop.";
+      document.getElementById("last-jarvis-text").textContent = state.lastBriefing;
+      syncTranscriptRail();
+      openPacket("review");
+      if (reviewItem.notification_id) {{
+        loadJSON(`/api/assistant-core/notifications/${{encodeURIComponent(reviewItem.notification_id)}}`, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{ actor, status: "opened" }}),
+        }}).catch(() => null);
+      }}
+      return true;
+    }}
+
+    function formatMeasurement(value, unit) {{
+      if (!Number.isFinite(value)) return `-- ${{unit}}`;
+      const precision = value >= 10 ? 1 : 2;
+      return `${{value.toFixed(precision)}} ${{unit}}`;
+    }}
+
+    function getVisionSelectionMetrics(video) {{
+      if (!video || !state.visionCropRect) return null;
+      const width = video.videoWidth || 0;
+      const height = video.videoHeight || 0;
+      const displayWidth = video.clientWidth || width;
+      const displayHeight = video.clientHeight || height;
+      if (!width || !height || !displayWidth || !displayHeight) return null;
+      const scaleX = width / displayWidth;
+      const scaleY = height / displayHeight;
+      const pixelWidth = Math.max(1, state.visionCropRect.width * scaleX);
+      const pixelHeight = Math.max(1, state.visionCropRect.height * scaleY);
+      const majorAxisPixels = Math.max(pixelWidth, pixelHeight);
+      const diagonalPixels = Math.hypot(pixelWidth, pixelHeight);
+      return {{
+        pixelWidth,
+        pixelHeight,
+        majorAxisPixels,
+        diagonalPixels,
+      }};
+    }}
+
+    function renderVisionCalibrationSummary(extraMessage = "") {{
+      const summary = document.getElementById("vision-calibration-summary");
+      if (!summary) return;
+      const calibration = state.visionCalibration;
+      if (!calibration) {{
+        summary.textContent = extraMessage || "No calibration yet. Place a ruler on the stage, turn crop on, drag across a known span, then calibrate.";
+        return;
+      }}
+      const detail = `Calibrated at ${{calibration.referenceLength}} ${{calibration.unit}} across ${{Math.round(calibration.referencePixels)}} px (${{calibration.pixelsPerUnit.toFixed(2)}} px per ${{calibration.unit}}).`;
+      summary.textContent = extraMessage ? `${{detail}} ${{extraMessage}}` : detail;
+    }}
+
+    function stopVisionPreview() {{
+      if (state.visionStream) {{
+        state.visionStream.getTracks().forEach((track) => track.stop());
+        state.visionStream = null;
+      }}
+      const video = document.getElementById("vision-live-video");
+      if (video) {{
+        video.srcObject = null;
+      }}
+      const crop = document.getElementById("vision-crop-box");
+      if (crop) {{
+        crop.classList.remove("active");
+      }}
+    }}
+
+    function destroyModelForgeScene() {{
+      const sceneState = state.modelForgeScene;
+      if (!sceneState) return;
+      if (sceneState.raf) cancelAnimationFrame(sceneState.raf);
+      if (sceneState.resizeObserver) sceneState.resizeObserver.disconnect();
+      if (sceneState.renderer) sceneState.renderer.dispose();
+      if (sceneState.mount) sceneState.mount.innerHTML = "";
+      state.modelForgeScene = null;
+    }}
+
+    function initModelForgeScene(mountId) {{
+      destroyModelForgeScene();
+      const mount = document.getElementById(mountId);
+      if (!mount) return null;
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x08111b);
+      const camera = new THREE.PerspectiveCamera(44, 1, 0.1, 2000);
+      const renderer = new THREE.WebGLRenderer({{ antialias: true, alpha: true }});
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      mount.innerHTML = "";
+      mount.appendChild(renderer.domElement);
+
+      const ambient = new THREE.AmbientLight(0xc7f7ff, 1.6);
+      const key = new THREE.DirectionalLight(0x8de8ff, 1.8);
+      key.position.set(140, 180, 120);
+      const fill = new THREE.DirectionalLight(0x5f8dff, 0.7);
+      fill.position.set(-120, 90, -60);
+      scene.add(ambient, key, fill);
+
+      const grid = new THREE.GridHelper(220, 22, 0x4ca0ff, 0x163245);
+      grid.position.y = -0.01;
+      scene.add(grid);
+
+      const modelGroup = new THREE.Group();
+      scene.add(modelGroup);
+
+      let pointerDown = false;
+      let lastX = 0;
+      let lastY = 0;
+      let orbitTheta = 0.85;
+      let orbitPhi = 0.88;
+      let orbitRadius = 180;
+      const target = new THREE.Vector3(0, 26, 0);
+
+      function clampOrbit() {{
+        orbitPhi = Math.max(0.15, Math.min(Math.PI - 0.15, orbitPhi));
+        orbitRadius = Math.max(40, Math.min(420, orbitRadius));
+      }}
+
+      function positionCamera() {{
+        clampOrbit();
+        camera.position.set(
+          target.x + orbitRadius * Math.sin(orbitPhi) * Math.sin(orbitTheta),
+          target.y + orbitRadius * Math.cos(orbitPhi),
+          target.z + orbitRadius * Math.sin(orbitPhi) * Math.cos(orbitTheta),
+        );
+        camera.lookAt(target);
+      }}
+
+      function resize() {{
+        const width = mount.clientWidth || 640;
+        const height = mount.clientHeight || 420;
+        renderer.setSize(width, height, false);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+      }}
+
+      mount.addEventListener("pointerdown", (event) => {{
+        pointerDown = true;
+        lastX = event.clientX;
+        lastY = event.clientY;
+      }});
+      window.addEventListener("pointerup", () => {{
+        pointerDown = false;
+      }});
+      window.addEventListener("pointermove", (event) => {{
+        if (!pointerDown || state.modelForgeScene?.mount !== mount) return;
+        const dx = event.clientX - lastX;
+        const dy = event.clientY - lastY;
+        lastX = event.clientX;
+        lastY = event.clientY;
+        orbitTheta -= dx * 0.01;
+        orbitPhi += dy * 0.01;
+        positionCamera();
+      }});
+      mount.addEventListener("wheel", (event) => {{
+        event.preventDefault();
+        orbitRadius += event.deltaY * 0.08;
+        positionCamera();
+      }}, {{ passive: false }});
+
+      const resizeObserver = new ResizeObserver(() => resize());
+      resizeObserver.observe(mount);
+
+      function animate() {{
+        renderer.render(scene, camera);
+        if (state.modelForgeScene?.mount === mount) {{
+          state.modelForgeScene.raf = requestAnimationFrame(animate);
+        }}
+      }}
+
+      resize();
+      positionCamera();
+      state.modelForgeScene = {{ mount, scene, camera, renderer, modelGroup, resizeObserver, raf: requestAnimationFrame(animate), target }};
+      return state.modelForgeScene;
+    }}
+
+    async function loadModelForgePackage(packageId) {{
+      const details = document.getElementById("model-forge-details");
+      const script = document.getElementById("model-forge-script");
+      const status = document.getElementById("model-forge-viewer-status");
+      const placeholder = document.getElementById("model-forge-empty");
+      if (!packageId || !details || !script || !status) return;
+      status.textContent = "Loading model forge package…";
+      const response = await fetch(`/api/model-forge/package/${{encodeURIComponent(packageId)}}`, {{ cache: "no-store" }});
+      if (!response.ok) {{
+        const error = await response.json().catch(() => ({{ detail: "Failed to load package." }}));
+        status.textContent = error.detail || "Failed to load package.";
+        return;
+      }}
+      const pkg = await response.json();
+      details.innerHTML = `
+        <div class="metric"><strong>${{escapeHtml(pkg.part_name || "Part")}}</strong></div>
+        <div class="metric"><span class="tag">${{escapeHtml(pkg.export_status || "cad-package")}}</span></div>
+        <div class="metric">${{escapeHtml(pkg.export_detail || "No export detail available.")}}</div>
+        <div class="metric"><strong>Family</strong><span class="muted">${{escapeHtml(pkg.family || "unspecified")}}</span></div>
+        <div class="metric"><strong>Printer</strong><span class="muted">${{escapeHtml(pkg.printer_id || "unassigned")}}</span></div>
+        <div class="metric"><strong>Profile</strong><span class="muted">${{escapeHtml(pkg.profile_name || "unassigned")}}</span></div>
+        <div class="metric"><strong>Material</strong><span class="muted">${{escapeHtml(pkg.material || "unassigned")}}</span></div>
+        <div class="metric"><strong>Artifact Dir</strong><span class="muted">${{escapeHtml(pkg.artifact_dir || "Not recorded")}}</span></div>
+        <div class="inline-actions" style="margin-top:10px;flex-wrap:wrap;">
+          <a href="/api/model-forge/package/${{encodeURIComponent(packageId)}}/download/stl">Download STL</a>
+          <a href="/api/model-forge/package/${{encodeURIComponent(packageId)}}/download/step">Download STEP</a>
+          <a href="/api/model-forge/package/${{encodeURIComponent(packageId)}}/download/3mf">Download 3MF</a>
+          <a href="/api/model-forge/package/${{encodeURIComponent(packageId)}}/download/slicer-pack">Download Slicer Pack</a>
+          <button type="button" id="model-forge-open-slicer" data-package-id="${{escapeHtml(packageId)}}">Open In Slicer</button>
+        </div>
+      `;
+      script.textContent = pkg.openscad_stub || "No OpenSCAD source recorded.";
+      if (!pkg.model_path) {{
+        destroyModelForgeScene();
+        if (placeholder) placeholder.style.display = "grid";
+        status.textContent = "This package has source and metadata, but no exported STL yet.";
+        return;
+      }}
+      const sceneState = initModelForgeScene("model-forge-viewer");
+      if (!sceneState) return;
+      if (placeholder) placeholder.style.display = "none";
+      status.textContent = "Loading STL…";
+      const loader = new STLLoader();
+      loader.load(
+        `/api/model-forge/package/${{encodeURIComponent(packageId)}}/model`,
+        (geometry) => {{
+          const material = new THREE.MeshPhysicalMaterial({{
+            color: 0x78f0ff,
+            metalness: 0.08,
+            roughness: 0.3,
+            transmission: 0.02,
+            clearcoat: 0.6,
+            clearcoatRoughness: 0.3,
+          }});
+          while (sceneState.modelGroup.children.length) {{
+            const child = sceneState.modelGroup.children.pop();
+            if (child?.geometry) child.geometry.dispose?.();
+            if (child?.material) child.material.dispose?.();
+          }}
+          geometry.computeBoundingBox();
+          geometry.computeVertexNormals();
+          geometry.center();
+          const mesh = new THREE.Mesh(geometry, material);
+          sceneState.modelGroup.add(mesh);
+          const bounds = geometry.boundingBox;
+          const size = new THREE.Vector3();
+          bounds.getSize(size);
+          const maxDim = Math.max(size.x, size.y, size.z, 1);
+          const distance = maxDim * 2.4;
+          sceneState.target.set(0, Math.max(size.y * 0.15, 6), 0);
+          sceneState.camera.position.set(distance * 0.8, distance * 0.65, distance);
+          sceneState.camera.lookAt(sceneState.target);
+          status.textContent = `Viewing STL · ${{size.x.toFixed(1)}} x ${{size.y.toFixed(1)}} x ${{size.z.toFixed(1)}} mm`;
+        }},
+        undefined,
+        (error) => {{
+          console.error(error);
+          if (placeholder) placeholder.style.display = "grid";
+          status.textContent = "STL failed to load.";
+        }},
+      );
+    }}
+
+    function wireModelForgePacket() {{
+      const select = document.getElementById("model-forge-package");
+      const refresh = document.getElementById("model-forge-refresh");
+      const family = document.getElementById("model-forge-family");
+      const printer = document.getElementById("model-forge-printer");
+      const profile = document.getElementById("model-forge-profile");
+      const slicer = document.getElementById("model-forge-slicer");
+      const generate = document.getElementById("model-forge-generate");
+      const output = document.getElementById("model-forge-generation-output");
+      if (!select) return;
+
+      const familyProfiles = {{
+        bracket: {{
+          label: "Bracket workflow",
+          note: "Bias toward hole spacing, plate thickness, bend radius, and load path.",
+          part: "Garden bench bracket",
+          dimensions: "hole spacing 110 mm, plate width 30 mm, thickness 8 mm, bend radius 12 mm",
+          constraints: "Preserve mounting geometry, add drainage, keep corners softened for fatigue resistance.",
+        }},
+        enclosure: {{
+          label: "Enclosure workflow",
+          note: "Bias toward outer size, wall thickness, lid fit, cable exits, and screw pattern.",
+          part: "Sensor enclosure",
+          dimensions: "outer length 120 mm, width 80 mm, height 40 mm, wall thickness 3 mm",
+          constraints: "Keep lid printable, allow cable exit, leave room for fasteners and board clearance.",
+        }},
+        spacer: {{
+          label: "Spacer workflow",
+          note: "Bias toward exact height, inner diameter, outer diameter, and stable concentric geometry.",
+          part: "Fixture spacer",
+          dimensions: "outer diameter 18 mm, inner diameter 6.2 mm, height 12 mm",
+          constraints: "Maintain tight axial height, keep bore clean, no supports if possible.",
+        }},
+        mount: {{
+          label: "Mount workflow",
+          note: "Bias toward footprint, riser height, hole pattern, and surface attachment.",
+          part: "Camera mount",
+          dimensions: "base length 90 mm, width 40 mm, thickness 6 mm, riser height 35 mm",
+          constraints: "Preserve fastener access, keep base stable, strengthen the riser-to-base transition.",
+        }},
+      }};
+
+      async function ensureModelForgeOptions() {{
+        if (state.modelForgeOptions) return state.modelForgeOptions;
+        const response = await fetch("/api/workshop-machine-options", {{ cache: "no-store" }});
+        if (!response.ok) {{
+          throw new Error("Failed to load machine options.");
+        }}
+        state.modelForgeOptions = await response.json();
+        return state.modelForgeOptions;
+      }}
+
+      function refreshModelForgeProfileOptions() {{
+        if (!printer || !profile || !state.modelForgeOptions) return;
+        const printers = state.modelForgeOptions.printers || [];
+        const selectedPrinter = printers.find((item) => item.id === printer.value) || printers[0];
+        const profiles = Array.isArray(selectedPrinter?.profiles) ? selectedPrinter.profiles : [];
+        profile.innerHTML = profiles.map((item) => `<option value="${{escapeHtml(item)}}">${{escapeHtml(item)}}</option>`).join("");
+        if (!profile.value && profiles.length) {{
+          profile.value = profiles[0];
+        }}
+      }}
+
+      function refreshModelForgeFamilyGuidance() {{
+        const partField = document.getElementById("model-forge-part");
+        const dimensionsField = document.getElementById("model-forge-dimensions");
+        const constraintsField = document.getElementById("model-forge-constraints");
+        const guidance = document.getElementById("model-forge-guidance");
+        const selected = familyProfiles[family?.value || "bracket"] || familyProfiles.bracket;
+        if (guidance) guidance.textContent = `${{selected.label}}: ${{selected.note}}`;
+        if (partField && (!partField.value || partField.dataset.autofill === "true")) {{
+          partField.value = selected.part;
+          partField.dataset.autofill = "true";
+        }}
+        if (dimensionsField && (!dimensionsField.value || dimensionsField.dataset.autofill === "true")) {{
+          dimensionsField.value = selected.dimensions;
+          dimensionsField.dataset.autofill = "true";
+        }}
+        if (constraintsField && (!constraintsField.value || constraintsField.dataset.autofill === "true")) {{
+          constraintsField.value = selected.constraints;
+          constraintsField.dataset.autofill = "true";
+        }}
+      }}
+
+      async function populateModelForgeControls() {{
+        const options = await ensureModelForgeOptions();
+        if (family) {{
+          family.innerHTML = (options.families || []).map((item) => `<option value="${{escapeHtml(item.id)}}">${{escapeHtml(item.label)}}</option>`).join("");
+        }}
+        if (printer) {{
+          printer.innerHTML = (options.printers || []).map((item) => `<option value="${{escapeHtml(item.id)}}">${{escapeHtml(item.name)}}</option>`).join("");
+          if (options.default_printer_id) printer.value = options.default_printer_id;
+        }}
+        if (slicer) {{
+          slicer.innerHTML = [`<option value="">System default</option>`]
+            .concat((options.slicers || []).map((item) => `<option value="${{escapeHtml(item.id)}}">${{escapeHtml(item.label)}}</option>`))
+            .join("");
+        }}
+        refreshModelForgeProfileOptions();
+        refreshModelForgeFamilyGuidance();
+      }}
+
+      async function refreshModelForgePackages(selectedId = "") {{
+        const response = await fetch("/api/cad-packages", {{ cache: "no-store" }});
+        if (!response.ok) {{
+          throw new Error("Failed to refresh model forge packages.");
+        }}
+        const packages = await response.json();
+        select.innerHTML = packages.map((item, index) => `<option value="${{escapeHtml(item.package_id)}}" ${{(selectedId ? item.package_id === selectedId : index === 0) ? "selected" : ""}}>${{escapeHtml(item.part_name)}} · ${{escapeHtml(item.export_status || "cad-package")}}</option>`).join("");
+        if (select.value) {{
+          await loadModelForgePackage(select.value);
+        }}
+      }}
+
+      async function generateModelForgePackage() {{
+        const payload = {{
+          actor: "Chris",
+          family: family?.value || "",
+          printer: printer?.value || "",
+          profile: profile?.value || "",
+          part: document.getElementById("model-forge-part")?.value || "",
+          dimensions: document.getElementById("model-forge-dimensions")?.value || "",
+          constraints: document.getElementById("model-forge-constraints")?.value || "",
+        }};
+        const response = await fetch("/api/cad-package", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify(payload),
+        }});
+        if (!response.ok) {{
+          throw new Error("Failed to generate model forge package.");
+        }}
+        const result = await response.json();
+        if (output) output.textContent = JSON.stringify(result, null, 2);
+        await refreshModelForgePackages(result.package_id);
+      }}
+
+      async function openSelectedPackageInSlicer(packageId) {{
+        const response = await fetch(`/api/model-forge/package/${{encodeURIComponent(packageId)}}/open-in-slicer`, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{ slicer_app: slicer?.value || "" }}),
+        }});
+        if (!response.ok) {{
+          throw new Error("Failed to open package in slicer.");
+        }}
+        const result = await response.json();
+        if (output) output.textContent = JSON.stringify(result, null, 2);
+      }}
+
+      const loadSelected = () => {{
+        loadModelForgePackage(select.value).catch((error) => {{
+          const status = document.getElementById("model-forge-viewer-status");
+          if (status) status.textContent = error.message || "Failed to load model forge package.";
+        }});
+      }};
+      populateModelForgeControls().catch((error) => {{
+        if (output) output.textContent = error.message;
+      }});
+      family?.addEventListener("change", refreshModelForgeFamilyGuidance);
+      printer?.addEventListener("change", refreshModelForgeProfileOptions);
+      ["model-forge-part", "model-forge-dimensions", "model-forge-constraints"].forEach((id) => {{
+        const field = document.getElementById(id);
+        field?.addEventListener("input", () => {{
+          field.dataset.autofill = "false";
+        }});
+      }});
+      select.addEventListener("change", loadSelected);
+      refresh?.addEventListener("click", loadSelected);
+      generate?.addEventListener("click", () => {{
+        generateModelForgePackage().catch((error) => {{
+          if (output) output.textContent = error.message;
+        }});
+      }});
+      document.getElementById("model-forge-details")?.addEventListener("click", (event) => {{
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        const button = target.closest("#model-forge-open-slicer");
+        if (!(button instanceof HTMLElement)) return;
+        const packageId = button.dataset.packageId;
+        if (!packageId) return;
+        openSelectedPackageInSlicer(packageId).catch((error) => {{
+          if (output) output.textContent = error.message;
+        }});
+      }});
+      if (select.value) loadSelected();
+    }}
+
+    async function listVisionDevices() {{
+      if (!navigator.mediaDevices?.enumerateDevices) {{
+        return [];
+      }}
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      return devices.filter((device) => device.kind === "videoinput");
+    }}
+
+    async function populateVisionDevicePicker() {{
+      const select = document.getElementById("vision-device");
+      if (!select) {{
+        return;
+      }}
+      state.visionDevices = await listVisionDevices();
+      const devices = state.visionDevices.length ? state.visionDevices : [{{ deviceId: "", label: "Default camera" }}];
+      select.innerHTML = devices.map((device, index) => {{
+        const label = device.label || `Camera ${{index + 1}}`;
+        const selected = device.deviceId && device.deviceId === state.visionDeviceId ? "selected" : "";
+        return `<option value="${{escapeHtml(device.deviceId || "")}}" ${{selected}}>${{escapeHtml(label)}}</option>`;
+      }}).join("");
+    }}
+
+    async function startVisionPreview(deviceId = "") {{
+      const status = document.getElementById("vision-status");
+      const video = document.getElementById("vision-live-video");
+      if (!video) {{
+        return;
+      }}
+      if (!navigator.mediaDevices?.getUserMedia) {{
+        if (status) status.textContent = "This browser does not expose camera access.";
+        return;
+      }}
+      stopVisionPreview();
+      if (status) status.textContent = "Requesting camera access…";
+      const constraints = deviceId
+        ? {{ video: {{ deviceId: {{ exact: deviceId }} }}, audio: false }}
+        : {{ video: true, audio: false }};
+      try {{
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        state.visionStream = stream;
+        video.srcObject = stream;
+        await video.play();
+        const track = stream.getVideoTracks()[0];
+        const settings = track?.getSettings?.() || {{}};
+        state.visionDeviceId = String(settings.deviceId || deviceId || "");
+        await populateVisionDevicePicker();
+        if (status) {{
+          status.textContent = "Live preview active. JARVIS is not monitoring in the background; capture only happens when you press Capture Frame.";
+        }}
+      }} catch (error) {{
+        if (status) status.textContent = error.message || "Camera access failed.";
+      }}
+    }}
+
+    async function captureVisionFrame() {{
+      const video = document.getElementById("vision-live-video");
+      const canvas = document.getElementById("vision-canvas");
+      const preview = document.getElementById("vision-preview");
+      const analysis = document.getElementById("vision-analysis");
+      const status = document.getElementById("vision-status");
+      const prompt = document.getElementById("vision-prompt")?.value || "";
+      const actor = document.getElementById("actor")?.value || "Chris";
+      const deviceSelect = document.getElementById("vision-device");
+      const mode = document.getElementById("vision-mode")?.value || "describe";
+      if (!video || !canvas) {{
+        return;
+      }}
+      if (!state.visionStream) {{
+        await startVisionPreview(deviceSelect?.value || "");
+      }}
+      const width = video.videoWidth || 1280;
+      const height = video.videoHeight || 720;
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+      if (!context) {{
+        if (status) status.textContent = "Camera capture context unavailable.";
+        return;
+      }}
+      if (mode === "measure") {{
+        const metrics = getVisionSelectionMetrics(video);
+        if (!state.visionCalibration) {{
+          if (analysis) analysis.textContent = "Calibrate first: place a ruler on the stage, turn crop on, select a known span, and use Calibrate Selection.";
+          if (status) status.textContent = "Measure mode needs calibration before it can estimate size.";
+          return;
+        }}
+        if (!metrics) {{
+          if (analysis) analysis.textContent = "Turn crop on and drag across the object span you want to measure.";
+          if (status) status.textContent = "Measure mode needs a selected span on the live preview.";
+          return;
+        }}
+        const unit = state.visionCalibration.unit || "cm";
+        const measuredWidth = metrics.pixelWidth / state.visionCalibration.pixelsPerUnit;
+        const measuredHeight = metrics.pixelHeight / state.visionCalibration.pixelsPerUnit;
+        const measuredDiagonal = metrics.diagonalPixels / state.visionCalibration.pixelsPerUnit;
+        canvas.width = width;
+        canvas.height = height;
+        context.drawImage(video, 0, 0, width, height, 0, 0, width, height);
+        const imageDataUrl = canvas.toDataURL("image/jpeg", 0.92);
+        if (preview) {{
+          preview.src = imageDataUrl;
+          preview.hidden = false;
+        }}
+        if (analysis) {{
+          analysis.textContent = [
+            `Measured selection:`,
+            `Width: ${{formatMeasurement(measuredWidth, unit)}}`,
+            `Height: ${{formatMeasurement(measuredHeight, unit)}}`,
+            `Diagonal: ${{formatMeasurement(measuredDiagonal, unit)}}`,
+            `Calibration: ${{state.visionCalibration.referenceLength}} ${{unit}} across ${{Math.round(state.visionCalibration.referencePixels)}} px`,
+          ].join("\\n");
+        }}
+        if (status) status.textContent = "Measured the selected span using the saved ruler calibration.";
+        renderVisionCalibrationSummary("Measurement ready.");
+        return;
+      }}
+      if (mode === "compare" && !state.lastVisionCapture?.capture_id) {{
+        if (analysis) analysis.textContent = "Capture a baseline frame first, then switch to compare mode.";
+        if (status) status.textContent = "Compare mode needs one earlier frame to compare against.";
+        return;
+      }}
+      let sx = 0;
+      let sy = 0;
+      let sw = width;
+      let sh = height;
+      if (state.visionCropEnabled && state.visionCropRect) {{
+        const displayWidth = video.clientWidth || width;
+        const displayHeight = video.clientHeight || height;
+        const scaleX = width / displayWidth;
+        const scaleY = height / displayHeight;
+        sx = Math.max(0, Math.round(state.visionCropRect.x * scaleX));
+        sy = Math.max(0, Math.round(state.visionCropRect.y * scaleY));
+        sw = Math.max(1, Math.round(state.visionCropRect.width * scaleX));
+        sh = Math.max(1, Math.round(state.visionCropRect.height * scaleY));
+        canvas.width = sw;
+        canvas.height = sh;
+      }}
+      context.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      const imageDataUrl = canvas.toDataURL("image/jpeg", 0.92);
+      if (preview) {{
+        preview.src = imageDataUrl;
+        preview.hidden = false;
+      }}
+      if (status) status.textContent = "Analyzing captured frame…";
+      if (analysis) analysis.textContent = "JARVIS is analyzing this frame.";
+      try {{
+        const selectedOption = deviceSelect?.selectedOptions?.[0];
+        const result = await loadJSON("/api/vision/analyze", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            actor,
+            prompt,
+            mode,
+            image_data_url: imageDataUrl,
+            camera_label: selectedOption?.textContent || "Desk Camera",
+            compare_to_capture_id: mode === "compare" ? (state.lastVisionCapture?.capture_id || "") : "",
+          }}),
+        }});
+        state.lastVisionCapture = result;
+        if (analysis) analysis.textContent = result.analysis || "No analysis returned.";
+        if (status) status.textContent = `Captured one frame from ${{result.camera_label || "Desk Camera"}}. No continuous monitoring is active.`;
+      }} catch (error) {{
+        if (analysis) analysis.textContent = error.message || "Vision analysis failed.";
+        if (status) status.textContent = "Capture succeeded, but analysis failed.";
+      }}
+    }}
+
+    function wireVisionPacket() {{
+      const startButton = document.getElementById("vision-start");
+      const captureButton = document.getElementById("vision-capture");
+      const retakeButton = document.getElementById("vision-retake");
+      const cropToggle = document.getElementById("vision-toggle-crop");
+      const deviceSelect = document.getElementById("vision-device");
+      const modeSelect = document.getElementById("vision-mode");
+      const video = document.getElementById("vision-live-video");
+      const cropBox = document.getElementById("vision-crop-box");
+      const preview = document.getElementById("vision-preview");
+      const analysis = document.getElementById("vision-analysis");
+      const status = document.getElementById("vision-status");
+      const promptField = document.getElementById("vision-prompt");
+      const calibrateButton = document.getElementById("vision-calibrate");
+      const clearCalibrationButton = document.getElementById("vision-clear-calibration");
+      const calibrationLengthField = document.getElementById("vision-calibration-length");
+      const calibrationUnitField = document.getElementById("vision-calibration-unit");
+
+      function renderCropBox() {{
+        if (!cropBox || !state.visionCropRect || !state.visionCropEnabled) {{
+          cropBox?.classList.remove("active");
+          return;
+        }}
+        cropBox.classList.add("active");
+        cropBox.style.left = `${{state.visionCropRect.x}}px`;
+        cropBox.style.top = `${{state.visionCropRect.y}}px`;
+        cropBox.style.width = `${{state.visionCropRect.width}}px`;
+        cropBox.style.height = `${{state.visionCropRect.height}}px`;
+      }}
+
+      function resetVisionCaptureState(preserveHistory = true) {{
+        if (!preserveHistory) {{
+          state.lastVisionCapture = null;
+        }}
+        state.visionCropRect = null;
+        state.visionDragStart = null;
+        if (preview) {{
+          preview.hidden = true;
+          preview.removeAttribute("src");
+        }}
+        if (analysis) analysis.textContent = "No frame captured yet.";
+        if (status) {{
+          status.textContent = preserveHistory && state.lastVisionCapture?.capture_id
+            ? "Retake ready. Your previous frame is still available for compare mode."
+            : "Live preview active. JARVIS is not monitoring in the background; capture only happens when you press Capture Frame.";
+        }}
+        renderCropBox();
+      }}
+
+      function calibrateVisionSelection() {{
+        const metrics = getVisionSelectionMetrics(video);
+        const rawLength = Number(calibrationLengthField?.value || "");
+        const unit = calibrationUnitField?.value || "cm";
+        if (!metrics) {{
+          if (analysis) analysis.textContent = "Turn crop on and drag across a known ruler span before calibrating.";
+          if (status) status.textContent = "Calibration needs a selected ruler span.";
+          return;
+        }}
+        if (!Number.isFinite(rawLength) || rawLength <= 0) {{
+          if (analysis) analysis.textContent = "Enter the real ruler length for the selected span before calibrating.";
+          if (status) status.textContent = "Calibration length must be a positive number.";
+          return;
+        }}
+        const calibration = {{
+          pixelsPerUnit: metrics.majorAxisPixels / rawLength,
+          referencePixels: metrics.majorAxisPixels,
+          referenceLength: rawLength,
+          unit,
+          updatedAt: new Date().toISOString(),
+        }};
+        saveVisionCalibration(calibration);
+        renderVisionCalibrationSummary("Selection is now calibrated for measure mode.");
+        if (analysis) {{
+          analysis.textContent = `Calibration saved: ${{rawLength}} ${{unit}} across ${{Math.round(metrics.majorAxisPixels)}} px.`;
+        }}
+        if (status) status.textContent = "Vision measure mode is calibrated and ready.";
+      }}
+
+      startButton?.addEventListener("click", () => {{
+        startVisionPreview(deviceSelect?.value || "").catch((error) => {{
+          if (status) status.textContent = error.message || "Camera start failed.";
+        }});
+      }});
+      captureButton?.addEventListener("click", () => {{
+        captureVisionFrame().catch((error) => {{
+          if (analysis) analysis.textContent = error.message || "Vision capture failed.";
+          if (status) status.textContent = "Capture failed.";
+        }});
+      }});
+      retakeButton?.addEventListener("click", () => {{
+        resetVisionCaptureState();
+      }});
+      calibrateButton?.addEventListener("click", () => {{
+        calibrateVisionSelection();
+      }});
+      clearCalibrationButton?.addEventListener("click", () => {{
+        saveVisionCalibration(null);
+        renderVisionCalibrationSummary("Calibration cleared.");
+        if (status) status.textContent = "Vision calibration cleared.";
+      }});
+      cropToggle?.addEventListener("click", () => {{
+        state.visionCropEnabled = !state.visionCropEnabled;
+        cropToggle.classList.toggle("primary", state.visionCropEnabled);
+        cropToggle.textContent = state.visionCropEnabled ? "Crop On" : "Crop Before Analyze";
+        if (!state.visionCropEnabled) {{
+          state.visionCropRect = null;
+        }}
+        renderCropBox();
+      }});
+      modeSelect?.addEventListener("change", () => {{
+        const mode = modeSelect.value;
+        if (mode === "text") {{
+          if (promptField) {{
+            promptField.value ||= "Read any visible text exactly. If it is unclear, say so.";
+          }}
+        }} else if (mode === "compare") {{
+          if (promptField) {{
+            promptField.value ||= "Compare this frame to the previous one and tell me what changed.";
+          }}
+          if (status && !state.lastVisionCapture?.capture_id) {{
+            status.textContent = "Compare mode is ready, but you need one earlier capture first.";
+          }}
+        }} else if (mode === "measure") {{
+          state.visionCropEnabled = true;
+          cropToggle?.classList.add("primary");
+          if (cropToggle) cropToggle.textContent = "Selection On";
+          if (promptField && !promptField.value.trim()) {{
+            promptField.value = "Measure the selected item using the saved ruler calibration.";
+          }}
+          renderVisionCalibrationSummary();
+          if (status) {{
+            status.textContent = state.visionCalibration
+              ? "Measure mode ready. Drag across the item span you want to measure, then capture."
+              : "Measure mode ready. Place a ruler on the stage, select a known span, and calibrate first.";
+          }}
+        }} else if (status) {{
+          status.textContent = state.lastVisionCapture?.capture_id
+            ? "Live preview active. A previous frame is available if you want compare mode."
+            : "Live preview active. JARVIS is not monitoring in the background; capture only happens when you press Capture Frame.";
+        }}
+      }});
+      deviceSelect?.addEventListener("change", () => {{
+        startVisionPreview(deviceSelect.value).catch((error) => {{
+          if (status) status.textContent = error.message || "Camera switch failed.";
+        }});
+      }});
+      video?.addEventListener("pointerdown", (event) => {{
+        if (!state.visionCropEnabled || !video) return;
+        const rect = video.getBoundingClientRect();
+        state.visionDragStart = {{
+          x: Math.max(0, Math.min(rect.width, event.clientX - rect.left)),
+          y: Math.max(0, Math.min(rect.height, event.clientY - rect.top)),
+        }};
+        state.visionCropRect = {{ x: state.visionDragStart.x, y: state.visionDragStart.y, width: 1, height: 1 }};
+        renderCropBox();
+      }});
+      video?.addEventListener("pointermove", (event) => {{
+        if (!state.visionCropEnabled || !state.visionDragStart || !video) return;
+        const rect = video.getBoundingClientRect();
+        const currentX = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
+        const currentY = Math.max(0, Math.min(rect.height, event.clientY - rect.top));
+        const x = Math.min(state.visionDragStart.x, currentX);
+        const y = Math.min(state.visionDragStart.y, currentY);
+        const width = Math.abs(currentX - state.visionDragStart.x);
+        const height = Math.abs(currentY - state.visionDragStart.y);
+        state.visionCropRect = {{ x, y, width, height }};
+        renderCropBox();
+      }});
+      if (!window.__jarvisVisionPointerUpBound) {{
+        window.addEventListener("pointerup", () => {{
+          state.visionDragStart = null;
+        }});
+        window.__jarvisVisionPointerUpBound = true;
+      }}
+      populateVisionDevicePicker()
+        .then(() => startVisionPreview(state.visionDeviceId || deviceSelect?.value || ""))
+        .catch((error) => {{
+          if (status) status.textContent = error.message || "Camera preview unavailable.";
+        }});
+      state.visionCalibration = loadVisionCalibration();
+      renderVisionCalibrationSummary();
     }}
 
     function browserSpeechRecognition() {{
       return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+    }}
+
+    function formatSourceIndicator(provider, model = "") {{
+      const normalized = String(provider || "standby").trim().toLowerCase();
+      if (normalized === "ollama") return "Local";
+      if (normalized === "openai") return "OpenAI";
+      if (normalized === "policy") return "Policy";
+      if (normalized === "fallback") return "Fallback";
+      return "Standby";
+    }}
+
+    function updateSourceIndicator(provider, model = "") {{
+      const indicator = document.getElementById("state-source-indicator");
+      if (!indicator) {{
+        return;
+      }}
+      const normalized = String(provider || "standby").trim().toLowerCase();
+      indicator.dataset.provider = normalized || "standby";
+      indicator.textContent = formatSourceIndicator(normalized, model);
+      indicator.title = model
+        ? `Response source: ${{formatSourceIndicator(normalized, model)}} · ${{model}}`
+        : `Response source: ${{formatSourceIndicator(normalized, model)}}`;
+    }}
+
+    function wakeWordPattern() {{
+      return /\\bhey\\s+jarvis\\b[\\s,.:;-]*/i;
+    }}
+
+    function conversationWindowActive() {{
+      return Date.now() < state.followUpUntil;
+    }}
+
+    function extendConversationWindow() {{
+      state.followUpUntil = Date.now() + state.followUpWindowMs;
+    }}
+
+    function clearRecognitionRestartTimer() {{
+      if (state.recognitionRestartTimer) {{
+        clearTimeout(state.recognitionRestartTimer);
+        state.recognitionRestartTimer = null;
+      }}
+    }}
+
+    function refreshMicButton() {{
+      if (state.recognizing) {{
+        setTalkButton(true, conversationWindowActive() ? "Listening..." : "Wake Listening");
+        return;
+      }}
+      if (state.alwaysOnMicEnabled) {{
+        setTalkButton(true, "Mic On");
+        return;
+      }}
+      setTalkButton(false, "Mic Off");
+    }}
+
+    function queueAlwaysOnListening(delay = 320) {{
+      clearRecognitionRestartTimer();
+      if (!state.alwaysOnMicEnabled || state.recognizing || state.recognizer) {{
+        refreshMicButton();
+        return;
+      }}
+      if (state.currentAudio || (window.speechSynthesis && window.speechSynthesis.speaking)) {{
+        refreshMicButton();
+        return;
+      }}
+      state.recognitionRestartTimer = window.setTimeout(() => {{
+        state.recognitionRestartTimer = null;
+        startVoiceCommand({{ automatic: true }}).catch((error) => {{
+          console.debug("Always-on microphone restart failed", error);
+          refreshMicButton();
+        }});
+      }}, delay);
+      refreshMicButton();
+    }}
+
+    function disableAlwaysOnMic(detail = "Microphone is off.") {{
+      state.alwaysOnMicEnabled = false;
+      state.followUpUntil = 0;
+      clearRecognitionRestartTimer();
+      stopRecognition();
+      setVoiceState("idle", detail);
+      refreshMicButton();
+    }}
+
+    function enableAlwaysOnMic(detail = 'Standing by for "Hey Jarvis".') {{
+      state.alwaysOnMicEnabled = true;
+      setVoiceState("idle", detail);
+      queueAlwaysOnListening(60);
+      refreshMicButton();
+    }}
+
+    async function handleRecognizedSpeech(spoken) {{
+      const normalized = spoken.replace(/\\s+/g, " ").trim();
+      if (!normalized) {{
+        if (state.alwaysOnMicEnabled) {{
+          queueAlwaysOnListening();
+        }}
+        return;
+      }}
+
+      const ambientSubtitle = document.getElementById("ambient-subtitle");
+      const wakePattern = wakeWordPattern();
+      const heardWakeWord = wakePattern.test(normalized);
+      const activeConversation = conversationWindowActive();
+
+      if (!activeConversation && !heardWakeWord) {{
+        setVoiceState("idle", 'Standing by for "Hey Jarvis".');
+        if (ambientSubtitle) {{
+          ambientSubtitle.textContent = 'Standing by for "Hey Jarvis".';
+        }}
+        queueAlwaysOnListening();
+        return;
+      }}
+
+      const request = heardWakeWord ? normalized.replace(wakePattern, "").trim() : normalized;
+      extendConversationWindow();
+
+      if (!request) {{
+        setVoiceState("listening", "Wake word heard. Go ahead.");
+        if (ambientSubtitle) {{
+          ambientSubtitle.textContent = "Wake word heard. Go ahead.";
+        }}
+        queueAlwaysOnListening();
+        return;
+      }}
+
+      document.getElementById("last-user-text").textContent = request;
+      document.getElementById("command-input").value = request;
+      if (ambientSubtitle) ambientSubtitle.textContent = request;
+      syncTranscriptRail();
+      await sendCommand(true);
     }}
 
     function updateClock() {{
@@ -1645,14 +3060,7 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
         clearInterval(state.energyTimer);
         state.energyTimer = null;
       }}
-      state.energyTarget =
-        nextState === "speaking"
-          ? (state.audioReactive ? state.energyTarget : 0.88)
-          : nextState === "listening"
-            ? 0.68
-            : nextState === "responding"
-              ? 0.54
-              : 0.35;
+      state.energyTarget = 0.35;
     }}
 
     function stopAudioReactivePulse() {{
@@ -1702,19 +3110,11 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
         state.audioSourceNode = source;
         state.audioAnalyser = analyser;
         state.audioReactive = true;
-        const buffer = new Uint8Array(analyser.frequencyBinCount);
         const tick = () => {{
           if (!state.audioReactive || !state.audioAnalyser) {{
             return;
           }}
-          analyser.getByteFrequencyData(buffer);
-          let sum = 0;
-          for (let i = 0; i < buffer.length; i += 1) {{
-            sum += buffer[i];
-          }}
-          const avg = sum / Math.max(buffer.length, 1);
-          const normalized = Math.min(1.15, 0.28 + avg / 140);
-          state.energyTarget = normalized;
+          state.energyTarget = 0.35;
           state.audioReactiveFrame = requestAnimationFrame(tick);
         }};
         tick();
@@ -1732,14 +3132,23 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       }}
       rail.classList.toggle("collapsed", !state.signalRailExpanded);
       toggle.classList.toggle("hidden", state.signalRailExpanded);
-      const background = data.background_agents || {{}};
-      const packets = [
-        ["House", data.home_overview?.summary?.[0] || "House profile standing by"],
-        ["Weather", data.weather || "Weather standing by"],
-        ["Mission", data.cards?.mission?.summary || "Mission context ready"],
-        ["Agents", `${{background.awake_count ?? 0}} awake · ${{background.idle_count ?? 0}} idle · ${{background.blocked_count ?? 0}} blocked`],
-        ["Watch", data.cold_storage_monitor?.recommended_action || data.overnight_review?.summary || "No watch item loaded"],
-      ];
+      const truth = data.truth || {{}};
+      const packets = [];
+      if (truth.home_live) {{
+        packets.push(["House", data.home_overview?.summary?.[0] || "Home state available"]);
+      }}
+      if (truth.watch_live) {{
+        packets.push(["Watch", data.cold_storage_monitor?.recommended_action || data.overnight_review?.summary || "No watch item loaded"]);
+      }}
+      if ((data.assistant_notifications?.summary?.unread || 0) > 0) {{
+        packets.push(["Inbox", `${{data.assistant_notifications.summary.unread}} assistant item(s) waiting`]);
+      }}
+      if (degradedInfo(data)?.active) {{
+        packets.push(["Status", "Degraded mode: last good snapshot"]);
+      }}
+      for (const [label, value] of (data.assistant_surface?.signal_chips || [])) {{
+        packets.push([label, value]);
+      }}
       rail.innerHTML = `<button class="packet-button" data-signal-collapse="true">Hide</button>` + packets.map(([label, value]) => `
         <div class="signal-chip"><strong>${{escapeHtml(label)}}:</strong> ${{escapeHtml(value)}}</div>
       `).join("");
@@ -1857,6 +3266,7 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
     function fillBrainGraph(data) {{
       const graph = data.brain_graph || {{}};
       const activeNodes = new Set(graph.active_nodes || []);
+      updateSourceIndicator(graph.active_provider || "standby", graph.active_model || "");
       document.getElementById("brain-graph-provider").textContent =
         graph.active_provider ? String(graph.active_provider).toUpperCase() : "STANDBY";
       document.getElementById("brain-mesh-caption-state").textContent =
@@ -3288,6 +4698,19 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       return `<div class="line-list">${{items.map((item) => `<div class="line-item">${{item}}</div>`).join("")}}</div>`;
     }}
 
+    function renderFirstLightSection(section) {{
+      const details = Array.isArray(section?.details) ? section.details : [];
+      const truth = section?.truth_state ? `<div class="muted" style="margin-bottom:8px; text-transform:uppercase; letter-spacing:0.12em;">${{escapeHtml(section.truth_state)}}</div>` : "";
+      return packetBlock(
+        section?.title || "Section",
+        `
+          ${{truth}}
+          <p>${{escapeHtml(section?.summary || "")}}</p>
+          ${{renderList(details.map((item) => `<div>${{escapeHtml(item)}}</div>`))}}
+        `
+      );
+    }}
+
     const HOLO_REVIEW_STORAGE_KEY = "jarvis-holo-review-v2";
     const REVIEWABLE_PAGES = [
       ["shell", "Home Shell"],
@@ -3391,16 +4814,37 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       return `<section class="packet-block"><h3>${{escapeHtml(title)}}</h3>${{inner}}</section>`;
     }}
 
+    function renderAssistantInboxItems(items, emptyLabel = "No unread assistant nudges are waiting right now.") {{
+      const rows = Array.isArray(items) ? items : [];
+      if (!rows.length) {{
+        return `<p>${{escapeHtml(emptyLabel)}}</p>`;
+      }}
+      return renderList(rows.map((item) => `
+        <div>
+          <strong>${{escapeHtml(item.title || "Assistant item")}}</strong>
+          <br>${{escapeHtml(item.detail || "")}}
+          <br><span class="muted">Priority: ${{escapeHtml(item.priority_class || "normal")}} · State: ${{escapeHtml(item.status || "opened")}}</span>
+          <br><span class="muted">Why this surfaced: ${{escapeHtml(item.why_this_surfaced || item.delivery_policy_summary || "JARVIS judged that this deserved attention.")}}</span>
+          <div class="inline-actions" style="margin-top:8px;">
+            ${{item.packet ? `<button type="button" class="ghost-toggle assistant-inbox-open" data-notification-id="${{escapeHtml(item.notification_id || "")}}" data-packet="${{escapeHtml(item.packet || "today")}}">Open</button>` : ""}}
+            <button type="button" class="ghost-toggle assistant-inbox-ignore" data-notification-id="${{escapeHtml(item.notification_id || "")}}">Ignore</button>
+          </div>
+        </div>
+      `));
+    }}
+
     async function refreshVoiceSettings() {{
-      const [settings, options, accounts, locations] = await Promise.all([
+      const [settings, options, accounts, identity, locations] = await Promise.all([
         loadJSON("/api/voice-settings"),
         loadJSON("/api/voice-options"),
         loadJSON("/api/accounts"),
+        loadJSON("/api/identity"),
         loadJSON("/api/location-settings")
       ]);
       state.voiceSettings = settings;
       state.voiceOptions = options;
       state.accountRegistry = accounts;
+      state.identity = identity;
       state.locationSettings = locations;
     }}
 
@@ -3411,6 +4855,92 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
           document.getElementById("last-jarvis-text").textContent = error.message;
           setVoiceState("idle", "Settings are unavailable right now.");
         }});
+    }}
+
+    function getShellDeviceIdentity() {{
+      let deviceId = "";
+      try {{
+        deviceId = window.localStorage.getItem(SHELL_DEVICE_ID_KEY) || "";
+        if (!deviceId) {{
+          deviceId = (window.crypto?.randomUUID?.() || `jarvis-device-${{Date.now()}}-${{Math.random().toString(16).slice(2)}}`);
+          window.localStorage.setItem(SHELL_DEVICE_ID_KEY, deviceId);
+        }}
+      }} catch (error) {{
+        deviceId = `jarvis-device-${{Date.now()}}`;
+      }}
+      state.shellDeviceId = deviceId;
+      const platform = navigator.userAgentData?.platform || navigator.platform || "Unknown platform";
+      const label = `${{platform}} browser`;
+      const fingerprint = [navigator.userAgent || "", navigator.language || "", String(window.screen?.width || 0), String(window.screen?.height || 0)].join("|");
+      return {{
+        device_id: deviceId,
+        label,
+        device_type: "browser",
+        room: document.getElementById("room")?.value || "office",
+        user_agent: navigator.userAgent || "",
+        fingerprint,
+      }};
+    }}
+
+    function applyResolvedActor(actorId) {{
+      if (!actorId) return;
+      const actor = document.getElementById("actor");
+      const modeActor = document.getElementById("mode-actor");
+      if (actor && Array.from(actor.options).some((option) => option.value === actorId)) {{
+        actor.value = actorId;
+      }}
+      if (modeActor && Array.from(modeActor.options).some((option) => option.value === actorId)) {{
+        modeActor.value = actorId;
+      }}
+      syncContextPanelCopy();
+    }}
+
+    function loadSessionActorOverride() {{
+      try {{
+        return window.localStorage.getItem(SESSION_ACTOR_OVERRIDE_KEY) || "";
+      }} catch (_error) {{
+        return "";
+      }}
+    }}
+
+    function saveSessionActorOverride(actorId) {{
+      state.sessionActorOverride = actorId || "";
+      try {{
+        if (actorId) {{
+          window.localStorage.setItem(SESSION_ACTOR_OVERRIDE_KEY, actorId);
+        }} else {{
+          window.localStorage.removeItem(SESSION_ACTOR_OVERRIDE_KEY);
+        }}
+      }} catch (_error) {{
+        // noop
+      }}
+    }}
+
+    async function bindShellIdentity() {{
+      const payload = getShellDeviceIdentity();
+      payload.session_actor_id = state.sessionActorOverride || loadSessionActorOverride() || "";
+      const data = await loadJSON("/api/identity/session", {{
+        method: "POST",
+        headers: {{ "Content-Type": "application/json" }},
+        body: JSON.stringify(payload),
+      }});
+      state.identity = data.identity || state.identity;
+      state.sessionIdentity = data;
+      if (data.resolved_actor_id) {{
+        applyResolvedActor(data.resolved_actor_id || "");
+        if (data.actor_source === "session-override") {{
+          saveSessionActorOverride(data.resolved_actor_id || "");
+        }}
+      }}
+      return data;
+    }}
+
+    function preferredActorLabel() {{
+      return (
+        state.sessionIdentity?.resolved_actor_label ||
+        document.getElementById("actor")?.value ||
+        "Chris"
+      );
     }}
 
     function wireCatalystWorkspace() {{
@@ -3599,6 +5129,9 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
     }}
 
     function openPacket(packetId) {{
+      if (packetId !== "vision") {{
+        stopVisionPreview();
+      }}
       state.packet = packetId;
       state.packetStripExpanded = true;
       document.body.classList.add("modal-open");
@@ -3607,24 +5140,264 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       const title = document.getElementById("modal-title");
       const body = document.getElementById("modal-body");
       const data = state.dashboard || {{}};
+      const needsDashboardHydration =
+        !state.dashboard ||
+        (packetId === "today" && !data.today_board) ||
+        (packetId === "review" && !data.cadence_review) ||
+        (packetId === "tasks" && !data.open_loops);
       let heading = "Packet";
       let content = "";
 
+      if (needsDashboardHydration) {{
+        if (state.packetHydrationPending === packetId) {{
+          setModalVisibility(true);
+          return;
+        }}
+        title.textContent =
+          packetId === "today"
+            ? "Today Board"
+            : packetId === "review"
+              ? "Cadence Review"
+              : packetId === "tasks"
+                ? "Assistant Core"
+                : "Packet";
+        body.innerHTML = `<div class="packet-grid"><div class="metric">${{
+          packetId === "today"
+            ? "Loading Today Board..."
+            : packetId === "review"
+              ? "Loading Cadence Review..."
+              : packetId === "tasks"
+                ? "Loading Assistant Core..."
+                : "Loading live assistant state..."
+        }}</div></div>`;
+        state.packetHydrationPending = packetId;
+        const hydrationToken = ++state.packetHydrationToken;
+        setModalVisibility(true);
+        const actor = preferredActorLabel();
+        const hydrate = packetId === "today"
+          ? loadJSON(`/api/today-board?actor=${{encodeURIComponent(actor)}}`).then((todayBoard) => {{
+              mergeDashboardState({{
+                today_board: todayBoard,
+                cognitive: todayBoard?.cognition || state.dashboard?.cognitive || null,
+                assistant_notifications: todayBoard?.assistant_notifications || state.dashboard?.assistant_notifications || null,
+              }});
+            }})
+          : packetId === "review"
+            ? loadJSON(`/api/cadence-review?actor=${{encodeURIComponent(actor)}}`).then((reviewPacket) => {{
+                mergeDashboardState({{
+                  cadence_review: reviewPacket,
+                }});
+              }})
+          : packetId === "tasks"
+            ? loadJSON(`/api/open-loops?actor=${{encodeURIComponent(actor)}}&limit=18`).then((openLoops) => {{
+                mergeDashboardState({{
+                  open_loops: openLoops,
+                }});
+              }})
+            : refreshDashboard();
+        hydrate
+          .then(() => {{
+            if (state.packet === packetId && state.packetHydrationToken === hydrationToken) {{
+              state.packetHydrationPending = "";
+              openPacket(packetId);
+            }}
+          }})
+          .catch((error) => {{
+            if (state.packet === packetId && state.packetHydrationToken === hydrationToken) {{
+              state.packetHydrationPending = "";
+              body.innerHTML = `<div class="packet-grid"><div class="metric">${{escapeHtml(error?.message || "Failed to load packet data.")}}</div></div>`;
+            }}
+          }});
+        return;
+      }}
+
+      if (state.packetHydrationPending === packetId) {{
+        state.packetHydrationPending = "";
+      }}
+
       if (packetId === "briefing") {{
-        heading = "Morning Brief";
+        const firstLight = state.firstLight || null;
+        heading = firstLight ? "First Light" : "Morning Brief";
+        if (firstLight) {{
+          content = `
+            <div class="packet-grid">
+              ${{renderFreshnessBanner(firstLight, "First Light")}}
+              ${{
+                packetBlock("Opening", `<p>${{escapeHtml(firstLight.opening || state.lastBriefing || "")}}</p>${{renderList((firstLight.what_changed || []).map((item) => `<div>${{escapeHtml(item)}}</div>`))}}`)
+              }}
+              ${{
+                packetBlock("First 20 Minutes", renderList((firstLight.first_20_minutes || []).map((item) => `<div>${{escapeHtml(item)}}</div>`)))
+              }}
+              ${{
+                packetBlock("Watch", `<p>${{escapeHtml(firstLight.watch_line || "")}}</p>`)
+              }}
+              ${{
+                packetBlock("Formation", `<p>${{escapeHtml(firstLight.formation_cue || "")}}</p>`)
+              }}
+              ${{(firstLight.sections || []).map((section) => renderFirstLightSection(section)).join("")}}
+            </div>`;
+        }} else {{
+          content = `
+            <div class="packet-grid">
+              ${{
+                packetBlock("Body", `<p>${{escapeHtml(data.cards?.body?.summary || "")}}</p>${{renderList((data.cards?.body?.details || []).map((item) => `<div>${{escapeHtml(item)}}</div>`))}}`)
+              }}
+              ${{
+                packetBlock("Home", `<p>${{escapeHtml(data.cards?.home?.summary || "")}}</p>${{renderList((data.cards?.home?.details || []).map((item) => `<div>${{escapeHtml(item)}}</div>`))}}`)
+              }}
+              ${{
+                packetBlock("Mission", `<p>${{escapeHtml(data.cards?.mission?.summary || "")}}</p>${{renderList((data.cards?.mission?.details || []).map((item) => `<div>${{escapeHtml(item)}}</div>`))}}`)
+              }}
+              ${{
+                packetBlock("Briefing", `<p>${{escapeHtml(state.lastBriefing || "Use the Brief button or ask JARVIS for a briefing.")}}</p>`)
+              }}
+            </div>`;
+        }}
+      }} else if (packetId === "today") {{
+        heading = "Today Board";
+        const board = data.today_board || {{}};
+        const notifications = board.assistant_notifications || {{}};
+        const notificationPolicy = board.notification_policy || {{}};
+        const quietWindow = notificationPolicy.quiet_window || {{}};
+        const browserAlertStatus = !browserAlertsSupported()
+          ? "Browser alerts are not supported on this device."
+          : state.browserAlertsPermission === "granted" && state.browserAlertsEnabled
+            ? "Browser alerts are active for assistant follow-up."
+            : state.browserAlertsPermission === "denied"
+              ? "Browser alerts are blocked by the browser for this device."
+              : "Browser alerts are available but not enabled yet.";
         content = `
           <div class="packet-grid">
+            ${{renderFreshnessBanner(board, "Today Board")}}
             ${{
-              packetBlock("Body", `<p>${{escapeHtml(data.cards?.body?.summary || "")}}</p>${{renderList((data.cards?.body?.details || []).map((item) => `<div>${{escapeHtml(item)}}</div>`))}}`)
+              packetBlock("Priorities", renderList((board.priorities || []).map((item) => `
+                <div>
+                  <strong>${{escapeHtml(item.title || "Priority")}}</strong>
+                  <br>${{escapeHtml(item.owner_agent || "JARVIS")}} · ${{escapeHtml(item.next_action || "follow up")}} · ${{escapeHtml(item.status || "open")}}
+                </div>
+              `)))
             }}
             ${{
-              packetBlock("Home", `<p>${{escapeHtml(data.cards?.home?.summary || "")}}</p>${{renderList((data.cards?.home?.details || []).map((item) => `<div>${{escapeHtml(item)}}</div>`))}}`)
+              packetBlock("Carry Today", renderList((board.carry || []).map((item) => `<div>${{escapeHtml(item)}}</div>`)))
             }}
             ${{
-              packetBlock("Mission", `<p>${{escapeHtml(data.cards?.mission?.summary || "")}}</p>${{renderList((data.cards?.mission?.details || []).map((item) => `<div>${{escapeHtml(item)}}</div>`))}}`)
+              packetBlock("Calendar Pressure", renderList((board.calendar || []).map((item) => `<div><strong>${{escapeHtml(item.summary || "(Untitled event)")}}</strong><br>${{escapeHtml(item.start || "")}}</div>`)))
             }}
             ${{
-              packetBlock("Briefing", `<p>${{escapeHtml(state.lastBriefing || "Use the Brief button or ask JARVIS for a briefing.")}}</p>`)
+              packetBlock("Autonomy Boundary", renderList((board.autonomy || []).map((item) => `<div>${{escapeHtml(item)}}</div>`)))
+            }}
+            ${{
+              packetBlock(
+                "Cognitive Posture",
+                `
+                  <div class="metric"><strong>Mode</strong> ${{escapeHtml(board.cognition?.deliberation?.mode || "watch")}}</div>
+                  <div class="metric"><strong>Decision</strong> ${{escapeHtml(board.cognition?.deliberation?.decision || "hold")}}</div>
+                  <div class="metric"><strong>Cadence</strong> ${{escapeHtml(board.cognition?.cadence?.phase || "watch")}} · ${{escapeHtml(board.cognition?.cadence?.suggested_loop || "autonomy-sweep")}}</div>
+                  <div class="metric"><strong>Active loop</strong> ${{escapeHtml((board.cognition?.cadence?.loops || []).find((item) => item.state === "active")?.label || "Autonomy Sweep")}}</div>
+                  <div class="metric"><strong>World state</strong> ${{escapeHtml(board.cognition?.world_state?.pressure || "steady")}} · tasks ${{escapeHtml(String(board.cognition?.world_state?.summary?.tasks || 0))}} · notifications ${{escapeHtml(String(board.cognition?.world_state?.summary?.notifications || 0))}}</div>
+                  <div class="metric"><strong>Growth pressure</strong> ${{escapeHtml(board.cognition?.growth_state?.summary?.pressure || "quiet")}} · signals ${{escapeHtml(String(board.cognition?.growth_state?.summary?.tracked_signal_count || 0))}}</div>
+                  <div class="metric"><strong>Goal pull</strong> ${{escapeHtml((board.cognition?.goal_stack?.immediate || [])[0] || "No strong immediate pull")}}</div>
+                  ${{renderList((board.cognition?.deliberation?.reasoning || []).map((item) => `<div>${{escapeHtml(item)}}</div>`))}}
+                  <div class="metric" style="margin-top:10px;"><strong>Council consensus</strong> ${{escapeHtml(board.cognition?.internal_council?.consensus || "hold")}}</div>
+                  ${{renderList((board.cognition?.internal_council?.members || []).slice(0, 3).map((item) => `<div><strong>${{escapeHtml(item.role || "council")}}</strong> · ${{escapeHtml(item.vote || "queue")}}<br>${{escapeHtml(item.recommendation || "")}}</div>`))}}
+                  ${{renderList((board.cognition?.world_state?.delta?.added_labels || []).slice(0, 3).map((item) => `<div><strong>New signal</strong><br>${{escapeHtml(item)}}</div>`))}}
+                `
+              )
+            }}
+            ${{
+              packetBlock(
+                "Growth Lanes",
+                `
+                  <div class="metric"><strong>Overall</strong> ${{escapeHtml(board.growth?.summary?.pressure || board.cognition?.growth_state?.summary?.pressure || "quiet")}}</div>
+                  <div class="metric"><strong>Tracked signals</strong> ${{escapeHtml(String(board.growth?.summary?.tracked_signal_count || board.cognition?.growth_state?.summary?.tracked_signal_count || 0))}}</div>
+                  <div class="metric"><strong>Domains</strong> ${{escapeHtml(String(board.growth?.summary?.tracked_domain_count || board.cognition?.growth_state?.summary?.tracked_domain_count || 0))}} · live adapters ${{escapeHtml(String(board.growth?.summary?.live_adapter_count || board.cognition?.growth_state?.summary?.live_adapter_count || 0))}}</div>
+                  <div class="metric"><strong>Active review</strong> ${{escapeHtml(board.growth_guidance?.label || "Growth Watch")}} · ${{escapeHtml(board.growth_guidance?.pressure || "quiet")}}</div>
+                  <div class="metric"><strong>Review note</strong> ${{escapeHtml(board.growth_guidance?.summary || "No strong growth review is staged right now.")}}</div>
+                  ${{renderList(((board.growth?.lanes || board.cognition?.growth_state?.lanes || [])).map((item) => `
+                    <div>
+                      <strong>${{escapeHtml(item.label || "Growth lane")}}</strong> · ${{escapeHtml(item.pressure || "quiet")}} · ${{escapeHtml(item.confidence || "low")}}
+                      <br>${{escapeHtml(item.summary || "")}}
+                      <br><span class="muted">${{escapeHtml(item.latest || "")}}</span>
+                    </div>
+                  `))}}
+                  ${{renderList(((board.growth?.adapters || board.cognition?.growth_state?.adapters || [])).slice(0, 4).map((item) => `
+                    <div>
+                      <strong>${{escapeHtml(item.label || "Adapter")}}</strong> · ${{escapeHtml(item.status || "planned")}} · ${{escapeHtml(item.live ? "live" : "inferred")}}
+                      <br><span class="muted">${{escapeHtml(item.note || "")}}</span>
+                    </div>
+                  `))}}
+                  ${{renderList((board.growth?.top_signals || board.cognition?.growth_state?.top_signals || []).slice(0, 4).map((item) => `<div><strong>Signal</strong><br>${{escapeHtml(item)}}</div>`))}}
+                `
+              )
+            }}
+            ${{
+              packetBlock(
+                "Assistant Inbox",
+                `
+                  <p>${{escapeHtml(browserAlertStatus)}}</p>
+                  <div class="inline-actions" style="margin:0 0 10px 0;">
+                    <button class="btn btn-secondary" id="enable-browser-alerts" type="button">Enable Browser Alerts</button>
+                    <button class="btn btn-subtle" id="disable-browser-alerts" type="button">Mute Browser Alerts</button>
+                  </div>
+                  <div class="metric"><strong>Delivery policy</strong> ${{
+                    notificationPolicy.quiet_hours_active
+                      ? `Quiet hours active · ${{escapeHtml(quietWindow.start || "22:00")}} to ${{escapeHtml(quietWindow.end || "06:00")}}`
+                      : `Active hours · browser-eligible items may interrupt`
+                  }}</div>
+                  <div class="metric"><strong>Inbox state</strong> unseen ${{escapeHtml(String(notifications.summary?.by_status?.unseen || 0))}} · surfaced ${{escapeHtml(String(notifications.summary?.by_status?.surfaced || 0))}} · opened ${{escapeHtml(String(notifications.summary?.by_status?.opened || 0))}}</div>
+                  <div class="metric"><strong>Priority mix</strong> quiet ${{escapeHtml(String(notifications.summary?.by_priority?.quiet || 0))}} · normal ${{escapeHtml(String(notifications.summary?.by_priority?.normal || 0))}} · interrupt-worthy ${{escapeHtml(String(notifications.summary?.by_priority?.["interrupt-worthy"] || 0))}}</div>
+                  ${{
+                    notifications.summary?.unread
+                      ? renderAssistantInboxItems(notifications.items || [])
+                      : "<p>No unread assistant nudges are waiting right now.</p>"
+                  }}
+                `
+              )
+            }}
+          </div>`;
+      }} else if (packetId === "review") {{
+        const review = data.cadence_review || {{}};
+        const recommendedAction = review.recommended_action || null;
+        heading = review.title || "Cadence Review";
+        content = `
+          <div class="packet-grid">
+            ${{renderFreshnessBanner(review, "Cadence Review")}}
+            ${{
+              packetBlock(
+                "Cadence",
+                `
+                  <div class="metric"><strong>Phase</strong> ${{escapeHtml(review.phase || "watch")}}</div>
+                  <div class="metric"><strong>Active loop</strong> ${{escapeHtml(review.active_loop || "Autonomy Sweep")}}</div>
+                  <p>${{escapeHtml(review.summary || "No cadence summary is available yet.")}}</p>
+                  <p><strong>Digest</strong><br>${{escapeHtml(review.digest || "No digest is available yet.")}}</p>
+                  <p><strong>Why this surfaced</strong><br>${{escapeHtml(review.why_this_surfaced || review.digest || review.summary || "JARVIS judged that this review deserved attention now.")}}</p>
+                  ${{recommendedAction?.action_id ? `
+                    <div class="inline-actions" style="margin-top:10px;">
+                      <button
+                        type="button"
+                        class="ghost-toggle review-action-button"
+                        data-domain="${{escapeHtml(recommendedAction.domain || "")}}"
+                        data-item-id="${{escapeHtml(recommendedAction.item_id || "")}}"
+                        data-action="${{escapeHtml(recommendedAction.action_id || "")}}"
+                      >${{escapeHtml(recommendedAction.label || "Act Now")}}</button>
+                    </div>
+                  ` : ""}}
+                `
+              )
+            }}
+            ${{
+              (review.sections || []).map((section) => packetBlock(
+                section.title || "Section",
+                `
+                  <p>${{escapeHtml(section.summary || "")}}</p>
+                  ${{renderList((section.details || []).map((item) => `<div>${{escapeHtml(item)}}</div>`))}}
+                `
+              )).join("")
+            }}
+            ${{
+              (data.assistant_notifications?.items || []).length
+                ? packetBlock("Inbox Actions", renderAssistantInboxItems(data.assistant_notifications.items || []))
+                : ""
             }}
           </div>`;
       }} else if (packetId === "brains") {{
@@ -3695,6 +5468,7 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
         const statuses = background.statuses || [];
         const registry = data.agent_registry?.agents || [];
         const curator = data.memory_curator || {{}};
+        const liveExecution = background.live_execution === true;
         content = `
           <div class="packet-grid">
             ${{
@@ -3705,19 +5479,22 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
                 </div>`)
             }}
             ${{
-              packetBlock("Scheduler Status", `
+              packetBlock("Scheduler Status", liveExecution ? `
                 <div class="stack">
                   <div class="metric"><strong>Awake</strong> ${{escapeHtml(String(background.awake_count ?? 0))}}</div>
                   <div class="metric"><strong>Idle</strong> ${{escapeHtml(String(background.idle_count ?? 0))}}</div>
                   <div class="metric"><strong>Blocked</strong> ${{escapeHtml(String(background.blocked_count ?? 0))}}</div>
                   <div class="metric"><strong>Mode</strong> ${{escapeHtml((background.active_mode || "ambient-associate").replaceAll("-", " "))}}</div>
-                </div>`)
+                </div>` : `
+                <p>Background role counts are hidden until JARVIS has real live execution-state tracking instead of scheduler posture.</p>
+                <div class="metric"><strong>Mode</strong> ${{escapeHtml((background.active_mode || "ambient-associate").replaceAll("-", " "))}}</div>
+              `)
             }}
             ${{
-              packetBlock("Awake Now", renderList(statuses.filter((item) => item.state === "awake").map((item) => `<div><strong>${{escapeHtml(item.label)}}</strong> · ${{escapeHtml(item.reason)}}</div>`)) || `<div class="empty">No agents are currently awake.</div>`)
+              packetBlock("Awake Now", liveExecution ? (renderList(statuses.filter((item) => item.state === "awake").map((item) => `<div><strong>${{escapeHtml(item.label)}}</strong> · ${{escapeHtml(item.reason)}}</div>`)) || `<div class="empty">No agents are currently awake.</div>`) : `<div class="empty">Live execution-state tracking is not enabled yet.</div>`)
             }}
             ${{
-              packetBlock("Blocked", renderList(statuses.filter((item) => item.state === "blocked").map((item) => `<div><strong>${{escapeHtml(item.label)}}</strong> · waiting on ${{escapeHtml((item.blocked_dependencies || []).join(", ") || "dependency")}}</div>`)) || `<div class="empty">Nothing is blocked at the moment.</div>`)
+              packetBlock("Blocked", liveExecution ? (renderList(statuses.filter((item) => item.state === "blocked").map((item) => `<div><strong>${{escapeHtml(item.label)}}</strong> · waiting on ${{escapeHtml((item.blocked_dependencies || []).join(", ") || "dependency")}}</div>`)) || `<div class="empty">Nothing is blocked at the moment.</div>`) : `<div class="empty">Blocked counts are hidden until live execution-state tracking exists.</div>`)
             }}
             ${{
               packetBlock("Memory Curator", `
@@ -3730,6 +5507,27 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
             }}
             ${{
               packetBlock("Curation Rules", renderList((curator.rules || []).map((item) => `<div><strong>${{escapeHtml(item.label)}}</strong> · ${{escapeHtml(item.capture_when)}}</div>`)))
+            }}
+          </div>`;
+      }} else if (packetId === "connected-devices") {{
+        heading = "Connected Devices";
+        content = `
+          <div class="packet-grid">
+            ${{
+              packetBlock("Admin View", `
+                <p>See every registered phone, tablet, browser, and display JARVIS knows about, then map each one to the right family member without guessing. This is app-level identity only: device ids, session fingerprints, and last-seen posture, not MAC or IMEI numbers.</p>
+                <div class="inline-actions">
+                  <button type="button" id="connected-devices-refresh">Refresh Devices</button>
+                  <button type="button" id="connected-devices-bind-current">Bind Current Browser</button>
+                </div>
+                <div class="settings-note" id="connected-devices-status">Loading connected devices…</div>
+              `)
+            }}
+            ${{
+              packetBlock("Summary", `<div class="stack" id="connected-devices-summary"><div class="metric">Loading device summary…</div></div>`)
+            }}
+            ${{
+              packetBlock("Registry", `<div class="stack" id="connected-devices-list"><div class="metric">Loading device registry…</div></div>`)
             }}
           </div>`;
       }} else if (packetId === "home") {{
@@ -3793,6 +5591,158 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
               packetBlock("Approvals", renderList((data.explainability?.approval_history || []).filter((item) => item.status === "pending").map((item) => `<div>${{escapeHtml(item.request)}}</div>`)))
             }}
           </div>`;
+      }} else if (packetId === "vision") {{
+        heading = "Vision";
+        content = `
+          <div class="vision-shell">
+            <div class="vision-note">Live preview only while this modal is open. JARVIS does not continuously monitor your desk. Capture happens only when you press <strong>Capture Frame</strong>.</div>
+            <div class="vision-grid">
+              <div class="vision-stage">
+                <div class="workspace-summary">
+                  <span class="tag">On-demand only</span>
+                  <span class="tag">No background watching</span>
+                  <span class="tag">Single-frame analysis</span>
+                </div>
+                <div class="vision-controls">
+                  <label>
+                    Analysis mode
+                    <select id="vision-mode">
+                      <option value="describe">General scene</option>
+                      <option value="text">Read text only</option>
+                      <option value="compare">Compare to previous frame</option>
+                      <option value="measure">Measure with calibration</option>
+                    </select>
+                  </label>
+                  <div class="vision-helper">For zoom crop or measurement, turn crop on and drag across the live preview before you capture.</div>
+                </div>
+                <div class="vision-feed">
+                  <video id="vision-live-video" autoplay playsinline muted></video>
+                  <canvas id="vision-canvas"></canvas>
+                  <div class="vision-crop-box" id="vision-crop-box"></div>
+                </div>
+                <div class="inline-actions">
+                  <button id="vision-start" type="button">Start Camera</button>
+                  <button id="vision-toggle-crop" type="button">Crop Before Analyze</button>
+                  <button id="vision-capture" class="ghost-toggle" type="button">Capture Frame</button>
+                  <button id="vision-retake" type="button">Retake</button>
+                </div>
+                <div class="vision-status" id="vision-status">Open this modal to request a live preview. Capture only happens when you ask for it.</div>
+              </div>
+              <div class="vision-preview-card">
+                <label>
+                  Camera
+                  <select id="vision-device">
+                    <option value="">Default camera</option>
+                  </select>
+                </label>
+                <label>
+                  Ask JARVIS what to look for
+                  <textarea id="vision-prompt" placeholder="What do you see on my desk? Read the label on this box. Is my notebook open?"></textarea>
+                </label>
+                <div class="vision-measure-panel">
+                  <div class="metric"><strong>Measure Mode</strong></div>
+                  <div class="vision-helper">Place a ruler on the stage, turn crop on, and drag across a known span. Then calibrate once and reuse it.</div>
+                  <div class="vision-measure-grid">
+                    <label>
+                      Known length
+                      <input id="vision-calibration-length" type="number" min="0.1" step="0.1" value="1">
+                    </label>
+                    <label>
+                      Units
+                      <select id="vision-calibration-unit">
+                        <option value="cm">cm</option>
+                        <option value="mm">mm</option>
+                        <option value="in">in</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="inline-actions">
+                    <button id="vision-calibrate" type="button">Calibrate Selection</button>
+                    <button id="vision-clear-calibration" type="button">Clear Calibration</button>
+                  </div>
+                  <div class="vision-measure-summary" id="vision-calibration-summary">No calibration yet.</div>
+                </div>
+                <img id="vision-preview" alt="Captured frame preview" hidden>
+                <div class="metric"><strong>Analysis</strong></div>
+                <div class="output-box" id="vision-analysis">No frame captured yet.</div>
+              </div>
+            </div>
+          </div>`;
+      }} else if (packetId === "model-forge") {{
+        heading = "Model Forge";
+        const packages = data.cad_packages || [];
+        content = `
+          <div class="model-forge-shell">
+            <div class="workspace-summary">
+              <span class="tag">Packages ${{escapeHtml(String(packages.length))}}</span>
+              <span class="tag">Source-first</span>
+              <span class="tag">Fit-check STL when possible</span>
+            </div>
+            <div class="model-forge-grid">
+              <div class="model-forge-stage">
+                <div class="model-forge-viewer" id="model-forge-viewer"></div>
+                <div class="model-forge-empty" id="model-forge-empty">Choose a generated model package to inspect its STL here.</div>
+              </div>
+              <div class="model-forge-panel">
+                <div class="model-forge-meta">
+                  <div class="metric"><strong>Create Package</strong></div>
+                  <div class="stack" style="gap:10px;">
+                    <label>
+                      Part family
+                      <select id="model-forge-family"></select>
+                    </label>
+                    <label>
+                      Machine target
+                      <select id="model-forge-printer"></select>
+                    </label>
+                    <label>
+                      Print profile
+                      <select id="model-forge-profile"></select>
+                    </label>
+                    <label>
+                      Slicer handoff
+                      <select id="model-forge-slicer"></select>
+                    </label>
+                    <div class="vision-status" id="model-forge-guidance">Choose a family to prefill the working geometry.</div>
+                    <label>
+                      Part name
+                      <input id="model-forge-part" type="text" value="Garden bench bracket">
+                    </label>
+                    <label>
+                      Dimensions
+                      <textarea id="model-forge-dimensions" rows="4" placeholder="hole spacing 110 mm, plate width 30 mm, thickness 8 mm"></textarea>
+                    </label>
+                    <label>
+                      Constraints
+                      <textarea id="model-forge-constraints" rows="3" placeholder="Preserve mounting geometry and strengthen the fatigue path."></textarea>
+                    </label>
+                    <div class="model-forge-actions">
+                      <button id="model-forge-generate" type="button">Generate Package</button>
+                    </div>
+                    <pre class="model-forge-script" id="model-forge-generation-output">Awaiting generation request.</pre>
+                  </div>
+                </div>
+                <label>
+                  Model package
+                  <select id="model-forge-package">
+                    ${{packages.map((item, index) => `<option value="${{escapeHtml(item.package_id)}}"
+                      ${{index === 0 ? "selected" : ""}}>${{escapeHtml(item.part_name)}} · ${{escapeHtml(item.export_status || "cad-package")}}</option>`).join("")}}
+                  </select>
+                </label>
+                <div class="model-forge-actions">
+                  <button id="model-forge-refresh" type="button">Load Model</button>
+                </div>
+                <div class="model-forge-meta" id="model-forge-details">
+                  <div class="metric">Select a package to see its export details.</div>
+                </div>
+                <div class="vision-status" id="model-forge-viewer-status">${{packages.length ? "Ready to load the latest generated package." : "No model forge packages yet. Generate one from the Workshop packet first."}}</div>
+                <div class="model-forge-meta">
+                  <div class="metric"><strong>OpenSCAD Source</strong></div>
+                  <pre class="model-forge-script" id="model-forge-script">No source loaded yet.</pre>
+                </div>
+              </div>
+            </div>
+          </div>`;
       }} else if (packetId === "chronicle") {{
         heading = "Chronicle Packet";
         content = `
@@ -3825,6 +5775,16 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
             }}
             ${{
               packetBlock("Safety", renderList((data.safety_checks || []).map((item) => `<div><strong>${{escapeHtml(item.operation)}}</strong> · ${{item.allowed ? "allowed" : "blocked"}}</div>`)))
+            }}
+            ${{
+              packetBlock("Model Forge", `
+                <div class="stack">
+                  <div class="metric"><strong>Latest</strong> ${{escapeHtml(data.cad_packages?.[0]?.part_name || "No model package yet")}}</div>
+                  <div class="metric"><strong>Status</strong> ${{escapeHtml(data.cad_packages?.[0]?.export_status || "--")}}</div>
+                  <div class="inline-actions" style="margin-top:10px;">
+                    <button type="button" id="open-model-forge-packet">Open Viewer</button>
+                  </div>
+                </div>`)
             }}
           </div>`;
       }} else if (packetId === "catalyst") {{
@@ -3870,17 +5830,94 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
             ${{
               packetBlock("Explainability", renderList((data.explainability?.latest_reasons || []).map((item) => `<div><strong>${{escapeHtml(item.module)}}</strong><br>${{escapeHtml(item.rationale)}}</div>`)))
             }}
+            ${{
+              packetBlock("Autonomy Audit", `
+                <div class="metric"><strong>Total actions</strong> ${{escapeHtml(String(data.explainability?.assistant_action_summary?.total || 0))}}</div>
+                <div class="metric"><strong>Automatic</strong> ${{escapeHtml(String(data.explainability?.assistant_action_summary?.automatic || 0))}} · successful ${{escapeHtml(String(data.explainability?.assistant_action_summary?.successful || 0))}}</div>
+                ${{renderList((data.explainability?.assistant_actions || []).slice(0, 6).map((item) => `<div><strong>${{escapeHtml(item.action_class || item.action || "action")}}</strong> · ${{escapeHtml(item.domain || "general")}} · ${{escapeHtml(item.confidence || "medium")}} confidence<br>${{escapeHtml(item.why_now || item.policy_basis || "")}}<br><span class="muted">${{escapeHtml(item.result_summary || "")}}</span></div>`)) || `<div class="empty">No recent autonomous actions have been recorded yet.</div>`}}
+              `)
+            }}
+          </div>`;
+      }} else if (packetId === "tasks") {{
+        heading = "Assistant Core";
+        const openLoops = data.open_loops || {{}};
+        const queueItems = openLoops.items || [];
+        const proactive = openLoops.proactive_surface || [];
+        const lanes = openLoops.task_lanes || [];
+        const summary = openLoops.summary || {{}};
+        const renderTaskActions = (item) => {{
+          const actions = item.available_actions || [];
+          if (!actions.length) return `<div class="empty">No direct action available yet.</div>`;
+          return `<div class="inline-actions">${{actions.map((action) => `
+            <button
+              type="button"
+              class="ghost-toggle task-queue-action"
+              data-domain="${{escapeHtml(item.domain || "")}}"
+              data-item-id="${{escapeHtml(item.item_id || "")}}"
+              data-action="${{escapeHtml(action.id || "")}}"
+            >${{escapeHtml(action.label || action.id || "Act")}}</button>
+          `).join("")}}</div>`;
+        }};
+        content = `
+          <div class="packet-grid">
+            ${{
+              packetBlock("Open Loops", `
+                <div class="metric"><strong>Total</strong> ${{escapeHtml(String(summary.total || 0))}}</div>
+                <div class="metric"><strong>Waiting on you</strong> ${{escapeHtml(String(summary.waiting_on_you || 0))}}</div>
+                <div class="metric"><strong>Staged</strong> ${{escapeHtml(String(summary.staged || 0))}}</div>
+                <div class="metric"><strong>Needs revisit</strong> ${{escapeHtml(String(summary.needs_revisit || 0))}}</div>
+                <div class="metric"><strong>Deferred</strong> ${{escapeHtml(String(summary.hidden_deferred || 0))}}</div>
+                ${{renderList(queueItems.slice(0, 8).map((item) => `
+                  <div>
+                    <strong>${{escapeHtml(item.title || item.kind || "Open loop")}}</strong>
+                    <br>${{escapeHtml(item.domain || "general")}} · ${{escapeHtml(item.status || "open")}} · ${{escapeHtml(item.owner_agent || "JARVIS")}}
+                    <br><span class="muted">${{escapeHtml(item.next_action || "")}}</span>
+                    <br><span class="muted">Review by: ${{escapeHtml(item.next_review_at || "not scheduled")}}</span>
+                    <br><span class="muted">Autonomy: ${{escapeHtml(item.auto_execution?.summary || "Review required.")}}</span>
+                    ${{renderTaskActions(item)}}
+                  </div>
+                `))}}
+              `)
+            }}
+            ${{
+              packetBlock("Proactive Surface", renderList(proactive.map((item) => `
+                <div>
+                  <strong>${{escapeHtml(item.title || "Open loop")}}</strong>
+                  <br>${{escapeHtml(item.proactive_reason || item.summary || "")}}
+                </div>
+              `)) || `<div class="empty">No immediate resurfacing items.</div>`)
+            }}
+            ${{
+              packetBlock("Task Lanes", renderList(lanes.map((item) => `
+                <div>
+                  <strong>${{escapeHtml(item.owner_agent || "JARVIS")}}</strong> · ${{escapeHtml(item.domain || "general")}}
+                  <br>${{escapeHtml(item.lane || "")}}
+                  <br><span class="muted">${{escapeHtml(item.approval_threshold?.summary || "")}}</span>
+                </div>
+              `)))
+            }}
+            ${{
+              packetBlock("Autonomy Audit", `
+                <div class="metric"><strong>Recent autonomous actions</strong> ${{escapeHtml(String(data.explainability?.assistant_action_summary?.total || 0))}}</div>
+                <div class="metric"><strong>Automatic</strong> ${{escapeHtml(String(data.explainability?.assistant_action_summary?.automatic || 0))}} · successful ${{escapeHtml(String(data.explainability?.assistant_action_summary?.successful || 0))}}</div>
+                ${{renderList((data.explainability?.assistant_actions || []).slice(0, 5).map((item) => `<div><strong>${{escapeHtml(item.action_class || item.action || "action")}}</strong> · ${{escapeHtml(item.domain || "general")}} · ${{escapeHtml(item.cadence_phase || "watch")}}<br>${{escapeHtml(item.policy_basis || item.detail || "")}}<br><span class="muted">${{escapeHtml(item.result_summary || "")}}</span></div>`)) || `<div class="empty">No recent autonomous actions have been recorded yet.</div>`}}
+              `)
+            }}
           </div>`;
       }} else if (packetId === "settings") {{
         heading = "Settings";
         const settings = state.voiceSettings || {{}};
         const options = state.voiceOptions || {{}};
         const accountRegistry = state.accountRegistry || {{}};
+        const identity = state.identity || {{}};
         const locationSettings = state.locationSettings || {{}};
         const stackStatus = options.stack_status || settings.stack_status || {{}};
         const googleWorkspace = data.google_workspace || {{}};
         const googleClientSecret = googleWorkspace.client_secret || {{}};
         const personalAccounts = accountRegistry.accounts || [];
+        const identityMembers = identity.members || [];
+        const identityDevices = identity.devices || [];
+        const identityService = identity.service || {{}};
         const savedLocations = locationSettings.saved_locations || [];
         const activeLocation = locationSettings.active_location || {{}};
         const deviceLocation = locationSettings.device_location || null;
@@ -4025,6 +6062,239 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
                 </div>`)
             }}
             ${{
+              packetBlock("Family Identity", `
+                <div class="settings-grid">
+                  <div class="settings-note">
+                    Give each person a distinct long-lived profile so JARVIS can learn preferences, tone, and anticipation patterns without flattening the household into one blob.
+                  </div>
+                  <div class="stack">
+                    ${{
+                      identityMembers.length
+                        ? identityMembers.map((member) => `
+                          <div class="metric">
+                            <strong>${{escapeHtml(member.display_name)}}</strong>
+                            · ${{escapeHtml(member.trust_level || "standard")}}
+                            · ${{escapeHtml(member.privacy_boundary || "personal")}}
+                            <br>
+                            Tone: ${{escapeHtml(member.preferred_tone || "--")}}
+                            <br>
+                            Voice: ${{escapeHtml(member.preferred_voice || "--")}} · Aliases: ${{escapeHtml((member.voice_aliases || []).join(", ") || "none")}}
+                            <br>
+                            Rooms: ${{escapeHtml((member.primary_rooms || []).join(", ") || "--")}} · Morning: ${{escapeHtml(member.morning_room || "--")}}
+                            <br>
+                            Devices: ${{escapeHtml((member.device_ids || []).length ? member.device_ids.join(", ") : "none bound")}}
+                          </div>
+                        `).join("")
+                        : `<div class="metric">No household identity profiles loaded.</div>`
+                    }}
+                  </div>
+                  <label>
+                    Person
+                    <select id="identity-member-user-id">
+                      ${{renderSelectOptions(identity.owners || [], "", "No household users found")}}
+                    </select>
+                  </label>
+                  <label>
+                    Preferred tone
+                    <input id="identity-member-tone" placeholder="calm and direct">
+                  </label>
+                  <label>
+                    Briefing style
+                    <input id="identity-member-briefing-style" placeholder="first-light">
+                  </label>
+                  <label>
+                    Anticipation style
+                    <input id="identity-member-anticipation-style" placeholder="quietly proactive">
+                  </label>
+                  <label>
+                    Preferred voice
+                    <input id="identity-member-voice" placeholder="elevenlabs, piper, calm-low">
+                  </label>
+                  <label>
+                    Voice aliases
+                    <input id="identity-member-voice-aliases" placeholder="dad, daddy, mom, rebekah">
+                  </label>
+                  <label>
+                    Primary rooms
+                    <input id="identity-member-primary-rooms" placeholder="office, kitchen, workshop">
+                  </label>
+                  <label>
+                    Morning room
+                    <input id="identity-member-morning-room" placeholder="kitchen">
+                  </label>
+                  <label>
+                    Privacy boundary
+                    <input id="identity-member-boundary" placeholder="personal, child, shared">
+                  </label>
+                  <label>
+                    Trust level
+                    <select id="identity-member-trust">
+                      ${{renderSelectOptions(identity.trust_levels || [], "trusted")}}
+                    </select>
+                  </label>
+                  <label>
+                    Notes
+                    <textarea id="identity-member-notes" placeholder="What should JARVIS learn carefully about this person?"></textarea>
+                  </label>
+                  <div class="inline-actions">
+                    <button id="save-identity-member" type="button">Save Person Profile</button>
+                    <button id="refresh-persona-snapshot" class="ghost-toggle" type="button">Refresh Persona Snapshot</button>
+                  </div>
+                  <div class="stack" id="identity-member-adaptation">
+                    <div class="metric">Select a person to see the current adaptive persona snapshot.</div>
+                  </div>
+                  <div class="stack" id="identity-member-learning-review">
+                    <div class="metric">Learning review will appear here for the selected person.</div>
+                  </div>
+                  <div class="settings-note" id="identity-member-status">Each family member should have a separate adaptive profile.</div>
+                </div>`)
+            }}
+            ${{
+              packetBlock("Device Registry", `
+                <div class="settings-grid">
+                  <div class="settings-note">
+                    Bind each phone, tablet, display, or browser to a person or mark it shared. This is the lock-in layer that lets JARVIS know who it is serving before the conversation starts.
+                  </div>
+                  <div class="stack">
+                    ${{
+                      identityDevices.length
+                        ? identityDevices.map((device) => `
+                          <div class="metric">
+                            <strong>${{escapeHtml(device.label)}}</strong>
+                            · ${{escapeHtml(device.device_type || "device")}}
+                            · ${{device.shared ? "shared" : escapeHtml(device.owner_user_id || "unassigned")}}
+                            <br>
+                            Trust: ${{escapeHtml(device.trust_level || "trusted")}} · Room: ${{escapeHtml(device.room || "--")}}
+                            <br>
+                            Last actor: ${{escapeHtml(device.last_actor_id || "--")}} · Source: ${{escapeHtml(device.last_actor_source || "--")}}
+                            <br>
+                            Suggested default: ${{escapeHtml(device.suggested_default_actor_id || "--")}}
+                            <br>
+                            Last seen: ${{escapeHtml(device.last_seen_at || "never")}}
+                          </div>
+                        `).join("")
+                        : `<div class="metric">No devices registered yet.</div>`
+                    }}
+                  </div>
+                  <label>
+                    Device id
+                    <input id="identity-device-id" value="${{escapeHtml(state.sessionIdentity?.device?.device_id || state.shellDeviceId || "")}}" placeholder="browser or hardware id">
+                  </label>
+                  <label>
+                    Label
+                    <input id="identity-device-label" value="${{escapeHtml(state.sessionIdentity?.device?.label || "")}}" placeholder="Chris iPad">
+                  </label>
+                  <label>
+                    Device type
+                    <select id="identity-device-type">
+                      ${{renderSelectOptions(identity.device_types || [], "browser")}}
+                    </select>
+                  </label>
+                  <label>
+                    Owner
+                    <select id="identity-device-owner">
+                      ${{renderSelectOptions([{{ id: "", label: "Unassigned" }}].concat(identity.owners || []), state.sessionIdentity?.device?.owner_user_id || "")}}
+                    </select>
+                  </label>
+                  <label>
+                    Default actor
+                    <select id="identity-device-default-actor">
+                      ${{renderSelectOptions([{{ id: "", label: "No default" }}].concat(identity.owners || []), state.sessionIdentity?.device?.default_actor_id || "")}}
+                    </select>
+                  </label>
+                  <label>
+                    Trust level
+                    <select id="identity-device-trust">
+                      ${{renderSelectOptions(identity.trust_levels || [], state.sessionIdentity?.device?.trust_level || "trusted")}}
+                    </select>
+                  </label>
+                  <label>
+                    Room
+                    <input id="identity-device-room" value="${{escapeHtml(state.sessionIdentity?.device?.room || document.getElementById("room")?.value || "")}}" placeholder="office">
+                  </label>
+                  <label>
+                    Notes
+                    <textarea id="identity-device-notes" placeholder="Personal, shared, child-safe, kitchen display, workshop tablet..."></textarea>
+                  </label>
+                  <label class="toggle-row">
+                    <input id="identity-device-shared" type="checkbox" ${{state.sessionIdentity?.device?.shared ? "checked" : ""}}>
+                    Shared device
+                  </label>
+                  <label class="toggle-row">
+                    <input id="identity-device-always-available" type="checkbox" ${{state.sessionIdentity?.device?.always_available ? "checked" : ""}}>
+                    Always available endpoint
+                  </label>
+                  <div class="inline-actions">
+                    <button id="save-identity-device" type="button">Save Device Binding</button>
+                    <button id="bind-current-device" class="ghost-toggle" type="button">Bind Current Browser</button>
+                  </div>
+                  <label>
+                    Shared-device actor for this session
+                    <select id="identity-session-actor">
+                      ${{renderSelectOptions([{{ id: "", label: "Choose person for this session" }}].concat(identity.owners || []), state.sessionActorOverride || state.sessionIdentity?.resolved_actor_id || "")}}
+                    </select>
+                  </label>
+                  <div class="inline-actions">
+                    <button id="apply-session-actor" class="ghost-toggle" type="button">Use For This Session</button>
+                    <button id="clear-session-actor" class="ghost-toggle" type="button">Clear Session Override</button>
+                  </div>
+                  <div class="settings-note" id="identity-device-status">Bind this browser or device to a person, or mark it shared.</div>
+                </div>`)
+            }}
+            ${{
+              packetBlock("Always-On Service", `
+                <div class="settings-grid">
+                  <div class="settings-note">
+                    JARVIS should live as infrastructure. Track the primary host, LAN name, and whether boot-time launch and watchdog behavior are in place.
+                  </div>
+                  <div class="stack">
+                    <div class="metric"><strong>Host</strong> ${{escapeHtml(identityService.host_label || "Primary JARVIS host")}}</div>
+                    <div class="metric"><strong>LAN URL</strong> ${{escapeHtml(identityService.lan_url || window.location.origin)}}</div>
+                    <div class="metric"><strong>Hostname</strong> ${{escapeHtml(identityService.hostname || "jarvis.local")}}</div>
+                    <div class="metric"><strong>Launch on boot</strong> ${{identityService.launch_on_boot ? "enabled" : "not yet"}}</div>
+                  </div>
+                  <div class="stack" id="runtime-service-status">
+                    <div class="metric">Runtime service status is loading…</div>
+                  </div>
+                  <label>
+                    Host label
+                    <input id="identity-service-host-label" value="${{escapeHtml(identityService.host_label || "Primary JARVIS host")}}">
+                  </label>
+                  <label>
+                    Host type
+                    <input id="identity-service-host-type" value="${{escapeHtml(identityService.host_type || "desktop")}}" placeholder="desktop, mac-mini, server">
+                  </label>
+                  <label>
+                    LAN URL
+                    <input id="identity-service-lan-url" value="${{escapeHtml(identityService.lan_url || window.location.origin)}}">
+                  </label>
+                  <label>
+                    Hostname
+                    <input id="identity-service-hostname" value="${{escapeHtml(identityService.hostname || "jarvis.local")}}">
+                  </label>
+                  <label>
+                    Notes
+                    <textarea id="identity-service-notes" placeholder="How should this host behave as an always-on service?">${{escapeHtml(identityService.notes || "")}}</textarea>
+                  </label>
+                  <label class="toggle-row">
+                    <input id="identity-service-always-on" type="checkbox" ${{identityService.always_on_enabled ? "checked" : ""}}>
+                    Always-on host enabled
+                  </label>
+                  <label class="toggle-row">
+                    <input id="identity-service-launch-on-boot" type="checkbox" ${{identityService.launch_on_boot ? "checked" : ""}}>
+                    Launch on boot
+                  </label>
+                  <label class="toggle-row">
+                    <input id="identity-service-watchdog" type="checkbox" ${{identityService.watchdog_enabled ? "checked" : ""}}>
+                    Watchdog enabled
+                  </label>
+                  <div class="inline-actions">
+                    <button id="save-identity-service" type="button">Save Service Plan</button>
+                  </div>
+                  <div class="settings-note" id="identity-service-status">Track the host plan here, then use <code>ops/install_launchd_services.sh</code> to install it for real.</div>
+                </div>`)
+            }}
+            ${{
               packetBlock("Google Workspace", `
                 <div class="settings-grid">
                   <div class="settings-note">
@@ -4123,29 +6393,52 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
         wireLocationSettingsForm();
         wireGoogleSettingsForm();
         wireAccountSettingsForm();
+        wireIdentitySettingsForm();
+      }} else if (packetId === "connected-devices") {{
+        wireConnectedDevicesAdmin();
+      }} else if (packetId === "today") {{
+        wireTodayBoardActions();
+        wireAssistantInboxActions("today");
+      }} else if (packetId === "review") {{
+        wireReviewActions();
+        wireAssistantInboxActions("review");
+      }} else if (packetId === "tasks") {{
+        wireTaskQueueActions();
+      }} else if (packetId === "workshop") {{
+        document.getElementById("open-model-forge-packet")?.addEventListener("click", () => {{
+          openPacket("model-forge");
+        }});
       }} else if (packetId === "agents") {{
         document.getElementById("open-agent-hierarchy")?.addEventListener("click", () => {{
           window.open("/agents/hierarchy", "_blank", "noopener,noreferrer");
         }});
       }} else if (packetId === "catalyst") {{
         wireCatalystWorkspace();
+      }} else if (packetId === "vision") {{
+        wireVisionPacket();
+      }} else if (packetId === "model-forge") {{
+        wireModelForgePacket();
       }} else if (packetId === "brains") {{
         const graph = data.brain_graph || {{}};
         const activeNodes = new Set(graph.active_nodes || []);
         renderBrainMesh("brain-mesh-modal", graph, activeNodes);
       }}
-      modal.classList.add("open");
-      modal.setAttribute("aria-hidden", "false");
+      setModalVisibility(true);
       syncDesignReviewPanel();
     }}
 
     function closePacket() {{
+      stopVisionPreview();
+      destroyModelForgeScene();
+      state.packetHydrationToken += 1;
+      state.packetHydrationPending = "";
       state.packet = "";
       document.body.classList.remove("modal-open");
       fillPacketStrip();
       const modal = document.getElementById("modal-layer");
-      modal.classList.remove("open");
-      modal.setAttribute("aria-hidden", "true");
+      document.getElementById("modal-title").textContent = "Packet";
+      document.getElementById("modal-body").innerHTML = "";
+      setModalVisibility(false);
       modal.querySelector(".modal").classList.remove("workspace-modal");
       modal.querySelector(".modal").classList.remove("brains-modal");
       syncDesignReviewPanel();
@@ -4280,31 +6573,867 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       }});
     }}
 
+    function wireConnectedDevicesAdmin() {{
+      const summary = document.getElementById("connected-devices-summary");
+      const list = document.getElementById("connected-devices-list");
+      const status = document.getElementById("connected-devices-status");
+      const refreshButton = document.getElementById("connected-devices-refresh");
+      const bindCurrentButton = document.getElementById("connected-devices-bind-current");
+
+      if (!summary || !list || !status) {{
+        return;
+      }}
+
+      const renderSummary = (data) => {{
+        const counts = data.summary || {{}};
+        summary.innerHTML = `
+          <div class="metric"><strong>Total known devices</strong> ${{escapeHtml(String(counts.total || 0))}}</div>
+          <div class="metric"><strong>Mapped</strong> ${{escapeHtml(String(counts.mapped || 0))}} · <strong>Unassigned</strong> ${{escapeHtml(String(counts.unassigned || 0))}}</div>
+          <div class="metric"><strong>Shared</strong> ${{escapeHtml(String(counts.shared || 0))}} · <strong>Personal</strong> ${{escapeHtml(String(counts.personal || 0))}}</div>
+          <div class="metric"><strong>Suggested defaults</strong> ${{escapeHtml(String(counts.suggested_defaults || 0))}}</div>
+          <div class="metric"><strong>Current browser</strong> ${{escapeHtml(state.shellDeviceId || "--")}}</div>
+        `;
+      }};
+
+      const renderDeviceCard = (device, data) => {{
+        const ownerOptions = renderSelectOptions([{{ id: "", label: "Unassigned" }}].concat(data.owners || []), device.owner_user_id || "", "No household users found");
+        const actorOptions = renderSelectOptions([{{ id: "", label: "No default" }}].concat(data.owners || []), device.default_actor_id || "", "No household users found");
+        const trustOptions = renderSelectOptions(data.trust_levels || [], device.trust_level || "trusted");
+        const typeOptions = renderSelectOptions(data.device_types || [], device.device_type || "browser");
+        const currentBadge = device.device_id === state.shellDeviceId ? `<div class="metric"><strong>This browser</strong> yes</div>` : "";
+        const fingerprintLabel = device.has_fingerprint ? "present" : "missing";
+        const mappedLabel = device.owner_display_name || device.default_actor_display_name || "unassigned";
+        const lastActor = device.last_actor_display_name || device.last_actor_id || "--";
+        const suggested = device.suggested_default_actor_id || "--";
+        const sharedLabel = device.shared ? "shared" : "personal";
+        return `
+          <div class="metric" data-device-card="${{escapeHtml(device.device_id || "")}}">
+            <strong>${{escapeHtml(device.label || "Unnamed device")}}</strong> · ${{escapeHtml(device.device_type || "device")}} · ${{escapeHtml(sharedLabel)}} · ${{escapeHtml(device.posture || "unassigned")}}
+            <br>
+            Mapped to: ${{escapeHtml(mappedLabel)}} · Trust: ${{escapeHtml(device.trust_level || "trusted")}}
+            <br>
+            Last actor: ${{escapeHtml(lastActor)}} · Suggested default: ${{escapeHtml(suggested)}}
+            <br>
+            Last seen: ${{escapeHtml(device.last_seen_at || "never")}} · Fingerprint: ${{escapeHtml(fingerprintLabel)}}
+            ${{currentBadge}}
+            <div class="settings-grid" style="margin-top:12px;">
+              <label>
+                Label
+                <input data-field="label" value="${{escapeHtml(device.label || "")}}">
+              </label>
+              <label>
+                Type
+                <select data-field="device_type">${{typeOptions}}</select>
+              </label>
+              <label>
+                Owner
+                <select data-field="owner_user_id">${{ownerOptions}}</select>
+              </label>
+              <label>
+                Default actor
+                <select data-field="default_actor_id">${{actorOptions}}</select>
+              </label>
+              <label>
+                Trust
+                <select data-field="trust_level">${{trustOptions}}</select>
+              </label>
+              <label>
+                Room
+                <input data-field="room" value="${{escapeHtml(device.room || "")}}" placeholder="office, kitchen, workshop">
+              </label>
+              <label>
+                Notes
+                <textarea data-field="notes" placeholder="Personal phone, shared iPad, workshop display...">${{escapeHtml(device.notes || "")}}</textarea>
+              </label>
+              <label class="toggle-row">
+                <input data-field="shared" type="checkbox" ${{device.shared ? "checked" : ""}}>
+                Shared device
+              </label>
+              <label class="toggle-row">
+                <input data-field="always_available" type="checkbox" ${{device.always_available ? "checked" : ""}}>
+                Always available endpoint
+              </label>
+            </div>
+            <div class="inline-actions" style="margin-top:10px;">
+              <button class="connected-device-save" type="button" data-device-id="${{escapeHtml(device.device_id || "")}}">Save Mapping</button>
+            </div>
+            <div class="settings-note" style="margin-top:8px;">${{escapeHtml(device.device_id || "")}}</div>
+          </div>
+        `;
+      }};
+
+      const wireDeviceButtons = (data) => {{
+        list.querySelectorAll(".connected-device-save").forEach((button) => {{
+          button.addEventListener("click", async () => {{
+            const deviceId = button.dataset.deviceId || "";
+            const card = button.closest("[data-device-card]");
+            if (!deviceId || !card) return;
+            const readValue = (field) => card.querySelector(`[data-field="${{field}}"]`);
+            const payload = {{
+              device_id: deviceId,
+              label: readValue("label")?.value || "",
+              device_type: readValue("device_type")?.value || "browser",
+              owner_user_id: readValue("owner_user_id")?.value || "",
+              default_actor_id: readValue("default_actor_id")?.value || "",
+              trust_level: readValue("trust_level")?.value || "trusted",
+              room: readValue("room")?.value || "",
+              notes: readValue("notes")?.value || "",
+              shared: !!readValue("shared")?.checked,
+              always_available: !!readValue("always_available")?.checked,
+            }};
+            try {{
+              const result = await loadJSON("/api/identity/device", {{
+                method: "POST",
+                headers: {{ "Content-Type": "application/json" }},
+                body: JSON.stringify(payload),
+              }});
+              state.identity = result.identity || state.identity;
+              status.textContent = `Saved mapping for ${{result.device?.label || deviceId}}.`;
+              await refreshDevices();
+            }} catch (error) {{
+              status.textContent = error.message || "Failed to save the device mapping.";
+            }}
+          }});
+        }});
+      }};
+
+      async function refreshDevices() {{
+        status.textContent = "Refreshing connected devices…";
+        summary.innerHTML = `<div class="metric">Loading device summary…</div>`;
+        list.innerHTML = `<div class="metric">Loading device registry…</div>`;
+        try {{
+          const data = await loadJSON("/api/connected-devices");
+          state.connectedDevices = data;
+          renderSummary(data);
+          const devices = data.devices || [];
+          list.innerHTML = devices.length
+            ? devices.map((device) => renderDeviceCard(device, data)).join("")
+            : `<div class="metric">No device sessions have been registered yet. Open JARVIS on the device and bind the current browser first.</div>`;
+          wireDeviceButtons(data);
+          status.textContent = devices.length
+            ? `Showing ${{devices.length}} known device sessions. Unassigned devices can be mapped directly here.`
+            : "No device sessions have been registered yet.";
+        }} catch (error) {{
+          summary.innerHTML = `<div class="metric">Connected device summary unavailable.</div>`;
+          list.innerHTML = `<div class="metric">Connected device registry unavailable: ${{escapeHtml(error.message || "request failed")}}</div>`;
+          status.textContent = error.message || "Connected device refresh failed.";
+        }}
+      }}
+
+      refreshButton?.addEventListener("click", refreshDevices);
+      bindCurrentButton?.addEventListener("click", async () => {{
+        try {{
+          const data = await bindShellIdentity();
+          status.textContent = data.resolved_actor_label
+            ? `Current browser bound and resolved to ${{data.resolved_actor_label}}.`
+            : "Current browser bound. Map it to a person below if it is still unassigned.";
+          await refreshDevices();
+        }} catch (error) {{
+          status.textContent = error.message || "Failed to bind the current browser.";
+        }}
+      }});
+
+      refreshDevices();
+    }}
+
+    function wireTaskQueueActions() {{
+      const statusTarget = document.getElementById("last-jarvis-text");
+      document.querySelectorAll(".task-queue-action").forEach((button) => {{
+        button.addEventListener("click", async () => {{
+          const action = button.dataset.action || "";
+          const domain = button.dataset.domain || "";
+          const itemId = button.dataset.itemId || "";
+          if (!action || !domain || !itemId) return;
+          button.disabled = true;
+          try {{
+            const payload = {{
+              actor: state.sessionIdentity?.resolved_actor_label || document.getElementById("actor")?.value || "Chris",
+              action,
+              domain,
+              item_id: itemId,
+            }};
+            const result = await loadJSON("/api/open-loops/action", {{
+              method: "POST",
+              headers: {{ "Content-Type": "application/json" }},
+              body: JSON.stringify(payload),
+            }});
+            if (statusTarget) {{
+              statusTarget.textContent = `Assistant Core updated ${{domain}} with action "${{action}}".`;
+            }}
+            await refreshDashboard();
+            openPacket("tasks");
+          }} catch (error) {{
+            if (statusTarget) {{
+              statusTarget.textContent = error.message || "Failed to update the assistant core queue.";
+            }}
+          }} finally {{
+            button.disabled = false;
+          }}
+        }});
+      }});
+    }}
+
+    function wireIdentitySettingsForm() {{
+      async function refreshRuntimeServiceStatus() {{
+        const container = document.getElementById("runtime-service-status");
+        if (!container) return;
+        container.innerHTML = `<div class="metric">Runtime service status is loading…</div>`;
+        try {{
+          const data = await loadJSON("/api/runtime-service");
+          const jarvis = data.runtime || {{}};
+          const openviking = data.openviking || {{}};
+          const host = data.service_plan || {{}};
+          container.innerHTML = `
+            <div class="metric"><strong>JARVIS launch agent</strong> ${{jarvis.installed ? (jarvis.loaded ? "installed and loaded" : "installed but not loaded") : "not installed"}}</div>
+            <div class="metric"><strong>OpenViking launch agent</strong> ${{openviking.installed ? (openviking.loaded ? "installed and loaded" : "installed but not loaded") : "not installed"}}</div>
+            <div class="metric"><strong>LAN URL</strong> ${{escapeHtml(data.lan_url || host.lan_url || window.location.origin)}}</div>
+            <div class="metric"><strong>Hostname</strong> ${{escapeHtml(data.hostname || host.hostname || "jarvis.local")}}</div>
+          `;
+        }} catch (error) {{
+          container.innerHTML = `<div class="metric">Runtime service status unavailable: ${{escapeHtml(error.message || "request failed")}}</div>`;
+        }}
+      }}
+
+      async function refreshPersonaSnapshot(forceRefresh = false) {{
+        const userId = document.getElementById("identity-member-user-id")?.value || "";
+        const container = document.getElementById("identity-member-adaptation");
+        if (!userId || !container) return;
+        container.innerHTML = `<div class="metric">Loading adaptive persona snapshot…</div>`;
+        try {{
+          const params = new URLSearchParams({{
+            actor: userId,
+            device_id: state.shellDeviceId || "",
+            refresh: forceRefresh ? "true" : "false",
+          }});
+          const data = await loadJSON(`/api/persona-snapshot?${{params.toString()}}`);
+          const voice = data.voice_identity || {{}};
+          const presence = data.presence_identity || {{}};
+          const digitalTwin = data.digital_twin || {{}};
+          const morning = data.morning_pattern || {{}};
+          const signals = data.signal_counts || {{}};
+          container.innerHTML = `
+            <div class="metric"><strong>Headline</strong><br>${{escapeHtml(digitalTwin.headline || "No adaptive headline yet.")}}</div>
+            <div class="metric"><strong>Voice identity</strong><br>Voice: ${{escapeHtml(voice.preferred_voice || "--")}} · Aliases: ${{escapeHtml((voice.voice_aliases || []).join(", ") || "none")}}</div>
+            <div class="metric"><strong>Presence</strong><br>Rooms: ${{escapeHtml((presence.primary_rooms || []).join(", ") || "--")}} · Morning: ${{escapeHtml(presence.morning_room || "--")}} · Presence: ${{escapeHtml(presence.actor_presence || "unknown")}}</div>
+            <div class="metric"><strong>Morning pattern</strong><br>${{escapeHtml(morning.briefing_style || "first-light")}} · ${{escapeHtml(morning.anticipation_style || "quietly proactive")}}</div>
+            <div class="metric"><strong>Likely next needs</strong><br>${{escapeHtml((digitalTwin.likely_next_needs || []).join(" | ") || "Still learning.")}}</div>
+            <div class="metric"><strong>Signals</strong><br>Facts: ${{escapeHtml(String(signals.profile_facts || 0))}} · First Light runs: ${{escapeHtml(String(signals.first_light_runs || 0))}} · Devices: ${{escapeHtml(String(signals.owned_devices || 0))}}</div>
+          `;
+        }} catch (error) {{
+          container.innerHTML = `<div class="metric">Adaptive persona snapshot unavailable: ${{escapeHtml(error.message || "request failed")}}</div>`;
+        }}
+      }}
+
+      async function refreshLearningReview() {{
+        const userId = document.getElementById("identity-member-user-id")?.value || "";
+        const container = document.getElementById("identity-member-learning-review");
+        if (!userId || !container) return;
+        container.innerHTML = `<div class="metric">Loading learning review…</div>`;
+        try {{
+          const viewer = state.sessionIdentity?.resolved_actor_label || "Chris";
+          const params = new URLSearchParams({{
+            viewer,
+            subject_user_id: userId,
+          }});
+          const data = await loadJSON(`/api/learning-review?${{params.toString()}}`);
+          const proposals = data.pending_proposals || [];
+          const facts = data.profile_facts || [];
+          const governance = data.governance || {{}};
+          const history = data.first_light_history || [];
+          const proposalSummary = proposals.length
+            ? proposals.map((item) => `${{escapeHtml(item.summary || "")}} [${{escapeHtml(item.confidence || "confirmed")}}]`).join(" | ")
+            : "No pending learning proposals.";
+          const factSummary = facts.length
+            ? facts.map((item) => escapeHtml(item.summary || "")).join(" | ")
+            : "No active durable facts yet.";
+          const historySummary = history.length
+            ? history.map((item) => escapeHtml(item.local_time || item.generated_at || "")).join(" | ")
+            : "No First Light history yet.";
+          const proposalButtons = proposals.slice(0, 3).map((item) =>
+            `<button class="ghost-toggle learning-proposal-action" data-proposal-id="${{escapeHtml(item.proposal_id || "")}}" data-decision="approved" type="button">Approve ${{escapeHtml(item.title || "proposal")}}</button><button class="ghost-toggle learning-proposal-action" data-proposal-id="${{escapeHtml(item.proposal_id || "")}}" data-decision="rejected" type="button">Reject</button>`
+          ).join("");
+          const factButtons = facts.slice(0, 3).map((item) =>
+            `<button class="ghost-toggle learning-fact-action" data-fact-id="${{escapeHtml(item.fact_id || "")}}" data-status="retired" type="button">Retire fact</button>`
+          ).join("");
+          container.innerHTML = `
+            <div class="metric"><strong>Learning governance</strong><br>Approve proposals: ${{governance.can_approve_proposals ? "yes" : "no"}} · Retire facts: ${{governance.can_retire_facts ? "yes" : "no"}} · Child-safe boundary: ${{data.child_safe_boundary ? "on" : "off"}}</div>
+            <div class="metric"><strong>Pending proposals</strong><br>${{proposalSummary}}</div>
+            <div class="metric"><strong>Durable facts</strong><br>${{factSummary}}</div>
+            <div class="metric"><strong>Recent First Light runs</strong><br>${{historySummary}}</div>
+            <div class="inline-actions">
+              ${{proposalButtons}}
+              ${{factButtons}}
+            </div>
+          `;
+          container.querySelectorAll(".learning-proposal-action").forEach((button) => {{
+            button.addEventListener("click", async () => {{
+              const proposalId = button.dataset.proposalId || "";
+              const decision = button.dataset.decision || "approved";
+              if (!proposalId) return;
+              try {{
+                await loadJSON(`/api/learning/proposals/${{encodeURIComponent(proposalId)}}`, {{
+                  method: "POST",
+                  headers: {{ "Content-Type": "application/json" }},
+                  body: JSON.stringify({{ decision }}),
+                }});
+                const status = document.getElementById("identity-member-status");
+                if (status) status.textContent = `Learning proposal ${{decision}} for ${{data.subject_display_name || userId}}.`;
+                await refreshPersonaSnapshot(true);
+                await refreshLearningReview();
+              }} catch (error) {{
+                const status = document.getElementById("identity-member-status");
+                if (status) status.textContent = error.message || "Failed to update learning proposal.";
+              }}
+            }});
+          }});
+          container.querySelectorAll(".learning-fact-action").forEach((button) => {{
+            button.addEventListener("click", async () => {{
+              const factId = button.dataset.factId || "";
+              const statusValue = button.dataset.status || "retired";
+              if (!factId) return;
+              try {{
+                await loadJSON(`/api/learning/facts/${{encodeURIComponent(factId)}}`, {{
+                  method: "POST",
+                  headers: {{ "Content-Type": "application/json" }},
+                  body: JSON.stringify({{
+                    viewer: state.sessionIdentity?.resolved_actor_label || "Chris",
+                    status: statusValue,
+                  }}),
+                }});
+                const status = document.getElementById("identity-member-status");
+                if (status) status.textContent = `Learning fact updated for ${{data.subject_display_name || userId}}.`;
+                await refreshPersonaSnapshot(true);
+                await refreshLearningReview();
+              }} catch (error) {{
+                const status = document.getElementById("identity-member-status");
+                if (status) status.textContent = error.message || "Failed to update learning fact.";
+              }}
+            }});
+          }});
+        }} catch (error) {{
+          container.innerHTML = `<div class="metric">Learning review unavailable: ${{escapeHtml(error.message || "request failed")}}</div>`;
+        }}
+      }}
+
+      const syncSelectedMember = () => {{
+        const userId = document.getElementById("identity-member-user-id")?.value || "";
+        const member = (state.identity?.members || []).find((item) => item.user_id === userId);
+        if (!member) return;
+        const setValue = (id, value) => {{
+          const el = document.getElementById(id);
+          if (el) el.value = value || "";
+        }};
+        setValue("identity-member-tone", member.preferred_tone);
+        setValue("identity-member-briefing-style", member.briefing_style);
+        setValue("identity-member-anticipation-style", member.anticipation_style);
+        setValue("identity-member-voice", member.preferred_voice);
+        setValue("identity-member-voice-aliases", (member.voice_aliases || []).join(", "));
+        setValue("identity-member-primary-rooms", (member.primary_rooms || []).join(", "));
+        setValue("identity-member-morning-room", member.morning_room);
+        setValue("identity-member-boundary", member.privacy_boundary);
+        setValue("identity-member-notes", member.notes);
+        const trust = document.getElementById("identity-member-trust");
+        if (trust) trust.value = member.trust_level || "trusted";
+        refreshPersonaSnapshot(false);
+        refreshLearningReview();
+      }};
+
+      document.getElementById("identity-member-user-id")?.addEventListener("change", syncSelectedMember);
+      syncSelectedMember();
+      refreshRuntimeServiceStatus();
+
+      const saveMember = document.getElementById("save-identity-member");
+      if (saveMember) {{
+        saveMember.addEventListener("click", async () => {{
+          const userId = document.getElementById("identity-member-user-id")?.value || "";
+          const existing = (state.identity?.members || []).find((item) => item.user_id === userId) || {{}};
+          const payload = {{
+            user_id: userId,
+            display_name: existing.display_name || userId,
+            role: existing.role || "",
+            permissions: existing.permissions || "",
+            trust_level: document.getElementById("identity-member-trust")?.value || existing.trust_level || "trusted",
+            privacy_boundary: document.getElementById("identity-member-boundary")?.value || existing.privacy_boundary || "personal",
+            preferred_tone: document.getElementById("identity-member-tone")?.value || existing.preferred_tone || "",
+            briefing_style: document.getElementById("identity-member-briefing-style")?.value || existing.briefing_style || "",
+            anticipation_style: document.getElementById("identity-member-anticipation-style")?.value || existing.anticipation_style || "",
+            preferred_voice: document.getElementById("identity-member-voice")?.value || existing.preferred_voice || "",
+            voice_aliases: String(document.getElementById("identity-member-voice-aliases")?.value || "").split(",").map((item) => item.trim()).filter(Boolean),
+            primary_rooms: String(document.getElementById("identity-member-primary-rooms")?.value || "").split(",").map((item) => item.trim()).filter(Boolean),
+            morning_room: document.getElementById("identity-member-morning-room")?.value || existing.morning_room || "",
+            notes: document.getElementById("identity-member-notes")?.value || existing.notes || "",
+            priorities: existing.priorities || [],
+            active: existing.active !== false,
+          }};
+          try {{
+            const data = await loadJSON("/api/identity/member", {{
+              method: "POST",
+              headers: {{ "Content-Type": "application/json" }},
+              body: JSON.stringify(payload),
+            }});
+            state.identity = data.identity;
+            const status = document.getElementById("identity-member-status");
+            if (status) status.textContent = `Saved profile for ${{data.member?.display_name || userId}}.`;
+            await refreshPersonaSnapshot(true);
+            await refreshLearningReview();
+            openPacket("settings");
+          }} catch (error) {{
+            const status = document.getElementById("identity-member-status");
+            if (status) status.textContent = error.message || "Failed to save family identity profile.";
+          }}
+        }});
+      }}
+
+      const refreshPersona = document.getElementById("refresh-persona-snapshot");
+      if (refreshPersona) {{
+        refreshPersona.addEventListener("click", async () => {{
+          await refreshPersonaSnapshot(true);
+          await refreshLearningReview();
+          const status = document.getElementById("identity-member-status");
+          if (status) status.textContent = "Adaptive persona snapshot refreshed from First Light, memory, and device signals.";
+        }});
+      }}
+
+      const saveDevice = document.getElementById("save-identity-device");
+      if (saveDevice) {{
+        saveDevice.addEventListener("click", async () => {{
+          const payload = {{
+            device_id: document.getElementById("identity-device-id")?.value || "",
+            label: document.getElementById("identity-device-label")?.value || "",
+            device_type: document.getElementById("identity-device-type")?.value || "browser",
+            owner_user_id: document.getElementById("identity-device-owner")?.value || "",
+            default_actor_id: document.getElementById("identity-device-default-actor")?.value || "",
+            trust_level: document.getElementById("identity-device-trust")?.value || "trusted",
+            room: document.getElementById("identity-device-room")?.value || "",
+            notes: document.getElementById("identity-device-notes")?.value || "",
+            shared: !!document.getElementById("identity-device-shared")?.checked,
+            always_available: !!document.getElementById("identity-device-always-available")?.checked,
+            user_agent: navigator.userAgent || "",
+          }};
+          try {{
+            const data = await loadJSON("/api/identity/device", {{
+              method: "POST",
+              headers: {{ "Content-Type": "application/json" }},
+              body: JSON.stringify(payload),
+            }});
+            state.identity = data.identity;
+            const status = document.getElementById("identity-device-status");
+            if (status) status.textContent = `Saved device binding for ${{data.device?.label || payload.device_id}}.`;
+            openPacket("settings");
+          }} catch (error) {{
+            const status = document.getElementById("identity-device-status");
+            if (status) status.textContent = error.message || "Failed to save device binding.";
+          }}
+        }});
+      }}
+
+      const bindCurrent = document.getElementById("bind-current-device");
+      if (bindCurrent) {{
+        bindCurrent.addEventListener("click", async () => {{
+          try {{
+            const data = await bindShellIdentity();
+            const status = document.getElementById("identity-device-status");
+            if (status) status.textContent = data.resolved_actor_label
+              ? `Current browser bound to ${{data.resolved_actor_label}}.`
+              : "Current browser bound. Mark it shared or assign a default actor if needed.";
+            openPacket("settings");
+          }} catch (error) {{
+            const status = document.getElementById("identity-device-status");
+            if (status) status.textContent = error.message || "Failed to bind current browser.";
+          }}
+        }});
+      }}
+
+      const applySessionActor = document.getElementById("apply-session-actor");
+      if (applySessionActor) {{
+        applySessionActor.addEventListener("click", async () => {{
+          const actorId = document.getElementById("identity-session-actor")?.value || "";
+          saveSessionActorOverride(actorId);
+          try {{
+            const data = await bindShellIdentity();
+            const status = document.getElementById("identity-device-status");
+            if (status) status.textContent = data.resolved_actor_label
+              ? `Using ${{data.resolved_actor_label}} for this shared-device session.`
+              : "Session override cleared. Device defaults are active again.";
+            openPacket("settings");
+          }} catch (error) {{
+            const status = document.getElementById("identity-device-status");
+            if (status) status.textContent = error.message || "Failed to apply the shared-device session actor.";
+          }}
+        }});
+      }}
+
+      const clearSessionActor = document.getElementById("clear-session-actor");
+      if (clearSessionActor) {{
+        clearSessionActor.addEventListener("click", async () => {{
+          saveSessionActorOverride("");
+          try {{
+            const data = await bindShellIdentity();
+            const status = document.getElementById("identity-device-status");
+            if (status) status.textContent = data.resolved_actor_label
+              ? `Session override cleared. Current actor is now ${{data.resolved_actor_label}}.`
+              : "Session override cleared. Device defaults are active again.";
+            openPacket("settings");
+          }} catch (error) {{
+            const status = document.getElementById("identity-device-status");
+            if (status) status.textContent = error.message || "Failed to clear the shared-device session actor.";
+          }}
+        }});
+      }}
+
+      const saveService = document.getElementById("save-identity-service");
+      if (saveService) {{
+        saveService.addEventListener("click", async () => {{
+          const payload = {{
+            host_label: document.getElementById("identity-service-host-label")?.value || "",
+            host_type: document.getElementById("identity-service-host-type")?.value || "",
+            lan_url: document.getElementById("identity-service-lan-url")?.value || "",
+            hostname: document.getElementById("identity-service-hostname")?.value || "",
+            notes: document.getElementById("identity-service-notes")?.value || "",
+            always_on_enabled: !!document.getElementById("identity-service-always-on")?.checked,
+            launch_on_boot: !!document.getElementById("identity-service-launch-on-boot")?.checked,
+            watchdog_enabled: !!document.getElementById("identity-service-watchdog")?.checked,
+          }};
+          try {{
+            const data = await loadJSON("/api/identity/service", {{
+              method: "POST",
+              headers: {{ "Content-Type": "application/json" }},
+              body: JSON.stringify(payload),
+            }});
+            state.identity = data.identity;
+            const status = document.getElementById("identity-service-status");
+            if (status) status.textContent = "Always-on service plan saved.";
+            await refreshRuntimeServiceStatus();
+            openPacket("settings");
+          }} catch (error) {{
+            const status = document.getElementById("identity-service-status");
+            if (status) status.textContent = error.message || "Failed to save service plan.";
+          }}
+        }});
+      }}
+    }}
+
     async function refreshDashboard() {{
-      const data = await loadJSON("/api/dashboard");
-      state.dashboard = data;
+      const actor = preferredActorLabel();
+      const data = mergeDashboardState(await loadJSON(`/api/dashboard?actor=${{encodeURIComponent(actor)}}`));
       const activeLocationRecord = state.locationSettings?.active_location || null;
       const activeLocationLabel = activeLocationRecord?.label || data.location || "";
       const activeLocation = /^QA Location \\d+$/i.test(activeLocationLabel)
         ? (activeLocationRecord?.geography || "")
         : activeLocationLabel;
       const purpose = data.mode_brief?.purpose || "Standing by for voice or typed command.";
+      updateRuntimeFreshness(data);
       fillSignalRail(data);
       fillBrainGraph(data);
       fillPacketStrip();
-      if (state.packet) {{
+      const assistantSurface = data.assistant_surface || {{}};
+      const surfaceKey = assistantSurface.surface_key || "";
+      const suggestedPacket = assistantSurface.auto_open_packet || "";
+      if (
+        suggestedPacket &&
+        surfaceKey &&
+        !document.body.classList.contains("modal-open") &&
+        !state.packet &&
+        state.lastAssistantSurfaceKey !== surfaceKey
+      ) {{
+        saveAssistantSurfaceKey(surfaceKey);
+        document.getElementById("last-jarvis-text").textContent =
+          (assistantSurface.briefing_lines && assistantSurface.briefing_lines[0]) ||
+          "JARVIS has work that should come back to you now.";
+        syncTranscriptRail();
+        openPacket(suggestedPacket);
+        return;
+      }}
+      if (state.packet && state.packetHydrationPending !== state.packet) {{
         openPacket(state.packet);
       }}
+      if (await maybeAutoOpenCadenceReview(data.assistant_notifications || {{}})) {{
+        return;
+      }}
+      await deliverAssistantBrowserAlerts().catch((error) => console.warn("Assistant browser alerts failed", error));
+    }}
+
+    async function enableBrowserAlerts() {{
+      if (!browserAlertsSupported()) {{
+        throw new Error("Browser notifications are not supported on this device.");
+      }}
+      if (Notification.permission === "granted") {{
+        state.browserAlertsPermission = "granted";
+        saveBrowserAlertsEnabled(true);
+        return true;
+      }}
+      const permission = await Notification.requestPermission();
+      state.browserAlertsPermission = permission;
+      if (permission === "granted") {{
+        saveBrowserAlertsEnabled(true);
+        return true;
+      }}
+      saveBrowserAlertsEnabled(false);
+      return false;
+    }}
+
+    function disableBrowserAlerts() {{
+      saveBrowserAlertsEnabled(false);
+    }}
+
+    async function deliverAssistantBrowserAlerts() {{
+      if (!browserAlertsReady()) {{
+        return [];
+      }}
+      const actor = preferredActorLabel();
+      const params = new URLSearchParams({{
+        actor,
+        device_id: state.shellDeviceId || "",
+        limit: "3",
+      }});
+      const payload = await loadJSON(`/api/assistant-core/browser-alerts?${{params.toString()}}`);
+      const items = Array.isArray(payload.items) ? payload.items : [];
+      for (const item of items) {{
+        const title = item.title || "Assistant item";
+        const detail = item.detail || item.why_this_surfaced_now || "JARVIS has something ready for you.";
+        const packet = item.packet || "today";
+        const notification = new Notification(title, {{
+          body: detail,
+          tag: item.notification_id || item.surface_key || title,
+          renotify: false,
+        }});
+        notification.onclick = () => {{
+          window.focus();
+          state.lastBriefing = detail;
+          document.getElementById("last-jarvis-text").textContent = detail;
+          syncTranscriptRail();
+          openPacket(packet);
+          loadJSON(`/api/assistant-core/notifications/${{encodeURIComponent(item.notification_id)}}`, {{
+            method: "POST",
+            headers: {{ "Content-Type": "application/json" }},
+            body: JSON.stringify({{ actor, status: "opened" }}),
+          }}).catch(() => null);
+          notification.close();
+        }};
+        await loadJSON(`/api/assistant-core/notifications/${{encodeURIComponent(item.notification_id)}}/delivered`, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{ actor, device_id: state.shellDeviceId || "" }}),
+        }});
+      }}
+      return items;
+    }}
+
+    async function runAssistantAutonomySweep() {{
+      const actor = preferredActorLabel();
+      const tick = await loadJSON(`/api/assistant-core/tick?actor=${{encodeURIComponent(actor)}}`);
+      if (tick.assistant_surface) {{
+        state.dashboard = {{
+          ...(state.dashboard || {{}}),
+          open_loops: tick.open_loops || state.dashboard?.open_loops || null,
+          today_board: tick.today_board || state.dashboard?.today_board || null,
+          cognitive: tick.cognitive || state.dashboard?.cognitive || null,
+          assistant_surface: tick.assistant_surface,
+        }};
+        fillSignalRail(state.dashboard);
+        fillPacketStrip();
+      }}
+      const surfaceKey = tick.assistant_surface?.surface_key || "";
+      const suggestedPacket = tick.assistant_surface?.auto_open_packet || "";
+      if (
+        tick.should_surface &&
+        suggestedPacket &&
+        surfaceKey &&
+        !document.body.classList.contains("modal-open") &&
+        !state.packet &&
+        state.lastAssistantSurfaceKey !== surfaceKey
+      ) {{
+        saveAssistantSurfaceKey(surfaceKey);
+        document.getElementById("last-jarvis-text").textContent =
+          (tick.assistant_surface.briefing_lines && tick.assistant_surface.briefing_lines[0]) ||
+          "JARVIS has resurfaced work that matters now.";
+        syncTranscriptRail();
+        openPacket(suggestedPacket);
+      }}
+      if (await maybeAutoOpenCadenceReview(state.dashboard?.assistant_notifications || {{}})) {{
+        return tick;
+      }}
+      await deliverAssistantBrowserAlerts().catch((error) => console.warn("Assistant browser alerts failed", error));
+      return tick;
+    }}
+
+    function scheduleAssistantAutonomy() {{
+      if (state.autonomyTickTimer) {{
+        window.clearInterval(state.autonomyTickTimer);
+      }}
+      state.autonomyTickTimer = window.setInterval(() => {{
+        runAssistantAutonomySweep().catch((error) => console.warn("Assistant autonomy sweep failed", error));
+      }}, 120000);
+    }}
+
+    async function runAssistantBackgroundAutonomy() {{
+      const actor = preferredActorLabel();
+      const result = await loadJSON("/api/assistant-core/background-run", {{
+        method: "POST",
+        headers: {{ "Content-Type": "application/json" }},
+        body: JSON.stringify({{ actors: [actor] }}),
+      }});
+      await refreshDashboard();
+      if (await maybeAutoOpenCadenceReview(state.dashboard?.assistant_notifications || {{}})) {{
+        return result;
+      }}
+      await deliverAssistantBrowserAlerts().catch((error) => console.warn("Assistant browser alerts failed", error));
+      return result;
+    }}
+
+    function wireTodayBoardActions() {{
+      const enable = document.getElementById("enable-browser-alerts");
+      if (enable) {{
+        enable.addEventListener("click", async () => {{
+          try {{
+            const enabled = await enableBrowserAlerts();
+            document.getElementById("last-jarvis-text").textContent = enabled
+              ? "Browser alerts are live. JARVIS can now nudge this device when assistant work crosses a threshold."
+              : "Browser alerts were not enabled.";
+            syncTranscriptRail();
+            openPacket("today");
+            await deliverAssistantBrowserAlerts().catch(() => null);
+          }} catch (error) {{
+            document.getElementById("last-jarvis-text").textContent = error.message || "Browser alerts are unavailable.";
+            syncTranscriptRail();
+          }}
+        }});
+      }}
+      const disable = document.getElementById("disable-browser-alerts");
+      if (disable) {{
+        disable.addEventListener("click", () => {{
+          disableBrowserAlerts();
+          document.getElementById("last-jarvis-text").textContent = "Browser alerts are muted for this device.";
+          syncTranscriptRail();
+          openPacket("today");
+        }});
+      }}
+    }}
+
+    function wireReviewActions() {{
+      document.querySelectorAll(".review-action-button").forEach((button) => {{
+        button.addEventListener("click", async () => {{
+          const actor = preferredActorLabel();
+          const domain = button.dataset.domain || "";
+          const itemId = button.dataset.itemId || "";
+          const action = button.dataset.action || "";
+          if (!domain || !itemId || !action) {{
+            return;
+          }}
+          try {{
+            await loadJSON("/api/open-loops/action", {{
+              method: "POST",
+              headers: {{ "Content-Type": "application/json" }},
+              body: JSON.stringify({{
+                actor,
+                domain,
+                item_id: itemId,
+                action,
+                note: "review-packet",
+              }}),
+            }});
+            await refreshDashboard();
+            openPacket("review");
+          }} catch (error) {{
+            document.getElementById("last-jarvis-text").textContent = error.message || "Review action failed.";
+            syncTranscriptRail();
+          }}
+        }});
+      }});
+    }}
+
+    function wireAssistantInboxActions(returnPacket = "today") {{
+      document.querySelectorAll(".assistant-inbox-open").forEach((button) => {{
+        button.addEventListener("click", async () => {{
+          const actor = preferredActorLabel();
+          const notificationId = button.dataset.notificationId || "";
+          const packet = button.dataset.packet || "today";
+          try {{
+            if (notificationId) {{
+              await loadJSON(`/api/assistant-core/notifications/${{encodeURIComponent(notificationId)}}`, {{
+                method: "POST",
+                headers: {{ "Content-Type": "application/json" }},
+                body: JSON.stringify({{ actor, status: "opened" }}),
+              }});
+            }}
+            await refreshDashboard();
+            openPacket(packet);
+          }} catch (error) {{
+            document.getElementById("last-jarvis-text").textContent = error.message || "Assistant inbox action failed.";
+            syncTranscriptRail();
+          }}
+        }});
+      }});
+
+      document.querySelectorAll(".assistant-inbox-ignore").forEach((button) => {{
+        button.addEventListener("click", async () => {{
+          const actor = preferredActorLabel();
+          const notificationId = button.dataset.notificationId || "";
+          if (!notificationId) {{
+            return;
+          }}
+          try {{
+            await loadJSON(`/api/assistant-core/notifications/${{encodeURIComponent(notificationId)}}`, {{
+              method: "POST",
+              headers: {{ "Content-Type": "application/json" }},
+              body: JSON.stringify({{ actor, status: "ignored" }}),
+            }});
+            await refreshDashboard();
+            openPacket(returnPacket);
+          }} catch (error) {{
+            document.getElementById("last-jarvis-text").textContent = error.message || "Assistant inbox ignore failed.";
+            syncTranscriptRail();
+          }}
+        }});
+      }});
+    }}
+
+    function scheduleAssistantBackgroundRun() {{
+      if (state.autonomyBackgroundTimer) {{
+        window.clearInterval(state.autonomyBackgroundTimer);
+      }}
+      state.autonomyBackgroundTimer = window.setInterval(() => {{
+        runAssistantBackgroundAutonomy().catch((error) => console.warn("Assistant background autonomy run failed", error));
+      }}, 600000);
     }}
 
     async function loadBriefing() {{
       const actor = document.getElementById("actor").value || "Chris";
+      const firstLight = await checkFirstLight(true).catch(() => null);
+      if (firstLight?.eligible) {{
+        return;
+      }}
       const data = await loadJSON(`/api/briefing?actor=${{encodeURIComponent(actor)}}`);
+      state.firstLight = null;
       state.lastBriefing = data.briefing || "";
       document.getElementById("last-jarvis-text").textContent = state.lastBriefing || "Briefing unavailable.";
       syncTranscriptRail();
       openPacket("briefing");
       await speakText(state.lastBriefing);
+    }}
+
+    async function checkFirstLight(force = false) {{
+      const preferredActor =
+        state.sessionIdentity?.resolved_actor_label ||
+        document.getElementById("actor")?.value ||
+        "Chris";
+      const timezoneName = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
+      const params = new URLSearchParams({{
+        actor: preferredActor,
+        device_id: state.shellDeviceId || "",
+        timezone_name: timezoneName,
+        force: force ? "true" : "false",
+      }});
+      const data = await loadJSON(`/api/first-light?${{params.toString()}}`);
+      if (!data.eligible || !data.packet) {{
+        return data;
+      }}
+      state.firstLight = data.packet;
+      state.lastBriefing = data.packet.spoken_summary || data.packet.opening || "";
+      document.getElementById("last-jarvis-text").textContent = state.lastBriefing || "First Light ready.";
+      syncTranscriptRail();
+      openPacket("briefing");
+      return data;
     }}
 
     function stopSpeaking() {{
@@ -4326,6 +7455,9 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
         state.speakingTimer = null;
       }}
       setVoiceState("idle", "Standing by for voice or typed command.");
+      if (state.alwaysOnMicEnabled) {{
+        queueAlwaysOnListening();
+      }}
     }}
 
     function speakWithBrowserFallback(text) {{
@@ -4333,9 +7465,19 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = 0.92;
         utterance.pitch = 0.9;
-        utterance.onstart = () => setVoiceState("speaking", "JARVIS fallback voice is speaking.");
-        utterance.onend = () => setVoiceState("idle", "Standing by for voice or typed command.");
-        utterance.onerror = () => setVoiceState("idle", "Voice output unavailable. Standing by.");
+        utterance.onstart = () => {{
+          stopRecognition();
+          setVoiceState("speaking", "JARVIS fallback voice is speaking.");
+        }};
+        utterance.onend = () => {{
+          extendConversationWindow();
+          setVoiceState("idle", 'Standing by for "Hey Jarvis".');
+          queueAlwaysOnListening();
+        }};
+        utterance.onerror = () => {{
+          setVoiceState("idle", "Voice output unavailable. Standing by.");
+          queueAlwaysOnListening();
+        }};
         window.speechSynthesis.speak(utterance);
         return true;
       }}
@@ -4355,6 +7497,7 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
         return;
       }}
       try {{
+        stopRecognition();
         const response = await fetch("/api/tts", {{
           method: "POST",
           headers: {{ "Content-Type": "application/json" }},
@@ -4381,7 +7524,9 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
             URL.revokeObjectURL(audioUrl);
             state.currentAudioUrl = "";
           }}
-          setVoiceState("idle", "Standing by for voice or typed command.");
+          extendConversationWindow();
+          setVoiceState("idle", 'Standing by for "Hey Jarvis".');
+          queueAlwaysOnListening();
         }};
         audio.onerror = () => {{
           stopAudioReactivePulse();
@@ -4394,6 +7539,7 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
           }}
           if (!speakWithBrowserFallback(text)) {{
             setVoiceState("idle", "Voice output unavailable. Standing by.");
+            queueAlwaysOnListening();
           }}
         }};
         await audio.play();
@@ -4401,11 +7547,13 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
         console.error(error);
         if (!speakWithBrowserFallback(text)) {{
           setVoiceState("idle", "Voice output unavailable. Standing by.");
+          queueAlwaysOnListening();
         }}
       }}
     }}
 
     function stopRecognition() {{
+      clearRecognitionRestartTimer();
       if (state.recognizer && state.recognizing) {{
         state.recognizer.stop();
       }}
@@ -4417,37 +7565,52 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       button.classList.toggle("primary", active);
     }}
 
-    async function startVoiceCommand() {{
+    async function startVoiceCommand(options = {{}}) {{
+      const automatic = Boolean(options.automatic);
       const Recognition = browserSpeechRecognition();
       if (!Recognition) {{
         document.getElementById("last-jarvis-text").textContent =
           "This browser does not expose speech recognition. Use typed input here, or we can wire server-side microphone capture next.";
         syncTranscriptRail();
         setVoiceState("idle", "No browser microphone recognition is available.");
+        state.alwaysOnMicEnabled = false;
+        refreshMicButton();
         return;
       }}
-      if (state.recognizing) {{
-        stopRecognition();
+      if (!automatic && state.alwaysOnMicEnabled) {{
+        disableAlwaysOnMic("Always-on microphone disabled.");
+        return;
+      }}
+      if (!state.alwaysOnMicEnabled) {{
+        state.alwaysOnMicEnabled = true;
+      }}
+      if (state.recognizing || state.recognizer) {{
         return;
       }}
 
       stopSpeaking();
       const recognizer = new Recognition();
+      clearRecognitionRestartTimer();
       state.recognizer = recognizer;
       recognizer.lang = "en-US";
       recognizer.interimResults = true;
       recognizer.continuous = false;
       recognizer.maxAlternatives = 1;
+      let transcript = "";
+      let finalTranscript = "";
 
       recognizer.onstart = () => {{
         state.recognizing = true;
-        setTalkButton(true, "Listening");
-        setVoiceState("listening", "Listening for your command.");
+        refreshMicButton();
+        setVoiceState(
+          "listening",
+          conversationWindowActive() ? "Listening for your follow-up." : 'Listening for "Hey Jarvis".'
+        );
       }};
 
       recognizer.onresult = (event) => {{
-        let transcript = "";
-        let finalTranscript = "";
+        transcript = "";
+        finalTranscript = "";
         for (let index = event.resultIndex; index < event.results.length; index += 1) {{
           const chunk = event.results[index][0]?.transcript || "";
           transcript += chunk;
@@ -4467,37 +7630,42 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
 
       recognizer.onerror = (event) => {{
         state.recognizing = false;
-        setTalkButton(false, "Talk");
+        state.recognizer = null;
+        refreshMicButton();
         const code = event?.error || "unknown";
         if (code === "not-allowed" || code === "service-not-allowed") {{
           document.getElementById("last-jarvis-text").textContent =
             "Microphone access was blocked. Allow microphone permission for this page and try again.";
           syncTranscriptRail();
-          setVoiceState("idle", "Microphone permission is required.");
+          disableAlwaysOnMic("Microphone permission is required.");
           return;
         }}
         if (code === "no-speech") {{
-          setVoiceState("idle", "No speech detected. Try again.");
+          setVoiceState("idle", conversationWindowActive() ? "Listening for your follow-up." : 'Standing by for "Hey Jarvis".');
+          queueAlwaysOnListening();
           return;
         }}
         document.getElementById("last-jarvis-text").textContent = `Voice recognition error: ${{code}}`;
         syncTranscriptRail();
         setVoiceState("idle", "Voice recognition failed.");
+        queueAlwaysOnListening(900);
       }};
 
       recognizer.onend = () => {{
-        const spoken = document.getElementById("command-input").value.trim();
+        const spoken = (finalTranscript || transcript || "").trim();
         state.recognizing = false;
-        setTalkButton(false, "Talk");
         state.recognizer = null;
+        refreshMicButton();
         if (spoken) {{
-          sendCommand().catch((error) => {{
+          handleRecognizedSpeech(spoken).catch((error) => {{
             document.getElementById("last-jarvis-text").textContent = error.message;
             syncTranscriptRail();
             setVoiceState("idle", "Command failed. Standing by.");
+            queueAlwaysOnListening();
           }});
         }} else {{
-          setVoiceState("idle", "Standing by for voice or typed command.");
+          setVoiceState("idle", conversationWindowActive() ? "Listening for your follow-up." : 'Standing by for "Hey Jarvis".');
+          queueAlwaysOnListening();
         }}
       }};
 
@@ -4506,13 +7674,16 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
 
     function packetFromRequest(request) {{
       const lowered = request.toLowerCase();
+      if (lowered.includes("today board") || lowered.includes("run my day") || lowered.includes("what needs my attention")) return "today";
       if (lowered.includes("brief") || lowered.includes("agenda") || lowered.includes("today")) return "briefing";
       if (lowered.includes("home") || lowered.includes("garage") || lowered.includes("weather") || lowered.includes("freezer")) return "home";
       if (lowered.includes("family") || lowered.includes("dinner") || lowered.includes("grocery") || lowered.includes("calm version")) return "family";
       if (lowered.includes("security") || lowered.includes("door") || lowered.includes("arrival")) return "security";
+      if (lowered.includes("camera") || lowered.includes("look at") || lowered.includes("look on") || lowered.includes("see this") || lowered.includes("desk")) return "vision";
       if (lowered.includes("chronicle") || lowered.includes("scripture") || lowered.includes("prayer")) return "chronicle";
       if (lowered.includes("workshop") || lowered.includes("printer") || lowered.includes("prototype")) return "workshop";
       if (lowered.includes("email") || lowered.includes("meeting") || lowered.includes("project plan") || lowered.includes("catalyst")) return "catalyst";
+      if (lowered.includes("task") || lowered.includes("open loop") || lowered.includes("follow up")) return "tasks";
       if (lowered.includes("approve") || lowered.includes("approval")) return "approvals";
       return "";
     }}
@@ -4530,11 +7701,15 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       return "home";
     }}
 
-    async function sendCommand() {{
+    async function sendCommand(fromSpeech = false) {{
       const actor = document.getElementById("actor").value;
       const room = document.getElementById("room").value;
       const request = document.getElementById("command-input").value.trim();
       if (!request) return;
+      if (fromSpeech || state.alwaysOnMicEnabled) {{
+        extendConversationWindow();
+      }}
+      stopRecognition();
       document.getElementById("last-user-text").textContent = request;
       syncTranscriptRail();
       setVoiceState("responding", "JARVIS is reasoning.");
@@ -4543,6 +7718,7 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
         headers: {{ "Content-Type": "application/json" }},
         body: JSON.stringify({{ actor, room, request }})
       }});
+      updateSourceIndicator(data.provider || "standby", data.model || "");
       const output = data.output_text || "No response returned.";
       document.getElementById("last-jarvis-text").textContent = output;
       syncTranscriptRail();
@@ -4568,7 +7744,7 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
     }});
 
     document.getElementById("voice-command").addEventListener("click", () => {{
-      startVoiceCommand().catch((error) => {{
+      startVoiceCommand({{ automatic: false }}).catch((error) => {{
         document.getElementById("last-jarvis-text").textContent = error.message;
         syncTranscriptRail();
         setVoiceState("idle", "Voice command failed.");
@@ -4696,19 +7872,47 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       }}
     }});
 
+    function connectEventStream() {{
+      const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+      const socket = new WebSocket(`${{protocol}}://${{window.location.host}}/ws/events`);
+      socket.addEventListener("message", (event) => {{
+        try {{
+          const payload = JSON.parse(event.data);
+          if (payload.dashboard || payload.refresh) {{
+            refreshDashboard().catch((error) => console.warn("Dashboard refresh from event stream failed", error));
+          }}
+        }} catch (error) {{
+          console.warn("JARVIS event stream parse error", error);
+        }}
+      }});
+      socket.addEventListener("close", () => {{
+        window.setTimeout(connectEventStream, 1500);
+      }});
+    }}
+
     updateClock();
     window.setInterval(updateClock, 1000);
+    state.browserAlertsEnabled = loadBrowserAlertsEnabled();
+    state.browserAlertsPermission = browserAlertsSupported() ? Notification.permission : "unsupported";
+    connectEventStream();
+    scheduleAssistantAutonomy();
+    scheduleAssistantBackgroundRun();
+    state.lastAssistantSurfaceKey = loadAssistantSurfaceKey();
     loadDesignReviewState().finally(() => {{
       ensureHoloCore();
       syncDesignReviewPanel();
     }});
     refreshVoiceSettings()
+      .then(() => bindShellIdentity().catch(() => null))
       .then(() => refreshDashboard())
+      .then(() => checkFirstLight().catch(() => null))
       .catch((error) => {{
         document.getElementById("last-jarvis-text").textContent = error.message;
         syncTranscriptRail();
       }});
     window.addEventListener("beforeunload", () => {{
+      clearRecognitionRestartTimer();
+      stopRecognition();
       stopAudioReactivePulse();
       if (state.holoCoreScene) {{
         if (state.holoCoreScene.frame) cancelAnimationFrame(state.holoCoreScene.frame);
@@ -4718,10 +7922,16 @@ def render_voice_shell(runtime: JarvisRuntime) -> str:
       if (state.audioContext) {{
         state.audioContext.close().catch(() => null);
       }}
+      if (state.autonomyTickTimer) {{
+        window.clearInterval(state.autonomyTickTimer);
+      }}
+      if (state.autonomyBackgroundTimer) {{
+        window.clearInterval(state.autonomyBackgroundTimer);
+      }}
     }});
-    setVoiceState("idle", "Standing by for voice or typed command.");
     syncTranscriptRail();
     syncContextPanelCopy();
+    enableAlwaysOnMic('Standing by for "Hey Jarvis".');
   </script>
 </body>
 </html>"""

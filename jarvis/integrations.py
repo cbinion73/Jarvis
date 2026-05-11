@@ -92,6 +92,35 @@ def check_memory_profile(config: AppConfig) -> IntegrationStatus:
     )
 
 
+def check_openviking(config: AppConfig) -> IntegrationStatus:
+    if not config.openviking_enabled:
+        return IntegrationStatus(
+            name="openviking",
+            ok=False,
+            detail="JARVIS_OPENVIKING_ENABLED is false",
+        )
+    if not config.openviking_base_url:
+        return IntegrationStatus(
+            name="openviking",
+            ok=False,
+            detail="OPENVIKING_BASE_URL is missing",
+        )
+    try:
+        with request.urlopen(f"{config.openviking_base_url}/health", timeout=5) as response:
+            status_code = response.status
+    except error.URLError as exc:
+        return IntegrationStatus(
+            name="openviking",
+            ok=False,
+            detail=str(exc),
+        )
+    return IntegrationStatus(
+        name="openviking",
+        ok=200 <= status_code < 300,
+        detail=f"http {status_code} at {config.openviking_base_url}",
+    )
+
+
 def check_google_workspace(config: AppConfig) -> IntegrationStatus:
     if not config.google_client_secret_path.exists():
         return IntegrationStatus(
@@ -123,4 +152,18 @@ def check_workshop_adapter(config: AppConfig) -> IntegrationStatus:
         name="workshop-adapter",
         ok=True,
         detail=f"loaded profile {config.workshop_profile_path}",
+    )
+
+
+def check_openai_api(config: AppConfig) -> IntegrationStatus:
+    if not config.openai_api_key:
+        return IntegrationStatus(
+            name="openai-api",
+            ok=False,
+            detail="OPENAI_API_KEY is missing",
+        )
+    return IntegrationStatus(
+        name="openai-api",
+        ok=True,
+        detail="OpenAI API key is configured",
     )

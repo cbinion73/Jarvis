@@ -1,5 +1,5 @@
 {
-  "started_at": "2026-05-08T15:24:37.930Z",
+  "started_at": "2026-05-10T20:27:43.660Z",
   "base_url": "http://127.0.0.1:8787",
   "checks": [
     {
@@ -45,28 +45,14 @@
       "kind": "automated"
     },
     {
-      "name": "Google login hint is malformed for Chris Gmail",
-      "status": "warning",
-      "details": "Expected an email-style login_hint, got \"73\".",
-      "screenshot": null,
-      "kind": "automated"
-    },
-    {
-      "name": "Gmail provider is connected but not usable for Chris Gmail",
-      "status": "warning",
-      "details": "<HttpError 403 when requesting https://gmail.googleapis.com/gmail/v1/users/me/messages?q=in%3Ainbox+is%3Aunread&maxResults=6&alt=json returned \"Gmail API has not been used in project 1055386606834 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/gmail.googleapis.com/overview?project=1055386606834 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.\". Details: \"[{'message': 'Gmail API has not been used in project 1055386606834 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/gmail.googleapis.com/overview?project=1055386606834 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.', 'domain': 'usageLimits', 'reason': 'accessNotConfigured', 'extendedHelp': 'https://console.developers.google.com'}]\">",
-      "screenshot": null,
-      "kind": "automated"
-    },
-    {
-      "name": "Calendar provider is connected but not usable for Chris Gmail",
-      "status": "warning",
-      "details": "<HttpError 403 when requesting https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=2026-05-08T15%3A24%3A50.628538%2B00%3A00&maxResults=6&singleEvents=true&orderBy=startTime&alt=json returned \"Google Calendar API has not been used in project 1055386606834 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/calendar-json.googleapis.com/overview?project=1055386606834 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.\". Details: \"[{'message': 'Google Calendar API has not been used in project 1055386606834 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/calendar-json.googleapis.com/overview?project=1055386606834 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.', 'domain': 'usageLimits', 'reason': 'accessNotConfigured', 'extendedHelp': 'https://console.developers.google.com'}]\">",
-      "screenshot": null,
-      "kind": "automated"
-    },
-    {
       "name": "Google connect handoff route exists for Chris Gmail",
+      "status": "passed",
+      "details": null,
+      "screenshot": null,
+      "kind": "automated"
+    },
+    {
+      "name": "Google snapshot loads for Chris Google",
       "status": "passed",
       "details": null,
       "screenshot": null,
@@ -80,44 +66,20 @@
       "kind": "automated"
     },
     {
-      "name": "Integration status disagrees with connected Google accounts",
-      "status": "warning",
-      "details": "google-workspace reports blocked: Google account is not connected yet",
-      "screenshot": null,
-      "kind": "automated"
-    },
-    {
       "name": "Live Home Assistant action checks",
       "status": "skipped",
-      "details": "Home Assistant not ready: HOME_ASSISTANT_URL or HOME_ASSISTANT_TOKEN is missing",
+      "details": "Home Assistant not ready: Home Assistant is not connected.",
       "screenshot": null,
       "kind": "automated"
     }
   ],
   "failures": [],
-  "warnings": [
-    {
-      "name": "Google login hint is malformed for Chris Gmail",
-      "details": "Expected an email-style login_hint, got \"73\"."
-    },
-    {
-      "name": "Gmail provider is connected but not usable for Chris Gmail",
-      "details": "<HttpError 403 when requesting https://gmail.googleapis.com/gmail/v1/users/me/messages?q=in%3Ainbox+is%3Aunread&maxResults=6&alt=json returned \"Gmail API has not been used in project 1055386606834 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/gmail.googleapis.com/overview?project=1055386606834 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.\". Details: \"[{'message': 'Gmail API has not been used in project 1055386606834 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/gmail.googleapis.com/overview?project=1055386606834 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.', 'domain': 'usageLimits', 'reason': 'accessNotConfigured', 'extendedHelp': 'https://console.developers.google.com'}]\">"
-    },
-    {
-      "name": "Calendar provider is connected but not usable for Chris Gmail",
-      "details": "<HttpError 403 when requesting https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=2026-05-08T15%3A24%3A50.628538%2B00%3A00&maxResults=6&singleEvents=true&orderBy=startTime&alt=json returned \"Google Calendar API has not been used in project 1055386606834 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/calendar-json.googleapis.com/overview?project=1055386606834 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.\". Details: \"[{'message': 'Google Calendar API has not been used in project 1055386606834 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/calendar-json.googleapis.com/overview?project=1055386606834 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.', 'domain': 'usageLimits', 'reason': 'accessNotConfigured', 'extendedHelp': 'https://console.developers.google.com'}]\">"
-    },
-    {
-      "name": "Integration status disagrees with connected Google accounts",
-      "details": "google-workspace reports blocked: Google account is not connected yet"
-    }
-  ],
+  "warnings": [],
   "summary": {
-    "passed": 8,
+    "passed": 9,
     "failed": 0,
     "skipped": 1,
-    "warned": 4
+    "warned": 0
   },
-  "finished_at": "2026-05-08T15:24:50.839Z"
+  "finished_at": "2026-05-10T20:28:23.459Z"
 }

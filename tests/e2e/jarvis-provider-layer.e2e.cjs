@@ -116,7 +116,7 @@ async function run() {
   });
 
   await check("Settings modal exposes provider controls", async (entry) => {
-    await page.goto(`${BASE_URL}/`, { waitUntil: "networkidle" });
+    await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
     await page.click("#open-settings");
     await page.waitForSelector("#modal-layer.open");
     await page.waitForSelector("#save-google-client-secret");

@@ -1,0 +1,19 @@
+{
+  "part_name": "QA Camera Mount 1778434790444",
+  "family": "mount",
+  "primary_model": "qa-camera-mount-1778434790444.3mf",
+  "fallback_mesh": "qa-camera-mount-1778434790444.stl",
+  "printer_id": "creality-k2-pro-combo",
+  "profile_name": "fit-check-fast",
+  "material": "PETG-CF",
+  "layer_height": "0.20 mm",
+  "infill": "35% gyroid",
+  "supports": "Minimal supports only where required",
+  "dimensions_mm": {
+    "base length": 90.0,
+    "width": 40.0,
+    "thickness": 6.0,
+    "riser height": 35.0,
+    "qa camera mount": 45172243677277.59
+  }
+}

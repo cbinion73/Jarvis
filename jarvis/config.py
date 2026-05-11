@@ -57,6 +57,8 @@ class AppConfig:
     second_brain_model: str
     second_brain_enabled: bool
     ollama_base_url: str
+    ollama_summarize_model: str
+    ollama_background_model: str
     home_assistant_url: str
     home_assistant_token: str
     openclaw_gateway_url: str
@@ -75,6 +77,13 @@ class AppConfig:
     catalyst_profile_path: Path
     google_client_secret_path: Path
     google_token_path: Path
+    openviking_enabled: bool
+    openviking_base_url: str
+    openviking_api_key: str
+    openviking_account: str
+    openviking_user: str
+    openviking_agent_id: str
+    openviking_memory_uri_root: str
 
     @classmethod
     def from_env(cls) -> "AppConfig":
@@ -101,10 +110,10 @@ class AppConfig:
                 "JARVIS_TTS_FALLBACKS",
                 ("piper", "localai", "elevenlabs", "system"),
             ),
-            stt_provider=os.getenv("JARVIS_STT_PROVIDER", "auto").strip().lower(),
+            stt_provider=os.getenv("JARVIS_STT_PROVIDER", "openai").strip().lower(),
             stt_fallbacks=_csv_env(
                 "JARVIS_STT_FALLBACKS",
-                ("localai", "openai"),
+                ("localai",),
             ),
             localai_base_url=os.getenv("LOCALAI_BASE_URL", "http://127.0.0.1:8080"),
             localai_api_key=os.getenv("LOCALAI_API_KEY", ""),
@@ -118,9 +127,11 @@ class AppConfig:
             livekit_api_key=os.getenv("LIVEKIT_API_KEY", ""),
             livekit_api_secret=os.getenv("LIVEKIT_API_SECRET", ""),
             second_brain_provider=os.getenv("JARVIS_SECOND_BRAIN_PROVIDER", "ollama").strip().lower(),
-            second_brain_model=os.getenv("JARVIS_SECOND_BRAIN_MODEL", "qwen2.5:1.5b"),
+            second_brain_model=os.getenv("JARVIS_SECOND_BRAIN_MODEL", "qwen2.5:7b"),
             second_brain_enabled=_bool_env("JARVIS_SECOND_BRAIN_ENABLED", True),
             ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434"),
+            ollama_summarize_model=os.getenv("JARVIS_OLLAMA_SUMMARIZE_MODEL", "qwen2.5:7b"),
+            ollama_background_model=os.getenv("JARVIS_OLLAMA_BACKGROUND_MODEL", "qwen2.5:7b"),
             home_assistant_url=os.getenv("HOME_ASSISTANT_URL", ""),
             home_assistant_token=os.getenv("HOME_ASSISTANT_TOKEN", ""),
             openclaw_gateway_url=os.getenv(
@@ -211,6 +222,16 @@ class AppConfig:
                     "data/google/google_token.json",
                 )
             ),
+            openviking_enabled=_bool_env("JARVIS_OPENVIKING_ENABLED", False),
+            openviking_base_url=os.getenv("OPENVIKING_BASE_URL", "http://127.0.0.1:1933").rstrip("/"),
+            openviking_api_key=os.getenv("OPENVIKING_API_KEY", "").strip(),
+            openviking_account=os.getenv("OPENVIKING_ACCOUNT", "default").strip(),
+            openviking_user=os.getenv("OPENVIKING_USER", "chris").strip(),
+            openviking_agent_id=os.getenv("OPENVIKING_AGENT_ID", "jarvis").strip(),
+            openviking_memory_uri_root=os.getenv(
+                "JARVIS_OPENVIKING_MEMORY_URI_ROOT",
+                "viking://user/chris/memories/",
+            ).strip(),
         )
 
     def load_household(self) -> HouseholdProfile:

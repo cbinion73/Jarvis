@@ -1,0 +1,34 @@
+{
+  "package_id": "671aad98-900d-4b09-858c-f27c1c6057b6",
+  "part_name": "Garden bench bracket",
+  "actor": "Chris",
+  "summary": "Sir, this is a compact L-bracket concept for a garden bench bracket, preserving the 110 mm hole spacing and 30 mm plate width, with an 8 mm thickness and a 12 mm bend radius. I\u2019ve added a simple drain slot path and kept the motif suggestion restrained, so it looks intentional rather than as though a committee of ravens discovered decorative tooling.",
+  "parameters": [
+    "part_name = \"garden_bench_bracket\"",
+    "plate_width = 30;",
+    "thickness = 8;",
+    "hole_spacing = 110;",
+    "bend_radius = 12;",
+    "hole_dia = 9;",
+    "edge_margin = 10;",
+    "leg_length = 70;",
+    "bend_clearance = 2;",
+    "drain_slot_w = 4;",
+    "drain_slot_l = 18;",
+    "drain_offset = 8;",
+    "motif_scale = 0.35;",
+    "motif_depth = 1.2;"
+  ],
+  "fit_checks": [
+    "Confirm hole spacing on the Garden bench bracket.",
+    "Check fastener clearance and wrench access.",
+    "Verify drain path does not weaken the load path."
+  ],
+  "artifact_dir": "data/workshop/model_forge/671aad98-900d-4b09-858c-f27c1c6057b6",
+  "script_path": "data/workshop/model_forge/671aad98-900d-4b09-858c-f27c1c6057b6/model.scad",
+  "model_path": "data/workshop/model_forge/671aad98-900d-4b09-858c-f27c1c6057b6/garden-bench-bracket-fit-check.stl",
+  "export_status": "fit-check-stl",
+  "export_detail": "Exported a simple fit-check STL using 110.00 x 30.00 x 8.00 mm derived from the supplied dimensions.",
+  "export_engine": "jarvis-fit-check",
+  "timestamp": "2026-05-10T04:15:43.554673+00:00"
+}

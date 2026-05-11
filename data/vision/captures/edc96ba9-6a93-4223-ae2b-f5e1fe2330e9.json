@@ -1,0 +1,11 @@
+{
+  "capture_id": "edc96ba9-6a93-4223-ae2b-f5e1fe2330e9",
+  "actor": "Chris",
+  "camera_label": "USB Camera (0c45:632e)",
+  "prompt": "Describe what is visible and call out the most important objects or activity.",
+  "mode": "describe",
+  "compare_to_capture_id": null,
+  "image_path": "data/vision/captures/edc96ba9-6a93-4223-ae2b-f5e1fe2330e9.jpg",
+  "created_at": "2026-05-10T05:09:22.403770+00:00",
+  "analysis": "The snapshot shows a very dark scene with the top edge of a workspace or instrument panel visible.\n\nMost noticeable objects:\n- A long row of small vertical items or components along the top edge, lit by warm light.\n- A ruler or measuring scale with tick marks near the lower part of the visible strip.\n- A dark foreground area below, with no clear activity or people visible.\n\nOverall, it looks like a close-up of a shelf, panel, or equipment surface under low light."
+}

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import IntEnum
+from enum import IntEnum, StrEnum
 
 
 class ActionClass(IntEnum):
@@ -12,6 +12,19 @@ class ActionClass(IntEnum):
     EXECUTE_MEDIUM_RISK = 4
     EXECUTE_HIGH_RISK = 5
     RESTRICTED = 6
+
+
+class TaskClass(StrEnum):
+    AMBIENT = "ambient"
+    FAMILY = "family"
+    EXECUTIVE = "executive"
+    FORMATION = "formation"
+    WORKSHOP = "workshop"
+    TUTORING = "tutoring"
+    RESEARCH = "research"
+    SENSITIVE_DRAFTING = "sensitive-drafting"
+    PARTY_MODE = "party-mode"
+    BACKGROUND = "background"
 
 
 @dataclass(slots=True)
@@ -88,6 +101,9 @@ class RequestPlan:
     mode: str
     module: str
     workstream: str
+    task_class: TaskClass
+    preferred_provider: str
+    context_lane: str
     model: str
     action_class: ActionClass
     allowed: bool
@@ -276,6 +292,16 @@ class CadPackage:
     parameters: list[str]
     openscad_stub: str
     fit_checks: list[str]
+    artifact_dir: str
+    script_path: str
+    cadquery_script_path: str
+    model_path: str
+    step_path: str
+    mesh_3mf_path: str
+    slicer_pack_dir: str
+    export_status: str
+    export_detail: str
+    export_engine: str
     timestamp: str
 
 
@@ -383,6 +409,11 @@ class MemoryEntry:
     encrypted_payload: str
     created_at: str
     updated_at: str
+    subject_user_id: str = ""
+    access_policy: str = "personal"
+    boundary_label: str = ""
+    source_type: str = "user-stated"
+    confidence: str = "confirmed"
 
 
 @dataclass(slots=True)
@@ -401,3 +432,26 @@ class MemoryProposal:
     status: str
     rationale: str
     created_at: str
+    subject_user_id: str = ""
+    access_policy: str = "personal"
+    boundary_label: str = ""
+    source_type: str = "user-stated"
+    confidence: str = "confirmed"
+
+
+@dataclass(slots=True)
+class MemoryProfileFact:
+    fact_id: str
+    subject_user_id: str
+    subject_display_name: str
+    lane: str
+    title: str
+    summary: str
+    tags: list[str]
+    source_entry_ids: list[str]
+    confidence: str
+    status: str
+    source_type: str
+    boundary_label: str
+    created_at: str
+    updated_at: str

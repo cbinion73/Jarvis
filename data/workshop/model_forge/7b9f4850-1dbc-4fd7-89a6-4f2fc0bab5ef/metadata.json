@@ -1,0 +1,39 @@
+{
+  "package_id": "7b9f4850-1dbc-4fd7-89a6-4f2fc0bab5ef",
+  "part_name": "QA Camera Mount 1778436400339",
+  "actor": "Chris",
+  "summary": "Sir, I have framed this as a simple base plate with a single vertical riser, keeping fastener access unobstructed on the base face and leaving the geometry intentionally plain for later hand refinement. The printability of this sort of thing depends less on optimism and more on clearances, so I have erred on the side of sensible margins.",
+  "parameters": [
+    "part_name = \"QA Camera Mount 1778436400339\"",
+    "base_len = 90;",
+    "base_wid = 40;",
+    "base_thk = 6;",
+    "riser_h = 35;",
+    "fit_clearance = 0.5;",
+    "edge_margin = 8;",
+    "riser_thk = 8;",
+    "riser_wid = 24;",
+    "hole_d = 4.3;",
+    "hole_spacing = 58;",
+    "hole_offset_x = (base_len - hole_spacing) / 2;",
+    "hole_center_y = base_wid / 2;"
+  ],
+  "fit_checks": [
+    "Printable fit-check export, Sir: use a flat base plate 90 x 40 x 6 mm with two through-holes at 4.3 mm diameter, spaced 58 mm apart and centered across the width. Keep at least 8 mm from each end to the hole centers, which leaves comfortable tool access and avoids the usual comedy of splitting the part during first tightening. The riser is 35 mm tall, 8 mm thick, and centered on the base width; this should be easy to verify visually and with calipers before"
+  ],
+  "family": "mount",
+  "artifact_dir": "data/workshop/model_forge/7b9f4850-1dbc-4fd7-89a6-4f2fc0bab5ef",
+  "script_path": "data/workshop/model_forge/7b9f4850-1dbc-4fd7-89a6-4f2fc0bab5ef/model.scad",
+  "cadquery_script_path": "data/workshop/model_forge/7b9f4850-1dbc-4fd7-89a6-4f2fc0bab5ef/model_cadquery.py",
+  "model_path": "data/workshop/model_forge/7b9f4850-1dbc-4fd7-89a6-4f2fc0bab5ef/qa-camera-mount-1778436400339.stl",
+  "step_path": "data/workshop/model_forge/7b9f4850-1dbc-4fd7-89a6-4f2fc0bab5ef/qa-camera-mount-1778436400339.step",
+  "mesh_3mf_path": "data/workshop/model_forge/7b9f4850-1dbc-4fd7-89a6-4f2fc0bab5ef/qa-camera-mount-1778436400339.3mf",
+  "slicer_pack_dir": "data/workshop/model_forge/7b9f4850-1dbc-4fd7-89a6-4f2fc0bab5ef/slicer_pack",
+  "printer_id": "creality-k2-pro-combo",
+  "profile_name": "fit-check-fast",
+  "material": "PETG-CF",
+  "export_status": "cadquery-mount",
+  "export_detail": "Exported CadQuery mount assets as STL, STEP, and 3MF, then assembled a slicer pack for creality-k2-pro-combo using the fit-check-fast profile.",
+  "export_engine": "cadquery",
+  "timestamp": "2026-05-10T18:06:45.713418+00:00"
+}

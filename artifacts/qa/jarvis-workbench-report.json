@@ -1,0 +1,43 @@
+{
+  "started_at": "2026-05-10T20:29:20.453Z",
+  "base_url": "http://127.0.0.1:8787",
+  "checks": [
+    {
+      "name": "Model Forge endpoints expose a complete package",
+      "status": "passed",
+      "details": null,
+      "screenshot": null,
+      "kind": "automated"
+    },
+    {
+      "name": "Model Forge modal renders controls and viewer state",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/workbench-model-forge-modal.png",
+      "kind": "automated"
+    },
+    {
+      "name": "Model Forge can generate a package from the modal",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/workbench-model-forge-generated.png",
+      "kind": "automated"
+    },
+    {
+      "name": "Vision modal renders on-demand camera controls with stubbed device",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/workbench-vision-modal.png",
+      "kind": "automated"
+    }
+  ],
+  "failures": [],
+  "warnings": [],
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "warned": 0,
+    "skipped": 0
+  },
+  "finished_at": "2026-05-10T20:29:57.870Z"
+}

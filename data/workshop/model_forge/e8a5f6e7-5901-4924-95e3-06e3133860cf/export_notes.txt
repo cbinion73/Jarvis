@@ -1,0 +1,6 @@
+Package e8a5f6e7-5901-4924-95e3-06e3133860cf exported a CadQuery-backed enclosure model.
+Primary mesh: sensor-enclosure.3mf
+Fallback mesh: sensor-enclosure.stl
+Solid exchange: sensor-enclosure.step
+Recommended material: PLA
+Suggested slicer profile: enclosure-balanced

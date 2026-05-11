@@ -1,0 +1,105 @@
+{
+  "started_at": "2026-05-10T20:26:46.170Z",
+  "finished_at": "2026-05-10T20:30:36.983Z",
+  "base_url": "http://127.0.0.1:8787",
+  "batteries": [
+    {
+      "name": "platform",
+      "script": "/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs",
+      "report_path": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/jarvis-platform-report.json",
+      "exit_code": 0,
+      "signal": null,
+      "summary": {
+        "passed": 10,
+        "failed": 0,
+        "warned": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "name": "provider-layer",
+      "script": "/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-provider-layer.e2e.cjs",
+      "report_path": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/jarvis-provider-layer-report.json",
+      "exit_code": 0,
+      "signal": null,
+      "summary": {
+        "passed": 9,
+        "failed": 0,
+        "warned": 0,
+        "skipped": 1
+      }
+    },
+    {
+      "name": "full-system",
+      "script": "/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-full-system.e2e.cjs",
+      "report_path": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/jarvis-full-system-report.json",
+      "exit_code": 0,
+      "signal": null,
+      "summary": {
+        "passed": 12,
+        "failed": 0,
+        "warned": 0,
+        "skipped": 1
+      }
+    },
+    {
+      "name": "workbench",
+      "script": "/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-workbench.e2e.cjs",
+      "report_path": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/jarvis-workbench-report.json",
+      "exit_code": 0,
+      "signal": null,
+      "summary": {
+        "passed": 4,
+        "failed": 0,
+        "warned": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "name": "identity-admin",
+      "script": "/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-identity-admin.e2e.cjs",
+      "report_path": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/jarvis-identity-admin-report.json",
+      "exit_code": 0,
+      "signal": null,
+      "summary": {
+        "passed": 5,
+        "failed": 0,
+        "warned": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "name": "memory-governance",
+      "script": "/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-memory-governance.e2e.cjs",
+      "report_path": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/jarvis-memory-governance-report.json",
+      "exit_code": 0,
+      "signal": null,
+      "summary": {
+        "passed": 5,
+        "failed": 0,
+        "warned": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "name": "approval-queue",
+      "script": "/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-approval-queue.e2e.cjs",
+      "report_path": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/jarvis-approval-queue-report.json",
+      "exit_code": 0,
+      "signal": null,
+      "summary": {
+        "passed": 5,
+        "failed": 0,
+        "warned": 0,
+        "skipped": 0
+      }
+    }
+  ],
+  "totals": {
+    "passed": 50,
+    "failed": 0,
+    "warned": 0,
+    "skipped": 2
+  },
+  "failures": []
+}

@@ -1,0 +1,38 @@
+{
+  "package_id": "a2c24ef0-14c4-4b1e-b737-913c8588abca",
+  "part_name": "Garden bench bracket",
+  "actor": "Chris",
+  "summary": "Sir, this is a rough parameter-driven bracket concept for a garden bench mount: a 30 mm wide plate, 8 mm thick, with 150 mm hole spacing and a 12 mm bend radius. I have preserved the mounting geometry, added drainage, and softened the corners so the part is less inclined to crack from repeated outdoor indignities.",
+  "parameters": [
+    "plate_w = 30;",
+    "plate_t = 8;",
+    "hole_spacing = 150;",
+    "bend_r = 12;",
+    "hole_d = 9; // adjust to suit fastener clearance",
+    "edge_margin = 20; // from plate ends to hole centers",
+    "corner_r = 4; // softened outer corners",
+    "drain_d = 5; // drainage hole diameter",
+    "drain_offset = 10; // from lowest flat face edge, if orientation requires",
+    "bend_angle = 90; // assumed bracket bend, adjust as needed",
+    "bend_relief_w = 6;",
+    "bend_relief_l = 10;"
+  ],
+  "fit_checks": [
+    "The hole centers are set 150 mm apart, with an assumed"
+  ],
+  "family": "bracket",
+  "artifact_dir": "data/workshop/model_forge/a2c24ef0-14c4-4b1e-b737-913c8588abca",
+  "script_path": "data/workshop/model_forge/a2c24ef0-14c4-4b1e-b737-913c8588abca/model.scad",
+  "cadquery_script_path": "data/workshop/model_forge/a2c24ef0-14c4-4b1e-b737-913c8588abca/model_cadquery.py",
+  "model_path": "data/workshop/model_forge/a2c24ef0-14c4-4b1e-b737-913c8588abca/garden-bench-bracket.stl",
+  "step_path": "data/workshop/model_forge/a2c24ef0-14c4-4b1e-b737-913c8588abca/garden-bench-bracket.step",
+  "mesh_3mf_path": "data/workshop/model_forge/a2c24ef0-14c4-4b1e-b737-913c8588abca/garden-bench-bracket.3mf",
+  "slicer_pack_dir": "data/workshop/model_forge/a2c24ef0-14c4-4b1e-b737-913c8588abca/slicer_pack",
+  "printer_id": "creality-k2-pro-combo",
+  "profile_name": "fit-check-fast",
+  "material": "PETG-CF",
+  "export_status": "cadquery-bracket",
+  "export_detail": "Exported CadQuery bracket assets as STL, STEP, and 3MF, then assembled a slicer pack for creality-k2-pro-combo using the fit-check-fast profile.",
+  "export_engine": "cadquery",
+  "timestamp": "2026-05-10T05:16:04.148315+00:00"
+}

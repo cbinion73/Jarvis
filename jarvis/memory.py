@@ -9,7 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .config import AppConfig
-from .models import MemoryEntry, MemoryProposal, UserProfile
+from .identity import IdentityRegistry
+from .models import MemoryEntry, MemoryProfileFact, MemoryProposal, UserProfile
 
 
 def _now_iso() -> str:
@@ -44,6 +45,7 @@ class MemoryStore:
         self.root.mkdir(parents=True, exist_ok=True)
         self.entries_path = self.root / "entries.json"
         self.proposals_path = self.root / "proposals.json"
+        self.facts_path = self.root / "profile_facts.json"
 
     def _load_json(self, path: Path, default: object) -> object:
         if not path.exists():
@@ -55,7 +57,8 @@ class MemoryStore:
 
     def _entries(self) -> list[dict]:
         payload = self._load_json(self.entries_path, [])
-        return payload if isinstance(payload, list) else []
+        records = payload if isinstance(payload, list) else []
+        return [self._coerce_entry_record(item) for item in records if isinstance(item, dict)]
 
     def _save_entries(self, records: list[dict]) -> None:
         self._save_json(self.entries_path, records)
@@ -85,7 +88,8 @@ class MemoryStore:
 
     def _proposals(self) -> list[dict]:
         payload = self._load_json(self.proposals_path, [])
-        return payload if isinstance(payload, list) else []
+        records = payload if isinstance(payload, list) else []
+        return [self._coerce_proposal_record(item) for item in records if isinstance(item, dict)]
 
     def _save_proposals(self, records: list[dict]) -> None:
         self._save_json(self.proposals_path, records)
@@ -112,16 +116,120 @@ class MemoryStore:
             self._save_proposals(records)
         return updated
 
+    def list_profile_facts(self) -> list[dict]:
+        payload = self._load_json(self.facts_path, [])
+        records = payload if isinstance(payload, list) else []
+        return [self._coerce_fact_record(item) for item in records if isinstance(item, dict)]
+
+    def migrate_records(self) -> None:
+        entries = self._entries()
+        proposals = self._proposals()
+        facts = self.list_profile_facts()
+        self._save_entries(entries)
+        self._save_proposals(proposals)
+        self._save_json(self.facts_path, facts)
+
+    def upsert_profile_fact(self, fact: MemoryProfileFact) -> dict:
+        records = self.list_profile_facts()
+        payload = asdict(fact)
+        next_records: list[dict] = []
+        replaced = False
+        for item in records:
+            if item.get("fact_id") == fact.fact_id:
+                next_records.append(payload)
+                replaced = True
+            else:
+                next_records.append(item)
+        if not replaced:
+            next_records.append(payload)
+        self._save_json(self.facts_path, next_records)
+        return payload
+
+    def update_profile_fact_status(self, fact_id: str, status: str) -> dict | None:
+        records = self.list_profile_facts()
+        updated = None
+        for item in records:
+            if item.get("fact_id") == fact_id:
+                item["status"] = status
+                item["updated_at"] = _now_iso()
+                updated = item
+                break
+        if updated is not None:
+            self._save_json(self.facts_path, records)
+        return updated
+
+    def _coerce_entry_record(self, item: dict) -> dict:
+        item = dict(item)
+        if not str(item.get("subject_user_id", "")).strip() and str(item.get("memory_type", "")).strip().lower() == "personal":
+            owner = str(item.get("owner", "")).strip()
+            item["subject_user_id"] = owner.lower() if owner else ""
+        item["access_policy"] = self._normalized_access_policy(item)
+        item.setdefault("boundary_label", "")
+        item.setdefault("source_type", "user-stated")
+        item.setdefault("confidence", "confirmed")
+        return item
+
+    def _coerce_proposal_record(self, item: dict) -> dict:
+        item = dict(item)
+        if not str(item.get("subject_user_id", "")).strip() and str(item.get("memory_type", "")).strip().lower() == "personal":
+            owner = str(item.get("owner", "")).strip()
+            item["subject_user_id"] = owner.lower() if owner else ""
+        item["access_policy"] = self._normalized_access_policy(item)
+        item.setdefault("boundary_label", "")
+        item.setdefault("source_type", "user-stated")
+        item.setdefault("confidence", "confirmed")
+        return item
+
+    def _coerce_fact_record(self, item: dict) -> dict:
+        item = dict(item)
+        item.setdefault("source_entry_ids", [])
+        item.setdefault("tags", [])
+        item.setdefault("confidence", "confirmed")
+        item.setdefault("status", "active")
+        item.setdefault("source_type", "user-stated")
+        item.setdefault("boundary_label", "")
+        return item
+
+    def _legacy_access_policy(self, item: dict) -> str:
+        memory_type = str(item.get("memory_type", "")).strip().lower()
+        scope = str(item.get("scope", "")).strip().lower()
+        if memory_type == "safety" or scope == "safety":
+            return "restricted"
+        if memory_type == "project" or scope == "project":
+            return "shared"
+        if memory_type == "household" or scope == "household":
+            return "household"
+        return "personal"
+
+    def _normalized_access_policy(self, item: dict) -> str:
+        access_policy = str(item.get("access_policy", "")).strip().lower()
+        legacy_default = self._legacy_access_policy(item)
+        if not access_policy or access_policy == "personal" and legacy_default != "personal":
+            return legacy_default
+        return access_policy
+
 
 class MemorySupport:
-    def __init__(self, config: AppConfig, store: MemoryStore) -> None:
+    def __init__(self, config: AppConfig, store: MemoryStore, identity_registry: IdentityRegistry | None = None) -> None:
         self.config = config
         self.store = store
+        self.identity_registry = identity_registry
         self.profile = config.load_json_profile(
             config.memory_profile_path,
             {
                 "schemas": {},
                 "boundaries": {},
+                "partitionRules": {
+                    "defaultPersonalAccess": "personal",
+                    "defaultHouseholdAccess": "household",
+                    "defaultProjectAccess": "shared",
+                    "defaultSafetyAccess": "restricted",
+                },
+                "promotionRules": {
+                    "promotePersonalToProfileFacts": True,
+                    "promoteHouseholdPatterns": True,
+                    "notes": [],
+                },
                 "sensitiveApprovalRules": {
                     "typesRequiringApproval": [],
                     "keywordsRequiringApproval": [],
@@ -140,6 +248,7 @@ class MemorySupport:
         )
         key_path = Path(self.profile.get("encryption", {}).get("keyPath", "data/memory/fernet.key"))
         self.cipher = LocalCipher(key_path)
+        self.store.migrate_records()
 
     def schemas(self) -> dict:
         return self.profile.get("schemas", {})
@@ -165,14 +274,150 @@ class MemorySupport:
                 return True, f"Sensitive keyword '{keyword}' triggered approval before storage."
         return False, ""
 
-    def _cloud_excluded(self, sensitivity: str, tags: list[str]) -> bool:
+    def _cloud_excluded(self, sensitivity: str, tags: list[str], access_policy: str = "", boundary_label: str = "") -> bool:
         policy = self.profile.get("cloudExclusion", {})
         excluded_tags = {item.lower() for item in policy.get("excludedTags", [])}
+        if access_policy in {"personal", "restricted"}:
+            return True
+        if boundary_label in {"child", "child-private"}:
+            return True
         return (policy.get("excludeSensitive", True) and sensitivity == "sensitive") or bool(excluded_tags.intersection(set(tags)))
 
     def _title_from_summary(self, summary: str) -> str:
         cleaned = summary.strip().split(".")[0].strip()
         return cleaned[:80] or "Untitled memory"
+
+    def _member_record(self, user_ref: str) -> dict:
+        if self.identity_registry is not None:
+            member = self.identity_registry.member(user_ref)
+            if member is not None:
+                return member.to_dict()
+        fallback = str(user_ref).strip()
+        return {
+            "user_id": fallback.lower(),
+            "display_name": fallback,
+            "permissions": "adult",
+            "privacy_boundary": "personal",
+            "trust_level": "trusted",
+        }
+
+    def _resolve_subject(self, actor: UserProfile, owner: str, subject_user_id: str, scope: str, memory_type: str) -> tuple[str, str]:
+        explicit_subject = str(subject_user_id).strip()
+        if explicit_subject:
+            member = self._member_record(explicit_subject)
+            return str(member.get("user_id", explicit_subject)).strip().lower(), str(member.get("display_name", owner or actor.display_name)).strip()
+        owner_name = str(owner).strip()
+        if owner_name:
+            member = self._member_record(owner_name)
+            return str(member.get("user_id", owner_name)).strip().lower(), str(member.get("display_name", owner_name)).strip()
+        if scope == "personal" or memory_type == "personal":
+            member = self._member_record(actor.user_id or actor.display_name)
+            return str(member.get("user_id", actor.user_id)).strip().lower(), str(member.get("display_name", actor.display_name)).strip()
+        return "", owner_name or actor.display_name
+
+    def _default_access_policy(self, memory_type: str, scope: str) -> str:
+        rules = self.profile.get("partitionRules", {})
+        if memory_type == "safety" or scope == "safety":
+            return str(rules.get("defaultSafetyAccess", "restricted"))
+        if memory_type == "project" or scope == "project":
+            return str(rules.get("defaultProjectAccess", "shared"))
+        if memory_type == "household" or scope == "household":
+            return str(rules.get("defaultHouseholdAccess", "household"))
+        return str(rules.get("defaultPersonalAccess", "personal"))
+
+    def _boundary_label_for(self, subject_user_id: str, access_policy: str) -> str:
+        if access_policy == "restricted":
+            return "restricted"
+        if not subject_user_id:
+            return "shared"
+        member = self._member_record(subject_user_id)
+        privacy_boundary = str(member.get("privacy_boundary", "personal")).strip().lower() or "personal"
+        if privacy_boundary == "child" and access_policy == "personal":
+            return "child-private"
+        return privacy_boundary
+
+    def _fact_id_for(self, subject_user_id: str, lane: str, summary: str) -> str:
+        seed = f"{subject_user_id}|{lane}|{summary.strip().lower()}"
+        return hashlib.sha256(seed.encode("utf-8")).hexdigest()[:24]
+
+    def _effective_subject_user_id(self, item: dict) -> str:
+        subject_user_id = str(item.get("subject_user_id", "")).strip().lower()
+        if subject_user_id:
+            return subject_user_id
+        if str(item.get("memory_type", "")).strip().lower() == "personal":
+            owner = str(item.get("owner", "")).strip()
+            member = self._member_record(owner)
+            return str(member.get("user_id", "")).strip().lower()
+        return ""
+
+    def _effective_access_policy(self, item: dict) -> str:
+        access_policy = str(item.get("access_policy", "")).strip().lower()
+        if access_policy:
+            return access_policy
+        return self._default_access_policy(str(item.get("memory_type", "")), str(item.get("scope", "")))
+
+    def _effective_boundary_label(self, item: dict) -> str:
+        boundary_label = str(item.get("boundary_label", "")).strip()
+        if boundary_label:
+            return boundary_label
+        return self._boundary_label_for(self._effective_subject_user_id(item), self._effective_access_policy(item))
+
+    def _candidate_profile_fact(self, entry: dict, payload: dict) -> MemoryProfileFact | None:
+        promote = self.profile.get("promotionRules", {})
+        memory_type = str(entry.get("memory_type", "")).strip().lower()
+        if memory_type == "personal" and not promote.get("promotePersonalToProfileFacts", True):
+            return None
+        if memory_type == "household" and not promote.get("promoteHouseholdPatterns", True):
+            return None
+        if memory_type not in {"personal", "household"}:
+            return None
+        subject_user_id = str(entry.get("subject_user_id", "")).strip().lower()
+        if not subject_user_id and memory_type == "personal":
+            return None
+        member = self._member_record(subject_user_id) if subject_user_id else {"display_name": "Household"}
+        title = str(entry.get("title", "")).strip() or self._title_from_summary(str(entry.get("summary", "")))
+        return MemoryProfileFact(
+            fact_id=self._fact_id_for(subject_user_id or "household", memory_type, str(entry.get("summary", ""))),
+            subject_user_id=subject_user_id,
+            subject_display_name=str(member.get("display_name", "Household")).strip() or "Household",
+            lane=memory_type,
+            title=title,
+            summary=str(entry.get("summary", "")).strip(),
+            tags=list(entry.get("tags", [])),
+            source_entry_ids=[str(entry.get("entry_id", "")).strip()],
+            confidence=str(payload.get("confidence") or entry.get("confidence") or "confirmed").strip() or "confirmed",
+            status="active",
+            source_type=str(payload.get("source_type") or entry.get("source_type") or "user-stated").strip() or "user-stated",
+            boundary_label=str(entry.get("boundary_label", "")).strip(),
+            created_at=_now_iso(),
+            updated_at=_now_iso(),
+        )
+
+    def _promote_entry_to_profile_fact(self, entry: dict, payload: dict) -> dict | None:
+        candidate = self._candidate_profile_fact(entry, payload)
+        if candidate is None:
+            return None
+        existing = next((item for item in self.store.list_profile_facts() if item.get("fact_id") == candidate.fact_id), None)
+        if existing:
+            source_entry_ids = sorted(set([*existing.get("source_entry_ids", []), *candidate.source_entry_ids]))
+            candidate = MemoryProfileFact(
+                fact_id=candidate.fact_id,
+                subject_user_id=candidate.subject_user_id,
+                subject_display_name=candidate.subject_display_name,
+                lane=candidate.lane,
+                title=candidate.title,
+                summary=candidate.summary,
+                tags=sorted(set([*existing.get("tags", []), *candidate.tags])),
+                source_entry_ids=source_entry_ids,
+                confidence=candidate.confidence if candidate.confidence != "provisional" else str(existing.get("confidence", "confirmed")),
+                status="active",
+                source_type=candidate.source_type,
+                boundary_label=candidate.boundary_label,
+                created_at=str(existing.get("created_at", candidate.created_at)),
+                updated_at=_now_iso(),
+            )
+        stored = self.store.upsert_profile_fact(candidate)
+        return {"fact": stored, "status": "updated" if existing else "created"}
 
     def remember(
         self,
@@ -185,18 +430,27 @@ class MemorySupport:
         project: str = "",
         tags: list[str] | None = None,
         sensitivity: str = "normal",
+        subject_user_id: str = "",
+        access_policy: str = "",
+        source_type: str = "user-stated",
+        confidence: str = "confirmed",
     ) -> dict:
         tag_list = self._normalize_tags(tags or [], memory_type)
-        resolved_owner = owner or actor.display_name
+        resolved_subject_user_id, resolved_owner = self._resolve_subject(actor, owner, subject_user_id, scope, memory_type)
+        resolved_access_policy = str(access_policy).strip().lower() or self._default_access_policy(memory_type, scope)
+        boundary_label = self._boundary_label_for(resolved_subject_user_id, resolved_access_policy)
         title = self._title_from_summary(summary)
         needs_approval, rationale = self._requires_approval(memory_type, summary, detail, tag_list)
         payload = {
             "detail": detail,
             "owner": resolved_owner,
+            "subject_user_id": resolved_subject_user_id,
             "project": project,
             "captured_by": actor.display_name,
             "scope": scope,
             "memory_type": memory_type,
+            "source_type": source_type,
+            "confidence": confidence,
             "hash": hashlib.sha256(detail.encode("utf-8")).hexdigest(),
         }
         if needs_approval or sensitivity == "sensitive":
@@ -215,6 +469,11 @@ class MemorySupport:
                 status="pending",
                 rationale=rationale or "Sensitive memory requires explicit review before storage.",
                 created_at=_now_iso(),
+                subject_user_id=resolved_subject_user_id,
+                access_policy=resolved_access_policy,
+                boundary_label=boundary_label,
+                source_type=source_type,
+                confidence=confidence,
             )
             return {"stored": False, "proposal": self.store.add_proposal(proposal), "needs_approval": True}
 
@@ -229,22 +488,45 @@ class MemorySupport:
             tags=tag_list,
             sensitivity=sensitivity,
             approval_status="approved",
-            cloud_excluded=self._cloud_excluded(sensitivity, tag_list),
+            cloud_excluded=self._cloud_excluded(sensitivity, tag_list, resolved_access_policy, boundary_label),
             encrypted_payload=self.cipher.encrypt_json(payload),
             created_at=_now_iso(),
             updated_at=_now_iso(),
+            subject_user_id=resolved_subject_user_id,
+            access_policy=resolved_access_policy,
+            boundary_label=boundary_label,
+            source_type=source_type,
+            confidence=confidence,
         )
-        return {"stored": True, "entry": self.store.add_entry(entry), "needs_approval": False}
+        stored = self.store.add_entry(entry)
+        result = {"stored": True, "entry": stored, "needs_approval": False}
+        promotion = self._promote_entry_to_profile_fact(stored, payload)
+        if promotion:
+            result["profile_promotion"] = promotion
+        return result
 
     def _viewer_allowed(self, viewer: UserProfile, entry: dict) -> bool:
+        boundaries = self.profile.get("boundaries", {})
+        access_policy = self._effective_access_policy(entry)
+        subject_user_id = self._effective_subject_user_id(entry)
+        owner = str(entry.get("owner", "")).strip()
+        viewer_matches_subject = bool(subject_user_id and subject_user_id == viewer.user_id)
+        viewer_matches_owner = owner == viewer.display_name
         if viewer.permissions == "adult":
+            if access_policy == "restricted":
+                return bool(boundaries.get("adultCanViewAll", True)) or viewer_matches_subject or viewer_matches_owner
             return True
         boundaries = self.profile.get("boundaries", {})
         scope = entry.get("scope", "")
         memory_type = entry.get("memory_type", "")
-        owner = entry.get("owner", "")
+        if access_policy == "restricted":
+            return viewer_matches_subject or viewer_matches_owner
+        if access_policy == "household":
+            return bool(boundaries.get("childCanViewHousehold", False))
+        if access_policy == "shared":
+            return bool(boundaries.get("childCanViewProject", False))
         if memory_type == "personal" and boundaries.get("childCanViewOwnPersonal", True):
-            return owner == viewer.display_name
+            return viewer_matches_subject or viewer_matches_owner
         if memory_type == "household":
             return bool(boundaries.get("childCanViewHousehold", False))
         if memory_type == "project":
@@ -276,19 +558,33 @@ class MemorySupport:
             payload = None
             if include_payload:
                 payload = self.cipher.decrypt_json(item["encrypted_payload"])
+            effective_subject_user_id = self._effective_subject_user_id(item)
+            effective_access_policy = self._effective_access_policy(item)
+            effective_boundary_label = self._effective_boundary_label(item)
+            effective_cloud_excluded = bool(item.get("cloud_excluded")) or self._cloud_excluded(
+                str(item.get("sensitivity", "normal")),
+                list(item.get("tags", [])),
+                effective_access_policy,
+                effective_boundary_label,
+            )
             results.append(
                 {
                     "entry_id": item["entry_id"],
                     "memory_type": item["memory_type"],
                     "scope": item["scope"],
                     "owner": item["owner"],
+                    "subject_user_id": effective_subject_user_id,
                     "project": item["project"],
                     "title": item["title"],
                     "summary": item["summary"],
                     "tags": item["tags"],
                     "sensitivity": item["sensitivity"],
                     "approval_status": item["approval_status"],
-                    "cloud_excluded": item["cloud_excluded"],
+                    "cloud_excluded": effective_cloud_excluded,
+                    "access_policy": effective_access_policy,
+                    "boundary_label": effective_boundary_label,
+                    "source_type": item.get("source_type", "user-stated"),
+                    "confidence": item.get("confidence", "confirmed"),
                     "created_at": item["created_at"],
                     "updated_at": item["updated_at"],
                     "payload": payload,
@@ -355,24 +651,42 @@ class MemorySupport:
             tags=proposal["tags"],
             sensitivity=proposal["sensitivity"],
             approval_status="approved",
-            cloud_excluded=self._cloud_excluded(proposal["sensitivity"], proposal["tags"]),
+            cloud_excluded=self._cloud_excluded(
+                proposal["sensitivity"],
+                proposal["tags"],
+                str(proposal.get("access_policy", "")),
+                str(proposal.get("boundary_label", "")),
+            ),
             encrypted_payload=self.cipher.encrypt_json(payload),
             created_at=_now_iso(),
             updated_at=_now_iso(),
+            subject_user_id=str(proposal.get("subject_user_id", "")).strip().lower(),
+            access_policy=str(proposal.get("access_policy", "")).strip() or self._default_access_policy(proposal["memory_type"], proposal["scope"]),
+            boundary_label=str(proposal.get("boundary_label", "")).strip(),
+            source_type=str(proposal.get("source_type", "user-stated")).strip() or "user-stated",
+            confidence=str(proposal.get("confidence", "confirmed")).strip() or "confirmed",
         )
         stored = self.store.add_entry(entry)
-        return {"proposal_id": proposal_id, "status": "approved", "entry": stored}
+        result = {"proposal_id": proposal_id, "status": "approved", "entry": stored}
+        promotion = self._promote_entry_to_profile_fact(stored, payload)
+        if promotion:
+            result["profile_promotion"] = promotion
+        return result
 
     def overview(self, viewer: UserProfile) -> dict:
         visible = self.review(viewer, include_payload=False)
         by_type: dict[str, int] = {}
         by_owner: dict[str, int] = {}
+        by_subject: dict[str, int] = {}
         cloud_excluded = 0
         for item in visible:
             by_type[item["memory_type"]] = by_type.get(item["memory_type"], 0) + 1
             by_owner[item["owner"]] = by_owner.get(item["owner"], 0) + 1
+            subject_label = item.get("subject_user_id") or item["owner"]
+            by_subject[subject_label] = by_subject.get(subject_label, 0) + 1
             if item["cloud_excluded"]:
                 cloud_excluded += 1
+        visible_facts = self.profile_facts(viewer)
         return {
             "viewer": viewer.display_name,
             "schemas": self.schemas(),
@@ -381,14 +695,122 @@ class MemorySupport:
                 "visible_entries": len(visible),
                 "cloud_excluded_entries": cloud_excluded,
                 "pending_proposals": len([item for item in self.store.list_proposals() if item.get("status") == "pending"]),
+                "visible_profile_facts": len(visible_facts),
             },
             "by_type": by_type,
             "by_owner": by_owner,
+            "by_subject": by_subject,
             "recent_entries": visible[:8],
+            "profile_facts": visible_facts[:8],
             "pending_proposals": self.proposals(status="pending")[:8],
             "encryption": {
                 "algorithm": self.profile.get("encryption", {}).get("algorithm", "fernet"),
                 "key_path": self.profile.get("encryption", {}).get("keyPath", ""),
             },
             "cloud_exclusion": self.profile.get("cloudExclusion", {}),
+        }
+
+    def approved_entries_for_context(self) -> list[dict]:
+        entries: list[dict] = []
+        for item in self.store.list_entries():
+            payload = self.cipher.decrypt_json(item["encrypted_payload"])
+            entries.append(
+                {
+                    "entry_id": item["entry_id"],
+                    "memory_type": item["memory_type"],
+                    "scope": item["scope"],
+                    "owner": item["owner"],
+                    "project": item["project"],
+                    "title": item["title"],
+                    "summary": item["summary"],
+                    "tags": item["tags"],
+                    "sensitivity": item["sensitivity"],
+                    "approval_status": item["approval_status"],
+                    "cloud_excluded": bool(item.get("cloud_excluded")) or self._cloud_excluded(
+                        str(item.get("sensitivity", "normal")),
+                        list(item.get("tags", [])),
+                        self._effective_access_policy(item),
+                        self._effective_boundary_label(item),
+                    ),
+                    "subject_user_id": self._effective_subject_user_id(item),
+                    "access_policy": self._effective_access_policy(item),
+                    "boundary_label": self._effective_boundary_label(item),
+                    "source_type": item.get("source_type", "user-stated"),
+                    "confidence": item.get("confidence", "confirmed"),
+                    "created_at": item["created_at"],
+                    "updated_at": item["updated_at"],
+                    "payload": payload,
+                }
+            )
+        return list(reversed(entries))
+
+    def profile_facts(self, viewer: UserProfile, subject_user_id: str = "") -> list[dict]:
+        facts: list[dict] = []
+        subject_filter = str(subject_user_id).strip().lower()
+        for item in self.store.list_profile_facts():
+            if str(item.get("status", "active")).strip().lower() != "active":
+                continue
+            candidate_entry = {
+                "memory_type": item.get("lane", "personal"),
+                "scope": "personal" if item.get("lane") == "personal" else "household",
+                "owner": item.get("subject_display_name", ""),
+                "subject_user_id": item.get("subject_user_id", ""),
+                "access_policy": "personal" if item.get("lane") == "personal" else "household",
+                "boundary_label": item.get("boundary_label", ""),
+            }
+            if subject_filter and item.get("subject_user_id", "").lower() != subject_filter:
+                continue
+            if not self._viewer_allowed(viewer, candidate_entry):
+                continue
+            facts.append(item)
+        return list(reversed(facts))
+
+    def update_profile_fact_status(self, viewer: UserProfile, fact_id: str, status: str) -> dict:
+        if status not in {"active", "retired"}:
+            raise ValueError("status must be active or retired")
+        target = None
+        for item in self.store.list_profile_facts():
+            if item.get("fact_id") == fact_id:
+                target = item
+                break
+        if target is None:
+            raise KeyError(f"Unknown profile fact: {fact_id}")
+        candidate_entry = {
+            "memory_type": target.get("lane", "personal"),
+            "scope": "personal" if target.get("lane") == "personal" else "household",
+            "owner": target.get("subject_display_name", ""),
+            "subject_user_id": target.get("subject_user_id", ""),
+            "access_policy": "personal" if target.get("lane") == "personal" else "household",
+            "boundary_label": target.get("boundary_label", ""),
+        }
+        if not self._viewer_allowed(viewer, candidate_entry):
+            raise PermissionError("Viewer may not modify this profile fact")
+        updated = self.store.update_profile_fact_status(fact_id, status)
+        if updated is None:
+            raise KeyError(f"Unknown profile fact: {fact_id}")
+        return updated
+
+    def nightly_curation(self) -> dict:
+        promoted: list[dict] = []
+        scanned = 0
+        for item in self.store.list_entries():
+            if item.get("approval_status") != "approved":
+                continue
+            scanned += 1
+            payload = self.cipher.decrypt_json(item["encrypted_payload"])
+            promotion = self._promote_entry_to_profile_fact(item, payload)
+            if promotion:
+                promoted.append(
+                    {
+                        "entry_id": item.get("entry_id", ""),
+                        "summary": item.get("summary", ""),
+                        "fact_id": promotion["fact"].get("fact_id", ""),
+                        "status": promotion["status"],
+                    }
+                )
+        return {
+            "ran_at": _now_iso(),
+            "scanned_entries": scanned,
+            "promoted_count": len(promoted),
+            "promotions": promoted[:24],
         }

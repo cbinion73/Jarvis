@@ -1,0 +1,9 @@
+{
+  "capture_id": "1fe2f387-9a32-4aa7-b6bd-5e63be72ccf4",
+  "actor": "Chris",
+  "camera_label": "USB Camera (0c45:632e)",
+  "prompt": "WHat type of sauce packet?  Who makes it?  what are the ingredients?  Nutritional info?",
+  "image_path": "data/vision/captures/1fe2f387-9a32-4aa7-b6bd-5e63be72ccf4.jpg",
+  "created_at": "2026-05-10T03:47:48.814695+00:00",
+  "analysis": "It looks like a **sriracha sauce packet**.\n\n**Who makes it:**  \nThe packet appears to be branded **Thai Kitchen** (the logo text is small, but the red/black packet design matches their sriracha condiment packets).\n\n**Ingredients:**  \nI can\u2019t read the full ingredient panel clearly from this single image. Sriracha typically contains:\n- chili peppers\n- vinegar\n- garlic\n- sugar\n- salt\n- water\n- preservatives / stabilizers\n\n**Nutrition info:**  \nI can\u2019t reliably read the nutrition facts from the photo. For sriracha packets, a single packet is usually very low in calories, often around **5\u201310 calories** with **0 g fat** and small amounts of sodium.\n\nIf you want, I can help identify it more precisely if you send a closer photo of the packet front and back."
+}

@@ -7,6 +7,8 @@ from .integrations import (
     check_home_assistant,
     check_home_profile,
     check_memory_profile,
+    check_openai_api,
+    check_openviking,
     check_openclaw,
     check_perception_profile,
     check_workshop_adapter,
@@ -15,11 +17,13 @@ from .integrations import (
 
 def collect_status(config: AppConfig) -> list[IntegrationStatus]:
     return [
+        check_openai_api(config),
         check_openclaw(config),
         check_google_workspace(config),
         check_home_assistant(config),
         check_home_profile(config),
         check_memory_profile(config),
+        check_openviking(config),
         check_perception_profile(config),
         check_workshop_adapter(config),
     ]

@@ -1,0 +1,45 @@
+{
+  "started_at": "2026-05-10T20:30:19.577Z",
+  "base_url": "http://127.0.0.1:8787",
+  "checks": [
+    {
+      "name": "Parent message path creates draft and pending approval",
+      "status": "passed",
+      "details": "Draft 31fddf74-6868-4e5e-be5a-3a672d41befa, approval fea60620-898d-4596-9b15-87bc04b37c50",
+      "kind": "automated"
+    },
+    {
+      "name": "Vendor prep path creates record and pending approval",
+      "status": "passed",
+      "details": "Vendor prep a87f8a54-15e6-4d07-8de0-8c514ca02822, approval 15618a19-6f49-4dfd-b68d-32ad3d72bfcd",
+      "kind": "automated"
+    },
+    {
+      "name": "Approving and rejecting queue items updates status",
+      "status": "passed",
+      "details": "Approved fea60620-898d-4596-9b15-87bc04b37c50, rejected 15618a19-6f49-4dfd-b68d-32ad3d72bfcd",
+      "kind": "automated"
+    },
+    {
+      "name": "Approval history reflects both decisions",
+      "status": "passed",
+      "details": "Approval history captured both transitions",
+      "kind": "automated"
+    },
+    {
+      "name": "Draft and vendor records remain reachable after queue updates",
+      "status": "passed",
+      "details": "Draft 31fddf74-6868-4e5e-be5a-3a672d41befa and vendor prep a87f8a54-15e6-4d07-8de0-8c514ca02822 still reachable",
+      "kind": "automated"
+    }
+  ],
+  "failures": [],
+  "warnings": [],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "warned": 0,
+    "skipped": 0
+  },
+  "finished_at": "2026-05-10T20:30:36.976Z"
+}

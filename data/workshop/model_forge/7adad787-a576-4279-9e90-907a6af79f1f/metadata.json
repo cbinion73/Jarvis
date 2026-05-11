@@ -1,0 +1,34 @@
+{
+  "package_id": "7adad787-a576-4279-9e90-907a6af79f1f",
+  "part_name": "Garden bench bracket",
+  "actor": "Chris",
+  "summary": "Sir, here is a rough parameter-driven bracket concept suitable for later hand refinement. I have preserved the 110 mm hole spacing, kept the plate narrow at 30 mm, and assumed a simple L-bracket form with 70 mm legs. For outdoor service, the geometry includes a modest drain slot and open relief so water is not invited to linger like a committee.",
+  "parameters": [
+    "part_name = \"garden_bench_bracket\"",
+    "hole_spacing = 110;        // mm, center to center",
+    "plate_width = 30;          // mm",
+    "thickness = 8;             // mm",
+    "hole_diameter = 8.5;       // mm",
+    "leg_a = 70;                // mm",
+    "leg_b = 70;                // mm",
+    "bend_radius = 6;           // mm, rough inside bend allowance",
+    "edge_margin = 10;          // mm, approximate hole center from ends",
+    "drain_slot_w = 4;          // mm",
+    "drain_slot_l = 12;         // mm",
+    "drain_slot_offset = 8;     // mm from low point of load path"
+  ],
+  "fit_checks": [
+    "Preserve hole spacing: 110 mm center to center is retained in the stub. The first hole center is assumed at 10 mm from the end,"
+  ],
+  "artifact_dir": "data/workshop/model_forge/7adad787-a576-4279-9e90-907a6af79f1f",
+  "script_path": "data/workshop/model_forge/7adad787-a576-4279-9e90-907a6af79f1f/model.scad",
+  "cadquery_script_path": "data/workshop/model_forge/7adad787-a576-4279-9e90-907a6af79f1f/model_cadquery.py",
+  "model_path": "data/workshop/model_forge/7adad787-a576-4279-9e90-907a6af79f1f/garden-bench-bracket.stl",
+  "step_path": "data/workshop/model_forge/7adad787-a576-4279-9e90-907a6af79f1f/garden-bench-bracket.step",
+  "mesh_3mf_path": "data/workshop/model_forge/7adad787-a576-4279-9e90-907a6af79f1f/garden-bench-bracket.3mf",
+  "slicer_pack_dir": "data/workshop/model_forge/7adad787-a576-4279-9e90-907a6af79f1f/slicer_pack",
+  "export_status": "cadquery-bracket",
+  "export_detail": "Exported CadQuery bracket assets as STL, STEP, and 3MF, then assembled a slicer pack for creality-k2-pro-combo using the functional-prototype profile.",
+  "export_engine": "cadquery",
+  "timestamp": "2026-05-10T04:33:50.052078+00:00"
+}

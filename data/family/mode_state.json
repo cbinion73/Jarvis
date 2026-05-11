@@ -1,7 +1,7 @@
 {
-  "mode": "chronicle-mode",
+  "mode": "dawn-protocol",
   "status": "manual",
-  "reason": "Manual mode update from JARVIS shell.",
+  "reason": "Automated E2E mode transition check.",
   "actor": "Chris",
-  "timestamp": "2026-05-09T00:58:33.721992+00:00"
+  "timestamp": "2026-05-10T20:27:21.455937+00:00"
 }

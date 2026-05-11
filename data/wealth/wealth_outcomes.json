@@ -1,0 +1,567 @@
+[
+  {
+    "entry_id": "ac2a07a1-2b64-4c2e-8b29-777b9f6a5ef3",
+    "timestamp": "2026-05-10T01:34:46.308425+00:00",
+    "request": "Give me one strong passive-income experiment to run next.",
+    "workflow": "wealth-and-leverage",
+    "agents": [
+      "black-panther",
+      "shuri",
+      "rocket"
+    ],
+    "focus_areas": [
+      "passive-income ideas",
+      "venture and opportunity triage",
+      "tooling and automation leverage",
+      "ROI-aware experimentation"
+    ],
+    "opportunity_theses": [
+      "Give me one strong passive-income experiment to run next."
+    ],
+    "experiments_in_flight": [],
+    "rejected_ideas": [],
+    "roi_lessons": [],
+    "synthesis": "## Recommendation\nRun a **niche digital asset pack** experiment: create one small, repeatable product that solves a painful problem for a very specific audience, priced at **$19\u2013$49**. Keep it simple enough to build in a weekend: checklist, template, calculator, or prompt pack. The goal is not a brand launch; it is to prove there is demand for a product you can sell many times with near-zero fulfillment.\n\n## Best Bets\nBest format: **one problem, one buyer, one asset**.  \nBest channel: **existing network + niche communities + direct outreach**.  \nBest leverage: **automated delivery through Gumroad or Shopify** so you are not trading time for every sale.  \nBest win condition: **2 sales or 5 strong objections** from 20 targeted eyeballs. That gives you real signal without overcommitting capital or attention.\n\n## Risks\nThe main failure mode is building something that is easy to make but not urgently wanted. The second is scope creep: adding branding, automation, or extra features before the offer is validated. A third risk is choosing a market that is too broad, which usually means weak conversion and noisy feedback. Treat this as a test of demand, not a product launch.\n\n## Next Experiment\nIn the next **7 days**, do this in order:\n1. Identify one painful repeat problem you already know well.\n2. Build a bare-bones digital asset that solves it.\n3. Publish a simple landing page with a checkout link.\n4. Drive **20 targeted views** via direct outreach, niche forums, or your existing network.\n5. Measure clicks, objections, and purchases.\n\nIf you want, I can help you pick the **single best product idea** based on your skills, audience, and time budget.",
+    "participants": [
+      {
+        "agent_id": "black-panther",
+        "label": "Black Panther",
+        "title": "Finance Steward",
+        "response": "- **Best next experiment:** Build a **simple digital product around a pain you already know**\u2014for example, a one-page checklist, template, or mini-guide tied to a skill you use repeatedly. Aim to validate demand fast with a **$19\u2013$49 offer** before you invest more time. This is the cleanest path to passive income because it can be created once, sold many times, and doesn\u2019t add payroll or inventory risk.\n\n- **Main tradeoff/risk:** The danger is mistaking \u201ceasy to make\u201d for \u201cwanted by buyers.\u201d A weak product becomes dead weight. Keep the scope tiny, and don\u2019t overbuild brand, site, or automation until you see real purchases or at least strong buyer intent.\n\n- **Next experiment:** Spend **2\u20134 hours** to do this in sequence:  \n  1) identify one painful repeat problem you solve,  \n  2) create a bare-bones solution,  \n  3) post it to a relevant audience or marketplace,  \n  4) track clicks, inquiries, and first sales.  \n  If you want, I can help you choose the **best product idea** based on your current skills and existing audience."
+      },
+      {
+        "agent_id": "shuri",
+        "label": "Shuri",
+        "title": "Innovation Architect",
+        "response": "- **Best next experiment:** Build a **niche digital asset pack** around a painful, repeatable problem you already know well\u2014think \u201cdone-for-you templates,\u201d checklists, calculators, or prompt packs for a narrow audience. Aim for something that can sell at **$19\u2013$49** and be delivered automatically through Gumroad/Shopify. The win condition is not fame; it\u2019s **proof of repeatable demand** with near-zero fulfillment.\n\n- **Main risk / tradeoff:** Most passive-income ideas fail because they\u2019re either too broad or too custom. If it requires live support, endless updates, or a huge audience, it\u2019s not passive\u2014it\u2019s a second job in disguise. The tradeoff is **choosing a boring, specific market** over a flashy one.\n\n- **Next experiment:** In the next **7 days**, create **one product, one landing page, one checkout link**, and drive **20 targeted eyeballs** to it via your existing network, niche forums, or direct outreach. Success metric: **at least 2 sales or 5 strong buyer objections**. Either result is valuable\u2014sales means go deeper, objections mean refine the offer fast."
+      },
+      {
+        "agent_id": "rocket",
+        "label": "Rocket",
+        "title": "Vendor Scout",
+        "response": "- **Best opportunity:** Run a **tiny niche service-bureau offer** built around a boring but painful job you can automate: **\u201cCAD cleanup + DXF/STL prep + quoting\u201d** for one specific buyer type (machine shops, Etsy product sellers, local inventors, or laser/CNC hobby shops). Sell it as a fixed-price package on Upwork/Fiverr/local groups. This is the fastest path to passive-ish income because you\u2019re productizing a repeatable workflow, not chasing one-off custom chaos.\n\n- **Main risk/tradeoff:** It\u2019s not truly passive at first. The trap is spending weeks building a fancy website, logo, or full automation before proving demand. Also, if you pick too broad a market, you\u2019ll get garbage leads and price-shoppers. Narrow beats clever.\n\n- **Next experiment:** In the next **72 hours**, publish **one offer** with **3 tiers** and **one clear turnaround**:\n  - Basic: file cleanup / fix errors\n  - Standard: cleanup + export to required format\n  - Rush: 24-hour turnaround  \n  Then send it to **20 targeted prospects** and post it in **2 niche channels**. Your goal is just **3 paid test jobs**. If people bite"
+      }
+    ]
+  },
+  {
+    "entry_id": "91cbb744-0f6a-4345-9f03-3680f28b8688",
+    "timestamp": "2026-05-10T01:37:51.942203+00:00",
+    "request": "Evaluate three practical passive-income paths that fit my current life, then recommend the highest-leverage next experiment.",
+    "workflow": "wealth-and-leverage",
+    "agents": [
+      "black-panther",
+      "shuri",
+      "rocket"
+    ],
+    "focus_areas": [
+      "passive-income ideas",
+      "venture and opportunity triage",
+      "tooling and automation leverage",
+      "ROI-aware experimentation"
+    ],
+    "opportunity_theses": [
+      "Evaluate three practical passive-income paths that fit my current life, then recommend the highest-leverage next experiment."
+    ],
+    "experiments_in_flight": [],
+    "rejected_ideas": [],
+    "roi_lessons": [],
+    "synthesis": "## Recommendation\nThe highest-leverage next move is a **micro digital asset** tied to a problem you already understand: a template pack, SOP bundle, checklist, calculator, or small workflow tool.  \nFor your current life, it beats rental real estate and index-fund passive income on **speed, capital efficiency, and scalability**. It is not truly passive at first, but it is the best path to **passive-ish income with automation leverage**.\n\nIf you want the executive summary:\n- **Index funds** = most passive, lowest effort, but slow income impact\n- **Real estate** = stronger cash flow potential, but high friction and hidden labor\n- **Digital asset** = best ROI on your time if you can package expertise once and sell repeatedly\n\n## Best Bets\n1. **Niche digital asset**\n   - Best for leverage\n   - Low upfront cost\n   - Can be automated with checkout, delivery, and light support\n   - Strongest fit if you can solve a recurring problem for a specific audience\n\n2. **Index fund investing**\n   - Best for long-term wealth preservation\n   - Very low maintenance\n   - Not a meaningful passive-income engine unless capital is already substantial\n\n3. **Rental real estate**\n   - Can produce monthly income\n   - More operational drag than it first appears\n   - Better as a wealth-building vehicle than a true passive-income play\n\n## Risks\n- **False-passive trap:** many \u201cpassive\u201d paths become active businesses in disguise.\n- **Custom work creep:** anything that requires ongoing tailoring, support, or content production can kill leverage.\n- **Distribution risk:** a good product without a channel is dead capital.\n- **Capital drag:** real estate and low-yield investments can absorb time and money before they pay back.\n- **Opportunity cost:** overbuilding before validation is the most common failure mode.\n\n## Next Experiment\nRun a **7-day validation sprint** on one micro digital asset.\n\nPlan:\n- Pick **one painful, specific problem** you already know how to solve",
+    "participants": [
+      {
+        "agent_id": "black-panther",
+        "label": "Black Panther",
+        "title": "Finance Steward",
+        "response": "- **Best opportunity recommendation:** Of the usual \u201cpassive-ish\u201d paths, the highest-leverage fit is **building a small digital asset that compounds from your existing expertise**\u2014for example, a niche template pack, mini-course, paid newsletter, or simple workflow tool around a problem you already solve. It has the best blend of **low startup capital, controllable risk, and scalability**. If you\u2019re already producing value in a domain, this path can detach income from active hours faster than most alternatives.\n\n- **Main risk / tradeoff:** The tradeoff is that \u201cpassive income\u201d here is really **front-loaded effort plus ongoing maintenance**. Compare that to dividend/index investing: it\u2019s cleaner and more passive, but the yield is modest and it usually won\u2019t move independence fast unless capital is already large. Compare to rental property: stronger cash flow potential, but it adds leverage, repair risk, vacancy risk, and time drag\u2014easy to mistake appreciation for freedom while actually buying a second job. The hidden danger in all three is **pursuing cash flow without preserving margin**.\n\n- **Next experiment worth running:** Run a **14-day validation sprint** on the digital-asset path: pick one recurring pain point, build a minimum version in under"
+      },
+      {
+        "agent_id": "shuri",
+        "label": "Shuri",
+        "title": "Innovation Architect",
+        "response": "- **Best opportunity:** build a **small \u201cniche digital asset\u201d engine** around something you already know and can package once: templates, checklists, swipe files, or a tiny paid guide tied to a specific pain point. Of the three passive-income paths, this is usually the highest leverage because it has **low capital, low overhead, fast feedback, and compounding upside**. Think: one narrowly useful product + one simple sales page + one distribution channel (newsletter, LinkedIn, or a small community). If it hits, you can clone it into adjacent offers.\n\n- **Main tradeoff/risk:** the \u201cpassive\u201d part is delayed\u2014**distribution is the real job**. The other two common paths, like index funds and rental real estate, are more structurally passive but less likely to move the needle quickly. Index investing is excellent for wealth-building but not meaningful immediate income. Real estate can cash flow, but it brings capital, maintenance, vacancy, and headache risk. A digital asset business can become passive-ish, but only after you prove people actually buy it.\n\n- **Next experiment worth running:** in the next 7 days, create **one sellable micro-offer** for a painfully specific audience/problem, price it at **$19"
+      },
+      {
+        "agent_id": "rocket",
+        "label": "Rocket",
+        "title": "Vendor Scout",
+        "response": "- **Best opportunity:** Build a **small, boring digital product or service package** around something you already know or can document once and sell repeatedly. Think: templates, checklists, SOP packs, niche calculators, or a tiny \u201cdone-for-you\u201d setup for a specific audience. Lowest capital, fastest to test, and it can turn into semi-passive income if you standardize delivery and keep support tight.\n\n- **Main tradeoff:** \u201cPassive\u201d is mostly a lie upfront. The real risk is picking something that needs ongoing custom work, ads, or constant content creation. Those paths eat your time and kill leverage. You want **one-time creation + repeatable distribution**, not a second job wearing a passive-income costume.\n\n- **Next experiment:** Run a **7-day validation sprint**: pick 3 problems you can solve, make a one-page offer for each, and post/sell them to a tiny audience first. Best test is whichever gets the most clicks, replies, or preorders with the least explanation. If you want the highest-leverage move: **build the cheapest version of the winner, then automate delivery and upsell a paid implementation call or add-on**."
+      }
+    ]
+  },
+  {
+    "entry_id": "aa0184d7-b21e-4eb0-9f31-a0b5251180d4",
+    "timestamp": "2026-05-10T01:38:18.062878+00:00",
+    "request": "Evaluate three practical passive-income paths that fit my current life, then recommend the highest-leverage next experiment.",
+    "workflow": "wealth-and-leverage",
+    "agents": [
+      "black-panther",
+      "shuri",
+      "rocket"
+    ],
+    "focus_areas": [
+      "passive-income ideas",
+      "venture and opportunity triage",
+      "tooling and automation leverage",
+      "ROI-aware experimentation"
+    ],
+    "opportunity_theses": [
+      "Evaluate three practical passive-income paths that fit my current life, then recommend the highest-leverage next experiment."
+    ],
+    "experiments_in_flight": [],
+    "rejected_ideas": [],
+    "roi_lessons": [],
+    "synthesis": "## Recommendation\nThe highest-leverage path for your current life is a **small, boring digital asset with an automation-backed distribution loop**. In practical terms: build one niche product you can ship fast \u2014 a template pack, SOP bundle, calculator, checklist, or micro-guide \u2014 and pair it with a simple capture-and-sell funnel. This is the best blend of low capital, fast validation, owned equity, and scalable upside.\n\nIf I rank the three practical passive-income paths for you:\n1. **Digital product / knowledge asset**\n2. **Index-fund / dividend portfolio**\n3. **Real estate exposure**\n\nThe first wins on control and leverage; the second wins on simplicity and durability; the third has the most operational drag.\n\n## Best Bets\n- **Digital product + distribution loop**: strongest near-term ROI if you can solve a real, repeated problem.\n- **Automated lead capture + low-ticket offer**: email capture, simple landing page, one payment link, one follow-up sequence.\n- **Investing into index funds/dividend assets**: best for true passive compounding, but not fast cash-flow.\n- **Content-to-affiliate engine**: useful only if you already have a repeatable publishing habit and clear audience access.\n\nThe smart move is to treat passive income as an **asset-building exercise**, not an \u201ceffortless income\u201d fantasy.\n\n## Risks\n- **False passivity**: many \u201cpassive\u201d ideas are just deferred labor.\n- **Overbuilding before validation**: polishing the asset before knowing anyone wants it.\n- **Channel dependence**: if distribution is weak, even a good product stalls.\n- **Capital lock-up**: real estate and some investing paths preserve wealth but slow experimentation.\n- **Opportunity drift**: content, tools, and ideas can multiply faster than revenue if you don\u2019t enforce a kill rule.\n\n## Next Experiment\nRun a **14-day validation sprint** on one niche problem you already understand.\n\n- Pick one audience you can reach quickly.\n- Interview 10 people or message 10",
+    "participants": [
+      {
+        "agent_id": "black-panther",
+        "label": "Black Panther",
+        "title": "Finance Steward",
+        "response": "- **Best opportunity:** If your life is already full, the highest-leverage passive-income path is usually **building a small, durable digital asset around something you already know**\u2014for example: a niche template pack, micro-course, paid newsletter, or automation toolkit. It has low capital risk, can start part-time, and compounds into an asset you own. Among the three likely paths, I\u2019d rank them: **(1) digital product/knowledge asset, (2) dividend/index portfolio, (3) rental/real estate exposure** for most busy professionals. The first one is the best blend of control, scalability, and speed-to-validation.\n\n- **Main risk/tradeoff:** The danger is confusing \u201cpassive income\u201d with \u201clow effort.\u201d Digital assets require upfront creation and distribution; investing requires capital and patience; real estate can become a second job with leverage, repairs, vacancies, and financing risk. The tradeoff to watch is **time now vs. freedom later**\u2014if the path doesn\u2019t preserve margin and create repeatable cash flow, it\u2019s not really passive, just deferred work or hidden obligation.\n\n- **Next experiment:** Run a **14-day validation sprint** on one niche digital offer tied to a real problem you already understand. Pick one"
+      },
+      {
+        "agent_id": "shuri",
+        "label": "Shuri",
+        "title": "Innovation Architect",
+        "response": "- **Best opportunity recommendation:** Build a **micro-asset ladder**: start with one narrow digital productized asset tied to your existing expertise or household reality\u2014e.g. a checklist, template pack, SOP bundle, or niche guide\u2014then distribute it through a simple funnel (email capture + low-cost offer + upsell). It\u2019s the best blend of **low capital, fast validation, and compounding**. If it works, you can later stack it into a small library that earns while you sleep instead of trading time for dollars.\n\n- **Three practical passive-income paths for your current life:**  \n  1) **Digital products / templates** \u2014 highest leverage, low overhead, but requires upfront thinking and marketing.  \n  2) **Index-fund / dividend investing** \u2014 most passive and durable, but slow to move and not a \u201cnext-quarter\u201d income engine.  \n  3) **Niche content + affiliate/referral engine** \u2014 good compounding if you can publish consistently, but it\u2019s easier to get distracted by content grind than cash flow.  \n  **Tradeoff:** the more passive it gets, the slower the cash starts; the more immediate the cash, the less passive it usually is.\n\n- **Next experiment worth running:** In"
+      },
+      {
+        "agent_id": "rocket",
+        "label": "Rocket",
+        "title": "Vendor Scout",
+        "response": "- **Best opportunity:** **Small, boring digital product + distribution loop**. Think templates, checklists, calculators, or niche SOP packs built around something you already know or can learn fast. Lowest startup cost, no inventory, and it compounds if you pair it with one channel: LinkedIn, YouTube shorts, SEO, or a niche newsletter. If you want financial independence, this is the cleanest shot at building an asset instead of just buying yourself another job.\n\n- **Main tradeoff/risk:** **Most \u201cpassive\u201d ideas are fake passive at the start.** Rental, content, and ecommerce all take upfront work; the difference is whether the asset can later run with low touch. Real estate ties up capital and headaches. Content can be cheap but slow. Digital products are the best value, but only if you pick a niche with painful, frequent problems and resist building a masterpiece nobody wants.\n\n- **Next experiment:** **Run a 14-day validation sprint for one niche problem.** Pick one audience you can reach, interview 10 people, and offer a dead-simple product at $19\u2013$49 before building it fully. If 3+ people buy or strongly commit, build the MVP in a weekend and ship it. If not, kill it"
+      }
+    ]
+  },
+  {
+    "entry_id": "bce6cc20-edc0-402f-823d-7a02621bb69a",
+    "timestamp": "2026-05-10T01:39:04.238562+00:00",
+    "request": "Evaluate three practical passive-income paths that fit my current life, then recommend the highest-leverage next experiment.",
+    "workflow": "wealth-and-leverage",
+    "agents": [
+      "black-panther",
+      "shuri",
+      "rocket"
+    ],
+    "focus_areas": [
+      "passive-income ideas",
+      "venture and opportunity triage",
+      "tooling and automation leverage",
+      "ROI-aware experimentation"
+    ],
+    "opportunity_theses": [
+      "Evaluate three practical passive-income paths that fit my current life, then recommend the highest-leverage next experiment."
+    ],
+    "experiments_in_flight": [],
+    "rejected_ideas": [],
+    "roi_lessons": [],
+    "synthesis": "## Recommendation\nHighest leverage: build a **small digital asset around something you already know**, then use it to create an automated sales loop. For your situation, that is the best mix of low capital, compounding upside, and eventual semi-passive cash flow. It is more realistic than rentals, faster than equities, and less fragile than chasing pure content.\n\n## Best Bets\n1. **Digital product / template / SOP pack**  \n   Best for speed to market and leverage. A single useful asset can sell repeatedly with minimal overhead.\n\n2. **Service-to-product wrapper**  \n   Start with a fixed-scope service that solves one recurring problem, then convert the workflow into a product. This is the quickest path to validation and cash.\n\n3. **Automated investing into low-fee index funds**  \n   Not high-upside, but the cleanest truly passive baseline. Good as a wealth floor, not as the main lever.\n\n## Risks\n- Most passive income is either **capital-heavy** or **maintenance-heavy**.\n- The biggest failure mode is building something no one buys.\n- Rentals can become operations; content can become a treadmill; SaaS can become support.\n- The key tradeoff is **speed to cash vs. durability of margin**.\n\n## Next Experiment\nRun a **7-day validation sprint** on one digital offer:\n- Pick one painful problem you know well.\n- Create one offer, one landing page, one price.\n- Sell to a narrow audience with direct outreach.\n- Measure: replies, calls booked, and preorders.\n- If you get signal, build the simplest version and automate fulfillment next.",
+    "participants": [
+      {
+        "agent_id": "black-panther",
+        "label": "Black Panther",
+        "title": "Finance Steward",
+        "response": "- **Best opportunity:** Favor the path that compounds with your existing skills and doesn\u2019t create a second job: **build a small digital asset or system around something you already know** (template, guide, niche tool, evergreen content, simple course, or referral/affiliate engine). That\u2019s usually the highest-leverage \u201cpassive-ish\u201d route because upfront effort can turn into repeated sales without adding fixed overhead. If you have any audience, expertise, or workflow pain you solve well, monetize that first before chasing capital-intensive income.\n\n- **Main risk / tradeoff:** Most \u201cpassive income\u201d is either **capital-dependent** (dividends, rentals) or **maintenance-dependent** (content, products, platforms). The trap is confusing cash flow with freedom: rentals can become operations; content can become a treadmill; high-yield products can become low-trust. The key tradeoff is between **speed to cash** and **durability of margin**\u2014don\u2019t buy yourself into complexity that reduces your flexibility or locks up capital you may need for resilience.\n\n- **Next experiment worth running:** Run a **30-day proof-of-concept** on the most realistic path with the lowest startup cost:  \n  1) pick one problem you can solve for a specific audience"
+      },
+      {
+        "agent_id": "shuri",
+        "label": "Shuri",
+        "title": "Innovation Architect",
+        "response": "- **Best opportunity recommendation:** Build a **tiny digital product + distribution loop** around something you already know or use weekly: a paid template pack, SOP bundle, prompt kit, or niche mini-course sold on Gumroad/Payhip. It\u2019s the best fit for financial independence because it\u2019s **asset-based, low-capex, and compounding**: one good product can sell while you sleep, and every improvement to the funnel helps future sales. If you want the highest leverage, pair it with one channel you can sustain\u2014LinkedIn, email, YouTube Shorts, or a niche community.\n\n- **Main tradeoff / risk:** \u201cPassive\u201d is mostly a lie at the start. The risk isn\u2019t the product\u2014it\u2019s **building something nobody wants** or spreading yourself across too many ideas before you get signal. The other trap is that digital products can become a graveyard of polished but unvalidated work. Real leverage comes from **solving one painful, specific problem** and getting distribution right.\n\n- **Next experiment worth running:** In the next 7 days, test **three micro-offers** before building anything big:  \n  1) a $19\u2013$49 template/SOP pack,  \n  2) a $99 mini-implementation service"
+      },
+      {
+        "agent_id": "rocket",
+        "label": "Rocket",
+        "title": "Vendor Scout",
+        "response": "- **Best opportunity:** Go after a **boring, cashflow-first digital product/service hybrid**: pick one recurring problem you already know, build a tiny template/tool/guide, and sell it through a simple landing page plus direct outreach. Fastest path to leverage is usually **sell first, automate later**. For passive income, you want something that can become semi-passive after the first 10\u201320 customers fund the system.\n\n- **Main tradeoff:** Pure \u201cpassive\u201d is mostly a scam at the start. **Rentals need capital, equities need time, content needs volume, SaaS needs support.** The real question is where your time, skills, and cash can buy the best return without turning into a second job. Avoid shiny assets that look passive but eat cashflow, especially anything with high maintenance or low control.\n\n- **Next experiment:** Run a **7-day validation sprint** on 3 paths:\n  1) **Digital product** in your strongest niche: make one offer, one page, one price.  \n  2) **Service wrapper** around something repetitive: fixed-scope, fixed-price, outsourceable later.  \n  3) **Capital path**: automatic monthly buys into low-fee index funds or"
+      }
+    ]
+  },
+  {
+    "entry_id": "e6a0bac1-6320-4657-bc00-1360a87e1213",
+    "timestamp": "2026-05-10T01:39:38.570482+00:00",
+    "request": "Evaluate three practical passive-income paths that fit my current life, then recommend the highest-leverage next experiment.",
+    "workflow": "wealth-and-leverage",
+    "agents": [
+      "black-panther",
+      "shuri",
+      "rocket"
+    ],
+    "focus_areas": [
+      "passive-income ideas",
+      "venture and opportunity triage",
+      "tooling and automation leverage",
+      "ROI-aware experimentation"
+    ],
+    "opportunity_theses": [
+      "The highest-leverage path for your current situation is a **micro digital product or niche B2B asset** that you can create once and sell repeatedly. It fits the best balance of low capital, fast validation, and scalable leverage. If you already have income, keep passive investing running in parallel as the compounding base layer, but do not treat it as the main experiment. The practical objective is to convert a piece of know-how into an asset that can earn without proportional time.",
+      "## Best Bets",
+      "1. **Micro digital product / template pack**",
+      "Best for speed, control, and low overhead. Examples: SOPs, checklists, calculators, prompt packs, or a tiny toolkit for a specific workflow. Highest leverage if it solves one painful problem for one narrow audience.",
+      "2. **Automated index investing**",
+      "Cleanest true-passive path. Low maintenance, low complexity, and strong long-term ROI if funded consistently. Best as the financial foundation, not the near-term income engine."
+    ],
+    "experiments_in_flight": [],
+    "rejected_ideas": [],
+    "roi_lessons": [
+      "1. **Micro digital product / template pack**",
+      "Best for speed, control, and low overhead. Examples: SOPs, checklists, calculators, prompt packs, or a tiny toolkit for a specific workflow. Highest leverage if it solves one painful problem for one narrow audience.",
+      "The main risk is confusing \u201cpassive\u201d with \u201ceasy.\u201d Most income paths have hidden active work somewhere: setup, distribution, support, volatility, or maintenance. Digital products fail when distribution is weak. Renting assets creates wear and variable demand. Investing is reliable but slow. The highest risk-adjusted mistake is choosing a path that looks scalable but takes too long to prove demand.",
+      "## Next Experiment"
+    ],
+    "synthesis": "## Recommendation\nThe highest-leverage path for your current situation is a **micro digital product or niche B2B asset** that you can create once and sell repeatedly. It fits the best balance of low capital, fast validation, and scalable leverage. If you already have income, keep passive investing running in parallel as the compounding base layer, but do not treat it as the main experiment. The practical objective is to convert a piece of know-how into an asset that can earn without proportional time.\n\n## Best Bets\n1. **Micro digital product / template pack**  \n   Best for speed, control, and low overhead. Examples: SOPs, checklists, calculators, prompt packs, or a tiny toolkit for a specific workflow. Highest leverage if it solves one painful problem for one narrow audience.\n\n2. **Automated index investing**  \n   Cleanest true-passive path. Low maintenance, low complexity, and strong long-term ROI if funded consistently. Best as the financial foundation, not the near-term income engine.\n\n3. **Renting an existing asset**  \n   Good if you already own something underused: gear, parking, a room, a vehicle, or workspace. Fastest to start with existing inventory, but operational drag is higher and the income is less durable.\n\n## Risks\nThe main risk is confusing \u201cpassive\u201d with \u201ceasy.\u201d Most income paths have hidden active work somewhere: setup, distribution, support, volatility, or maintenance. Digital products fail when distribution is weak. Renting assets creates wear and variable demand. Investing is reliable but slow. The highest risk-adjusted mistake is choosing a path that looks scalable but takes too long to prove demand.\n\n## Next Experiment\nRun a **7-day validation sprint** on one niche problem you already understand:\n- Pick one painful problem in a specific audience.\n- Build a tiny offer in one sitting.\n- Set a clear price.\n- Share it through direct outreach and one marketplace or landing page.\n- Measure interest by replies, clicks, and preorders.\n\nIf you want the most leverage, test the",
+    "participants": [
+      {
+        "agent_id": "black-panther",
+        "label": "Black Panther",
+        "title": "Finance Steward",
+        "response": "- **Best opportunity:** Prioritize the path with the best **capital-to-time ratio** and the least ongoing management: usually **broad-market index investing + automated contributions** if you already have income, or **a simple digital asset / content product** if you have a strong skill and can create once, sell many times. If you want true passive income, the first move is often **building investable surplus**\u2014that compounds with almost no operational drag.  \n\n- **Main tradeoff/risk:** \u201cPassive income\u201d can hide **active work, volatility, or maintenance**. Rental real estate can produce cash flow, but it brings leverage, repairs, vacancies, and time debt. Dividend stocks are low-maintenance, but yield alone won\u2019t beat reckless concentration. Online products can scale, but only if there\u2019s real demand; otherwise you build an asset nobody buys. Don\u2019t buy complexity that weakens margin.  \n\n- **Next experiment:** Run a **30-day leverage test** on 3 paths:  \n  1) **Automate investing**: set a fixed monthly transfer into low-cost index funds.  \n  2) **Validate one scalable offer**: list a small digital product/service and measure interest.  \n  3) **Price one higher"
+      },
+      {
+        "agent_id": "shuri",
+        "label": "Shuri",
+        "title": "Innovation Architect",
+        "response": "- **Best opportunity recommendation:** Build a **micro digital product + lead engine** around something you already know and can repeat: templates, checklists, SOPs, or a tiny paid toolkit that solves one annoying problem for a narrow audience. Best fit if you want passive-ish income without becoming a landlord or stock picker. It compounds because every customer interaction can improve the offer, and the same asset can be sold infinitely with low marginal cost.\n\n- **Three practical paths, with tradeoffs:**  \n  1) **Digital products / templates** \u2014 lowest capital, fastest to test, highest leverage if you can package expertise; downside is you need distribution.  \n  2) **Dividend ETFs / index investing** \u2014 cleanest true-passive path, but not a near-term income engine; tradeoff is slow growth and lower control.  \n  3) **Renting out an asset you already own** (space, tools, car, gear, parking) \u2014 can create cash quickly with existing stuff; downside is maintenance, wear, and irregular demand.  \n  If your goal is financial independence, the best near-term move is usually **active-to-passive conversion**: create an asset once, then let it sell while you sleep.\n\n- **Next experiment worth running:**"
+      },
+      {
+        "agent_id": "rocket",
+        "label": "Rocket",
+        "title": "Vendor Scout",
+        "response": "- **Best opportunity:** Build a **niche B2B \u201cdone-for-you\u201d asset** you can sell repeatedly with low support: e.g. templates, calculators, SOP packs, compliance checklists, or micro-tools for a problem you already understand. This is the fastest route to real passive-ish income because it\u2019s cheap to validate, easy to price, and doesn\u2019t require inventory or customer service hell. Aim for something that saves a buyer time or prevents a costly mistake, then sell it through a simple landing page + direct outreach + one marketplace.  \n\n- **Main risk/tradeoff:** The \u201cpassive income\u201d trap is mostly fake\u2014**most paths are front-loaded work**. Content channels, affiliate sites, and apps can work, but they\u2019re slower, noisier, and usually need more volume than people admit. The real tradeoff is choosing between **speed to first dollar** vs **scalability**. If you need financial independence, don\u2019t worship elegant scalability; prioritize something that can make money within 30 days and prove demand before you build more.  \n\n- **Next experiment:** Pick **one painful niche problem** and test it in 7 days: create a tiny offer, set a price, and pre-sell to 20 targeted"
+      }
+    ]
+  },
+  {
+    "entry_id": "f3b3a773-7e83-4311-afc7-cc7fb9881544",
+    "timestamp": "2026-05-10T01:40:15.682707+00:00",
+    "request": "Evaluate three practical passive-income paths that fit my current life, then recommend the highest-leverage next experiment.",
+    "workflow": "wealth-and-leverage",
+    "agents": [
+      "black-panther",
+      "shuri",
+      "rocket"
+    ],
+    "focus_areas": [
+      "passive-income ideas",
+      "venture and opportunity triage",
+      "tooling and automation leverage",
+      "ROI-aware experimentation"
+    ],
+    "opportunity_theses": [
+      "The highest-leverage next move is a **small digital product paired with an automated lead-capture funnel**. It fits your current life best because it starts with knowledge you already have, requires little capital, and can be systemized into recurring sales. If you want financial independence, this is a better first bet than capital-heavy \u201cpassive\u201d plays, which usually dilute returns with time, risk, or complexity.",
+      "1. **Digital product / template pack**",
+      "Highest leverage. Package one useful problem into a checklist, SOP, template, or guide. Sell it repeatedly with minimal marginal cost.",
+      "2. **Index-fund core investing**",
+      "Most genuinely passive, but slow. Best as a balance-sheet anchor, not an income engine.",
+      "3. **Micro service-bureau with productized repeat work**"
+    ],
+    "experiments_in_flight": [],
+    "rejected_ideas": [
+      "The main failure mode is mistaking **low-effort for passive**. Many \u201cpassive\u201d paths are actually hidden labor, platform dependence, or capital traps. Digital products can fail if the niche is vague. Service businesses can stay active forever if they are not standardized. Investing can be too slow if you need near-term income."
+    ],
+    "roi_lessons": [
+      "1. **Digital product / template pack**",
+      "Highest leverage. Package one useful problem into a checklist, SOP, template, or guide. Sell it repeatedly with minimal marginal cost.",
+      "The main failure mode is mistaking **low-effort for passive**. Many \u201cpassive\u201d paths are actually hidden labor, platform dependence, or capital traps. Digital products can fail if the niche is vague. Service businesses can stay active forever if they are not standardized. Investing can be too slow if you need near-term income."
+    ],
+    "synthesis": "## Recommendation\nThe highest-leverage next move is a **small digital product paired with an automated lead-capture funnel**. It fits your current life best because it starts with knowledge you already have, requires little capital, and can be systemized into recurring sales. If you want financial independence, this is a better first bet than capital-heavy \u201cpassive\u201d plays, which usually dilute returns with time, risk, or complexity.\n\n## Best Bets\n1. **Digital product / template pack**  \n   Highest leverage. Package one useful problem into a checklist, SOP, template, or guide. Sell it repeatedly with minimal marginal cost.\n\n2. **Index-fund core investing**  \n   Most genuinely passive, but slow. Best as a balance-sheet anchor, not an income engine.\n\n3. **Micro service-bureau with productized repeat work**  \n   Strong cashflow potential and can become semi-passive if standardized. Best if you already know a niche where speed or sourcing creates value.\n\n## Risks\nThe main failure mode is mistaking **low-effort for passive**. Many \u201cpassive\u201d paths are actually hidden labor, platform dependence, or capital traps. Digital products can fail if the niche is vague. Service businesses can stay active forever if they are not standardized. Investing can be too slow if you need near-term income.\n\n## Next Experiment\nRun a **7-day validation test** on one narrowly defined problem you already understand:\n- Pick one pain point\n- Create one minimal offer: template, checklist, or mini-guide\n- Add one simple landing page with email capture\n- Share it with 10\u201320 targeted people\n- Measure: interest, replies, sign-ups, and any preorders\n\nIf there is clear pull, build that. If not, pivot fast.",
+    "participants": [
+      {
+        "agent_id": "black-panther",
+        "label": "Black Panther",
+        "title": "Finance Steward",
+        "response": "- **Best opportunity recommendation:** Prioritize the path that **turns one existing skill or asset into an asset with recurring revenue**\u2014for most people, that means **digital product / template / niche content + email capture** before anything capital-heavy. It\u2019s the cleanest bridge to financial independence because it can start small, compound over time, and doesn\u2019t require you to buy your way into yield. If you already have expertise, package it once and sell it repeatedly; if you have spare cash, deploy it only into an index-fund core, not a \u201cpassive income\u201d gimmick.\n\n- **Main risk or tradeoff:** The biggest danger is confusing **low-effort with low-risk**. Rentals, dividend chasing, private deals, and \u201csemi-passive\u201d businesses can look attractive but often add hidden labor, concentration risk, or liquidity traps. The tradeoff is simple: higher headline income usually means more maintenance, more downside, or more capital locked up. Protect margin first\u2014don\u2019t create a passive-income stream that becomes a second job or weakens your balance sheet.\n\n- **Next experiment worth running:** Run a **30-day micro-test** on one path: pick a single problem you know well, create a minimal offer (template, guide, checklist"
+      },
+      {
+        "agent_id": "shuri",
+        "label": "Shuri",
+        "title": "Innovation Architect",
+        "response": "- **Best opportunity:** build a **small digital product + automation funnel** around a problem you already know well. Think: one focused template pack, checklist system, or SOP bundle sold via Gumroad/Shopify, with AI-assisted content and a simple email capture. It\u2019s the best fit for financial independence because it can start as \u201cactive-ish\u201d work, then compound into semi-passive income with low overhead and strong leverage.\n\n- **Three practical paths, ranked:**  \n  1) **Digital products / templates** \u2014 highest leverage, low capital, scalable, and easiest to test fast.  \n  2) **Index-fund + cashflow investing** \u2014 most truly passive, but slow and capital-dependent; great for wealth preservation, weak for near-term income.  \n  3) **Rentable assets / micro-SaaS / content affiliate** \u2014 can work, but usually more operational drag or longer ramp. Better only if you already have an audience or a sharp niche.  \n  **Main tradeoff:** the more \u201cpassive\u201d it is on paper, the less control and speed you usually get. The more leverage you want, the more you need a tight niche and a repeatable distribution loop.\n\n- **Next experiment worth running:** pick **"
+      },
+      {
+        "agent_id": "rocket",
+        "label": "Rocket",
+        "title": "Vendor Scout",
+        "response": "- **Best opportunity:** Build a **micro service-bureau / sourcing business** around a painful, repeatable niche you already understand\u2014think **3D printing, laser-cut parts, simple fabrication, or procurement for small operators**. It\u2019s the fastest path to cash because you can start with **zero inventory**, use local/online vendors as needed, and keep margins by being the person who finds the right part fast. For passive-income potential, productize the repeat work later: quote templates, vendor lists, standard SKUs, and a simple landing page to capture inbound requests.\n\n- **Main tradeoff / risk:** \u201cPassive income\u201d is usually a lie at the start. The bad paths are the ones with **high upfront spend, low differentiation, or platform risk**\u2014dropshipping, generic digital products, random affiliate sites. They look passive, but they\u2019re mostly ad spend, customer support, and algorithm roulette. The real risk with a service-bureau angle is that it begins as active work; if you don\u2019t standardize and narrow the niche, it never becomes leverage.\n\n- **Next experiment worth running:** In the next **7 days**, pick **one niche pain point** and offer a **done-for-you quote + sourcing service** to 10 target customers"
+      }
+    ]
+  },
+  {
+    "entry_id": "9535c120-efea-441d-b900-cfb6273a6f6d",
+    "timestamp": "2026-05-10T01:40:53.057511+00:00",
+    "request": "Evaluate three practical passive-income paths that fit my current life, then recommend the highest-leverage next experiment.",
+    "workflow": "wealth-and-leverage",
+    "agents": [
+      "black-panther",
+      "shuri",
+      "rocket"
+    ],
+    "focus_areas": [
+      "passive-income ideas",
+      "venture and opportunity triage",
+      "tooling and automation leverage",
+      "ROI-aware experimentation"
+    ],
+    "opportunity_theses": [
+      "The highest-leverage next experiment is a **small, boring digital product** built around a problem you already solve repeatedly. It fits your current life best because it requires little capital, can be automated quickly, and has the best compounding-to-maintenance ratio.",
+      "Template, SOP, checklist, calculator, or mini-course**",
+      "Best when you can solve a narrow pain point in under 1 page or 1 hour.",
+      "Easy to test pricing and demand.",
+      "Productized service that can later be automated**",
+      "Good bridge if you know the buyer and the workflow."
+    ],
+    "experiments_in_flight": [],
+    "rejected_ideas": [],
+    "roi_lessons": [
+      "Template, SOP, checklist, calculator, or mini-course**",
+      "Best when you can solve a narrow pain point in under 1 page or 1 hour.",
+      "Mistaking \u201cincome\u201d for \u201cfreedom.\u201d** Some passive-income ideas create hidden operational drag.",
+      "Building before validation.** The most common failure is making something nobody wants."
+    ],
+    "synthesis": "## Recommendation\nThe highest-leverage next experiment is a **small, boring digital product** built around a problem you already solve repeatedly. It fits your current life best because it requires little capital, can be automated quickly, and has the best compounding-to-maintenance ratio.\n\nIf I had to rank the three paths for you:\n1. **Digital product / productized knowledge asset** \u2014 best leverage, fastest path to scalable passive-ish income.\n2. **Content + affiliate/referral income** \u2014 good if you already have distribution, but slower and more platform-dependent.\n3. **Dividend / cash-flow assets** \u2014 most stable, but usually too slow to materially change financial independence unless capital is already substantial.\n\n## Best Bets\n- **Template, SOP, checklist, calculator, or mini-course**\n  - Best when you can solve a narrow pain point in under 1 page or 1 hour.\n  - Easy to test pricing and demand.\n- **Productized service that can later be automated**\n  - Good bridge if you know the buyer and the workflow.\n  - Can evolve into passive-ish income through documentation and tooling.\n- **Cash-flow investing**\n  - Solid foundation, not a primary growth engine.\n  - Best once emergency fund, debt, and basic savings rate are handled.\n\nFor leverage, the cleanest stack is: **solve one niche problem \u2192 package it \u2192 automate delivery \u2192 distribute through one channel**.\n\n## Risks\n- **Mistaking \u201cincome\u201d for \u201cfreedom.\u201d** Some passive-income ideas create hidden operational drag.\n- **Building before validation.** The most common failure is making something nobody wants.\n- **Overestimating dividend speed.** Stable, yes; transformative, usually no.\n- **Distribution risk.** A great product without a way to reach buyers stays invisible.\n- **Tooling overhead.** Automation helps only after the offer is proven.\n\n## Next Experiment\nRun a **7-day validation sprint**:\n1. Pick **one repeatable problem** you\u2019ve solved more than once.\n2. Write a **one-page",
+    "participants": [
+      {
+        "agent_id": "black-panther",
+        "label": "Black Panther",
+        "title": "Finance Steward",
+        "response": "- **Best opportunity recommendation:** Favor the path with the highest **compounding-to-maintenance ratio**: usually a **cash-flowing digital asset or content/productized knowledge asset** you can build once and sell repeatedly. For your situation, the strongest candidates are: **(1) a narrowly targeted digital product**, **(2) dividend/index investing once your emergency fund and debt posture are clean**, and **(3) a small automation-enabled service that can be systemized into \u201cpassive-ish\u201d income**. If you want true leverage, the first path is often best because it can start small, requires low capital, and can grow without tying up more labor.\n\n- **Main risk or tradeoff:** The biggest trap is mistaking **simple cash flow for durable freedom**. Dividend investing is stable but usually too slow unless capital is already meaningful. Digital products can be high leverage but fail if the audience/problem fit is weak. \u201cPassive\u201d service businesses often become disguised active work if you don\u2019t aggressively document, automate, and delegate. In every case, protect margin: don\u2019t add obligations that reduce your runway or increase stress just to chase income.\n\n- **Next experiment worth running:** Run a **30-day validation sprint** on one specific pain point you already understand:"
+      },
+      {
+        "agent_id": "shuri",
+        "label": "Shuri",
+        "title": "Innovation Architect",
+        "response": "- **Best opportunity:** build a **small, boring digital asset stack** around what you already know and can repeat: one niche problem, one lead magnet, one paid product, one simple distribution channel. For your current life, the highest-leverage passive-income path is usually **evergreen digital products + automation** (templates, checklists, scripts, mini-courses, or a paid newsletter) because it can compound without requiring capital, staff, or constant active hours.\n\n- **Three practical paths, ranked:**  \n  1) **Digital products/services-to-productized offer** \u2014 highest leverage, lowest overhead; tradeoff is you must choose a niche with real pain and do a bit of upfront validation.  \n  2) **Content + affiliate/referral income** \u2014 can become durable if you already have a distribution channel; tradeoff is slower ramp and platform risk.  \n  3) **Cash-flow assets** like dividend ETFs, T-bills, or a small local yield play \u2014 most stable, but least likely to move the needle on financial independence quickly unless the capital base is already meaningful.  \n\n- **Next experiment worth running:** in the next 14 days, validate **one micro-offer**: pick a problem you\u2019ve solved more than once,"
+      },
+      {
+        "agent_id": "rocket",
+        "label": "Rocket",
+        "title": "Vendor Scout",
+        "response": "- **Best opportunity:** Build a **small, boring digital product stack** around a real skill you already use\u2014templates, checklists, calculators, SOP packs, or a niche mini-course. Lowest startup cost, fastest path to first sale, and easiest to automate. If you can sell even a $19\u2013$49 product to a narrow audience, that\u2019s the cleanest bridge to scalable passive-ish income.  \n- **Main tradeoff / risk:** \u201cPassive income\u201d is usually **front-loaded work + ongoing distribution**. The trap is building before proving demand, or choosing a crowded idea with no audience. Avoid anything that needs inventory, heavy capital, or customer service hell unless the margin is stupid-good.  \n- **Next experiment:** In the next 7 days, pick **one painful, repeatable problem** from your own work/life, make a **one-page landing page + checkout**, and pre-sell it to 10 targeted people. If 2\u20133 people bite, build the minimum version; if not, kill it fast and move to the next niche."
+      }
+    ]
+  },
+  {
+    "entry_id": "b9149d90-de09-4822-86da-83f58b1df0b4",
+    "timestamp": "2026-05-10T01:41:28.472868+00:00",
+    "request": "Evaluate three practical passive-income paths that fit my current life, then recommend the highest-leverage next experiment.",
+    "workflow": "wealth-and-leverage",
+    "agents": [
+      "black-panther",
+      "shuri",
+      "rocket"
+    ],
+    "focus_areas": [
+      "passive-income ideas",
+      "venture and opportunity triage",
+      "tooling and automation leverage",
+      "ROI-aware experimentation"
+    ],
+    "opportunity_theses": [
+      "Prioritize a **small digital product or template-based asset** as the highest-leverage next move, with a narrow niche and a simple distribution path. It best fits financial independence goals because it is **low-capital, reusable, and scalable without adding operational drag**. If you already know a specific audience problem, this is the cleanest route to passive-income-like cash flow. Keep the bar high: if it does not compound through reuse, automation, or repeat sales, it is not leverage.",
+      "1. **Digital product / template pack**",
+      "Best overall ROI. Create once, sell many times, and automate delivery. Good examples: checklists, calculators, playbooks, prompt packs, SOP templates, or niche guides.",
+      "2. **Productized micro-service with recurring billing**",
+      "Not fully passive, but strong leverage if it solves a boring recurring problem. This is the fastest way to test willingness to pay and can later be systemized.",
+      "3. **Niche content + affiliate layer**"
+    ],
+    "experiments_in_flight": [],
+    "rejected_ideas": [
+      "The main danger is confusing **busy income** with **passive income**. High-friction paths like rentals, trading, or broad content plays can create hidden complexity, capital exposure, or dependence on constant attention. Another common failure mode is building before validating demand. The objective is not to create something impressive; it is to create something that **sells with minimal ongoing effort**."
+    ],
+    "roi_lessons": [
+      "1. **Digital product / template pack**",
+      "Best overall ROI. Create once, sell many times, and automate delivery. Good examples: checklists, calculators, playbooks, prompt packs, SOP templates, or niche guides.",
+      "The main danger is confusing **busy income** with **passive income**. High-friction paths like rentals, trading, or broad content plays can create hidden complexity, capital exposure, or dependence on constant attention. Another common failure mode is building before validating demand. The objective is not to create something impressive; it is to create something that **sells with minimal ongoing effort**."
+    ],
+    "synthesis": "## Recommendation\nPrioritize a **small digital product or template-based asset** as the highest-leverage next move, with a narrow niche and a simple distribution path. It best fits financial independence goals because it is **low-capital, reusable, and scalable without adding operational drag**. If you already know a specific audience problem, this is the cleanest route to passive-income-like cash flow. Keep the bar high: if it does not compound through reuse, automation, or repeat sales, it is not leverage.\n\n## Best Bets\n1. **Digital product / template pack**  \n   Best overall ROI. Create once, sell many times, and automate delivery. Good examples: checklists, calculators, playbooks, prompt packs, SOP templates, or niche guides.\n\n2. **Productized micro-service with recurring billing**  \n   Not fully passive, but strong leverage if it solves a boring recurring problem. This is the fastest way to test willingness to pay and can later be systemized.\n\n3. **Niche content + affiliate layer**  \n   Slower, but valuable if you can publish consistently and recommend tools you actually use. Best as a distribution engine attached to a real asset, not as a standalone bet.\n\n## Risks\nThe main danger is confusing **busy income** with **passive income**. High-friction paths like rentals, trading, or broad content plays can create hidden complexity, capital exposure, or dependence on constant attention. Another common failure mode is building before validating demand. The objective is not to create something impressive; it is to create something that **sells with minimal ongoing effort**.\n\n## Next Experiment\nRun a **7-day validation sprint** on one niche pain point. Define one paid offer, create a one-page landing page, and test it with 20\u201330 targeted prospects through direct outreach or a small audience channel. Use a simple ROI lens:\n\n- **If people ask for it or pre-buy it:** build the minimum version.\n- **If they hesitate:** adjust the niche or offer.\n- **If nobody responds:** kill it",
+    "participants": [
+      {
+        "agent_id": "black-panther",
+        "label": "Black Panther",
+        "title": "Finance Steward",
+        "response": "- **Best opportunity:** Prioritize **one scalable, low-capital asset path**: build a small digital product or \u201cevergreen\u201d knowledge asset around something you already know well, then distribute it through an audience channel you can compound over time (email list, short-form content, niche community, or a simple landing page). This is the cleanest route to passive-income-like cash flow without buying more obligations or tying up large capital. If you want true leverage, the asset should be reusable, sellable, and not require your hourly presence.\n\n- **Main tradeoff / risk:** The biggest trap is **mistaking busy side income for passive income**. Rental property, trading, or chasing \u201ceasy\u201d online opportunities can look attractive but often add debt, management drag, or volatility. For your goal of financial independence, the standard is not \u201ccan it pay this month?\u201d but \u201cdoes it compound, preserve margin, and reduce dependence on active labor?\u201d If the answer is no, it\u2019s probably a distraction.\n\n- **Next experiment:** Run a **14-day validation sprint** on the highest-leverage concept: pick one niche problem, define one paid offer, and test demand before building. Example: create a one-page offer, send it to 20\u201330 targeted"
+      },
+      {
+        "agent_id": "shuri",
+        "label": "Shuri",
+        "title": "Innovation Architect",
+        "response": "- **Best opportunity:** Build a **small, AI-assisted digital asset stack** around what you already know: one niche guide/template pack, one recurring content channel, and one simple lead capture. It\u2019s the cleanest path to passive-ish income because the upfront work compounds: make it once, sell it many times, and use automation to keep distribution alive. If you choose a niche tied to a real pain point you understand, this beats \u201ccute\u201d income ideas fast.\n\n- **Three practical paths, ranked:**  \n  1) **Digital products / templates** \u2014 highest leverage, lowest capital, best fit for financial independence.  \n  2) **Affiliate + niche content** \u2014 slower burn, but strong if you can publish consistently and recommend tools you\u2019d actually use.  \n  3) **Low-cost indexed investing / cashflow vehicles** \u2014 not really \u201cincome business,\u201d but the most reliable passive wealth engine; boring wins here.  \n  **Tradeoff:** digital products and affiliate content can look passive but require distribution discipline; investing is passive but not high-upside cashflow in the short term.\n\n- **Next experiment:** In the next **7 days**, validate one niche with a **minimum viable offer**: create a 1-page landing page, a"
+      },
+      {
+        "agent_id": "rocket",
+        "label": "Rocket",
+        "title": "Vendor Scout",
+        "response": "- **Best opportunity:** Build a **small B2B micro-service or productized service** around something you already touch often, then standardize it for recurring revenue. Highest-leverage version: pick a boring, painful task in a niche you understand, sell it as a monthly subscription, and use simple fulfillment tools before hiring. That\u2019s the fastest path to \u201csemi-passive\u201d cash flow with real margins\u2014more reliable than chasing ads, dropshipping, or app dreams. If you can solve a recurring headache for 10 businesses at $200\u2013$500/mo, that\u2019s meaningful leverage.\n\n- **Main risk / tradeoff:** True passive income is mostly a myth early on. The trap is choosing a \u201cpassive\u201d idea that secretly requires heavy traffic, ad spend, inventory, or constant support. Lower-friction options like digital products, templates, or affiliate content are easier to start, but they\u2019re usually low signal and slow to compound unless you already have distribution. In plain English: avoid shiny stuff with high setup and no buyers.\n\n- **Next experiment:** Run a **7-day validation sprint** on three paths:  \n  1) **Productized service**: one painful niche problem, one offer, one price.  \n  2) **Digital"
+      }
+    ]
+  },
+  {
+    "entry_id": "eae5a6fb-caa6-4054-9d8a-d1e3c58ebc36",
+    "timestamp": "2026-05-10T01:42:04.730444+00:00",
+    "request": "Evaluate three practical passive-income paths that fit my current life, then recommend the highest-leverage next experiment.",
+    "workflow": "wealth-and-leverage",
+    "agents": [
+      "black-panther",
+      "shuri",
+      "rocket"
+    ],
+    "focus_areas": [
+      "passive-income ideas",
+      "venture and opportunity triage",
+      "tooling and automation leverage",
+      "ROI-aware experimentation"
+    ],
+    "opportunity_theses": [
+      "The highest-leverage path is to build a small digital asset around something you already know or do repeatedly, then attach a simple distribution engine to it. For your current life, that is the best blend of passive-income potential, ROI discipline, and scalability. It starts as a focused offer, but can become a template pack, checklist library, mini-guide, or workflow system that sells with near-zero marginal cost. If you need cash faster, a productized micro-service can fund the build, but the primary bet should be the digital asset.",
+      "1. Digital templates, guides, or SOPs",
+      "Best for leverage, margins, and low overhead. Strong fit if you can package a repeatable process into a buyer-facing asset.",
+      "2. Content-led affiliate income",
+      "Useful if you can publish credible comparisons, reviews, or recommendations. Slower ramp, but strong leverage once trust and traffic exist.",
+      "3. Productized micro-service that later gets systemized"
+    ],
+    "experiments_in_flight": [
+      "Run a 7-day validation sprint on one problem you already understand. Create one offer, one landing page, and one checkout or preorder link. Send it to 20\u201350 highly targeted people. Track only clicks, replies, and preorders. If you get real signals, double down and turn the offer into a reusable asset; if not, refine the problem"
+    ],
+    "rejected_ideas": [
+      "The main risk is confusing \u201csimple to build\u201d with \u201ceasy to monetize.\u201d Digital assets fail when the audience is vague, the problem is not painful enough, or distribution is ignored. Affiliate income is vulnerable to platform shifts. Micro-services can quietly become another job if you do not productize aggressively. In general, the closer something is to true passive income, the slower it tends to grow without capital."
+    ],
+    "roi_lessons": [
+      "1. Digital templates, guides, or SOPs",
+      "Best for leverage, margins, and low overhead. Strong fit if you can package a repeatable process into a buyer-facing asset.",
+      "The main risk is confusing \u201csimple to build\u201d with \u201ceasy to monetize.\u201d Digital assets fail when the audience is vague, the problem is not painful enough, or distribution is ignored. Affiliate income is vulnerable to platform shifts. Micro-services can quietly become another job if you do not productize aggressively. In general, the closer something is to true passive income, the slower it tends to grow without capital."
+    ],
+    "synthesis": "## Recommendation\nThe highest-leverage path is to build a small digital asset around something you already know or do repeatedly, then attach a simple distribution engine to it. For your current life, that is the best blend of passive-income potential, ROI discipline, and scalability. It starts as a focused offer, but can become a template pack, checklist library, mini-guide, or workflow system that sells with near-zero marginal cost. If you need cash faster, a productized micro-service can fund the build, but the primary bet should be the digital asset.\n\n## Best Bets\n1. Digital templates, guides, or SOPs  \n   Best for leverage, margins, and low overhead. Strong fit if you can package a repeatable process into a buyer-facing asset.\n\n2. Content-led affiliate income  \n   Useful if you can publish credible comparisons, reviews, or recommendations. Slower ramp, but strong leverage once trust and traffic exist.\n\n3. Productized micro-service that later gets systemized  \n   Best for near-term validation and cash flow. Not passive at first, but it can evolve into a semi-passive asset if delivery is standardized.\n\nMy read: templates plus an email list is the strongest long-term combination. It gives you owned distribution and a platform for future offers.\n\n## Risks\nThe main risk is confusing \u201csimple to build\u201d with \u201ceasy to monetize.\u201d Digital assets fail when the audience is vague, the problem is not painful enough, or distribution is ignored. Affiliate income is vulnerable to platform shifts. Micro-services can quietly become another job if you do not productize aggressively. In general, the closer something is to true passive income, the slower it tends to grow without capital.\n\n## Next Experiment\nRun a 7-day validation sprint on one problem you already understand. Create one offer, one landing page, and one checkout or preorder link. Send it to 20\u201350 highly targeted people. Track only clicks, replies, and preorders. If you get real signals, double down and turn the offer into a reusable asset; if not, refine the problem",
+    "participants": [
+      {
+        "agent_id": "black-panther",
+        "label": "Black Panther",
+        "title": "Finance Steward",
+        "response": "- **Best opportunity recommendation:**  \n  **Build a small, repeatable digital asset around what you already know or do**\u2014for example a niche template pack, checklist library, short guide, or paid workflow system. This is the cleanest fit for passive-income *potential* because the upfront work compounds, margins are high, and it can sell while you sleep without adding staff, inventory, or major capital risk. If your current life is busy, this is the most sovereign path: low overhead, scalable, and compatible with financial independence.\n\n- **Main risk / tradeoff:**  \n  The biggest trap is mistaking \u201ceasy to start\u201d for \u201ceasy to monetize.\u201d Digital products can become busywork if you pick a broad audience, build too much, or avoid distribution. The second path\u2014**a cash-flowing side service that later productizes**\u2014can produce money faster, but it is not truly passive at first and can quietly become another job. The third path\u2014**dividend/index investing from spare cash**\u2014is the most passive and durable, but it\u2019s usually a slow engine unless you already have meaningful capital. So: service gives speed, digital assets give leverage, investing gives permanence.\n\n- **Next experiment worth running:**  \n  Run a **14"
+      },
+      {
+        "agent_id": "shuri",
+        "label": "Shuri",
+        "title": "Innovation Architect",
+        "response": "- **Best opportunity:** build a **small digital product + email list** around something you already know or do repeatedly. For financial independence, this is usually the cleanest leverage: one asset gets created once, can be sold repeatedly, and can later expand into templates, mini-courses, or a subscription. If you already have any niche expertise, use that; if not, package a household/professional problem you\u2019ve solved into a \u201cdone-for-you\u201d system.\n\n- **Three practical paths, with the tradeoff:**  \n  1) **Digital templates / guides / SOPs** \u2014 lowest cost, fastest to test, best margins; tradeoff is you need a clear audience and a decent distribution channel.  \n  2) **Content-led affiliate income** \u2014 good if you can publish useful comparisons/reviews; tradeoff is slower ramp and platform dependence.  \n  3) **Cash-flowing micro-service with productized delivery** \u2014 not pure passive at first, but can be systemized and later semi-passive; tradeoff is more upfront effort and occasional client friction.  \n  My read: **templates + list** beats the other two on leverage because it can later feed affiliate offers, services, or a paid community.\n\n- **Next experiment:**"
+      },
+      {
+        "agent_id": "rocket",
+        "label": "Rocket",
+        "title": "Vendor Scout",
+        "response": "- **Best opportunity:** Build a **small, boring digital product or niche service around your existing expertise/workflow**\u2014something you can sell repeatedly with near-zero marginal cost. For financial independence, this beats \u201cpassive income\u201d fantasies because it can start as an active offer, prove demand fast, then get systemized. If you already touch a niche, make a simple checklist, template pack, calculator, or done-for-you setup offer and sell it to a pain point people already pay to solve.\n\n- **Main risk/tradeoff:** The trap is **choosing a path that sounds passive but is actually a slow, capital-heavy grind** (rental property, dividend chasing, YouTube perfectionism, print-on-demand, etc.). Those often need money, time, or scale before they pay meaningful cash. The real tradeoff is speed vs. elegance: the fastest path is usually slightly ugly, manual, and narrowly focused at first.\n\n- **Next experiment:** Run a **7-day demand test**: pick one problem you can solve, create one landing page + one simple offer + one checkout link, and send it to 20\u201350 targeted people. Track only 3 numbers: clicks, replies, and preorders. If even a few people bite, that"
+      }
+    ]
+  },
+  {
+    "entry_id": "b30f7d5e-408c-4eff-ac4b-9787a565cc31",
+    "timestamp": "2026-05-10T03:11:17.612135+00:00",
+    "request": "Help me identify the strongest next path toward financial independence through passive income, leverage, and ROI-aware experimentation.",
+    "workflow": "wealth-and-leverage",
+    "agents": [
+      "black-panther",
+      "shuri",
+      "rocket"
+    ],
+    "focus_areas": [
+      "passive-income ideas",
+      "venture and opportunity triage",
+      "tooling and automation leverage",
+      "ROI-aware experimentation"
+    ],
+    "opportunity_theses": [
+      "1. **Micro digital product or template**",
+      "Best when you know a workflow others repeat.",
+      "Low build cost, high margin, easy to automate delivery.",
+      "Good fit for ROI-aware experimentation.",
+      "2. **Niche lead-gen asset**",
+      "Build a simple site for a boring, profitable service niche."
+    ],
+    "experiments_in_flight": [
+      "run a **2-week ROI test** on 3 ideas and force the numbers. For each, write: problem, buyer, price, distribution channel, and expected effort. Then validate with one of these: 1) a landing page + waitlist, 2) a pre-sell to 10 target users, or 3) a simple automation that saves time and charge for access. Pick the idea with the",
+      "run a **2-week ROI sprint** with 3 options in parallel:"
+    ],
+    "rejected_ideas": [],
+    "roi_lessons": [
+      "1. **Micro digital product or template**",
+      "Best when you know a workflow others repeat.",
+      "Fake passive income"
+    ],
+    "synthesis": "## Recommendation\nThe strongest next path is a **two-layer strategy**: preserve and automate your base capital, then build **one scalable cash-flow asset** with reusable leverage. In practice, that means:\n1. **Protect and compound** with automated saving/investing or debt payoff if your risk-free return is higher.\n2. **Create one narrow digital asset** tied to a problem you already understand: template, workflow, lead-gen page, micro-product, or tiny B2B tool.\n3. **Optimize for repeatability, not novelty**. The goal is not \u201cpassive\u201d in the fantasy sense; it is **low-touch, durable, and delegable** cash flow.\n\nIf you want the highest probability path to financial independence, avoid moonshots and choose the asset that can be tested fastest, sold simplest, and maintained cheapest.\n\n## Best Bets\n1. **Micro digital product or template**\n   - Best when you know a workflow others repeat.\n   - Low build cost, high margin, easy to automate delivery.\n   - Good fit for ROI-aware experimentation.\n\n2. **Niche lead-gen asset**\n   - Build a simple site for a boring, profitable service niche.\n   - Monetize via leads, referrals, or booked calls.\n   - Often faster to cash than a full product.\n\n3. **Productized service with SOPs**\n   - Start service-based, then standardize and delegate.\n   - Strong bridge from active income to leverage.\n   - Useful if you already have a skill buyers pay for.\n\n4. **Tiny B2B micro-SaaS or automation tool**\n   - Best if you can remove a recurring pain.\n   - Higher upside, but more build and support risk.\n   - Only pursue if you can validate demand first.\n\n5. **Acquire a small cash-flow asset**\n   - Neglected sites, content properties, or small online businesses.\n   - Strong if you can inspect churn, maintenance, and transferability.\n   - Usually better than speculative investing when diligence is solid.\n\n## Risks\n- **Fake passive income",
+    "participants": [
+      {
+        "agent_id": "black-panther",
+        "label": "Black Panther",
+        "title": "Finance Steward",
+        "response": "- **Best next path:** Build a **two-track engine**: protect your current income first, then funnel surplus into **high-probability, scalable assets**. That means (1) automate a strict savings/investing rate, and (2) run one leverage experiment that can create recurring or semi-passive cash flow\u2014ideally a **digital product, content asset, or service with templates/SOPs** that can later be delegated. This gives you compounding plus optionality, instead of just more active work.\n\n- **Main risk / tradeoff:** The trap is chasing \u201cpassive income\u201d that is really just **new active labor in disguise** or low-quality speculation. You want to avoid strategies that demand heavy management, high fees, or fragile assumptions. Also, every new experiment has an opportunity cost: if it distracts from margin, debt reduction, or index-fund consistency, it may slow freedom rather than speed it.\n\n- **Next experiment worth running:** Choose **one** ROI-aware test for 30 days:\n  1) List your current cash flows, fixed costs, debt, and investable surplus.  \n  2) Pick the highest-return use of surplus: **debt payoff if risk-free return beats alternatives**, otherwise **automatic"
+      },
+      {
+        "agent_id": "shuri",
+        "label": "Shuri",
+        "title": "Innovation Architect",
+        "response": "- **Best opportunity:** build a **small digital asset + automation flywheel** around something you already know well: one narrow problem, one paid solution, one repeatable acquisition channel. Think \u201ctemplate/productized workflow/micro-SaaS/content funnel\u201d rather than pure investing\u2014because it can create **passive-ish income plus reusable leverage**. Highest ROI path is usually: **solve a recurring pain, package it once, sell it many times**.\n\n- **Main tradeoff/risk:** the trap is chasing \u201cpassive income\u201d that\u2019s really just **busywork with prettier branding**. Anything that needs constant custom support, endless content, or heavy ad spend will eat the margin. The real risk is building something that looks scalable but has weak distribution; without a reliable channel, even a great asset stays a hobby.\n\n- **Next experiment:** run a **2-week ROI test** on 3 ideas and force the numbers. For each, write: problem, buyer, price, distribution channel, and expected effort. Then validate with one of these: 1) a landing page + waitlist, 2) a pre-sell to 10 target users, or 3) a simple automation that saves time and charge for access. Pick the idea with the"
+      },
+      {
+        "agent_id": "rocket",
+        "label": "Rocket",
+        "title": "Vendor Scout",
+        "response": "- **Best opportunity:** build or buy a **small, boring cash-flow asset with leverage**, not a moonshot. Fastest practical path is usually one of: **(a)** a niche content/lead-gen site that sells leads, **(b)** a tiny B2B micro-SaaS or template/productized service, or **(c)** buying a neglected cash-flowing asset from a retiring owner. The highest-ROI move is the one you can **validate in days, not months**\u2014find a painful niche problem, charge for it, and only then scale.\n\n- **Main risk/tradeoff:** \u201cpassive income\u201d is often just **active work wearing a fake mustache**. The trap is building something elegant that never gets distribution, or buying a deal with hidden churn, maintenance, or customer support drag. Financial independence comes from **cash flow + repeatability + low upkeep**; anything high-touch, trendy, or dependent on your personal attention is a weak asset, not leverage.\n\n- **Next experiment:** run a **2-week ROI sprint** with 3 options in parallel:  \n  1) **One lead-gen niche**: pick a boring service industry, build a one-page site, and test SEO/ads/partner outreach"
+      }
+    ]
+  },
+  {
+    "entry_id": "32b74775-2698-4e7c-9f91-8438732a275c",
+    "timestamp": "2026-05-10T03:11:32.279311+00:00",
+    "request": "Help me identify the strongest next path toward financial independence through passive income, leverage, and ROI-aware experimentation.",
+    "workflow": "wealth-and-leverage",
+    "agents": [
+      "black-panther",
+      "shuri",
+      "rocket"
+    ],
+    "focus_areas": [
+      "passive-income ideas",
+      "venture and opportunity triage",
+      "tooling and automation leverage",
+      "ROI-aware experimentation"
+    ],
+    "opportunity_theses": [
+      "Pursue a **cashflow-first, leverage-second** path: build one repeatable income engine that can be systematized, then funnel surplus into boring compounding assets. The strongest route is usually **a productized service or small digital asset with clear buyer pain**, because it can generate cash quickly, be automated, and create reusable leverage.",
+      "1. **Productized service** with templates, SOPs, and AI-assisted fulfillment.",
+      "2. **Small digital product** solving a narrow, expensive problem.",
+      "3. **Niche lead-gen asset** that can be sold or licensed.",
+      "4. **Micro-SaaS or internal tool** only if demand is already validated.",
+      "5. **Broad index investing** as the capital compounding layer, funded by surplus cash flow."
+    ],
+    "experiments_in_flight": [
+      "run a **30-day ROI sprint** with 3 small bets, each designed to answer",
+      "Pick **3 assets** and run a tiny ROI test on each:"
+    ],
+    "rejected_ideas": [
+      "The main risk is confusing **\u201cpassive\u201d with \u201clow effort.\u201d** Many high-ROI ideas are actually active businesses with hidden management burden, platform risk, or long validation cycles. Avoid anything that increases complexity before proof. If it cannot clearly improve **recurring revenue, asset value, or time saved**, it is probably a distraction."
+    ],
+    "roi_lessons": [
+      "1. **Productized service** with templates, SOPs, and AI-assisted fulfillment.",
+      "2. **Small digital product** solving a narrow, expensive problem.",
+      "The main risk is confusing **\u201cpassive\u201d with \u201clow effort.\u201d** Many high-ROI ideas are actually active businesses with hidden management burden, platform risk, or long validation cycles. Avoid anything that increases complexity before proof. If it cannot clearly improve **recurring revenue, asset value, or time saved**, it is probably a distraction."
+    ],
+    "synthesis": "## Recommendation\nPursue a **cashflow-first, leverage-second** path: build one repeatable income engine that can be systematized, then funnel surplus into boring compounding assets. The strongest route is usually **a productized service or small digital asset with clear buyer pain**, because it can generate cash quickly, be automated, and create reusable leverage.\n\n## Best Bets\n1. **Productized service** with templates, SOPs, and AI-assisted fulfillment.  \n2. **Small digital product** solving a narrow, expensive problem.  \n3. **Niche lead-gen asset** that can be sold or licensed.  \n4. **Micro-SaaS or internal tool** only if demand is already validated.  \n5. **Broad index investing** as the capital compounding layer, funded by surplus cash flow.\n\n## Risks\nThe main risk is confusing **\u201cpassive\u201d with \u201clow effort.\u201d** Many high-ROI ideas are actually active businesses with hidden management burden, platform risk, or long validation cycles. Avoid anything that increases complexity before proof. If it cannot clearly improve **recurring revenue, asset value, or time saved**, it is probably a distraction.\n\n## Next Experiment\nRun a **30-day ROI sprint** with one hard constraint: **limited cash, limited time, clear metrics**. Choose **3 small bets**:\n- one lead-gen concept,\n- one digital product,\n- one automation/tooling idea.\n\nFor each, test:\n- demand signal,\n- time required,\n- first dollar potential,\n- path to repetition.\n\nKill the losers quickly. Double down only on the one with the best **payback loop** and lowest maintenance burden.",
+    "participants": [
+      {
+        "agent_id": "black-panther",
+        "label": "Black Panther",
+        "title": "Finance Steward",
+        "response": "- **Best next path:** build a **cash-flow-first base + one leverage engine**. Keep emergency reserves, kill any high-interest debt, and automate a fixed monthly \u201ccapital stack\u201d into broad index funds or other low-maintenance assets. In parallel, pick **one scalable income experiment** you can systematize: digital product, niche service with templates, or a content-to-offer funnel. The goal is not just more income\u2014it\u2019s **decoupling earnings from hours**.\n\n- **Main risk / tradeoff:** the temptation to chase \u201cpassive income\u201d that is actually **active work disguised as investing**. Rental deals, trading, crypto, and complex businesses can look high-ROI but often add leverage, volatility, and hidden time costs. Stewardship rule: if it increases monthly obligations, management burden, or downside asymmetry, it may reduce freedom even if the headline return looks attractive.\n\n- **Next experiment worth running:** choose **one 30-day ROI test** with a hard cap on time and cash. Example: validate a small digital asset or lead-gen offer\u2014spend <$200, 10 focused hours, and measure one metric: qualified leads, conversion rate, or first $ earned. If it shows traction, double down and productize"
+      },
+      {
+        "agent_id": "shuri",
+        "label": "Shuri",
+        "title": "Innovation Architect",
+        "response": "- **Best opportunity:** build a **two-lane asset engine**: (1) a high-cashflow, repeatable service or digital offer that can be systematized, and (2) funnel every surplus dollar into **broad, boring compounding assets**. For financial independence, the fastest path is usually **cashflow first, then automation, then investing**\u2014not hunting a magical passive income unicorn. The leverage move is to create something you can sell repeatedly with the same core effort: templates, a niche service, a paid newsletter, a micro-SaaS, or an AI-assisted productized service.\n\n- **Main risk / tradeoff:** the trap is confusing **\u201cscalable\u201d with \u201ceasy\u201d**. Most passive-income ideas are either undercapitalized, too early, or too content-heavy to produce real ROI. Your real tradeoff is **short-term effort vs. long-term compounding**: high-upside experiments can distract from cash generation if you don\u2019t measure them tightly. If an experiment can\u2019t show a clear path to either recurring revenue, asset value, or time saved, it\u2019s probably vanity, not leverage.\n\n- **Next experiment:** run a **30-day ROI sprint** with 3 small bets, each designed to answer"
+      },
+      {
+        "agent_id": "rocket",
+        "label": "Rocket",
+        "title": "Vendor Scout",
+        "response": "- **Best opportunity:** Build or buy a **boring, cash-flowing micro-asset** you can source cheaply and systematize fast: think **niche service lead-gen, tiny content/property-like digital assets, or a small B2B tool with clear ROI**. The strongest path is usually **one asset with a measurable payback loop**\u2014something that can be sold, licensed, or automated. Don\u2019t chase \u201cpassive\u201d first; chase **repeatable margin + low maintenance**, then automate. If you can validate demand in 7\u201314 days, that\u2019s your lane.\n\n- **Main risk/tradeoff:** The trap is **high-upfront effort for uncertain upside**\u2014most \u201cpassive income\u201d ideas are just disguised jobs, and most \u201cleveraged\u201d ideas are overbuilt before proof. Also, anything with real returns will have **execution risk, platform risk, and mediocre data**. Your edge is not perfect analysis; it\u2019s **cheap experimentation and ruthless kill decisions**.\n\n- **Next experiment:** Pick **3 assets** and run a tiny ROI test on each:  \n  1) **Lead-gen site** for a high-ticket local niche,  \n  2) **Small digital product/template** for a painful B"
+      }
+    ]
+  }
+]

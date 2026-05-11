@@ -1,0 +1,9 @@
+{
+  "capture_id": "78889fe0-c019-44bb-be72-95ee210b1b3d",
+  "actor": "Chris",
+  "camera_label": "USB Camera (0c45:632e)",
+  "prompt": "Calibrate based on this ruler",
+  "image_path": "data/vision/captures/78889fe0-c019-44bb-be72-95ee210b1b3d.jpg",
+  "created_at": "2026-05-10T03:50:46.731523+00:00",
+  "analysis": "Use the ruler in this frame as a rough scale reference:\n\n- **Visible ruler span:** about **34 cm** across the image\n- **Estimated horizontal scale:** roughly **19 pixels per cm**  \n  - equivalently, **~1 pixel = 0.053 cm = 0.53 mm**\n\nThis is approximate because the ruler is slightly angled and partially perspective-distorted. If you want, I can also estimate **mm-per-pixel at a specific point** in the image."
+}

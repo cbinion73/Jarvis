@@ -21,5 +21,37 @@
     ],
     "raw_output": "Recommendation:\nAdopt a **manual-safe meeting follow-up workflow** inside JARVIS that drafts next steps from the strategy meeting, then pauses for your approval before anything is sent or scheduled.\n\nReasoning:\nThe signal is modest but useful: follow-up work after strategy meetings tends to drift into either forgotten tasks or overconfident automation. The strongest opportunity here is not to \u201cdo more,\u201d but to **reduce friction while preserving control**.\n\nA personal-safe workflow should:\n1. Capture the meeting\u2019s decisions, open questions, and owners.\n2. Draft a concise follow-up note with proposed next steps.\n3. Present it to you for review.\n4. Only after approval, prepare any downstream actions.\n\nThis is the sort of task where a steward should be helpful, not presumptuous. Automation that drafts is useful; automation that decides is how one ends up apologizing to three people and a calendar.\n\nConfidence:\nHigh. The signal is clear, low-risk, and well matched to a draft-only workflow.\n\nAction Items:\n1. Use a simple template for each strategy meeting:\n   - Decisions\n   - Open questions\n   - Action items\n   - Owner\n   - Due date\n2. Ask JARVIS to produce a draft follow-up summary after the meeting.\n3. Review and approve before any message is sent or any calendar/task update is made.\n4. If you want, I can help you define the exact template for \u201cstrategy meeting follow-up\u201d next.",
     "timestamp": "2026-05-07T04:15:07.637452+00:00"
+  },
+  {
+    "run_id": "a338f0cc-e46f-4556-896c-4ecd1c81fd17",
+    "actor": "Chris",
+    "signal_count": 4,
+    "open_commitments": 0,
+    "overdue_count": 0,
+    "recommendation": "Prioritize the Friday agenda decision first. Confirm whether the strategy block should move to Friday afternoon, and identify exactly who must review the deck before it is locked. The personal-safe follow-up workflow can be drafted afterward; a meeting cannot be unfumbled after the fact, though it does try.",
+    "reasoning": "The strongest live signal is time-sensitive and externally consequential: someone is waiting for a decision by tomorrow noon. The follow-up workflow idea is useful, but it is preparatory rather than urgent. Keeping Catalyst personal and connector-honest means we should not over-automate judgment, only support it.",
+    "confidence": 0.68,
+    "action_items": [
+      "Confirm whether Friday afternoon is the correct slot for the strategy block.",
+      "Identify the reviewers for the deck before then.",
+      "Prepare a short, personal-safe follow-up template for post-strategy next steps once the agenda decision is settled."
+    ],
+    "raw_output": "Recommendation:\nPrioritize the Friday agenda decision first. Confirm whether the strategy block should move to Friday afternoon, and identify exactly who must review the deck before it is locked. The personal-safe follow-up workflow can be drafted afterward; a meeting cannot be unfumbled after the fact, though it does try.\n\nReasoning:\nThe strongest live signal is time-sensitive and externally consequential: someone is waiting for a decision by tomorrow noon. The follow-up workflow idea is useful, but it is preparatory rather than urgent. Keeping Catalyst personal and connector-honest means we should not over-automate judgment, only support it.\n\nConfidence:\nHigh. The agenda request is explicit, dated, and has a deadline. The workflow item is real, but secondary.\n\nAction Items:\nConfirm whether Friday afternoon is the correct slot for the strategy block.\nIdentify the reviewers for the deck before then.\nPrepare a short, personal-safe follow-up template for post-strategy next steps once the agenda decision is settled.",
+    "timestamp": "2026-05-10T01:34:38.876000+00:00"
+  },
+  {
+    "run_id": "9e9d9d32-2b24-43ef-b1ed-ecb6ac423b3c",
+    "actor": "Chris",
+    "signal_count": 4,
+    "open_commitments": 0,
+    "overdue_count": 0,
+    "recommendation": "Sir, prioritize the cashflow-first path and run the 30-day ROI sprint around one productized service. It is the cleanest route to prove demand, generate near-term revenue, and avoid the usual hobbyist tax paid by ambitious but unprofitable ideas.",
+    "reasoning": "The strongest signal is repeated and practical: build a repeatable income engine, then direct surplus into boring compounding assets. Of the active lanes, a productized service has the best mix of speed, buyer pain, and systematization. The email on Friday agenda is a separate but immediate coordination issue; it is low drama, but it does require a decision before someone helpfully locks the calendar into reality.",
+    "confidence": 0.68,
+    "action_items": [
+      "Confirm the Friday agenda move and identify the deck reviewers by tomorrow noon. Then choose one productized service concept for the 30-day sprint and define the three tests around demand, fulfillment speed, and willingness to pay."
+    ],
+    "raw_output": "Recommendation: Sir, prioritize the cashflow-first path and run the 30-day ROI sprint around one productized service. It is the cleanest route to prove demand, generate near-term revenue, and avoid the usual hobbyist tax paid by ambitious but unprofitable ideas.\n\nReasoning: The strongest signal is repeated and practical: build a repeatable income engine, then direct surplus into boring compounding assets. Of the active lanes, a productized service has the best mix of speed, buyer pain, and systematization. The email on Friday agenda is a separate but immediate coordination issue; it is low drama, but it does require a decision before someone helpfully locks the calendar into reality.\n\nConfidence: High on the strategic direction, moderate on the exact vehicle. The evidence favors cashflow before leverage, though the best niche still needs validation rather than noble speculation.\n\nAction Items: Confirm the Friday agenda move and identify the deck reviewers by tomorrow noon. Then choose one productized service concept for the 30-day sprint and define the three tests around demand, fulfillment speed, and willingness to pay.",
+    "timestamp": "2026-05-11T04:15:47.064851+00:00"
   }
 ]

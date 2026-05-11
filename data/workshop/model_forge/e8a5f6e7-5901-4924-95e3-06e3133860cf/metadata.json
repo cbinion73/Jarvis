@@ -1,0 +1,43 @@
+{
+  "package_id": "e8a5f6e7-5901-4924-95e3-06e3133860cf",
+  "part_name": "Sensor enclosure",
+  "actor": "Chris",
+  "summary": "Sir, a straightforward two-piece electronics enclosure: outer shell with 3 mm walls, a 2 mm lid lip for registration, and conservative internal clearance. I have kept the geometry simple and parameter-driven, because elegance is often just restraint with better manners.",
+  "parameters": [
+    "length = 120;",
+    "width = 80;",
+    "height = 45;",
+    "wall = 3;",
+    "lip = 2;",
+    "lid_clearance = 0.3;",
+    "corner_r = 4;",
+    "base_inner_h = height - wall - lip;",
+    "base_outer_h = height;",
+    "lid_thickness = 3;",
+    "lid_top_thickness = 3;",
+    "lid_overhang = 0.8;",
+    "screw_post_od = 8;",
+    "screw_post_id = 3.2;",
+    "screw_post_h = base_inner_h - 2;",
+    "standoff_od = 6;",
+    "standoff_id = 2.8;",
+    "standoff_h = 6;",
+    "hole_edge_offset = 12;"
+  ],
+  "fit_checks": [
+    "Confirm hole spacing on the Sensor enclosure.",
+    "Check fastener clearance and wrench access.",
+    "Verify drain path does not weaken the load path."
+  ],
+  "artifact_dir": "data/workshop/model_forge/e8a5f6e7-5901-4924-95e3-06e3133860cf",
+  "script_path": "data/workshop/model_forge/e8a5f6e7-5901-4924-95e3-06e3133860cf/model.scad",
+  "cadquery_script_path": "data/workshop/model_forge/e8a5f6e7-5901-4924-95e3-06e3133860cf/model_cadquery.py",
+  "model_path": "data/workshop/model_forge/e8a5f6e7-5901-4924-95e3-06e3133860cf/sensor-enclosure.stl",
+  "step_path": "data/workshop/model_forge/e8a5f6e7-5901-4924-95e3-06e3133860cf/sensor-enclosure.step",
+  "mesh_3mf_path": "data/workshop/model_forge/e8a5f6e7-5901-4924-95e3-06e3133860cf/sensor-enclosure.3mf",
+  "slicer_pack_dir": "data/workshop/model_forge/e8a5f6e7-5901-4924-95e3-06e3133860cf/slicer_pack",
+  "export_status": "cadquery-enclosure",
+  "export_detail": "Exported CadQuery enclosure assets as STL, STEP, and 3MF, then assembled a slicer pack for creality-k2-pro-combo using the enclosure-balanced profile.",
+  "export_engine": "cadquery",
+  "timestamp": "2026-05-10T04:34:01.034278+00:00"
+}

@@ -1,0 +1,96 @@
+[
+  {
+    "run_id": "dfd91541-f391-49b0-afe5-ac65ff6838b6",
+    "actor": "Chris",
+    "topic": "Markets, geopolitics, trade",
+    "channel": "YouTube",
+    "context": "Compile today's intelligence report.",
+    "options": [
+      {
+        "option_id": "dcdccccf-6249-4161-af58-e52b59649901",
+        "topic": "Markets, geopolitics, trade",
+        "channel": "YouTube",
+        "title": "Today\u2019s Market Map: What Geopolitics Is Pricing In",
+        "hook": "Markets are not reacting to headlines\u2014they\u2019re repricing risk in real time.",
+        "angle": "Frame today\u2019s intelligence report around the three forces moving capital now: tariffs/trade friction, conflict risk, and policy surprises. Show how each one is hitting equities, rates, commodities, and FX.",
+        "notes": "Best as a concise anchor video with a clear visual dashboard. Use a before/after market reaction structure and end with the one risk traders may be underestimating."
+      },
+      {
+        "option_id": "d0f16f5d-cd72-4a30-8163-03b42e684c50",
+        "topic": "Markets, geopolitics, trade",
+        "channel": "YouTube",
+        "title": "Trade War Signals: The Hidden Market Winners and Losers",
+        "hook": "Every trade headline creates a winner before the press conference ends.",
+        "angle": "Focus on the second-order market effects of trade conflict: sectors that benefit from reshoring, industrial policy, and supply chain rerouting versus those exposed to import costs and slower global growth.",
+        "notes": "Strong for YouTube if paired with a country-and-sector scoreboard. Keep it practical, not theoretical; name the markets that are moving and why."
+      },
+      {
+        "option_id": "829ea62a-42f3-462e-9ec7-d7c97e2ba801",
+        "topic": "Markets, geopolitics, trade",
+        "channel": "YouTube",
+        "title": "Geopolitical Flashpoints That Could Move Markets This Week",
+        "hook": "The biggest market move this week may come from a headline nobody is watching yet.",
+        "angle": "Deliver a short intelligence brief on the top geopolitical pressure points with direct market transmission paths: energy, shipping, semiconductors, and defense spending.",
+        "notes": "Use a countdown format to create urgency. Make each flashpoint actionable by linking it to a specific asset class reaction."
+      },
+      {
+        "option_id": "a2442538-c5ea-4309-9be5-af11c48debff",
+        "topic": "Markets, geopolitics, trade",
+        "channel": "YouTube",
+        "title": "The New Market Order: Why Trade Is Now a Macro Story",
+        "hook": "Trade is no longer just an economic issue\u2014it is the market story.",
+        "angle": "Position today\u2019s report as a macro thesis: geopolitics, industrial policy, and deglobalization are reshaping inflation, growth, and valuations. Explain how investors should think about regime change, not just daily volatility.",
+        "notes": "Best for a thought-leadership style YouTube piece. Sharp, analytical, and forward-looking. End with a clear takeaway on what changes in portfolio positioning when trade becomes geopolitics."
+      }
+    ],
+    "raw_output": "{\"options\":[{\"title\":\"Today\u2019s Market Map: What Geopolitics Is Pricing In\",\"hook\":\"Markets are not reacting to headlines\u2014they\u2019re repricing risk in real time.\",\"angle\":\"Frame today\u2019s intelligence report around the three forces moving capital now: tariffs/trade friction, conflict risk, and policy surprises. Show how each one is hitting equities, rates, commodities, and FX.\",\"notes\":\"Best as a concise anchor video with a clear visual dashboard. Use a before/after market reaction structure and end with the one risk traders may be underestimating.\"},{\"title\":\"Trade War Signals: The Hidden Market Winners and Losers\",\"hook\":\"Every trade headline creates a winner before the press conference ends.\",\"angle\":\"Focus on the second-order market effects of trade conflict: sectors that benefit from reshoring, industrial policy, and supply chain rerouting versus those exposed to import costs and slower global growth.\",\"notes\":\"Strong for YouTube if paired with a country-and-sector scoreboard. Keep it practical, not theoretical; name the markets that are moving and why.\"},{\"title\":\"Geopolitical Flashpoints That Could Move Markets This Week\",\"hook\":\"The biggest market move this week may come from a headline nobody is watching yet.\",\"angle\":\"Deliver a short intelligence brief on the top geopolitical pressure points with direct market transmission paths: energy, shipping, semiconductors, and defense spending.\",\"notes\":\"Use a countdown format to create urgency. Make each flashpoint actionable by linking it to a specific asset class reaction.\"},{\"title\":\"The New Market Order: Why Trade Is Now a Macro Story\",\"hook\":\"Trade is no longer just an economic issue\u2014it is the market story.\",\"angle\":\"Position today\u2019s report as a macro thesis: geopolitics, industrial policy, and deglobalization are reshaping inflation, growth, and valuations. Explain how investors should think about regime change, not just daily volatility.\",\"notes\":\"Best for a thought-leadership style YouTube piece. Sharp, analytical, and forward-looking. End with a clear takeaway on what changes in portfolio positioning when trade becomes geopolitics.\"}]}",
+    "timestamp": "2026-05-10T02:39:32.935622+00:00"
+  },
+  {
+    "run_id": "9e0c1021-7e74-434d-ad08-efa41e4bf9a2",
+    "actor": "Chris",
+    "topic": "Markets, geopolitics, trade",
+    "channel": "YouTube",
+    "context": "Compile today's intelligence report.",
+    "options": [
+      {
+        "option_id": "687c214e-11fa-4fb2-8791-06d948f94513",
+        "topic": "Markets, geopolitics, trade",
+        "channel": "YouTube",
+        "title": "Today\u2019s Market Map: What Geopolitics Is Quietly Pricing In",
+        "hook": "The biggest market moves today may be coming from headlines investors are still underreacting to.",
+        "angle": "Frame the report around how trade friction, regional flashpoints, and policy signaling are rippling through rates, commodities, defense, shipping, and semis.",
+        "notes": "Best if Chris wants a sober, analyst-style briefing with clear asset-class implications and a calm delivery."
+      },
+      {
+        "option_id": "7e049f86-d17a-4dc9-8110-cd7ee20c9864",
+        "topic": "Markets, geopolitics, trade",
+        "channel": "YouTube",
+        "title": "Trade Tensions Are Back: Who Wins, Who Gets Hit First",
+        "hook": "If trade gets more restricted, the first damage won\u2019t be political\u2014it\u2019ll show up in margins, inventories, and guidance.",
+        "angle": "Focus on the supply chain winners and losers from tariffs, export controls, and friend-shoring, with attention on China, Mexico, Europe, and key industrial sectors.",
+        "notes": "Good for a more punchy YouTube explainer that translates geopolitics into stock-market consequences."
+      },
+      {
+        "option_id": "f94e15e8-813d-444e-9848-27a89cfcf77b",
+        "topic": "Markets, geopolitics, trade",
+        "channel": "YouTube",
+        "title": "The New Geopolitical Premium: Why Volatility Feels Different Now",
+        "hook": "Markets aren\u2019t just reacting to bad news\u2014they\u2019re repricing a world where shocks arrive faster and last longer.",
+        "angle": "Position this as a structural shift in risk: higher term premium, more commodity sensitivity, defense outperformance, and persistent policy uncertainty.",
+        "notes": "Strong option if the goal is a macro narrative that connects markets, central banks, and global instability."
+      },
+      {
+        "option_id": "25e2625a-d817-4c1a-930d-5078c60e4672",
+        "topic": "Markets, geopolitics, trade",
+        "channel": "YouTube",
+        "title": "3 Signals Traders Are Watching Before the Next Macro Shock",
+        "hook": "The smartest money isn\u2019t asking what happened\u2014it\u2019s watching these three signals to see what breaks next.",
+        "angle": "Build the report around a tight checklist: shipping lanes and freight rates, energy price pressure, and cross-border policy moves that could trigger rotation.",
+        "notes": "Ideal for a fast-paced, highly clickable format with a practical framework and clear watchlist."
+      }
+    ],
+    "raw_output": "{\"options\":[{\"title\":\"Today\u2019s Market Map: What Geopolitics Is Quietly Pricing In\",\"hook\":\"The biggest market moves today may be coming from headlines investors are still underreacting to.\",\"angle\":\"Frame the report around how trade friction, regional flashpoints, and policy signaling are rippling through rates, commodities, defense, shipping, and semis.\",\"notes\":\"Best if Chris wants a sober, analyst-style briefing with clear asset-class implications and a calm delivery.\"},{\"title\":\"Trade Tensions Are Back: Who Wins, Who Gets Hit First\",\"hook\":\"If trade gets more restricted, the first damage won\u2019t be political\u2014it\u2019ll show up in margins, inventories, and guidance.\",\"angle\":\"Focus on the supply chain winners and losers from tariffs, export controls, and friend-shoring, with attention on China, Mexico, Europe, and key industrial sectors.\",\"notes\":\"Good for a more punchy YouTube explainer that translates geopolitics into stock-market consequences.\"},{\"title\":\"The New Geopolitical Premium: Why Volatility Feels Different Now\",\"hook\":\"Markets aren\u2019t just reacting to bad news\u2014they\u2019re repricing a world where shocks arrive faster and last longer.\",\"angle\":\"Position this as a structural shift in risk: higher term premium, more commodity sensitivity, defense outperformance, and persistent policy uncertainty.\",\"notes\":\"Strong option if the goal is a macro narrative that connects markets, central banks, and global instability.\"},{\"title\":\"3 Signals Traders Are Watching Before the Next Macro Shock\",\"hook\":\"The smartest money isn\u2019t asking what happened\u2014it\u2019s watching these three signals to see what breaks next.\",\"angle\":\"Build the report around a tight checklist: shipping lanes and freight rates, energy price pressure, and cross-border policy moves that could trigger rotation.\",\"notes\":\"Ideal for a fast-paced, highly clickable format with a practical framework and clear watchlist.\"}]}",
+    "timestamp": "2026-05-10T03:13:19.261651+00:00"
+  }
+]

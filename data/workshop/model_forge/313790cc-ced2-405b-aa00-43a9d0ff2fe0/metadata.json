@@ -1,0 +1,33 @@
+{
+  "package_id": "313790cc-ced2-405b-aa00-43a9d0ff2fe0",
+  "part_name": "Monitor mount plate",
+  "actor": "Chris",
+  "summary": "Sir, here is a rough parameter-driven OpenSCAD starter for a simple desk monitor mount plate prototype. I have kept it intentionally plain and adjustable, because fabrication surprises are rarely charming.",
+  "parameters": [
+    "part_name = \"monitor_mount_plate\";",
+    "length = 90;",
+    "width = 45;",
+    "thickness = 6;",
+    "hole_spacing = 60;",
+    "hole_diameter = 6;",
+    "riser_height = 22;",
+    "Derived assumptions:",
+    "center_to_hole = hole_spacing / 2;",
+    "edge_margin_length = (length - hole_spacing) / 2;",
+    "plate_center = [length / 2, width / 2];"
+  ],
+  "fit_checks": [
+    "Hole centers land at x = 15 mm and x = 75 mm, with y = 22.5 mm, which gives the requested 60 mm spacing and decent symmetry. Edge margin along the length is 15 mm per side, which is sensible for a prototype, though I would not ask it to audition for a structural award without a proper load path. The riser is a crude vertical block at the rear edge; it is suitable as a rough placeholder, but you will likely want to replace it with a true angled support or fastener interface once the mounting method is confirmed."
+  ],
+  "artifact_dir": "data/workshop/model_forge/313790cc-ced2-405b-aa00-43a9d0ff2fe0",
+  "script_path": "data/workshop/model_forge/313790cc-ced2-405b-aa00-43a9d0ff2fe0/model.scad",
+  "cadquery_script_path": "data/workshop/model_forge/313790cc-ced2-405b-aa00-43a9d0ff2fe0/model_cadquery.py",
+  "model_path": "data/workshop/model_forge/313790cc-ced2-405b-aa00-43a9d0ff2fe0/monitor-mount-plate.stl",
+  "step_path": "data/workshop/model_forge/313790cc-ced2-405b-aa00-43a9d0ff2fe0/monitor-mount-plate.step",
+  "mesh_3mf_path": "data/workshop/model_forge/313790cc-ced2-405b-aa00-43a9d0ff2fe0/monitor-mount-plate.3mf",
+  "slicer_pack_dir": "data/workshop/model_forge/313790cc-ced2-405b-aa00-43a9d0ff2fe0/slicer_pack",
+  "export_status": "cadquery-mount",
+  "export_detail": "Exported CadQuery mount assets as STL, STEP, and 3MF, then assembled a slicer pack for creality-k2-pro-combo using the functional-prototype profile.",
+  "export_engine": "cadquery",
+  "timestamp": "2026-05-10T04:34:25.788479+00:00"
+}

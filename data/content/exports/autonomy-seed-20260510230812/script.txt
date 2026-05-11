@@ -1,0 +1,1 @@
+This is a seeded verification package for safe assistant export.

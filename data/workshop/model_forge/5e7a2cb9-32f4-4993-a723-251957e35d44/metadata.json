@@ -1,0 +1,40 @@
+{
+  "package_id": "5e7a2cb9-32f4-4993-a723-251957e35d44",
+  "part_name": "Garden bench bracket",
+  "actor": "Chris",
+  "summary": "Sir, this is a rough parameter-driven bracket concept for later refinement. I have preserved the mounting hole spacing, kept the plate narrow at 30 mm, respected the 8 mm thickness, and added drainage and softened corners so the part is less keen to fail in a damp garden with unrealistic optimism.",
+  "parameters": [
+    "part_name = \"garden_bench_bracket\"",
+    "hole_spacing = 150;",
+    "plate_width = 30;",
+    "thickness = 8;",
+    "bend_radius = 12;",
+    "hole_diameter = 9; // assume M8 clearance; revise as needed",
+    "end_margin = 15; // conservative default for edge distance",
+    "corner_radius = 4; // softened external corners",
+    "drain_hole_diameter = 6;",
+    "drain_offset_from_bend = 18;",
+    "flange_length = 45; // placeholder for hand refinement",
+    "leg_length = 45; // placeholder for hand refinement",
+    "sheet_length = hole_spacing + 2*end_margin;"
+  ],
+  "fit_checks": [
+    "Hole spacing is held at 150 mm centre-to-centre. Plate width remains 30 mm, so edge distance is tight if the holes are large; for M8 clearance, 15 mm margins are workable but not generous. Bend radius of 12 mm is sensible against an 8 mm sheet, though the actual formed geometry still needs material-specific allowance.",
+    "The drainage hole is intentionally offset from the main fasteners so it does not weaken the critical mounting region. External corners are softened through the rounded outline, which is the polite engineering version of \u201cless stress, fewer cracks.\u201d If you want, I can tighten this into a proper folded L-bracket or convert it into a laser-cut flat pattern with bend allowances."
+  ],
+  "family": "bracket",
+  "artifact_dir": "data/workshop/model_forge/5e7a2cb9-32f4-4993-a723-251957e35d44",
+  "script_path": "data/workshop/model_forge/5e7a2cb9-32f4-4993-a723-251957e35d44/model.scad",
+  "cadquery_script_path": "data/workshop/model_forge/5e7a2cb9-32f4-4993-a723-251957e35d44/model_cadquery.py",
+  "model_path": "data/workshop/model_forge/5e7a2cb9-32f4-4993-a723-251957e35d44/garden-bench-bracket.stl",
+  "step_path": "data/workshop/model_forge/5e7a2cb9-32f4-4993-a723-251957e35d44/garden-bench-bracket.step",
+  "mesh_3mf_path": "data/workshop/model_forge/5e7a2cb9-32f4-4993-a723-251957e35d44/garden-bench-bracket.3mf",
+  "slicer_pack_dir": "data/workshop/model_forge/5e7a2cb9-32f4-4993-a723-251957e35d44/slicer_pack",
+  "printer_id": "creality-k2-pro-combo",
+  "profile_name": "fit-check-fast",
+  "material": "PETG-CF",
+  "export_status": "cadquery-bracket",
+  "export_detail": "Exported CadQuery bracket assets as STL, STEP, and 3MF, then assembled a slicer pack for creality-k2-pro-combo using the fit-check-fast profile.",
+  "export_engine": "cadquery",
+  "timestamp": "2026-05-10T05:14:00.240576+00:00"
+}

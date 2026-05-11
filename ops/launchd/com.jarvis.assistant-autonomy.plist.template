@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.jarvis.assistant-autonomy</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/ABSOLUTE/PATH/TO/JARVIS/.venv/bin/python</string>
+      <string>-m</string>
+      <string>jarvis</string>
+      <string>assistant-autonomy-daemon</string>
+      <string>--interval-seconds</string>
+      <string>600</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/ABSOLUTE/PATH/TO/JARVIS</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>PATH</key>
+      <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+      <key>JARVIS_SERVICE_ROLE</key>
+      <string>assistant-autonomy</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <dict>
+      <key>SuccessfulExit</key>
+      <false/>
+    </dict>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>StandardOutPath</key>
+    <string>/ABSOLUTE/PATH/TO/JARVIS/data/logs/jarvis-assistant-autonomy.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/ABSOLUTE/PATH/TO/JARVIS/data/logs/jarvis-assistant-autonomy.stderr.log</string>
+  </dict>
+</plist>

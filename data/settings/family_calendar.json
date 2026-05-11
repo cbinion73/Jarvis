@@ -1,0 +1,5 @@
+{
+  "label": "Cozi Family Calendar",
+  "source": "cozi",
+  "ics_url": "https://rest.cozi.com/api/ext/1103/97b13a23-edc9-4c5f-9fa9-4ad4f6a3857a/icalendar/feed/feed.ics"
+}

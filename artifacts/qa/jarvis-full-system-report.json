@@ -1,0 +1,636 @@
+{
+  "started_at": "2026-05-11T04:28:54.929Z",
+  "base_url": "http://127.0.0.1:8787",
+  "checks": [
+    {
+      "name": "Health endpoint is healthy",
+      "status": "passed",
+      "details": null,
+      "screenshot": null,
+      "kind": "automated",
+      "classification": "product",
+      "duration_ms": 58
+    },
+    {
+      "name": "Root shell responds",
+      "status": "passed",
+      "details": null,
+      "screenshot": null,
+      "kind": "automated",
+      "classification": "product",
+      "duration_ms": 3
+    },
+    {
+      "name": "/api/dashboard API was slow but passed",
+      "status": "warning",
+      "details": "/api/dashboard responded in 40224ms (warn threshold 12000ms).",
+      "screenshot": null,
+      "kind": "automated",
+      "classification": "latency_budget",
+      "related_check": "/api/dashboard"
+    },
+    {
+      "name": "Primary dashboard endpoint has expected shape",
+      "status": "passed",
+      "details": null,
+      "screenshot": null,
+      "kind": "automated",
+      "classification": "product",
+      "duration_ms": 40225
+    },
+    {
+      "name": "/api/dashboard?actor=Caleb API was slow but passed",
+      "status": "warning",
+      "details": "/api/dashboard?actor=Caleb responded in 39969ms (warn threshold 12000ms).",
+      "screenshot": null,
+      "kind": "automated",
+      "classification": "latency_budget",
+      "related_check": "/api/dashboard?actor=Caleb"
+    },
+    {
+      "name": "Actor-aware dashboard endpoint has expected shape",
+      "status": "passed",
+      "details": null,
+      "screenshot": null,
+      "kind": "automated",
+      "classification": "product",
+      "duration_ms": 39971
+    },
+    {
+      "name": "/api/assistant-core/tick API was slow but passed",
+      "status": "warning",
+      "details": "/api/assistant-core/tick responded in 12117ms (warn threshold 2500ms).",
+      "screenshot": null,
+      "kind": "automated",
+      "classification": "latency_budget",
+      "related_check": "/api/assistant-core/tick"
+    },
+    {
+      "name": "/api/merged-calendar API was slow but passed",
+      "status": "warning",
+      "details": "/api/merged-calendar responded in 2564ms (warn threshold 2500ms).",
+      "screenshot": null,
+      "kind": "automated",
+      "classification": "latency_budget",
+      "related_check": "/api/merged-calendar"
+    },
+    {
+      "name": "Operational platform endpoints have expected shape",
+      "status": "passed",
+      "details": null,
+      "screenshot": null,
+      "kind": "automated",
+      "classification": "product",
+      "duration_ms": 23136
+    },
+    {
+      "name": "/api/today-board?actor=Chris API was slow but passed",
+      "status": "warning",
+      "details": "/api/today-board?actor=Chris responded in 12313ms (warn threshold 8000ms).",
+      "screenshot": null,
+      "kind": "automated",
+      "classification": "latency_budget",
+      "related_check": "/api/today-board?actor=Chris"
+    },
+    {
+      "name": "/api/cadence-review?actor=Chris API was slow but passed",
+      "status": "warning",
+      "details": "/api/cadence-review?actor=Chris responded in 11260ms (warn threshold 8000ms).",
+      "screenshot": null,
+      "kind": "automated",
+      "classification": "latency_budget",
+      "related_check": "/api/cadence-review?actor=Chris"
+    },
+    {
+      "name": "Cognitive platform endpoints have expected shape",
+      "status": "passed",
+      "details": null,
+      "screenshot": null,
+      "kind": "automated",
+      "classification": "product",
+      "duration_ms": 35827
+    },
+    {
+      "name": "/api/first-light?actor=Chris&force=true API was slow but passed",
+      "status": "warning",
+      "details": "/api/first-light?actor=Chris&force=true responded in 28238ms (warn threshold 15000ms).",
+      "screenshot": null,
+      "kind": "automated",
+      "classification": "latency_budget",
+      "related_check": "/api/first-light?actor=Chris&force=true"
+    },
+    {
+      "name": "First Light and persona APIs respond",
+      "status": "passed",
+      "details": null,
+      "screenshot": null,
+      "kind": "automated",
+      "classification": "product",
+      "duration_ms": 29557
+    },
+    {
+      "name": "/api/assistant-core/background-run API was slow but passed",
+      "status": "warning",
+      "details": "/api/assistant-core/background-run responded in 23321ms (warn threshold 12000ms).",
+      "screenshot": null,
+      "kind": "automated",
+      "classification": "latency_budget",
+      "related_check": "/api/assistant-core/background-run"
+    },
+    {
+      "name": "Assistant background autonomy run responds",
+      "status": "passed",
+      "details": null,
+      "screenshot": null,
+      "kind": "automated",
+      "classification": "product",
+      "duration_ms": 23321
+    },
+    {
+      "name": "TTS endpoint returns downloadable audio",
+      "status": "passed",
+      "details": null,
+      "screenshot": null,
+      "kind": "automated",
+      "classification": "product",
+      "duration_ms": 2113
+    },
+    {
+      "name": "Live Home Assistant action checks",
+      "status": "skipped",
+      "details": "Home Assistant not ready: Home Assistant is not connected.",
+      "screenshot": null,
+      "kind": "automated",
+      "classification": "environment"
+    },
+    {
+      "name": "Voice shell loads and stays interactive",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/full-system-home-shell.png",
+      "kind": "automated",
+      "classification": "product",
+      "duration_ms": 2082
+    },
+    {
+      "name": "Packet rail expands with current packet set",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/full-system-packet-strip.png",
+      "kind": "automated",
+      "classification": "product",
+      "duration_ms": 1099
+    },
+    {
+      "name": "Settings modal opens with identity controls was slow but passed",
+      "status": "warning",
+      "details": "Settings modal opens with identity controls completed in 40764ms (warn threshold 12000ms).",
+      "screenshot": null,
+      "kind": "automated",
+      "classification": "latency_budget",
+      "related_check": "Settings modal opens with identity controls"
+    },
+    {
+      "name": "Settings modal opens with identity controls",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/full-system-settings-modal.png",
+      "kind": "automated",
+      "classification": "product",
+      "duration_ms": 40764
+    },
+    {
+      "name": "Connected devices admin view opens and renders registry",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/full-system-connected-devices.png",
+      "kind": "automated",
+      "classification": "product",
+      "duration_ms": 910
+    },
+    {
+      "name": "Tasks packet opens and renders assistant-core queue",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/full-system-tasks-packet.png",
+      "kind": "automated",
+      "classification": "product",
+      "duration_ms": 532
+    },
+    {
+      "name": "Approval Queue packet opens and renders autonomy audit",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/full-system-approval-queue.png",
+      "kind": "automated",
+      "classification": "product",
+      "duration_ms": 510
+    },
+    {
+      "name": "Today Board packet opens and renders autonomy surface",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/full-system-today-board.png",
+      "kind": "automated",
+      "classification": "product",
+      "duration_ms": 437
+    },
+    {
+      "name": "Cadence Review packet opens with phase-aware review content",
+      "status": "passed",
+      "details": "Review action available: Approve",
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/full-system-cadence-review.png",
+      "kind": "automated",
+      "classification": "product",
+      "duration_ms": 524
+    },
+    {
+      "name": "Catalyst workspace packet opens and routes",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/full-system-catalyst.png",
+      "kind": "automated",
+      "classification": "product",
+      "duration_ms": 895
+    },
+    {
+      "name": "Talk button remains interactive after modal navigation",
+      "status": "passed",
+      "details": "State after Talk click: idle",
+      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/full-system-talk-state.png",
+      "kind": "automated",
+      "classification": "product",
+      "duration_ms": 2150
+    }
+  ],
+  "failures": [],
+  "warnings": [
+    {
+      "name": "/api/dashboard API was slow but passed",
+      "details": "/api/dashboard responded in 40224ms (warn threshold 12000ms).",
+      "classification": "latency_budget"
+    },
+    {
+      "name": "/api/dashboard?actor=Caleb API was slow but passed",
+      "details": "/api/dashboard?actor=Caleb responded in 39969ms (warn threshold 12000ms).",
+      "classification": "latency_budget"
+    },
+    {
+      "name": "/api/assistant-core/tick API was slow but passed",
+      "details": "/api/assistant-core/tick responded in 12117ms (warn threshold 2500ms).",
+      "classification": "latency_budget"
+    },
+    {
+      "name": "/api/merged-calendar API was slow but passed",
+      "details": "/api/merged-calendar responded in 2564ms (warn threshold 2500ms).",
+      "classification": "latency_budget"
+    },
+    {
+      "name": "/api/today-board?actor=Chris API was slow but passed",
+      "details": "/api/today-board?actor=Chris responded in 12313ms (warn threshold 8000ms).",
+      "classification": "latency_budget"
+    },
+    {
+      "name": "/api/cadence-review?actor=Chris API was slow but passed",
+      "details": "/api/cadence-review?actor=Chris responded in 11260ms (warn threshold 8000ms).",
+      "classification": "latency_budget"
+    },
+    {
+      "name": "/api/first-light?actor=Chris&force=true API was slow but passed",
+      "details": "/api/first-light?actor=Chris&force=true responded in 28238ms (warn threshold 15000ms).",
+      "classification": "latency_budget"
+    },
+    {
+      "name": "/api/assistant-core/background-run API was slow but passed",
+      "details": "/api/assistant-core/background-run responded in 23321ms (warn threshold 12000ms).",
+      "classification": "latency_budget"
+    },
+    {
+      "name": "Settings modal opens with identity controls was slow but passed",
+      "details": "Settings modal opens with identity controls completed in 40764ms (warn threshold 12000ms).",
+      "classification": "latency_budget"
+    }
+  ],
+  "performance": {
+    "api": [
+      {
+        "pathname": "/health",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 57,
+        "threshold_ms": 1200
+      },
+      {
+        "pathname": "/",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 3,
+        "threshold_ms": 1500
+      },
+      {
+        "pathname": "/api/dashboard",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 40224,
+        "threshold_ms": 12000
+      },
+      {
+        "pathname": "/api/dashboard?actor=Caleb",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 39969,
+        "threshold_ms": 12000
+      },
+      {
+        "pathname": "/api/status",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 1298,
+        "threshold_ms": 2500
+      },
+      {
+        "pathname": "/api/identity",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 6,
+        "threshold_ms": 2500
+      },
+      {
+        "pathname": "/api/connected-devices",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 6,
+        "threshold_ms": 2500
+      },
+      {
+        "pathname": "/api/runtime-service",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 1427,
+        "threshold_ms": 2500
+      },
+      {
+        "pathname": "/api/explainability",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 1360,
+        "threshold_ms": 2500
+      },
+      {
+        "pathname": "/api/open-loops",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 78,
+        "threshold_ms": 2500
+      },
+      {
+        "pathname": "/api/assistant-core/tick",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 12117,
+        "threshold_ms": 2500
+      },
+      {
+        "pathname": "/api/assistant-core/notifications",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 57,
+        "threshold_ms": 2500
+      },
+      {
+        "pathname": "/api/assistant-core/browser-alerts",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 59,
+        "threshold_ms": 2500
+      },
+      {
+        "pathname": "/api/location-settings",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 3,
+        "threshold_ms": 2500
+      },
+      {
+        "pathname": "/api/voice-settings",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 422,
+        "threshold_ms": 2500
+      },
+      {
+        "pathname": "/api/voice-options",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 225,
+        "threshold_ms": 2500
+      },
+      {
+        "pathname": "/api/accounts",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 1088,
+        "threshold_ms": 2500
+      },
+      {
+        "pathname": "/api/google/status",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 1132,
+        "threshold_ms": 2500
+      },
+      {
+        "pathname": "/api/merged-calendar",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 2564,
+        "threshold_ms": 2500
+      },
+      {
+        "pathname": "/api/catalyst-overview",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 1289,
+        "threshold_ms": 2500
+      },
+      {
+        "pathname": "/api/today-board?actor=Chris",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 12313,
+        "threshold_ms": 8000
+      },
+      {
+        "pathname": "/api/cadence-review?actor=Chris",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 11260,
+        "threshold_ms": 8000
+      },
+      {
+        "pathname": "/api/cognitive?actor=Chris&include_graph=false",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 10822,
+        "threshold_ms": 12000
+      },
+      {
+        "pathname": "/api/cognitive/world-state?actor=Chris",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 1431,
+        "threshold_ms": 6000
+      },
+      {
+        "pathname": "/api/first-light?actor=Chris&force=true",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 28238,
+        "threshold_ms": 15000
+      },
+      {
+        "pathname": "/api/persona-snapshot?actor=Chris&refresh=true",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 1311,
+        "threshold_ms": 8000
+      },
+      {
+        "pathname": "/api/learning-review?viewer=Chris&subject_user_id=chris",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 7,
+        "threshold_ms": 8000
+      },
+      {
+        "pathname": "/api/assistant-core/background-run",
+        "method": "POST",
+        "status": 200,
+        "duration_ms": 23321,
+        "threshold_ms": 12000
+      },
+      {
+        "pathname": "/api/tts",
+        "method": "POST",
+        "status": 200,
+        "duration_ms": 2111,
+        "threshold_ms": 2500
+      },
+      {
+        "pathname": "/api/status",
+        "method": "GET",
+        "status": 200,
+        "duration_ms": 1291,
+        "threshold_ms": 2500
+      }
+    ],
+    "checks": [
+      {
+        "name": "Health endpoint is healthy",
+        "duration_ms": 58,
+        "threshold_ms": 12000
+      },
+      {
+        "name": "Root shell responds",
+        "duration_ms": 3,
+        "threshold_ms": 12000
+      },
+      {
+        "name": "Primary dashboard endpoint has expected shape",
+        "duration_ms": 40225,
+        "threshold_ms": 12000
+      },
+      {
+        "name": "Actor-aware dashboard endpoint has expected shape",
+        "duration_ms": 39971,
+        "threshold_ms": 12000
+      },
+      {
+        "name": "Operational platform endpoints have expected shape",
+        "duration_ms": 23136,
+        "threshold_ms": 12000
+      },
+      {
+        "name": "Cognitive platform endpoints have expected shape",
+        "duration_ms": 35827,
+        "threshold_ms": 12000
+      },
+      {
+        "name": "First Light and persona APIs respond",
+        "duration_ms": 29557,
+        "threshold_ms": 12000
+      },
+      {
+        "name": "Assistant background autonomy run responds",
+        "duration_ms": 23321,
+        "threshold_ms": 12000
+      },
+      {
+        "name": "TTS endpoint returns downloadable audio",
+        "duration_ms": 2113,
+        "threshold_ms": 12000
+      },
+      {
+        "name": "Voice shell loads and stays interactive",
+        "duration_ms": 2082,
+        "threshold_ms": 12000
+      },
+      {
+        "name": "Packet rail expands with current packet set",
+        "duration_ms": 1099,
+        "threshold_ms": 12000
+      },
+      {
+        "name": "Settings modal opens with identity controls",
+        "duration_ms": 40764,
+        "threshold_ms": 12000
+      },
+      {
+        "name": "Connected devices admin view opens and renders registry",
+        "duration_ms": 910,
+        "threshold_ms": 12000
+      },
+      {
+        "name": "Tasks packet opens and renders assistant-core queue",
+        "duration_ms": 532,
+        "threshold_ms": 12000
+      },
+      {
+        "name": "Approval Queue packet opens and renders autonomy audit",
+        "duration_ms": 510,
+        "threshold_ms": 12000
+      },
+      {
+        "name": "Today Board packet opens and renders autonomy surface",
+        "duration_ms": 437,
+        "threshold_ms": 12000
+      },
+      {
+        "name": "Cadence Review packet opens with phase-aware review content",
+        "duration_ms": 524,
+        "threshold_ms": 12000
+      },
+      {
+        "name": "Catalyst workspace packet opens and routes",
+        "duration_ms": 895,
+        "threshold_ms": 12000
+      },
+      {
+        "name": "Talk button remains interactive after modal navigation",
+        "duration_ms": 2150,
+        "threshold_ms": 12000
+      }
+    ]
+  },
+  "summary": {
+    "passed": 19,
+    "failed": 0,
+    "warned": 9,
+    "skipped": 1,
+    "product_failures": 0,
+    "latency_failures": 0,
+    "environment_skips": 1,
+    "runner_failures": 0
+  },
+  "finished_at": "2026-05-11T04:33:00.730Z"
+}
