@@ -1,0 +1,6 @@
+Package 7adad787-a576-4279-9e90-907a6af79f1f exported a CadQuery-backed bracket model.
+Primary mesh: garden-bench-bracket.3mf
+Fallback mesh: garden-bench-bracket.stl
+Solid exchange: garden-bench-bracket.step
+Recommended material: PETG-CF
+Suggested slicer profile: functional-prototype

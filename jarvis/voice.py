@@ -445,6 +445,11 @@ class JarvisVoiceShell:
         for user in self.runtime.household.users.values():
             if user.display_name.lower() in lowered:
                 return user.display_name, "direct-name"
+        for member in self.runtime.identity_overview().get("members", []):
+            display_name = str(member.get("display_name", "")).strip()
+            aliases = [str(item).strip().lower() for item in member.get("voice_aliases", []) if str(item).strip()]
+            if any(alias in lowered for alias in aliases):
+                return display_name or str(member.get("user_id", "")).title(), "profile-alias"
         speaker_markers = {
             "my homework": "Caleb",
             "my quiz": "Caleb",
@@ -457,6 +462,22 @@ class JarvisVoiceShell:
         for phrase, actor in speaker_markers.items():
             if phrase in lowered:
                 return actor, "context-phrase"
+        normalized_device = device_name.strip().lower()
+        if normalized_device:
+            for device in self.runtime.identity_overview().get("devices", []):
+                label = str(device.get("label", "")).strip().lower()
+                device_id = str(device.get("device_id", "")).strip().lower()
+                if normalized_device in {label, device_id}:
+                    candidate = (
+                        str(device.get("default_actor_id", "")).strip()
+                        or str(device.get("owner_user_id", "")).strip()
+                        or str(device.get("last_actor_id", "")).strip()
+                    )
+                    if candidate:
+                        try:
+                            return self.runtime.get_actor(candidate).display_name, "identity-device"
+                        except KeyError:
+                            pass
         satellite = self._match_satellite(device_name)
         if satellite and satellite.default_speaker:
             return satellite.default_speaker, "device-map"

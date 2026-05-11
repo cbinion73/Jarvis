@@ -1,0 +1,9 @@
+{
+  "capture_id": "89285d03-6ffa-4970-a95f-46de2a203e90",
+  "actor": "Chris",
+  "camera_label": "Test Camera",
+  "prompt": "Confirm the route is working.",
+  "image_path": "data/vision/captures/89285d03-6ffa-4970-a95f-46de2a203e90.jpg",
+  "created_at": "2026-05-10T03:44:23.280218+00:00",
+  "analysis": "JARVIS could not complete the image analysis request. Reason: Error code: 400 - {'error': {'message': 'The image data you provided does not represent a valid image. Please check your input and try again.', 'type': 'invalid_request_error', 'param': 'input', 'code': 'invalid_value'}}. The frame was captured, but the vision model path is unavailable right now."
+}

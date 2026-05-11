@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import secrets
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -253,6 +253,7 @@ class GoogleWorkspaceSupport:
             "disconnect_path": "/api/google/disconnect",
             "emails": [],
             "calendar_events": [],
+            "profile_email": "",
             "counts": {
                 "unread_emails": 0,
                 "upcoming_events": 0,
@@ -267,6 +268,8 @@ class GoogleWorkspaceSupport:
 
         try:
             gmail_service = build("gmail", "v1", credentials=credentials, cache_discovery=False)
+            profile = gmail_service.users().getProfile(userId="me").execute()
+            summary["profile_email"] = str(profile.get("emailAddress", "")).strip()
             unread_payload = (
                 gmail_service.users()
                 .messages()
@@ -308,11 +311,13 @@ class GoogleWorkspaceSupport:
         try:
             calendar_service = build("calendar", "v3", credentials=credentials, cache_discovery=False)
             now = datetime.now(timezone.utc).isoformat()
+            horizon = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
             calendar_payload = (
                 calendar_service.events()
                 .list(
                     calendarId="primary",
                     timeMin=now,
+                    timeMax=horizon,
                     maxResults=event_limit,
                     singleEvents=True,
                     orderBy="startTime",

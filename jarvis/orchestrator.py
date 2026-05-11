@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 
 from .config import AppConfig
-from .models import RequestPlan, UserProfile
+from .models import RequestPlan, TaskClass, UserProfile
 from .permissions import PermissionEngine
 
 
@@ -18,9 +18,14 @@ class JarvisOrchestrator:
         mode = self._infer_mode(room, lowered)
         module = self._select_module(mode, lowered)
         workstream = self._select_workstream(mode, module, lowered)
-        model = self._select_model(mode, lowered)
+        task_class = self._select_task_class(mode, module, workstream, lowered)
+        preferred_provider = self._select_provider(task_class, module, workstream, lowered)
+        context_lane = self._select_context_lane(task_class, module, workstream)
+        model = self._select_model(task_class, preferred_provider, lowered)
         rationale = (
-            f"Mode '{mode}' maps to module '{module}' and workstream '{workstream}' using model '{model}'. "
+            f"Mode '{mode}' maps to module '{module}', workstream '{workstream}', "
+            f"task class '{task_class.value}', provider '{preferred_provider}', context lane '{context_lane}', "
+            f"and model '{model}'. "
             f"Permission class is {decision.action_class.name}."
         )
         return RequestPlan(
@@ -31,6 +36,9 @@ class JarvisOrchestrator:
             mode=mode,
             module=module,
             workstream=workstream,
+            task_class=task_class,
+            preferred_provider=preferred_provider,
+            context_lane=context_lane,
             model=model,
             action_class=decision.action_class,
             allowed=decision.allowed,
@@ -104,9 +112,70 @@ class JarvisOrchestrator:
             return "homework-coaching"
         return mode
 
-    def _select_model(self, mode: str, request: str) -> str:
+    def _select_task_class(self, mode: str, module: str, workstream: str, request: str) -> TaskClass:
+        if any(keyword in request for keyword in ("party mode", "roundtable", "war room", "council")):
+            return TaskClass.PARTY_MODE
+        if workstream in {"research-summary", "venture-brief"}:
+            return TaskClass.RESEARCH
+        if workstream in {"confidentiality-filter", "iron-clad-editor"} or any(
+            keyword in request for keyword in ("confidential", "private", "sensitive", "redact")
+        ):
+            return TaskClass.SENSITIVE_DRAFTING
+        mapping = {
+            "faith-and-formation": TaskClass.FORMATION,
+            "workshop-copilot": TaskClass.WORKSHOP,
+            "child-tutor": TaskClass.TUTORING,
+            "executive-work": TaskClass.EXECUTIVE,
+            "family-logistics": TaskClass.FAMILY,
+            "household-associate": TaskClass.AMBIENT,
+        }
+        return mapping.get(module, TaskClass.AMBIENT)
+
+    def _select_provider(self, task_class: TaskClass, module: str, workstream: str, request: str) -> str:
+        if task_class in {TaskClass.SENSITIVE_DRAFTING, TaskClass.BACKGROUND}:
+            return "ollama"
+        if task_class in {TaskClass.FAMILY, TaskClass.AMBIENT} and not any(
+            keyword in request for keyword in ("latest", "current", "today", "search", "source", "citation", "weather")
+        ):
+            return "ollama"
+        if module == "workshop-copilot" and "prototype" not in request and "research" not in request:
+            return "ollama"
+        return "openai"
+
+    def _select_context_lane(self, task_class: TaskClass, module: str, workstream: str) -> str:
+        if task_class == TaskClass.PARTY_MODE:
+            return "party-mode"
+        if task_class == TaskClass.RESEARCH:
+            return "research"
+        if task_class == TaskClass.SENSITIVE_DRAFTING:
+            return "restricted-local"
+        if module == "executive-work":
+            return "executive"
+        if module == "family-logistics":
+            return "family"
+        if module == "faith-and-formation":
+            return "formation"
+        if module == "workshop-copilot":
+            return "workshop"
+        return "ambient"
+
+    def _select_model(self, task_class: TaskClass, provider: str, request: str) -> str:
+        if provider == "ollama":
+            if task_class == TaskClass.BACKGROUND:
+                return self.config.ollama_background_model
+            if task_class in {TaskClass.FAMILY, TaskClass.AMBIENT}:
+                return self.config.ollama_summarize_model
+            return self.config.second_brain_model
         if "voice" in request or "talk" in request or "listen" in request:
             return self.config.openai_realtime_model
-        if mode in {"work-mode", "workshop-mode", "chronicle-mode", "tutor-mode"}:
+        if task_class in {
+            TaskClass.EXECUTIVE,
+            TaskClass.FORMATION,
+            TaskClass.WORKSHOP,
+            TaskClass.TUTORING,
+            TaskClass.RESEARCH,
+            TaskClass.PARTY_MODE,
+            TaskClass.SENSITIVE_DRAFTING,
+        }:
             return self.config.openai_text_model
         return self.config.openai_router_model

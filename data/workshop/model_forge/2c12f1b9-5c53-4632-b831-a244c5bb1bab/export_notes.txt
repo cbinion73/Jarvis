@@ -1,0 +1,6 @@
+Package 2c12f1b9-5c53-4632-b831-a244c5bb1bab exported a CadQuery-backed mount model.
+Primary mesh: desk-camera-mount.3mf
+Fallback mesh: desk-camera-mount.stl
+Solid exchange: desk-camera-mount.step
+Recommended material: PETG-CF
+Suggested slicer profile: functional-prototype

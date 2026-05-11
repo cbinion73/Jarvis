@@ -19,7 +19,7 @@ function slugify(value) {
 
 async function recordShot(page, name) {
   const file = path.join(SCREENSHOT_DIR, `${slugify(name)}.png`);
-  await page.screenshot({ path: file, fullPage: true });
+  await page.screenshot({ path: file, fullPage: true, timeout: 60000, animations: "disabled" });
   return file;
 }
 
@@ -112,7 +112,7 @@ async function run() {
   });
 
   await check("Voice shell loads", async (entry) => {
-    await page.goto(`${BASE_URL}/`, { waitUntil: "networkidle" });
+    await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector("#command-input");
     await page.waitForSelector("#voice-command");
     await page.waitForSelector("#open-settings");
@@ -194,7 +194,7 @@ async function run() {
   await check("Catalyst workspace opens as modal app", async (entry) => {
     await page.click("#close-modal");
     await page.waitForTimeout(200);
-    await page.click("#packet-catalyst");
+    await page.click('[data-packet="catalyst"]');
     await page.waitForSelector("#modal-layer.open");
     await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("Catalyst Workspace"));
     await page.waitForSelector("#catalyst-workspace-frame");

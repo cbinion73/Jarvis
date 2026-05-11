@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import time
 from pathlib import Path
 
 try:
@@ -14,7 +15,7 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for cold systems
 from .runtime import JarvisRuntime
 from .openclaw_bridge import build_openclaw_envelope, envelope_to_json
 from .speech import voice_stack_status
-from .web import serve
+from .service import serve
 
 try:
     from .voice import JarvisVoiceShell, build_voice_parser
@@ -40,12 +41,22 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("agent-registry", help="Show the configured background agent registry")
     subparsers.add_parser("agent-status", help="Show the current awake, idle, or blocked state of background agents")
     subparsers.add_parser("memory-curator", help="Show memory curator rules and current curation candidates")
+    assistant_notifications = subparsers.add_parser("assistant-notifications", help="Show assistant notifications for an actor")
+    assistant_notifications.add_argument("--actor", default="Chris")
+    assistant_notifications.add_argument("--unread-only", action="store_true")
+    assistant_notifications.add_argument("--limit", type=int, default=12)
+    assistant_autonomy = subparsers.add_parser("assistant-autonomy-run", help="Run a background assistant autonomy sweep")
+    assistant_autonomy.add_argument("--actor", action="append", dest="actors")
+    assistant_autonomy_daemon = subparsers.add_parser("assistant-autonomy-daemon", help="Run the assistant autonomy sweep in a persistent loop")
+    assistant_autonomy_daemon.add_argument("--actor", action="append", dest="actors")
+    assistant_autonomy_daemon.add_argument("--interval-seconds", type=int, default=600)
+    subparsers.add_parser("openviking-status", help="Show OpenViking context backend readiness")
     subparsers.add_parser("catalyst-overview", help="Show the personal-safe Catalyst backend overview")
     subparsers.add_parser("google-status", help="Show Google Workspace connector readiness")
     subparsers.add_parser("google-summary", help="Show Gmail unread mail and upcoming calendar events")
 
     serve_parser = subparsers.add_parser("serve", help="Run the JARVIS local dashboard")
-    serve_parser.add_argument("--host", default="127.0.0.1")
+    serve_parser.add_argument("--host", default="0.0.0.0")
     serve_parser.add_argument("--port", type=int, default=8787)
 
     briefing = subparsers.add_parser("briefing", help="Generate a morning briefing")
@@ -366,6 +377,8 @@ def build_parser() -> argparse.ArgumentParser:
     memory_approve.add_argument("--proposal-id", required=True)
     memory_approve.add_argument("--decision", required=True, choices=["approved", "rejected"])
 
+    subparsers.add_parser("openviking-sync-memory", help="Sync approved non-sensitive memory entries into OpenViking")
+
     catalyst_signal = subparsers.add_parser("catalyst-signal", help="Capture a Catalyst signal manually")
     catalyst_signal.add_argument("--actor", default="Chris")
     catalyst_signal.add_argument("--source", required=True)
@@ -610,6 +623,24 @@ def command_memory_curator(runtime: JarvisRuntime) -> int:
     return 0
 
 
+def command_assistant_notifications(runtime: JarvisRuntime, actor: str, unread_only: bool, limit: int) -> int:
+    print(json.dumps(runtime.assistant_notifications(actor, unread_only=unread_only, limit=limit), indent=2))
+    return 0
+
+
+def command_assistant_autonomy_run(runtime: JarvisRuntime, actors: list[str] | None) -> int:
+    print(json.dumps(runtime.background_autonomy_run(actors), indent=2))
+    return 0
+
+
+def command_assistant_autonomy_daemon(runtime: JarvisRuntime, actors: list[str] | None, interval_seconds: int) -> int:
+    interval = max(60, int(interval_seconds))
+    while True:
+        result = runtime.background_autonomy_run(actors)
+        print(json.dumps(result), flush=True)
+        time.sleep(interval)
+
+
 def command_catalyst_overview(runtime: JarvisRuntime) -> int:
     print(json.dumps(runtime.catalyst_overview(), indent=2))
     return 0
@@ -711,6 +742,9 @@ def command_plan(runtime: JarvisRuntime, actor: str, room: str, request: str) ->
     print(f"Room: {plan.room}")
     print(f"Mode: {plan.mode}")
     print(f"Module: {plan.module}")
+    print(f"Task class: {plan.task_class.value}")
+    print(f"Preferred provider: {plan.preferred_provider}")
+    print(f"Context lane: {plan.context_lane}")
     print(f"Model: {plan.model}")
     print(f"Allowed: {plan.allowed}")
     print(f"Approval required: {plan.needs_approval}")
@@ -1232,6 +1266,16 @@ def command_memory_approve(runtime: JarvisRuntime, proposal_id: str, decision: s
     return 0
 
 
+def command_openviking_status(runtime: JarvisRuntime) -> int:
+    print(json.dumps(runtime.openviking_status(), indent=2))
+    return 0
+
+
+def command_openviking_sync_memory(runtime: JarvisRuntime) -> int:
+    print(json.dumps(runtime.sync_memory_to_openviking(), indent=2))
+    return 0
+
+
 def command_voice_note(runtime: JarvisRuntime, actor: str, source: str, note: str) -> int:
     print(json.dumps(runtime.capture_voice_note(actor, source, note), indent=2))
     return 0
@@ -1517,6 +1561,12 @@ def main() -> int:
         return command_agent_status(runtime)
     if args.command == "memory-curator":
         return command_memory_curator(runtime)
+    if args.command == "assistant-notifications":
+        return command_assistant_notifications(runtime, args.actor, args.unread_only, args.limit)
+    if args.command == "assistant-autonomy-run":
+        return command_assistant_autonomy_run(runtime, args.actors)
+    if args.command == "assistant-autonomy-daemon":
+        return command_assistant_autonomy_daemon(runtime, args.actors, args.interval_seconds)
     if args.command == "catalyst-overview":
         return command_catalyst_overview(runtime)
     if args.command == "google-status":
@@ -1811,6 +1861,10 @@ def main() -> int:
         return command_memory_proposals(runtime, args.status)
     if args.command == "memory-approve":
         return command_memory_approve(runtime, args.proposal_id, args.decision)
+    if args.command == "openviking-status":
+        return command_openviking_status(runtime)
+    if args.command == "openviking-sync-memory":
+        return command_openviking_sync_memory(runtime)
     if args.command == "catalyst-signal":
         return command_catalyst_signal(
             runtime,

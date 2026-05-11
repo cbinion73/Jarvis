@@ -39,6 +39,51 @@ class AuditLog:
         with self.actions_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(entry) + "\n")
 
+    def log_assistant_action(
+        self,
+        *,
+        actor: str,
+        domain: str,
+        item_id: str,
+        action: str,
+        detail: str,
+        mode: str = "automatic",
+        action_class: str = "",
+        policy_basis: str = "",
+        confidence: str = "",
+        decision: str = "",
+        cadence_phase: str = "",
+        quiet_hours_active: bool | None = None,
+        why_now: str = "",
+        surface_key: str = "",
+        result_summary: str = "",
+        succeeded: bool | None = None,
+    ) -> None:
+        entry = {
+            "entry_type": "assistant-action",
+            "actor": actor,
+            "domain": domain,
+            "item_id": item_id,
+            "action": action,
+            "action_class": action_class,
+            "detail": detail,
+            "mode": mode,
+            "policy_basis": policy_basis,
+            "confidence": confidence,
+            "decision": decision,
+            "cadence_phase": cadence_phase,
+            "why_now": why_now,
+            "surface_key": surface_key,
+            "result_summary": result_summary,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        if quiet_hours_active is not None:
+            entry["quiet_hours_active"] = bool(quiet_hours_active)
+        if succeeded is not None:
+            entry["succeeded"] = bool(succeeded)
+        with self.actions_path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(entry) + "\n")
+
     def list_recent(self, limit: int = 25, entry_type: str | None = None) -> list[dict]:
         if not self.actions_path.exists():
             return []

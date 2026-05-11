@@ -52,5 +52,59 @@
       "When timing is tight, simplify rather than stacking extra reminders."
     ],
     "timestamp": "2026-05-06T13:36:36.136292+00:00"
+  },
+  {
+    "run_id": "0f0382f1-094d-4038-b080-6ce9f76f231b",
+    "actor": "Chris",
+    "context": "Need to leave for church on time\nMerged calendar: Rebekah: Hair on 2026-05-11T23:30:00; Anna: Observation on 2026-05-13T09:30:00; Chris: Stag Setup on 2026-05-15T15:00:00; Chris: Stag on 2026-05-16T15:00:00",
+    "headline": "Departure plan staged.",
+    "weather_hold": "Watch for rain timing before loading the car.",
+    "garage_note": "Main Garage Door is closed.",
+    "focus_calls": [
+      "Chris: Meeting prep with discretion",
+      "Rebekah: Troop logistics",
+      "Caleb: Math quiz confidence",
+      "Anna: Project pacing"
+    ],
+    "checklist": [
+      "Backpacks by the door",
+      "Charged school devices",
+      "Permission slips signed",
+      "Water bottles filled",
+      "Right folders packed"
+    ],
+    "notes": [
+      "Use the mudroom like a flight deck, not a pile zone.",
+      "Call out only the items that change the departure outcome.",
+      "When timing is tight, simplify rather than stacking extra reminders."
+    ],
+    "timestamp": "2026-05-10T01:43:38.294025+00:00"
+  },
+  {
+    "run_id": "7e9712cb-6dfa-47ff-8a0e-cd19d9f5e08f",
+    "actor": "Chris",
+    "context": "Need to leave for church on time\nMerged calendar: Rebekah: Hair on 2026-05-11T23:30:00; Anna: Observation on 2026-05-13T09:30:00; Chris: Stag Setup on 2026-05-15T15:00:00; Chris: Stag on 2026-05-16T15:00:00",
+    "headline": "Departure plan staged.",
+    "weather_hold": "Watch for rain timing before loading the car.",
+    "garage_note": "Main Garage Door is closed.",
+    "focus_calls": [
+      "Chris: Meeting prep with discretion",
+      "Rebekah: Troop logistics",
+      "Caleb: Math quiz confidence",
+      "Anna: Project pacing"
+    ],
+    "checklist": [
+      "Backpacks by the door",
+      "Charged school devices",
+      "Permission slips signed",
+      "Water bottles filled",
+      "Right folders packed"
+    ],
+    "notes": [
+      "Use the mudroom like a flight deck, not a pile zone.",
+      "Call out only the items that change the departure outcome.",
+      "When timing is tight, simplify rather than stacking extra reminders."
+    ],
+    "timestamp": "2026-05-10T01:43:49.216186+00:00"
   }
 ]

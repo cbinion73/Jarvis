@@ -1,0 +1,102 @@
+[
+  {
+    "run_id": "6cf6220f-0820-46f7-a33a-9ec97964a9be",
+    "actor": "Chris",
+    "meeting_title": "Upcoming meeting",
+    "brief_points": [
+      "The meeting appears underspecified at present, Sir. With no open commitments and no recent signals, the safest posture is to clarify the purpose early and avoid wandering into ceremonial irrelevance."
+    ],
+    "watch_points": [
+      "The main risk is a meeting that exists because a calendar slot was available. Watch for vague ownership, invisible decisions, and \u201cjust a quick sync\u201d becoming a small administrative swamp."
+    ],
+    "suggested_agenda": [
+      "Confirm the meeting objective in one sentence.",
+      "Identify the decision required, if any.",
+      "Establish whether action items are needed or whether this is informational only.",
+      "Assign any owners and due dates before closing."
+    ],
+    "raw_output": "Brief Points:\nThe meeting appears underspecified at present, Sir. With no open commitments and no recent signals, the safest posture is to clarify the purpose early and avoid wandering into ceremonial irrelevance.\n\nWatch Points:\nThe main risk is a meeting that exists because a calendar slot was available. Watch for vague ownership, invisible decisions, and \u201cjust a quick sync\u201d becoming a small administrative swamp.\n\nSuggested Agenda:\nConfirm the meeting objective in one sentence.\nIdentify the decision required, if any.\nEstablish whether action items are needed or whether this is informational only.\nAssign any owners and due dates before closing.",
+    "timestamp": "2026-05-10T01:43:09.328806+00:00"
+  },
+  {
+    "run_id": "6472c725-de3c-4ba3-b6ca-5fcb9edb762f",
+    "actor": "Chris",
+    "meeting_title": "Upcoming meeting",
+    "brief_points": [
+      "The room should be ready before anyone starts improvising. The only signal so far is to flag unclear objectives, which usually means the meeting is in danger of becoming a finely organized misunderstanding."
+    ],
+    "watch_points": [
+      "Watch for vague goals, missing decision-makers, and side discussions masquerading as progress. If no one can state the decision required in one sentence, the meeting needs correction, not momentum."
+    ],
+    "suggested_agenda": [
+      "Open with the objective, stated plainly.",
+      "Confirm what decision, outcome, or deliverable is expected.",
+      "Review any required context or materials.",
+      "Surface unclear points early and assign ownership for clarifying them.",
+      "Close with decisions, action items, and who is responsible for each."
+    ],
+    "raw_output": "Brief Points:\nThe room should be ready before anyone starts improvising. The only signal so far is to flag unclear objectives, which usually means the meeting is in danger of becoming a finely organized misunderstanding.\n\nWatch Points:\nWatch for vague goals, missing decision-makers, and side discussions masquerading as progress. If no one can state the decision required in one sentence, the meeting needs correction, not momentum.\n\nSuggested Agenda:\nOpen with the objective, stated plainly.\nConfirm what decision, outcome, or deliverable is expected.\nReview any required context or materials.\nSurface unclear points early and assign ownership for clarifying them.\nClose with decisions, action items, and who is responsible for each.",
+    "timestamp": "2026-05-10T02:39:29.360134+00:00"
+  },
+  {
+    "run_id": "1f397d81-b7c6-4260-b1d5-7ba108c641b7",
+    "actor": "Chris",
+    "meeting_title": "Upcoming meeting",
+    "brief_points": [
+      "Chris, this is a tight, outcome-driven meeting: one decision, one owner, and no ceremonial fog. The presence of an external guest suggests the room should be prepared for clarity, not improvisation."
+    ],
+    "watch_points": [
+      "The main risk is drifting into discussion without closure. \u201cDecision Call\u201d can become a polite substitute for actual deciding, which is a favourite hobby of busy rooms. Also watch for the \u201cTrade\u201d lane becoming a side exchange that muddies ownership or delays the decision."
+    ],
+    "suggested_agenda": [
+      "Open by stating the decision required and the owner needed at the end. Confirm the trade context in one sentence, then lay out the options and the decision criteria. Resolve the decision, assign the owner, and finish with a brief recap of next step, timing, and any trade follow-up."
+    ],
+    "raw_output": "Brief Points:\nChris, this is a tight, outcome-driven meeting: one decision, one owner, and no ceremonial fog. The presence of an external guest suggests the room should be prepared for clarity, not improvisation.\n\nWatch Points:\nThe main risk is drifting into discussion without closure. \u201cDecision Call\u201d can become a polite substitute for actual deciding, which is a favourite hobby of busy rooms. Also watch for the \u201cTrade\u201d lane becoming a side exchange that muddies ownership or delays the decision.\n\nSuggested Agenda:\nOpen by stating the decision required and the owner needed at the end. Confirm the trade context in one sentence, then lay out the options and the decision criteria. Resolve the decision, assign the owner, and finish with a brief recap of next step, timing, and any trade follow-up.",
+    "timestamp": "2026-05-10T03:13:15.155145+00:00"
+  },
+  {
+    "run_id": "b29f1e34-e669-4469-bd98-c724e8b52144",
+    "actor": "Chris",
+    "meeting_title": "Upcoming meeting",
+    "brief_points": [
+      "Chris, this meeting appears to be a straightforward alignment session with an external guest. The core aim is to decide the next move and leave with clear owners, not to admire the ambiguity in public."
+    ],
+    "watch_points": [
+      "The main risk is collapsing \u201cDecision Call\u201d and \u201cTrade\u201d into vague discussion without an actual decision. Also watch for ownership drift: if everyone agrees politely and nobody owns the next step, nothing has, in fact, been decided. External guest means keep the conversation crisp and avoid assuming they share your internal context."
+    ],
+    "suggested_agenda": [
+      "Open by stating the outcome required: one decision, one trade posture, and named owners.",
+      "Confirm the decision criteria and any constraints.",
+      "Review the trade options briefly and compare them against the criteria.",
+      "Make the call.",
+      "Assign owners, deadlines, and the next check-in.",
+      "Close by restating the decision and responsibilities in plain language."
+    ],
+    "raw_output": "Brief Points:\nChris, this meeting appears to be a straightforward alignment session with an external guest. The core aim is to decide the next move and leave with clear owners, not to admire the ambiguity in public.\n\nWatch Points:\nThe main risk is collapsing \u201cDecision Call\u201d and \u201cTrade\u201d into vague discussion without an actual decision. Also watch for ownership drift: if everyone agrees politely and nobody owns the next step, nothing has, in fact, been decided. External guest means keep the conversation crisp and avoid assuming they share your internal context.\n\nSuggested Agenda:\nOpen by stating the outcome required: one decision, one trade posture, and named owners.\nConfirm the decision criteria and any constraints.\nReview the trade options briefly and compare them against the criteria.\nMake the call.\nAssign owners, deadlines, and the next check-in.\nClose by restating the decision and responsibilities in plain language.",
+    "timestamp": "2026-05-10T03:17:33.946645+00:00"
+  },
+  {
+    "run_id": "26ae6100-104d-4a1a-a2f4-3b949ccdd5b0",
+    "actor": "Chris",
+    "meeting_title": "Upcoming meeting",
+    "brief_points": [
+      "Chris, this appears to be a compact decision-and-ownership meeting with one external guest. The goal is not to admire the problem; it is to leave with a clear next move, named owners, and any trade terms or constraints written down in plain English."
+    ],
+    "watch_points": [
+      "Unclear ownership is the main hazard here. If no one is named to do what by when, the meeting will produce agreeable fog.",
+      "Watch for hidden assumptions about scope, timing, approval authority, or dependencies from the external guest.",
+      "If \u201cDecision Call\u201d and \u201cTrade\u201d are linked, confirm whether the trade is conditional on the decision or merely adjacent to it. Otherwise, you may accidentally negotiate two different realities in one sitting, which is a very modern mistake.",
+      "Keep an eye on any commitments that sound urgent but are not actually necessary today."
+    ],
+    "suggested_agenda": [
+      "Open with the decision required and the intended outcome.",
+      "Confirm context and the two lanes: Decision Call and Trade.",
+      "Review the key options or trade terms briefly.",
+      "Identify the preferred path and any blocking concerns.",
+      "Assign owners for each action item, with deadlines.",
+      "Close by restating the decision, the trade implications, and the next checkpoint."
+    ],
+    "raw_output": "Brief Points:\nChris, this appears to be a compact decision-and-ownership meeting with one external guest. The goal is not to admire the problem; it is to leave with a clear next move, named owners, and any trade terms or constraints written down in plain English.\nDecision posture: be ready to define the decision to be made, the preferred option, the fallback, and who has authority to close it. If \u201cTrade\u201d refers to a commercial exchange or transfer, keep the terms explicit and avoid vague side understandings. Those have a charming way of becoming expensive later.\n\nWatch Points:\nUnclear ownership is the main hazard here. If no one is named to do what by when, the meeting will produce agreeable fog.\nWatch for hidden assumptions about scope, timing, approval authority, or dependencies from the external guest.\nIf \u201cDecision Call\u201d and \u201cTrade\u201d are linked, confirm whether the trade is conditional on the decision or merely adjacent to it. Otherwise, you may accidentally negotiate two different realities in one sitting, which is a very modern mistake.\nKeep an eye on any commitments that sound urgent but are not actually necessary today.\n\nSuggested Agenda:\nOpen with the decision required and the intended outcome.\nConfirm context and the two lanes: Decision Call and Trade.\nReview the key options or trade terms briefly.\nIdentify the preferred path and any blocking concerns.\nAssign owners for each action item, with deadlines.\nClose by restating the decision, the trade implications, and the next checkpoint.",
+    "timestamp": "2026-05-10T03:17:56.938418+00:00"
+  }
+]

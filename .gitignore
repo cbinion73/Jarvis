@@ -1,8 +1,11 @@
 .env
 .venv/
+.venv-openviking/
 __pycache__/
 *.pyc
 .DS_Store
 *.log
 config/google_client_secret.json
+config/openviking/
 data/google/
+data/openviking/

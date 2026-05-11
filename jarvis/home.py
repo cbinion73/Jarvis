@@ -258,7 +258,7 @@ class HomeSupport:
         active_leaks = [item for item in leaks if item.get("state") not in {"dry", "clear", "off"}]
         active_cold_storage = [item for item in cold_storage if self._cold_storage_severity(item) != "stable"]
         return {
-            "mode": "live" if self.adapter.live else "simulated",
+            "mode": "live" if self.adapter.live else "profile-backed",
             "provider_notes": self.profile.get("providerNotes", {}),
             "counts": {
                 "lights_on": len(active_lights),
@@ -516,6 +516,7 @@ class HomeSupport:
         leaks = self._items("leakSensors")
         active = [item for item in leaks if item.get("state") not in {"dry", "clear", "off"}]
         return {
+            "mode": "live" if self.adapter.live else "profile-backed",
             "status": "alert" if active else "clear",
             "active_count": len(active),
             "active_sensors": active,
@@ -563,6 +564,7 @@ class HomeSupport:
             if severity != "stable":
                 elevated.append(reviewed_item)
         return {
+            "mode": "live" if self.adapter.live else "profile-backed",
             "status": "alert" if any(item["severity"] == "critical" for item in elevated) else ("watch" if elevated else "stable"),
             "active_count": len(elevated),
             "active_sensors": elevated,

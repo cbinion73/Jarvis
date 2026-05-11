@@ -1,0 +1,25 @@
+[
+  {
+    "fact_id": "be0aec9aba2a8e3012364020",
+    "subject_user_id": "anna",
+    "subject_display_name": "Anna",
+    "lane": "personal",
+    "title": "Anna likes reminders after breakfast",
+    "summary": "Anna likes reminders after breakfast.",
+    "tags": [
+      "anna",
+      "morning",
+      "personal",
+      "preference"
+    ],
+    "source_entry_ids": [
+      "1dd3fd32-0c40-48db-afe8-ca3227448da4"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "user-stated",
+    "boundary_label": "child-private",
+    "created_at": "2026-05-10T05:53:17.566170+00:00",
+    "updated_at": "2026-05-10T05:53:23.981748+00:00"
+  }
+]

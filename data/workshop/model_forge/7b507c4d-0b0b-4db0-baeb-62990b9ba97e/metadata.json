@@ -1,0 +1,28 @@
+{
+  "package_id": "7b507c4d-0b0b-4db0-baeb-62990b9ba97e",
+  "part_name": "Axle spacer",
+  "actor": "Chris",
+  "summary": "Sir, a simple cylindrical spacer is the sensible creature here: 18 mm outer diameter, 8 mm through-bore, 12 mm long. For a load-bearing spacer, keep the walls plain and the edges lightly chamfered or rounded later by hand so nothing mischievous starts cracking under compression.",
+  "parameters": [
+    "outer_d = 18;",
+    "inner_d = 8;",
+    "length = 12;",
+    "clearance = 0.2; // optional print/process margin, adjust to suit axle fit",
+    "wall = (outer_d - inner_d) / 2; // 5 mm wall thickness"
+  ],
+  "fit_checks": [
+    "Outer diameter 18 mm with 8 mm bore leaves a 5 mm radial wall, which is perfectly respectable for a load-bearing spacer. Length 12 mm should seat cleanly if the mating faces are flat and the axle is actually 8 mm rather than \u201cnominally, emotionally, approximately 8 mm.\u201d",
+    "Check axle fit against your real shaft diameter and process tolerance. If this is 3D printed, the 8 mm bore may want a slight process clearance, typically 0.1 to 0.3 mm depending on printer behaviour and your appetite for filing."
+  ],
+  "artifact_dir": "data/workshop/model_forge/7b507c4d-0b0b-4db0-baeb-62990b9ba97e",
+  "script_path": "data/workshop/model_forge/7b507c4d-0b0b-4db0-baeb-62990b9ba97e/model.scad",
+  "cadquery_script_path": "data/workshop/model_forge/7b507c4d-0b0b-4db0-baeb-62990b9ba97e/model_cadquery.py",
+  "model_path": "data/workshop/model_forge/7b507c4d-0b0b-4db0-baeb-62990b9ba97e/axle-spacer.stl",
+  "step_path": "data/workshop/model_forge/7b507c4d-0b0b-4db0-baeb-62990b9ba97e/axle-spacer.step",
+  "mesh_3mf_path": "data/workshop/model_forge/7b507c4d-0b0b-4db0-baeb-62990b9ba97e/axle-spacer.3mf",
+  "slicer_pack_dir": "data/workshop/model_forge/7b507c4d-0b0b-4db0-baeb-62990b9ba97e/slicer_pack",
+  "export_status": "cadquery-spacer",
+  "export_detail": "Exported CadQuery spacer assets as STL, STEP, and 3MF, then assembled a slicer pack for creality-k2-pro-combo using the fit-check-fast profile.",
+  "export_engine": "cadquery",
+  "timestamp": "2026-05-10T04:34:12.117289+00:00"
+}

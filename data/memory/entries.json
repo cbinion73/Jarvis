@@ -18,7 +18,12 @@
     "cloud_excluded": false,
     "encrypted_payload": "gAAAAABp-0DzupadWkH4h65sfCMtQdbzDgYvV0K5_Pd8HsD3ZZcKHhDMYrLARfxteaCy1sp796jw2cqb9KwdiuGkC_-mC6DzXTnzY_8fH_LOrJgqqkCotMQLW3KyfPlkPyPpTgnmIvNc7wcqmQugoCgWUwLgQXrzToCZCLCtuvg0iVoA_Ck0HcoWALZNDL6y5D8YCDoX1vX6L4o7MUslvpihqDpeY-PCGJvOtqhbDklvsq6RnggszkFd2qG_oTmMtMW3VSh0EnEtkjAKMOxzS39fBmZpFUJqtxwxU0VZJ8h1Fr5BHRR4nncLvJe4l7ElFBM0nBJSUxkZHTZZncwEK9WQjSUTpkfoGApSQI2e9xcNXihYTJODGfJzddEMiEQylyvB35TxMDakEvz3eK2I5Mqg3q5YObk26zdp7ab0xYUv635Zyw6_Tis=",
     "created_at": "2026-05-06T13:24:03.292217+00:00",
-    "updated_at": "2026-05-06T13:24:03.292581+00:00"
+    "updated_at": "2026-05-06T13:24:03.292581+00:00",
+    "subject_user_id": "chris",
+    "access_policy": "personal",
+    "boundary_label": "",
+    "source_type": "user-stated",
+    "confidence": "confirmed"
   },
   {
     "entry_id": "96437703-a375-4a1a-aabb-2a8aec67d701",
@@ -38,7 +43,12 @@
     "cloud_excluded": true,
     "encrypted_payload": "gAAAAABp-0EUqH93pJfTiu7F-kCSiNrBfkaJK-A4jyO0IWQlmvPULeFQwW6vk7PzVOIHj2uVt0t2PLXSc4nBeqoFCyCg1ipbAFxdmvt-B6eG_gONe0W9dSbf6TI4w2XHRuVsB0dwuYUFQtav_Rv2crP1L4MuyPbCVs_133G8NXpi3NOEy2gxPzbT-QN1aQZY1xuNRMu-g7xVeT2xHJNbYXPxV4xxeByHC8umm_YRsoRCC_944k-FlGNrxrTfOcxznB7n5Wor4XtPvel1V-rfhA0Odq1nSPNnbrBY9WvfAzk7g694F0zaU3zhYl3guO4baJrBJvNOh0HtVM3_v3FznvxDL0JvwT-QAGO4O_LTWeNKu1BSVfTYvJ7WmNSrgo-agh0RlKpEaQQ9jzfTEf8ZV4hwIETE50GEeam21zIF-CTJlLocs_MONRo=",
     "created_at": "2026-05-06T13:24:36.601678+00:00",
-    "updated_at": "2026-05-06T13:24:36.601685+00:00"
+    "updated_at": "2026-05-06T13:24:36.601685+00:00",
+    "subject_user_id": "",
+    "access_policy": "restricted",
+    "boundary_label": "",
+    "source_type": "user-stated",
+    "confidence": "confirmed"
   },
   {
     "entry_id": "06f86d06-1550-40fe-baa1-ec61cf493c61",
@@ -60,6 +70,37 @@
     "cloud_excluded": false,
     "encrypted_payload": "gAAAAABp-0GGjzHOTy_9CvamrGyfzg0kHzyszlY8hqUM92IxZjra25vuD7VrMZTaktZqvaUYyxc2kS9kXCDirAq0zL_yRUjZelv7d6eH4kgaQeMBtTw9_coSOXYMe2x2NdSDwaWsggPKrcErl_iRuLSgO6MypTjRpTQYVuFgLa3FgK2FjSBuVt7_YRrFkqFIYTh7XYs6jzbzAFD0TiEOlqTy1gZbbw8hpShyvZCH-Pby8zbhfMSzf4D0hhaXrHbSb4DA9CXdQ_G2FSafVwnLR3uq-k5ALHZ1stTu-pNQrv2h-w2OXzdGJnfHxRZvoNZdSvsuVD5wOy8dPavSCmq7U3OGP6hTCbtsnExZ_TgQxBJW_OeUieV-ATJ10-zcz5Khv6TV5xOGpfg2LkJhir4gdx43TiqqmX_Ppadl_om_VXgAdQVPCRr3irILB_o6WDK7TcEUdMucqHkU",
     "created_at": "2026-05-06T13:26:30.369971+00:00",
-    "updated_at": "2026-05-06T13:26:30.369988+00:00"
+    "updated_at": "2026-05-06T13:26:30.369988+00:00",
+    "subject_user_id": "",
+    "access_policy": "shared",
+    "boundary_label": "",
+    "source_type": "user-stated",
+    "confidence": "confirmed"
+  },
+  {
+    "entry_id": "1dd3fd32-0c40-48db-afe8-ca3227448da4",
+    "memory_type": "personal",
+    "scope": "personal",
+    "owner": "Anna",
+    "project": "",
+    "title": "Anna likes reminders after breakfast",
+    "summary": "Anna likes reminders after breakfast.",
+    "tags": [
+      "personal",
+      "preference",
+      "morning",
+      "anna"
+    ],
+    "sensitivity": "normal",
+    "approval_status": "approved",
+    "cloud_excluded": true,
+    "encrypted_payload": "gAAAAABqAB1NSlT7kBvtCBKiRsZox2uEiyH4ZHNQf-deSdBpN_gzMMXdKKNi-Nlr4cP84EIWMVdlFYCx822XfM55F0vlo7UB8mH7uRi7rhWE9FTQ0UgVjYKhGVwYV6wh_S3OVq6NDIXg9hpFDjHcUUnC1oL9mJ8Rqklfsfb0EfwU6hHIwDBEZNMklW85TDws40M84mBmFwg0NqzNxY8v2wIk1d452cwaVqjpbBCg7rEv3fpLXrdNHMGcjbc1hLvyufE-qcpbnMpGoGiq0_fFrLqrPz_FTnMaI5SDnyYDHUwHP37lgCRwmfRRwgfeWWp2FuSmfLS0dMq6seJ4xJHb8wmeg0MqLev0wGdOlu8ctrZrM1eNCKSxexwyg7AxpcenwDJXzHTnhDn_QENVZeE-DOpLzOWpTSn2Q7vGqLEXZh6u2wpbv8dzDmZqRLtr4qyzLQbmNwBs1n5abRhz4m1-pCp1PKe8JNt8K7Up9bN7n-hU3oc7ZP_RcTZ6I8CrqaTZTlifAmZdM62Cw0IzbkP52LYW5Appq6hYqWnbn1mxXI-GXEHSHHQRprQ=",
+    "created_at": "2026-05-10T05:53:17.565036+00:00",
+    "updated_at": "2026-05-10T05:53:17.565052+00:00",
+    "subject_user_id": "anna",
+    "access_policy": "personal",
+    "boundary_label": "child-private",
+    "source_type": "user-stated",
+    "confidence": "confirmed"
   }
 ]

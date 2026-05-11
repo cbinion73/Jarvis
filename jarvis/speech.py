@@ -63,7 +63,7 @@ def synthesize_speech(config: AppConfig, text: str, voice_settings: dict | None 
                     requested_voice=selected_elevenlabs_voice or None,
                 )
             if provider == "system":
-                raise RuntimeError("System TTS does not produce a downloadable audio payload.")
+                return _synthesize_with_system(config, text)
             raise RuntimeError(f"Unknown TTS provider: {provider}")
         except Exception as exc:
             errors.append(f"{provider}: {exc}")
@@ -216,6 +216,55 @@ def _synthesize_with_localai(config: AppConfig, text: str) -> AudioPayload:
         extension=extension,
         provider="localai",
     )
+
+
+def _synthesize_with_system(config: AppConfig, text: str) -> AudioPayload:
+    say_binary = shutil.which("say")
+    if not say_binary:
+        raise RuntimeError("macOS say command is unavailable.")
+
+    afconvert_binary = shutil.which("afconvert")
+    with tempfile.NamedTemporaryFile(suffix=".aiff", delete=False) as handle:
+        aiff_path = Path(handle.name)
+    wav_path = aiff_path.with_suffix(".wav")
+
+    try:
+        say_result = subprocess.run(
+            [say_binary, "-o", str(aiff_path), text],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if say_result.returncode != 0:
+            stderr = say_result.stderr.strip() or say_result.stdout.strip() or "unknown say failure"
+            raise RuntimeError(stderr)
+
+        if afconvert_binary:
+            convert_result = subprocess.run(
+                [afconvert_binary, "-f", "WAVE", "-d", "LEI16", str(aiff_path), str(wav_path)],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if convert_result.returncode == 0 and wav_path.exists():
+                return AudioPayload(
+                    data=wav_path.read_bytes(),
+                    content_type="audio/wav",
+                    extension=".wav",
+                    provider="system",
+                )
+
+        return AudioPayload(
+            data=aiff_path.read_bytes(),
+            content_type="audio/aiff",
+            extension=".aiff",
+            provider="system",
+        )
+    finally:
+        if aiff_path.exists():
+            aiff_path.unlink()
+        if wav_path.exists():
+            wav_path.unlink()
 
 
 def _transcribe_with_openai(

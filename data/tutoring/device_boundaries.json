@@ -46,5 +46,21 @@
     "reminder_text": "Finish the checklist, then dock the device before free time.",
     "status": "open",
     "timestamp": "2026-05-06T08:18:30.154830+00:00"
+  },
+  {
+    "routine_id": "d72e4583-7830-4f9e-b590-77e7eaa20b14",
+    "actor": "Caleb",
+    "window_label": "after-school",
+    "checklist": [
+      "Shoes off and snack first",
+      "Backpack opened and papers sorted",
+      "Math and reading materials on the island",
+      "Water bottle filled",
+      "Device docked after homework block"
+    ],
+    "device_expectation": "Chromebook or tablet stays docked once homework and review are done.",
+    "reminder_text": "Finish the checklist, then dock the device before free time.",
+    "status": "open",
+    "timestamp": "2026-05-09T18:47:31.812406+00:00"
   }
 ]

@@ -1,0 +1,43 @@
+{
+  "package_id": "32bb88ae-eb03-4cce-a83b-7bf09f877a83",
+  "part_name": "QA Camera Mount 1778444985970",
+  "actor": "Chris",
+  "summary": "Sir, this is a simple bracket-style camera mount: a 90 by 40 by 6 mm base with a 35 mm riser. I have kept the geometry parameter-driven and left the fastener access open rather than doing anything heroic and regrettable.",
+  "parameters": [
+    "part_name = \"QA Camera Mount 1778444985970\";",
+    "base_len = 90;",
+    "base_wid = 40;",
+    "base_thk = 6;",
+    "riser_h = 35;",
+    "wall_thk = 6;",
+    "hole_d = 5.5;",
+    "hole_edge_x = 12;",
+    "hole_edge_y = 10;",
+    "hole_spacing_x = 66;",
+    "hole_spacing_y = 20;",
+    "clearance_front = 12;",
+    "clearance_top = 10;",
+    "fit_check_thk = 2.0;",
+    "fit_check_clearance = 0.4;"
+  ],
+  "fit_checks": [
+    "Confirm hole spacing on the QA Camera Mount 1778444985970.",
+    "Check fastener clearance and wrench access.",
+    "Verify drain path does not weaken the load path."
+  ],
+  "family": "mount",
+  "artifact_dir": "data/workshop/model_forge/32bb88ae-eb03-4cce-a83b-7bf09f877a83",
+  "script_path": "data/workshop/model_forge/32bb88ae-eb03-4cce-a83b-7bf09f877a83/model.scad",
+  "cadquery_script_path": "data/workshop/model_forge/32bb88ae-eb03-4cce-a83b-7bf09f877a83/model_cadquery.py",
+  "model_path": "data/workshop/model_forge/32bb88ae-eb03-4cce-a83b-7bf09f877a83/qa-camera-mount-1778444985970.stl",
+  "step_path": "data/workshop/model_forge/32bb88ae-eb03-4cce-a83b-7bf09f877a83/qa-camera-mount-1778444985970.step",
+  "mesh_3mf_path": "data/workshop/model_forge/32bb88ae-eb03-4cce-a83b-7bf09f877a83/qa-camera-mount-1778444985970.3mf",
+  "slicer_pack_dir": "data/workshop/model_forge/32bb88ae-eb03-4cce-a83b-7bf09f877a83/slicer_pack",
+  "printer_id": "creality-k2-pro-combo",
+  "profile_name": "fit-check-fast",
+  "material": "PETG-CF",
+  "export_status": "cadquery-mount",
+  "export_detail": "Exported CadQuery mount assets as STL, STEP, and 3MF, then assembled a slicer pack for creality-k2-pro-combo using the fit-check-fast profile.",
+  "export_engine": "cadquery",
+  "timestamp": "2026-05-10T20:29:56.060523+00:00"
+}

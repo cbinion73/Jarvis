@@ -1,0 +1,11 @@
+{
+  "capture_id": "6a5d791f-e45e-437a-9ac1-b72a83ab58ce",
+  "actor": "Chris",
+  "camera_label": "USB Camera (0c45:632e)",
+  "prompt": "Describe what is visible and call out the most important objects or activity.",
+  "mode": "describe",
+  "compare_to_capture_id": null,
+  "image_path": "data/vision/captures/6a5d791f-e45e-437a-9ac1-b72a83ab58ce.jpg",
+  "created_at": "2026-05-10T05:09:40.237948+00:00",
+  "analysis": "A long black circuit board or LED sign strip is lying horizontally on a wooden desk. It has many small components and connectors, with a large lighted/contrasting section in the middle that appears to spell or display \u201cFIND\u201d or similar block lettering. A black cable runs in from the right side. The main visible activity is a static hardware setup or inspection on the tabletop."
+}

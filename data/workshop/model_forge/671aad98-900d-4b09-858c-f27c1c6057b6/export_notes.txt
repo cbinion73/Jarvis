@@ -1,0 +1,3 @@
+Package 671aad98-900d-4b09-858c-f27c1c6057b6 exported a simple fit-check STL.
+This mesh is a conservative rectangular prototype based on the strongest available measured extents.
+Original constraints: Preserve hole pattern, add drain path, allow subtle Scout motif.

@@ -1,0 +1,11 @@
+{
+  "capture_id": "d6c79577-04d7-48da-bd20-0edb5406cf2f",
+  "actor": "Chris",
+  "camera_label": "USB Camera (0c45:632e)",
+  "prompt": "Describe what is visible and call out the most important objects or activity.",
+  "mode": "describe",
+  "compare_to_capture_id": null,
+  "image_path": "data/vision/captures/d6c79577-04d7-48da-bd20-0edb5406cf2f.jpg",
+  "created_at": "2026-05-10T15:19:44.897447+00:00",
+  "analysis": "A desk/workspace is visible with a large dark mouse pad on the right and a keyboard partially in frame. On the left side of the pad is a small brown glass jar labeled **\u201cZippo Dark Rum & Oak\u201d** with a cork lid, likely a candle or fragrance jar. A pair of tweezers/scissors rests near the top edge of the mouse pad, and a cable runs vertically along the right side. The left side of the image shows a wood-grain floor or tabletop area."
+}

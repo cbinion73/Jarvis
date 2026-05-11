@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -11,6 +12,7 @@ from .models import HouseholdProfile
 ACCOUNTS_PATH = Path.cwd() / "data" / "settings" / "accounts.json"
 SUPPORTED_PROVIDERS = ("google", "outlook", "imap", "other")
 SUPPORTED_SERVICES = ("mail", "calendar", "mail_calendar")
+EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
 
 
 @dataclass(slots=True)
@@ -107,6 +109,22 @@ class AccountRegistry:
                 return item
         return None
 
+    def update_login_hint(self, account_id: str, login_hint: str) -> PersonalAccount | None:
+        cleaned = str(login_hint).strip()
+        if not cleaned:
+            return None
+        accounts = self.list_accounts()
+        target: PersonalAccount | None = None
+        for item in accounts:
+            if item.account_id == account_id:
+                item.login_hint = cleaned
+                target = item
+                break
+        if not target:
+            return None
+        self._save(accounts)
+        return target
+
     def _save(self, accounts: list[PersonalAccount]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(
@@ -127,6 +145,8 @@ class AccountRegistry:
             service_scope = "mail_calendar"
         label = str(payload.get("label", "")).strip() or f"{owner.display_name} {provider.title()}"
         login_hint = str(payload.get("login_hint", "")).strip()
+        if login_hint and not EMAIL_RE.match(login_hint):
+            login_hint = ""
         status = str(payload.get("status", "planned")).strip().lower() or "planned"
         notes = str(payload.get("notes", "")).strip()
         return PersonalAccount(

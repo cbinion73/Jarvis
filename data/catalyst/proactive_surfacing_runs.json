@@ -1,0 +1,18 @@
+[
+  {
+    "run_id": "675aaff4-1d69-4353-961d-7955f5ce748a",
+    "actor": "Chris",
+    "horizon": "today",
+    "opportunities": [
+      "The Friday agenda decision is the cleanest leverage point. Resolve whether the strategy block moves to Friday afternoon, then identify the minimum deck reviewers before anything hardens into calendar law. Also worth capturing the personal-safe follow-up workflow now, since it will reduce post-meeting drift without letting the machine get overconfident."
+    ],
+    "risks": [
+      "The agenda question is duplicated, which usually means it is either important or merely haunting the inbox. Either way, unanswered by tomorrow will create avoidable friction. The follow-up workflow must remain draft-only until you approve it; otherwise we are simply automating surprise, which is a magnificent but ill-advised hobby."
+    ],
+    "recommended_focus": [
+      "Handle the Friday agenda decision first. Confirm the time move and the required reviewers, then stage the deck-review path behind a manual approval step. After that, draft the strategy-meeting follow-up workflow so it can produce next steps, but not take liberties."
+    ],
+    "raw_output": "Opportunities:\nThe Friday agenda decision is the cleanest leverage point. Resolve whether the strategy block moves to Friday afternoon, then identify the minimum deck reviewers before anything hardens into calendar law. Also worth capturing the personal-safe follow-up workflow now, since it will reduce post-meeting drift without letting the machine get overconfident.\n\nRisks:\nThe agenda question is duplicated, which usually means it is either important or merely haunting the inbox. Either way, unanswered by tomorrow will create avoidable friction. The follow-up workflow must remain draft-only until you approve it; otherwise we are simply automating surprise, which is a magnificent but ill-advised hobby.\n\nRecommended Focus:\nHandle the Friday agenda decision first. Confirm the time move and the required reviewers, then stage the deck-review path behind a manual approval step. After that, draft the strategy-meeting follow-up workflow so it can produce next steps, but not take liberties.",
+    "timestamp": "2026-05-11T04:15:46.564117+00:00"
+  }
+]

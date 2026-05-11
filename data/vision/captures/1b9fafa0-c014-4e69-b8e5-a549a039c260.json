@@ -1,0 +1,9 @@
+{
+  "capture_id": "1b9fafa0-c014-4e69-b8e5-a549a039c260",
+  "actor": "Chris",
+  "camera_label": "USB Camera (0c45:632e)",
+  "prompt": "What type of sauce packet is there specifically?",
+  "image_path": "data/vision/captures/1b9fafa0-c014-4e69-b8e5-a549a039c260.jpg",
+  "created_at": "2026-05-10T03:47:11.700041+00:00",
+  "analysis": "It\u2019s a **sriracha sauce packet**."
+}

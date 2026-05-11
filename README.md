@@ -148,7 +148,7 @@ python -m jarvis vendor-prep --actor Chris --part "Garden bench bracket" --vendo
 python -m jarvis cad-packages --limit 5
 python -m jarvis print-preps --limit 5
 python -m jarvis vendor-preps --limit 5
-python -m jarvis serve --host 127.0.0.1 --port 8787
+python -m jarvis serve --host 0.0.0.0 --port 8787
 python -m jarvis voice --text "Jarvis, what should I focus on this morning?" --silent
 python -m jarvis voice --text-loop
 python -m jarvis voice --loop

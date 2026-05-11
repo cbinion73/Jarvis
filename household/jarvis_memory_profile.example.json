@@ -52,6 +52,21 @@
     "childCanViewProject": false,
     "childCanViewSafety": false
   },
+  "partitionRules": {
+    "defaultPersonalAccess": "personal",
+    "defaultHouseholdAccess": "household",
+    "defaultProjectAccess": "shared",
+    "defaultSafetyAccess": "restricted"
+  },
+  "promotionRules": {
+    "promotePersonalToProfileFacts": true,
+    "promoteHouseholdPatterns": true,
+    "notes": [
+      "Personal memories can be promoted into durable per-person profile facts.",
+      "Household memories can become shared continuity patterns.",
+      "Restricted and sensitive lanes remain local-first and should not be promoted casually."
+    ]
+  },
   "sensitiveApprovalRules": {
     "typesRequiringApproval": [
       "safety"

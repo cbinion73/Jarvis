@@ -1,0 +1,19 @@
+{
+  "part_name": "Sensor enclosure",
+  "family": "enclosure",
+  "primary_model": "sensor-enclosure.3mf",
+  "fallback_mesh": "sensor-enclosure.stl",
+  "printer_id": "creality-k2-pro-combo",
+  "profile_name": "enclosure-balanced",
+  "material": "PLA",
+  "layer_height": "0.20 mm",
+  "infill": "20% gyroid",
+  "supports": "Support top openings only if needed",
+  "dimensions_mm": {
+    "length": 120.0,
+    "width": 80.0,
+    "height": 45.0,
+    "wall thickness": 3.0,
+    "lip": 2.0
+  }
+}

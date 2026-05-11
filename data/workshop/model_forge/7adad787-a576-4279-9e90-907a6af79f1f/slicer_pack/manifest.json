@@ -1,0 +1,20 @@
+{
+  "part_name": "Garden bench bracket",
+  "family": "bracket",
+  "primary_model": "garden-bench-bracket.3mf",
+  "fallback_mesh": "garden-bench-bracket.stl",
+  "printer_id": "creality-k2-pro-combo",
+  "profile_name": "functional-prototype",
+  "material": "PETG-CF",
+  "layer_height": "0.20 mm",
+  "infill": "35% gyroid",
+  "supports": "Minimal supports only where required",
+  "dimensions_mm": {
+    "hole spacing": 110.0,
+    "plate width": 30.0,
+    "thickness": 8.0,
+    "hole diameter": 8.5,
+    "leg length a": 70.0,
+    "leg length b": 70.0
+  }
+}

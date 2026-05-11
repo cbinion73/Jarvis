@@ -1,0 +1,45 @@
+{
+  "started_at": "2026-05-10T20:30:05.960Z",
+  "base_url": "http://127.0.0.1:8787",
+  "checks": [
+    {
+      "name": "Sensitive memory creates a pending proposal",
+      "status": "passed",
+      "details": "Proposal 4d45d9fd-c7eb-4d9c-ba53-103735b5d2f2",
+      "kind": "automated"
+    },
+    {
+      "name": "Approved learning proposal becomes entry and profile fact",
+      "status": "passed",
+      "details": "Entry ed5ba62d-40d3-404a-aa18-9ea660b4b7c5, fact a1ddd6855a73dc3d055593b0",
+      "kind": "automated"
+    },
+    {
+      "name": "Retiring and reactivating a profile fact updates visibility",
+      "status": "passed",
+      "details": "Fact a1ddd6855a73dc3d055593b0 retired and restored",
+      "kind": "automated"
+    },
+    {
+      "name": "Rejected learning proposal stays out of stored memory",
+      "status": "passed",
+      "details": "Proposal ad171aac-4e24-4cac-a43a-9eeb2bb4998a rejected cleanly",
+      "kind": "automated"
+    },
+    {
+      "name": "Memory curation API remains healthy after governance mutations",
+      "status": "passed",
+      "details": "promoted_count=3",
+      "kind": "automated"
+    }
+  ],
+  "failures": [],
+  "warnings": [],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "warned": 0,
+    "skipped": 0
+  },
+  "finished_at": "2026-05-10T20:30:19.537Z"
+}

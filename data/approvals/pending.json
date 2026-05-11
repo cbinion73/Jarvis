@@ -68,5 +68,35 @@
     "second_factor_required": false,
     "status": "pending",
     "rationale": "Parent-facing communication must be reviewed before sending."
+  },
+  {
+    "request_id": "0957c452-0520-4cf5-9148-f4d09f1fd552",
+    "actor": "Chris",
+    "room": "bedroom",
+    "request": "can you read my email",
+    "action_class": "EXECUTE_MEDIUM_RISK",
+    "second_factor_required": false,
+    "status": "pending",
+    "rationale": "Mode 'ambient-associate' maps to module 'household-associate', workstream 'ambient-associate', task class 'ambient', provider 'ollama', context lane 'ambient', and model 'qwen2.5:7b'. Permission class is EXECUTE_MEDIUM_RISK."
+  },
+  {
+    "request_id": "c355e60b-cd30-464b-a432-69a264f0fc07",
+    "actor": "Chris",
+    "room": "bedroom",
+    "request": "what is on my calendar",
+    "action_class": "EXECUTE_MEDIUM_RISK",
+    "second_factor_required": false,
+    "status": "pending",
+    "rationale": "Mode 'ambient-associate' maps to module 'household-associate', workstream 'ambient-associate', task class 'ambient', provider 'ollama', context lane 'ambient', and model 'qwen2.5:7b'. Permission class is EXECUTE_MEDIUM_RISK."
+  },
+  {
+    "request_id": "82b30534-eeae-4c96-beb1-4465aa04d918",
+    "actor": "Chris",
+    "room": "bedroom",
+    "request": "what is on my calendar",
+    "action_class": "EXECUTE_MEDIUM_RISK",
+    "second_factor_required": false,
+    "status": "pending",
+    "rationale": "Mode 'ambient-associate' maps to module 'household-associate', workstream 'ambient-associate', task class 'ambient', provider 'ollama', context lane 'ambient', and model 'qwen2.5:7b'. Permission class is EXECUTE_MEDIUM_RISK."
   }
 ]

@@ -25,6 +25,10 @@
     },
     "status": "approved",
     "rationale": "Memory type 'safety' requires approval before storage.",
-    "created_at": "2026-05-06T13:24:03.286899+00:00"
+    "created_at": "2026-05-06T13:24:03.286899+00:00",
+    "access_policy": "restricted",
+    "boundary_label": "",
+    "source_type": "user-stated",
+    "confidence": "confirmed"
   }
 ]

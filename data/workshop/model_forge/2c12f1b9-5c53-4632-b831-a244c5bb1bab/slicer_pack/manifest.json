@@ -1,0 +1,19 @@
+{
+  "part_name": "Desk camera mount",
+  "family": "mount",
+  "primary_model": "desk-camera-mount.3mf",
+  "fallback_mesh": "desk-camera-mount.stl",
+  "printer_id": "creality-k2-pro-combo",
+  "profile_name": "functional-prototype",
+  "material": "PETG-CF",
+  "layer_height": "0.20 mm",
+  "infill": "35% gyroid",
+  "supports": "Minimal supports only where required",
+  "dimensions_mm": {
+    "base length": 92.0,
+    "width": 40.0,
+    "thickness": 6.0,
+    "riser height": 36.0,
+    "hole spacing": 50.0
+  }
+}

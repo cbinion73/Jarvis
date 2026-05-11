@@ -1,7 +1,7 @@
 {
-  "last_tick_at": "2026-05-09T01:51:04.260072+00:00",
+  "last_tick_at": "2026-05-11T04:35:55.432734+00:00",
   "quiet_hours_active": true,
-  "active_mode": "chronicle-mode",
+  "active_mode": "dawn-protocol",
   "agents": {
     "ambient-router": {
       "state": "awake",
@@ -14,12 +14,12 @@
       "next_run_at": "2026-05-07T03:45:47.362397+00:00"
     },
     "executive-watch": {
-      "state": "blocked",
+      "state": "idle",
       "last_run_at": "2026-05-07T03:35:47.362397+00:00",
       "next_run_at": "2026-05-07T03:55:47.362397+00:00"
     },
     "chronicle-curator": {
-      "state": "blocked",
+      "state": "idle",
       "last_run_at": "2026-05-07T03:35:47.362397+00:00",
       "next_run_at": "2026-05-07T04:05:47.362397+00:00"
     },
@@ -44,14 +44,14 @@
       "next_run_at": "2026-05-07T03:50:47.362397+00:00"
     },
     "catalyst-personal": {
-      "state": "blocked",
+      "state": "idle",
       "last_run_at": "2026-05-07T04:18:23.640323+00:00",
       "next_run_at": "2026-05-07T04:38:23.640323+00:00"
     }
   },
   "awake_count": 1,
-  "idle_count": 3,
-  "blocked_count": 5,
+  "idle_count": 6,
+  "blocked_count": 2,
   "statuses": [
     {
       "agent_id": "ambient-router",
@@ -100,15 +100,13 @@
     {
       "agent_id": "executive-watch",
       "label": "Executive Watch",
-      "state": "blocked",
-      "reason": "Waiting on openai",
+      "state": "idle",
+      "reason": "Quiet hours posture in effect.",
       "cadence_minutes": 20,
       "dependencies": [
         "openai"
       ],
-      "blocked_dependencies": [
-        "openai"
-      ],
+      "blocked_dependencies": [],
       "owns": [
         "briefs",
         "follow-ups",
@@ -121,20 +119,18 @@
       "last_run_at": "2026-05-07T03:35:47.362397+00:00",
       "next_run_at": "2026-05-07T03:55:47.362397+00:00",
       "due_now": true,
-      "priority": "hold"
+      "priority": "low"
     },
     {
       "agent_id": "catalyst-personal",
       "label": "Catalyst Personal",
-      "state": "blocked",
-      "reason": "Waiting on openai",
+      "state": "idle",
+      "reason": "Quiet hours posture in effect.",
       "cadence_minutes": 20,
       "dependencies": [
         "openai"
       ],
-      "blocked_dependencies": [
-        "openai"
-      ],
+      "blocked_dependencies": [],
       "owns": [
         "workflow runs",
         "signal triage",
@@ -147,20 +143,18 @@
       "last_run_at": "2026-05-07T04:18:23.640323+00:00",
       "next_run_at": "2026-05-07T04:38:23.640323+00:00",
       "due_now": true,
-      "priority": "hold"
+      "priority": "low"
     },
     {
       "agent_id": "chronicle-curator",
       "label": "Chronicle Curator",
-      "state": "blocked",
-      "reason": "Waiting on openai",
+      "state": "idle",
+      "reason": "Quiet hours posture in effect.",
       "cadence_minutes": 30,
       "dependencies": [
         "openai"
       ],
-      "blocked_dependencies": [
-        "openai"
-      ],
+      "blocked_dependencies": [],
       "owns": [
         "Chronicle entries",
         "theme summaries",
@@ -173,7 +167,7 @@
       "last_run_at": "2026-05-07T03:35:47.362397+00:00",
       "next_run_at": "2026-05-07T04:05:47.362397+00:00",
       "due_now": true,
-      "priority": "hold"
+      "priority": "low"
     },
     {
       "agent_id": "workshop-watch",
@@ -227,13 +221,14 @@
       "agent_id": "watchtower",
       "label": "Watchtower",
       "state": "blocked",
-      "reason": "Waiting on home_assistant",
+      "reason": "Waiting on perception, home_assistant",
       "cadence_minutes": 5,
       "dependencies": [
         "perception",
         "home_assistant"
       ],
       "blocked_dependencies": [
+        "perception",
         "home_assistant"
       ],
       "owns": [

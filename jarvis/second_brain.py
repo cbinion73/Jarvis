@@ -31,6 +31,9 @@ class OllamaBrainClient:
             return False
 
     def model_available(self) -> bool:
+        return self._model_available(self.config.second_brain_model)
+
+    def _model_available(self, model: str) -> bool:
         if not self.healthy():
             return False
         try:
@@ -39,7 +42,7 @@ class OllamaBrainClient:
         except (error.URLError, TimeoutError, ValueError, json.JSONDecodeError):
             return False
         models = body.get("models", []) if isinstance(body, dict) else []
-        target = self.config.second_brain_model.strip()
+        target = model.strip()
         for item in models:
             if not isinstance(item, dict):
                 continue
@@ -57,11 +60,12 @@ class OllamaBrainClient:
     ) -> SecondBrainResult:
         if not self.enabled():
             raise RuntimeError("Second brain is disabled.")
-        if not self.model_available():
-            raise RuntimeError(f"Second brain model '{self.config.second_brain_model}' is not available yet.")
+        selected_model = model or self.config.second_brain_model
+        if not self._model_available(selected_model):
+            raise RuntimeError(f"Second brain model '{selected_model}' is not available yet.")
         payload = json.dumps(
             {
-                "model": model or self.config.second_brain_model,
+                "model": selected_model,
                 "stream": False,
                 "messages": [
                     {"role": "system", "content": system_prompt},
@@ -86,6 +90,6 @@ class OllamaBrainClient:
             raise RuntimeError("Second brain response was empty.")
         return SecondBrainResult(
             provider="ollama",
-            model=str(body.get("model") or (model or self.config.second_brain_model)),
+            model=str(body.get("model") or selected_model),
             output_text=content,
         )

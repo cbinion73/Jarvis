@@ -1,0 +1,143 @@
+{
+  "users": {
+    "chris": {
+      "last_presented_local_date": "2026-05-10",
+      "last_presented_at": "2026-05-10T06:16:23.471119+00:00",
+      "last_packet_id": "89c5a9bc-e54f-4b3d-89a4-3d09525a1145"
+    }
+  },
+  "history": [
+    {
+      "packet_id": "89c5a9bc-e54f-4b3d-89a4-3d09525a1145",
+      "user_id": "chris",
+      "actor": "Chris",
+      "device_id": "test-morning-utc",
+      "generated_at": "2026-05-10T06:16:23.470996+00:00",
+      "local_time": "2026-05-10T06:16:12.380594+00:00",
+      "title": "First Light",
+      "opening": "Chris, hold steady; today is about clearing risk, not chasing volume.",
+      "spoken_summary": "Chris, hold steady; today is about clearing risk, not chasing volume. Schedule: Chris: Stag Setup \u00b7 2026-05-15T15:00:00 Watch: Family coordination begins to stack soon; keep an eye on rain windows, the workshop overbuild risk, and your voice tightening before the day fragments.",
+      "what_changed": [
+        "This is the first First Light run for this profile, so today becomes the new baseline."
+      ],
+      "first_20_minutes": [
+        "unlock the front door with second factor",
+        "approve the troop parent message draft",
+        "defer duplicate vendor package approvals",
+        "pack school folders, devices, and water"
+      ],
+      "formation_cue": "Stewardship under pressure \u2014 move with restraint, choose the one necessary action, and let the rest wait.",
+      "watch_line": "Family coordination begins to stack soon; keep an eye on rain windows, the workshop overbuild risk, and your voice tightening before the day fragments.",
+      "unread_emails": 6,
+      "calendar_events": [
+        {
+          "id": "e8e6d49c-95bd-4c22-816e-02e2e734a149@cozi.com",
+          "summary": "Chris: Stag Setup",
+          "start": "2026-05-15T15:00:00",
+          "end": "2026-05-15T16:00:00",
+          "location": "",
+          "description": "",
+          "all_day": false,
+          "source": "cozi",
+          "source_label": "Cozi Family Calendar"
+        },
+        {
+          "id": "094ac29f-ab6a-469c-96c1-1f1ba886b7b9@cozi.com",
+          "summary": "Chris: Stag",
+          "start": "2026-05-16T15:00:00",
+          "end": "2026-05-16T16:00:00",
+          "location": "",
+          "description": "",
+          "all_day": false,
+          "source": "cozi",
+          "source_label": "Cozi Family Calendar"
+        },
+        {
+          "id": "a2d7ab19-5383-40ca-83d4-8635b6fc5925@cozi.com",
+          "summary": "Rebekah/Chris: Anniversary",
+          "start": "2026-05-20",
+          "end": "2026-05-21",
+          "location": "",
+          "description": "",
+          "all_day": false,
+          "source": "cozi",
+          "source_label": "Cozi Family Calendar"
+        },
+        {
+          "id": "b3e17263-2ab1-477a-a940-2a95c3e443d8@cozi.com",
+          "summary": "Chris: Hunter Education",
+          "start": "2026-05-30T15:00:00",
+          "end": "2026-05-30T16:00:00",
+          "location": "",
+          "description": "",
+          "all_day": false,
+          "source": "cozi",
+          "source_label": "Cozi Family Calendar"
+        }
+      ],
+      "sections": [
+        {
+          "id": "day-shape",
+          "title": "Day Shape",
+          "summary": "Chris, hold steady; today is about clearing risk, not chasing volume.",
+          "details": [
+            "This is the first First Light run for this profile, so today becomes the new baseline."
+          ],
+          "truth_state": "interpreted"
+        },
+        {
+          "id": "weather",
+          "title": "Weather",
+          "summary": "Depart only during a clear break for troop meeting arrival and school departure; if rain persists, use an indoor backup or brief covered wait rather than canceling.",
+          "details": [
+            "Source: staged advisory, not a live weather connector."
+          ],
+          "truth_state": "staged"
+        },
+        {
+          "id": "schedule",
+          "title": "Schedule",
+          "summary": "Chris: Stag Setup \u00b7 2026-05-15T15:00:00",
+          "details": [
+            "Chris: Stag \u00b7 2026-05-16T15:00:00",
+            "Rebekah/Chris: Anniversary \u00b7 2026-05-20",
+            "Chris: Hunter Education \u00b7 2026-05-30T15:00:00"
+          ],
+          "truth_state": "live"
+        },
+        {
+          "id": "family",
+          "title": "Family",
+          "summary": "Meeting prep with discretion",
+          "details": [
+            "Chapter 4 voice tightening",
+            "Workshop bracket overbuild",
+            "Backpacks by the door",
+            "Charged school devices",
+            "Permission slips signed"
+          ],
+          "truth_state": "mixed"
+        },
+        {
+          "id": "mission",
+          "title": "Mission",
+          "summary": "What matters now: your calendar is stacked with family commitments starting May 11, plus two pending approvals that need decisions, but the only one that truly requires urgency is the front door unlock because it\u2019s high-risk and needs second factor.  \nWhat can wait: the duplicate vendor-package approvals, the parent-message drafts, and any deeper wealth strategy work\u2014your financial-independence lane is already clear: build one small digital asset or productized offer, not a moonshot.  \nClean next move: clear the approval queue in order of risk, then block one focused session to pick a single repeatable problem and ship a one-page offer with a simple validation link to 10\u201320 targeted people.",
+          "details": [
+            "First-light today is less about the clock than the loadout: Chris has a short runway before family coordination starts stacking\u2014especially Rebekah\u2019s hair appointment, Anna\u2019s observation, and the mid-May Chris/Stag sequence. The second-order effect is that \u201cmeeting prep with discretion\u201d and \u201cvoice tightening\u201d should happen early, because once the calendar gets moving, attention gets fragmented and the workshop overbuild risk rises.",
+            "5 approval item(s) are pending."
+          ],
+          "truth_state": "interpreted"
+        },
+        {
+          "id": "formation",
+          "title": "Formation",
+          "summary": "Stewardship under pressure \u2014 move with restraint, choose the one necessary action, and let the rest wait.",
+          "details": [
+            "stewardship under pressure \u00b7 2 mention(s)"
+          ],
+          "truth_state": "interpreted"
+        }
+      ]
+    }
+  ]
+}

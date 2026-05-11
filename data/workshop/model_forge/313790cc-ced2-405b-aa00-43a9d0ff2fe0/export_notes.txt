@@ -1,0 +1,6 @@
+Package 313790cc-ced2-405b-aa00-43a9d0ff2fe0 exported a CadQuery-backed mount model.
+Primary mesh: monitor-mount-plate.3mf
+Fallback mesh: monitor-mount-plate.stl
+Solid exchange: monitor-mount-plate.step
+Recommended material: PETG-CF
+Suggested slicer profile: functional-prototype

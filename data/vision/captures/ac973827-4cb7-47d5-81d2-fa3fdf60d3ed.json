@@ -1,0 +1,9 @@
+{
+  "capture_id": "ac973827-4cb7-47d5-81d2-fa3fdf60d3ed",
+  "actor": "Chris",
+  "camera_label": "USB Camera (0c45:632e)",
+  "prompt": "Describe what is visible and call out the most important objects or activity.",
+  "image_path": "data/vision/captures/ac973827-4cb7-47d5-81d2-fa3fdf60d3ed.jpg",
+  "created_at": "2026-05-10T03:46:22.456664+00:00",
+  "analysis": "A desk/workspace is visible from above. Main items:\n\n- A black mouse pad or desk mat covering most of the center/right area\n- A keyboard at the upper right\n- A hand resting near the top center, touching or using a mouse\n- A Sriracha sauce packet lying on the mat near the center-bottom\n- Papers/documents on the left side\n- A container or cup partially visible at the top left\n\nThe main activity appears to be someone working at the desk, with the mouse/keyboard in use."
+}

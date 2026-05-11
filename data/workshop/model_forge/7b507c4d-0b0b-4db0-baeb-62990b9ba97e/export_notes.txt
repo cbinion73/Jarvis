@@ -1,0 +1,6 @@
+Package 7b507c4d-0b0b-4db0-baeb-62990b9ba97e exported a CadQuery-backed spacer model.
+Primary mesh: axle-spacer.3mf
+Fallback mesh: axle-spacer.stl
+Solid exchange: axle-spacer.step
+Recommended material: PLA
+Suggested slicer profile: fit-check-fast
