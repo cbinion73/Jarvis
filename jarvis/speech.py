@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import tempfile
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import BinaryIO
 from urllib import error, request
@@ -18,6 +19,11 @@ class AudioPayload:
     content_type: str
     extension: str
     provider: str
+
+
+ELEVENLABS_TTS_TIMEOUT_SECONDS = float(os.getenv("JARVIS_ELEVENLABS_TTS_TIMEOUT_SECONDS", "3.5"))
+ELEVENLABS_STREAMING_LATENCY = int(os.getenv("JARVIS_ELEVENLABS_STREAMING_LATENCY", "3"))
+ELEVENLABS_OUTPUT_FORMAT = os.getenv("JARVIS_ELEVENLABS_OUTPUT_FORMAT", "mp3_22050_32").strip() or "mp3_22050_32"
 
 
 def resolve_tts_providers(config: AppConfig, preferred_provider: str | None = None) -> list[str]:
@@ -57,10 +63,15 @@ def synthesize_speech(config: AppConfig, text: str, voice_settings: dict | None 
             if provider == "localai":
                 return _synthesize_with_localai(config, text)
             if provider == "elevenlabs":
-                return _synthesize_with_elevenlabs(
-                    config,
-                    text,
-                    requested_voice=selected_elevenlabs_voice or None,
+                return _run_with_timeout(
+                    "elevenlabs",
+                    partial(
+                        _synthesize_with_elevenlabs,
+                        config,
+                        text,
+                        requested_voice=selected_elevenlabs_voice or None,
+                    ),
+                    timeout_seconds=ELEVENLABS_TTS_TIMEOUT_SECONDS,
                 )
             if provider == "system":
                 return _synthesize_with_system(config, text)
@@ -124,16 +135,25 @@ def _synthesize_with_elevenlabs(
     requested_voice: str | None = None,
 ) -> AudioPayload:
     from elevenlabs.client import ElevenLabs
+    from elevenlabs.core.request_options import RequestOptions
 
     api_key = os.getenv("ELEVENLABS_API_KEY", "").strip() or config.elevenlabs_api_key.strip()
     if not api_key:
         raise RuntimeError("ELEVENLABS_API_KEY is missing.")
-    voice = ElevenLabs(api_key=api_key)
+    voice = ElevenLabs(
+        api_key=api_key,
+        timeout=max(1.0, ELEVENLABS_TTS_TIMEOUT_SECONDS),
+    )
     voice_id = _resolve_elevenlabs_voice_id(voice, requested_voice or config.elevenlabs_voice)
     audio = voice.text_to_speech.convert(
         voice_id=voice_id,
         text=text,
-        output_format="mp3_44100_128",
+        optimize_streaming_latency=ELEVENLABS_STREAMING_LATENCY,
+        output_format=ELEVENLABS_OUTPUT_FORMAT,
+        request_options=RequestOptions(
+            timeout_in_seconds=max(1, int(ELEVENLABS_TTS_TIMEOUT_SECONDS)),
+            max_retries=0,
+        ),
     )
     return AudioPayload(
         data=b"".join(audio),
@@ -388,3 +408,21 @@ def _localai_healthcheck(base_url: str) -> bool:
             return 200 <= response.status < 300
     except (error.URLError, TimeoutError, ValueError):
         return False
+
+
+def _run_with_timeout(provider: str, operation, *, timeout_seconds: float) -> AudioPayload:
+    import concurrent.futures
+
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    future = executor.submit(operation)
+    try:
+        return future.result(timeout=max(0.1, timeout_seconds))
+    except concurrent.futures.TimeoutError as exc:
+        future.cancel()
+        executor.shutdown(wait=False, cancel_futures=True)
+        raise RuntimeError(
+            f"{provider} timed out after {timeout_seconds:.1f}s"
+        ) from exc
+    finally:
+        if future.done():
+            executor.shutdown(wait=True, cancel_futures=False)

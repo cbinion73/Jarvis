@@ -29,7 +29,7 @@
       "suggested_packet": "tasks",
       "cadence_phase": "morning",
       "active_loop": "First Light",
-      "updated_at": "2026-05-11T13:22:47.034154+00:00"
+      "updated_at": "2026-05-11T13:27:04.638341+00:00"
     },
     "rebekah": {
       "actor": "Rebekah",
@@ -66,28 +66,6 @@
     }
   },
   "surface_history": [
-    {
-      "actor": "Anna",
-      "surface_key": "growth::financial::warming",
-      "total_open_loops": 3,
-      "waiting_on_you": 0,
-      "needs_revisit": 0,
-      "suggested_packet": "",
-      "cadence_phase": "night",
-      "active_loop": "Learning Curation",
-      "updated_at": "2026-05-11T08:23:55.937074+00:00"
-    },
-    {
-      "actor": "Chris",
-      "surface_key": "workshop::296ab530-fad6-4b16-9ad4-260b37262ef2::pending-approval",
-      "total_open_loops": 18,
-      "waiting_on_you": 11,
-      "needs_revisit": 7,
-      "suggested_packet": "",
-      "cadence_phase": "night",
-      "active_loop": "Learning Curation",
-      "updated_at": "2026-05-11T08:29:01.392645+00:00"
-    },
     {
       "actor": "Chris",
       "surface_key": "workshop::296ab530-fad6-4b16-9ad4-260b37262ef2::pending-approval",
@@ -1385,6 +1363,28 @@
       "cadence_phase": "morning",
       "active_loop": "First Light",
       "updated_at": "2026-05-11T13:22:47.034154+00:00"
+    },
+    {
+      "actor": "Chris",
+      "surface_key": "workshop::296ab530-fad6-4b16-9ad4-260b37262ef2::pending-approval",
+      "total_open_loops": 18,
+      "waiting_on_you": 11,
+      "needs_revisit": 7,
+      "suggested_packet": "tasks",
+      "cadence_phase": "morning",
+      "active_loop": "First Light",
+      "updated_at": "2026-05-11T13:25:05.046810+00:00"
+    },
+    {
+      "actor": "Chris",
+      "surface_key": "workshop::296ab530-fad6-4b16-9ad4-260b37262ef2::pending-approval",
+      "total_open_loops": 18,
+      "waiting_on_you": 11,
+      "needs_revisit": 7,
+      "suggested_packet": "tasks",
+      "cadence_phase": "morning",
+      "active_loop": "First Light",
+      "updated_at": "2026-05-11T13:27:04.638341+00:00"
     }
   ],
   "notifications": [
@@ -1503,7 +1503,7 @@
   "world_graphs": {
     "chris": {
       "actor": "Chris",
-      "captured_at": "2026-05-11T13:22:30.328535+00:00",
+      "captured_at": "2026-05-11T13:26:44.934104+00:00",
       "summary": {
         "people": 4,
         "rooms": 5,
@@ -1722,19 +1722,19 @@
         "growth-signal:chris:4",
         "growth-signal:chris:5",
         "growth-signal:chris:6",
-        "lead:1f53a113-83f5-4008-addb-c4319ccf1e19",
-        "lead:219f7d57-2e8c-4454-95ab-8d1aa3b96c42",
-        "lead:a4a828cd-d3b6-47b6-8b2a-93131c7a72dd",
-        "lead:e43423bd-9324-45e5-a536-3c0f9259a4a4",
+        "lead:26162cbc-cfec-439c-bb8b-d726ac22ad7d",
+        "lead:3cc3c8df-f330-474c-8d74-6c2950a0c04c",
+        "lead:667744c0-997e-4083-b245-3163ecc7ee96",
+        "lead:ab246dee-5b51-4675-87b7-ab692378019d",
         "notification:assistant-1778493902.191669-cadence-morning",
         "person:anna",
         "person:caleb",
         "person:chris",
         "person:rebekah",
-        "risk:pipeline-stalled-1f53a113-83f5-4008-addb-c4319ccf1e19",
-        "risk:pipeline-stalled-219f7d57-2e8c-4454-95ab-8d1aa3b96c42",
-        "risk:pipeline-stalled-a4a828cd-d3b6-47b6-8b2a-93131c7a72dd",
-        "risk:pipeline-stalled-e43423bd-9324-45e5-a536-3c0f9259a4a4",
+        "risk:pipeline-stalled-26162cbc-cfec-439c-bb8b-d726ac22ad7d",
+        "risk:pipeline-stalled-3cc3c8df-f330-474c-8d74-6c2950a0c04c",
+        "risk:pipeline-stalled-667744c0-997e-4083-b245-3163ecc7ee96",
+        "risk:pipeline-stalled-ab246dee-5b51-4675-87b7-ab692378019d",
         "room:bedroom",
         "room:kitchen",
         "room:living-room",
@@ -1959,19 +1959,19 @@
         "growth-signal:chris:4": "Morning capture",
         "growth-signal:chris:5": "Need a quick decision on Friday agenda",
         "growth-signal:chris:6": "Thermo follow-up idea",
-        "lead:219f7d57-2e8c-4454-95ab-8d1aa3b96c42": "Thermo follow-up idea",
-        "lead:a4a828cd-d3b6-47b6-8b2a-93131c7a72dd": "Need a quick decision on Friday agenda",
-        "lead:e43423bd-9324-45e5-a536-3c0f9259a4a4": "Personal Catalyst for Jarvis",
-        "lead:1f53a113-83f5-4008-addb-c4319ccf1e19": "Morning capture",
+        "lead:3cc3c8df-f330-474c-8d74-6c2950a0c04c": "Thermo follow-up idea",
+        "lead:667744c0-997e-4083-b245-3163ecc7ee96": "Need a quick decision on Friday agenda",
+        "lead:ab246dee-5b51-4675-87b7-ab692378019d": "Personal Catalyst for Jarvis",
+        "lead:26162cbc-cfec-439c-bb8b-d726ac22ad7d": "Morning capture",
         "routine:first-light": "First Light",
         "routine:drift-check": "Drift Check",
         "routine:handoff-prep": "Handoff Prep",
         "routine:open-loop-collapse": "Open-Loop Collapse",
         "routine:learning-curation": "Learning Curation",
-        "risk:pipeline-stalled-1f53a113-83f5-4008-addb-c4319ccf1e19": "Morning capture is stale in the pipeline.",
-        "risk:pipeline-stalled-a4a828cd-d3b6-47b6-8b2a-93131c7a72dd": "Need a quick decision on Friday agenda is stale in the pipeline.",
-        "risk:pipeline-stalled-219f7d57-2e8c-4454-95ab-8d1aa3b96c42": "Thermo follow-up idea is stale in the pipeline.",
-        "risk:pipeline-stalled-e43423bd-9324-45e5-a536-3c0f9259a4a4": "Personal Catalyst for Jarvis is stale in the pipeline."
+        "risk:pipeline-stalled-26162cbc-cfec-439c-bb8b-d726ac22ad7d": "Morning capture is stale in the pipeline.",
+        "risk:pipeline-stalled-667744c0-997e-4083-b245-3163ecc7ee96": "Need a quick decision on Friday agenda is stale in the pipeline.",
+        "risk:pipeline-stalled-3cc3c8df-f330-474c-8d74-6c2950a0c04c": "Thermo follow-up idea is stale in the pipeline.",
+        "risk:pipeline-stalled-ab246dee-5b51-4675-87b7-ab692378019d": "Personal Catalyst for Jarvis is stale in the pipeline."
       },
       "node_types": {
         "person:chris": "person",
@@ -2168,40 +2168,40 @@
         "growth-signal:chris:4": "growth-signal",
         "growth-signal:chris:5": "growth-signal",
         "growth-signal:chris:6": "growth-signal",
-        "lead:219f7d57-2e8c-4454-95ab-8d1aa3b96c42": "lead",
-        "lead:a4a828cd-d3b6-47b6-8b2a-93131c7a72dd": "lead",
-        "lead:e43423bd-9324-45e5-a536-3c0f9259a4a4": "lead",
-        "lead:1f53a113-83f5-4008-addb-c4319ccf1e19": "lead",
+        "lead:3cc3c8df-f330-474c-8d74-6c2950a0c04c": "lead",
+        "lead:667744c0-997e-4083-b245-3163ecc7ee96": "lead",
+        "lead:ab246dee-5b51-4675-87b7-ab692378019d": "lead",
+        "lead:26162cbc-cfec-439c-bb8b-d726ac22ad7d": "lead",
         "routine:first-light": "routine",
         "routine:drift-check": "routine",
         "routine:handoff-prep": "routine",
         "routine:open-loop-collapse": "routine",
         "routine:learning-curation": "routine",
-        "risk:pipeline-stalled-1f53a113-83f5-4008-addb-c4319ccf1e19": "risk",
-        "risk:pipeline-stalled-a4a828cd-d3b6-47b6-8b2a-93131c7a72dd": "risk",
-        "risk:pipeline-stalled-219f7d57-2e8c-4454-95ab-8d1aa3b96c42": "risk",
-        "risk:pipeline-stalled-e43423bd-9324-45e5-a536-3c0f9259a4a4": "risk"
+        "risk:pipeline-stalled-26162cbc-cfec-439c-bb8b-d726ac22ad7d": "risk",
+        "risk:pipeline-stalled-667744c0-997e-4083-b245-3163ecc7ee96": "risk",
+        "risk:pipeline-stalled-3cc3c8df-f330-474c-8d74-6c2950a0c04c": "risk",
+        "risk:pipeline-stalled-ab246dee-5b51-4675-87b7-ab692378019d": "risk"
       },
       "delta": {
         "added_ids": [
-          "lead:1f53a113-83f5-4008-addb-c4319ccf1e19",
-          "lead:219f7d57-2e8c-4454-95ab-8d1aa3b96c42",
-          "lead:a4a828cd-d3b6-47b6-8b2a-93131c7a72dd",
-          "lead:e43423bd-9324-45e5-a536-3c0f9259a4a4",
-          "risk:pipeline-stalled-1f53a113-83f5-4008-addb-c4319ccf1e19",
-          "risk:pipeline-stalled-219f7d57-2e8c-4454-95ab-8d1aa3b96c42",
-          "risk:pipeline-stalled-a4a828cd-d3b6-47b6-8b2a-93131c7a72dd",
-          "risk:pipeline-stalled-e43423bd-9324-45e5-a536-3c0f9259a4a4"
+          "lead:26162cbc-cfec-439c-bb8b-d726ac22ad7d",
+          "lead:3cc3c8df-f330-474c-8d74-6c2950a0c04c",
+          "lead:667744c0-997e-4083-b245-3163ecc7ee96",
+          "lead:ab246dee-5b51-4675-87b7-ab692378019d",
+          "risk:pipeline-stalled-26162cbc-cfec-439c-bb8b-d726ac22ad7d",
+          "risk:pipeline-stalled-3cc3c8df-f330-474c-8d74-6c2950a0c04c",
+          "risk:pipeline-stalled-667744c0-997e-4083-b245-3163ecc7ee96",
+          "risk:pipeline-stalled-ab246dee-5b51-4675-87b7-ab692378019d"
         ],
         "removed_ids": [
-          "lead:2db5f9ce-e7be-4dad-8dde-81ae7a1f2eee",
-          "lead:dbc395ce-2893-46dc-8c30-fea230ec7109",
-          "lead:ec16597e-f632-4b0c-9bd9-bdd0f6829244",
-          "lead:ed869b31-5638-4061-8e79-77f6901efaf0",
-          "risk:pipeline-stalled-2db5f9ce-e7be-4dad-8dde-81ae7a1f2eee",
-          "risk:pipeline-stalled-dbc395ce-2893-46dc-8c30-fea230ec7109",
-          "risk:pipeline-stalled-ec16597e-f632-4b0c-9bd9-bdd0f6829244",
-          "risk:pipeline-stalled-ed869b31-5638-4061-8e79-77f6901efaf0"
+          "lead:27eef400-1289-4bc9-96b4-5d6e1b05d48b",
+          "lead:416ace0b-432c-4474-a7b8-3f73d3c30644",
+          "lead:468fbcd7-5aa5-45f0-9fb2-568f71861058",
+          "lead:ca60a2df-5404-47c8-b2ef-22a662aab888",
+          "risk:pipeline-stalled-27eef400-1289-4bc9-96b4-5d6e1b05d48b",
+          "risk:pipeline-stalled-416ace0b-432c-4474-a7b8-3f73d3c30644",
+          "risk:pipeline-stalled-468fbcd7-5aa5-45f0-9fb2-568f71861058",
+          "risk:pipeline-stalled-ca60a2df-5404-47c8-b2ef-22a662aab888"
         ],
         "added_labels": [
           "Morning capture",
@@ -2215,167 +2215,17 @@
         ],
         "removed_labels": [
           "Personal Catalyst for Jarvis",
-          "Need a quick decision on Friday agenda",
           "Morning capture",
           "Thermo follow-up idea",
+          "Need a quick decision on Friday agenda",
           "Personal Catalyst for Jarvis is stale in the pipeline.",
-          "Need a quick decision on Friday agenda is stale in the pipeline.",
           "Morning capture is stale in the pipeline.",
-          "Thermo follow-up idea is stale in the pipeline."
+          "Thermo follow-up idea is stale in the pipeline.",
+          "Need a quick decision on Friday agenda is stale in the pipeline."
         ],
         "count_delta": {}
       },
       "history": [
-        {
-          "captured_at": "2026-05-11T13:09:24.930019+00:00",
-          "summary": {
-            "people": 4,
-            "rooms": 5,
-            "devices": 138,
-            "events": 12,
-            "tasks": 18,
-            "approvals": 7,
-            "notifications": 1,
-            "growth_lanes": 3,
-            "growth_signals": 6,
-            "accounts": 0,
-            "leads": 4,
-            "assets": 0,
-            "routines": 5,
-            "risks": 4,
-            "entity_counts": {
-              "person": 4,
-              "room": 5,
-              "device": 138,
-              "event": 12,
-              "task": 18,
-              "approval": 7,
-              "notification": 1,
-              "growth-lane": 3,
-              "growth-signal": 6,
-              "lead": 4,
-              "account": 0,
-              "risk": 4,
-              "routine": 5,
-              "project": 0,
-              "asset": 0,
-              "habit": 0
-            },
-            "edge_counts": {
-              "owns": 0,
-              "located-in": 146,
-              "attends-or-carries": 4,
-              "carries": 18,
-              "must-decide": 7,
-              "needs-attention": 1,
-              "uses-account": 0,
-              "tracks": 18,
-              "compounds": 3,
-              "belongs-to-lane": 3,
-              "at-risk-from": 4,
-              "drives": 0,
-              "scheduled-by": 5,
-              "supports": 0
-            },
-            "edges": 209
-          },
-          "count_delta": {},
-          "added_labels": [
-            "Need a quick decision on Friday agenda",
-            "Morning capture",
-            "Thermo follow-up idea",
-            "Personal Catalyst for Jarvis",
-            "Need a quick decision on Friday agenda is stale in the pipeline.",
-            "Morning capture is stale in the pipeline.",
-            "Thermo follow-up idea is stale in the pipeline.",
-            "Personal Catalyst for Jarvis is stale in the pipeline."
-          ],
-          "removed_labels": [
-            "Need a quick decision on Friday agenda",
-            "Morning capture",
-            "Personal Catalyst for Jarvis",
-            "Thermo follow-up idea",
-            "Need a quick decision on Friday agenda is stale in the pipeline.",
-            "Morning capture is stale in the pipeline.",
-            "Personal Catalyst for Jarvis is stale in the pipeline.",
-            "Thermo follow-up idea is stale in the pipeline."
-          ]
-        },
-        {
-          "captured_at": "2026-05-11T13:12:45.098334+00:00",
-          "summary": {
-            "people": 4,
-            "rooms": 5,
-            "devices": 138,
-            "events": 12,
-            "tasks": 18,
-            "approvals": 7,
-            "notifications": 1,
-            "growth_lanes": 3,
-            "growth_signals": 6,
-            "accounts": 0,
-            "leads": 4,
-            "assets": 0,
-            "routines": 5,
-            "risks": 4,
-            "entity_counts": {
-              "person": 4,
-              "room": 5,
-              "device": 138,
-              "event": 12,
-              "task": 18,
-              "approval": 7,
-              "notification": 1,
-              "growth-lane": 3,
-              "growth-signal": 6,
-              "lead": 4,
-              "account": 0,
-              "risk": 4,
-              "routine": 5,
-              "project": 0,
-              "asset": 0,
-              "habit": 0
-            },
-            "edge_counts": {
-              "owns": 0,
-              "located-in": 146,
-              "attends-or-carries": 4,
-              "carries": 18,
-              "must-decide": 7,
-              "needs-attention": 1,
-              "uses-account": 0,
-              "tracks": 18,
-              "compounds": 3,
-              "belongs-to-lane": 3,
-              "at-risk-from": 4,
-              "drives": 0,
-              "scheduled-by": 5,
-              "supports": 0
-            },
-            "edges": 209
-          },
-          "count_delta": {},
-          "added_labels": [
-            "Personal Catalyst for Jarvis",
-            "Need a quick decision on Friday agenda",
-            "Thermo follow-up idea",
-            "Morning capture",
-            "Personal Catalyst for Jarvis is stale in the pipeline.",
-            "Need a quick decision on Friday agenda is stale in the pipeline.",
-            "Thermo follow-up idea is stale in the pipeline.",
-            "Morning capture is stale in the pipeline."
-          ],
-          "removed_labels": [
-            "Need a quick decision on Friday agenda",
-            "Morning capture",
-            "Thermo follow-up idea",
-            "Personal Catalyst for Jarvis",
-            "Need a quick decision on Friday agenda is stale in the pipeline.",
-            "Morning capture is stale in the pipeline.",
-            "Thermo follow-up idea is stale in the pipeline.",
-            "Personal Catalyst for Jarvis is stale in the pipeline."
-          ]
-        },
         {
           "captured_at": "2026-05-11T13:14:44.891462+00:00",
           "summary": {
@@ -3130,6 +2980,156 @@
             "Need a quick decision on Friday agenda is stale in the pipeline.",
             "Morning capture is stale in the pipeline.",
             "Thermo follow-up idea is stale in the pipeline."
+          ]
+        },
+        {
+          "captured_at": "2026-05-11T13:24:48.919394+00:00",
+          "summary": {
+            "people": 4,
+            "rooms": 5,
+            "devices": 138,
+            "events": 12,
+            "tasks": 18,
+            "approvals": 7,
+            "notifications": 1,
+            "growth_lanes": 3,
+            "growth_signals": 6,
+            "accounts": 0,
+            "leads": 4,
+            "assets": 0,
+            "routines": 5,
+            "risks": 4,
+            "entity_counts": {
+              "person": 4,
+              "room": 5,
+              "device": 138,
+              "event": 12,
+              "task": 18,
+              "approval": 7,
+              "notification": 1,
+              "growth-lane": 3,
+              "growth-signal": 6,
+              "lead": 4,
+              "account": 0,
+              "risk": 4,
+              "routine": 5,
+              "project": 0,
+              "asset": 0,
+              "habit": 0
+            },
+            "edge_counts": {
+              "owns": 0,
+              "located-in": 146,
+              "attends-or-carries": 4,
+              "carries": 18,
+              "must-decide": 7,
+              "needs-attention": 1,
+              "uses-account": 0,
+              "tracks": 18,
+              "compounds": 3,
+              "belongs-to-lane": 3,
+              "at-risk-from": 4,
+              "drives": 0,
+              "scheduled-by": 5,
+              "supports": 0
+            },
+            "edges": 209
+          },
+          "count_delta": {},
+          "added_labels": [
+            "Personal Catalyst for Jarvis",
+            "Morning capture",
+            "Thermo follow-up idea",
+            "Need a quick decision on Friday agenda",
+            "Personal Catalyst for Jarvis is stale in the pipeline.",
+            "Morning capture is stale in the pipeline.",
+            "Thermo follow-up idea is stale in the pipeline.",
+            "Need a quick decision on Friday agenda is stale in the pipeline."
+          ],
+          "removed_labels": [
+            "Morning capture",
+            "Thermo follow-up idea",
+            "Need a quick decision on Friday agenda",
+            "Personal Catalyst for Jarvis",
+            "Morning capture is stale in the pipeline.",
+            "Thermo follow-up idea is stale in the pipeline.",
+            "Need a quick decision on Friday agenda is stale in the pipeline.",
+            "Personal Catalyst for Jarvis is stale in the pipeline."
+          ]
+        },
+        {
+          "captured_at": "2026-05-11T13:26:44.934104+00:00",
+          "summary": {
+            "people": 4,
+            "rooms": 5,
+            "devices": 138,
+            "events": 12,
+            "tasks": 18,
+            "approvals": 7,
+            "notifications": 1,
+            "growth_lanes": 3,
+            "growth_signals": 6,
+            "accounts": 0,
+            "leads": 4,
+            "assets": 0,
+            "routines": 5,
+            "risks": 4,
+            "entity_counts": {
+              "person": 4,
+              "room": 5,
+              "device": 138,
+              "event": 12,
+              "task": 18,
+              "approval": 7,
+              "notification": 1,
+              "growth-lane": 3,
+              "growth-signal": 6,
+              "lead": 4,
+              "account": 0,
+              "risk": 4,
+              "routine": 5,
+              "project": 0,
+              "asset": 0,
+              "habit": 0
+            },
+            "edge_counts": {
+              "owns": 0,
+              "located-in": 146,
+              "attends-or-carries": 4,
+              "carries": 18,
+              "must-decide": 7,
+              "needs-attention": 1,
+              "uses-account": 0,
+              "tracks": 18,
+              "compounds": 3,
+              "belongs-to-lane": 3,
+              "at-risk-from": 4,
+              "drives": 0,
+              "scheduled-by": 5,
+              "supports": 0
+            },
+            "edges": 209
+          },
+          "count_delta": {},
+          "added_labels": [
+            "Morning capture",
+            "Thermo follow-up idea",
+            "Need a quick decision on Friday agenda",
+            "Personal Catalyst for Jarvis",
+            "Morning capture is stale in the pipeline.",
+            "Thermo follow-up idea is stale in the pipeline.",
+            "Need a quick decision on Friday agenda is stale in the pipeline.",
+            "Personal Catalyst for Jarvis is stale in the pipeline."
+          ],
+          "removed_labels": [
+            "Personal Catalyst for Jarvis",
+            "Morning capture",
+            "Thermo follow-up idea",
+            "Need a quick decision on Friday agenda",
+            "Personal Catalyst for Jarvis is stale in the pipeline.",
+            "Morning capture is stale in the pipeline.",
+            "Thermo follow-up idea is stale in the pipeline.",
+            "Need a quick decision on Friday agenda is stale in the pipeline."
           ]
         }
       ]
@@ -13117,7 +13117,7 @@
     },
     {
       "actor": "Chris",
-      "captured_at": "2026-05-11T13:22:30.328535+00:00",
+      "captured_at": "2026-05-11T13:26:44.934104+00:00",
       "summary": {
         "people": 4,
         "rooms": 5,
@@ -13199,9 +13199,9 @@
         "Thermo follow-up idea is stale in the pipeline."
       ],
       "signature": "chris|world.signal.removed|labels|removed|down|morning capture,morning capture is stale in the pipeline.,need a quick decision on friday agenda,need a quick decision on friday agenda is stale in the pipeline.,personal catalyst for jarvis,personal catalyst for jarvis is stale in the pipeline.,thermo follow-up idea,thermo follow-up idea is stale in the pipeline.",
-      "occurrence_count": 14,
+      "occurrence_count": 16,
       "first_seen_at": "2026-05-11T12:08:48.230430+00:00",
-      "last_seen_at": "2026-05-11T13:22:30.328535+00:00",
+      "last_seen_at": "2026-05-11T13:26:44.934104+00:00",
       "delta_value": 0
     },
     {
@@ -13566,7 +13566,7 @@
     },
     {
       "actor": "Chris",
-      "captured_at": "2026-05-11T13:22:30.328535+00:00",
+      "captured_at": "2026-05-11T13:26:44.934104+00:00",
       "summary": {
         "people": 4,
         "rooms": 5,
@@ -13648,9 +13648,9 @@
         "Need a quick decision on Friday agenda is stale in the pipeline."
       ],
       "signature": "chris|world.signal.added|labels|added|up|morning capture,morning capture is stale in the pipeline.,need a quick decision on friday agenda,need a quick decision on friday agenda is stale in the pipeline.,personal catalyst for jarvis,personal catalyst for jarvis is stale in the pipeline.,thermo follow-up idea,thermo follow-up idea is stale in the pipeline.",
-      "occurrence_count": 11,
+      "occurrence_count": 13,
       "first_seen_at": "2026-05-11T12:12:20.019092+00:00",
-      "last_seen_at": "2026-05-11T13:22:30.328535+00:00",
+      "last_seen_at": "2026-05-11T13:26:44.934104+00:00",
       "delta_value": 0
     },
     {
@@ -16292,10 +16292,10 @@
     },
     "today_board:chris": {
       "surface_key": "today_board:chris",
-      "saved_at": "2026-05-11T13:22:09.787132+00:00",
+      "saved_at": "2026-05-11T13:26:44.889276+00:00",
       "payload": {
         "actor": "Chris",
-        "generated_at": "2026-05-11T13:22:09.552982+00:00",
+        "generated_at": "2026-05-11T13:26:44.824039+00:00",
         "calendar": [
           {
             "id": "e8e6d49c-95bd-4c22-816e-02e2e734a149@cozi.com",
@@ -16457,7 +16457,7 @@
         },
         "growth": {
           "actor": "Chris",
-          "generated_at": "2026-05-11T13:21:57.408458+00:00",
+          "generated_at": "2026-05-11T13:26:36.307942+00:00",
           "schema_version": "2026-05-11",
           "schema": {
             "version": "2026-05-11",
@@ -17111,7 +17111,7 @@
         },
         "assistant_notifications": {
           "actor": "Chris",
-          "generated_at": "2026-05-11T13:22:09.770709+00:00",
+          "generated_at": "2026-05-11T13:26:44.879912+00:00",
           "summary": {
             "total": 1,
             "unread": 1,
@@ -17151,10 +17151,10 @@
         },
         "cognition": {
           "actor": "Chris",
-          "generated_at": "2026-05-11T13:21:52.275031+00:00",
+          "generated_at": "2026-05-11T13:26:27.426831+00:00",
           "self_model": {
             "actor": "Chris",
-            "generated_at": "2026-05-11T13:21:55.343566+00:00",
+            "generated_at": "2026-05-11T13:26:30.087645+00:00",
             "tools": {
               "ready": [
                 "openai-api",
@@ -17387,7 +17387,7 @@
           },
           "world_state": {
             "actor": "Chris",
-            "generated_at": "2026-05-11T13:21:57.380412+00:00",
+            "generated_at": "2026-05-11T13:26:36.282962+00:00",
             "summary": {
               "people": 4,
               "rooms": 5,
@@ -17443,20 +17443,20 @@
             "delta": {
               "count_delta": {},
               "added_labels": [
-                "Morning capture",
                 "Personal Catalyst for Jarvis",
+                "Morning capture",
                 "Thermo follow-up idea",
                 "Need a quick decision on Friday agenda",
-                "Morning capture is stale in the pipeline.",
-                "Personal Catalyst for Jarvis is stale in the pipeline."
+                "Personal Catalyst for Jarvis is stale in the pipeline.",
+                "Morning capture is stale in the pipeline."
               ],
               "removed_labels": [
-                "Need a quick decision on Friday agenda",
                 "Morning capture",
-                "Personal Catalyst for Jarvis",
                 "Thermo follow-up idea",
-                "Need a quick decision on Friday agenda is stale in the pipeline.",
-                "Morning capture is stale in the pipeline."
+                "Need a quick decision on Friday agenda",
+                "Personal Catalyst for Jarvis",
+                "Morning capture is stale in the pipeline.",
+                "Thermo follow-up idea is stale in the pipeline."
               ]
             },
             "event_summary": {
@@ -18346,237 +18346,6 @@
             ],
             "history": [
               {
-                "captured_at": "2026-05-11T13:17:44.902455+00:00",
-                "summary": {
-                  "people": 4,
-                  "rooms": 5,
-                  "devices": 138,
-                  "events": 4,
-                  "tasks": 18,
-                  "approvals": 7,
-                  "notifications": 1,
-                  "growth_lanes": 3,
-                  "growth_signals": 6,
-                  "accounts": 0,
-                  "leads": 4,
-                  "assets": 0,
-                  "routines": 5,
-                  "risks": 4,
-                  "entity_counts": {
-                    "person": 4,
-                    "room": 5,
-                    "device": 138,
-                    "event": 4,
-                    "task": 18,
-                    "approval": 7,
-                    "notification": 1,
-                    "growth-lane": 3,
-                    "growth-signal": 6,
-                    "lead": 4,
-                    "account": 0,
-                    "risk": 4,
-                    "routine": 5,
-                    "project": 0,
-                    "asset": 0,
-                    "habit": 0
-                  },
-                  "edge_counts": {
-                    "owns": 0,
-                    "located-in": 138,
-                    "attends-or-carries": 4,
-                    "carries": 18,
-                    "must-decide": 7,
-                    "needs-attention": 1,
-                    "uses-account": 0,
-                    "tracks": 10,
-                    "compounds": 3,
-                    "belongs-to-lane": 3,
-                    "at-risk-from": 4,
-                    "drives": 0,
-                    "scheduled-by": 5,
-                    "supports": 0
-                  },
-                  "edges": 193
-                },
-                "count_delta": {
-                  "edges": -16,
-                  "events": -8
-                },
-                "added_labels": [
-                  "Thermo follow-up idea",
-                  "Personal Catalyst for Jarvis",
-                  "Morning capture",
-                  "Need a quick decision on Friday agenda",
-                  "Thermo follow-up idea is stale in the pipeline.",
-                  "Personal Catalyst for Jarvis is stale in the pipeline.",
-                  "Morning capture is stale in the pipeline.",
-                  "Need a quick decision on Friday agenda is stale in the pipeline."
-                ],
-                "removed_labels": [
-                  "Measured 2.40 x 1.80 cm",
-                  "A long black circuit board or LED sign strip is lying horizontally on a wooden desk. It has many small components and connectors, with a large lighted/contrasting section in the middle that appears to spell or display \u201cFIND\u201d or similar block lettering. A black cable runs in from the right side. The main visible activity is a static hardware setup or inspection on the tabletop.",
-                  "Use the ruler in this frame as a rough scale reference:",
-                  "JARVIS could not complete the image analysis request. Reason: Error code: 400 - {'error': {'message': 'The image data you provided does not represent a valid image. Please check your input and try again.', 'type': 'invalid_request_error', 'param': 'input', 'code': 'invalid_value'}}. The frame was captured, but the vision model path is unavailable right now.",
-                  "A desk/workspace is visible from above. Main items:",
-                  "A desk/workspace is visible with a large dark mouse pad on the right and a keyboard partially in frame. On the left side of the pad is a small brown glass jar labeled **\u201cZippo Dark Rum & Oak\u201d** with a cork lid, likely a candle or fragrance jar. A pair of tweezers/scissors rests near the top edge of the mouse pad, and a cable runs vertically along the right side. The left side of the image shows a wood-grain floor or tabletop area.",
-                  "The snapshot shows a very dark scene with the top edge of a workspace or instrument panel visible.",
-                  "Visible is a **Zippo Dark Rum & Oak** candle/jar with a cork-style lid, sitting on a **wooden surface**. The most important object is the **candle container**, which is centered in the frame. No people or active motion are visible."
-                ]
-              },
-              {
-                "captured_at": "2026-05-11T13:17:55.994878+00:00",
-                "summary": {
-                  "people": 4,
-                  "rooms": 5,
-                  "devices": 138,
-                  "events": 12,
-                  "tasks": 18,
-                  "approvals": 7,
-                  "notifications": 1,
-                  "growth_lanes": 3,
-                  "growth_signals": 6,
-                  "accounts": 0,
-                  "leads": 4,
-                  "assets": 0,
-                  "routines": 5,
-                  "risks": 4,
-                  "entity_counts": {
-                    "person": 4,
-                    "room": 5,
-                    "device": 138,
-                    "event": 12,
-                    "task": 18,
-                    "approval": 7,
-                    "notification": 1,
-                    "growth-lane": 3,
-                    "growth-signal": 6,
-                    "lead": 4,
-                    "account": 0,
-                    "risk": 4,
-                    "routine": 5,
-                    "project": 0,
-                    "asset": 0,
-                    "habit": 0
-                  },
-                  "edge_counts": {
-                    "owns": 0,
-                    "located-in": 146,
-                    "attends-or-carries": 4,
-                    "carries": 18,
-                    "must-decide": 7,
-                    "needs-attention": 1,
-                    "uses-account": 0,
-                    "tracks": 18,
-                    "compounds": 3,
-                    "belongs-to-lane": 3,
-                    "at-risk-from": 4,
-                    "drives": 0,
-                    "scheduled-by": 5,
-                    "supports": 0
-                  },
-                  "edges": 209
-                },
-                "count_delta": {
-                  "edges": 16,
-                  "events": 8
-                },
-                "added_labels": [
-                  "Measured 2.40 x 1.80 cm",
-                  "A long black circuit board or LED sign strip is lying horizontally on a wooden desk. It has many small components and connectors, with a large lighted/contrasting section in the middle that appears to spell or display \u201cFIND\u201d or similar block lettering. A black cable runs in from the right side. The main visible activity is a static hardware setup or inspection on the tabletop.",
-                  "Use the ruler in this frame as a rough scale reference:",
-                  "JARVIS could not complete the image analysis request. Reason: Error code: 400 - {'error': {'message': 'The image data you provided does not represent a valid image. Please check your input and try again.', 'type': 'invalid_request_error', 'param': 'input', 'code': 'invalid_value'}}. The frame was captured, but the vision model path is unavailable right now.",
-                  "A desk/workspace is visible from above. Main items:",
-                  "A desk/workspace is visible with a large dark mouse pad on the right and a keyboard partially in frame. On the left side of the pad is a small brown glass jar labeled **\u201cZippo Dark Rum & Oak\u201d** with a cork lid, likely a candle or fragrance jar. A pair of tweezers/scissors rests near the top edge of the mouse pad, and a cable runs vertically along the right side. The left side of the image shows a wood-grain floor or tabletop area.",
-                  "The snapshot shows a very dark scene with the top edge of a workspace or instrument panel visible.",
-                  "Visible is a **Zippo Dark Rum & Oak** candle/jar with a cork-style lid, sitting on a **wooden surface**. The most important object is the **candle container**, which is centered in the frame. No people or active motion are visible."
-                ],
-                "removed_labels": [
-                  "Thermo follow-up idea",
-                  "Personal Catalyst for Jarvis",
-                  "Morning capture",
-                  "Need a quick decision on Friday agenda",
-                  "Thermo follow-up idea is stale in the pipeline.",
-                  "Personal Catalyst for Jarvis is stale in the pipeline.",
-                  "Morning capture is stale in the pipeline.",
-                  "Need a quick decision on Friday agenda is stale in the pipeline."
-                ]
-              },
-              {
-                "captured_at": "2026-05-11T13:18:40.959721+00:00",
-                "summary": {
-                  "people": 4,
-                  "rooms": 5,
-                  "devices": 138,
-                  "events": 12,
-                  "tasks": 18,
-                  "approvals": 7,
-                  "notifications": 1,
-                  "growth_lanes": 3,
-                  "growth_signals": 6,
-                  "accounts": 0,
-                  "leads": 4,
-                  "assets": 0,
-                  "routines": 5,
-                  "risks": 4,
-                  "entity_counts": {
-                    "person": 4,
-                    "room": 5,
-                    "device": 138,
-                    "event": 12,
-                    "task": 18,
-                    "approval": 7,
-                    "notification": 1,
-                    "growth-lane": 3,
-                    "growth-signal": 6,
-                    "lead": 4,
-                    "account": 0,
-                    "risk": 4,
-                    "routine": 5,
-                    "project": 0,
-                    "asset": 0,
-                    "habit": 0
-                  },
-                  "edge_counts": {
-                    "owns": 0,
-                    "located-in": 146,
-                    "attends-or-carries": 4,
-                    "carries": 18,
-                    "must-decide": 7,
-                    "needs-attention": 1,
-                    "uses-account": 0,
-                    "tracks": 18,
-                    "compounds": 3,
-                    "belongs-to-lane": 3,
-                    "at-risk-from": 4,
-                    "drives": 0,
-                    "scheduled-by": 5,
-                    "supports": 0
-                  },
-                  "edges": 209
-                },
-                "count_delta": {},
-                "added_labels": [
-                  "Thermo follow-up idea",
-                  "Morning capture",
-                  "Need a quick decision on Friday agenda",
-                  "Personal Catalyst for Jarvis",
-                  "Thermo follow-up idea is stale in the pipeline.",
-                  "Morning capture is stale in the pipeline.",
-                  "Need a quick decision on Friday agenda is stale in the pipeline.",
-                  "Personal Catalyst for Jarvis is stale in the pipeline."
-                ],
-                "removed_labels": [
-                  "Personal Catalyst for Jarvis",
-                  "Need a quick decision on Friday agenda",
-                  "Morning capture",
-                  "Thermo follow-up idea",
-                  "Personal Catalyst for Jarvis is stale in the pipeline.",
-                  "Need a quick decision on Friday agenda is stale in the pipeline.",
-                  "Morning capture is stale in the pipeline.",
-                  "Thermo follow-up idea is stale in the pipeline."
-                ]
-              },
-              {
                 "captured_at": "2026-05-11T13:19:58.289906+00:00",
                 "summary": {
                   "people": 4,
@@ -18800,12 +18569,237 @@
                   "Personal Catalyst for Jarvis is stale in the pipeline.",
                   "Thermo follow-up idea is stale in the pipeline."
                 ]
+              },
+              {
+                "captured_at": "2026-05-11T13:22:09.984556+00:00",
+                "summary": {
+                  "people": 4,
+                  "rooms": 5,
+                  "devices": 138,
+                  "events": 12,
+                  "tasks": 18,
+                  "approvals": 7,
+                  "notifications": 1,
+                  "growth_lanes": 3,
+                  "growth_signals": 6,
+                  "accounts": 0,
+                  "leads": 4,
+                  "assets": 0,
+                  "routines": 5,
+                  "risks": 4,
+                  "entity_counts": {
+                    "person": 4,
+                    "room": 5,
+                    "device": 138,
+                    "event": 12,
+                    "task": 18,
+                    "approval": 7,
+                    "notification": 1,
+                    "growth-lane": 3,
+                    "growth-signal": 6,
+                    "lead": 4,
+                    "account": 0,
+                    "risk": 4,
+                    "routine": 5,
+                    "project": 0,
+                    "asset": 0,
+                    "habit": 0
+                  },
+                  "edge_counts": {
+                    "owns": 0,
+                    "located-in": 146,
+                    "attends-or-carries": 4,
+                    "carries": 18,
+                    "must-decide": 7,
+                    "needs-attention": 1,
+                    "uses-account": 0,
+                    "tracks": 18,
+                    "compounds": 3,
+                    "belongs-to-lane": 3,
+                    "at-risk-from": 4,
+                    "drives": 0,
+                    "scheduled-by": 5,
+                    "supports": 0
+                  },
+                  "edges": 209
+                },
+                "count_delta": {},
+                "added_labels": [
+                  "Personal Catalyst for Jarvis",
+                  "Need a quick decision on Friday agenda",
+                  "Morning capture",
+                  "Thermo follow-up idea",
+                  "Personal Catalyst for Jarvis is stale in the pipeline.",
+                  "Need a quick decision on Friday agenda is stale in the pipeline.",
+                  "Morning capture is stale in the pipeline.",
+                  "Thermo follow-up idea is stale in the pipeline."
+                ],
+                "removed_labels": [
+                  "Morning capture",
+                  "Personal Catalyst for Jarvis",
+                  "Thermo follow-up idea",
+                  "Need a quick decision on Friday agenda",
+                  "Morning capture is stale in the pipeline.",
+                  "Personal Catalyst for Jarvis is stale in the pipeline.",
+                  "Thermo follow-up idea is stale in the pipeline.",
+                  "Need a quick decision on Friday agenda is stale in the pipeline."
+                ]
+              },
+              {
+                "captured_at": "2026-05-11T13:22:30.328535+00:00",
+                "summary": {
+                  "people": 4,
+                  "rooms": 5,
+                  "devices": 138,
+                  "events": 12,
+                  "tasks": 18,
+                  "approvals": 7,
+                  "notifications": 1,
+                  "growth_lanes": 3,
+                  "growth_signals": 6,
+                  "accounts": 0,
+                  "leads": 4,
+                  "assets": 0,
+                  "routines": 5,
+                  "risks": 4,
+                  "entity_counts": {
+                    "person": 4,
+                    "room": 5,
+                    "device": 138,
+                    "event": 12,
+                    "task": 18,
+                    "approval": 7,
+                    "notification": 1,
+                    "growth-lane": 3,
+                    "growth-signal": 6,
+                    "lead": 4,
+                    "account": 0,
+                    "risk": 4,
+                    "routine": 5,
+                    "project": 0,
+                    "asset": 0,
+                    "habit": 0
+                  },
+                  "edge_counts": {
+                    "owns": 0,
+                    "located-in": 146,
+                    "attends-or-carries": 4,
+                    "carries": 18,
+                    "must-decide": 7,
+                    "needs-attention": 1,
+                    "uses-account": 0,
+                    "tracks": 18,
+                    "compounds": 3,
+                    "belongs-to-lane": 3,
+                    "at-risk-from": 4,
+                    "drives": 0,
+                    "scheduled-by": 5,
+                    "supports": 0
+                  },
+                  "edges": 209
+                },
+                "count_delta": {},
+                "added_labels": [
+                  "Morning capture",
+                  "Thermo follow-up idea",
+                  "Need a quick decision on Friday agenda",
+                  "Personal Catalyst for Jarvis",
+                  "Morning capture is stale in the pipeline.",
+                  "Thermo follow-up idea is stale in the pipeline.",
+                  "Need a quick decision on Friday agenda is stale in the pipeline.",
+                  "Personal Catalyst for Jarvis is stale in the pipeline."
+                ],
+                "removed_labels": [
+                  "Personal Catalyst for Jarvis",
+                  "Need a quick decision on Friday agenda",
+                  "Morning capture",
+                  "Thermo follow-up idea",
+                  "Personal Catalyst for Jarvis is stale in the pipeline.",
+                  "Need a quick decision on Friday agenda is stale in the pipeline.",
+                  "Morning capture is stale in the pipeline.",
+                  "Thermo follow-up idea is stale in the pipeline."
+                ]
+              },
+              {
+                "captured_at": "2026-05-11T13:24:48.919394+00:00",
+                "summary": {
+                  "people": 4,
+                  "rooms": 5,
+                  "devices": 138,
+                  "events": 12,
+                  "tasks": 18,
+                  "approvals": 7,
+                  "notifications": 1,
+                  "growth_lanes": 3,
+                  "growth_signals": 6,
+                  "accounts": 0,
+                  "leads": 4,
+                  "assets": 0,
+                  "routines": 5,
+                  "risks": 4,
+                  "entity_counts": {
+                    "person": 4,
+                    "room": 5,
+                    "device": 138,
+                    "event": 12,
+                    "task": 18,
+                    "approval": 7,
+                    "notification": 1,
+                    "growth-lane": 3,
+                    "growth-signal": 6,
+                    "lead": 4,
+                    "account": 0,
+                    "risk": 4,
+                    "routine": 5,
+                    "project": 0,
+                    "asset": 0,
+                    "habit": 0
+                  },
+                  "edge_counts": {
+                    "owns": 0,
+                    "located-in": 146,
+                    "attends-or-carries": 4,
+                    "carries": 18,
+                    "must-decide": 7,
+                    "needs-attention": 1,
+                    "uses-account": 0,
+                    "tracks": 18,
+                    "compounds": 3,
+                    "belongs-to-lane": 3,
+                    "at-risk-from": 4,
+                    "drives": 0,
+                    "scheduled-by": 5,
+                    "supports": 0
+                  },
+                  "edges": 209
+                },
+                "count_delta": {},
+                "added_labels": [
+                  "Personal Catalyst for Jarvis",
+                  "Morning capture",
+                  "Thermo follow-up idea",
+                  "Need a quick decision on Friday agenda",
+                  "Personal Catalyst for Jarvis is stale in the pipeline.",
+                  "Morning capture is stale in the pipeline.",
+                  "Thermo follow-up idea is stale in the pipeline.",
+                  "Need a quick decision on Friday agenda is stale in the pipeline."
+                ],
+                "removed_labels": [
+                  "Morning capture",
+                  "Thermo follow-up idea",
+                  "Need a quick decision on Friday agenda",
+                  "Personal Catalyst for Jarvis",
+                  "Morning capture is stale in the pipeline.",
+                  "Thermo follow-up idea is stale in the pipeline.",
+                  "Need a quick decision on Friday agenda is stale in the pipeline.",
+                  "Personal Catalyst for Jarvis is stale in the pipeline."
+                ]
               }
             ]
           },
           "growth_state": {
             "actor": "Chris",
-            "generated_at": "2026-05-11T13:21:57.408458+00:00",
+            "generated_at": "2026-05-11T13:26:36.307942+00:00",
             "schema_version": "2026-05-11",
             "schema": {
               "version": "2026-05-11",
@@ -19448,7 +19442,7 @@
           },
           "goal_stack": {
             "actor": "Chris",
-            "generated_at": "2026-05-11T13:21:57.411299+00:00",
+            "generated_at": "2026-05-11T13:26:36.309611+00:00",
             "immediate": [
               "Garden bench bracket \u00b7 carbon-fiber service bureau",
               "Troop parents \u00b7 Indoor backup update",
@@ -19485,7 +19479,7 @@
           },
           "cadence": {
             "actor": "Chris",
-            "generated_at": "2026-05-11T13:21:59.500747+00:00",
+            "generated_at": "2026-05-11T13:26:37.974313+00:00",
             "phase": "morning",
             "hour_local": 9,
             "suggested_loop": "first-light",
@@ -19565,7 +19559,7 @@
           },
           "deliberation": {
             "actor": "Chris",
-            "generated_at": "2026-05-11T13:22:03.915981+00:00",
+            "generated_at": "2026-05-11T13:26:41.593630+00:00",
             "mode": "simulation",
             "decision": "notify",
             "top_item": {
@@ -19741,7 +19735,7 @@
           },
           "internal_council": {
             "actor": "Chris",
-            "generated_at": "2026-05-11T13:22:09.552951+00:00",
+            "generated_at": "2026-05-11T13:26:44.824020+00:00",
             "top_item_title": "Garden bench bracket \u00b7 carbon-fiber service bureau",
             "consensus": "notify",
             "tally": {
@@ -19801,7 +19795,7 @@
     },
     "dashboard:chris": {
       "surface_key": "dashboard:chris",
-      "saved_at": "2026-05-11T13:22:17.725100+00:00",
+      "saved_at": "2026-05-11T13:28:16.512601+00:00",
       "payload": {
         "day_label": "Wednesday, May 6",
         "location": "Kentucky Home",
@@ -20100,7 +20094,7 @@
             "No live garage or freezer entity map yet",
             "Workshop integrations remain simulated"
           ],
-          "timestamp": "2026-05-11T13:22:09.925939+00:00"
+          "timestamp": "2026-05-11T13:27:58.149646+00:00"
         },
         "departure_checklist": [
           "Backpacks by the door",
@@ -20603,7 +20597,7 @@
             "active_job": "Prototype bracket validation queue",
             "progress_percent": 100,
             "note": "Primary FDM fleet target with multicolor CFS and dual AI camera; using local simulated status until a live adapter is wired.",
-            "timestamp": "2026-05-11T13:22:10.192782+00:00"
+            "timestamp": "2026-05-11T13:27:58.150119+00:00"
           },
           {
             "printer_id": "halot-one-cl60",
@@ -20613,7 +20607,7 @@
             "active_job": "No active resin job",
             "progress_percent": 0,
             "note": "Fine-detail resin path for small precision parts, molds, and detail prototypes.",
-            "timestamp": "2026-05-11T13:22:10.192782+00:00"
+            "timestamp": "2026-05-11T13:27:58.150119+00:00"
           },
           {
             "printer_id": "falcon-5w-laser",
@@ -20623,7 +20617,7 @@
             "active_job": "No active laser job",
             "progress_percent": 0,
             "note": "Laser path for engraving, templates, masking, light cutting, and signage.",
-            "timestamp": "2026-05-11T13:22:10.192782+00:00"
+            "timestamp": "2026-05-11T13:27:58.150119+00:00"
           },
           {
             "printer_id": "titoe-4540-cnc",
@@ -20633,7 +20627,7 @@
             "active_job": "No active CNC job",
             "progress_percent": 0,
             "note": "CNC path for stock removal, cut paths, fixture planning, and stronger final fabrication work.",
-            "timestamp": "2026-05-11T13:22:10.192782+00:00"
+            "timestamp": "2026-05-11T13:27:58.150119+00:00"
           },
           {
             "printer_id": "cricut-joy-xtra",
@@ -20643,7 +20637,7 @@
             "active_job": "No active cutter job",
             "progress_percent": 0,
             "note": "Craft-cutter path for labels, vinyl masks, stencils, and household organization support.",
-            "timestamp": "2026-05-11T13:22:10.192782+00:00"
+            "timestamp": "2026-05-11T13:27:58.150119+00:00"
           }
         ],
         "workshop_inspections": [
@@ -21131,7 +21125,7 @@
         ],
         "open_loops": {
           "actor": "Chris",
-          "generated_at": "2026-05-11T13:21:44.663555+00:00",
+          "generated_at": "2026-05-11T13:27:35.313985+00:00",
           "summary": {
             "total": 18,
             "staged": 2,
@@ -22005,7 +21999,7 @@
               "summary": "Weekly money review was completed recently and comes due again around 2026-05-18.",
               "status": "warming",
               "actor": "Chris",
-              "timestamp": "2026-05-11T13:21:44.583888+00:00",
+              "timestamp": "2026-05-11T13:27:35.245435+00:00",
               "task_lane": "wealth-and-growth",
               "owner_agent": "Black Panther",
               "approval_threshold": {
@@ -22030,7 +22024,7 @@
               "needs_revisit": false,
               "next_action": "review the next leverage move",
               "proactive_reason": "Financial Independence is active, so JARVIS should keep one leverage move legible.",
-              "next_review_at": "2026-05-12T07:21:44.583888+00:00",
+              "next_review_at": "2026-05-12T07:27:35.245435+00:00",
               "due_for_surface": false,
               "available_actions": [
                 {
@@ -22063,7 +22057,7 @@
               "summary": "Weekly marketing review was completed recently and comes due again around 2026-05-18.",
               "status": "warming",
               "actor": "Chris",
-              "timestamp": "2026-05-11T13:21:44.583888+00:00",
+              "timestamp": "2026-05-11T13:27:35.245435+00:00",
               "task_lane": "wealth-and-growth",
               "owner_agent": "Black Panther",
               "approval_threshold": {
@@ -22088,7 +22082,7 @@
               "needs_revisit": false,
               "next_action": "review the next leverage move",
               "proactive_reason": "Content and Marketing Engine is warming, so JARVIS should keep one leverage move legible.",
-              "next_review_at": "2026-05-12T07:21:44.583888+00:00",
+              "next_review_at": "2026-05-12T07:27:35.245435+00:00",
               "due_for_surface": false,
               "available_actions": [
                 {
@@ -22571,7 +22565,7 @@
         },
         "today_board": {
           "actor": "Chris",
-          "generated_at": "2026-05-11T13:22:06.601699+00:00",
+          "generated_at": "2026-05-11T13:27:56.434941+00:00",
           "calendar": [
             {
               "id": "e8e6d49c-95bd-4c22-816e-02e2e734a149@cozi.com",
@@ -22733,7 +22727,7 @@
           },
           "growth": {
             "actor": "Chris",
-            "generated_at": "2026-05-11T13:21:54.701568+00:00",
+            "generated_at": "2026-05-11T13:27:46.688785+00:00",
             "schema_version": "2026-05-11",
             "schema": {
               "version": "2026-05-11",
@@ -23387,7 +23381,7 @@
           },
           "assistant_notifications": {
             "actor": "Chris",
-            "generated_at": "2026-05-11T13:22:06.763910+00:00",
+            "generated_at": "2026-05-11T13:27:56.473857+00:00",
             "summary": {
               "total": 1,
               "unread": 1,
@@ -23427,10 +23421,10 @@
           },
           "cognition": {
             "actor": "Chris",
-            "generated_at": "2026-05-11T13:21:44.663611+00:00",
+            "generated_at": "2026-05-11T13:27:35.314028+00:00",
             "self_model": {
               "actor": "Chris",
-              "generated_at": "2026-05-11T13:21:47.794958+00:00",
+              "generated_at": "2026-05-11T13:27:38.548997+00:00",
               "tools": {
                 "ready": [
                   "openai-api",
@@ -23663,7 +23657,7 @@
             },
             "world_state": {
               "actor": "Chris",
-              "generated_at": "2026-05-11T13:21:54.681248+00:00",
+              "generated_at": "2026-05-11T13:27:46.664174+00:00",
               "summary": {
                 "people": 4,
                 "rooms": 5,
@@ -23720,18 +23714,18 @@
                 "count_delta": {},
                 "added_labels": [
                   "Morning capture",
-                  "Personal Catalyst for Jarvis",
                   "Thermo follow-up idea",
                   "Need a quick decision on Friday agenda",
+                  "Personal Catalyst for Jarvis",
                   "Morning capture is stale in the pipeline.",
-                  "Personal Catalyst for Jarvis is stale in the pipeline."
+                  "Thermo follow-up idea is stale in the pipeline."
                 ],
                 "removed_labels": [
-                  "Need a quick decision on Friday agenda",
-                  "Morning capture",
                   "Personal Catalyst for Jarvis",
+                  "Morning capture",
                   "Thermo follow-up idea",
-                  "Need a quick decision on Friday agenda is stale in the pipeline.",
+                  "Need a quick decision on Friday agenda",
+                  "Personal Catalyst for Jarvis is stale in the pipeline.",
                   "Morning capture is stale in the pipeline."
                 ]
               },
@@ -24622,312 +24616,6 @@
               ],
               "history": [
                 {
-                  "captured_at": "2026-05-11T13:17:44.902455+00:00",
-                  "summary": {
-                    "people": 4,
-                    "rooms": 5,
-                    "devices": 138,
-                    "events": 4,
-                    "tasks": 18,
-                    "approvals": 7,
-                    "notifications": 1,
-                    "growth_lanes": 3,
-                    "growth_signals": 6,
-                    "accounts": 0,
-                    "leads": 4,
-                    "assets": 0,
-                    "routines": 5,
-                    "risks": 4,
-                    "entity_counts": {
-                      "person": 4,
-                      "room": 5,
-                      "device": 138,
-                      "event": 4,
-                      "task": 18,
-                      "approval": 7,
-                      "notification": 1,
-                      "growth-lane": 3,
-                      "growth-signal": 6,
-                      "lead": 4,
-                      "account": 0,
-                      "risk": 4,
-                      "routine": 5,
-                      "project": 0,
-                      "asset": 0,
-                      "habit": 0
-                    },
-                    "edge_counts": {
-                      "owns": 0,
-                      "located-in": 138,
-                      "attends-or-carries": 4,
-                      "carries": 18,
-                      "must-decide": 7,
-                      "needs-attention": 1,
-                      "uses-account": 0,
-                      "tracks": 10,
-                      "compounds": 3,
-                      "belongs-to-lane": 3,
-                      "at-risk-from": 4,
-                      "drives": 0,
-                      "scheduled-by": 5,
-                      "supports": 0
-                    },
-                    "edges": 193
-                  },
-                  "count_delta": {
-                    "edges": -16,
-                    "events": -8
-                  },
-                  "added_labels": [
-                    "Thermo follow-up idea",
-                    "Personal Catalyst for Jarvis",
-                    "Morning capture",
-                    "Need a quick decision on Friday agenda",
-                    "Thermo follow-up idea is stale in the pipeline.",
-                    "Personal Catalyst for Jarvis is stale in the pipeline.",
-                    "Morning capture is stale in the pipeline.",
-                    "Need a quick decision on Friday agenda is stale in the pipeline."
-                  ],
-                  "removed_labels": [
-                    "Measured 2.40 x 1.80 cm",
-                    "A long black circuit board or LED sign strip is lying horizontally on a wooden desk. It has many small components and connectors, with a large lighted/contrasting section in the middle that appears to spell or display \u201cFIND\u201d or similar block lettering. A black cable runs in from the right side. The main visible activity is a static hardware setup or inspection on the tabletop.",
-                    "Use the ruler in this frame as a rough scale reference:",
-                    "JARVIS could not complete the image analysis request. Reason: Error code: 400 - {'error': {'message': 'The image data you provided does not represent a valid image. Please check your input and try again.', 'type': 'invalid_request_error', 'param': 'input', 'code': 'invalid_value'}}. The frame was captured, but the vision model path is unavailable right now.",
-                    "A desk/workspace is visible from above. Main items:",
-                    "A desk/workspace is visible with a large dark mouse pad on the right and a keyboard partially in frame. On the left side of the pad is a small brown glass jar labeled **\u201cZippo Dark Rum & Oak\u201d** with a cork lid, likely a candle or fragrance jar. A pair of tweezers/scissors rests near the top edge of the mouse pad, and a cable runs vertically along the right side. The left side of the image shows a wood-grain floor or tabletop area.",
-                    "The snapshot shows a very dark scene with the top edge of a workspace or instrument panel visible.",
-                    "Visible is a **Zippo Dark Rum & Oak** candle/jar with a cork-style lid, sitting on a **wooden surface**. The most important object is the **candle container**, which is centered in the frame. No people or active motion are visible."
-                  ]
-                },
-                {
-                  "captured_at": "2026-05-11T13:17:55.994878+00:00",
-                  "summary": {
-                    "people": 4,
-                    "rooms": 5,
-                    "devices": 138,
-                    "events": 12,
-                    "tasks": 18,
-                    "approvals": 7,
-                    "notifications": 1,
-                    "growth_lanes": 3,
-                    "growth_signals": 6,
-                    "accounts": 0,
-                    "leads": 4,
-                    "assets": 0,
-                    "routines": 5,
-                    "risks": 4,
-                    "entity_counts": {
-                      "person": 4,
-                      "room": 5,
-                      "device": 138,
-                      "event": 12,
-                      "task": 18,
-                      "approval": 7,
-                      "notification": 1,
-                      "growth-lane": 3,
-                      "growth-signal": 6,
-                      "lead": 4,
-                      "account": 0,
-                      "risk": 4,
-                      "routine": 5,
-                      "project": 0,
-                      "asset": 0,
-                      "habit": 0
-                    },
-                    "edge_counts": {
-                      "owns": 0,
-                      "located-in": 146,
-                      "attends-or-carries": 4,
-                      "carries": 18,
-                      "must-decide": 7,
-                      "needs-attention": 1,
-                      "uses-account": 0,
-                      "tracks": 18,
-                      "compounds": 3,
-                      "belongs-to-lane": 3,
-                      "at-risk-from": 4,
-                      "drives": 0,
-                      "scheduled-by": 5,
-                      "supports": 0
-                    },
-                    "edges": 209
-                  },
-                  "count_delta": {
-                    "edges": 16,
-                    "events": 8
-                  },
-                  "added_labels": [
-                    "Measured 2.40 x 1.80 cm",
-                    "A long black circuit board or LED sign strip is lying horizontally on a wooden desk. It has many small components and connectors, with a large lighted/contrasting section in the middle that appears to spell or display \u201cFIND\u201d or similar block lettering. A black cable runs in from the right side. The main visible activity is a static hardware setup or inspection on the tabletop.",
-                    "Use the ruler in this frame as a rough scale reference:",
-                    "JARVIS could not complete the image analysis request. Reason: Error code: 400 - {'error': {'message': 'The image data you provided does not represent a valid image. Please check your input and try again.', 'type': 'invalid_request_error', 'param': 'input', 'code': 'invalid_value'}}. The frame was captured, but the vision model path is unavailable right now.",
-                    "A desk/workspace is visible from above. Main items:",
-                    "A desk/workspace is visible with a large dark mouse pad on the right and a keyboard partially in frame. On the left side of the pad is a small brown glass jar labeled **\u201cZippo Dark Rum & Oak\u201d** with a cork lid, likely a candle or fragrance jar. A pair of tweezers/scissors rests near the top edge of the mouse pad, and a cable runs vertically along the right side. The left side of the image shows a wood-grain floor or tabletop area.",
-                    "The snapshot shows a very dark scene with the top edge of a workspace or instrument panel visible.",
-                    "Visible is a **Zippo Dark Rum & Oak** candle/jar with a cork-style lid, sitting on a **wooden surface**. The most important object is the **candle container**, which is centered in the frame. No people or active motion are visible."
-                  ],
-                  "removed_labels": [
-                    "Thermo follow-up idea",
-                    "Personal Catalyst for Jarvis",
-                    "Morning capture",
-                    "Need a quick decision on Friday agenda",
-                    "Thermo follow-up idea is stale in the pipeline.",
-                    "Personal Catalyst for Jarvis is stale in the pipeline.",
-                    "Morning capture is stale in the pipeline.",
-                    "Need a quick decision on Friday agenda is stale in the pipeline."
-                  ]
-                },
-                {
-                  "captured_at": "2026-05-11T13:18:40.959721+00:00",
-                  "summary": {
-                    "people": 4,
-                    "rooms": 5,
-                    "devices": 138,
-                    "events": 12,
-                    "tasks": 18,
-                    "approvals": 7,
-                    "notifications": 1,
-                    "growth_lanes": 3,
-                    "growth_signals": 6,
-                    "accounts": 0,
-                    "leads": 4,
-                    "assets": 0,
-                    "routines": 5,
-                    "risks": 4,
-                    "entity_counts": {
-                      "person": 4,
-                      "room": 5,
-                      "device": 138,
-                      "event": 12,
-                      "task": 18,
-                      "approval": 7,
-                      "notification": 1,
-                      "growth-lane": 3,
-                      "growth-signal": 6,
-                      "lead": 4,
-                      "account": 0,
-                      "risk": 4,
-                      "routine": 5,
-                      "project": 0,
-                      "asset": 0,
-                      "habit": 0
-                    },
-                    "edge_counts": {
-                      "owns": 0,
-                      "located-in": 146,
-                      "attends-or-carries": 4,
-                      "carries": 18,
-                      "must-decide": 7,
-                      "needs-attention": 1,
-                      "uses-account": 0,
-                      "tracks": 18,
-                      "compounds": 3,
-                      "belongs-to-lane": 3,
-                      "at-risk-from": 4,
-                      "drives": 0,
-                      "scheduled-by": 5,
-                      "supports": 0
-                    },
-                    "edges": 209
-                  },
-                  "count_delta": {},
-                  "added_labels": [
-                    "Thermo follow-up idea",
-                    "Morning capture",
-                    "Need a quick decision on Friday agenda",
-                    "Personal Catalyst for Jarvis",
-                    "Thermo follow-up idea is stale in the pipeline.",
-                    "Morning capture is stale in the pipeline.",
-                    "Need a quick decision on Friday agenda is stale in the pipeline.",
-                    "Personal Catalyst for Jarvis is stale in the pipeline."
-                  ],
-                  "removed_labels": [
-                    "Personal Catalyst for Jarvis",
-                    "Need a quick decision on Friday agenda",
-                    "Morning capture",
-                    "Thermo follow-up idea",
-                    "Personal Catalyst for Jarvis is stale in the pipeline.",
-                    "Need a quick decision on Friday agenda is stale in the pipeline.",
-                    "Morning capture is stale in the pipeline.",
-                    "Thermo follow-up idea is stale in the pipeline."
-                  ]
-                },
-                {
-                  "captured_at": "2026-05-11T13:19:58.289906+00:00",
-                  "summary": {
-                    "people": 4,
-                    "rooms": 5,
-                    "devices": 138,
-                    "events": 12,
-                    "tasks": 18,
-                    "approvals": 7,
-                    "notifications": 1,
-                    "growth_lanes": 3,
-                    "growth_signals": 6,
-                    "accounts": 0,
-                    "leads": 4,
-                    "assets": 0,
-                    "routines": 5,
-                    "risks": 4,
-                    "entity_counts": {
-                      "person": 4,
-                      "room": 5,
-                      "device": 138,
-                      "event": 12,
-                      "task": 18,
-                      "approval": 7,
-                      "notification": 1,
-                      "growth-lane": 3,
-                      "growth-signal": 6,
-                      "lead": 4,
-                      "account": 0,
-                      "risk": 4,
-                      "routine": 5,
-                      "project": 0,
-                      "asset": 0,
-                      "habit": 0
-                    },
-                    "edge_counts": {
-                      "owns": 0,
-                      "located-in": 146,
-                      "attends-or-carries": 4,
-                      "carries": 18,
-                      "must-decide": 7,
-                      "needs-attention": 1,
-                      "uses-account": 0,
-                      "tracks": 18,
-                      "compounds": 3,
-                      "belongs-to-lane": 3,
-                      "at-risk-from": 4,
-                      "drives": 0,
-                      "scheduled-by": 5,
-                      "supports": 0
-                    },
-                    "edges": 209
-                  },
-                  "count_delta": {},
-                  "added_labels": [
-                    "Personal Catalyst for Jarvis",
-                    "Need a quick decision on Friday agenda",
-                    "Thermo follow-up idea",
-                    "Morning capture",
-                    "Personal Catalyst for Jarvis is stale in the pipeline.",
-                    "Need a quick decision on Friday agenda is stale in the pipeline.",
-                    "Thermo follow-up idea is stale in the pipeline.",
-                    "Morning capture is stale in the pipeline."
-                  ],
-                  "removed_labels": [
-                    "Thermo follow-up idea",
-                    "Morning capture",
-                    "Need a quick decision on Friday agenda",
-                    "Personal Catalyst for Jarvis",
-                    "Thermo follow-up idea is stale in the pipeline.",
-                    "Morning capture is stale in the pipeline.",
-                    "Need a quick decision on Friday agenda is stale in the pipeline.",
-                    "Personal Catalyst for Jarvis is stale in the pipeline."
-                  ]
-                },
-                {
                   "captured_at": "2026-05-11T13:20:51.907124+00:00",
                   "summary": {
                     "people": 4,
@@ -25076,12 +24764,312 @@
                     "Personal Catalyst for Jarvis is stale in the pipeline.",
                     "Thermo follow-up idea is stale in the pipeline."
                   ]
+                },
+                {
+                  "captured_at": "2026-05-11T13:22:09.984556+00:00",
+                  "summary": {
+                    "people": 4,
+                    "rooms": 5,
+                    "devices": 138,
+                    "events": 12,
+                    "tasks": 18,
+                    "approvals": 7,
+                    "notifications": 1,
+                    "growth_lanes": 3,
+                    "growth_signals": 6,
+                    "accounts": 0,
+                    "leads": 4,
+                    "assets": 0,
+                    "routines": 5,
+                    "risks": 4,
+                    "entity_counts": {
+                      "person": 4,
+                      "room": 5,
+                      "device": 138,
+                      "event": 12,
+                      "task": 18,
+                      "approval": 7,
+                      "notification": 1,
+                      "growth-lane": 3,
+                      "growth-signal": 6,
+                      "lead": 4,
+                      "account": 0,
+                      "risk": 4,
+                      "routine": 5,
+                      "project": 0,
+                      "asset": 0,
+                      "habit": 0
+                    },
+                    "edge_counts": {
+                      "owns": 0,
+                      "located-in": 146,
+                      "attends-or-carries": 4,
+                      "carries": 18,
+                      "must-decide": 7,
+                      "needs-attention": 1,
+                      "uses-account": 0,
+                      "tracks": 18,
+                      "compounds": 3,
+                      "belongs-to-lane": 3,
+                      "at-risk-from": 4,
+                      "drives": 0,
+                      "scheduled-by": 5,
+                      "supports": 0
+                    },
+                    "edges": 209
+                  },
+                  "count_delta": {},
+                  "added_labels": [
+                    "Personal Catalyst for Jarvis",
+                    "Need a quick decision on Friday agenda",
+                    "Morning capture",
+                    "Thermo follow-up idea",
+                    "Personal Catalyst for Jarvis is stale in the pipeline.",
+                    "Need a quick decision on Friday agenda is stale in the pipeline.",
+                    "Morning capture is stale in the pipeline.",
+                    "Thermo follow-up idea is stale in the pipeline."
+                  ],
+                  "removed_labels": [
+                    "Morning capture",
+                    "Personal Catalyst for Jarvis",
+                    "Thermo follow-up idea",
+                    "Need a quick decision on Friday agenda",
+                    "Morning capture is stale in the pipeline.",
+                    "Personal Catalyst for Jarvis is stale in the pipeline.",
+                    "Thermo follow-up idea is stale in the pipeline.",
+                    "Need a quick decision on Friday agenda is stale in the pipeline."
+                  ]
+                },
+                {
+                  "captured_at": "2026-05-11T13:22:30.328535+00:00",
+                  "summary": {
+                    "people": 4,
+                    "rooms": 5,
+                    "devices": 138,
+                    "events": 12,
+                    "tasks": 18,
+                    "approvals": 7,
+                    "notifications": 1,
+                    "growth_lanes": 3,
+                    "growth_signals": 6,
+                    "accounts": 0,
+                    "leads": 4,
+                    "assets": 0,
+                    "routines": 5,
+                    "risks": 4,
+                    "entity_counts": {
+                      "person": 4,
+                      "room": 5,
+                      "device": 138,
+                      "event": 12,
+                      "task": 18,
+                      "approval": 7,
+                      "notification": 1,
+                      "growth-lane": 3,
+                      "growth-signal": 6,
+                      "lead": 4,
+                      "account": 0,
+                      "risk": 4,
+                      "routine": 5,
+                      "project": 0,
+                      "asset": 0,
+                      "habit": 0
+                    },
+                    "edge_counts": {
+                      "owns": 0,
+                      "located-in": 146,
+                      "attends-or-carries": 4,
+                      "carries": 18,
+                      "must-decide": 7,
+                      "needs-attention": 1,
+                      "uses-account": 0,
+                      "tracks": 18,
+                      "compounds": 3,
+                      "belongs-to-lane": 3,
+                      "at-risk-from": 4,
+                      "drives": 0,
+                      "scheduled-by": 5,
+                      "supports": 0
+                    },
+                    "edges": 209
+                  },
+                  "count_delta": {},
+                  "added_labels": [
+                    "Morning capture",
+                    "Thermo follow-up idea",
+                    "Need a quick decision on Friday agenda",
+                    "Personal Catalyst for Jarvis",
+                    "Morning capture is stale in the pipeline.",
+                    "Thermo follow-up idea is stale in the pipeline.",
+                    "Need a quick decision on Friday agenda is stale in the pipeline.",
+                    "Personal Catalyst for Jarvis is stale in the pipeline."
+                  ],
+                  "removed_labels": [
+                    "Personal Catalyst for Jarvis",
+                    "Need a quick decision on Friday agenda",
+                    "Morning capture",
+                    "Thermo follow-up idea",
+                    "Personal Catalyst for Jarvis is stale in the pipeline.",
+                    "Need a quick decision on Friday agenda is stale in the pipeline.",
+                    "Morning capture is stale in the pipeline.",
+                    "Thermo follow-up idea is stale in the pipeline."
+                  ]
+                },
+                {
+                  "captured_at": "2026-05-11T13:24:48.919394+00:00",
+                  "summary": {
+                    "people": 4,
+                    "rooms": 5,
+                    "devices": 138,
+                    "events": 12,
+                    "tasks": 18,
+                    "approvals": 7,
+                    "notifications": 1,
+                    "growth_lanes": 3,
+                    "growth_signals": 6,
+                    "accounts": 0,
+                    "leads": 4,
+                    "assets": 0,
+                    "routines": 5,
+                    "risks": 4,
+                    "entity_counts": {
+                      "person": 4,
+                      "room": 5,
+                      "device": 138,
+                      "event": 12,
+                      "task": 18,
+                      "approval": 7,
+                      "notification": 1,
+                      "growth-lane": 3,
+                      "growth-signal": 6,
+                      "lead": 4,
+                      "account": 0,
+                      "risk": 4,
+                      "routine": 5,
+                      "project": 0,
+                      "asset": 0,
+                      "habit": 0
+                    },
+                    "edge_counts": {
+                      "owns": 0,
+                      "located-in": 146,
+                      "attends-or-carries": 4,
+                      "carries": 18,
+                      "must-decide": 7,
+                      "needs-attention": 1,
+                      "uses-account": 0,
+                      "tracks": 18,
+                      "compounds": 3,
+                      "belongs-to-lane": 3,
+                      "at-risk-from": 4,
+                      "drives": 0,
+                      "scheduled-by": 5,
+                      "supports": 0
+                    },
+                    "edges": 209
+                  },
+                  "count_delta": {},
+                  "added_labels": [
+                    "Personal Catalyst for Jarvis",
+                    "Morning capture",
+                    "Thermo follow-up idea",
+                    "Need a quick decision on Friday agenda",
+                    "Personal Catalyst for Jarvis is stale in the pipeline.",
+                    "Morning capture is stale in the pipeline.",
+                    "Thermo follow-up idea is stale in the pipeline.",
+                    "Need a quick decision on Friday agenda is stale in the pipeline."
+                  ],
+                  "removed_labels": [
+                    "Morning capture",
+                    "Thermo follow-up idea",
+                    "Need a quick decision on Friday agenda",
+                    "Personal Catalyst for Jarvis",
+                    "Morning capture is stale in the pipeline.",
+                    "Thermo follow-up idea is stale in the pipeline.",
+                    "Need a quick decision on Friday agenda is stale in the pipeline.",
+                    "Personal Catalyst for Jarvis is stale in the pipeline."
+                  ]
+                },
+                {
+                  "captured_at": "2026-05-11T13:26:44.934104+00:00",
+                  "summary": {
+                    "people": 4,
+                    "rooms": 5,
+                    "devices": 138,
+                    "events": 12,
+                    "tasks": 18,
+                    "approvals": 7,
+                    "notifications": 1,
+                    "growth_lanes": 3,
+                    "growth_signals": 6,
+                    "accounts": 0,
+                    "leads": 4,
+                    "assets": 0,
+                    "routines": 5,
+                    "risks": 4,
+                    "entity_counts": {
+                      "person": 4,
+                      "room": 5,
+                      "device": 138,
+                      "event": 12,
+                      "task": 18,
+                      "approval": 7,
+                      "notification": 1,
+                      "growth-lane": 3,
+                      "growth-signal": 6,
+                      "lead": 4,
+                      "account": 0,
+                      "risk": 4,
+                      "routine": 5,
+                      "project": 0,
+                      "asset": 0,
+                      "habit": 0
+                    },
+                    "edge_counts": {
+                      "owns": 0,
+                      "located-in": 146,
+                      "attends-or-carries": 4,
+                      "carries": 18,
+                      "must-decide": 7,
+                      "needs-attention": 1,
+                      "uses-account": 0,
+                      "tracks": 18,
+                      "compounds": 3,
+                      "belongs-to-lane": 3,
+                      "at-risk-from": 4,
+                      "drives": 0,
+                      "scheduled-by": 5,
+                      "supports": 0
+                    },
+                    "edges": 209
+                  },
+                  "count_delta": {},
+                  "added_labels": [
+                    "Morning capture",
+                    "Thermo follow-up idea",
+                    "Need a quick decision on Friday agenda",
+                    "Personal Catalyst for Jarvis",
+                    "Morning capture is stale in the pipeline.",
+                    "Thermo follow-up idea is stale in the pipeline.",
+                    "Need a quick decision on Friday agenda is stale in the pipeline.",
+                    "Personal Catalyst for Jarvis is stale in the pipeline."
+                  ],
+                  "removed_labels": [
+                    "Personal Catalyst for Jarvis",
+                    "Morning capture",
+                    "Thermo follow-up idea",
+                    "Need a quick decision on Friday agenda",
+                    "Personal Catalyst for Jarvis is stale in the pipeline.",
+                    "Morning capture is stale in the pipeline.",
+                    "Thermo follow-up idea is stale in the pipeline.",
+                    "Need a quick decision on Friday agenda is stale in the pipeline."
+                  ]
                 }
               ]
             },
             "growth_state": {
               "actor": "Chris",
-              "generated_at": "2026-05-11T13:21:54.701568+00:00",
+              "generated_at": "2026-05-11T13:27:46.688785+00:00",
               "schema_version": "2026-05-11",
               "schema": {
                 "version": "2026-05-11",
@@ -25724,7 +25712,7 @@
             },
             "goal_stack": {
               "actor": "Chris",
-              "generated_at": "2026-05-11T13:21:54.702794+00:00",
+              "generated_at": "2026-05-11T13:27:46.689712+00:00",
               "immediate": [
                 "Garden bench bracket \u00b7 carbon-fiber service bureau",
                 "Troop parents \u00b7 Indoor backup update",
@@ -25761,7 +25749,7 @@
             },
             "cadence": {
               "actor": "Chris",
-              "generated_at": "2026-05-11T13:21:56.457444+00:00",
+              "generated_at": "2026-05-11T13:27:48.285286+00:00",
               "phase": "morning",
               "hour_local": 9,
               "suggested_loop": "first-light",
@@ -25841,7 +25829,7 @@
             },
             "deliberation": {
               "actor": "Chris",
-              "generated_at": "2026-05-11T13:22:00.368016+00:00",
+              "generated_at": "2026-05-11T13:27:51.451691+00:00",
               "mode": "simulation",
               "decision": "notify",
               "top_item": {
@@ -26017,7 +26005,7 @@
             },
             "internal_council": {
               "actor": "Chris",
-              "generated_at": "2026-05-11T13:22:04.784688+00:00",
+              "generated_at": "2026-05-11T13:27:55.122105+00:00",
               "top_item_title": "Garden bench bracket \u00b7 carbon-fiber service bureau",
               "consensus": "notify",
               "tally": {
@@ -26076,7 +26064,7 @@
         },
         "cadence_review": {
           "actor": "Chris",
-          "generated_at": "2026-05-11T13:22:08.264639+00:00",
+          "generated_at": "2026-05-11T13:27:56.684839+00:00",
           "title": "Morning Operating Review",
           "phase": "morning",
           "active_loop": "First Light",
@@ -26274,10 +26262,10 @@
         },
         "cognitive": {
           "actor": "Chris",
-          "generated_at": "2026-05-11T13:21:44.663611+00:00",
+          "generated_at": "2026-05-11T13:27:35.314028+00:00",
           "self_model": {
             "actor": "Chris",
-            "generated_at": "2026-05-11T13:21:47.794958+00:00",
+            "generated_at": "2026-05-11T13:27:38.548997+00:00",
             "tools": {
               "ready": [
                 "openai-api",
@@ -26510,7 +26498,7 @@
           },
           "world_state": {
             "actor": "Chris",
-            "generated_at": "2026-05-11T13:21:54.681248+00:00",
+            "generated_at": "2026-05-11T13:27:46.664174+00:00",
             "summary": {
               "people": 4,
               "rooms": 5,
@@ -26567,18 +26555,18 @@
               "count_delta": {},
               "added_labels": [
                 "Morning capture",
-                "Personal Catalyst for Jarvis",
                 "Thermo follow-up idea",
                 "Need a quick decision on Friday agenda",
+                "Personal Catalyst for Jarvis",
                 "Morning capture is stale in the pipeline.",
-                "Personal Catalyst for Jarvis is stale in the pipeline."
+                "Thermo follow-up idea is stale in the pipeline."
               ],
               "removed_labels": [
-                "Need a quick decision on Friday agenda",
-                "Morning capture",
                 "Personal Catalyst for Jarvis",
+                "Morning capture",
                 "Thermo follow-up idea",
-                "Need a quick decision on Friday agenda is stale in the pipeline.",
+                "Need a quick decision on Friday agenda",
+                "Personal Catalyst for Jarvis is stale in the pipeline.",
                 "Morning capture is stale in the pipeline."
               ]
             },
@@ -27469,312 +27457,6 @@
             ],
             "history": [
               {
-                "captured_at": "2026-05-11T13:17:44.902455+00:00",
-                "summary": {
-                  "people": 4,
-                  "rooms": 5,
-                  "devices": 138,
-                  "events": 4,
-                  "tasks": 18,
-                  "approvals": 7,
-                  "notifications": 1,
-                  "growth_lanes": 3,
-                  "growth_signals": 6,
-                  "accounts": 0,
-                  "leads": 4,
-                  "assets": 0,
-                  "routines": 5,
-                  "risks": 4,
-                  "entity_counts": {
-                    "person": 4,
-                    "room": 5,
-                    "device": 138,
-                    "event": 4,
-                    "task": 18,
-                    "approval": 7,
-                    "notification": 1,
-                    "growth-lane": 3,
-                    "growth-signal": 6,
-                    "lead": 4,
-                    "account": 0,
-                    "risk": 4,
-                    "routine": 5,
-                    "project": 0,
-                    "asset": 0,
-                    "habit": 0
-                  },
-                  "edge_counts": {
-                    "owns": 0,
-                    "located-in": 138,
-                    "attends-or-carries": 4,
-                    "carries": 18,
-                    "must-decide": 7,
-                    "needs-attention": 1,
-                    "uses-account": 0,
-                    "tracks": 10,
-                    "compounds": 3,
-                    "belongs-to-lane": 3,
-                    "at-risk-from": 4,
-                    "drives": 0,
-                    "scheduled-by": 5,
-                    "supports": 0
-                  },
-                  "edges": 193
-                },
-                "count_delta": {
-                  "edges": -16,
-                  "events": -8
-                },
-                "added_labels": [
-                  "Thermo follow-up idea",
-                  "Personal Catalyst for Jarvis",
-                  "Morning capture",
-                  "Need a quick decision on Friday agenda",
-                  "Thermo follow-up idea is stale in the pipeline.",
-                  "Personal Catalyst for Jarvis is stale in the pipeline.",
-                  "Morning capture is stale in the pipeline.",
-                  "Need a quick decision on Friday agenda is stale in the pipeline."
-                ],
-                "removed_labels": [
-                  "Measured 2.40 x 1.80 cm",
-                  "A long black circuit board or LED sign strip is lying horizontally on a wooden desk. It has many small components and connectors, with a large lighted/contrasting section in the middle that appears to spell or display \u201cFIND\u201d or similar block lettering. A black cable runs in from the right side. The main visible activity is a static hardware setup or inspection on the tabletop.",
-                  "Use the ruler in this frame as a rough scale reference:",
-                  "JARVIS could not complete the image analysis request. Reason: Error code: 400 - {'error': {'message': 'The image data you provided does not represent a valid image. Please check your input and try again.', 'type': 'invalid_request_error', 'param': 'input', 'code': 'invalid_value'}}. The frame was captured, but the vision model path is unavailable right now.",
-                  "A desk/workspace is visible from above. Main items:",
-                  "A desk/workspace is visible with a large dark mouse pad on the right and a keyboard partially in frame. On the left side of the pad is a small brown glass jar labeled **\u201cZippo Dark Rum & Oak\u201d** with a cork lid, likely a candle or fragrance jar. A pair of tweezers/scissors rests near the top edge of the mouse pad, and a cable runs vertically along the right side. The left side of the image shows a wood-grain floor or tabletop area.",
-                  "The snapshot shows a very dark scene with the top edge of a workspace or instrument panel visible.",
-                  "Visible is a **Zippo Dark Rum & Oak** candle/jar with a cork-style lid, sitting on a **wooden surface**. The most important object is the **candle container**, which is centered in the frame. No people or active motion are visible."
-                ]
-              },
-              {
-                "captured_at": "2026-05-11T13:17:55.994878+00:00",
-                "summary": {
-                  "people": 4,
-                  "rooms": 5,
-                  "devices": 138,
-                  "events": 12,
-                  "tasks": 18,
-                  "approvals": 7,
-                  "notifications": 1,
-                  "growth_lanes": 3,
-                  "growth_signals": 6,
-                  "accounts": 0,
-                  "leads": 4,
-                  "assets": 0,
-                  "routines": 5,
-                  "risks": 4,
-                  "entity_counts": {
-                    "person": 4,
-                    "room": 5,
-                    "device": 138,
-                    "event": 12,
-                    "task": 18,
-                    "approval": 7,
-                    "notification": 1,
-                    "growth-lane": 3,
-                    "growth-signal": 6,
-                    "lead": 4,
-                    "account": 0,
-                    "risk": 4,
-                    "routine": 5,
-                    "project": 0,
-                    "asset": 0,
-                    "habit": 0
-                  },
-                  "edge_counts": {
-                    "owns": 0,
-                    "located-in": 146,
-                    "attends-or-carries": 4,
-                    "carries": 18,
-                    "must-decide": 7,
-                    "needs-attention": 1,
-                    "uses-account": 0,
-                    "tracks": 18,
-                    "compounds": 3,
-                    "belongs-to-lane": 3,
-                    "at-risk-from": 4,
-                    "drives": 0,
-                    "scheduled-by": 5,
-                    "supports": 0
-                  },
-                  "edges": 209
-                },
-                "count_delta": {
-                  "edges": 16,
-                  "events": 8
-                },
-                "added_labels": [
-                  "Measured 2.40 x 1.80 cm",
-                  "A long black circuit board or LED sign strip is lying horizontally on a wooden desk. It has many small components and connectors, with a large lighted/contrasting section in the middle that appears to spell or display \u201cFIND\u201d or similar block lettering. A black cable runs in from the right side. The main visible activity is a static hardware setup or inspection on the tabletop.",
-                  "Use the ruler in this frame as a rough scale reference:",
-                  "JARVIS could not complete the image analysis request. Reason: Error code: 400 - {'error': {'message': 'The image data you provided does not represent a valid image. Please check your input and try again.', 'type': 'invalid_request_error', 'param': 'input', 'code': 'invalid_value'}}. The frame was captured, but the vision model path is unavailable right now.",
-                  "A desk/workspace is visible from above. Main items:",
-                  "A desk/workspace is visible with a large dark mouse pad on the right and a keyboard partially in frame. On the left side of the pad is a small brown glass jar labeled **\u201cZippo Dark Rum & Oak\u201d** with a cork lid, likely a candle or fragrance jar. A pair of tweezers/scissors rests near the top edge of the mouse pad, and a cable runs vertically along the right side. The left side of the image shows a wood-grain floor or tabletop area.",
-                  "The snapshot shows a very dark scene with the top edge of a workspace or instrument panel visible.",
-                  "Visible is a **Zippo Dark Rum & Oak** candle/jar with a cork-style lid, sitting on a **wooden surface**. The most important object is the **candle container**, which is centered in the frame. No people or active motion are visible."
-                ],
-                "removed_labels": [
-                  "Thermo follow-up idea",
-                  "Personal Catalyst for Jarvis",
-                  "Morning capture",
-                  "Need a quick decision on Friday agenda",
-                  "Thermo follow-up idea is stale in the pipeline.",
-                  "Personal Catalyst for Jarvis is stale in the pipeline.",
-                  "Morning capture is stale in the pipeline.",
-                  "Need a quick decision on Friday agenda is stale in the pipeline."
-                ]
-              },
-              {
-                "captured_at": "2026-05-11T13:18:40.959721+00:00",
-                "summary": {
-                  "people": 4,
-                  "rooms": 5,
-                  "devices": 138,
-                  "events": 12,
-                  "tasks": 18,
-                  "approvals": 7,
-                  "notifications": 1,
-                  "growth_lanes": 3,
-                  "growth_signals": 6,
-                  "accounts": 0,
-                  "leads": 4,
-                  "assets": 0,
-                  "routines": 5,
-                  "risks": 4,
-                  "entity_counts": {
-                    "person": 4,
-                    "room": 5,
-                    "device": 138,
-                    "event": 12,
-                    "task": 18,
-                    "approval": 7,
-                    "notification": 1,
-                    "growth-lane": 3,
-                    "growth-signal": 6,
-                    "lead": 4,
-                    "account": 0,
-                    "risk": 4,
-                    "routine": 5,
-                    "project": 0,
-                    "asset": 0,
-                    "habit": 0
-                  },
-                  "edge_counts": {
-                    "owns": 0,
-                    "located-in": 146,
-                    "attends-or-carries": 4,
-                    "carries": 18,
-                    "must-decide": 7,
-                    "needs-attention": 1,
-                    "uses-account": 0,
-                    "tracks": 18,
-                    "compounds": 3,
-                    "belongs-to-lane": 3,
-                    "at-risk-from": 4,
-                    "drives": 0,
-                    "scheduled-by": 5,
-                    "supports": 0
-                  },
-                  "edges": 209
-                },
-                "count_delta": {},
-                "added_labels": [
-                  "Thermo follow-up idea",
-                  "Morning capture",
-                  "Need a quick decision on Friday agenda",
-                  "Personal Catalyst for Jarvis",
-                  "Thermo follow-up idea is stale in the pipeline.",
-                  "Morning capture is stale in the pipeline.",
-                  "Need a quick decision on Friday agenda is stale in the pipeline.",
-                  "Personal Catalyst for Jarvis is stale in the pipeline."
-                ],
-                "removed_labels": [
-                  "Personal Catalyst for Jarvis",
-                  "Need a quick decision on Friday agenda",
-                  "Morning capture",
-                  "Thermo follow-up idea",
-                  "Personal Catalyst for Jarvis is stale in the pipeline.",
-                  "Need a quick decision on Friday agenda is stale in the pipeline.",
-                  "Morning capture is stale in the pipeline.",
-                  "Thermo follow-up idea is stale in the pipeline."
-                ]
-              },
-              {
-                "captured_at": "2026-05-11T13:19:58.289906+00:00",
-                "summary": {
-                  "people": 4,
-                  "rooms": 5,
-                  "devices": 138,
-                  "events": 12,
-                  "tasks": 18,
-                  "approvals": 7,
-                  "notifications": 1,
-                  "growth_lanes": 3,
-                  "growth_signals": 6,
-                  "accounts": 0,
-                  "leads": 4,
-                  "assets": 0,
-                  "routines": 5,
-                  "risks": 4,
-                  "entity_counts": {
-                    "person": 4,
-                    "room": 5,
-                    "device": 138,
-                    "event": 12,
-                    "task": 18,
-                    "approval": 7,
-                    "notification": 1,
-                    "growth-lane": 3,
-                    "growth-signal": 6,
-                    "lead": 4,
-                    "account": 0,
-                    "risk": 4,
-                    "routine": 5,
-                    "project": 0,
-                    "asset": 0,
-                    "habit": 0
-                  },
-                  "edge_counts": {
-                    "owns": 0,
-                    "located-in": 146,
-                    "attends-or-carries": 4,
-                    "carries": 18,
-                    "must-decide": 7,
-                    "needs-attention": 1,
-                    "uses-account": 0,
-                    "tracks": 18,
-                    "compounds": 3,
-                    "belongs-to-lane": 3,
-                    "at-risk-from": 4,
-                    "drives": 0,
-                    "scheduled-by": 5,
-                    "supports": 0
-                  },
-                  "edges": 209
-                },
-                "count_delta": {},
-                "added_labels": [
-                  "Personal Catalyst for Jarvis",
-                  "Need a quick decision on Friday agenda",
-                  "Thermo follow-up idea",
-                  "Morning capture",
-                  "Personal Catalyst for Jarvis is stale in the pipeline.",
-                  "Need a quick decision on Friday agenda is stale in the pipeline.",
-                  "Thermo follow-up idea is stale in the pipeline.",
-                  "Morning capture is stale in the pipeline."
-                ],
-                "removed_labels": [
-                  "Thermo follow-up idea",
-                  "Morning capture",
-                  "Need a quick decision on Friday agenda",
-                  "Personal Catalyst for Jarvis",
-                  "Thermo follow-up idea is stale in the pipeline.",
-                  "Morning capture is stale in the pipeline.",
-                  "Need a quick decision on Friday agenda is stale in the pipeline.",
-                  "Personal Catalyst for Jarvis is stale in the pipeline."
-                ]
-              },
-              {
                 "captured_at": "2026-05-11T13:20:51.907124+00:00",
                 "summary": {
                   "people": 4,
@@ -27923,12 +27605,312 @@
                   "Personal Catalyst for Jarvis is stale in the pipeline.",
                   "Thermo follow-up idea is stale in the pipeline."
                 ]
+              },
+              {
+                "captured_at": "2026-05-11T13:22:09.984556+00:00",
+                "summary": {
+                  "people": 4,
+                  "rooms": 5,
+                  "devices": 138,
+                  "events": 12,
+                  "tasks": 18,
+                  "approvals": 7,
+                  "notifications": 1,
+                  "growth_lanes": 3,
+                  "growth_signals": 6,
+                  "accounts": 0,
+                  "leads": 4,
+                  "assets": 0,
+                  "routines": 5,
+                  "risks": 4,
+                  "entity_counts": {
+                    "person": 4,
+                    "room": 5,
+                    "device": 138,
+                    "event": 12,
+                    "task": 18,
+                    "approval": 7,
+                    "notification": 1,
+                    "growth-lane": 3,
+                    "growth-signal": 6,
+                    "lead": 4,
+                    "account": 0,
+                    "risk": 4,
+                    "routine": 5,
+                    "project": 0,
+                    "asset": 0,
+                    "habit": 0
+                  },
+                  "edge_counts": {
+                    "owns": 0,
+                    "located-in": 146,
+                    "attends-or-carries": 4,
+                    "carries": 18,
+                    "must-decide": 7,
+                    "needs-attention": 1,
+                    "uses-account": 0,
+                    "tracks": 18,
+                    "compounds": 3,
+                    "belongs-to-lane": 3,
+                    "at-risk-from": 4,
+                    "drives": 0,
+                    "scheduled-by": 5,
+                    "supports": 0
+                  },
+                  "edges": 209
+                },
+                "count_delta": {},
+                "added_labels": [
+                  "Personal Catalyst for Jarvis",
+                  "Need a quick decision on Friday agenda",
+                  "Morning capture",
+                  "Thermo follow-up idea",
+                  "Personal Catalyst for Jarvis is stale in the pipeline.",
+                  "Need a quick decision on Friday agenda is stale in the pipeline.",
+                  "Morning capture is stale in the pipeline.",
+                  "Thermo follow-up idea is stale in the pipeline."
+                ],
+                "removed_labels": [
+                  "Morning capture",
+                  "Personal Catalyst for Jarvis",
+                  "Thermo follow-up idea",
+                  "Need a quick decision on Friday agenda",
+                  "Morning capture is stale in the pipeline.",
+                  "Personal Catalyst for Jarvis is stale in the pipeline.",
+                  "Thermo follow-up idea is stale in the pipeline.",
+                  "Need a quick decision on Friday agenda is stale in the pipeline."
+                ]
+              },
+              {
+                "captured_at": "2026-05-11T13:22:30.328535+00:00",
+                "summary": {
+                  "people": 4,
+                  "rooms": 5,
+                  "devices": 138,
+                  "events": 12,
+                  "tasks": 18,
+                  "approvals": 7,
+                  "notifications": 1,
+                  "growth_lanes": 3,
+                  "growth_signals": 6,
+                  "accounts": 0,
+                  "leads": 4,
+                  "assets": 0,
+                  "routines": 5,
+                  "risks": 4,
+                  "entity_counts": {
+                    "person": 4,
+                    "room": 5,
+                    "device": 138,
+                    "event": 12,
+                    "task": 18,
+                    "approval": 7,
+                    "notification": 1,
+                    "growth-lane": 3,
+                    "growth-signal": 6,
+                    "lead": 4,
+                    "account": 0,
+                    "risk": 4,
+                    "routine": 5,
+                    "project": 0,
+                    "asset": 0,
+                    "habit": 0
+                  },
+                  "edge_counts": {
+                    "owns": 0,
+                    "located-in": 146,
+                    "attends-or-carries": 4,
+                    "carries": 18,
+                    "must-decide": 7,
+                    "needs-attention": 1,
+                    "uses-account": 0,
+                    "tracks": 18,
+                    "compounds": 3,
+                    "belongs-to-lane": 3,
+                    "at-risk-from": 4,
+                    "drives": 0,
+                    "scheduled-by": 5,
+                    "supports": 0
+                  },
+                  "edges": 209
+                },
+                "count_delta": {},
+                "added_labels": [
+                  "Morning capture",
+                  "Thermo follow-up idea",
+                  "Need a quick decision on Friday agenda",
+                  "Personal Catalyst for Jarvis",
+                  "Morning capture is stale in the pipeline.",
+                  "Thermo follow-up idea is stale in the pipeline.",
+                  "Need a quick decision on Friday agenda is stale in the pipeline.",
+                  "Personal Catalyst for Jarvis is stale in the pipeline."
+                ],
+                "removed_labels": [
+                  "Personal Catalyst for Jarvis",
+                  "Need a quick decision on Friday agenda",
+                  "Morning capture",
+                  "Thermo follow-up idea",
+                  "Personal Catalyst for Jarvis is stale in the pipeline.",
+                  "Need a quick decision on Friday agenda is stale in the pipeline.",
+                  "Morning capture is stale in the pipeline.",
+                  "Thermo follow-up idea is stale in the pipeline."
+                ]
+              },
+              {
+                "captured_at": "2026-05-11T13:24:48.919394+00:00",
+                "summary": {
+                  "people": 4,
+                  "rooms": 5,
+                  "devices": 138,
+                  "events": 12,
+                  "tasks": 18,
+                  "approvals": 7,
+                  "notifications": 1,
+                  "growth_lanes": 3,
+                  "growth_signals": 6,
+                  "accounts": 0,
+                  "leads": 4,
+                  "assets": 0,
+                  "routines": 5,
+                  "risks": 4,
+                  "entity_counts": {
+                    "person": 4,
+                    "room": 5,
+                    "device": 138,
+                    "event": 12,
+                    "task": 18,
+                    "approval": 7,
+                    "notification": 1,
+                    "growth-lane": 3,
+                    "growth-signal": 6,
+                    "lead": 4,
+                    "account": 0,
+                    "risk": 4,
+                    "routine": 5,
+                    "project": 0,
+                    "asset": 0,
+                    "habit": 0
+                  },
+                  "edge_counts": {
+                    "owns": 0,
+                    "located-in": 146,
+                    "attends-or-carries": 4,
+                    "carries": 18,
+                    "must-decide": 7,
+                    "needs-attention": 1,
+                    "uses-account": 0,
+                    "tracks": 18,
+                    "compounds": 3,
+                    "belongs-to-lane": 3,
+                    "at-risk-from": 4,
+                    "drives": 0,
+                    "scheduled-by": 5,
+                    "supports": 0
+                  },
+                  "edges": 209
+                },
+                "count_delta": {},
+                "added_labels": [
+                  "Personal Catalyst for Jarvis",
+                  "Morning capture",
+                  "Thermo follow-up idea",
+                  "Need a quick decision on Friday agenda",
+                  "Personal Catalyst for Jarvis is stale in the pipeline.",
+                  "Morning capture is stale in the pipeline.",
+                  "Thermo follow-up idea is stale in the pipeline.",
+                  "Need a quick decision on Friday agenda is stale in the pipeline."
+                ],
+                "removed_labels": [
+                  "Morning capture",
+                  "Thermo follow-up idea",
+                  "Need a quick decision on Friday agenda",
+                  "Personal Catalyst for Jarvis",
+                  "Morning capture is stale in the pipeline.",
+                  "Thermo follow-up idea is stale in the pipeline.",
+                  "Need a quick decision on Friday agenda is stale in the pipeline.",
+                  "Personal Catalyst for Jarvis is stale in the pipeline."
+                ]
+              },
+              {
+                "captured_at": "2026-05-11T13:26:44.934104+00:00",
+                "summary": {
+                  "people": 4,
+                  "rooms": 5,
+                  "devices": 138,
+                  "events": 12,
+                  "tasks": 18,
+                  "approvals": 7,
+                  "notifications": 1,
+                  "growth_lanes": 3,
+                  "growth_signals": 6,
+                  "accounts": 0,
+                  "leads": 4,
+                  "assets": 0,
+                  "routines": 5,
+                  "risks": 4,
+                  "entity_counts": {
+                    "person": 4,
+                    "room": 5,
+                    "device": 138,
+                    "event": 12,
+                    "task": 18,
+                    "approval": 7,
+                    "notification": 1,
+                    "growth-lane": 3,
+                    "growth-signal": 6,
+                    "lead": 4,
+                    "account": 0,
+                    "risk": 4,
+                    "routine": 5,
+                    "project": 0,
+                    "asset": 0,
+                    "habit": 0
+                  },
+                  "edge_counts": {
+                    "owns": 0,
+                    "located-in": 146,
+                    "attends-or-carries": 4,
+                    "carries": 18,
+                    "must-decide": 7,
+                    "needs-attention": 1,
+                    "uses-account": 0,
+                    "tracks": 18,
+                    "compounds": 3,
+                    "belongs-to-lane": 3,
+                    "at-risk-from": 4,
+                    "drives": 0,
+                    "scheduled-by": 5,
+                    "supports": 0
+                  },
+                  "edges": 209
+                },
+                "count_delta": {},
+                "added_labels": [
+                  "Morning capture",
+                  "Thermo follow-up idea",
+                  "Need a quick decision on Friday agenda",
+                  "Personal Catalyst for Jarvis",
+                  "Morning capture is stale in the pipeline.",
+                  "Thermo follow-up idea is stale in the pipeline.",
+                  "Need a quick decision on Friday agenda is stale in the pipeline.",
+                  "Personal Catalyst for Jarvis is stale in the pipeline."
+                ],
+                "removed_labels": [
+                  "Personal Catalyst for Jarvis",
+                  "Morning capture",
+                  "Thermo follow-up idea",
+                  "Need a quick decision on Friday agenda",
+                  "Personal Catalyst for Jarvis is stale in the pipeline.",
+                  "Morning capture is stale in the pipeline.",
+                  "Thermo follow-up idea is stale in the pipeline.",
+                  "Need a quick decision on Friday agenda is stale in the pipeline."
+                ]
               }
             ]
           },
           "growth_state": {
             "actor": "Chris",
-            "generated_at": "2026-05-11T13:21:54.701568+00:00",
+            "generated_at": "2026-05-11T13:27:46.688785+00:00",
             "schema_version": "2026-05-11",
             "schema": {
               "version": "2026-05-11",
@@ -28571,7 +28553,7 @@
           },
           "goal_stack": {
             "actor": "Chris",
-            "generated_at": "2026-05-11T13:21:54.702794+00:00",
+            "generated_at": "2026-05-11T13:27:46.689712+00:00",
             "immediate": [
               "Garden bench bracket \u00b7 carbon-fiber service bureau",
               "Troop parents \u00b7 Indoor backup update",
@@ -28608,7 +28590,7 @@
           },
           "cadence": {
             "actor": "Chris",
-            "generated_at": "2026-05-11T13:21:56.457444+00:00",
+            "generated_at": "2026-05-11T13:27:48.285286+00:00",
             "phase": "morning",
             "hour_local": 9,
             "suggested_loop": "first-light",
@@ -28688,7 +28670,7 @@
           },
           "deliberation": {
             "actor": "Chris",
-            "generated_at": "2026-05-11T13:22:00.368016+00:00",
+            "generated_at": "2026-05-11T13:27:51.451691+00:00",
             "mode": "simulation",
             "decision": "notify",
             "top_item": {
@@ -28864,7 +28846,7 @@
           },
           "internal_council": {
             "actor": "Chris",
-            "generated_at": "2026-05-11T13:22:04.784688+00:00",
+            "generated_at": "2026-05-11T13:27:55.122105+00:00",
             "top_item_title": "Garden bench bracket \u00b7 carbon-fiber service bureau",
             "consensus": "notify",
             "tally": {
@@ -28922,7 +28904,7 @@
         },
         "growth_state": {
           "actor": "Chris",
-          "generated_at": "2026-05-11T13:21:54.701568+00:00",
+          "generated_at": "2026-05-11T13:27:46.688785+00:00",
           "schema_version": "2026-05-11",
           "schema": {
             "version": "2026-05-11",
@@ -29643,7 +29625,7 @@
         },
         "assistant_notifications": {
           "actor": "Chris",
-          "generated_at": "2026-05-11T13:22:11.088299+00:00",
+          "generated_at": "2026-05-11T13:27:58.343858+00:00",
           "summary": {
             "total": 1,
             "unread": 1,
@@ -30082,7 +30064,7 @@
         },
         "environment_status": {
           "actor": "Chris",
-          "generated_at": "2026-05-11T13:22:13.006268+00:00",
+          "generated_at": "2026-05-11T13:28:12.307297+00:00",
           "status": "alert",
           "summary": [
             "Environment is alert.",
@@ -30146,11 +30128,11 @@
             },
             "system": {
               "available": true,
-              "uptime": "9:22  up 2 days, 14:09, 1 user, load averages: 11.88 10.25 6.91",
+              "uptime": "9:27  up 2 days, 14:15, 1 user, load averages: 3.63 6.97 6.52",
               "disk_root": "/dev/disk3s1s1   1.8Ti    12Gi   1.3Ti     1%    458k  4.3G    0%   /",
               "runtime_role": "runtime",
-              "runtime_pid": 93718,
-              "runtime_started_at": "2026-05-11T13:18:10.048086+00:00"
+              "runtime_pid": 5504,
+              "runtime_started_at": "2026-05-11T13:27:33.096972+00:00"
             }
           },
           "device_status": {
@@ -30850,7 +30832,7 @@
                 "source": "garage freezer",
                 "severity": "elevated",
                 "timestamp": "2026-05-06T13:16:56.601445+00:00",
-                "age_minutes": 7205,
+                "age_minutes": 7211,
                 "repeat_count": 1,
                 "cooldown_active": false,
                 "should_escalate": true
@@ -30862,7 +30844,7 @@
                 "source": "sensor.garage_freezer_temperature",
                 "severity": "elevated",
                 "timestamp": "2026-05-06T02:13:00+00:00",
-                "age_minutes": 7869,
+                "age_minutes": 7875,
                 "repeat_count": 1,
                 "cooldown_active": false,
                 "should_escalate": true
@@ -30874,8 +30856,8 @@
             "cached": false,
             "cache_key": "environment_status:chris",
             "ttl_seconds": 30,
-            "cached_at": "2026-05-11T13:22:13.079714+00:00",
-            "expires_at": "2026-05-11T13:22:43.079714+00:00",
+            "cached_at": "2026-05-11T13:28:12.361158+00:00",
+            "expires_at": "2026-05-11T13:28:42.361158+00:00",
             "age_seconds": 0.0,
             "fallback": false
           }
@@ -31867,6 +31849,27 @@
                 "disconnect_path": "/api/google/disconnect",
                 "emails": [
                   {
+                    "id": "19e17383e9a87bf7",
+                    "from": "Valvoline Instant Oil Change <CustomerCare@guest.valvoline.com>",
+                    "subject": "Beat the heat \u2600\ufe0fGet colder air fast with a quick A/C \u2744\ufe0frecharge for your ride\ud83d\ude97 ",
+                    "date": "Mon, 11 May 2026 13:27:00 +0000",
+                    "snippet": "Get $10 off \ud83d\udcb5and a free A/C \u2744\ufe0fcheck today at Valvoline Instant Oil Change\ud83d\udee2\ufe0f \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c"
+                  },
+                  {
+                    "id": "19e173714c79b91c",
+                    "from": "TLDR AI <dan@tldrnewsletter.com>",
+                    "subject": "Nvidia invests $40B \ud83d\udcb0, Anthropic acquires compute \ud83e\udd1d, Mistral\u2019s growth \ud83d\udcc8",
+                    "date": "Mon, 11 May 2026 13:25:46 +0000",
+                    "snippet": "Nvidia has made over $40 billion in commitments this year so far. The company has been the biggest winner of the AI boom so far \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c"
+                  },
+                  {
+                    "id": "19e173438cc93650",
+                    "from": "\"Jimmy John's\" <announcements@jimmyjohns.com>",
+                    "subject": "Get a Meal Deal for only $8.99 \ud83d\ude4c",
+                    "date": "Mon, 11 May 2026 13:22:37 +0000",
+                    "snippet": "Get The Pepe \u00ae or a Turkey Tom \u00ae with chips and a drink for only $8.99 Display images to show real-time content For a Limited Time Only $8.99 Meal Deal Turkey Tom or The Pepe Combo Order Now Savor the"
+                  },
+                  {
                     "id": "19e1730853ea7460",
                     "from": "\"AMERICAN WALKERS' ASSOCIATION of Greater Cincinnati\" <info@email.meetup.com>",
                     "subject": "\ud83d\udcc5 Just scheduled: let's walk Shawnee Lookout Park",
@@ -31886,27 +31889,6 @@
                     "subject": "Marks Secures Second Elite Title With 90-14!",
                     "date": "Mon, 11 May 2026 07:13:01 -0600",
                     "snippet": "Topping the final leaderboard at another blueback herring fishery, Georgia pro Paul Marks saved the best for last, catching 25 pounds, 2 ounces during Championship Sunday at the Tedy&#39;s Team"
-                  },
-                  {
-                    "id": "19e1727ff60cc310",
-                    "from": "TLDR InfoSec <dan@tldrnewsletter.com>",
-                    "subject": "275M Canvas Users Hit \ud83c\udf93, Vercel Deepsec AI scanner \ud83d\udd0d, \u200bMeta drops IG encryption \ud83d\udcac",
-                    "date": "Mon, 11 May 2026 13:09:17 +0000",
-                    "snippet": "ShinyHunters defaced Canvas login pages with a ransom note threatening to leak data tied to 275 million users at nearly 9000 institutions \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c"
-                  },
-                  {
-                    "id": "19e17246c81d3f20",
-                    "from": "\"Superhuman \u2013 Zain Kahn\" <superhuman@mail.joinsuperhuman.ai>",
-                    "subject": "\ud83c\udfa7 Apple's AI AirPods near production",
-                    "date": "Mon, 11 May 2026 13:05:11 +0000 (UTC)",
-                    "snippet": "ALSO: How to create educational encyclopedia-style images \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c"
-                  },
-                  {
-                    "id": "19e1720edf9362b7",
-                    "from": "Hume Health <support@myhumehealth.com>",
-                    "subject": "Last chance: Mother\u2019s Day Sale Extended",
-                    "date": "Mon, 11 May 2026 13:00:59 +0000",
-                    "snippet": "Better sleep, recovery, and health insights, all in one gift. \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f"
                   }
                 ],
                 "calendar_events": [],
@@ -32129,6 +32111,27 @@
               "disconnect_path": "/api/google/disconnect",
               "emails": [
                 {
+                  "id": "19e17383e9a87bf7",
+                  "from": "Valvoline Instant Oil Change <CustomerCare@guest.valvoline.com>",
+                  "subject": "Beat the heat \u2600\ufe0fGet colder air fast with a quick A/C \u2744\ufe0frecharge for your ride\ud83d\ude97 ",
+                  "date": "Mon, 11 May 2026 13:27:00 +0000",
+                  "snippet": "Get $10 off \ud83d\udcb5and a free A/C \u2744\ufe0fcheck today at Valvoline Instant Oil Change\ud83d\udee2\ufe0f \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c"
+                },
+                {
+                  "id": "19e173714c79b91c",
+                  "from": "TLDR AI <dan@tldrnewsletter.com>",
+                  "subject": "Nvidia invests $40B \ud83d\udcb0, Anthropic acquires compute \ud83e\udd1d, Mistral\u2019s growth \ud83d\udcc8",
+                  "date": "Mon, 11 May 2026 13:25:46 +0000",
+                  "snippet": "Nvidia has made over $40 billion in commitments this year so far. The company has been the biggest winner of the AI boom so far \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c"
+                },
+                {
+                  "id": "19e173438cc93650",
+                  "from": "\"Jimmy John's\" <announcements@jimmyjohns.com>",
+                  "subject": "Get a Meal Deal for only $8.99 \ud83d\ude4c",
+                  "date": "Mon, 11 May 2026 13:22:37 +0000",
+                  "snippet": "Get The Pepe \u00ae or a Turkey Tom \u00ae with chips and a drink for only $8.99 Display images to show real-time content For a Limited Time Only $8.99 Meal Deal Turkey Tom or The Pepe Combo Order Now Savor the"
+                },
+                {
                   "id": "19e1730853ea7460",
                   "from": "\"AMERICAN WALKERS' ASSOCIATION of Greater Cincinnati\" <info@email.meetup.com>",
                   "subject": "\ud83d\udcc5 Just scheduled: let's walk Shawnee Lookout Park",
@@ -32148,27 +32151,6 @@
                   "subject": "Marks Secures Second Elite Title With 90-14!",
                   "date": "Mon, 11 May 2026 07:13:01 -0600",
                   "snippet": "Topping the final leaderboard at another blueback herring fishery, Georgia pro Paul Marks saved the best for last, catching 25 pounds, 2 ounces during Championship Sunday at the Tedy&#39;s Team"
-                },
-                {
-                  "id": "19e1727ff60cc310",
-                  "from": "TLDR InfoSec <dan@tldrnewsletter.com>",
-                  "subject": "275M Canvas Users Hit \ud83c\udf93, Vercel Deepsec AI scanner \ud83d\udd0d, \u200bMeta drops IG encryption \ud83d\udcac",
-                  "date": "Mon, 11 May 2026 13:09:17 +0000",
-                  "snippet": "ShinyHunters defaced Canvas login pages with a ransom note threatening to leak data tied to 275 million users at nearly 9000 institutions \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c"
-                },
-                {
-                  "id": "19e17246c81d3f20",
-                  "from": "\"Superhuman \u2013 Zain Kahn\" <superhuman@mail.joinsuperhuman.ai>",
-                  "subject": "\ud83c\udfa7 Apple's AI AirPods near production",
-                  "date": "Mon, 11 May 2026 13:05:11 +0000 (UTC)",
-                  "snippet": "ALSO: How to create educational encyclopedia-style images \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c"
-                },
-                {
-                  "id": "19e1720edf9362b7",
-                  "from": "Hume Health <support@myhumehealth.com>",
-                  "subject": "Last chance: Mother\u2019s Day Sale Extended",
-                  "date": "Mon, 11 May 2026 13:00:59 +0000",
-                  "snippet": "Better sleep, recovery, and health insights, all in one gift. \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f"
                 }
               ],
               "calendar_events": [],
@@ -32585,7 +32567,7 @@
           }
         ],
         "overnight_review": {
-          "generated_at": "2026-05-11T13:22:16.304240+00:00",
+          "generated_at": "2026-05-11T13:28:15.012879+00:00",
           "summary": "Open incidents: 5 | Elevated incidents: 3 | Package watch items: 2 | Motion watch items: 1 | Hazard alerts: 1",
           "carry_forward": [
             "LEAK alert from garage freezer area",
@@ -32766,9 +32748,30 @@
             }
           ],
           "module_counts": {
-            "household-associate": 12
+            "executive-work": 2,
+            "household-associate": 10
           },
           "latest_reasons": [
+            {
+              "actor": "Chris",
+              "request": "What do I need to focus on this morning? Keep it brief.",
+              "module": "executive-work",
+              "action_class": 2,
+              "needs_approval": false,
+              "second_factor_required": false,
+              "rationale": "Mode 'work-mode' maps to module 'executive-work', workstream 'executive-brief', task class 'executive', provider 'openai', context lane 'executive', and model 'gpt-5.4-mini'. Permission class is PREPARE.",
+              "timestamp": "2026-05-11T13:27:47.870869+00:00"
+            },
+            {
+              "actor": "Chris",
+              "request": "What do I need to focus on this morning? Keep it brief.",
+              "module": "executive-work",
+              "action_class": 2,
+              "needs_approval": false,
+              "second_factor_required": false,
+              "rationale": "Mode 'work-mode' maps to module 'executive-work', workstream 'executive-brief', task class 'executive', provider 'openai', context lane 'executive', and model 'gpt-5.4-mini'. Permission class is PREPARE.",
+              "timestamp": "2026-05-11T13:25:21.401971+00:00"
+            },
             {
               "actor": "Chris",
               "request": "Yes",
@@ -32828,26 +32831,6 @@
               "second_factor_required": false,
               "rationale": "Mode 'ambient-associate' maps to module 'household-associate', workstream 'ambient-associate', task class 'ambient', provider 'ollama', context lane 'ambient', and model 'qwen2.5:7b'. Permission class is SUGGEST.",
               "timestamp": "2026-05-11T04:16:00.142903+00:00"
-            },
-            {
-              "actor": "Chris",
-              "request": "What can you do now?",
-              "module": "household-associate",
-              "action_class": 1,
-              "needs_approval": false,
-              "second_factor_required": false,
-              "rationale": "Mode 'ambient-associate' maps to module 'household-associate', workstream 'ambient-associate', task class 'ambient', provider 'ollama', context lane 'ambient', and model 'qwen2.5:7b'. Permission class is SUGGEST.",
-              "timestamp": "2026-05-11T04:15:48.349341+00:00"
-            },
-            {
-              "actor": "Chris",
-              "request": "yes",
-              "module": "household-associate",
-              "action_class": 1,
-              "needs_approval": false,
-              "second_factor_required": false,
-              "rationale": "Mode 'ambient-associate' maps to module 'household-associate', workstream 'ambient-associate', task class 'ambient', provider 'ollama', context lane 'ambient', and model 'qwen2.5:7b'. Permission class is SUGGEST.",
-              "timestamp": "2026-05-10T16:46:50.141265+00:00"
             }
           ],
           "assistant_action_summary": {
@@ -32942,7 +32925,7 @@
           "assistant_tuning_summary": {
             "actor": "Chris",
             "device_id": "",
-            "generated_at": "2026-05-11T13:22:16.398173+00:00",
+            "generated_at": "2026-05-11T13:28:15.114719+00:00",
             "actor_profile": {
               "actor": "Chris",
               "domain": "",
@@ -33328,15 +33311,15 @@
           }
         },
         "brain_graph": {
-          "active_provider": "ollama",
-          "active_model": "qwen2.5:7b",
-          "last_module": "household-associate",
-          "last_timestamp": "2026-05-11T13:20:44.778474+00:00",
+          "active_provider": "openai",
+          "active_model": "gpt-5.4-mini-2026-03-17",
+          "last_module": "executive-work",
+          "last_timestamp": "2026-05-11T13:27:51.805625+00:00",
           "active_nodes": [
             "router",
-            "second-brain",
+            "primary-brain",
             "memory-core",
-            "household-associate"
+            "executive-work"
           ],
           "secondary_brain": {
             "enabled": true,
@@ -33402,7 +33385,7 @@
           ]
         },
         "background_agents": {
-          "last_tick_at": "2026-05-11T13:21:44.151293+00:00",
+          "last_tick_at": "2026-05-11T13:27:35.102169+00:00",
           "quiet_hours_active": false,
           "active_mode": "dawn-protocol",
           "agents": {
@@ -33676,7 +33659,7 @@
         },
         "background_cycle": {
           "scheduler": {
-            "last_tick_at": "2026-05-11T13:21:44.151293+00:00",
+            "last_tick_at": "2026-05-11T13:27:35.102169+00:00",
             "quiet_hours_active": false,
             "active_mode": "dawn-protocol",
             "agents": {
@@ -34017,8 +34000,17 @@
                 ]
               }
             ],
-            "candidates": [],
-            "summary": "The curator is quiet. Nothing recent looks durable enough to store."
+            "candidates": [
+              {
+                "rule_id": "project-continuity",
+                "proposed_type": "project",
+                "module": "executive-work",
+                "request": "What do I need to focus on this morning? Keep it brief.",
+                "rationale": "Mode 'work-mode' maps to module 'executive-work', workstream 'executive-brief', task class 'executive', provider 'openai', context lane 'executive', and model 'gpt-5.4-mini'. Permission class is PREPARE.",
+                "note": "This appears tied to long-range project continuity."
+              }
+            ],
+            "summary": "Current candidates suggest: project 1."
           },
           "openviking_sync": {
             "ok": true,
@@ -34319,8 +34311,17 @@
               ]
             }
           ],
-          "candidates": [],
-          "summary": "The curator is quiet. Nothing recent looks durable enough to store."
+          "candidates": [
+            {
+              "rule_id": "project-continuity",
+              "proposed_type": "project",
+              "module": "executive-work",
+              "request": "What do I need to focus on this morning? Keep it brief.",
+              "rationale": "Mode 'work-mode' maps to module 'executive-work', workstream 'executive-brief', task class 'executive', provider 'openai', context lane 'executive', and model 'gpt-5.4-mini'. Permission class is PREPARE.",
+              "note": "This appears tied to long-range project continuity."
+            }
+          ],
+          "summary": "Current candidates suggest: project 1."
         }
       }
     },
@@ -52329,10 +52330,10 @@
     },
     "finance_review:chris": {
       "surface_key": "finance_review:chris",
-      "saved_at": "2026-05-11T13:22:45.507199+00:00",
+      "saved_at": "2026-05-11T13:27:35.254231+00:00",
       "payload": {
         "actor": "Chris",
-        "generated_at": "2026-05-11T13:22:45.499911+00:00",
+        "generated_at": "2026-05-11T13:27:35.247084+00:00",
         "title": "Finance Review",
         "summary": "The finance lane has enough signal to support weekly review.",
         "scorecard": {
@@ -58800,10 +58801,10 @@
     },
     "world_graph:chris": {
       "surface_key": "world_graph:chris",
-      "saved_at": "2026-05-11T13:22:30.281817+00:00",
+      "saved_at": "2026-05-11T13:27:43.119961+00:00",
       "payload": {
         "actor": "Chris",
-        "generated_at": "2026-05-11T13:22:30.266694+00:00",
+        "generated_at": "2026-05-11T13:27:43.102639+00:00",
         "schema": {
           "version": "2026-05-11",
           "entity_types": [
@@ -61655,7 +61656,7 @@
             "inferred": true
           },
           {
-            "id": "lead:219f7d57-2e8c-4454-95ab-8d1aa3b96c42",
+            "id": "lead:d72f3ead-2b1f-4527-aa81-dec1768ec512",
             "type": "lead",
             "entity_type": "lead",
             "label": "Thermo follow-up idea",
@@ -61668,7 +61669,7 @@
             "last_activity_at": "2026-05-07T04:14:40.816081+00:00"
           },
           {
-            "id": "lead:a4a828cd-d3b6-47b6-8b2a-93131c7a72dd",
+            "id": "lead:b3c290d7-a6cb-4e5a-8572-ad2083dd8bb6",
             "type": "lead",
             "entity_type": "lead",
             "label": "Need a quick decision on Friday agenda",
@@ -61681,7 +61682,7 @@
             "last_activity_at": "2026-05-07T04:16:10.617638+00:00"
           },
           {
-            "id": "lead:e43423bd-9324-45e5-a536-3c0f9259a4a4",
+            "id": "lead:7fe1ac4d-f83b-4937-acf9-be41ebcc9063",
             "type": "lead",
             "entity_type": "lead",
             "label": "Personal Catalyst for Jarvis",
@@ -61694,7 +61695,7 @@
             "last_activity_at": "2026-05-07T04:16:15.183955+00:00"
           },
           {
-            "id": "lead:1f53a113-83f5-4008-addb-c4319ccf1e19",
+            "id": "lead:09b89159-b7e7-4366-9b9b-18c6ba741e2e",
             "type": "lead",
             "entity_type": "lead",
             "label": "Morning capture",
@@ -61772,7 +61773,7 @@
             "purpose": "Curate memory and adaptation after the day settles."
           },
           {
-            "id": "risk:pipeline-stalled-1f53a113-83f5-4008-addb-c4319ccf1e19",
+            "id": "risk:pipeline-stalled-09b89159-b7e7-4366-9b9b-18c6ba741e2e",
             "type": "risk",
             "entity_type": "risk",
             "label": "Morning capture is stale in the pipeline.",
@@ -61782,7 +61783,7 @@
             "inferred": true
           },
           {
-            "id": "risk:pipeline-stalled-a4a828cd-d3b6-47b6-8b2a-93131c7a72dd",
+            "id": "risk:pipeline-stalled-b3c290d7-a6cb-4e5a-8572-ad2083dd8bb6",
             "type": "risk",
             "entity_type": "risk",
             "label": "Need a quick decision on Friday agenda is stale in the pipeline.",
@@ -61792,7 +61793,7 @@
             "inferred": true
           },
           {
-            "id": "risk:pipeline-stalled-219f7d57-2e8c-4454-95ab-8d1aa3b96c42",
+            "id": "risk:pipeline-stalled-d72f3ead-2b1f-4527-aa81-dec1768ec512",
             "type": "risk",
             "entity_type": "risk",
             "label": "Thermo follow-up idea is stale in the pipeline.",
@@ -61802,7 +61803,7 @@
             "inferred": true
           },
           {
-            "id": "risk:pipeline-stalled-e43423bd-9324-45e5-a536-3c0f9259a4a4",
+            "id": "risk:pipeline-stalled-7fe1ac4d-f83b-4937-acf9-be41ebcc9063",
             "type": "risk",
             "entity_type": "risk",
             "label": "Personal Catalyst for Jarvis is stale in the pipeline.",
@@ -63778,7 +63779,7 @@
           },
           {
             "source": "growth-lane:pipeline",
-            "target": "lead:219f7d57-2e8c-4454-95ab-8d1aa3b96c42",
+            "target": "lead:d72f3ead-2b1f-4527-aa81-dec1768ec512",
             "type": "tracks",
             "edge_type": "tracks",
             "confidence": "medium",
@@ -63788,7 +63789,7 @@
           },
           {
             "source": "growth-lane:pipeline",
-            "target": "lead:a4a828cd-d3b6-47b6-8b2a-93131c7a72dd",
+            "target": "lead:b3c290d7-a6cb-4e5a-8572-ad2083dd8bb6",
             "type": "tracks",
             "edge_type": "tracks",
             "confidence": "medium",
@@ -63798,7 +63799,7 @@
           },
           {
             "source": "growth-lane:pipeline",
-            "target": "lead:e43423bd-9324-45e5-a536-3c0f9259a4a4",
+            "target": "lead:7fe1ac4d-f83b-4937-acf9-be41ebcc9063",
             "type": "tracks",
             "edge_type": "tracks",
             "confidence": "medium",
@@ -63808,7 +63809,7 @@
           },
           {
             "source": "growth-lane:pipeline",
-            "target": "lead:1f53a113-83f5-4008-addb-c4319ccf1e19",
+            "target": "lead:09b89159-b7e7-4366-9b9b-18c6ba741e2e",
             "type": "tracks",
             "edge_type": "tracks",
             "confidence": "medium",
@@ -63867,8 +63868,8 @@
             "inferred": false
           },
           {
-            "source": "lead:1f53a113-83f5-4008-addb-c4319ccf1e19",
-            "target": "risk:pipeline-stalled-1f53a113-83f5-4008-addb-c4319ccf1e19",
+            "source": "lead:09b89159-b7e7-4366-9b9b-18c6ba741e2e",
+            "target": "risk:pipeline-stalled-09b89159-b7e7-4366-9b9b-18c6ba741e2e",
             "type": "at-risk-from",
             "edge_type": "at-risk-from",
             "confidence": "medium",
@@ -63877,8 +63878,8 @@
             "inferred": true
           },
           {
-            "source": "lead:a4a828cd-d3b6-47b6-8b2a-93131c7a72dd",
-            "target": "risk:pipeline-stalled-a4a828cd-d3b6-47b6-8b2a-93131c7a72dd",
+            "source": "lead:b3c290d7-a6cb-4e5a-8572-ad2083dd8bb6",
+            "target": "risk:pipeline-stalled-b3c290d7-a6cb-4e5a-8572-ad2083dd8bb6",
             "type": "at-risk-from",
             "edge_type": "at-risk-from",
             "confidence": "medium",
@@ -63887,8 +63888,8 @@
             "inferred": true
           },
           {
-            "source": "lead:219f7d57-2e8c-4454-95ab-8d1aa3b96c42",
-            "target": "risk:pipeline-stalled-219f7d57-2e8c-4454-95ab-8d1aa3b96c42",
+            "source": "lead:d72f3ead-2b1f-4527-aa81-dec1768ec512",
+            "target": "risk:pipeline-stalled-d72f3ead-2b1f-4527-aa81-dec1768ec512",
             "type": "at-risk-from",
             "edge_type": "at-risk-from",
             "confidence": "medium",
@@ -63897,8 +63898,8 @@
             "inferred": true
           },
           {
-            "source": "lead:e43423bd-9324-45e5-a536-3c0f9259a4a4",
-            "target": "risk:pipeline-stalled-e43423bd-9324-45e5-a536-3c0f9259a4a4",
+            "source": "lead:7fe1ac4d-f83b-4937-acf9-be41ebcc9063",
+            "target": "risk:pipeline-stalled-7fe1ac4d-f83b-4937-acf9-be41ebcc9063",
             "type": "at-risk-from",
             "edge_type": "at-risk-from",
             "confidence": "medium",
@@ -63911,10 +63912,10 @@
     },
     "vision_state:chris": {
       "surface_key": "vision_state:chris",
-      "saved_at": "2026-05-11T13:22:28.611921+00:00",
+      "saved_at": "2026-05-11T13:27:41.271417+00:00",
       "payload": {
         "actor": "Chris",
-        "generated_at": "2026-05-11T13:22:28.602139+00:00",
+        "generated_at": "2026-05-11T13:27:41.264118+00:00",
         "calibration": {
           "calibration_id": "5ed46d7d-9d2d-4118-839f-92e8765f1169",
           "actor": "Chris",
@@ -64310,10 +64311,10 @@
     },
     "environment_status:chris": {
       "surface_key": "environment_status:chris",
-      "saved_at": "2026-05-11T13:22:13.021085+00:00",
+      "saved_at": "2026-05-11T13:28:12.317224+00:00",
       "payload": {
         "actor": "Chris",
-        "generated_at": "2026-05-11T13:22:13.006268+00:00",
+        "generated_at": "2026-05-11T13:28:12.307297+00:00",
         "status": "alert",
         "summary": [
           "Environment is alert.",
@@ -64377,11 +64378,11 @@
           },
           "system": {
             "available": true,
-            "uptime": "9:22  up 2 days, 14:09, 1 user, load averages: 11.88 10.25 6.91",
+            "uptime": "9:27  up 2 days, 14:15, 1 user, load averages: 3.63 6.97 6.52",
             "disk_root": "/dev/disk3s1s1   1.8Ti    12Gi   1.3Ti     1%    458k  4.3G    0%   /",
             "runtime_role": "runtime",
-            "runtime_pid": 93718,
-            "runtime_started_at": "2026-05-11T13:18:10.048086+00:00"
+            "runtime_pid": 5504,
+            "runtime_started_at": "2026-05-11T13:27:33.096972+00:00"
           }
         },
         "device_status": {
@@ -65081,7 +65082,7 @@
               "source": "garage freezer",
               "severity": "elevated",
               "timestamp": "2026-05-06T13:16:56.601445+00:00",
-              "age_minutes": 7205,
+              "age_minutes": 7211,
               "repeat_count": 1,
               "cooldown_active": false,
               "should_escalate": true
@@ -65093,7 +65094,7 @@
               "source": "sensor.garage_freezer_temperature",
               "severity": "elevated",
               "timestamp": "2026-05-06T02:13:00+00:00",
-              "age_minutes": 7869,
+              "age_minutes": 7875,
               "repeat_count": 1,
               "cooldown_active": false,
               "should_escalate": true
@@ -74206,12 +74207,12 @@
     },
     "runtime": {
       "role": "runtime",
-      "updated_at": "2026-05-11T13:18:10.056750+00:00",
-      "pid": 93718,
-      "started_at": "2026-05-11T13:18:10.048086+00:00",
+      "updated_at": "2026-05-11T13:27:33.105775+00:00",
+      "pid": 5504,
+      "started_at": "2026-05-11T13:27:33.096972+00:00",
       "cwd": "/Users/chris/Desktop/CODE/JARVIS",
-      "build_fingerprint": "9489b287a1db1d2b3265080bda724a480c2abd05f074f3f87967eb369c2c60c0",
-      "build_generated_at": "2026-05-11T13:18:10.049263+00:00"
+      "build_fingerprint": "4b15fb30156c4d1fcf879761c5b76a3e52c8df83b8e4f56e15e85bd7580ec765",
+      "build_generated_at": "2026-05-11T13:27:33.098077+00:00"
     }
   },
   "service_runtime_history": [
@@ -74502,6 +74503,15 @@
       "cwd": "/Users/chris/Desktop/CODE/JARVIS",
       "build_fingerprint": "9489b287a1db1d2b3265080bda724a480c2abd05f074f3f87967eb369c2c60c0",
       "build_generated_at": "2026-05-11T13:18:10.049263+00:00"
+    },
+    {
+      "role": "runtime",
+      "updated_at": "2026-05-11T13:27:33.105775+00:00",
+      "pid": 5504,
+      "started_at": "2026-05-11T13:27:33.096972+00:00",
+      "cwd": "/Users/chris/Desktop/CODE/JARVIS",
+      "build_fingerprint": "4b15fb30156c4d1fcf879761c5b76a3e52c8df83b8e4f56e15e85bd7580ec765",
+      "build_generated_at": "2026-05-11T13:27:33.098077+00:00"
     }
   ],
   "cadence_history": [
