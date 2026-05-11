@@ -414,6 +414,7 @@ async function run() {
         assert(Boolean(data.self_model), "Cognitive snapshot missing self_model");
         assert(Boolean(data.world_state), "Cognitive snapshot missing world_state");
         assert(Boolean(data.growth_state), "Cognitive snapshot missing growth_state");
+        assert(Boolean(data.growth_state.schema), "Growth state missing schema");
         assert(Boolean(data.goal_stack), "Cognitive snapshot missing goal_stack");
         assert(Boolean(data.cadence), "Cognitive snapshot missing cadence");
         assert(Array.isArray(data.cadence.loops), "Cognitive cadence missing loops");
@@ -421,8 +422,29 @@ async function run() {
         assert(Boolean(data.deliberation), "Cognitive snapshot missing deliberation");
         assert(Boolean(data.internal_council), "Cognitive snapshot missing internal_council");
         assert(Array.isArray(data.growth_state.lanes), "Growth state missing lanes");
+        assert(Array.isArray(data.growth_state.domains) && data.growth_state.domains.length >= 6, "Growth state missing canonical domains");
+        assert(Array.isArray(data.growth_state.adapters) && data.growth_state.adapters.length >= 6, "Growth state missing source adapters");
+        assert(data.growth_state.domains.some((item) => item.id === "finance"), "Growth domains missing finance");
+        assert(data.growth_state.domains.some((item) => item.id === "pipeline"), "Growth domains missing pipeline");
+        assert(data.growth_state.domains.some((item) => item.id === "marketing"), "Growth domains missing marketing");
+        assert(data.growth_state.domains.some((item) => item.id === "content"), "Growth domains missing content");
+        assert(data.growth_state.domains.some((item) => item.id === "experiments"), "Growth domains missing experiments");
+        assert(data.growth_state.domains.some((item) => item.id === "offers"), "Growth domains missing offers");
         assert(Boolean(data.freshness), "Cognitive snapshot missing freshness metadata");
         assert(data.freshness.surface === "cognitive", "Cognitive freshness surface mismatch");
+      }],
+      ["/api/growth-schema", (data) => {
+        assert(typeof data.version === "string" && data.version.length > 0, "Growth schema missing version");
+        assert(Array.isArray(data.domains) && data.domains.length >= 6, "Growth schema missing domains");
+        assert(Array.isArray(data.adapters) && data.adapters.length >= 6, "Growth schema missing adapters");
+        assert(Array.isArray(data.lanes) && data.lanes.length >= 3, "Growth schema missing lanes");
+      }],
+      ["/api/growth-state?actor=Chris", (data) => {
+        assert(Boolean(data.schema), "Growth state endpoint missing schema");
+        assert(Array.isArray(data.domains) && data.domains.length >= 6, "Growth state endpoint missing canonical domains");
+        assert(Array.isArray(data.adapters) && data.adapters.length >= 6, "Growth state endpoint missing adapters");
+        assert(Array.isArray(data.lanes) && data.lanes.length >= 3, "Growth state endpoint missing lanes");
+        assert(typeof data.summary?.tracked_domain_count === "number", "Growth state endpoint missing tracked domain count");
       }],
       ["/api/cognitive/world-state?actor=Chris", (data) => {
         assert(Boolean(data.summary), "World state missing summary");
