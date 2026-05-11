@@ -143,8 +143,8 @@
       "always_available": false,
       "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
       "notes": "",
-      "last_seen_at": "2026-05-11T13:16:31.116723+00:00",
-      "fingerprint": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36|en-US|3840|1600",
+      "last_seen_at": "2026-05-11T13:31:44.364637+00:00",
+      "fingerprint": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36|en-US|1920|1080",
       "last_actor_id": "",
       "last_actor_source": "",
       "actor_history": [],
@@ -2726,5 +2726,5 @@
     "watchdog_enabled": true,
     "notes": "Run JARVIS as local infrastructure, not a manual dev process."
   },
-  "updated_at": "2026-05-11T13:16:31.117518+00:00"
+  "updated_at": "2026-05-11T13:31:44.377034+00:00"
 }
