@@ -1,5 +1,5 @@
 {
-  "started_at": "2026-05-10T20:29:20.453Z",
+  "started_at": "2026-05-15T18:51:51.861Z",
   "base_url": "http://127.0.0.1:8787",
   "checks": [
     {
@@ -11,9 +11,9 @@
     },
     {
       "name": "Model Forge modal renders controls and viewer state",
-      "status": "passed",
-      "details": null,
-      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/workbench-model-forge-modal.png",
+      "status": "failed",
+      "details": "Error: Model forge details did not render download links\n    at assert (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-workbench.e2e.cjs:46:11)\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-workbench.e2e.cjs:266:5\n    at async check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-workbench.e2e.cjs:97:7)\n    at async run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-workbench.e2e.cjs:192:3)",
+      "screenshot": null,
       "kind": "automated"
     },
     {
@@ -31,13 +31,18 @@
       "kind": "automated"
     }
   ],
-  "failures": [],
+  "failures": [
+    {
+      "name": "Model Forge modal renders controls and viewer state",
+      "error": "Error: Model forge details did not render download links\n    at assert (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-workbench.e2e.cjs:46:11)\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-workbench.e2e.cjs:266:5\n    at async check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-workbench.e2e.cjs:97:7)\n    at async run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-workbench.e2e.cjs:192:3)"
+    }
+  ],
   "warnings": [],
   "summary": {
-    "passed": 4,
-    "failed": 0,
+    "passed": 3,
+    "failed": 1,
     "warned": 0,
     "skipped": 0
   },
-  "finished_at": "2026-05-10T20:29:57.870Z"
+  "finished_at": "2026-05-15T18:52:04.551Z"
 }

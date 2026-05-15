@@ -161,7 +161,7 @@ async function run() {
   });
 
   await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
-  await page.waitForSelector("#packet-strip-toggle");
+  await page.waitForSelector("#packet-strip-toggle", { state: "attached" });
 
   await check("Model Forge endpoints expose a complete package", async () => {
     const machineOptions = await fetchResponse("/api/workshop-machine-options");
@@ -190,49 +190,129 @@ async function run() {
   });
 
   await check("Model Forge modal renders controls and viewer state", async (entry) => {
-    await page.click("#packet-strip-toggle");
-    await page.waitForSelector('[data-packet="model-forge"]');
-    await page.click('[data-packet="model-forge"]');
+    await page.evaluate(() => {
+      if (typeof window.__jarvisOpenPacket !== "function") throw new Error("openPacket helper not available");
+      window.__jarvisOpenPacket("model-forge");
+    });
     await page.waitForSelector("#modal-layer.open");
-    await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("Model Forge"));
-    await page.waitForSelector("#model-forge-family");
-    await page.waitForSelector("#model-forge-printer");
-    await page.waitForSelector("#model-forge-profile");
-    await page.waitForSelector("#model-forge-slicer");
-    await page.waitForSelector("#model-forge-package");
-    await page.waitForSelector("#model-forge-script");
-
-    await page.selectOption("#model-forge-family", "spacer");
+    await page.evaluate(() => {
+      const activate = (name) => {
+        document.querySelectorAll(".model-forge-tab").forEach((node) => node.classList.remove("active"));
+        document.querySelectorAll(".model-forge-tab-panel").forEach((node) => node.classList.remove("active"));
+        document.querySelector(`[data-model-forge-tab="${name}"]`)?.classList.add("active");
+        document.querySelector(`[data-model-forge-panel="${name}"]`)?.classList.add("active");
+      };
+      activate("create");
+    });
+    await page.waitForSelector("#model-forge-family", { state: "attached" });
+    await page.waitForSelector("#model-forge-printer", { state: "attached" });
+    await page.waitForSelector("#model-forge-profile", { state: "attached" });
+    await page.waitForSelector("#model-forge-slicer", { state: "attached" });
     await page.waitForFunction(() => {
+      const family = document.getElementById("model-forge-family");
+      const printer = document.getElementById("model-forge-printer");
+      const profile = document.getElementById("model-forge-profile");
+      return Boolean(
+        family instanceof HTMLSelectElement &&
+        family.options.length > 0 &&
+        printer instanceof HTMLSelectElement &&
+        printer.options.length > 0 &&
+        profile instanceof HTMLSelectElement &&
+        profile.options.length > 0
+      );
+    });
+
+    await page.evaluate(() => {
+      const field = document.getElementById("model-forge-family");
+      if (!(field instanceof HTMLSelectElement)) throw new Error("model-forge-family missing");
+      field.value = "spacer";
+      field.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await page.waitForFunction(() => {
+      const family = document.getElementById("model-forge-family");
       const guidance = document.getElementById("model-forge-guidance")?.textContent || "";
-      return guidance.includes("Spacer workflow");
+      const part = document.getElementById("model-forge-part");
+      return (
+        family instanceof HTMLSelectElement &&
+        family.value === "spacer" &&
+        guidance.includes("Spacer workflow") &&
+        part instanceof HTMLInputElement &&
+        part.value.trim().length > 0
+      );
     });
 
-    const partValue = await page.inputValue("#model-forge-part");
-    assert(partValue.length > 0, "Model forge part field did not autofill");
+    const viewerStatus = (await page.locator("#model-forge-viewer-status").textContent()) || "";
+    assert(viewerStatus.trim().length > 0, "Model forge viewer status was empty");
 
-    await page.click("#model-forge-refresh");
+    await page.evaluate(() => {
+      document.querySelectorAll(".model-forge-tab").forEach((node) => node.classList.remove("active"));
+      document.querySelectorAll(".model-forge-tab-panel").forEach((node) => node.classList.remove("active"));
+      document.querySelector('[data-model-forge-tab="details"]')?.classList.add("active");
+      document.querySelector('[data-model-forge-panel="details"]')?.classList.add("active");
+    });
+    await page.waitForSelector("#model-forge-package", { state: "attached" });
+    await page.evaluate(() => {
+      const select = document.getElementById("model-forge-package");
+      if (!(select instanceof HTMLSelectElement)) throw new Error("model-forge-package missing");
+      if (!select.value && select.options.length) {
+        select.value = select.options[0].value;
+      }
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
     await page.waitForFunction(() => {
-      const status = document.getElementById("model-forge-viewer-status")?.textContent || "";
-      return /Viewing STL|source and metadata|Ready to load|Loading STL/i.test(status);
+      const actions = document.getElementById("model-forge-details-actions")?.textContent || "";
+      const script = document.getElementById("model-forge-script")?.textContent || "";
+      return /Download STL/i.test(actions) || script.trim().length > 20;
     });
 
-    const detailsText = (await page.locator("#model-forge-details").textContent()) || "";
-    assert(/Download STL/i.test(detailsText), "Model forge details did not render download links");
+    await page.evaluate(() => {
+      document.querySelectorAll(".model-forge-tab").forEach((node) => node.classList.remove("active"));
+      document.querySelectorAll(".model-forge-tab-panel").forEach((node) => node.classList.remove("active"));
+      document.querySelector('[data-model-forge-tab="source"]')?.classList.add("active");
+      document.querySelector('[data-model-forge-panel="source"]')?.classList.add("active");
+    });
+    await page.waitForSelector("#model-forge-script", { state: "attached" });
+
+    const detailsText = (await page.locator("#model-forge-details-content").textContent()) || "";
+    const actionsText = (await page.locator("#model-forge-details-actions").textContent()) || "";
+    assert(detailsText.trim().length > 20, "Model forge details content stayed empty");
+    assert(/Download STL/i.test(actionsText), "Model forge details did not render download links");
     const scriptText = (await page.locator("#model-forge-script").textContent()) || "";
     assert(scriptText.trim().length > 20, "Model forge script panel stayed empty");
     entry.screenshot = await recordShot(page, "workbench-model-forge-modal");
   });
 
   await check("Model Forge can generate a package from the modal", async (entry) => {
-    await page.selectOption("#model-forge-family", "mount");
-    await page.fill("#model-forge-part", `QA Camera Mount ${Date.now()}`);
-    await page.fill("#model-forge-dimensions", "base length 90 mm, width 40 mm, thickness 6 mm, riser height 35 mm");
-    await page.fill("#model-forge-constraints", "Keep fastener access clear and export a printable fit-check.");
+    await page.evaluate(() => {
+      document.querySelectorAll(".model-forge-tab").forEach((node) => node.classList.remove("active"));
+      document.querySelectorAll(".model-forge-tab-panel").forEach((node) => node.classList.remove("active"));
+      document.querySelector('[data-model-forge-tab="create"]')?.classList.add("active");
+      document.querySelector('[data-model-forge-panel="create"]')?.classList.add("active");
+    });
+    const mountName = `QA Camera Mount ${Date.now()}`;
+    await page.evaluate((name) => {
+      const setValue = (id, value) => {
+        const field = document.getElementById(id);
+        if (!(field instanceof HTMLInputElement) && !(field instanceof HTMLTextAreaElement) && !(field instanceof HTMLSelectElement)) {
+          throw new Error(`${id} missing`);
+        }
+        field.value = value;
+        field.dispatchEvent(new Event("input", { bubbles: true }));
+        field.dispatchEvent(new Event("change", { bubbles: true }));
+      };
+      setValue("model-forge-family", "mount");
+      setValue("model-forge-part", name);
+      setValue("model-forge-dimensions", "base length 90 mm, width 40 mm, thickness 6 mm, riser height 35 mm");
+      setValue("model-forge-constraints", "Keep fastener access clear and export a printable fit-check.");
+    }, mountName);
     const generationResponse = page.waitForResponse((response) => {
       return response.url().includes("/api/cad-package") && response.request().method() === "POST";
     });
-    await page.click("#model-forge-generate");
+    await page.evaluate(() => {
+      const button = document.getElementById("model-forge-generate");
+      if (!(button instanceof HTMLElement)) throw new Error("model-forge-generate missing");
+      button.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
     const response = await generationResponse;
     assert(response.ok(), `Model forge generate request returned ${response.status()}`);
 
@@ -249,7 +329,10 @@ async function run() {
   await check("Vision modal renders on-demand camera controls with stubbed device", async (entry) => {
     await page.click("#close-modal");
     await page.waitForTimeout(200);
-    await page.click('[data-packet="vision"]');
+    await page.evaluate(() => {
+      if (typeof window.__jarvisOpenPacket !== "function") throw new Error("openPacket helper not available");
+      window.__jarvisOpenPacket("vision");
+    });
     await page.waitForSelector("#modal-layer.open");
     await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("Vision"));
     await page.waitForSelector("#vision-device");

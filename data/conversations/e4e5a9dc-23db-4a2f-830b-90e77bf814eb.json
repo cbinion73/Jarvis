@@ -1,0 +1,47 @@
+{
+  "conversation_id": "e4e5a9dc-23db-4a2f-830b-90e77bf814eb",
+  "actor": "Chris",
+  "room": "office",
+  "source": "shell",
+  "title": "Use the attached file as context and answer in one sentence. Attached fi",
+  "status": "active",
+  "summary": "",
+  "memory_signals": [
+    {
+      "summary": "Use the attached file as context and answer in one sentence. Attached files were included with this message. Use any excerpts below as additional context. - jar",
+      "status": "observed",
+      "occurrences": 1
+    }
+  ],
+  "created_at": "2026-05-12T04:25:38.510540+00:00",
+  "updated_at": "2026-05-12T04:25:41.742867+00:00",
+  "last_activity_at": "2026-05-12T04:25:41.722585+00:00",
+  "turn_count": 2,
+  "latest_user_text": "Use the attached file as context and answer in one sentence.\n\nAttached files were included with this message.\nUse any excerpts below as additional context.\n- jarvis-attachment-test.txt (text/plain, 60 bytes)\n  Excerpt: Jarvis attachment smoke test\nThis should be staged into chat.",
+  "latest_assistant_text": "Sir, the attachment has been staged into context as a smoke test, and the only sensible conclusion is that the pipeline is alive and trying to look nonchalant about it.",
+  "turns": [
+    {
+      "turn_id": "6961ad63-cea0-4135-9cc9-5ae2b50e9a75",
+      "role": "user",
+      "text": "Use the attached file as context and answer in one sentence.\n\nAttached files were included with this message.\nUse any excerpts below as additional context.\n- jarvis-attachment-test.txt (text/plain, 60 bytes)\n  Excerpt: Jarvis attachment smoke test\nThis should be staged into chat.",
+      "actor": "Chris",
+      "room": "office",
+      "source": "shell",
+      "created_at": "2026-05-12T04:25:38.516811+00:00",
+      "metadata": {}
+    },
+    {
+      "turn_id": "956e28eb-eca2-4403-972a-3a40d81c6dab",
+      "role": "assistant",
+      "text": "Sir, the attachment has been staged into context as a smoke test, and the only sensible conclusion is that the pipeline is alive and trying to look nonchalant about it.",
+      "actor": "Chris",
+      "room": "office",
+      "source": "shell",
+      "created_at": "2026-05-12T04:25:41.722585+00:00",
+      "metadata": {
+        "provider": "openai",
+        "model": "gpt-5.4-mini-2026-03-17"
+      }
+    }
+  ]
+}

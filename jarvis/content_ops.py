@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import AppConfig
+from .data_hygiene import filter_records
 from .openai_tasks import JarvisOpenAIClient
 
 
@@ -40,7 +41,8 @@ class ContentOpsStore:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             return []
-        return payload if isinstance(payload, list) else []
+        records = payload if isinstance(payload, list) else []
+        return filter_records(records)
 
     def _save(self, path: Path, records: list[dict[str, Any]]) -> None:
         path.write_text(json.dumps(records, indent=2) + "\n", encoding="utf-8")

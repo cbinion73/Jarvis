@@ -1,5 +1,5 @@
 {
-  "started_at": "2026-05-10T20:26:46.348Z",
+  "started_at": "2026-05-15T16:12:54.786Z",
   "base_url": "http://127.0.0.1:8787",
   "checks": [
     {
@@ -16,57 +16,90 @@
     },
     {
       "name": "Voice shell loads",
-      "status": "passed",
-      "details": null,
-      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/voice-shell-home.png"
+      "status": "failed",
+      "details": "page.waitForSelector: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#packet-strip-toggle') to be visible\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:119:16\n    at async check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:7)\n    at async run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:114:3)",
+      "screenshot": null
     },
     {
       "name": "Packet rail expands",
-      "status": "passed",
-      "details": null,
-      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/packet-strip-expanded.png"
+      "status": "failed",
+      "details": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#packet-strip-toggle')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:128:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:127:9)",
+      "screenshot": null
     },
     {
       "name": "Settings modal opens with platform controls",
-      "status": "passed",
-      "details": null,
-      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/settings-modal.png"
+      "status": "failed",
+      "details": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#open-settings')\u001b[22m\n\u001b[2m    - locator resolved to <button type=\"button\" id=\"open-settings\" class=\"ghost-toggle\">Settings</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    47 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:138:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:137:9)",
+      "screenshot": null
     },
     {
       "name": "Mode panel can change household mode",
-      "status": "passed",
-      "details": null,
-      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/mode-panel-updated.png"
+      "status": "failed",
+      "details": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#close-modal')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:150:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:149:9)",
+      "screenshot": null
     },
     {
       "name": "Location settings persist a saved location",
-      "status": "passed",
-      "details": null,
-      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/location-settings-saved.png"
+      "status": "failed",
+      "details": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#open-settings')\u001b[22m\n\u001b[2m    - locator resolved to <button type=\"button\" id=\"open-settings\" class=\"ghost-toggle\">Settings</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    38 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:173:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:172:9)",
+      "screenshot": null
     },
     {
       "name": "Catalyst workspace opens as modal app",
-      "status": "passed",
-      "details": null,
-      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/catalyst-workspace.png"
+      "status": "failed",
+      "details": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#close-modal')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:195:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:194:9)",
+      "screenshot": null
     },
     {
       "name": "Modal state hides packet rail and shrinks core",
-      "status": "passed",
-      "details": "Core transform during modal: matrix(0.1, 0, 0, 0.1, 0, 0)",
+      "status": "failed",
+      "details": "locator.boundingBox: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#packet-strip-toggle')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:214:72\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:213:9)",
       "screenshot": null
     },
     {
       "name": "Talk button remains interactive",
-      "status": "passed",
-      "details": "State after Talk click: idle",
-      "screenshot": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots/talk-button-state.png"
+      "status": "failed",
+      "details": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#close-modal')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:223:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:222:9)",
+      "screenshot": null
     }
   ],
-  "failures": [],
+  "failures": [
+    {
+      "name": "Voice shell loads",
+      "error": "page.waitForSelector: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#packet-strip-toggle') to be visible\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:119:16\n    at async check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:7)\n    at async run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:114:3)"
+    },
+    {
+      "name": "Packet rail expands",
+      "error": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#packet-strip-toggle')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:128:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:127:9)"
+    },
+    {
+      "name": "Settings modal opens with platform controls",
+      "error": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#open-settings')\u001b[22m\n\u001b[2m    - locator resolved to <button type=\"button\" id=\"open-settings\" class=\"ghost-toggle\">Settings</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    47 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:138:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:137:9)"
+    },
+    {
+      "name": "Mode panel can change household mode",
+      "error": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#close-modal')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:150:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:149:9)"
+    },
+    {
+      "name": "Location settings persist a saved location",
+      "error": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#open-settings')\u001b[22m\n\u001b[2m    - locator resolved to <button type=\"button\" id=\"open-settings\" class=\"ghost-toggle\">Settings</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    38 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:173:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:172:9)"
+    },
+    {
+      "name": "Catalyst workspace opens as modal app",
+      "error": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#close-modal')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:195:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:194:9)"
+    },
+    {
+      "name": "Modal state hides packet rail and shrinks core",
+      "error": "locator.boundingBox: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#packet-strip-toggle')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:214:72\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:213:9)"
+    },
+    {
+      "name": "Talk button remains interactive",
+      "error": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#close-modal')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:223:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:222:9)"
+    }
+  ],
   "summary": {
-    "passed": 10,
-    "failed": 0
+    "passed": 2,
+    "failed": 8
   },
-  "finished_at": "2026-05-10T20:27:43.497Z"
+  "finished_at": "2026-05-15T16:17:12.597Z"
 }

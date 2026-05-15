@@ -1,5 +1,5 @@
 {
-  "last_tick_at": "2026-05-11T13:30:48.006510+00:00",
+  "last_tick_at": "2026-05-15T16:13:02.892379+00:00",
   "quiet_hours_active": false,
   "active_mode": "dawn-protocol",
   "agents": {
@@ -47,10 +47,20 @@
       "state": "idle",
       "last_run_at": "2026-05-07T04:18:23.640323+00:00",
       "next_run_at": "2026-05-07T04:38:23.640323+00:00"
+    },
+    "storm": {
+      "state": "idle",
+      "last_run_at": "2026-05-12T01:48:46.756652+00:00",
+      "next_run_at": "2026-05-12T01:58:46.756652+00:00"
+    },
+    "system-steward": {
+      "state": "idle",
+      "last_run_at": "2026-05-15T15:47:58.765632+00:00",
+      "next_run_at": "2026-05-15T16:17:58.765632+00:00"
     }
   },
   "awake_count": 3,
-  "idle_count": 4,
+  "idle_count": 6,
   "blocked_count": 2,
   "statuses": [
     {
@@ -246,6 +256,32 @@
       "priority": "hold"
     },
     {
+      "agent_id": "storm",
+      "label": "Storm",
+      "state": "idle",
+      "reason": "Standing by until its next useful window.",
+      "cadence_minutes": 10,
+      "dependencies": [],
+      "blocked_dependencies": [],
+      "owns": [
+        "live weather retrieval",
+        "forecast posture",
+        "alert surfacing",
+        "travel weather routing",
+        "outing readiness",
+        "family warning posture"
+      ],
+      "memory_scope": [
+        "safety",
+        "household",
+        "system"
+      ],
+      "last_run_at": "2026-05-12T01:48:46.756652+00:00",
+      "next_run_at": "2026-05-12T01:58:46.756652+00:00",
+      "due_now": true,
+      "priority": "medium"
+    },
+    {
       "agent_id": "memory-curator",
       "label": "Memory Curator",
       "state": "awake",
@@ -268,6 +304,30 @@
       "next_run_at": "2026-05-07T03:50:47.362397+00:00",
       "due_now": true,
       "priority": "medium"
+    },
+    {
+      "agent_id": "system-steward",
+      "label": "System Steward",
+      "state": "idle",
+      "reason": "Standing by until its next useful window.",
+      "cadence_minutes": 30,
+      "dependencies": [],
+      "blocked_dependencies": [],
+      "owns": [
+        "self-improvement jobs",
+        "model sync",
+        "repo health",
+        "maintenance posture"
+      ],
+      "memory_scope": [
+        "system",
+        "project",
+        "safety"
+      ],
+      "last_run_at": "2026-05-15T15:47:58.765632+00:00",
+      "next_run_at": "2026-05-15T16:17:58.765632+00:00",
+      "due_now": false,
+      "priority": "low"
     }
   ]
 }

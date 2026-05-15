@@ -1,0 +1,36 @@
+{
+  "system": "chronicle",
+  "version": "1.0",
+  "capabilities": {
+    "study_passage": {
+      "intent_families": ["faith.study"],
+      "mode_support": ["launch", "embed"],
+      "writes_record": true
+    },
+    "trace_theme": {
+      "intent_families": ["faith.study"],
+      "mode_support": ["launch", "embed"],
+      "writes_record": false
+    },
+    "prayer_session": {
+      "intent_families": ["faith.prayer"],
+      "mode_support": ["launch"],
+      "writes_record": true
+    },
+    "formation_memory_lookup": {
+      "intent_families": ["faith.lookup", "faith.formation"],
+      "mode_support": ["embed", "delegate"],
+      "writes_record": false
+    },
+    "record_spiritual_event": {
+      "intent_families": ["faith.capture", "faith.formation"],
+      "mode_support": ["delegate"],
+      "writes_record": true
+    },
+    "spiritual_timeline": {
+      "intent_families": ["faith.formation"],
+      "mode_support": ["launch", "embed"],
+      "writes_record": false
+    }
+  }
+}

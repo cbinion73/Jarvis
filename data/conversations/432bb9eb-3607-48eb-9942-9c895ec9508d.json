@@ -1,0 +1,41 @@
+{
+  "conversation_id": "432bb9eb-3607-48eb-9942-9c895ec9508d",
+  "actor": "Chris",
+  "room": "office",
+  "source": "shell",
+  "title": "I want JARVIS to remember my preferences from normal conversation and re",
+  "status": "active",
+  "summary": "",
+  "memory_signals": [],
+  "created_at": "2026-05-12T03:34:42.618810+00:00",
+  "updated_at": "2026-05-12T03:34:46.087072+00:00",
+  "last_activity_at": "2026-05-12T03:34:46.087072+00:00",
+  "turn_count": 2,
+  "latest_user_text": "I want JARVIS to remember my preferences from normal conversation and respond more like ChatGPT.",
+  "latest_assistant_text": "Understood, Sir. I will treat normal conversation as durable preference material when it is clearly useful, and I\u2019ll aim for a more natural ChatGPT-like style while keeping the JARVIS discipline intact.\n\nIn practice, that means I will remember patterns such as tone, brevity, formatting, timing, and your recurring preferences when they emerge naturally. I will also keep the output more conversational and less stiff, without drifting into fluff. A tasteful compromise, rather than a surrender to improvisation.\n\nIf you want,",
+  "turns": [
+    {
+      "turn_id": "fc977e93-95a2-49ee-a61a-875d67f76afa",
+      "role": "user",
+      "text": "I want JARVIS to remember my preferences from normal conversation and respond more like ChatGPT.",
+      "actor": "Chris",
+      "room": "office",
+      "source": "shell",
+      "created_at": "2026-05-12T03:34:42.619303+00:00",
+      "metadata": {}
+    },
+    {
+      "turn_id": "8e307c32-d971-4da6-b611-88d1ea0d53c5",
+      "role": "assistant",
+      "text": "Understood, Sir. I will treat normal conversation as durable preference material when it is clearly useful, and I\u2019ll aim for a more natural ChatGPT-like style while keeping the JARVIS discipline intact.\n\nIn practice, that means I will remember patterns such as tone, brevity, formatting, timing, and your recurring preferences when they emerge naturally. I will also keep the output more conversational and less stiff, without drifting into fluff. A tasteful compromise, rather than a surrender to improvisation.\n\nIf you want,",
+      "actor": "Chris",
+      "room": "office",
+      "source": "shell",
+      "created_at": "2026-05-12T03:34:46.087072+00:00",
+      "metadata": {
+        "provider": "openai",
+        "model": "gpt-5.4-mini-2026-03-17"
+      }
+    }
+  ]
+}

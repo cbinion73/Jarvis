@@ -176,6 +176,18 @@ def create_handler(runtime: JarvisRuntime) -> type[BaseHTTPRequestHandler]:
             if parsed.path == "/api/message-drafts":
                 self._send_json(runtime.list_message_drafts())
                 return
+            if parsed.path == "/api/trust-zones":
+                self._send_json({"zones": runtime.list_trust_zones()})
+                return
+            if parsed.path == "/api/resource-arenas":
+                self._send_json({"arenas": runtime.list_resource_arenas()})
+                return
+            if parsed.path == "/api/authority-stages":
+                self._send_json({"stages": runtime.list_authority_stages()})
+                return
+            if parsed.path == "/api/stage/queue":
+                self._send_json({"items": runtime.list_stage_queue()})
+                return
             if parsed.path == "/api/voice-notes":
                 self._send_json(runtime.list_voice_note_tasks())
                 return
@@ -381,7 +393,7 @@ def create_handler(runtime: JarvisRuntime) -> type[BaseHTTPRequestHandler]:
                 account_id = parsed.path.split("/")[3]
                 self._send_json(runtime.google_disconnect_account(account_id))
                 return
-            if parsed.path in {"/api/plan", "/api/respond", "/api/mode-brief", "/api/family-plan", "/api/departure-plan", "/api/rebekah-center", "/api/troop-plan", "/api/grocery-support", "/api/meal-plan", "/api/vehicle-plan", "/api/weather-contingency", "/api/message-draft", "/api/parent-message", "/api/voice-note", "/api/security-event", "/api/safety-alert", "/api/weather-alert", "/api/child-arrival", "/api/unlock-policy", "/api/tutor", "/api/device-boundary", "/api/workshop-plan", "/api/material-recommendation", "/api/cad-package", "/api/print-prep", "/api/safety-check", "/api/inspect-part", "/api/vendor-prep", "/api/executive-task", "/api/devotional-pause", "/api/family-devotional", "/api/chronicle-capture", "/api/room-scene", "/api/climate-control", "/api/access-control", "/api/garage-check", "/api/energy-window", "/api/mic-ingress", "/api/presence-update", "/api/phone-presence", "/api/camera-event", "/api/package-rule", "/api/object-recognition", "/api/environmental-anomaly", "/api/privacy-update", "/api/memory-remember", "/api/memory-forget", "/api/memory-approve", "/api/catalyst-signal", "/api/catalyst-email-triage", "/api/catalyst-meeting-prep", "/api/catalyst-meeting-extract", "/api/catalyst-briefing", "/api/catalyst-draft", "/api/catalyst-project-brief", "/api/catalyst-implementation-plan", "/api/catalyst-proactive"}:
+            if parsed.path in {"/api/plan", "/api/respond", "/api/mode-brief", "/api/family-plan", "/api/departure-plan", "/api/rebekah-center", "/api/troop-plan", "/api/grocery-support", "/api/meal-plan", "/api/vehicle-plan", "/api/weather-contingency", "/api/message-draft", "/api/parent-message", "/api/voice-note", "/api/security-event", "/api/safety-alert", "/api/weather-alert", "/api/child-arrival", "/api/unlock-policy", "/api/tutor", "/api/device-boundary", "/api/workshop-plan", "/api/material-recommendation", "/api/cad-package", "/api/print-prep", "/api/safety-check", "/api/inspect-part", "/api/vendor-prep", "/api/executive-task", "/api/devotional-pause", "/api/family-devotional", "/api/chronicle-capture", "/api/room-scene", "/api/climate-control", "/api/access-control", "/api/garage-check", "/api/energy-window", "/api/mic-ingress", "/api/presence-update", "/api/phone-presence", "/api/camera-event", "/api/package-rule", "/api/object-recognition", "/api/environmental-anomaly", "/api/privacy-update", "/api/memory-remember", "/api/memory-forget", "/api/memory-approve", "/api/catalyst-signal", "/api/catalyst-email-triage", "/api/catalyst-meeting-prep", "/api/catalyst-meeting-extract", "/api/catalyst-briefing", "/api/catalyst-draft", "/api/catalyst-project-brief", "/api/catalyst-hypothesis", "/api/catalyst-implementation-plan", "/api/catalyst-proactive"}:
                 payload = self._read_json()
                 actor = payload.get("actor", "Chris")
                 room = payload.get("room", "office")
@@ -697,6 +709,17 @@ def create_handler(runtime: JarvisRuntime) -> type[BaseHTTPRequestHandler]:
                         )
                     )
                     return
+                if parsed.path == "/api/catalyst-hypothesis":
+                    self._send_json(
+                        runtime.catalyst_hypothesis_generation(
+                            actor,
+                            payload.get("focus", ""),
+                            payload.get("context", ""),
+                            payload.get("lane", ""),
+                            payload.get("supporting_signals", []),
+                        )
+                    )
+                    return
                 if parsed.path == "/api/catalyst-implementation-plan":
                     self._send_json(
                         runtime.catalyst_implementation_plan(
@@ -940,6 +963,39 @@ def create_handler(runtime: JarvisRuntime) -> type[BaseHTTPRequestHandler]:
                     self.send_error(HTTPStatus.NOT_FOUND, "Message draft not found")
                     return
                 self._send_json(updated)
+                return
+
+            if parsed.path == "/api/stage/email/draft":
+                payload = self._read_json()
+                try:
+                    result = runtime.stage_email_draft(payload)
+                except KeyError:
+                    self.send_error(HTTPStatus.NOT_FOUND, "Unknown trust-zone arena")
+                    return
+                except (TypeError, ValueError):
+                    self.send_error(HTTPStatus.BAD_REQUEST, "Invalid email draft staging payload")
+                    return
+                self._send_json(result, status=201)
+                return
+
+            if parsed.path == "/api/trust-zones":
+                payload = self._read_json()
+                try:
+                    result = runtime.create_trust_zone(payload)
+                except (KeyError, TypeError, ValueError):
+                    self.send_error(HTTPStatus.BAD_REQUEST, "Invalid trust zone payload")
+                    return
+                self._send_json(result, status=201)
+                return
+
+            if parsed.path == "/api/resource-arenas":
+                payload = self._read_json()
+                try:
+                    result = runtime.create_resource_arena(payload)
+                except (KeyError, TypeError, ValueError):
+                    self.send_error(HTTPStatus.BAD_REQUEST, "Invalid resource arena payload")
+                    return
+                self._send_json(result, status=201)
                 return
 
             if parsed.path.startswith("/api/vendor-preps/"):

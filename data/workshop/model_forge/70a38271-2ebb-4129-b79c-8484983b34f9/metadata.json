@@ -1,0 +1,41 @@
+{
+  "package_id": "70a38271-2ebb-4129-b79c-8484983b34f9",
+  "part_name": "Ceremonial Shelf Totem",
+  "actor": "Chris",
+  "summary": "A simple, upright shelf totem with a heavy low base, centered mass, and a clean silhouette that will read well from a distance. I\u2019ve kept the form parameter-driven and easy to hand-refine later, with a stub that favors stability over fuss.",
+  "parameters": [
+    "overall_h = 160;",
+    "overall_w = 70;",
+    "overall_d = 60;",
+    "base_h = 12;",
+    "thickness = 6;",
+    "base_w = overall_w;",
+    "base_d = overall_d;",
+    "body_w = 46;",
+    "body_d = 34;",
+    "top_taper_h = 28;",
+    "shoulder_h = 22;",
+    "foot_overhang = 2;",
+    "front_relief = 0;",
+    "rear_relief = 0;"
+  ],
+  "fit_checks": [
+    "Overall height is set to 160 mm, with the base occupying the bottom 12 mm for a grounded stance. The footprint is 70 x 60 mm, which is decent for shelf stability at this height, though a slightly wider base would be even safer if you expect bumps. The body is intentionally narrower than the base so it reads as a vertical ceremonial object without becoming top-heavy. The taper near the top helps it feel intentional from across the room, and the broad lower mass keeps the center of gravity down where it belongs."
+  ],
+  "family": "custom-form",
+  "artifact_dir": "data/workshop/model_forge/70a38271-2ebb-4129-b79c-8484983b34f9",
+  "script_path": "data/workshop/model_forge/70a38271-2ebb-4129-b79c-8484983b34f9/model.scad",
+  "cadquery_script_path": "data/workshop/model_forge/70a38271-2ebb-4129-b79c-8484983b34f9/model_cadquery.py",
+  "model_path": "data/workshop/model_forge/70a38271-2ebb-4129-b79c-8484983b34f9/ceremonial-shelf-totem.stl",
+  "step_path": "data/workshop/model_forge/70a38271-2ebb-4129-b79c-8484983b34f9/ceremonial-shelf-totem.step",
+  "mesh_3mf_path": "data/workshop/model_forge/70a38271-2ebb-4129-b79c-8484983b34f9/ceremonial-shelf-totem.3mf",
+  "slicer_pack_dir": "data/workshop/model_forge/70a38271-2ebb-4129-b79c-8484983b34f9/slicer_pack",
+  "printer_id": "creality-k2-pro-combo",
+  "profile_name": "creative-concept-balanced",
+  "material": "PLA",
+  "creative_profile": "display-prop",
+  "export_status": "cadquery-custom-form",
+  "export_detail": "Exported CadQuery custom-form assets as STL, STEP, and 3MF, then assembled a slicer pack for creality-k2-pro-combo using the creative-concept-balanced profile.",
+  "export_engine": "cadquery",
+  "timestamp": "2026-05-15T15:47:57.332909+00:00"
+}

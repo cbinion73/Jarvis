@@ -1,0 +1,78 @@
+{
+  "conversation_id": "3f50a95a-de9f-47b7-b6b4-8953de2d60cd",
+  "actor": "Chris",
+  "room": "office",
+  "source": "shell",
+  "title": "Turn this into a plan: build a simple consulting offer around AI workflo",
+  "status": "active",
+  "summary": "",
+  "memory_signals": [],
+  "created_at": "2026-05-15T02:20:27.265632+00:00",
+  "updated_at": "2026-05-15T02:20:40.990654+00:00",
+  "last_activity_at": "2026-05-15T02:20:40.985594+00:00",
+  "turn_count": 2,
+  "latest_user_text": "Turn this into a plan: build a simple consulting offer around AI workflow audits for small businesses.",
+  "latest_assistant_text": "Here\u2019s a clean plan you can actually run with.\n\nGoal: create a simple, repeatable consulting offer that helps small businesses identify where AI can save time, reduce friction, and improve workflows without turning into a custom-software rabbit hole.\n\nStart by narrowing the promise. The offer should be about clarity, not transformation theater. Something like: \u201cI audit your current workflows and show you where AI can remove bottlenecks, save time, and create a practical next-step roadmap.\u201d\n\nShape the offer into three parts. First, discovery: a short intake plus one working session to understand the business, tools, and pain points. Second, audit: review the most time-consuming or error-prone workflows and identify AI opportunities. Third, delivery: a concise report with prioritized recommendations, quick wins, and a simple implementation roadmap.\n\nKeep the scope tight. Focus on a few common areas: customer communication, admin tasks, meeting notes, lead handling, document processing, internal knowledge lookup, and basic reporting. The point is to find leverage, not rebuild the business.\n\nProductize the output. The client should receive a short summary, a workflow map, a list of opportunities ranked by impact and effort, a \u201cstart here\u201d recommendation, and a 30-day action plan. That makes the service feel concrete and keeps you from drowning in bespoke advice.\n\nCreate one or two offer tiers. A basic audit can cover one team or one function and end with recommendations. A fuller version can include implementation guidance or a follow-up coaching session. Keep it simple enough that you can explain it in one breath.\n\nDefine the ideal client. Small businesses with 5\u201350 employees, messy operations, recurring admin work, and no internal AI strategy are probably the sweet spot. You want owners or operators who feel the pain acutely and are ready to act.\n\nSet a clear sales process. One short call to confirm fit, one intake form, then the audit. No elaborate funnel required at the start. You\u2019re selling relief and direction, not a moonshot.\n\nBuild a basic delivery template. Standardize your intake questions, audit rubric, recommendation format, and follow-up call. That way every engagement gets faster and more consistent.\n\nPrice it simply. Charge enough that it feels valuable and filters out dabblers, but not so much that small businesses flee. A fixed-fee model will probably work better than hourly for this kind of offer.\n\nOnce that\u2019s stable, test it on 2\u20133 pilot clients,\n\nCaptured in Catalyst as a implementation plan under family-savings.",
+  "turns": [
+    {
+      "turn_id": "23f29c2a-684e-4aa0-a2a0-678012c4e8f8",
+      "role": "user",
+      "text": "Turn this into a plan: build a simple consulting offer around AI workflow audits for small businesses.",
+      "actor": "Chris",
+      "room": "office",
+      "source": "shell",
+      "created_at": "2026-05-15T02:20:27.295784+00:00",
+      "metadata": {}
+    },
+    {
+      "turn_id": "6cca476d-20a3-47c2-a714-384144549255",
+      "role": "assistant",
+      "text": "Here\u2019s a clean plan you can actually run with.\n\nGoal: create a simple, repeatable consulting offer that helps small businesses identify where AI can save time, reduce friction, and improve workflows without turning into a custom-software rabbit hole.\n\nStart by narrowing the promise. The offer should be about clarity, not transformation theater. Something like: \u201cI audit your current workflows and show you where AI can remove bottlenecks, save time, and create a practical next-step roadmap.\u201d\n\nShape the offer into three parts. First, discovery: a short intake plus one working session to understand the business, tools, and pain points. Second, audit: review the most time-consuming or error-prone workflows and identify AI opportunities. Third, delivery: a concise report with prioritized recommendations, quick wins, and a simple implementation roadmap.\n\nKeep the scope tight. Focus on a few common areas: customer communication, admin tasks, meeting notes, lead handling, document processing, internal knowledge lookup, and basic reporting. The point is to find leverage, not rebuild the business.\n\nProductize the output. The client should receive a short summary, a workflow map, a list of opportunities ranked by impact and effort, a \u201cstart here\u201d recommendation, and a 30-day action plan. That makes the service feel concrete and keeps you from drowning in bespoke advice.\n\nCreate one or two offer tiers. A basic audit can cover one team or one function and end with recommendations. A fuller version can include implementation guidance or a follow-up coaching session. Keep it simple enough that you can explain it in one breath.\n\nDefine the ideal client. Small businesses with 5\u201350 employees, messy operations, recurring admin work, and no internal AI strategy are probably the sweet spot. You want owners or operators who feel the pain acutely and are ready to act.\n\nSet a clear sales process. One short call to confirm fit, one intake form, then the audit. No elaborate funnel required at the start. You\u2019re selling relief and direction, not a moonshot.\n\nBuild a basic delivery template. Standardize your intake questions, audit rubric, recommendation format, and follow-up call. That way every engagement gets faster and more consistent.\n\nPrice it simply. Charge enough that it feels valuable and filters out dabblers, but not so much that small businesses flee. A fixed-fee model will probably work better than hourly for this kind of offer.\n\nOnce that\u2019s stable, test it on 2\u20133 pilot clients,\n\nCaptured in Catalyst as a implementation plan under family-savings.",
+      "actor": "Chris",
+      "room": "office",
+      "source": "shell",
+      "created_at": "2026-05-15T02:20:40.985594+00:00",
+      "metadata": {
+        "provider": "openai",
+        "model": "gpt-5.4-mini-2026-03-17",
+        "catalyst_capture": {
+          "ok": true,
+          "kind": "implementation-plan",
+          "lane": "family-savings",
+          "title": "into a plan: build a simple consulting offer around AI workflow audits for small businesses",
+          "record": {
+            "run_id": "e9ecc2b4-00d0-427f-a517-75d2c14f9d73",
+            "actor": "Chris",
+            "project_name": "into a plan: build a simple consulting offer around AI workflow audits for small businesses",
+            "lane": "family-savings",
+            "objective": "Turn the brief into a simple, repeatable consulting offer for small businesses that audits AI workflow opportunities, stays out of custom-build chaos, and is easy to explain, sell, and deliver.",
+            "workstreams": [
+              "Narrow the promise to clarity and practical savings, not vague transformation. Define the offer as an AI workflow audit that identifies bottlenecks, time loss, and realistic AI-assisted improvements. Productize the service into a standard sequence: intake, working session, audit, and delivery. Tighten the scope around common small-business workflows like customer communication, admin, meeting notes, lead handling, document processing, internal knowledge lookup, and basic reporting. Create a reusable delivery package with a short summary, workflow map, ranked opportunities, a \u201cstart here\u201d recommendation, and a 30-day action plan. Keep pricing fixed-fee and simple, with one basic tier and one slightly fuller tier. Define the ideal customer as a 5\u201350 person business with messy ops, recurring admin drag, and no internal AI strategy. Standardize the sales process and delivery templates so each engagement gets easier and more consistent. Pilot it on 2\u20133 clients before expanding."
+            ],
+            "next_actions": [
+              "Write the one-sentence offer. Draft the intake form and audit rubric. Sketch the final deliverable template. Decide on two pricing tiers. Identify 2\u20133 pilot clients who fit the profile. I\u2019d also recommend you decide now whether the first version is aimed at owners, operators, or office managers, because that changes the language and the sale."
+            ],
+            "dependencies": [
+              "A clear target customer, a realistic time budget for delivery, a simple template stack for intake and reporting, and a short list of pilot prospects. You also need a firm boundary on what is out of scope, especially custom automation builds and software development."
+            ],
+            "open_questions": [
+              "What exact business type are you targeting first. Do you want this to be a one-off audit, or a gateway into ongoing advisory. What price range feels credible without scaring off small businesses. What tools do you want to standardize around for the recommendations. How much implementation help are you willing to include before the offer stops being \u201csimple.\u201d"
+            ],
+            "raw_output": "Lane: family-savings\n\nObjective: Turn the brief into a simple, repeatable consulting offer for small businesses that audits AI workflow opportunities, stays out of custom-build chaos, and is easy to explain, sell, and deliver.\n\nWorkstreams: Narrow the promise to clarity and practical savings, not vague transformation. Define the offer as an AI workflow audit that identifies bottlenecks, time loss, and realistic AI-assisted improvements. Productize the service into a standard sequence: intake, working session, audit, and delivery. Tighten the scope around common small-business workflows like customer communication, admin, meeting notes, lead handling, document processing, internal knowledge lookup, and basic reporting. Create a reusable delivery package with a short summary, workflow map, ranked opportunities, a \u201cstart here\u201d recommendation, and a 30-day action plan. Keep pricing fixed-fee and simple, with one basic tier and one slightly fuller tier. Define the ideal customer as a 5\u201350 person business with messy ops, recurring admin drag, and no internal AI strategy. Standardize the sales process and delivery templates so each engagement gets easier and more consistent. Pilot it on 2\u20133 clients before expanding.\n\nNext Actions: Write the one-sentence offer. Draft the intake form and audit rubric. Sketch the final deliverable template. Decide on two pricing tiers. Identify 2\u20133 pilot clients who fit the profile. I\u2019d also recommend you decide now whether the first version is aimed at owners, operators, or office managers, because that changes the language and the sale.\n\nDependencies: A clear target customer, a realistic time budget for delivery, a simple template stack for intake and reporting, and a short list of pilot prospects. You also need a firm boundary on what is out of scope, especially custom automation builds and software development.\n\nOpen Questions: What exact business type are you targeting first. Do you want this to be a one-off audit, or a gateway into ongoing advisory. What price range feels credible without scaring off small businesses. What tools do you want to standardize around for the recommendations. How much implementation help are you willing to include before the offer stops being \u201csimple.\u201d",
+            "timestamp": "2026-05-15T02:20:40.974254+00:00"
+          },
+          "summary": "Captured in Catalyst as a implementation plan under family-savings."
+        }
+      }
+    }
+  ],
+  "catalyst_captures": [
+    {
+      "ok": true,
+      "kind": "implementation-plan",
+      "lane": "family-savings",
+      "title": "into a plan: build a simple consulting offer around AI workflow audits for small businesses",
+      "summary": "Captured in Catalyst as a implementation plan under family-savings."
+    }
+  ]
+}

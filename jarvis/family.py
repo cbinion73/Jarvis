@@ -64,8 +64,24 @@ class FamilyStore:
         for draft in drafts:
             if draft["draft_id"] == draft_id:
                 draft["status"] = status
+                draft["updated_at"] = datetime.now(timezone.utc).isoformat()
                 updated = draft
                 break
+        if updated:
+            self._save_drafts(drafts)
+        return updated
+
+    def update_draft(self, draft_id: str, updates: dict[str, object]) -> dict | None:
+        drafts = self._load_drafts()
+        updated = None
+        for draft in drafts:
+            if draft["draft_id"] != draft_id:
+                continue
+            for key, value in updates.items():
+                draft[str(key)] = value
+            draft["updated_at"] = datetime.now(timezone.utc).isoformat()
+            updated = draft
+            break
         if updated:
             self._save_drafts(drafts)
         return updated
@@ -356,6 +372,72 @@ class FamilySupport:
 
     def update_draft_status(self, draft_id: str, status: str) -> dict | None:
         return self.store.update_draft_status(draft_id, status)
+
+    def stage_email_draft(
+        self,
+        *,
+        actor: str,
+        request_id: str,
+        arena_id: str,
+        mailbox_id: str,
+        thread_id: str,
+        source_message_id: str,
+        source_subject: str,
+        from_label: str,
+        intent_type: str,
+        tone: str,
+        goal: str,
+        key_points: list[str] | None = None,
+        context_refs: dict[str, object] | None = None,
+    ) -> dict:
+        style_note = self.profile.get("messageStyleNotes", {}).get(tone, "")
+        prompt_lines = [
+            f"Actor: {actor}",
+            f"From: {from_label}",
+            f"Subject: {source_subject}",
+            f"Intent Type: {intent_type}",
+            f"Goal: {goal}",
+        ]
+        if key_points:
+            prompt_lines.append("Key Points:")
+            prompt_lines.extend(f"- {item}" for item in key_points if str(item).strip())
+        if context_refs:
+            prompt_lines.append(f"Context Refs: {json.dumps(context_refs)}")
+        system = build_specialist_prompt(
+            "shared email draft staging",
+            "Write a polished email draft only. Do not imply it was sent.",
+            extra_guidance=(
+                "Keep the draft ready for principal review in a shared mailbox draft flow. "
+                f"Tone guidance: {style_note}"
+            ),
+        )
+        body = self.openai_client.prompt_text(system, "\n".join(prompt_lines), max_output_tokens=320)
+        draft = MessageDraft(
+            draft_id=str(uuid.uuid4()),
+            request_id=request_id,
+            actor=actor,
+            audience=from_label,
+            purpose=goal,
+            tone=tone,
+            context=json.dumps(context_refs or {}, sort_keys=True),
+            body=body,
+            status="awaiting-principal-review",
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            arena_id=arena_id,
+            mailbox_id=mailbox_id,
+            thread_id=thread_id,
+            source_message_id=source_message_id,
+            source_subject=source_subject,
+            stage_status="draft_saved",
+            alert_status="queued",
+            draft_folder="drafts",
+            sync_status="pending_external_write",
+        )
+        self.store.add_draft(draft)
+        return asdict(draft)
+
+    def update_draft(self, draft_id: str, updates: dict[str, object]) -> dict | None:
+        return self.store.update_draft(draft_id, updates)
 
     def capture_voice_note(self, actor: str, source: str, note: str) -> dict:
         system = build_specialist_prompt(

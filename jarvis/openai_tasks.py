@@ -381,7 +381,7 @@ class JarvisOpenAIClient:
         module = plan.module.replace("-", " ")
         return self._normalize_response_text(
             (
-            f"Sir, JARVIS hit an AI-service problem while handling the {module} request. "
+            f"JARVIS hit an AI-service problem while handling the {module} request. "
             f"Reason: {exc}. "
             "Manual fallback is in effect: keep the scope tight, avoid external actions, and stage the next concrete step for review."
             )

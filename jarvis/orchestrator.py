@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 
 from .config import AppConfig
-from .models import RequestPlan, TaskClass, UserProfile
+from .models import PrivacyLevel, RequestPlan, RiskLevel, RoutingTier, TaskClass, UserProfile
 from .permissions import PermissionEngine
 
 
@@ -22,10 +22,14 @@ class JarvisOrchestrator:
         preferred_provider = self._select_provider(task_class, module, workstream, lowered)
         context_lane = self._select_context_lane(task_class, module, workstream)
         model = self._select_model(task_class, preferred_provider, lowered)
+        routing_tier = self._select_routing_tier(task_class, preferred_provider, lowered)
+        privacy_level = self._select_privacy_level(task_class, lowered)
+        risk_level = self._select_risk_level(task_class, module, workstream, lowered)
         rationale = (
             f"Mode '{mode}' maps to module '{module}', workstream '{workstream}', "
             f"task class '{task_class.value}', provider '{preferred_provider}', context lane '{context_lane}', "
-            f"and model '{model}'. "
+            f"model '{model}', routing tier '{routing_tier.value}', privacy '{privacy_level.value}', "
+            f"and risk '{risk_level.value}'. "
             f"Permission class is {decision.action_class.name}."
         )
         return RequestPlan(
@@ -40,6 +44,9 @@ class JarvisOrchestrator:
             preferred_provider=preferred_provider,
             context_lane=context_lane,
             model=model,
+            routing_tier=routing_tier,
+            privacy_level=privacy_level,
+            risk_level=risk_level,
             action_class=decision.action_class,
             allowed=decision.allowed,
             needs_approval=decision.needs_approval,
@@ -166,7 +173,18 @@ class JarvisOrchestrator:
             if task_class in {TaskClass.FAMILY, TaskClass.AMBIENT}:
                 return self.config.ollama_summarize_model
             return self.config.second_brain_model
-        if "voice" in request or "talk" in request or "listen" in request:
+        lowered = request.lower()
+        if any(
+            phrase in lowered
+            for phrase in (
+                "transcribe",
+                "transcription",
+                "audio file",
+                "microphone input",
+                "speech to text",
+                "dictation",
+            )
+        ):
             return self.config.openai_realtime_model
         if task_class in {
             TaskClass.EXECUTIVE,
@@ -179,3 +197,35 @@ class JarvisOrchestrator:
         }:
             return self.config.openai_text_model
         return self.config.openai_router_model
+
+    def _select_routing_tier(self, task_class: TaskClass, provider: str, request: str) -> RoutingTier:
+        if task_class == TaskClass.BACKGROUND:
+            return RoutingTier.BACKGROUND_DETECTION
+        if provider == "ollama":
+            return RoutingTier.LOCAL_SYNTHESIS
+        lowered = request.lower()
+        if any(keyword in lowered for keyword in ("draft", "write", "respond", "message", "brief", "plan")):
+            return RoutingTier.USER_FACING_DELIVERY
+        return RoutingTier.HIGH_QUALITY_REASONING
+
+    def _select_privacy_level(self, task_class: TaskClass, request: str) -> PrivacyLevel:
+        if task_class in {TaskClass.SENSITIVE_DRAFTING, TaskClass.BACKGROUND}:
+            return PrivacyLevel.LOCAL_ONLY
+        if any(keyword in request for keyword in ("confidential", "private", "sensitive", "redact", "family", "household")):
+            return PrivacyLevel.PREFER_LOCAL
+        if task_class in {TaskClass.FAMILY, TaskClass.AMBIENT, TaskClass.WORKSHOP}:
+            return PrivacyLevel.PREFER_LOCAL
+        if task_class == TaskClass.RESEARCH:
+            return PrivacyLevel.CLOUD_OK
+        return PrivacyLevel.RESTRICTED if "thermo" in request else PrivacyLevel.CLOUD_OK
+
+    def _select_risk_level(self, task_class: TaskClass, module: str, workstream: str, request: str) -> RiskLevel:
+        if task_class in {TaskClass.SENSITIVE_DRAFTING, TaskClass.RESEARCH, TaskClass.PARTY_MODE}:
+            return RiskLevel.HIGH
+        if task_class in {TaskClass.EXECUTIVE, TaskClass.WORKSHOP, TaskClass.FORMATION}:
+            return RiskLevel.MODERATE
+        if any(keyword in request for keyword in ("finance", "financial", "payment", "purchase", "vendor", "publish")):
+            return RiskLevel.HIGH
+        if module == "family-logistics" or workstream in {"meeting-prep", "meeting-followup"}:
+            return RiskLevel.MODERATE
+        return RiskLevel.LOW

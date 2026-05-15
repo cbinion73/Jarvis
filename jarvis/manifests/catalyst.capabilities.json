@@ -1,0 +1,36 @@
+{
+  "system": "catalyst",
+  "version": "1.0",
+  "capabilities": {
+    "meeting_prep": {
+      "intent_families": ["exec.prep", "day.calendar"],
+      "mode_support": ["delegate", "embed"],
+      "writes_record": true
+    },
+    "briefing_build": {
+      "intent_families": ["exec.prep", "exec.packaging"],
+      "mode_support": ["delegate"],
+      "writes_record": true
+    },
+    "decision_support": {
+      "intent_families": ["exec.decision"],
+      "mode_support": ["delegate", "embed"],
+      "writes_record": true
+    },
+    "research_synthesis": {
+      "intent_families": ["exec.research"],
+      "mode_support": ["delegate"],
+      "writes_record": true
+    },
+    "action_packaging": {
+      "intent_families": ["exec.packaging"],
+      "mode_support": ["delegate"],
+      "writes_record": true
+    },
+    "signal_triage": {
+      "intent_families": ["day.review", "day.communications"],
+      "mode_support": ["delegate", "embed"],
+      "writes_record": true
+    }
+  }
+}

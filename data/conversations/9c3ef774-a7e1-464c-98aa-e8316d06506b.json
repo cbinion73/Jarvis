@@ -1,0 +1,41 @@
+{
+  "conversation_id": "9c3ef774-a7e1-464c-98aa-e8316d06506b",
+  "actor": "Chris",
+  "room": "office",
+  "source": "shell",
+  "title": "Can you help me think through my day in a natural conversational way?",
+  "status": "active",
+  "summary": "",
+  "memory_signals": [],
+  "created_at": "2026-05-12T16:47:20.046989+00:00",
+  "updated_at": "2026-05-12T16:47:27.368110+00:00",
+  "last_activity_at": "2026-05-12T16:47:27.368110+00:00",
+  "turn_count": 2,
+  "latest_user_text": "Can you help me think through my day in a natural conversational way?",
+  "latest_assistant_text": "Certainly, Sir. We can do that properly, without turning your day into a committee meeting.\n\nStart with the simple shape of it: what must happen, what should happen, and what would merely be pleasant. Then we can sort the day by energy, not by fantasy, which is usually where the trouble begins.\n\nTell me three things:\nwhat is already fixed,\nwhat is weighing on you,\nand what would make today feel successful.\n\nI\u2019ll help you work through the rest in plain conversation.",
+  "turns": [
+    {
+      "turn_id": "3cc3d319-fe83-48eb-84c4-35166fd7db86",
+      "role": "user",
+      "text": "Can you help me think through my day in a natural conversational way?",
+      "actor": "Chris",
+      "room": "office",
+      "source": "shell",
+      "created_at": "2026-05-12T16:47:20.078030+00:00",
+      "metadata": {}
+    },
+    {
+      "turn_id": "7d4ba45d-b615-4b3f-8142-e56398422bb3",
+      "role": "assistant",
+      "text": "Certainly, Sir. We can do that properly, without turning your day into a committee meeting.\n\nStart with the simple shape of it: what must happen, what should happen, and what would merely be pleasant. Then we can sort the day by energy, not by fantasy, which is usually where the trouble begins.\n\nTell me three things:\nwhat is already fixed,\nwhat is weighing on you,\nand what would make today feel successful.\n\nI\u2019ll help you work through the rest in plain conversation.",
+      "actor": "Chris",
+      "room": "office",
+      "source": "shell",
+      "created_at": "2026-05-12T16:47:27.368110+00:00",
+      "metadata": {
+        "provider": "openai",
+        "model": "gpt-5.4-mini-2026-03-17"
+      }
+    }
+  ]
+}

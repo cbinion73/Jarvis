@@ -1,0 +1,19 @@
+{
+  "part_name": "Recovered Shell Study",
+  "family": "custom-form",
+  "primary_model": "recovered-shell-study.3mf",
+  "fallback_mesh": "recovered-shell-study.stl",
+  "printer_id": "creality-k2-pro-combo",
+  "profile_name": "creative-concept-balanced",
+  "material": "PLA",
+  "layer_height": "0.20 mm",
+  "infill": "18% gyroid",
+  "supports": "Tree or organic supports only where the silhouette truly needs them",
+  "dimensions_mm": {
+    "overall height": 145.0,
+    "width": 82.0,
+    "depth": 54.0,
+    "base height": 12.0,
+    "wall thickness": 5.0
+  }
+}

@@ -1,0 +1,2 @@
+Jarvis attachment smoke test
+This should be staged into chat.

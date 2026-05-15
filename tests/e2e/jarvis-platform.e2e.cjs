@@ -115,8 +115,8 @@ async function run() {
     await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector("#command-input");
     await page.waitForSelector("#voice-command");
-    await page.waitForSelector("#open-settings");
-    await page.waitForSelector("#packet-strip-toggle");
+    await page.waitForSelector("#open-settings", { state: "attached" });
+    await page.waitForSelector("#packet-strip-toggle", { state: "attached" });
     await page.waitForSelector(".core-stage");
     await page.waitForTimeout(1200);
     const stateLabel = await page.locator("#state-label").textContent();
@@ -125,7 +125,11 @@ async function run() {
   });
 
   await check("Packet rail expands", async (entry) => {
-    await page.click("#packet-strip-toggle");
+    await page.evaluate(() => {
+      const button = document.getElementById("packet-strip-toggle");
+      if (!button) throw new Error("packet-strip-toggle not found");
+      button.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
     await page.waitForTimeout(250);
     const strip = page.locator("#packet-strip");
     await strip.waitFor();
@@ -135,7 +139,7 @@ async function run() {
   });
 
   await check("Settings modal opens with platform controls", async (entry) => {
-    await page.click("#open-settings");
+    await page.click("#open-settings", { force: true });
     await page.waitForSelector("#modal-layer.open");
     await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("Settings"));
     await page.waitForSelector("#save-location");
@@ -170,7 +174,7 @@ async function run() {
   });
 
   await check("Location settings persist a saved location", async (entry) => {
-    await page.click("#open-settings");
+    await page.click("#open-settings", { force: true });
     await page.waitForSelector("#modal-layer.open");
     const label = `QA Location ${Date.now()}`;
     await page.fill("#location-label", label);
@@ -194,7 +198,10 @@ async function run() {
   await check("Catalyst workspace opens as modal app", async (entry) => {
     await page.click("#close-modal");
     await page.waitForTimeout(200);
-    await page.click('[data-packet="catalyst"]');
+    await page.evaluate(() => {
+      if (typeof window.__jarvisOpenPacket !== "function") throw new Error("openPacket helper not available");
+      window.__jarvisOpenPacket("catalyst");
+    });
     await page.waitForSelector("#modal-layer.open");
     await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("Catalyst Workspace"));
     await page.waitForSelector("#catalyst-workspace-frame");

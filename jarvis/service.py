@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import suppress
 import json
+import mimetypes
+import os
+import re
+import secrets
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Query, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 import uvicorn
@@ -52,9 +58,62 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     location_settings = LocationSettingsStore(runtime.config)
     hub = EventHub()
     app = FastAPI(title="JARVIS Service", version="2.0")
+    shell_warmer_task: asyncio.Task | None = None
     assets_root = Path.cwd() / "assets"
     if assets_root.exists():
         app.mount("/assets", StaticFiles(directory=str(assets_root)), name="assets")
+    uploads_root = Path.cwd() / "data" / "chat_uploads"
+    uploads_root.mkdir(parents=True, exist_ok=True)
+
+    def _safe_chat_filename(name: str) -> str:
+        cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", str(name or "").strip()).strip("-._")
+        return cleaned[:120] or "attachment"
+
+    def _upload_excerpt(path: Path, content_type: str, suffix: str) -> str:
+        text_types = {
+            ".txt",
+            ".md",
+            ".markdown",
+            ".json",
+            ".csv",
+            ".tsv",
+            ".yaml",
+            ".yml",
+            ".py",
+            ".js",
+            ".ts",
+            ".html",
+            ".css",
+            ".xml",
+        }
+        looks_text = suffix.lower() in text_types or content_type.startswith("text/")
+        if not looks_text:
+            return ""
+        try:
+            data = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            return ""
+        normalized = "\n".join(line.rstrip() for line in data.splitlines())
+        return normalized[:4000].strip()
+
+    def _upload_prompt_fragment(attachments: list[dict[str, Any]]) -> str:
+        if not attachments:
+            return ""
+        lines = [
+            "Attached files were included with this message.",
+            "Use any excerpts below as additional context.",
+        ]
+        for item in attachments:
+            name = str(item.get("filename", "")).strip() or "Attachment"
+            content_type = str(item.get("content_type", "")).strip() or "application/octet-stream"
+            size = int(item.get("size_bytes", 0) or 0)
+            lines.append(f"- {name} ({content_type}, {size} bytes)")
+            excerpt = str(item.get("excerpt", "")).strip()
+            if excerpt:
+                lines.append(f"  Excerpt: {excerpt[:1500]}")
+            else:
+                lines.append("  Excerpt: No text preview extracted yet.")
+        return "\n".join(lines).strip()
 
     def _base_url(request: Request) -> str:
         return str(request.base_url).rstrip("/")
@@ -63,6 +122,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         payload: dict[str, Any] = {
             "type": event_name,
             "refresh": True,
+            "shell_state": runtime.shell_state_snapshot(),
         }
         if include_dashboard:
             payload["dashboard"] = runtime.dashboard_snapshot()
@@ -78,6 +138,42 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "Expires": "0",
             },
         )
+
+    async def _shell_state_warmer() -> None:
+        startup_delay = max(1, int(os.getenv("JARVIS_SHELL_WARM_STARTUP_DELAY_SECONDS", "2") or 2))
+        interval_seconds = max(15, int(os.getenv("JARVIS_SHELL_WARM_INTERVAL_SECONDS", "20") or 20))
+        actors = runtime.shell_state_actor_names()
+        await asyncio.sleep(startup_delay)
+        while True:
+            try:
+                await asyncio.to_thread(
+                    runtime.prewarm_shell_state,
+                    actors,
+                    include_today_board=False,
+                    include_dashboard=False,
+                )
+                await asyncio.to_thread(runtime.prewarm_proactive_state, actors)
+            except Exception:
+                pass
+            await asyncio.sleep(interval_seconds)
+
+    @app.on_event("startup")
+    async def _start_shell_state_warmer() -> None:
+        nonlocal shell_warmer_task
+        enabled = str(os.getenv("JARVIS_SHELL_WARMING_ENABLED", "1")).strip().lower() not in {"0", "false", "no", "off"}
+        if not enabled or shell_warmer_task is not None:
+            return
+        shell_warmer_task = asyncio.create_task(_shell_state_warmer(), name="jarvis-shell-state-warmer")
+
+    @app.on_event("shutdown")
+    async def _stop_shell_state_warmer() -> None:
+        nonlocal shell_warmer_task
+        if shell_warmer_task is None:
+            return
+        shell_warmer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await shell_warmer_task
+        shell_warmer_task = None
 
     def _summary_payload() -> dict[str, Any]:
         return {
@@ -107,6 +203,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "task_class": plan.task_class.value,
                 "preferred_provider": plan.preferred_provider,
                 "context_lane": plan.context_lane,
+                "routing_tier": plan.routing_tier.value,
+                "privacy_level": plan.privacy_level.value,
+                "risk_level": plan.risk_level.value,
                 "rationale": plan.rationale,
             }
         if path == "/api/mode-brief":
@@ -286,6 +385,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 str(payload.get("content", "")),
                 sender=str(payload.get("sender", "")),
                 tags=tags,
+                work_id=str(payload.get("work_id", "")),
             )
         if path == "/api/catalyst-email-triage":
             return runtime.catalyst_email_triage(
@@ -324,6 +424,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 str(payload.get("problem", "")),
                 str(payload.get("desired_outcome", "")),
                 str(payload.get("constraints", "")),
+                work_id=str(payload.get("work_id", "")),
             )
         if path == "/api/catalyst-implementation-plan":
             return runtime.catalyst_implementation_plan(
@@ -331,6 +432,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 str(payload.get("project_name", "")),
                 str(payload.get("brief", "")),
                 str(payload.get("constraints", "")),
+                work_id=str(payload.get("work_id", "")),
             )
         if path == "/api/catalyst-proactive":
             return runtime.catalyst_proactive_surfacing(
@@ -404,6 +506,23 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     def _workshop_payload(actor: str, payload: dict[str, Any], path: str, request_text: str) -> dict[str, Any]:
         if path == "/api/workshop-plan":
             return {"actor": actor, "output_text": runtime.workshop_plan(actor, request_text)}
+        if path == "/api/concept-studio/chat":
+            return runtime.concept_studio_chat(
+                actor,
+                request_text or str(payload.get("prompt", "")),
+                str(payload.get("object_type", "")),
+                str(payload.get("goals", "")),
+                str(payload.get("constraints", "")),
+                session_id=str(payload.get("session_id", "")),
+                image_path=str(payload.get("image_path", "")),
+                capture_id=str(payload.get("capture_id", "")),
+                reference_note=str(payload.get("reference_note", "")),
+                silhouette_preference=str(payload.get("silhouette_preference", "")),
+                vision_object_label=str(payload.get("vision_object_label", "")),
+                vision_contour_confidence=str(payload.get("vision_contour_confidence", "")),
+                vision_asymmetry_hint=str(payload.get("vision_asymmetry_hint", "")),
+                vision_dimension_seed=str(payload.get("vision_dimension_seed", "")),
+            )
         if path == "/api/material-recommendation":
             return runtime.material_recommendation(
                 actor,
@@ -420,6 +539,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 str(payload.get("family", "")),
                 str(payload.get("printer", "")),
                 str(payload.get("profile", "")),
+                str(payload.get("creative_profile", "")),
             )
         if path == "/api/print-prep":
             return runtime.print_prep(
@@ -493,6 +613,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/health")
     async def health() -> dict[str, Any]:
         service_runtime = runtime.service_runtime_snapshot(include_probe=False)
+        guardian = runtime.guardian_status_snapshot()
         return {
             "ok": True,
             "python": "3.12",
@@ -504,14 +625,41 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "build_fingerprint": (service_runtime.get("startup_build") or {}).get("fingerprint", ""),
                 "disk_fingerprint": (service_runtime.get("current_build") or {}).get("fingerprint", ""),
                 "drift": service_runtime.get("drift", {}),
+                "guardian": {
+                    "active": bool(guardian.get("active")),
+                    "generated_at": str((guardian.get("status") or {}).get("generated_at", "")).strip(),
+                },
             },
             "openviking": runtime.openviking_status(),
             "brain_graph": runtime.brain_graph_snapshot(),
         }
 
     @app.get("/", response_class=HTMLResponse)
-    async def root() -> str:
-        return render_voice_shell(runtime)
+    async def root(packet: str = Query(default="")) -> str:
+        return render_voice_shell(runtime, initial_packet=packet)
+
+    @app.get("/storm-dashboard")
+    async def storm_dashboard() -> Response:
+        storm_path = Path.cwd() / "artifacts" / "mockups" / "storm-weather-widget.html"
+        if not storm_path.exists():
+            raise HTTPException(status_code=404, detail="Storm dashboard is unavailable.")
+        return FileResponse(storm_path, media_type="text/html")
+
+    @app.get("/storm-assets/{filename}")
+    async def storm_asset(filename: str) -> Response:
+        assets_root = (Path.cwd() / "artifacts" / "weather-assets").resolve()
+        asset_path = (assets_root / filename).resolve()
+        if assets_root not in asset_path.parents or not asset_path.exists() or not asset_path.is_file():
+            raise HTTPException(status_code=404, detail="Storm asset not found.")
+        return FileResponse(asset_path)
+
+    @app.get("/api/storm-weather")
+    async def api_storm_weather(force: bool = False) -> JSONResponse:
+        return _json(runtime.storm_weather_snapshot(force=force))
+
+    @app.get("/api/storm-route-weather")
+    async def api_storm_route_weather(origin: str, destination: str) -> JSONResponse:
+        return _json(runtime.storm_route_weather(origin, destination))
 
     @app.get("/agents/hierarchy", response_class=HTMLResponse)
     async def agent_hierarchy() -> str:
@@ -553,8 +701,8 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def ws_events(websocket: WebSocket) -> None:
         await hub.connect(websocket)
         try:
-            dashboard = await asyncio.to_thread(runtime.dashboard_snapshot)
-            await websocket.send_json({"type": "hello", "dashboard": dashboard})
+            shell_state = await asyncio.to_thread(runtime.shell_state_snapshot)
+            await websocket.send_json({"type": "hello", "shell_state": shell_state})
             while True:
                 await websocket.receive_text()
         except WebSocketDisconnect:
@@ -565,6 +713,85 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/dashboard")
     async def api_dashboard(actor: str = "Chris") -> JSONResponse:
         return _json(await asyncio.to_thread(runtime.dashboard_snapshot, actor))
+
+    @app.get("/api/shell-state")
+    async def api_shell_state(actor: str = "Chris") -> JSONResponse:
+        return _json(await asyncio.to_thread(runtime.shell_state_snapshot, actor))
+
+    @app.get("/api/chat-state")
+    async def api_chat_state(actor: str = "Chris", conversation_id: str = "", room: str = "office") -> JSONResponse:
+        return _json(await asyncio.to_thread(runtime.chat_state_snapshot, actor, conversation_id, room))
+
+    @app.get("/api/conversations/{conversation_id}")
+    async def api_conversation(conversation_id: str, limit: int = 24) -> JSONResponse:
+        snapshot = await asyncio.to_thread(runtime.conversation_snapshot, conversation_id, limit)
+        if not snapshot:
+            raise HTTPException(status_code=404, detail="Conversation not found.")
+        return _json(snapshot)
+
+    @app.post("/api/chat-uploads")
+    async def api_chat_uploads(
+        actor: str = Form("Chris"),
+        room: str = Form("office"),
+        conversation_id: str = Form(""),
+        files: list[UploadFile] = File(...),
+    ) -> JSONResponse:
+        if not files:
+            raise HTTPException(status_code=400, detail="No files were uploaded.")
+        staged: list[dict[str, Any]] = []
+        upload_batch_dir = uploads_root / (conversation_id.strip() or f"staging-{secrets.token_hex(6)}")
+        upload_batch_dir.mkdir(parents=True, exist_ok=True)
+        for incoming in files[:8]:
+            original_name = str(incoming.filename or "").strip()
+            if not original_name:
+                continue
+            suffix = Path(original_name).suffix.lower()
+            content_type = str(incoming.content_type or mimetypes.guess_type(original_name)[0] or "application/octet-stream")
+            safe_name = _safe_chat_filename(original_name)
+            stored_name = f"{secrets.token_hex(6)}-{safe_name}"
+            destination = upload_batch_dir / stored_name
+            size_bytes = 0
+            try:
+                with destination.open("wb") as handle:
+                    while True:
+                        chunk = await incoming.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        size_bytes += len(chunk)
+                        if size_bytes > 25 * 1024 * 1024:
+                            raise HTTPException(status_code=413, detail=f"{original_name} exceeds the 25 MB upload limit.")
+                        handle.write(chunk)
+            finally:
+                await incoming.close()
+            excerpt = _upload_excerpt(destination, content_type, suffix)
+            staged.append(
+                {
+                    "attachment_id": stored_name,
+                    "filename": original_name,
+                    "content_type": content_type,
+                    "size_bytes": size_bytes,
+                    "suffix": suffix,
+                    "stored_path": str(destination),
+                    "excerpt": excerpt,
+                    "actor": actor,
+                    "room": room,
+                }
+            )
+        if not staged:
+            raise HTTPException(status_code=400, detail="No usable files were uploaded.")
+        return _json({"attachments": staged})
+
+    @app.get("/api/proactive-state")
+    async def api_proactive_state(actor: str = "Chris", channel: str = "") -> JSONResponse:
+        payload = await asyncio.to_thread(runtime.proactive_state_snapshot, actor)
+        requested_channel = str(channel).strip().lower()
+        if requested_channel and requested_channel in payload.get("clients", {}):
+            payload = {
+                **payload,
+                "requested_channel": requested_channel,
+                "client": dict((payload.get("clients") or {}).get(requested_channel) or {}),
+            }
+        return _json(payload)
 
     @app.get("/api/assistant-core/tick")
     async def api_assistant_core_tick(actor: str = "Chris") -> JSONResponse:
@@ -740,6 +967,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_google_summary() -> JSONResponse:
         return _json(runtime.google_workspace_summary())
 
+    @app.get("/api/google/bridge/status")
+    async def api_google_bridge_status() -> JSONResponse:
+        return _json(runtime.google_bridge_status())
+
     @app.get("/api/family-calendar")
     async def api_family_calendar() -> JSONResponse:
         return _json(runtime.family_calendar_summary())
@@ -792,6 +1023,88 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_pipeline_review(actor: str = "Chris") -> JSONResponse:
         return _json(runtime.pipeline_review(actor))
 
+    @app.get("/api/work-lifecycle")
+    async def api_work_lifecycle(actor: str = "Chris", limit: int = Query(28, ge=1, le=100)) -> JSONResponse:
+        return _json(runtime.work_lifecycle_snapshot(actor, limit=limit))
+
+    @app.post("/api/work-lifecycle/{work_id}/action")
+    async def api_work_lifecycle_action(work_id: str, payload: dict[str, Any]) -> JSONResponse:
+        actor = str(payload.get("actor", "Chris")).strip() or "Chris"
+        action = str(payload.get("action", "")).strip()
+        note = str(payload.get("note", "")).strip()
+        if not action:
+            raise HTTPException(status_code=400, detail="Action is required")
+        try:
+            result = runtime.apply_work_lifecycle_action(actor, work_id, action, note=note)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _json(result)
+
+    @app.get("/api/work-lifecycle/{work_id}/inspector")
+    async def api_work_lifecycle_inspector(work_id: str, actor: str = "Chris") -> JSONResponse:
+        try:
+            result = runtime.work_lifecycle_inspector_snapshot(actor, work_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(result)
+
+    @app.get("/api/work-lifecycle/{work_id}/artifact/{record_id}")
+    async def api_work_lifecycle_artifact(work_id: str, record_id: str, actor: str = "Chris") -> JSONResponse:
+        try:
+            result = runtime.resolve_work_lifecycle_artifact(actor, work_id, record_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        if not result.get("ok", False):
+            raise HTTPException(status_code=404, detail=result.get("message", "Artifact not found"))
+        return _json(result)
+
+    @app.get("/api/operating-policy")
+    async def api_operating_policy() -> JSONResponse:
+        return _json(runtime.operating_policy_snapshot())
+
+    @app.get("/api/self-mutation-constitution")
+    async def api_self_mutation_constitution() -> JSONResponse:
+        return _json(runtime.self_mutation_constitution_snapshot())
+
+    @app.get("/api/guardian-status")
+    async def api_guardian_status() -> JSONResponse:
+        return _json(runtime.guardian_status_snapshot())
+
+    @app.get("/api/self-improvement")
+    async def api_self_improvement() -> JSONResponse:
+        return _json(runtime.self_improvement_snapshot())
+
+    @app.post("/api/self-improvement/run")
+    async def api_self_improvement_run(payload: dict[str, Any]) -> JSONResponse:
+        actor = str(payload.get("actor", "Chris")).strip() or "Chris"
+        return _json(runtime.background_self_improvement_run(actor))
+
+    @app.post("/api/self-improvement/jobs/{job_id}/execute")
+    async def api_self_improvement_execute(job_id: str, payload: dict[str, Any]) -> JSONResponse:
+        actor = str(payload.get("actor", "Chris")).strip() or "Chris"
+        triggered_by = str(payload.get("triggered_by", "manual")).strip() or "manual"
+        try:
+            result = runtime.run_self_improvement_job(actor, job_id, triggered_by=triggered_by)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _json(result)
+
+    @app.post("/api/self-improvement/jobs/{job_id}/sandbox-execute")
+    async def api_self_improvement_sandbox_execute(job_id: str, payload: dict[str, Any]) -> JSONResponse:
+        actor = str(payload.get("actor", "Chris")).strip() or "Chris"
+        triggered_by = str(payload.get("triggered_by", "sandbox-run")).strip() or "sandbox-run"
+        try:
+            result = runtime.run_self_improvement_sandbox_job(actor, job_id, triggered_by=triggered_by)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _json(result)
+
     @app.get("/api/agent-workspace/{agent_id}")
     async def api_agent_workspace(agent_id: str) -> JSONResponse:
         if agent_id == "herald":
@@ -828,9 +1141,142 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_memory_curator() -> JSONResponse:
         return _json(runtime.memory_curator_snapshot())
 
+    @app.get("/api/shared-doctrine")
+    async def api_shared_doctrine(actor: str = "", refresh: bool = False) -> JSONResponse:
+        return _json(runtime.shared_doctrine_snapshot(actor_name=actor, refresh=refresh))
+
+    @app.post("/api/shared-doctrine/synthesize")
+    async def api_shared_doctrine_synthesize(payload: dict[str, Any]) -> JSONResponse:
+        auto_promote = bool(payload.get("auto_promote", True))
+        promoted_by = str(payload.get("promoted_by", "manual-refresh"))
+        return _json(runtime.synthesize_shared_doctrine(auto_promote=auto_promote, promoted_by=promoted_by))
+
+    @app.post("/api/shared-doctrine/candidates/{candidate_id}/promote")
+    async def api_shared_doctrine_promote(candidate_id: str, payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = runtime.promote_doctrine_candidate(
+                candidate_id,
+                promoted_by=str(payload.get("promoted_by", "Chris")),
+                basis=str(payload.get("basis", "approved-by-user")),
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(result)
+
+    @app.post("/api/shared-doctrine/candidates/{candidate_id}/dismiss")
+    async def api_shared_doctrine_dismiss(candidate_id: str, payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = runtime.dismiss_doctrine_candidate(
+                candidate_id,
+                dismissed_by=str(payload.get("dismissed_by", "Chris")),
+                reason=str(payload.get("reason", "")),
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(result)
+
     @app.get("/api/catalyst-overview")
     async def api_catalyst_overview() -> JSONResponse:
         return _json(runtime.catalyst_overview())
+
+    @app.get("/api/catalyst-live-state")
+    async def api_catalyst_live_state() -> JSONResponse:
+        return _json(runtime.catalyst_live_workspace())
+
+    @app.get("/api/router/capabilities")
+    async def api_router_capabilities() -> JSONResponse:
+        return _json(runtime.interface_router.capability_manifests())
+
+    @app.post("/api/router/intent")
+    async def api_router_intent(payload: dict[str, Any]) -> JSONResponse:
+        return _json(
+            runtime.interface_router.classify_intent(
+                str(payload.get("request_text", "")),
+                context=dict(payload.get("context") or {}),
+            )
+        )
+
+    @app.post("/api/router/handoff")
+    async def api_router_handoff(payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = runtime.interface_router.create_handoff(payload)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _json(result, status_code=202)
+
+    @app.post("/api/router/result")
+    async def api_router_result(payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = runtime.interface_router.post_result(payload)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(result, status_code=202)
+
+    @app.get("/api/router/session/{request_id}")
+    async def api_router_session(request_id: str) -> JSONResponse:
+        try:
+            result = runtime.interface_router.session_view(request_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(result)
+
+    @app.get("/api/chronicle/capabilities")
+    async def api_chronicle_capabilities() -> JSONResponse:
+        return _json(runtime.interface_router.system_manifest("chronicle"))
+
+    @app.post("/api/chronicle/handoff")
+    async def api_chronicle_handoff(payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = runtime.interface_router.create_handoff({**payload, "target_system": "chronicle"})
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _json(result, status_code=202)
+
+    @app.get("/api/chronicle/session/{request_id}")
+    async def api_chronicle_session(request_id: str) -> JSONResponse:
+        try:
+            result = runtime.interface_router.system_session_view("chronicle", request_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(result)
+
+    @app.get("/api/chronicle/result/{request_id}")
+    async def api_chronicle_result(request_id: str) -> JSONResponse:
+        try:
+            result = runtime.interface_router.result_view(request_id, source_system="chronicle")
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(result)
+
+    @app.get("/api/catalyst/capabilities")
+    async def api_catalyst_capabilities() -> JSONResponse:
+        return _json(runtime.interface_router.system_manifest("catalyst"))
+
+    @app.post("/api/catalyst/handoff")
+    async def api_catalyst_handoff(payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = runtime.interface_router.create_handoff({**payload, "target_system": "catalyst"})
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _json(result, status_code=202)
+
+    @app.get("/api/catalyst/run/{request_id}")
+    async def api_catalyst_run(request_id: str) -> JSONResponse:
+        try:
+            result = runtime.interface_router.system_session_view("catalyst", request_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(result)
+
+    @app.get("/api/catalyst/result/{request_id}")
+    async def api_catalyst_result(request_id: str) -> JSONResponse:
+        try:
+            result = runtime.interface_router.result_view(request_id, source_system="catalyst")
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(result)
 
     @app.get("/api/google/account/{account_id}")
     async def api_google_account(account_id: str) -> JSONResponse:
@@ -851,6 +1297,30 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/message-drafts")
     async def api_message_drafts() -> JSONResponse:
         return _json(runtime.list_message_drafts())
+
+    @app.get("/api/trust-zones")
+    async def api_trust_zones() -> JSONResponse:
+        return _json({"zones": runtime.list_trust_zones()})
+
+    @app.post("/api/trust-zones")
+    async def api_create_trust_zone(payload: dict[str, Any]) -> JSONResponse:
+        return _json(runtime.create_trust_zone(payload), status_code=201)
+
+    @app.get("/api/resource-arenas")
+    async def api_resource_arenas() -> JSONResponse:
+        return _json({"arenas": runtime.list_resource_arenas()})
+
+    @app.post("/api/resource-arenas")
+    async def api_create_resource_arena(payload: dict[str, Any]) -> JSONResponse:
+        return _json(runtime.create_resource_arena(payload), status_code=201)
+
+    @app.get("/api/authority-stages")
+    async def api_authority_stages() -> JSONResponse:
+        return _json({"stages": runtime.list_authority_stages()})
+
+    @app.get("/api/stage/queue")
+    async def api_stage_queue() -> JSONResponse:
+        return _json({"items": runtime.list_stage_queue()})
 
     @app.get("/api/voice-notes")
     async def api_voice_notes() -> JSONResponse:
@@ -994,6 +1464,17 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_cad_packages() -> JSONResponse:
         return _json(runtime.list_cad_packages())
 
+    @app.get("/api/concept-studio/sessions")
+    async def api_concept_studio_sessions(limit: int = 10) -> JSONResponse:
+        return _json(runtime.list_concept_sessions(limit=limit))
+
+    @app.get("/api/concept-studio/session/{session_id}")
+    async def api_concept_studio_session(session_id: str) -> JSONResponse:
+        session = runtime.get_concept_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Concept studio session not found")
+        return _json(session)
+
     @app.get("/api/workshop-machine-options")
     async def api_workshop_machine_options() -> JSONResponse:
         return _json(runtime.workshop_machine_options())
@@ -1080,13 +1561,21 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         payload: dict[str, Any],
         background_tasks: BackgroundTasks,
     ) -> JSONResponse:
-        result = runtime.respond(
+        attachments = payload.get("attachments")
+        attachment_records = [dict(item) for item in attachments if isinstance(item, dict)] if isinstance(attachments, list) else []
+        request_text = str(payload.get("request", ""))
+        attachment_context = _upload_prompt_fragment(attachment_records)
+        if attachment_context:
+            request_text = f"{request_text}\n\n{attachment_context}".strip()
+        result = runtime.converse(
             str(payload.get("actor", "Chris")),
             str(payload.get("room", "office")),
-            str(payload.get("request", "")),
+            request_text,
+            conversation_id=str(payload.get("conversation_id", "")),
+            source=str(payload.get("source", "shell")),
         )
         background_tasks.add_task(_broadcast_dashboard, "response.completed")
-        return _json({"provider": result.provider, "model": result.model, "output_text": result.output_text})
+        return _json(result)
 
     @app.post("/api/mode-transition")
     async def api_mode_transition(
@@ -1193,6 +1682,14 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_google_client_secret(payload: dict[str, Any]) -> JSONResponse:
         return _json(runtime.google_save_client_secret(str(payload.get("client_secret_json", ""))))
 
+    @app.post("/api/google/bridge/export")
+    async def api_google_bridge_export() -> JSONResponse:
+        return _json(runtime.google_bridge_export())
+
+    @app.post("/api/google/bridge/import")
+    async def api_google_bridge_import(payload: dict[str, Any]) -> JSONResponse:
+        return _json(runtime.google_bridge_import(str(payload.get("account_id", ""))))
+
     @app.post("/api/google/disconnect")
     async def api_google_disconnect() -> JSONResponse:
         return _json(runtime.google_disconnect())
@@ -1277,6 +1774,20 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         await _broadcast_dashboard("pipeline-review.completed")
         return _json(result)
 
+    @app.post("/api/catalyst-hypothesis")
+    async def api_catalyst_hypothesis(payload: dict[str, Any]) -> JSONResponse:
+        actor = str(payload.get("actor", "Chris"))
+        result = runtime.catalyst_hypothesis_generation(
+            actor,
+            str(payload.get("focus", "")),
+            str(payload.get("context", "")),
+            lane=str(payload.get("lane", "")),
+            supporting_signals=[str(item).strip() for item in payload.get("supporting_signals", []) if str(item).strip()],
+            work_id=str(payload.get("work_id", "")),
+            source_agent=str(payload.get("source_agent", "")),
+        )
+        return _json(result)
+
     @app.post("/api/herald/prepare")
     async def api_herald_prepare(payload: dict[str, Any]) -> JSONResponse:
         return _json(
@@ -1358,6 +1869,17 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         if updated is None:
             raise HTTPException(status_code=404, detail="Message draft not found")
         return _json(updated)
+
+    @app.post("/api/stage/email/draft")
+    async def api_stage_email_draft(payload: dict[str, Any], background_tasks: BackgroundTasks) -> JSONResponse:
+        try:
+            result = runtime.stage_email_draft(payload)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        background_tasks.add_task(_broadcast_dashboard, "communications.updated")
+        return _json(result, status_code=201)
 
     @app.post("/api/vendor-preps/{prep_id}")
     async def api_update_vendor_prep(prep_id: str, payload: dict[str, Any]) -> JSONResponse:
@@ -1442,6 +1964,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
             if path in {
                 "/api/workshop-plan",
+                "/api/concept-studio/chat",
                 "/api/material-recommendation",
                 "/api/cad-package",
                 "/api/print-prep",
