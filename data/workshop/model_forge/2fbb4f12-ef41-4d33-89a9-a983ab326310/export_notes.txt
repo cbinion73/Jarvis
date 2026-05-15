@@ -1,0 +1,3 @@
+Package 2fbb4f12-ef41-4d33-89a9-a983ab326310 exported a simple fit-check STL.
+This mesh is a conservative rectangular prototype based on the strongest available measured extents.
+Original constraints: Use an observed organic silhouette, preserve asymmetry, keep a stable base.

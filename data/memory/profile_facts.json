@@ -21,5 +21,722 @@
     "boundary_label": "child-private",
     "created_at": "2026-05-10T05:53:17.566170+00:00",
     "updated_at": "2026-05-10T05:53:23.981748+00:00"
+  },
+  {
+    "fact_id": "98e323c40d853c3e24504980",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris leads digital innovation work that turns emerging technology noise into de",
+    "summary": "Chris leads digital innovation work that turns emerging technology noise into decision-ready intelligence for leaders.",
+    "tags": [
+      "personal",
+      "preference",
+      "professional",
+      "identity",
+      "innovation",
+      "leadership"
+    ],
+    "source_entry_ids": [
+      "2d38f282-7330-4ffe-8df0-d263038ea0c9"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "seed-import-chatgpt",
+    "boundary_label": "personal",
+    "created_at": "2026-05-11T14:18:58.188878+00:00",
+    "updated_at": "2026-05-11T14:18:58.188879+00:00"
+  },
+  {
+    "fact_id": "5917c4365c45f985beb82648",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris prefers structured, deep, practical responses with clarity over fluff",
+    "summary": "Chris prefers structured, deep, practical responses with clarity over fluff.",
+    "tags": [
+      "personal",
+      "preference",
+      "communication",
+      "clarity"
+    ],
+    "source_entry_ids": [
+      "4e05cf1e-d3d6-4065-8023-802122e04977"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "seed-import-chatgpt",
+    "boundary_label": "personal",
+    "created_at": "2026-05-11T14:18:58.203858+00:00",
+    "updated_at": "2026-05-11T14:18:58.203860+00:00"
+  },
+  {
+    "fact_id": "7754966a24d9ef4851ca8dd2",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris expects strong evidence discipline for professional research, including cl",
+    "summary": "Chris expects strong evidence discipline for professional research, including clear sourcing, assumptions, and no invented facts.",
+    "tags": [
+      "personal",
+      "preference",
+      "research",
+      "evidence"
+    ],
+    "source_entry_ids": [
+      "fb34f841-1da4-475c-b1f8-b97d94a22385"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "seed-import-chatgpt",
+    "boundary_label": "personal",
+    "created_at": "2026-05-11T14:18:58.218654+00:00",
+    "updated_at": "2026-05-11T14:18:58.218656+00:00"
+  },
+  {
+    "fact_id": "8bbe8d908bd67e165f291193",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris wants executive-ready concise outputs for slides and summaries, but denser",
+    "summary": "Chris wants executive-ready concise outputs for slides and summaries, but denser traditional prose for longform writing.",
+    "tags": [
+      "personal",
+      "preference",
+      "writing",
+      "executive"
+    ],
+    "source_entry_ids": [
+      "93804c9d-f732-4215-9f43-3d8589d5fa72"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "seed-import-chatgpt",
+    "boundary_label": "personal",
+    "created_at": "2026-05-11T14:18:58.233707+00:00",
+    "updated_at": "2026-05-11T14:18:58.233708+00:00"
+  },
+  {
+    "fact_id": "e8890cc9d37925cf91789ab5",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris wants theology handled Bible-first, text-driven, and biblically faithful",
+    "summary": "Chris wants theology handled Bible-first, text-driven, and biblically faithful.",
+    "tags": [
+      "personal",
+      "preference",
+      "faith",
+      "theology"
+    ],
+    "source_entry_ids": [
+      "2dfeb6bc-a0ec-4b51-8ea9-77609c077e98"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "seed-import-chatgpt",
+    "boundary_label": "personal",
+    "created_at": "2026-05-11T14:18:58.248990+00:00",
+    "updated_at": "2026-05-11T14:18:58.248992+00:00"
+  },
+  {
+    "fact_id": "377c93886fe25171122e0630",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "JARVIS is a serious whole-home AI operating architecture for Chris, not a toy ch",
+    "summary": "JARVIS is a serious whole-home AI operating architecture for Chris, not a toy chatbot concept.",
+    "tags": [
+      "personal",
+      "preference",
+      "jarvis",
+      "project",
+      "architecture"
+    ],
+    "source_entry_ids": [
+      "27d0b8db-2a5c-470d-92cc-a0d8f5b7d559"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "seed-import-chatgpt",
+    "boundary_label": "personal",
+    "created_at": "2026-05-11T14:18:58.264414+00:00",
+    "updated_at": "2026-05-11T14:18:58.264415+00:00"
+  },
+  {
+    "fact_id": "cbd2e1d35a3f2a4a4648a559",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chronicle is a spiritual formation companion for Chris, not merely a Bible looku",
+    "summary": "Chronicle is a spiritual formation companion for Chris, not merely a Bible lookup app.",
+    "tags": [
+      "personal",
+      "preference",
+      "chronicle",
+      "faith",
+      "project"
+    ],
+    "source_entry_ids": [
+      "3d44f32a-30a3-4e46-9cde-520b3eaf2338"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "seed-import-chatgpt",
+    "boundary_label": "personal",
+    "created_at": "2026-05-11T14:18:58.279646+00:00",
+    "updated_at": "2026-05-11T14:18:58.279647+00:00"
+  },
+  {
+    "fact_id": "7bd157172c395a801b1b0505",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris is trying to build systems that turn confusion into clarity and move peopl",
+    "summary": "Chris is trying to build systems that turn confusion into clarity and move people toward faithful action.",
+    "tags": [
+      "personal",
+      "preference",
+      "goal",
+      "clarity",
+      "leadership"
+    ],
+    "source_entry_ids": [
+      "fa5f4ece-b220-4814-9fa0-29ef5f534fde"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "seed-import-chatgpt",
+    "boundary_label": "personal",
+    "created_at": "2026-05-11T14:18:58.295007+00:00",
+    "updated_at": "2026-05-11T14:18:58.295009+00:00"
+  },
+  {
+    "fact_id": "a431e168ae2e6f4ef3ab703b",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris wants JARVIS to act as a true partner, not merely an answer engine",
+    "summary": "Chris wants JARVIS to act as a true partner, not merely an answer engine.",
+    "tags": [
+      "personal",
+      "preference",
+      "interaction-style",
+      "partnership"
+    ],
+    "source_entry_ids": [
+      "8afd39dd-8cb3-41f7-b21f-2b0a8ddb9322"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "whitepaper-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:45:43.910699+00:00",
+    "updated_at": "2026-05-12T03:45:43.910706+00:00"
+  },
+  {
+    "fact_id": "20a9eaa1cc499f9faf50ff25",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris wants to be understood by trajectory, not just by isolated facts",
+    "summary": "Chris wants to be understood by trajectory, not just by isolated facts.",
+    "tags": [
+      "personal",
+      "preference",
+      "trajectory",
+      "formation"
+    ],
+    "source_entry_ids": [
+      "c46dbc4e-7d47-4ffc-9b4b-9572fdb4105e"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "whitepaper-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:45:43.931749+00:00",
+    "updated_at": "2026-05-12T03:45:43.931753+00:00"
+  },
+  {
+    "fact_id": "c9adfdd0b858d29d325e9673",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris is a system-builder with a theological imagination who likes turning raw i",
+    "summary": "Chris is a system-builder with a theological imagination who likes turning raw ideas into coherent, useful systems.",
+    "tags": [
+      "personal",
+      "preference",
+      "identity",
+      "systems",
+      "theology",
+      "creativity"
+    ],
+    "source_entry_ids": [
+      "19a624a8-ba71-43a8-b5ca-d13b9a9b87d5"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "whitepaper-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:45:43.952839+00:00",
+    "updated_at": "2026-05-12T03:45:43.952845+00:00"
+  },
+  {
+    "fact_id": "0d1c6e9f71bba17ef4ecd755",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris prefers structured, insightful, practical, intellectually honest responses",
+    "summary": "Chris prefers structured, insightful, practical, intellectually honest responses with depth but without academic fog.",
+    "tags": [
+      "personal",
+      "preference",
+      "communication",
+      "clarity",
+      "depth"
+    ],
+    "source_entry_ids": [
+      "1351e7f4-36ec-4227-9b4c-c14db7913ad6"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "whitepaper-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:45:43.974132+00:00",
+    "updated_at": "2026-05-12T03:45:43.974152+00:00"
+  },
+  {
+    "fact_id": "9e151f8a1371ea24988e1ca9",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris appreciates clever, kind, self-aware humor, but not flippancy, mockery, or",
+    "summary": "Chris appreciates clever, kind, self-aware humor, but not flippancy, mockery, or forced jokes.",
+    "tags": [
+      "personal",
+      "preference",
+      "humor",
+      "tone"
+    ],
+    "source_entry_ids": [
+      "14c7a239-5757-41ce-8887-4850f50fe8e2"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "whitepaper-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:45:43.995555+00:00",
+    "updated_at": "2026-05-12T03:45:43.995562+00:00"
+  },
+  {
+    "fact_id": "25937b2961af3214c01125dc",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris wants faith integrated naturally: biblical depth, Spirit-aware warmth, and",
+    "summary": "Chris wants faith integrated naturally: biblical depth, Spirit-aware warmth, and practical obedience without performative religiosity.",
+    "tags": [
+      "personal",
+      "preference",
+      "faith",
+      "theology",
+      "scripture"
+    ],
+    "source_entry_ids": [
+      "e7b80442-8dba-495e-a4c3-c2d38b908c14"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "whitepaper-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:45:44.017461+00:00",
+    "updated_at": "2026-05-12T03:45:44.017466+00:00"
+  },
+  {
+    "fact_id": "6675bb73d487a9e7a2adcb13",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris wants strong recommendations and reusable systems rather than undifferenti",
+    "summary": "Chris wants strong recommendations and reusable systems rather than undifferentiated options or one-off output.",
+    "tags": [
+      "personal",
+      "preference",
+      "recommendations",
+      "systems",
+      "leverage"
+    ],
+    "source_entry_ids": [
+      "6943ff45-8892-41eb-bedd-31ed199aae0d"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "whitepaper-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:45:44.038828+00:00",
+    "updated_at": "2026-05-12T03:45:44.038831+00:00"
+  },
+  {
+    "fact_id": "1bb896e82126b40f45599faa",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris values truthful, hopeful challenge and wants weak ideas sharpened rather t",
+    "summary": "Chris values truthful, hopeful challenge and wants weak ideas sharpened rather than flattered.",
+    "tags": [
+      "personal",
+      "preference",
+      "coaching",
+      "honesty",
+      "growth"
+    ],
+    "source_entry_ids": [
+      "2e397717-a7c6-409d-baa2-a0d854e7e6b8"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "whitepaper-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:45:44.062690+00:00",
+    "updated_at": "2026-05-12T03:45:44.062697+00:00"
+  },
+  {
+    "fact_id": "206b8fcf4dd3123d93038727",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris treats health, posture, voice, presence, leadership, and discipline as for",
+    "summary": "Chris treats health, posture, voice, presence, leadership, and discipline as formation goals tied to calling, not vanity.",
+    "tags": [
+      "personal",
+      "preference",
+      "goal",
+      "health",
+      "presence",
+      "leadership",
+      "formation"
+    ],
+    "source_entry_ids": [
+      "0e454635-756d-4261-8c81-20995947162b"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "whitepaper-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:45:44.085071+00:00",
+    "updated_at": "2026-05-12T03:45:44.085078+00:00"
+  },
+  {
+    "fact_id": "94320b924abf93abbfdd92a5",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris uses AI as a force multiplier and wants workflows that are reusable, trust",
+    "summary": "Chris uses AI as a force multiplier and wants workflows that are reusable, trustworthy, and high leverage.",
+    "tags": [
+      "personal",
+      "preference",
+      "ai",
+      "workflow",
+      "leverage"
+    ],
+    "source_entry_ids": [
+      "1e6bfb04-1810-4464-bcc8-c2c7a713188d"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "whitepaper-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:45:44.106825+00:00",
+    "updated_at": "2026-05-12T03:45:44.106829+00:00"
+  },
+  {
+    "fact_id": "59ef62f0933dbe89968508fa",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris provided a detailed whitepaper describing how JARVIS should understand and",
+    "summary": "Chris provided a detailed whitepaper describing how JARVIS should understand and interact with him across strategy, faith, creativity, and growth.",
+    "tags": [
+      "personal",
+      "preference",
+      "whitepaper",
+      "interaction-profile",
+      "continuity"
+    ],
+    "source_entry_ids": [
+      "1a603390-9a3e-43ab-a718-36019ff028ec"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "whitepaper-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:46:19.665401+00:00",
+    "updated_at": "2026-05-12T03:46:19.665413+00:00"
+  },
+  {
+    "fact_id": "44aad9338f5a268935e77943",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris provided a Jarvis Voice and Behavior Constitution describing how JARVIS sh",
+    "summary": "Chris provided a Jarvis Voice and Behavior Constitution describing how JARVIS should come toward him in tone, posture, mission, and response behavior.",
+    "tags": [
+      "personal",
+      "preference",
+      "constitution",
+      "voice-profile",
+      "continuity"
+    ],
+    "source_entry_ids": [
+      "7fa61985-4405-418c-95da-03c8e2c27126"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "constitution-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:49:13.220235+00:00",
+    "updated_at": "2026-05-12T03:49:13.220241+00:00"
+  },
+  {
+    "fact_id": "e58b89977007712f8bb1f54f",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris wants JARVIS to sound like a wise, trusted Christian friend with strategic",
+    "summary": "Chris wants JARVIS to sound like a wise, trusted Christian friend with strategic intelligence and practical usefulness.",
+    "tags": [
+      "personal",
+      "preference",
+      "tone",
+      "voice",
+      "friend"
+    ],
+    "source_entry_ids": [
+      "e5bef522-f678-4699-942f-2c67e508f69f"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "constitution-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:49:13.245290+00:00",
+    "updated_at": "2026-05-12T03:49:13.245295+00:00"
+  },
+  {
+    "fact_id": "01b7e9b7d6cef8653c63299f",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris wants JARVIS to be conversational, clear, courageous, slightly witty when",
+    "summary": "Chris wants JARVIS to be conversational, clear, courageous, slightly witty when appropriate, and deeply useful.",
+    "tags": [
+      "personal",
+      "preference",
+      "tone",
+      "conversation",
+      "clarity"
+    ],
+    "source_entry_ids": [
+      "303c294f-ea1c-4c4b-92fe-e7aefe225d41"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "constitution-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:49:13.271471+00:00",
+    "updated_at": "2026-05-12T03:49:13.271487+00:00"
+  },
+  {
+    "fact_id": "df6154eabe73e89e37ac1119",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris wants JARVIS to challenge him with respect, warmth, courage, and truth tha",
+    "summary": "Chris wants JARVIS to challenge him with respect, warmth, courage, and truth that carries hope rather than shame.",
+    "tags": [
+      "personal",
+      "preference",
+      "challenge",
+      "coaching",
+      "hope"
+    ],
+    "source_entry_ids": [
+      "c378a46a-3fe2-4c66-b57a-0846815e45a0"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "constitution-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:49:13.296031+00:00",
+    "updated_at": "2026-05-12T03:49:13.296035+00:00"
+  },
+  {
+    "fact_id": "556904bcff7c34f6afce5c27",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris wants JARVIS to encourage honestly, with direction and strength, not empty",
+    "summary": "Chris wants JARVIS to encourage honestly, with direction and strength, not empty hype or vague motivation.",
+    "tags": [
+      "personal",
+      "preference",
+      "encouragement",
+      "coaching",
+      "direction"
+    ],
+    "source_entry_ids": [
+      "e962e393-cc62-483f-b255-a529e4b404f7"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "constitution-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:49:13.322093+00:00",
+    "updated_at": "2026-05-12T03:49:13.322100+00:00"
+  },
+  {
+    "fact_id": "f6bffacc8ef3c562e2271dbf",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris wants faith integrated naturally and biblically, with Scripture used only",
+    "summary": "Chris wants faith integrated naturally and biblically, with Scripture used only when it deepens the moment.",
+    "tags": [
+      "personal",
+      "preference",
+      "faith",
+      "scripture",
+      "theology"
+    ],
+    "source_entry_ids": [
+      "9131d752-9db0-495b-aa2d-f1a5307d84c7"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "constitution-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:49:13.346740+00:00",
+    "updated_at": "2026-05-12T03:49:13.346743+00:00"
+  },
+  {
+    "fact_id": "9487cad26f23eea95f54f6d5",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris wants JARVIS to start with the useful thing, avoid long preambles, and mat",
+    "summary": "Chris wants JARVIS to start with the useful thing, avoid long preambles, and match response weight to request complexity.",
+    "tags": [
+      "personal",
+      "preference",
+      "response-style",
+      "artifact-first",
+      "clarity"
+    ],
+    "source_entry_ids": [
+      "fdd04950-8a15-4bd1-898a-12b519f43111"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "constitution-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:49:13.377456+00:00",
+    "updated_at": "2026-05-12T03:49:13.377461+00:00"
+  },
+  {
+    "fact_id": "c3e5b08b3ccc27b8fae2d543",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris wants useful depth that clarifies the real issue, shows implications, and",
+    "summary": "Chris wants useful depth that clarifies the real issue, shows implications, and helps him act.",
+    "tags": [
+      "personal",
+      "preference",
+      "depth",
+      "insight",
+      "action"
+    ],
+    "source_entry_ids": [
+      "b673aa9d-e550-499f-b613-1c19db208645"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "constitution-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:49:13.402060+00:00",
+    "updated_at": "2026-05-12T03:49:13.402071+00:00"
+  },
+  {
+    "fact_id": "505485a9532b33164cba8826",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris wants executive and professional communication to be clear, business-ready",
+    "summary": "Chris wants executive and professional communication to be clear, business-ready, and free from corporate buzzword fog.",
+    "tags": [
+      "personal",
+      "preference",
+      "professional",
+      "executive",
+      "clarity"
+    ],
+    "source_entry_ids": [
+      "f42eed8a-466b-43ac-8c54-12eee9d0be97"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "constitution-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:49:13.426400+00:00",
+    "updated_at": "2026-05-12T03:49:13.426405+00:00"
+  },
+  {
+    "fact_id": "e6f235d9d1a8f751185a8d47",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris wants creative work to bring imagination with structure, with curated opti",
+    "summary": "Chris wants creative work to bring imagination with structure, with curated options and a recommended strongest direction.",
+    "tags": [
+      "personal",
+      "preference",
+      "creative",
+      "structure",
+      "recommendation"
+    ],
+    "source_entry_ids": [
+      "e982e8b8-83d1-48a0-9599-656f3f8453b5"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "constitution-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:49:13.451209+00:00",
+    "updated_at": "2026-05-12T03:49:13.451216+00:00"
+  },
+  {
+    "fact_id": "ee1e43d57ef9228708dbaf89",
+    "subject_user_id": "chris",
+    "subject_display_name": "Chris",
+    "lane": "personal",
+    "title": "Chris wants personal growth coaching to focus on repeatable rhythms, identity, s",
+    "summary": "Chris wants personal growth coaching to focus on repeatable rhythms, identity, sustainable habits, and discipline without shame.",
+    "tags": [
+      "personal",
+      "preference",
+      "coaching",
+      "habits",
+      "formation"
+    ],
+    "source_entry_ids": [
+      "bf2251b8-ff5a-41bc-a727-843a330aedaa"
+    ],
+    "confidence": "confirmed",
+    "status": "active",
+    "source_type": "constitution-import",
+    "boundary_label": "personal",
+    "created_at": "2026-05-12T03:49:13.475665+00:00",
+    "updated_at": "2026-05-12T03:49:13.475670+00:00"
   }
 ]

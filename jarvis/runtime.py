@@ -1,18 +1,24 @@
 from __future__ import annotations
 
 import base64
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
+import re
+import shutil
 import subprocess
 import time
+import urllib.parse
 import urllib.request
 import uuid
+import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor
 
-from .accounts import AccountRegistry
+from .accounts import AccountRegistry, PersonalAccount
 from .adaptation import AdaptationStore
 from .assistant_core import AssistantCoreStore
 from .agentic import AgentRegistry, BackgroundStateStore, BackgroundTaskScheduler, LifeAgentStudioStore, MemoryCurator
@@ -21,7 +27,9 @@ from .briefing import build_morning_brief
 from .catalyst import CatalystStore, CatalystSupport
 from .chronicle import ChronicleStore, ChronicleSupport
 from .config import AppConfig
+from .conversation import ConversationStore
 from .content_ops import ContentOpsStore, ContentOpsSupport
+from .doctrine import SharedDoctrineStore
 from .executive import ExecutiveSupport
 from .family_calendar import FamilyCalendarSupport
 from .family import FamilyStore, FamilySupport
@@ -31,16 +39,20 @@ from .google_workspace import GoogleWorkspaceSupport
 from .growth import GrowthAdapterSnapshot, GrowthDomainSnapshot, GrowthLaneSnapshot, growth_schema_snapshot
 from .home import HomeStore, HomeSupport
 from .identity import IdentityRegistry
+from .interfaces import InterfaceRouterStore, InterfaceRouterSupport
 from .memory import MemoryStore, MemorySupport
-from .models import ApprovalRequest, HouseholdProfile, RequestPlan, UserProfile
+from .models import ApprovalRequest, AuthorityStage, AutonomyMode, AutonomyPolicy, EmailDraftStagingRequest, EmailDraftStagingResponse, HouseholdProfile, PrivacyLevel, RequestPlan, ResourceArena, RiskLevel, RoutingTier, StagedActionQueueItem, TrustZone, UserProfile, WorkLifecycleRecord, WorkLifecycleStage
 from .models import HouseholdSnapshot
+from .models import WeatherAdvisory
 from .openai_tasks import JarvisOpenAIClient, OpenAIResult
 from .orchestrator import JarvisOrchestrator
 from .openviking_context import OpenVikingSupport
 from .perception import PerceptionStore, PerceptionSupport
 from .permissions import PermissionEngine
 from .security import SecurityStore, SecuritySupport
+from .self_improvement import SelfImprovementStore
 from .tutoring import TutoringStore, TutoringSupport
+from .trust import TrustStore, TrustSupport
 from .wealth import WealthLeverageStore, WealthLeverageSupport
 from .workshop import WorkshopStore, WorkshopSupport
 
@@ -60,6 +72,36 @@ def _merge_unique(values: list[str], extras: list[str], limit: int = 6) -> list[
         if len(merged) >= limit:
             break
     return merged
+
+
+_STORM_SEVERE_ALERT_TERMS = (
+    "tornado",
+    "severe thunderstorm",
+    "flash flood",
+    "blizzard",
+    "ice storm",
+    "winter storm warning",
+    "hurricane",
+    "tropical storm",
+    "high wind warning",
+    "heat warning",
+    "red flag warning",
+)
+_STORM_SMOKE_HAZE_TERMS = (
+    "smoke",
+    "haze",
+    "dust",
+    "sand",
+    "ash",
+    "wildfire",
+    "poor air quality",
+)
+_STORM_WIND_TERMS = (
+    "windy",
+    "high wind",
+    "gale",
+    "squall",
+)
 
 
 @dataclass(slots=True)
@@ -88,6 +130,7 @@ class JarvisRuntime:
     wealth_support: WealthLeverageSupport
     account_registry: AccountRegistry
     identity_registry: IdentityRegistry
+    interface_router: InterfaceRouterSupport
     agent_registry: AgentRegistry
     life_agent_store: LifeAgentStudioStore
     background_scheduler: BackgroundTaskScheduler
@@ -95,6 +138,10 @@ class JarvisRuntime:
     first_light_store: FirstLightStore
     adaptation_store: AdaptationStore
     assistant_core_store: AssistantCoreStore
+    doctrine_store: SharedDoctrineStore
+    conversation_store: ConversationStore
+    trust_support: TrustSupport
+    self_improvement_store: SelfImprovementStore
     service_role: str = "interactive"
     process_started_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     process_id: int = field(default_factory=os.getpid)
@@ -103,6 +150,8 @@ class JarvisRuntime:
     _snapshot_cache_ttls: dict[str, int] = field(
         default_factory=lambda: {
             "dashboard": 30,
+            "shell_state": 30,
+            "proactive_state": 90,
             "today_board": 30,
             "cadence_review": 30,
             "finance_review": 60,
@@ -114,6 +163,9 @@ class JarvisRuntime:
             "world_graph": 30,
             "vision_state": 30,
             "environment_status": 30,
+            "storm_weather": 300,
+            "shared_doctrine": 120,
+            "chat_state": 15,
             "cognitive": 30,
             "world_state": 30,
             "first_light": 90,
@@ -140,6 +192,7 @@ class JarvisRuntime:
         memory_support = MemorySupport(config, MemoryStore(data_root / "memory"), identity_registry=identity_registry)
         openviking_support = OpenVikingSupport(config)
         catalyst_support = CatalystSupport(config, openai_client, CatalystStore(data_root / "catalyst"))
+        interface_router = InterfaceRouterSupport(InterfaceRouterStore(data_root / "router"))
         content_ops = ContentOpsSupport(config, openai_client, ContentOpsStore(data_root / "content"))
         google_workspace = GoogleWorkspaceSupport(config)
         family_calendar = FamilyCalendarSupport()
@@ -147,6 +200,7 @@ class JarvisRuntime:
             WealthLeverageStore(data_root / "wealth"),
             openai_client,
         )
+        trust_support = TrustSupport(TrustStore(data_root / "trust"))
         agent_registry = AgentRegistry()
         life_agent_store = LifeAgentStudioStore(data_root / "agents")
         background_scheduler = BackgroundTaskScheduler(
@@ -180,8 +234,10 @@ class JarvisRuntime:
             google_workspace=google_workspace,
             family_calendar=family_calendar,
             wealth_support=wealth_support,
+            trust_support=trust_support,
             account_registry=account_registry,
             identity_registry=identity_registry,
+            interface_router=interface_router,
             agent_registry=agent_registry,
             life_agent_store=life_agent_store,
             background_scheduler=background_scheduler,
@@ -189,7 +245,10 @@ class JarvisRuntime:
             first_light_store=FirstLightStore(),
             adaptation_store=AdaptationStore(),
             assistant_core_store=AssistantCoreStore(),
+            doctrine_store=SharedDoctrineStore(),
+            conversation_store=ConversationStore(data_root / "conversations"),
             service_role=os.getenv("JARVIS_SERVICE_ROLE", "interactive").strip().lower() or "interactive",
+            self_improvement_store=SelfImprovementStore(data_root / "system"),
         )
         runtime.startup_build = runtime._service_build_snapshot()
         runtime._record_service_runtime_startup()
@@ -258,6 +317,1010 @@ class JarvisRuntime:
             "age_seconds": 0.0,
         }
 
+    def _surface_cache_remaining_seconds(self, surface: str, actor_name: str, **parts: object) -> float | None:
+        key = self._cache_key(surface, actor_name, **parts)
+        record = self._snapshot_cache.get(key)
+        if not record:
+            return None
+        ttl_seconds = float(self._snapshot_cache_ttls.get(surface, 30))
+        now = time.monotonic()
+        age_seconds = max(0.0, now - float(record.get("stored_at_monotonic", now)))
+        return max(0.0, ttl_seconds - age_seconds)
+
+    def _storm_state_path(self) -> Path:
+        path = Path("data") / "weather" / "storm_weather.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def _storm_state_load(self) -> dict:
+        path = self._storm_state_path()
+        if not path.exists():
+            return {}
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return {}
+
+    def _storm_state_save(self, payload: dict) -> None:
+        self._storm_state_path().write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    def _storm_fetch_json(self, url: str) -> dict:
+        request = urllib.request.Request(
+            url,
+            headers={
+                "Accept": "application/geo+json, application/json",
+                "User-Agent": "JARVIS-Storm/1.0 (+http://127.0.0.1:8787)",
+            },
+        )
+        with urllib.request.urlopen(request, timeout=15) as response:
+            return json.loads(response.read().decode("utf-8"))
+
+    def _storm_solar_snapshot(self, *, now: datetime) -> dict:
+        local_day = now.astimezone().date().isoformat()
+        url = "https://api.sunrise-sunset.org/json?" + urllib.parse.urlencode(
+            {
+                "lat": "38.9595",
+                "lng": "-84.3877",
+                "formatted": "0",
+                "date": local_day,
+            }
+        )
+        return self._storm_fetch_json(url)
+
+    def _storm_to_f(self, value_c: float | int | None) -> int | None:
+        if value_c is None:
+            return None
+        return round((float(value_c) * 9 / 5) + 32)
+
+    def _storm_to_mph(self, value_ms: float | int | None) -> int | None:
+        if value_ms is None:
+            return None
+        return round(float(value_ms) * 2.23694)
+
+    def _storm_to_miles(self, value_m: float | int | None) -> float | None:
+        if value_m is None:
+            return None
+        return round((float(value_m) / 1609.344) * 10) / 10
+
+    def _storm_to_hpa(self, value_pa: float | int | None) -> int | None:
+        if value_pa is None:
+            return None
+        return round(float(value_pa) / 100)
+
+    def _storm_time_label(self, iso_value: str) -> str:
+        try:
+            return datetime.fromisoformat(iso_value.replace("Z", "+00:00")).astimezone().strftime("%-I %p")
+        except ValueError:
+            return iso_value
+
+    def _storm_stamp_label(self, iso_value: str) -> str:
+        try:
+            dt = datetime.fromisoformat(iso_value.replace("Z", "+00:00")).astimezone()
+            return dt.strftime("%A, %B %-d · %-I:%M %p")
+        except ValueError:
+            return iso_value
+
+    def _storm_degrees_to_cardinal(self, degrees: float | int | None) -> str:
+        if degrees is None:
+            return ""
+        directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+        try:
+            value = float(degrees) % 360.0
+        except (TypeError, ValueError):
+            return ""
+        index = int((value + 22.5) // 45) % 8
+        return directions[index]
+
+    def _storm_condition_icon(self, text: str = "", is_day: bool | None = None) -> str:
+        lowered = str(text or "").lower()
+        if "thunder" in lowered or "lightning" in lowered:
+            return "⛈"
+        if "snow" in lowered or "blizzard" in lowered:
+            return "❄"
+        if "freezing" in lowered or "ice" in lowered:
+            return "❄"
+        if "rain" in lowered or "showers" in lowered:
+            return "☂"
+        if any(term in lowered for term in ("fog", "mist", "haze", "smoke")):
+            return "〰"
+        if "cloud" in lowered or "overcast" in lowered:
+            return "☁"
+        if "clear" in lowered or "sunny" in lowered:
+            if is_day is False:
+                return "☾"
+            return "☀"
+        return "⛅"
+
+    def _storm_includes_any(self, value: str | None, terms: tuple[str, ...]) -> bool:
+        if not value:
+            return False
+        lowered = value.lower()
+        return any(term in lowered for term in terms)
+
+    def _storm_has_severe_alert(self, alerts: list[dict]) -> bool:
+        for alert in alerts:
+            severity = str(alert.get("severity", "none") or "none").lower()
+            event = str(alert.get("event", "") or "")
+            if severity in {"severe", "extreme"} or self._storm_includes_any(event, _STORM_SEVERE_ALERT_TERMS):
+                return True
+        return False
+
+    def _storm_select_visual(
+        self,
+        *,
+        condition_text: str,
+        is_day: bool,
+        temperature_f: int | None,
+        feels_like_f: int | None,
+        wind_mph: int | None,
+        gust_mph: int | None,
+        visibility_miles: float | None,
+        air_quality_index: int | None,
+        alerts: list[dict],
+    ) -> str:
+        temp = feels_like_f if feels_like_f is not None else temperature_f
+        lowered = condition_text.lower()
+        if self._storm_has_severe_alert(alerts):
+            return "severe_weather_alert"
+        if "thunder" in lowered or "lightning" in lowered:
+            return "thunderstorm_day" if is_day else "thunderstorm_night"
+        if any(term in lowered for term in ("freezing rain", "freezing drizzle", "ice")):
+            return "freezing_rain"
+        if any(term in lowered for term in ("blizzard", "heavy snow")):
+            return "heavy_snow"
+        if any(term in lowered for term in ("heavy rain", "downpour")):
+            return "heavy_rain_day" if is_day else "heavy_rain_night"
+        if any(term in lowered for term in ("fog", "mist")) or (visibility_miles is not None and visibility_miles <= 1.5):
+            return "fog"
+        if self._storm_includes_any(lowered, _STORM_SMOKE_HAZE_TERMS) or (air_quality_index is not None and air_quality_index >= 101):
+            return "haze_smoke"
+        if temp is not None and temp >= 95:
+            return "extreme_heat"
+        if temp is not None and temp <= 10:
+            return "extreme_cold"
+        if self._storm_includes_any(lowered, _STORM_WIND_TERMS) or (wind_mph is not None and wind_mph >= 25) or (gust_mph is not None and gust_mph >= 35):
+            return "windy"
+        if any(term in lowered for term in ("clear", "sunny", "mostly clear")):
+            return "clear_day" if is_day else "clear_night"
+        if "partly cloudy" in lowered:
+            return "partly_cloudy_day" if is_day else "partly_cloudy_night"
+        if any(term in lowered for term in ("mostly cloudy", "cloudy", "overcast")):
+            return "cloudy"
+        if any(term in lowered for term in ("light rain", "rain showers", "showers", "rain")):
+            return "light_rain_day" if is_day else "light_rain_night"
+        if "snow" in lowered:
+            return "snow_day" if is_day else "snow_night"
+        return "unknown_weather"
+
+    def _storm_pair_daily(self, periods: list[dict]) -> list[dict]:
+        days: list[dict] = []
+        index = 0
+        while index < len(periods) and len(days) < 7:
+            current = periods[index]
+            night = periods[index + 1] if index + 1 < len(periods) else None
+            if not bool(current.get("isDaytime")):
+                index += 1
+                continue
+            high = current.get("temperature")
+            low = night.get("temperature") if isinstance(night, dict) else None
+            days.append(
+                {
+                    "name": str(current.get("name", ""))[:3].upper(),
+                    "high": high,
+                    "low": low if isinstance(low, int) else (high - 10 if isinstance(high, int) else None),
+                    "forecast": str(current.get("shortForecast", "") or ""),
+                    "rain": int(
+                        (((night or {}).get("probabilityOfPrecipitation") or {}).get("value", 0))
+                        or (((current.get("probabilityOfPrecipitation") or {}).get("value", 0)) or 0)
+                    ),
+                }
+            )
+            index += 2
+        return days
+
+    def _storm_compare(self, previous: dict, current: dict) -> dict:
+        previous_current = dict(previous.get("current") or {})
+        current_current = dict(current.get("current") or {})
+        previous_alerts = list(previous.get("alerts") or [])
+        current_alerts = list(current.get("alerts") or [])
+        changes: list[str] = []
+        significant = False
+        if [str(item.get("headline", "")) for item in current_alerts] != [str(item.get("headline", "")) for item in previous_alerts]:
+            if current_alerts:
+                changes.append(f"New alert: {current_alerts[0].get('headline') or current_alerts[0].get('event') or 'Weather alert'}")
+                significant = True
+            elif previous_alerts:
+                changes.append("Active weather alerts cleared.")
+                significant = True
+        previous_condition = str(previous_current.get("condition", "") or "")
+        current_condition = str(current_current.get("condition", "") or "")
+        if previous_condition and current_condition and previous_condition != current_condition:
+            changes.append(f"Conditions shifted from {previous_condition} to {current_condition}.")
+            significant = True
+        previous_temp = previous_current.get("temperature_f")
+        current_temp = current_current.get("temperature_f")
+        if isinstance(previous_temp, int) and isinstance(current_temp, int):
+            delta = current_temp - previous_temp
+            if abs(delta) >= 4:
+                changes.append(f"Temperature moved {abs(delta)} degrees {'warmer' if delta > 0 else 'colder'}.")
+        previous_precip = previous_current.get("precip_probability")
+        current_precip = current_current.get("precip_probability")
+        if isinstance(previous_precip, int) and isinstance(current_precip, int) and abs(current_precip - previous_precip) >= 30:
+            changes.append(f"Rain chance changed from {previous_precip}% to {current_precip}%.")
+            significant = True
+        return {
+            "significant_change": significant,
+            "change_summary": changes[0] if changes else "",
+            "changes": changes,
+        }
+
+    def _storm_hazard_active(self, alerts: list[dict], condition_text: str = "") -> bool:
+        lowered = condition_text.lower()
+        return self._storm_has_severe_alert(alerts) or any(
+            phrase in lowered
+            for phrase in ("severe thunderstorm", "tornado", "thunderstorm", "lightning")
+        )
+
+    def _storm_parse_time(self, iso_value: str) -> datetime | None:
+        text = str(iso_value or "").strip()
+        if not text:
+            return None
+        try:
+            return datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+
+    def _storm_display_current(
+        self,
+        *,
+        observation: dict,
+        first_hourly: dict,
+        fetched_at: datetime,
+    ) -> dict:
+        observation_timestamp = self._storm_parse_time(str(observation.get("timestamp") or ""))
+        observation_temp = self._storm_to_f((observation.get("temperature") or {}).get("value"))
+        observation_dew_point = self._storm_to_f((observation.get("dewpoint") or {}).get("value"))
+        observation_wind_mph = self._storm_to_mph((observation.get("windSpeed") or {}).get("value"))
+        observation_visibility = self._storm_to_miles((observation.get("visibility") or {}).get("value"))
+        observation_pressure = self._storm_to_hpa((observation.get("barometricPressure") or {}).get("value"))
+        observation_humidity_raw = (observation.get("relativeHumidity") or {}).get("value")
+        observation_humidity = (
+            int(observation_humidity_raw)
+            if isinstance(observation_humidity_raw, (int, float))
+            else None
+        )
+        observation_condition = str(observation.get("textDescription") or "").strip()
+        observation_age_minutes = (
+            round((fetched_at - observation_timestamp).total_seconds() / 60, 1)
+            if observation_timestamp is not None
+            else None
+        )
+
+        forecast_timestamp = self._storm_parse_time(str(first_hourly.get("startTime") or ""))
+        forecast_temp = (
+            int(first_hourly.get("temperature"))
+            if isinstance(first_hourly.get("temperature"), int)
+            else None
+        )
+        forecast_condition = str(first_hourly.get("shortForecast") or "").strip()
+        forecast_precip = int((((first_hourly.get("probabilityOfPrecipitation") or {}).get("value")) or 0))
+
+        observation_complete = observation_temp is not None and bool(observation_condition)
+        observation_stale = observation_age_minutes is not None and observation_age_minutes > 15
+        forecast_usable = forecast_temp is not None or bool(forecast_condition)
+        use_forecast_display = (not observation_complete or observation_stale) and forecast_usable
+
+        display_timestamp = forecast_timestamp if use_forecast_display and forecast_timestamp else observation_timestamp
+        display_temp = forecast_temp if use_forecast_display and forecast_temp is not None else observation_temp
+        display_condition = forecast_condition if use_forecast_display and forecast_condition else observation_condition
+
+        if observation_wind_mph is None:
+            wind_direction_cardinal = str(first_hourly.get("windDirection") or "").strip()
+            wind_display = str(first_hourly.get("windSpeed") or "--").strip()
+            if wind_direction_cardinal and wind_display and wind_display != "--":
+                wind_display = f"{wind_direction_cardinal} {wind_display}".strip()
+        elif observation_wind_mph <= 0:
+            wind_display = "Calm"
+        else:
+            obs_wind_direction = (observation.get("windDirection") or {}).get("value")
+            wind_cardinal = self._storm_degrees_to_cardinal(obs_wind_direction)
+            wind_display = f"{wind_cardinal} {observation_wind_mph} mph".strip() if wind_cardinal else f"{observation_wind_mph} mph"
+
+        return {
+            "timestamp": display_timestamp.isoformat() if display_timestamp is not None else fetched_at.isoformat(),
+            "temperature_f": display_temp,
+            "feels_like_f": display_temp,
+            "condition": display_condition or "Unavailable",
+            "dew_point_f": observation_dew_point,
+            "wind": wind_display,
+            "humidity_pct": observation_humidity,
+            "visibility_miles": observation_visibility,
+            "pressure_hpa": observation_pressure,
+            "precip_probability": forecast_precip,
+            "temperature_source": (
+                "hourly_forecast_fallback_stale_observation"
+                if use_forecast_display and observation_stale
+                else "hourly_forecast_fallback"
+                if use_forecast_display
+                else "observation"
+            ),
+            "condition_source": (
+                "hourly_forecast_fallback_stale_observation"
+                if use_forecast_display and observation_stale
+                else "hourly_forecast_fallback"
+                if use_forecast_display
+                else "observation"
+            ),
+            "humidity_source": "observation" if observation_humidity is not None else "unavailable",
+            "sun_times_source": "live",
+            "observation_age_minutes": observation_age_minutes,
+            "using_forecast_fallback": use_forecast_display,
+        }
+
+    def _storm_moon_phase_key(self, at: datetime | None = None) -> str:
+        current = at or datetime.now(timezone.utc)
+        known_new_moon_utc = datetime(2026, 5, 15, 16, 2, tzinfo=timezone.utc)
+        synodic_month_days = 29.530588853
+        cycle_days = ((current - known_new_moon_utc).total_seconds() / 86400.0) % synodic_month_days
+        fraction = cycle_days / synodic_month_days
+        if fraction < 0.08:
+            return "moon_new"
+        if fraction < 0.19:
+            return "moon_waxing_crescent"
+        if fraction < 0.31:
+            return "moon_first_quarter"
+        if fraction < 0.44:
+            return "moon_waxing_gibbous"
+        if fraction < 0.56:
+            return "moon_full"
+        if fraction < 0.69:
+            return "moon_waning_gibbous"
+        if fraction < 0.81:
+            return "moon_last_quarter"
+        if fraction < 0.92:
+            return "moon_waning_crescent"
+        return "clear_night_no_moon"
+
+    def _storm_moon_phase_label(self, key: str) -> str:
+        labels = {
+            "moon_new": "New Moon",
+            "moon_waxing_crescent": "Waxing Crescent",
+            "moon_first_quarter": "First Quarter",
+            "moon_waxing_gibbous": "Waxing Gibbous",
+            "moon_full": "Full Moon",
+            "moon_waning_gibbous": "Waning Gibbous",
+            "moon_last_quarter": "Last Quarter",
+            "moon_waning_crescent": "Waning Crescent",
+            "clear_night_no_moon": "Dark Moon",
+        }
+        return labels.get(key, "")
+
+    def _storm_feed_due(self, feed: dict, interval_seconds: int, *, now: datetime) -> bool:
+        fetched_at = self._storm_parse_time(str(feed.get("fetched_at", "")))
+        if not fetched_at:
+            return True
+        return (now - fetched_at).total_seconds() >= interval_seconds
+
+    def _storm_next_due(self, feed: dict, interval_seconds: int) -> str:
+        fetched_at = self._storm_parse_time(str(feed.get("fetched_at", "")))
+        if not fetched_at:
+            return ""
+        return (fetched_at + timedelta(seconds=interval_seconds)).isoformat()
+
+    def _storm_near_term_outlook(self, *, condition: str, precip_probability: int, alerts: list[dict]) -> dict:
+        hazard_active = self._storm_hazard_active(alerts, condition)
+        if alerts:
+            summary = str(alerts[0].get("headline") or alerts[0].get("event") or "Weather alert in effect.")
+        elif precip_probability >= 70:
+            summary = "Rain is likely in the next 15 minutes window."
+        elif precip_probability >= 40:
+            summary = "Keep an eye on nearby rain in the next 15 minutes."
+        else:
+            summary = f"Near-term weather is steady: {condition}."
+        return {
+            "window_minutes": 15,
+            "summary": summary,
+            "hazard_active": hazard_active,
+            "rain_risk_pct": precip_probability,
+        }
+
+    def _storm_unavailable_payload(self, *, error: str = "", previous: dict | None = None) -> dict:
+        payload = dict(previous or {})
+        payload.update(
+            {
+                "available": False,
+                "live": False,
+                "stale": bool(previous),
+                "error": error,
+                "summary": "Live weather unavailable.",
+            }
+        )
+        freshness = dict(payload.get("freshness") or {})
+        freshness["surface"] = "storm_weather"
+        freshness["mode"] = "stale" if previous else "unavailable"
+        payload["freshness"] = freshness
+        return payload
+
+    def _storm_fetch_xml(self, url: str) -> ET.Element:
+        request = urllib.request.Request(
+            url,
+            headers={
+                "Accept": "application/xml, text/xml",
+                "User-Agent": "JARVIS-Storm/1.0 (+http://127.0.0.1:8787)",
+            },
+        )
+        with urllib.request.urlopen(request, timeout=20) as response:
+            return ET.fromstring(response.read())
+
+    def _storm_spc_feed_url(self) -> str:
+        return os.getenv("JARVIS_SPC_FEED_URL", "").strip() or "https://www.spc.noaa.gov/products/spcrss.xml"
+
+    def _storm_spc_snapshot(self, *, force: bool = False, now: datetime, hazard_mode: bool) -> dict:
+        path_state = self._storm_state_load()
+        feeds = dict(path_state.get("feeds") or {})
+        cached = dict(feeds.get("spc") or {})
+        interval_seconds = 60 if hazard_mode else 300
+        feed_url = self._storm_spc_feed_url()
+        if not force and cached and not self._storm_feed_due(cached, interval_seconds, now=now):
+            payload = dict(cached.get("payload") or {})
+            payload["next_due_at"] = self._storm_next_due(cached, interval_seconds)
+            return payload
+        try:
+            root = self._storm_fetch_xml(feed_url)
+            namespace = {"atom": "http://www.w3.org/2005/Atom"}
+            alerts: list[dict] = []
+            channel = root.find("channel")
+            items = list(channel.findall("item")) if channel is not None else []
+            for item in items[:8]:
+                title = (item.findtext("title", default="") or "").strip()
+                summary = (item.findtext("description", default="") or "").strip()
+                updated = (item.findtext("pubDate", default="") or "").strip()
+                link = (item.findtext("link", default="") or "").strip()
+                alerts.append(
+                    {
+                        "event": title,
+                        "headline": title,
+                        "summary": summary[:280],
+                        "updated": updated,
+                        "link": link,
+                    }
+                )
+            payload = {
+                "available": True,
+                "mode": "live",
+                "source": "NOAA SPC RSS",
+                "detail": "Live SPC severe feed available for severe-weather redundancy.",
+                "alerts": alerts,
+                "fetched_at": now.isoformat(),
+                "next_due_at": (now + timedelta(seconds=interval_seconds)).isoformat(),
+            }
+            feeds["spc"] = {"payload": payload, "fetched_at": now.isoformat()}
+            self._storm_state_save({"snapshot": path_state.get("snapshot") or {}, "feeds": feeds, "updated_at": path_state.get("updated_at", "")})
+            return payload
+        except Exception as error:
+            return {
+                "available": False,
+                "mode": "error",
+                "source": "NOAA SPC RSS",
+                "detail": f"SPC severe feed unavailable: {error}",
+                "alerts": [],
+                "fetched_at": str(cached.get("fetched_at", "")),
+                "next_due_at": self._storm_next_due(cached, interval_seconds),
+            }
+
+    def _storm_radar_snapshot(self, *, hazard_active: bool) -> dict:
+        station = "KILN"
+        mode = "elevated" if hazard_active else "watch"
+        return {
+            "available": True,
+            "source": "NOAA NWS Radar",
+            "station": station,
+            "viewer_url": f"https://radar.weather.gov/station/{station}/standard",
+            "loop_image_url": f"https://radar.weather.gov/ridge/standard/{station}_loop.gif",
+            "base_velocity_loop_url": f"https://radar.weather.gov/ridge/base_velocity/{station}_loop.gif",
+            "posture": {
+                "mode": mode,
+                "summary": "Radar is in elevated watch mode." if hazard_active else "Radar is available for situational awareness.",
+                "should_open": bool(hazard_active),
+            },
+        }
+
+    def _storm_family_warning_rules(self, snapshot: dict) -> dict:
+        current = dict(snapshot.get("current") or {})
+        alerts = list(snapshot.get("alerts") or [])
+        precip_probability = int(current.get("precip_probability", 0) or 0)
+        condition = str(current.get("condition", "") or "")
+        hazard_active = bool(snapshot.get("hazard_active"))
+        reasons: list[str] = []
+        level = "quiet"
+        should_warn = False
+        if alerts:
+            should_warn = True
+            level = "warning"
+            reasons.append(str((alerts[0].get("headline") or alerts[0].get("event") or "Weather alert")).strip())
+        if hazard_active:
+            should_warn = True
+            level = "critical" if self._storm_has_severe_alert(alerts) else "warning"
+            reasons.append("Severe or rapidly changing weather needs family awareness.")
+        if precip_probability >= 70:
+            should_warn = True
+            level = "elevated" if level == "quiet" else level
+            reasons.append("High near-term rain probability could affect departures and outdoor plans.")
+        elif precip_probability >= 40 and any(term in condition.lower() for term in ("rain", "storm", "thunder")):
+            should_warn = True
+            level = "watch" if level == "quiet" else level
+            reasons.append("Rain timing is worth surfacing before trips or outings.")
+        return {
+            "should_warn_family": should_warn,
+            "level": level,
+            "reasons": reasons,
+            "recommended_message": reasons[0] if reasons else "No family weather warning needed right now.",
+            "rules": [
+                "Warn immediately for severe thunderstorm, tornado, flash flood, or similarly hazardous alerts.",
+                "Warn before trips, outings, campouts, or events when route conditions or rainfall materially raise friction or risk.",
+                "Escalate earlier when hazardous weather could affect school flow, departures, or evening family plans.",
+            ],
+        }
+
+    def _storm_distance_miles(self, first: tuple[float, float], second: tuple[float, float]) -> float:
+        lat1, lon1 = first
+        lat2, lon2 = second
+        radius_miles = 3958.8
+        phi1 = math.radians(lat1)
+        phi2 = math.radians(lat2)
+        delta_phi = math.radians(lat2 - lat1)
+        delta_lambda = math.radians(lon2 - lon1)
+        a = math.sin(delta_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return radius_miles * c
+
+    def _storm_geocode(self, query: str) -> dict:
+        url = "https://nominatim.openstreetmap.org/search?" + urllib.parse.urlencode(
+            {"q": query, "format": "jsonv2", "limit": 1}
+        )
+        request = urllib.request.Request(
+            url,
+            headers={
+                "Accept": "application/json",
+                "User-Agent": "JARVIS-Storm/1.0 (+http://127.0.0.1:8787)",
+            },
+        )
+        with urllib.request.urlopen(request, timeout=20) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        if not payload:
+            raise RuntimeError(f"Unable to geocode '{query}'.")
+        item = payload[0]
+        return {
+            "label": str(item.get("display_name") or query),
+            "lat": float(item["lat"]),
+            "lon": float(item["lon"]),
+        }
+
+    def _storm_route_geometry(self, origin: dict, destination: dict) -> dict:
+        coords = f"{origin['lon']},{origin['lat']};{destination['lon']},{destination['lat']}"
+        url = f"https://router.project-osrm.org/route/v1/driving/{coords}?overview=full&geometries=geojson&steps=false"
+        request = urllib.request.Request(
+            url,
+            headers={
+                "Accept": "application/json",
+                "User-Agent": "JARVIS-Storm/1.0 (+http://127.0.0.1:8787)",
+            },
+        )
+        with urllib.request.urlopen(request, timeout=20) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        routes = list(payload.get("routes") or [])
+        if not routes:
+            raise RuntimeError("No drivable route returned.")
+        route = routes[0]
+        return {
+            "distance_miles": round(float(route.get("distance", 0.0)) / 1609.344, 1),
+            "duration_minutes": round(float(route.get("duration", 0.0)) / 60),
+            "coordinates": list(((route.get("geometry") or {}).get("coordinates")) or []),
+        }
+
+    def _storm_route_sample_points(self, coordinates: list[list[float]], limit: int = 5) -> list[tuple[float, float]]:
+        if not coordinates:
+            return []
+        count = min(limit, len(coordinates))
+        indexes = sorted({round(i * (len(coordinates) - 1) / max(count - 1, 1)) for i in range(count)})
+        samples: list[tuple[float, float]] = []
+        for idx in indexes:
+            lon, lat = coordinates[idx]
+            samples.append((float(lat), float(lon)))
+        return samples
+
+    def _storm_route_sample_weather(self, lat: float, lon: float) -> dict:
+        points = self._storm_fetch_json(f"https://api.weather.gov/points/{lat},{lon}")
+        hourly_url = str(((points.get("properties") or {}).get("forecastHourly")) or "")
+        alerts = self._storm_fetch_json(f"https://api.weather.gov/alerts/active?point={lat},{lon}")
+        hourly = self._storm_fetch_json(hourly_url)
+        first_hourly = dict((((hourly.get("properties") or {}).get("periods")) or [{}])[0])
+        condition = str(first_hourly.get("shortForecast") or "Unavailable")
+        rain_pct = int((((first_hourly.get("probabilityOfPrecipitation") or {}).get("value")) or 0))
+        return {
+            "condition": condition,
+            "temperature_f": first_hourly.get("temperature"),
+            "rain_pct": rain_pct,
+            "wind": str(first_hourly.get("windSpeed") or "").strip(),
+            "alerts": [
+                {
+                    "event": str((feature.get("properties") or {}).get("event") or ""),
+                    "headline": str((feature.get("properties") or {}).get("headline") or ""),
+                    "severity": str((feature.get("properties") or {}).get("severity") or "").lower(),
+                }
+                for feature in list(alerts.get("features") or [])[:3]
+            ],
+        }
+
+    def storm_route_weather(self, origin: str, destination: str) -> dict:
+        origin_point = self._storm_geocode(origin)
+        destination_point = self._storm_geocode(destination)
+        route = self._storm_route_geometry(origin_point, destination_point)
+        samples = self._storm_route_sample_points(route["coordinates"], limit=5)
+        sample_payload = []
+        hazard = False
+        for lat, lon in samples:
+            weather = self._storm_route_sample_weather(lat, lon)
+            alerts = list(weather.get("alerts") or [])
+            sample_payload.append(
+                {
+                    "lat": lat,
+                    "lon": lon,
+                    "condition": weather.get("condition"),
+                    "temperature_f": weather.get("temperature_f"),
+                    "rain_pct": weather.get("rain_pct"),
+                    "wind": weather.get("wind"),
+                    "alerts": alerts,
+                }
+            )
+            if alerts or int(weather.get("rain_pct", 0) or 0) >= 70 or any(
+                phrase in str(weather.get("condition", "")).lower()
+                for phrase in ("storm", "thunder", "snow", "freezing")
+            ):
+                hazard = True
+        return {
+            "origin": origin_point,
+            "destination": destination_point,
+            "route": route,
+            "samples": sample_payload,
+            "summary": "Route weather needs extra caution." if hazard else "Route weather looks manageable.",
+            "hazard_active": hazard,
+        }
+
+    def _storm_log_family_warning(self, snapshot: dict) -> None:
+        escalation = dict(snapshot.get("family_warning_escalation") or {})
+        if not escalation.get("should_warn_family"):
+            return
+        path_state = self._storm_state_load()
+        last_headline = str(path_state.get("last_family_warning_headline", "") or "")
+        current_headline = str(
+            ((snapshot.get("alerts") or [{}])[0].get("headline"))
+            or escalation.get("recommended_message")
+            or ""
+        ).strip()
+        if not current_headline or current_headline == last_headline:
+            return
+        advisory = WeatherAdvisory(
+            advisory_id=str(uuid.uuid4()),
+            actor="Storm",
+            context="Automatic family weather warning",
+            current_weather=str((snapshot.get("current") or {}).get("condition") or snapshot.get("summary") or ""),
+            risk_level=str(escalation.get("level", "watch")),
+            safe_timing="Adjust departures and outdoor timing around Storm guidance.",
+            recommendation=current_headline,
+            follow_ups=list(escalation.get("reasons") or [])[:3],
+            timestamp=datetime.now(timezone.utc).isoformat(),
+        )
+        self.security_support.store.add_weather(advisory)
+        path_state["last_family_warning_headline"] = current_headline
+        self._storm_state_save(path_state)
+
+    def _build_storm_weather_snapshot(self, *, feeds: dict, fetched_at: datetime) -> dict:
+        points = dict((feeds.get("points") or {}).get("payload") or {})
+        hourly = dict((feeds.get("hourly") or {}).get("payload") or {})
+        daily = dict((feeds.get("daily") or {}).get("payload") or {})
+        solar = dict((feeds.get("solar") or {}).get("payload") or {})
+        alerts = dict((feeds.get("alerts") or {}).get("payload") or {})
+        current = dict((feeds.get("current") or {}).get("payload") or {})
+        cadence = dict(feeds.get("cadence") or {})
+
+        if not points or not hourly or not daily or not current:
+            raise RuntimeError("Storm feed set is incomplete.")
+
+        lat = 38.9595
+        lon = -84.3877
+        now = dict((current.get("properties") or {}))
+        hourly_periods = list(((hourly.get("properties") or {}).get("periods")) or [])
+        daily_periods = list(((daily.get("properties") or {}).get("periods")) or [])
+        first_hourly = dict(hourly_periods[0] if hourly_periods else {})
+
+        display_current = self._storm_display_current(
+            observation=now,
+            first_hourly=first_hourly,
+            fetched_at=fetched_at,
+        )
+        display_timestamp = str(display_current.get("timestamp") or fetched_at.isoformat())
+        display_temp = display_current.get("temperature_f")
+        display_condition = str(display_current.get("condition") or "Unavailable")
+        wind_mph = self._storm_to_mph((now.get("windSpeed") or {}).get("value"))
+        visibility_miles = display_current.get("visibility_miles")
+        precip_probability = int(display_current.get("precip_probability") or 0)
+
+        solar_results = dict(solar.get("results") or {})
+        sunrise = str(solar_results.get("sunrise") or "")
+        sunset = str(solar_results.get("sunset") or "")
+        now_dt = datetime.fromisoformat(display_timestamp.replace("Z", "+00:00"))
+        sunrise_dt = datetime.fromisoformat(str(sunrise).replace("Z", "+00:00")) if sunrise else None
+        sunset_dt = datetime.fromisoformat(str(sunset).replace("Z", "+00:00")) if sunset else None
+        is_day = True if not sunrise_dt or not sunset_dt else sunrise_dt <= now_dt < sunset_dt
+
+        alert_items = [
+            {
+                "event": str((feature.get("properties") or {}).get("event") or ""),
+                "severity": str((feature.get("properties") or {}).get("severity") or "").lower(),
+                "headline": str((feature.get("properties") or {}).get("headline") or ""),
+                "description": str((feature.get("properties") or {}).get("description") or "")[:280],
+            }
+            for feature in list(alerts.get("features") or [])
+        ]
+        visual_key = self._storm_select_visual(
+            condition_text=display_condition,
+            is_day=is_day,
+            temperature_f=display_temp,
+            feels_like_f=display_current.get("feels_like_f"),
+            wind_mph=wind_mph,
+            gust_mph=self._storm_to_mph((now.get("windGust") or {}).get("value")),
+            visibility_miles=visibility_miles,
+            air_quality_index=None,
+            alerts=alert_items,
+        )
+
+        hourly_view = [
+            {
+                "time": self._storm_time_label(str(period.get("startTime") or "")),
+                "icon": self._storm_condition_icon(str(period.get("shortForecast") or "")),
+                "temperature_f": int(period.get("temperature")) if isinstance(period.get("temperature"), int) else None,
+                "rain_pct": int((((period.get("probabilityOfPrecipitation") or {}).get("value")) or 0)),
+                "forecast": str(period.get("shortForecast") or ""),
+                "start_time": str(period.get("startTime") or ""),
+            }
+            for period in hourly_periods[:8]
+        ]
+        daily_pairs = self._storm_pair_daily(daily_periods)
+        daily_view = [
+            {
+                "name": item["name"],
+                "icon": self._storm_condition_icon(str(item.get("forecast") or "")),
+                "high": item.get("high"),
+                "low": item.get("low"),
+                "rain_pct": item.get("rain"),
+                "forecast": item.get("forecast"),
+            }
+            for item in daily_pairs
+        ]
+        rain_samples = hourly_view[:7]
+        moon_phase_key = self._storm_moon_phase_key(now_dt) if not is_day else ""
+        current_payload = {
+            "location": "Alexandria, KY",
+            "timestamp": display_timestamp,
+            "stamp_label": self._storm_stamp_label(display_timestamp),
+            "temperature_f": display_temp,
+            "temperature_source": str(display_current.get("temperature_source") or "observation"),
+            "feels_like_f": display_current.get("feels_like_f"),
+            "condition": display_condition,
+            "condition_source": str(display_current.get("condition_source") or "observation"),
+            "icon": self._storm_condition_icon(display_condition, is_day=is_day),
+            "sunrise": self._storm_time_label(str(sunrise)) if sunrise else "--",
+            "sunset": self._storm_time_label(str(sunset)) if sunset else "--",
+            "sun_times_source": str(display_current.get("sun_times_source") or "live"),
+            "wind": str(display_current.get("wind") or "--"),
+            "humidity_pct": display_current.get("humidity_pct"),
+            "humidity_source": str(display_current.get("humidity_source") or "unavailable"),
+            "visibility_miles": visibility_miles,
+            "pressure_hpa": display_current.get("pressure_hpa"),
+            "dew_point_f": display_current.get("dew_point_f"),
+            "precip_probability": precip_probability,
+            "cloud_summary": display_condition,
+            "visual_key": visual_key,
+            "moon_phase": moon_phase_key,
+            "moon_phase_label": self._storm_moon_phase_label(moon_phase_key) if moon_phase_key else "",
+            "observation_age_minutes": display_current.get("observation_age_minutes"),
+            "using_forecast_fallback": bool(display_current.get("using_forecast_fallback")),
+        }
+        spc = self._storm_spc_snapshot(force=False, now=fetched_at, hazard_mode=self._storm_hazard_active(alert_items, display_condition))
+        near_term = self._storm_near_term_outlook(
+            condition=display_condition,
+            precip_probability=precip_probability,
+            alerts=alert_items,
+        )
+        hazard_active = bool(near_term.get("hazard_active"))
+        radar = self._storm_radar_snapshot(hazard_active=hazard_active)
+        intervals = {
+            "daily_forecast_seconds": 3600,
+            "hourly_forecast_seconds": 60 if hazard_active else 900,
+            "near_term_refresh_seconds": 60 if hazard_active else 300,
+            "alerts_seconds": 60 if hazard_active or alert_items else 300,
+            "current_conditions_seconds": 60 if hazard_active or alert_items else 300,
+        }
+        family_escalation = self._storm_family_warning_rules(
+            {
+                "current": current_payload,
+                "alerts": alert_items,
+                "hazard_active": hazard_active,
+            }
+        )
+        return {
+            "available": True,
+            "live": True,
+            "stale": False,
+            "location": "Alexandria, KY",
+            "source": "weather.gov",
+            "fetched_at": fetched_at.isoformat(),
+            "current": current_payload,
+            "summary": display_condition,
+            "alerts": alert_items,
+            "alert_redundancy": {
+                "primary": {
+                    "source": "NWS weather.gov",
+                    "available": True,
+                    "count": len(alert_items),
+                },
+                "secondary": spc,
+            },
+            "primary_alert": alert_items[0] if alert_items else None,
+            "hourly": hourly_view,
+            "daily": daily_view,
+            "near_term": near_term,
+            "radar": radar,
+            "rain_chart": {
+                "samples": [{"label": item["time"], "rain_pct": item["rain_pct"]} for item in rain_samples],
+            },
+            "details": {
+                "uv_value": "--",
+                "uv_state": "Night" if not is_day else "Unknown",
+                "air_quality_value": "--",
+                "air_quality_state": "Offline",
+                "pollen_value": "--",
+                "pollen_state": "Offline",
+                "dew_point": f"{display_current.get('dew_point_f')}°" if display_current.get("dew_point_f") is not None else "--",
+                "precipitation": f"{precip_probability}%",
+                "cloud_cover": display_condition,
+            },
+            "family_warning": self._storm_has_severe_alert(alert_items) or precip_probability >= 70,
+            "family_warning_escalation": family_escalation,
+            "hazard_active": hazard_active,
+            "freshness": {
+                "surface": "storm_weather",
+                "mode": "live",
+                "fetched_at": fetched_at.isoformat(),
+            },
+            "retrieval_policy": {
+                "summary_forecast_seconds": intervals["daily_forecast_seconds"],
+                "hourly_forecast_seconds": intervals["hourly_forecast_seconds"],
+                "near_term_refresh_seconds": intervals["near_term_refresh_seconds"],
+                "alerts_seconds": intervals["alerts_seconds"],
+                "current_conditions_seconds": intervals["current_conditions_seconds"],
+                "hazard_mode_active": hazard_active,
+                "note": "The 15-minute outlook is refreshed from authoritative current conditions, alerts, and the latest forecast cadence.",
+            },
+            "feed_status": {
+                "points": {
+                    "fetched_at": str((feeds.get("points") or {}).get("fetched_at", "")),
+                    "next_due_at": self._storm_next_due(dict(feeds.get("points") or {}), 86400),
+                },
+                "daily": {
+                    "fetched_at": str((feeds.get("daily") or {}).get("fetched_at", "")),
+                    "next_due_at": self._storm_next_due(dict(feeds.get("daily") or {}), intervals["daily_forecast_seconds"]),
+                },
+                "solar": {
+                    "fetched_at": str((feeds.get("solar") or {}).get("fetched_at", "")),
+                    "next_due_at": self._storm_next_due(dict(feeds.get("solar") or {}), 86400),
+                },
+                "hourly": {
+                    "fetched_at": str((feeds.get("hourly") or {}).get("fetched_at", "")),
+                    "next_due_at": self._storm_next_due(dict(feeds.get("hourly") or {}), intervals["hourly_forecast_seconds"]),
+                },
+                "alerts": {
+                    "fetched_at": str((feeds.get("alerts") or {}).get("fetched_at", "")),
+                    "next_due_at": self._storm_next_due(dict(feeds.get("alerts") or {}), intervals["alerts_seconds"]),
+                },
+                "current": {
+                    "fetched_at": str((feeds.get("current") or {}).get("fetched_at", "")),
+                    "next_due_at": self._storm_next_due(dict(feeds.get("current") or {}), intervals["current_conditions_seconds"]),
+                },
+            },
+            "cadence_state": cadence,
+        }
+
+    def storm_weather_snapshot(self, *, force: bool = False) -> dict:
+        path_state = self._storm_state_load()
+        previous_snapshot = dict(path_state.get("snapshot") or {})
+        feeds = dict(path_state.get("feeds") or {})
+        now = datetime.now(timezone.utc)
+        previous_hazard = bool(previous_snapshot.get("hazard_active"))
+        previous_alerts = list(previous_snapshot.get("alerts") or [])
+        hazard_polling = previous_hazard or bool(previous_alerts)
+        daily_interval = 3600
+        hourly_interval = 60 if hazard_polling else 900
+        alerts_interval = 60 if hazard_polling else 300
+        current_interval = 60 if hazard_polling else 300
+        cadence_state = {
+            "daily_forecast_seconds": daily_interval,
+            "hourly_forecast_seconds": hourly_interval,
+            "near_term_refresh_seconds": current_interval,
+            "alerts_seconds": alerts_interval,
+            "current_conditions_seconds": current_interval,
+            "hazard_mode_active": hazard_polling,
+        }
+
+        try:
+            if force or self._storm_feed_due(dict(feeds.get("points") or {}), 86400, now=now):
+                feeds["points"] = {
+                    "payload": self._storm_fetch_json("https://api.weather.gov/points/38.9595,-84.3877"),
+                    "fetched_at": now.isoformat(),
+                }
+            points_payload = dict((feeds.get("points") or {}).get("payload") or {})
+            if not points_payload:
+                raise RuntimeError("Storm points feed is unavailable.")
+
+            stations_url = str(((points_payload.get("properties") or {}).get("observationStations")) or "")
+            hourly_url = str(((points_payload.get("properties") or {}).get("forecastHourly")) or "")
+            daily_url = str(((points_payload.get("properties") or {}).get("forecast")) or "")
+
+            if force or self._storm_feed_due(dict(feeds.get("stations") or {}), 21600, now=now):
+                feeds["stations"] = {
+                    "payload": self._storm_fetch_json(stations_url),
+                    "fetched_at": now.isoformat(),
+                }
+            stations_payload = dict((feeds.get("stations") or {}).get("payload") or {})
+            station_id = str((((stations_payload.get("features") or [{}])[0].get("properties") or {}).get("stationIdentifier")) or "KCVG")
+
+            if force or self._storm_feed_due(dict(feeds.get("daily") or {}), daily_interval, now=now):
+                feeds["daily"] = {
+                    "payload": self._storm_fetch_json(daily_url),
+                    "fetched_at": now.isoformat(),
+                }
+            if force or self._storm_feed_due(dict(feeds.get("solar") or {}), 86400, now=now):
+                feeds["solar"] = {
+                    "payload": self._storm_solar_snapshot(now=now),
+                    "fetched_at": now.isoformat(),
+                }
+            if force or self._storm_feed_due(dict(feeds.get("hourly") or {}), hourly_interval, now=now):
+                feeds["hourly"] = {
+                    "payload": self._storm_fetch_json(hourly_url),
+                    "fetched_at": now.isoformat(),
+                }
+            if force or self._storm_feed_due(dict(feeds.get("alerts") or {}), alerts_interval, now=now):
+                feeds["alerts"] = {
+                    "payload": self._storm_fetch_json("https://api.weather.gov/alerts/active?point=38.9595,-84.3877"),
+                    "fetched_at": now.isoformat(),
+                }
+            if force or self._storm_feed_due(dict(feeds.get("current") or {}), current_interval, now=now):
+                feeds["current"] = {
+                    "payload": self._storm_fetch_json(f"https://api.weather.gov/stations/{station_id}/observations/latest"),
+                    "fetched_at": now.isoformat(),
+                }
+
+            feeds["cadence"] = cadence_state
+            snapshot = self._build_storm_weather_snapshot(feeds=feeds, fetched_at=now)
+            comparison = self._storm_compare(previous_snapshot, snapshot) if previous_snapshot else {
+                "significant_change": False,
+                "change_summary": "",
+                "changes": [],
+            }
+            snapshot["comparison"] = comparison
+            self._storm_state_save({"snapshot": snapshot, "feeds": feeds, "updated_at": snapshot.get("fetched_at", "")})
+            self._storm_log_family_warning(snapshot)
+            self._snapshot_cache.pop(self._cache_key("storm_weather", "system"), None)
+            return snapshot
+        except Exception as error:
+            fallback = self._storm_unavailable_payload(error=str(error), previous=previous_snapshot if previous_snapshot else None)
+            if previous_snapshot:
+                fallback["comparison"] = dict(previous_snapshot.get("comparison") or {})
+                fallback["retrieval_policy"] = dict(previous_snapshot.get("retrieval_policy") or {})
+                fallback["feed_status"] = dict(previous_snapshot.get("feed_status") or {})
+            return fallback
+
     def _persist_last_good_surface(self, key: str, payload: dict) -> None:
         self.assistant_core_store.save_surface_snapshot(key, payload)
 
@@ -322,12 +1385,17 @@ class JarvisRuntime:
     def _invalidate_snapshot_cache(self, actor_name: str = "", *, surfaces: tuple[str, ...] | None = None) -> None:
         actor_prefix = f":{actor_name.strip().lower()}" if actor_name.strip() else ""
         allowed_surfaces = set(surfaces or ())
+        if allowed_surfaces and allowed_surfaces.intersection(
+            {"dashboard", "today_board", "cadence_review", "cognitive", "world_state", "world_graph"}
+        ):
+            allowed_surfaces.add("shell_state")
+            allowed_surfaces.add("proactive_state")
         keys_to_remove: list[str] = []
         for key in self._snapshot_cache:
             surface = key.split(":", 1)[0]
             if allowed_surfaces and surface not in allowed_surfaces:
                 continue
-            if actor_prefix and actor_prefix not in key:
+            if actor_prefix and surface != "shared_doctrine" and actor_prefix not in key:
                 continue
             keys_to_remove.append(key)
         for key in keys_to_remove:
@@ -343,6 +1411,582 @@ class JarvisRuntime:
             or (isinstance(freshness, dict) and freshness.get("fallback"))
         )
 
+    def _agent_ids_for_domain(self, domain: str) -> list[str]:
+        normalized = str(domain).strip().lower()
+        mapping = {
+            "approvals": ["ambient-router", "memory-curator"],
+            "family": ["family-logistics", "ambient-router"],
+            "workshop": ["workshop-watch", "ambient-router"],
+            "memory": ["memory-curator", "ambient-router"],
+            "content": ["catalyst-personal", "executive-watch"],
+            "growth": ["catalyst-personal", "executive-watch"],
+            "security": ["watchtower", "home-ops", "ambient-router"],
+            "home": ["home-ops", "ambient-router"],
+            "safety": ["watchtower", "home-ops", "storm"],
+        }
+        return list(mapping.get(normalized, ["ambient-router"]))
+
+    def _infer_approval_domain(self, request_text: str, rationale: str = "") -> str:
+        haystack = " ".join([str(request_text or ""), str(rationale or "")]).strip().lower()
+        checks = [
+            ("workshop", ("vendor", "quote request", "service bureau", "fabrication", "cad", "print", "part", "bracket")),
+            ("family", ("parent message", "parent text", "troop", "grocery", "pickup", "family", "school", "homeschool", "message draft")),
+            ("security", ("unlock", "front door", "garage", "security", "alarm", "camera")),
+            ("content", ("publish", "export", "campaign", "content", "veronica", "asset")),
+            ("growth", ("pipeline", "crm", "lead", "revenue", "opportunity", "meeting prep", "calendar", "email triage")),
+            ("home", ("climate", "scene", "lights", "lighting", "home assistant")),
+            ("memory", ("memory", "profile fact", "remember", "preference")),
+        ]
+        for domain, terms in checks:
+            if any(term in haystack for term in terms):
+                return domain
+        return "approvals"
+
+    def _extract_correction_signals(self, requests: list[str]) -> list[dict[str, Any]]:
+        phrase_rules = [
+            ("brief-responses", ("keep it brief", "brief", "concise"), "Responses should stay brief and high-signal by default.", "response-style", {"queue_bias": 0}),
+            ("server-side-autonomy", ("server side", "without my interaction", "without my involvement", "behind the scenes"), "Work should happen server-side and behind the scenes whenever possible.", "autonomy-posture", {"queue_bias": 1}),
+            ("voice-first", ("voice only", "voice-first", "voice first", "hud", "watch app", "carplay", "apple vision", "apple tv"), "Ambient delivery should prefer voice and lightweight surfaces over the browser.", "surface-posture", {"queue_bias": 1}),
+            ("explicit-team-learning", ("learn from your mistakes", "learn from me", "work together", "team"), "Agents should share lessons and improve as a coordinated team, not as isolated workers.", "team-learning", {"queue_bias": 0}),
+        ]
+        lowered_requests = [str(item).strip().lower() for item in requests if str(item).strip()]
+        signals: list[dict[str, Any]] = []
+        for signal_id, phrases, summary, kind, effects in phrase_rules:
+            hits = [item for item in lowered_requests if any(phrase in item for phrase in phrases)]
+            if not hits:
+                continue
+            signals.append(
+                {
+                    "signal_id": signal_id,
+                    "summary": summary,
+                    "kind": kind,
+                    "count": len(hits),
+                    "examples": hits[:3],
+                    "policy_effects": effects,
+                }
+            )
+        return signals
+
+    def _doctrine_effect_totals(self, actor_name: str, *, domain: str = "", agent_id: str = "") -> dict[str, int]:
+        rules = self.doctrine_store.rules_for(actor=actor_name, domain=domain, agent_id=agent_id, active_only=True)
+        totals = {
+            "interrupt_threshold_delta": 0,
+            "cooldown_delta_minutes": 0,
+            "queue_bias": 0,
+            "require_explicit_approval": 0,
+        }
+        for rule in rules:
+            effects = dict(rule.get("policy_effects", {}))
+            totals["interrupt_threshold_delta"] += int(effects.get("interrupt_threshold_delta", 0) or 0)
+            totals["cooldown_delta_minutes"] += int(effects.get("cooldown_delta_minutes", 0) or 0)
+            totals["queue_bias"] += int(effects.get("queue_bias", 0) or 0)
+            if bool(effects.get("require_explicit_approval")):
+                totals["require_explicit_approval"] += 1
+        totals["interrupt_threshold_delta"] = max(-3, min(3, totals["interrupt_threshold_delta"]))
+        totals["cooldown_delta_minutes"] = max(-45, min(120, totals["cooldown_delta_minutes"]))
+        totals["queue_bias"] = max(0, min(3, totals["queue_bias"]))
+        return totals
+
+    def _synthesize_doctrine_candidates(self) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        outcomes = self.assistant_core_store.outcome_history(limit=500)
+        approvals = self.approval_history()[-200:]
+        ticks = self.background_scheduler.store.list_ticks(limit=80)
+        assistant_actions = self.audit_log.list_recent(limit=200, entry_type="assistant-action")
+        plans = self.audit_log.list_recent(limit=200, entry_type="plan")
+        responses = self.audit_log.list_recent(limit=200, entry_type="response")
+        actors_seen = sorted(
+            {
+                str(item.get("actor", "")).strip()
+                for item in [*outcomes, *approvals, *assistant_actions, *plans, *responses]
+                if str(item.get("actor", "")).strip()
+            }
+        )
+        domains = sorted(
+            {
+                str(item.get("domain", "")).strip().lower()
+                for item in outcomes
+                if str(item.get("domain", "")).strip()
+            }
+        )
+        candidates: list[dict[str, Any]] = []
+
+        def add_candidate(
+            candidate_id: str,
+            *,
+            title: str,
+            summary: str,
+            kind: str,
+            domains_for_rule: list[str],
+            actors_for_rule: list[str],
+            evidence: dict[str, Any],
+            policy_effects: dict[str, Any],
+            promotion_reason: str,
+            status: str = "candidate",
+        ) -> None:
+            domain_key = domains_for_rule[0] if domains_for_rule else "general"
+            candidate = {
+                "candidate_id": candidate_id,
+                "rule_id": f"rule-{candidate_id}",
+                "title": title,
+                "summary": summary,
+                "kind": kind,
+                "status": status,
+                "domains": domains_for_rule,
+                "actors": actors_for_rule,
+                "agent_ids": self._agent_ids_for_domain(domain_key),
+                "evidence": evidence,
+                "policy_effects": policy_effects,
+                "promotion_reason": promotion_reason,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+            candidates.append(candidate)
+
+        for domain in domains:
+            domain_outcomes = [item for item in outcomes if str(item.get("domain", "")).strip().lower() == domain]
+            if len(domain_outcomes) < 3:
+                continue
+            sample_size = len(domain_outcomes)
+            ignored = sum(1 for item in domain_outcomes if str(item.get("status", "")).strip().lower() == "ignored")
+            expired = sum(1 for item in domain_outcomes if str(item.get("status", "")).strip().lower() == "expired")
+            acted = sum(1 for item in domain_outcomes if str(item.get("status", "")).strip().lower() == "acted")
+            right_time = sum(1 for item in domain_outcomes if str(item.get("timing_quality", "")).strip().lower() == "right-time")
+            too_early = sum(1 for item in domain_outcomes if str(item.get("timing_quality", "")).strip().lower() in {"too-early", "not-useful"})
+            too_late = sum(1 for item in domain_outcomes if str(item.get("timing_quality", "")).strip().lower() in {"too-late", "late"})
+            friction = sum(1 for item in domain_outcomes if item.get("caused_friction") is True)
+            actor_names = sorted(
+                {
+                    str(item.get("actor", "")).strip()
+                    for item in domain_outcomes
+                    if str(item.get("actor", "")).strip()
+                }
+            )
+            related_ticks = [
+                tick
+                for tick in ticks
+                if any(
+                    str(status.get("agent_id", "")).strip() in self._agent_ids_for_domain(domain)
+                    and str(status.get("state", "")).strip() == "awake"
+                    for status in list(tick.get("statuses", []))
+                )
+            ]
+            evidence = {
+                "sample_size": sample_size,
+                "acted": acted,
+                "ignored": ignored,
+                "expired": expired,
+                "right_time": right_time,
+                "too_early": too_early,
+                "too_late": too_late,
+                "friction": friction,
+                "tick_support": len(related_ticks),
+            }
+            if ignored + too_early + friction >= max(2, sample_size // 2):
+                add_candidate(
+                    f"{domain}-queue-first",
+                    title=f"{domain.title()} should bias toward queueing before interruption",
+                    summary=f"{domain.title()} has produced enough ignored, early, or friction-heavy outcomes that the team should surface it more quietly by default.",
+                    kind="queue-posture",
+                    domains_for_rule=[domain],
+                    actors_for_rule=actor_names,
+                    evidence=evidence,
+                    policy_effects={
+                        "interrupt_threshold_delta": 1,
+                        "cooldown_delta_minutes": 30,
+                        "queue_bias": 1,
+                    },
+                    promotion_reason="Repeated low-value interruptions suggest this lane should queue more aggressively.",
+                    status="trusted" if ignored + too_early + friction >= max(3, sample_size // 2) else "candidate",
+                )
+            if acted + right_time >= max(2, sample_size // 2):
+                add_candidate(
+                    f"{domain}-timely-surface",
+                    title=f"{domain.title()} benefits from timely resurfacing",
+                    summary=f"{domain.title()} has enough acted or right-time outcomes that the team can surface it more decisively when pressure is real.",
+                    kind="timing-posture",
+                    domains_for_rule=[domain],
+                    actors_for_rule=actor_names,
+                    evidence=evidence,
+                    policy_effects={
+                        "interrupt_threshold_delta": -1,
+                        "cooldown_delta_minutes": -10,
+                    },
+                    promotion_reason="Repeated timely responses suggest this lane can surface sooner without increasing drag.",
+                    status="trusted" if acted + right_time >= max(3, sample_size // 2) else "candidate",
+                )
+            if expired + too_late >= 2:
+                add_candidate(
+                    f"{domain}-earlier-follow-up",
+                    title=f"{domain.title()} should not be allowed to go stale",
+                    summary=f"{domain.title()} is generating stale or late outcomes, so the team should tighten follow-up timing.",
+                    kind="staleness-guard",
+                    domains_for_rule=[domain],
+                    actors_for_rule=actor_names,
+                    evidence=evidence,
+                    policy_effects={
+                        "interrupt_threshold_delta": -1,
+                        "cooldown_delta_minutes": -15,
+                    },
+                    promotion_reason="Late outcomes suggest this lane needs earlier follow-up and less delay.",
+                    status="trusted" if expired + too_late >= 3 else "candidate",
+                )
+
+        rejected = [item for item in approvals if str(item.get("status", "")).strip().lower() in {"rejected", "denied"}]
+        approved = [item for item in approvals if str(item.get("status", "")).strip().lower() in {"approved", "accepted"}]
+        pending = [item for item in approvals if str(item.get("status", "")).strip().lower() == "pending"]
+        approvals_by_domain: dict[str, dict[str, Any]] = {}
+        for item in approvals:
+            domain = self._infer_approval_domain(str(item.get("request", "")), str(item.get("rationale", "")))
+            bucket = approvals_by_domain.setdefault(domain, {"total": 0, "pending": 0, "approved": 0, "rejected": 0, "actors": set(), "examples": []})
+            bucket["total"] += 1
+            normalized_status = str(item.get("status", "")).strip().lower()
+            if normalized_status in bucket:
+                bucket[normalized_status] += 1
+            actor_name = str(item.get("actor", "")).strip()
+            if actor_name:
+                bucket["actors"].add(actor_name)
+            if len(bucket["examples"]) < 3 and str(item.get("request", "")).strip():
+                bucket["examples"].append(str(item.get("request", "")).strip())
+        if pending:
+            waiting_on_actor: dict[str, int] = {}
+            for item in pending:
+                actor_name = str(item.get("actor", "")).strip()
+                if not actor_name:
+                    continue
+                waiting_on_actor[actor_name] = int(waiting_on_actor.get(actor_name, 0) or 0) + 1
+            highest_actor = max(waiting_on_actor, key=waiting_on_actor.get) if waiting_on_actor else ""
+            pending_count = len(pending)
+            add_candidate(
+                "approval-backlog-explicit-gate",
+                title="Approval-heavy work should stay staged and explicit",
+                summary="A non-trivial approval backlog is forming, so the team should keep packaging decisions clearly instead of letting them spill into ambiguous interruptions.",
+                kind="approval-backlog",
+                domains_for_rule=["approvals"],
+                actors_for_rule=sorted(waiting_on_actor),
+                evidence={
+                    "pending_count": pending_count,
+                    "approved_count": len(approved),
+                    "rejected_count": len(rejected),
+                    "highest_actor": highest_actor,
+                    "sample_size": len(approvals),
+                },
+                policy_effects={"queue_bias": 1, "require_explicit_approval": True},
+                promotion_reason="A sustained approval queue is a direct signal that staging and explicit gates matter more than ad hoc interruption.",
+                status="trusted" if pending_count >= 5 else "candidate",
+            )
+        for domain, bucket in approvals_by_domain.items():
+            if domain == "approvals":
+                continue
+            if int(bucket.get("pending", 0) or 0) >= 2:
+                add_candidate(
+                    f"{domain}-approval-domain-gate",
+                    title=f"{domain.title()} approvals should be packaged with domain-specific clarity",
+                    summary=f"{domain.title()} work is repeatedly landing in the approval queue, so the team should stage it with cleaner context and a stronger domain handoff.",
+                    kind="domain-approval-posture",
+                    domains_for_rule=[domain, "approvals"],
+                    actors_for_rule=sorted(bucket.get("actors", set())),
+                    evidence={
+                        "sample_size": int(bucket.get("total", 0) or 0),
+                        "pending_count": int(bucket.get("pending", 0) or 0),
+                        "approved_count": int(bucket.get("approved", 0) or 0),
+                        "examples": list(bucket.get("examples", [])),
+                    },
+                    policy_effects={"queue_bias": 1, "require_explicit_approval": True},
+                    promotion_reason=f"Repeated {domain} approval pressure suggests this lane needs clearer packaging before it reaches the human decision gate.",
+                    status="trusted" if int(bucket.get("pending", 0) or 0) >= 3 else "candidate",
+                )
+        if rejected:
+            add_candidate(
+                "approvals-explicit-gate",
+                title="External or sensitive moves should stay behind an explicit approval gate",
+                summary="Rejected approvals are evidence that the team should continue staging, not assuming, external or sensitive commitments.",
+                kind="approval-posture",
+                domains_for_rule=["approvals"],
+                actors_for_rule=sorted({str(item.get("actor", "")).strip() for item in rejected if str(item.get("actor", "")).strip()}),
+                evidence={
+                    "rejected_count": len(rejected),
+                    "approved_count": len(approved),
+                    "sample_size": len(rejected) + len(approved),
+                },
+                policy_effects={"require_explicit_approval": True, "queue_bias": 1},
+                promotion_reason="Human rejection is a direct correction and should harden the approval gate.",
+                status="trusted",
+            )
+
+        quiet_hour_wakes = 0
+        safety_awakes = 0
+        for tick in ticks:
+            if not bool(tick.get("quiet_hours_active")):
+                continue
+            quiet_hour_wakes += sum(
+                1
+                for status in list(tick.get("statuses", []))
+                if str(status.get("state", "")).strip() == "awake"
+            )
+            safety_awakes += sum(
+                1
+                for status in list(tick.get("statuses", []))
+                if str(status.get("agent_id", "")).strip() in {"watchtower", "storm", "home-ops"}
+                and str(status.get("state", "")).strip() == "awake"
+            )
+        if quiet_hour_wakes and safety_awakes >= max(2, quiet_hour_wakes // 2):
+            add_candidate(
+                "quiet-hours-safety-exceptions",
+                title="Quiet-hours autonomy should stay calm except for safety-class agents",
+                summary="Background tick history shows the team naturally keeps quiet-hours energy centered on safety and watch functions.",
+                kind="collaboration-posture",
+                domains_for_rule=["safety"],
+                actors_for_rule=actors_seen,
+                evidence={
+                    "quiet_hour_wakes": quiet_hour_wakes,
+                    "safety_awakes": safety_awakes,
+                    "sample_size": len(ticks),
+                },
+                policy_effects={"queue_bias": 1},
+                promotion_reason="Tick history shows that overnight activity is healthiest when safety agents carry the burden and everyone else stays calm.",
+                status="candidate",
+            )
+        if quiet_hour_wakes >= 3:
+            add_candidate(
+                "quiet-hours-queue-default",
+                title="Quiet hours should default to queueing and non-interruption",
+                summary="Tick history shows that the overnight team naturally collapses toward minimal routing activity, which should remain the default posture.",
+                kind="quiet-hours-posture",
+                domains_for_rule=["approvals", "family", "workshop", "content", "growth", "memory"],
+                actors_for_rule=actors_seen,
+                evidence={
+                    "quiet_hour_wakes": quiet_hour_wakes,
+                    "safety_awakes": safety_awakes,
+                    "sample_size": len(ticks),
+                },
+                policy_effects={"interrupt_threshold_delta": 1, "cooldown_delta_minutes": 20, "queue_bias": 1},
+                promotion_reason="Stable quiet-hour tick patterns are evidence that the system serves the household best by staying calm unless something truly matters.",
+                status="trusted" if quiet_hour_wakes >= 5 else "candidate",
+            )
+        successful_actions = [
+            item for item in assistant_actions
+            if item.get("succeeded") is True or ("updated record status to" in str(item.get("result_summary", "")).lower())
+        ]
+        success_by_domain: dict[str, dict[str, Any]] = {}
+        for item in successful_actions:
+            domain = str(item.get("domain", "")).strip().lower() or "general"
+            bucket = success_by_domain.setdefault(domain, {"count": 0, "actors": set(), "actions": {}, "examples": []})
+            bucket["count"] += 1
+            actor_name = str(item.get("actor", "")).strip()
+            if actor_name:
+                bucket["actors"].add(actor_name)
+            action = str(item.get("action", "")).strip().lower() or "action"
+            bucket["actions"][action] = int(bucket["actions"].get(action, 0) or 0) + 1
+            if len(bucket["examples"]) < 3 and str(item.get("detail", "")).strip():
+                bucket["examples"].append(str(item.get("detail", "")).strip())
+        for domain, bucket in success_by_domain.items():
+            if int(bucket.get("count", 0) or 0) < 2:
+                continue
+            actions_sorted = sorted((bucket.get("actions") or {}).items(), key=lambda item: (-int(item[1]), item[0]))
+            top_action = actions_sorted[0][0] if actions_sorted else "action"
+            add_candidate(
+                f"{domain}-successful-intervention",
+                title=f"{domain.title()} successful interventions should become team practice",
+                summary=f"{domain.title()} has repeated successful interventions, so the team should reuse the winning pattern instead of re-deriving it each time.",
+                kind="successful-intervention",
+                domains_for_rule=[domain],
+                actors_for_rule=sorted(bucket.get("actors", set())),
+                evidence={
+                    "sample_size": int(bucket.get("count", 0) or 0),
+                    "top_action": top_action,
+                    "actions": dict(bucket.get("actions", {})),
+                    "examples": list(bucket.get("examples", [])),
+                },
+                policy_effects={"queue_bias": 0, "cooldown_delta_minutes": -10},
+                promotion_reason=f"Repeated successful {domain} interventions suggest there is now a stable reusable operating pattern.",
+                status="trusted" if int(bucket.get("count", 0) or 0) >= 3 else "candidate",
+            )
+        correction_signals = self._extract_correction_signals(
+            [
+                str(item.get("request", "")).strip()
+                for item in [*plans, *responses]
+                if str(item.get("request", "")).strip()
+            ]
+        )
+        for signal in correction_signals:
+            count = int(signal.get("count", 0) or 0)
+            effects = dict(signal.get("policy_effects", {}))
+            if str(signal.get("signal_id", "")).strip() == "brief-responses":
+                effects["response_brief"] = True
+            if str(signal.get("signal_id", "")).strip() == "server-side-autonomy":
+                effects["prefer_server_side"] = True
+            if str(signal.get("signal_id", "")).strip() == "voice-first":
+                effects["prefer_ambient_surfaces"] = True
+            add_candidate(
+                f"correction-{str(signal.get('signal_id', '')).strip()}",
+                title=str(signal.get("summary", "")).strip(),
+                summary=str(signal.get("summary", "")).strip(),
+                kind=str(signal.get("kind", "user-correction")).strip(),
+                domains_for_rule=["content", "growth", "family", "approvals", "memory"],
+                actors_for_rule=["Chris"],
+                evidence={
+                    "sample_size": count,
+                    "examples": list(signal.get("examples", [])),
+                },
+                policy_effects=effects,
+                promotion_reason="Recurring user correction language is a direct instruction and should shape doctrine.",
+                status="trusted" if count >= 2 else "candidate",
+            )
+        blocked_counts: dict[str, int] = {}
+        awake_counts: dict[str, int] = {}
+        for tick in ticks:
+            for status in list(tick.get("statuses", [])):
+                agent_id = str(status.get("agent_id", "")).strip()
+                state = str(status.get("state", "")).strip().lower()
+                if not agent_id:
+                    continue
+                if state == "blocked":
+                    blocked_counts[agent_id] = int(blocked_counts.get(agent_id, 0) or 0) + 1
+                if state == "awake":
+                    awake_counts[agent_id] = int(awake_counts.get(agent_id, 0) or 0) + 1
+        blocked_handoff_pairs = [
+            ("ambient-router", "home-ops"),
+            ("ambient-router", "watchtower"),
+            ("family-logistics", "home-ops"),
+        ]
+        for source_agent, blocked_agent in blocked_handoff_pairs:
+            if int(awake_counts.get(source_agent, 0) or 0) < 3 or int(blocked_counts.get(blocked_agent, 0) or 0) < 3:
+                continue
+            domain = "safety" if blocked_agent in {"home-ops", "watchtower"} else "family"
+            add_candidate(
+                f"handoff-{source_agent}-to-{blocked_agent}",
+                title=f"{source_agent} should degrade gracefully when {blocked_agent} is blocked",
+                summary=f"Cross-agent handoff quality should stay honest when {blocked_agent} cannot complete its side of the work.",
+                kind="handoff-quality",
+                domains_for_rule=[domain],
+                actors_for_rule=actors_seen,
+                evidence={
+                    "source_awake_count": int(awake_counts.get(source_agent, 0) or 0),
+                    "blocked_count": int(blocked_counts.get(blocked_agent, 0) or 0),
+                    "sample_size": len(ticks),
+                },
+                policy_effects={"queue_bias": 1},
+                promotion_reason="Repeated blocked handoffs should teach the team to degrade honestly instead of implying a downstream capability is available.",
+                status="trusted",
+            )
+
+        meta = {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "sources": {
+                "outcomes": len(outcomes),
+                "approvals": len(approvals),
+                "ticks": len(ticks),
+                "assistant_actions": len(assistant_actions),
+                "plans": len(plans),
+                "responses": len(responses),
+            },
+            "candidate_count": len(candidates),
+        }
+        return candidates, meta
+
+    def synthesize_shared_doctrine(
+        self,
+        *,
+        auto_promote: bool = True,
+        promoted_by: str = "system",
+    ) -> dict[str, Any]:
+        candidates, meta = self._synthesize_doctrine_candidates()
+        previous_state = self.doctrine_store.load()
+        previous_candidates = {
+            str(item.get("candidate_id", "")).strip(): dict(item)
+            for item in list(previous_state.get("candidates", []))
+            if str(item.get("candidate_id", "")).strip()
+        }
+        promoted_candidate_ids = {
+            str(item.get("source_candidate_id", "")).strip()
+            for item in list(previous_state.get("rules", []))
+            if str(item.get("source_candidate_id", "")).strip()
+        }
+        normalized_candidates: list[dict[str, Any]] = []
+        for item in candidates:
+            candidate = dict(item)
+            candidate_id = str(candidate.get("candidate_id", "")).strip()
+            previous = previous_candidates.get(candidate_id, {})
+            if candidate_id in promoted_candidate_ids:
+                candidate["status"] = "promoted"
+                if str(previous.get("promoted_at", "")).strip():
+                    candidate["promoted_at"] = str(previous.get("promoted_at", "")).strip()
+                if str(previous.get("promoted_by", "")).strip():
+                    candidate["promoted_by"] = str(previous.get("promoted_by", "")).strip()
+            elif str(previous.get("status", "")).strip().lower() == "dismissed":
+                candidate["status"] = "dismissed"
+                if str(previous.get("dismissed_at", "")).strip():
+                    candidate["dismissed_at"] = str(previous.get("dismissed_at", "")).strip()
+                if str(previous.get("dismissed_by", "")).strip():
+                    candidate["dismissed_by"] = str(previous.get("dismissed_by", "")).strip()
+                if str(previous.get("dismiss_reason", "")).strip():
+                    candidate["dismiss_reason"] = str(previous.get("dismiss_reason", "")).strip()
+            normalized_candidates.append(candidate)
+        candidates = normalized_candidates
+        state = self.doctrine_store.replace_candidates(candidates, synthesis_meta=meta)
+        promoted_rules: list[dict[str, Any]] = []
+        if auto_promote:
+            for item in candidates:
+                if str(item.get("status", "")).strip().lower() != "trusted":
+                    continue
+                rule = self.doctrine_store.promote_candidate(
+                    str(item.get("candidate_id", "")).strip(),
+                    promoted_by=promoted_by,
+                    basis=str(item.get("promotion_reason", "")).strip() or "trusted repeated signal",
+                )
+                if rule is not None:
+                    promoted_rules.append(rule)
+            state = self.doctrine_store.load()
+        self._invalidate_snapshot_cache(surfaces=("shared_doctrine", "dashboard", "shell_state", "proactive_state"))
+        return {
+            "ok": True,
+            "generated_at": meta.get("generated_at", ""),
+            "candidate_count": len(list(state.get("candidates", []))),
+            "active_rule_count": len(self.doctrine_store.list_rules(active_only=True)),
+            "promoted_rules": promoted_rules,
+            "sources": dict(meta.get("sources", {})),
+        }
+
+    def shared_doctrine_snapshot(self, *, actor_name: str = "", refresh: bool = False) -> dict:
+        if refresh:
+            self.synthesize_shared_doctrine(auto_promote=True, promoted_by="system")
+
+        def builder() -> dict:
+            state = self.doctrine_store.load()
+            active_rules = self.doctrine_store.list_rules(active_only=True)
+            payload = {
+                "generated_at": str(state.get("generated_at", "")).strip(),
+                "summary": {
+                    "candidate_count": len(list(state.get("candidates", []))),
+                    "active_rule_count": len(active_rules),
+                    "history_events": len(list(state.get("history", []))),
+                },
+                "candidates": list(state.get("candidates", [])),
+                "rules": active_rules,
+                "last_synthesis": dict(state.get("last_synthesis", {})),
+                "history": list(state.get("history", []))[-20:],
+            }
+            actor_key = str(actor_name).strip()
+            if actor_key:
+                payload["actor"] = actor_key
+                payload["applicable_rules"] = self.doctrine_store.rules_for(actor=actor_key, active_only=True)
+            return payload
+
+        return self._cached_surface("shared_doctrine", actor_name or "system", builder)
+
+    def promote_doctrine_candidate(self, candidate_id: str, *, promoted_by: str = "Chris", basis: str = "approved-by-user") -> dict:
+        rule = self.doctrine_store.promote_candidate(candidate_id, promoted_by=promoted_by, basis=basis)
+        if rule is None:
+            raise KeyError(f"Unknown doctrine candidate: {candidate_id}")
+        self._invalidate_snapshot_cache(surfaces=("shared_doctrine", "dashboard", "shell_state", "proactive_state"))
+        return {"ok": True, "rule": rule}
+
+    def dismiss_doctrine_candidate(self, candidate_id: str, *, dismissed_by: str = "Chris", reason: str = "") -> dict:
+        candidate = self.doctrine_store.dismiss_candidate(candidate_id, dismissed_by=dismissed_by, reason=reason)
+        if candidate is None:
+            raise KeyError(f"Unknown doctrine candidate: {candidate_id}")
+        self._invalidate_snapshot_cache(surfaces=("shared_doctrine", "dashboard", "shell_state", "proactive_state"))
+        return {"ok": True, "candidate": candidate}
+
     def _repo_root(self) -> Path:
         return Path(__file__).resolve().parent.parent
 
@@ -354,6 +1998,7 @@ class JarvisRuntime:
             root / "jarvis" / "voice_ui.py",
             root / "jarvis" / "main.py",
             root / "jarvis" / "assistant_core.py",
+            root / "jarvis" / "self_improvement.py",
             root / "ops" / "install_launchd_services.sh",
             root / "ops" / "launchd" / "com.jarvis.runtime.plist.template",
             root / "ops" / "launchd" / "com.jarvis.assistant-autonomy.plist.template",
@@ -397,6 +2042,31 @@ class JarvisRuntime:
                 "build_generated_at": str(self.startup_build.get("generated_at", "")),
             },
         )
+
+    def guardian_status_snapshot(self) -> dict[str, Any]:
+        state_path = self._repo_root() / "data" / "system" / "guardian_state.json"
+        events_path = self._repo_root() / "data" / "system" / "guardian_events.jsonl"
+        payload: dict[str, Any] = {}
+        if state_path.exists():
+            try:
+                payload = json.loads(state_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                payload = {}
+        recent_events: list[dict[str, Any]] = []
+        if events_path.exists():
+            try:
+                lines = [line for line in events_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+                for line in lines[-8:]:
+                    recent_events.append(json.loads(line))
+            except Exception:
+                recent_events = []
+        return {
+            "state_path": str(state_path),
+            "events_path": str(events_path),
+            "active": bool(payload),
+            "status": payload,
+            "recent_events": recent_events,
+        }
 
     def _service_probe(self, url: str) -> dict[str, object]:
         target = str(url).strip()
@@ -463,6 +2133,7 @@ class JarvisRuntime:
             },
             "roles": role_records,
             "restart_history": history,
+            "guardian": self.guardian_status_snapshot(),
         }
 
     def identity_overview(self) -> dict:
@@ -1897,14 +3568,15 @@ class JarvisRuntime:
             if str(lane.get("id", "")).strip() in {"financial", "pipeline", "marketing"}
         ]
         formation_themes = (self.chronicle_theme_summary(limit=6) or {}).get("themes", [])[:3]
-        weather_summary = "Live weather is not connected yet."
-        weather_truth_state = "unavailable"
-        weather_detail = "Source unavailable; weather connector not live yet."
-        if self.list_weather_advisories(limit=1):
-            latest_weather = self.list_weather_advisories(limit=1)[0]
-            weather_summary = str(latest_weather.get("recommendation") or latest_weather.get("current_weather") or weather_summary)
-            weather_truth_state = "staged"
-            weather_detail = "Source: staged advisory, not a live weather connector."
+        storm_weather = self.storm_weather_snapshot(force=False)
+        weather_summary = str(storm_weather.get("summary") or "Live weather unavailable.")
+        weather_truth_state = "live" if bool(storm_weather.get("live")) else ("stale" if bool(storm_weather.get("stale")) else "unavailable")
+        weather_detail = "Source: weather.gov via Storm."
+        comparison = dict(storm_weather.get("comparison") or {})
+        if comparison.get("change_summary"):
+            weather_detail = str(comparison.get("change_summary"))
+        elif storm_weather.get("error"):
+            weather_detail = str(storm_weather.get("error"))
         approvals = self.list_pending_approvals()[:5]
         family_focus = self.snapshot.family_focus.get(actor.display_name, []) or self.snapshot.family_focus.get(actor.user_id, [])
         delta_lines = self._first_light_deltas(
@@ -1941,6 +3613,7 @@ class JarvisRuntime:
             "formation_themes": formation_themes,
             "approvals": approvals,
             "weather_summary": weather_summary,
+            "storm_weather": storm_weather,
             "assistant_core": open_loops,
             "assistant_inbox": assistant_inbox,
             "loop_guidance": loop_guidance,
@@ -2167,6 +3840,25 @@ class JarvisRuntime:
         plan = self.tutoring_support.apply_child_boundaries(actor, plan)
         self.audit_log.log_plan(plan)
         if plan.needs_approval and plan.allowed:
+            domain = self._domain_for_plan(plan)
+            task_lane = self._task_lane_for_domain(domain)
+            threshold = self._approval_threshold_for_domain(domain)
+            lifecycle = self.catalyst_support.transition_work_item(
+                actor=actor.display_name,
+                title=request[:96] or "Approval required",
+                domain=domain,
+                lane=str(task_lane.get("lane", "")).strip() or "decision-command",
+                owner_agent=str(task_lane.get("owner_agent", "")).strip() or "JARVIS",
+                stage=WorkLifecycleStage.REVIEW,
+                status="pending",
+                artifact_type="approval-request",
+                source="request-plan",
+                review_level=str(threshold.get("level", "decision-required")).strip() or "decision-required",
+                rationale=plan.rationale,
+                work_id=plan.request_id,
+                record_id=plan.request_id,
+                metadata={"module": plan.module, "task_class": plan.task_class.value, "routing_tier": plan.routing_tier.value},
+            )
             self.approval_store.add(
                 ApprovalRequest(
                     request_id=plan.request_id,
@@ -2177,6 +3869,10 @@ class JarvisRuntime:
                     second_factor_required=plan.second_factor_required,
                     status="pending",
                     rationale=plan.rationale,
+                    domain=domain,
+                    lane=str(task_lane.get("lane", "")).strip(),
+                    owner_agent=str(task_lane.get("owner_agent", "")).strip(),
+                    lifecycle_work_id=str(lifecycle.get("work_id", "")).strip(),
                 )
             )
         return plan
@@ -2275,6 +3971,404 @@ class JarvisRuntime:
         if responses:
             return responses
         return self.audit_log.list_recent(limit=limit, entry_type="plan")
+
+    def _conversation_signal_key(self, text: str) -> str:
+        return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", str(text or "").lower())).strip()
+
+    def _conversation_candidate_from_text(self, actor: UserProfile, text: str) -> dict | None:
+        raw = " ".join(str(text or "").strip().split())
+        lowered = raw.lower()
+        if len(raw) < 18:
+            return None
+
+        summary = ""
+        tags = ["conversation", "chat-memory"]
+        explicit = "remember" in lowered
+        memory_type = "personal"
+        scope = "personal"
+
+        patterns = [
+            (r"\bi prefer\s+(.+)", f"{actor.display_name} prefers ", ["preference"]),
+            (r"\bi want\s+(.+)", f"{actor.display_name} wants ", ["preference"]),
+            (r"\bi need\s+(.+)", f"{actor.display_name} needs ", ["need"]),
+            (r"\bi like\s+(.+)", f"{actor.display_name} likes ", ["preference"]),
+            (r"\bi love\s+(.+)", f"{actor.display_name} loves ", ["preference"]),
+            (r"\bi don't want\s+(.+)", f"{actor.display_name} wants to avoid ", ["constraint"]),
+            (r"\bi do not want\s+(.+)", f"{actor.display_name} wants to avoid ", ["constraint"]),
+        ]
+        for pattern, prefix, extra_tags in patterns:
+            match = re.search(pattern, lowered)
+            if not match:
+                continue
+            fragment = match.group(1).strip(" .")
+            if fragment:
+                summary = prefix + fragment
+                tags.extend(extra_tags)
+                break
+
+        if not summary and "same way i do chatgpt" in lowered:
+            summary = f"{actor.display_name} wants JARVIS to support ChatGPT-style conversation continuity and memory depth"
+            tags.extend(["conversation-style", "preference"])
+        if not summary and "true chat interface" in lowered:
+            summary = f"{actor.display_name} wants a true chat-style conversational interface in JARVIS"
+            tags.extend(["conversation-style", "ux"])
+        if not summary and "conversational" in lowered and "memory" in lowered:
+            summary = f"{actor.display_name} wants JARVIS to learn through ongoing natural conversation"
+            tags.extend(["conversation-style", "memory"])
+        if not summary and ("my family" in lowered or "my wife" in lowered or "my kids" in lowered or "our home" in lowered):
+            summary = raw[:160]
+            memory_type = "household"
+            scope = "household"
+            tags.append("household")
+        if not summary and any(keyword in lowered for keyword in ("jarvis", "chronicle", "ghostwritr", "workshop", "catalyst")):
+            summary = raw[:160]
+            memory_type = "project"
+            scope = "project"
+            tags.append("project")
+
+        if not summary:
+            return None
+
+        if any(keyword in lowered for keyword in ("wife", "kids", "family", "household", "home")):
+            memory_type = "household"
+            scope = "household"
+        if any(keyword in lowered for keyword in ("jarvis", "chronicle", "ghostwritr", "workshop", "catalyst", "project")):
+            memory_type = "project" if memory_type == "personal" else memory_type
+            scope = "project" if scope == "personal" else scope
+
+        confidence = "confirmed" if explicit else "provisional"
+        return {
+            "summary": summary[:220],
+            "detail": raw,
+            "tags": sorted(set(tags)),
+            "memory_type": memory_type,
+            "scope": scope,
+            "explicit": explicit,
+            "confidence": confidence,
+            "source_type": "conversation-explicit" if explicit else "conversation-learned",
+        }
+
+    def _conversation_signal_exists(self, summary: str) -> bool:
+        needle = self._conversation_signal_key(summary)
+        if not needle:
+            return True
+        for item in self.memory_support.store.list_profile_facts():
+            if self._conversation_signal_key(str(item.get("summary", ""))) == needle:
+                return True
+        for item in self.memory_support.store.list_entries():
+            if self._conversation_signal_key(str(item.get("summary", ""))) == needle:
+                return True
+        for item in self.memory_support.store.list_proposals():
+            if self._conversation_signal_key(str(item.get("summary", ""))) == needle and str(item.get("status", "")).strip().lower() == "pending":
+                return True
+        return False
+
+    def _relevant_profile_facts(self, actor: UserProfile, request: str, limit: int = 4) -> list[str]:
+        facts = self.memory_support.profile_facts(actor, subject_user_id=actor.user_id)
+        tokens = {
+            token
+            for token in re.findall(r"[a-z0-9]{4,}", str(request or "").lower())
+            if token not in {"that", "with", "have", "this", "from", "your", "what", "when", "into"}
+        }
+        scored: list[tuple[int, str]] = []
+        for item in facts:
+            summary = str(item.get("summary", "")).strip()
+            if not summary:
+                continue
+            haystack = self._conversation_signal_key(" ".join([summary, " ".join(item.get("tags", []))]))
+            score = sum(1 for token in tokens if token in haystack)
+            if score:
+                scored.append((score, summary))
+        scored.sort(key=lambda item: (-item[0], item[1]))
+        return [summary for _, summary in scored[: max(0, limit)]]
+
+    def _conversation_context_excerpt(
+        self,
+        actor: UserProfile,
+        conversation_id: str,
+        room: str,
+        request: str,
+        *,
+        thread: dict | None = None,
+    ) -> str:
+        thread = dict(thread) if isinstance(thread, dict) else self.conversation_store.get(conversation_id)
+        lines: list[str] = []
+        if thread is not None:
+            turns = [dict(item) for item in thread.get("turns", []) if isinstance(item, dict)][-8:]
+            if turns:
+                lines.append(f"Active conversation with {actor.display_name} in {room or thread.get('room', 'office')}.")
+                lines.append("Continue naturally from the recent thread without making the user restate context.")
+                lines.append("Recent turns:")
+                for turn in turns:
+                    speaker = actor.display_name if str(turn.get("role", "")).strip() == "user" else "JARVIS"
+                    snippet = " ".join(str(turn.get("text", "")).strip().split())[:260]
+                    if snippet:
+                        lines.append(f"{speaker}: {snippet}")
+        fact_lines = self._relevant_profile_facts(actor, request, limit=4)
+        if fact_lines:
+            lines.append("Relevant durable memory:")
+            lines.extend(f"- {item}" for item in fact_lines)
+        return "\n".join(lines).strip()
+
+    def _record_conversation_learning(
+        self,
+        actor: UserProfile,
+        conversation_id: str,
+        room: str,
+        *,
+        thread: dict | None = None,
+    ) -> list[dict]:
+        thread = dict(thread) if isinstance(thread, dict) else self.conversation_store.get(conversation_id)
+        if thread is None:
+            return []
+        user_turns = [
+            dict(item)
+            for item in thread.get("turns", [])
+            if isinstance(item, dict) and str(item.get("role", "")).strip() == "user"
+        ]
+        aggregated: dict[str, dict] = {}
+        for turn in user_turns[-18:]:
+            candidate = self._conversation_candidate_from_text(actor, str(turn.get("text", "")))
+            if candidate is None:
+                continue
+            key = self._conversation_signal_key(str(candidate.get("summary", "")))
+            if not key:
+                continue
+            current = aggregated.setdefault(
+                key,
+                {
+                    **candidate,
+                    "occurrences": 0,
+                    "evidence": [],
+                },
+            )
+            current["occurrences"] = int(current.get("occurrences", 0) or 0) + 1
+            evidence = list(current.get("evidence", []))
+            snippet = " ".join(str(turn.get("text", "")).strip().split())[:240]
+            if snippet and snippet not in evidence:
+                evidence.append(snippet)
+            current["evidence"] = evidence[-3:]
+            current["explicit"] = bool(current.get("explicit")) or bool(candidate.get("explicit"))
+
+        captured: list[dict] = []
+        for candidate in aggregated.values():
+            summary = str(candidate.get("summary", "")).strip()
+            if not summary or self._conversation_signal_exists(summary):
+                continue
+            occurrences = int(candidate.get("occurrences", 0) or 0)
+            if occurrences < 2 and not candidate.get("explicit"):
+                captured.append(
+                    {
+                        "summary": summary,
+                        "status": "observed",
+                        "occurrences": occurrences,
+                    }
+                )
+                continue
+            detail = (
+                f"Learned from conversation {conversation_id} in {room}. "
+                f"Evidence: {' | '.join(candidate.get('evidence', []))}"
+            )
+            result = self.remember(
+                actor.display_name,
+                str(candidate.get("memory_type", "personal")),
+                str(candidate.get("scope", "personal")),
+                summary,
+                detail,
+                owner=actor.display_name,
+                tags=list(candidate.get("tags", [])),
+                subject_user_id=actor.user_id if str(candidate.get("memory_type", "")) == "personal" else "",
+                source_type=str(candidate.get("source_type", "conversation-learned")),
+                confidence="confirmed" if candidate.get("explicit") or occurrences >= 3 else "provisional",
+            )
+            captured.append(
+                {
+                    "summary": summary,
+                    "status": "stored" if result.get("stored") else "proposal",
+                    "occurrences": occurrences,
+                    "memory_type": str(candidate.get("memory_type", "personal")),
+                }
+            )
+
+        if captured:
+            existing = [item for item in thread.get("memory_signals", []) if isinstance(item, dict)]
+            self.conversation_store.update_thread(
+                conversation_id,
+                memory_signals=[*existing, *captured][-12:],
+            )
+        return captured
+
+    def _should_auto_capture_to_catalyst(self, request: str) -> bool:
+        text = " ".join(str(request or "").strip().lower().split())
+        if not text:
+            return False
+        explicit_patterns = (
+            "track this in catalyst",
+            "put this in catalyst",
+            "save this to catalyst",
+            "capture this in catalyst",
+            "add this to catalyst",
+            "log this in catalyst",
+            "make this a catalyst project",
+            "track this as a project",
+            "make this a project",
+            "turn this into a project",
+            "turn this into a plan",
+            "let's pursue this",
+            "lets pursue this",
+            "let's pursue this idea",
+            "lets pursue this idea",
+            "run with this idea",
+            "we should pursue this",
+            "we should do this",
+        )
+        if any(pattern in text for pattern in explicit_patterns):
+            return True
+        if "catalyst" in text and any(token in text for token in ("track", "capture", "save", "add", "pursue", "project", "plan")):
+            return True
+        return False
+
+    def _catalyst_capture_title(self, request: str, assistant_text: str) -> str:
+        cleaned = " ".join(str(request or "").strip().split())
+        patterns = (
+            r"^(?:please\s+)?(?:let(?:'|’)s|lets)\s+",
+            r"^(?:please\s+)?track\s+this(?:\s+idea)?(?:\s+in\s+catalyst)?[:\s-]*",
+            r"^(?:please\s+)?(?:put|save|capture|add|log)\s+this(?:\s+idea)?(?:\s+in\s+catalyst)?(?:\s+as\s+a\s+(?:project|plan))?[:\s-]*",
+            r"^(?:please\s+)?make\s+this\s+a\s+(?:catalyst\s+)?project[:\s-]*",
+            r"^(?:please\s+)?turn\s+this\s+into\s+a\s+(?:project|plan)[:\s-]*",
+        )
+        for pattern in patterns:
+            cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE).strip(" .:-")
+        if cleaned:
+            return cleaned[:96]
+        assistant_clean = " ".join(str(assistant_text or "").strip().split())
+        return assistant_clean[:96] or "Catalyst project"
+
+    def _catalyst_capture_kind(self, request: str) -> str:
+        text = " ".join(str(request or "").strip().lower().split())
+        if any(token in text for token in ("implementation plan", "execution plan", "turn this into a plan", "build the plan", "next actions", "execution roadmap")):
+            return "implementation-plan"
+        if any(token in text for token in ("make this a project", "track this as a project", "turn this into a project", "project brief")):
+            return "project-brief"
+        return "hypothesis"
+
+    def _conversation_seed_work_id(self, thread: dict[str, Any] | None) -> str:
+        if not isinstance(thread, dict):
+            return ""
+        captures = [item for item in list(thread.get("catalyst_captures", [])) if isinstance(item, dict)]
+        for item in reversed(captures):
+            work_id = str(item.get("work_id", "")).strip()
+            if work_id:
+                return work_id
+        turns = [item for item in list(thread.get("turns", [])) if isinstance(item, dict)]
+        for turn in reversed(turns):
+            metadata = dict(turn.get("metadata") or {})
+            capture = dict(metadata.get("catalyst_capture") or {})
+            work_id = str(capture.get("work_id", "")).strip()
+            if work_id:
+                return work_id
+        return ""
+
+    def _auto_capture_to_catalyst(
+        self,
+        actor: UserProfile,
+        room: str,
+        request: str,
+        assistant_text: str,
+        *,
+        seed_work_id: str = "",
+    ) -> dict[str, Any] | None:
+        if not self._should_auto_capture_to_catalyst(request):
+            return None
+        kind = self._catalyst_capture_kind(request)
+        title = self._catalyst_capture_title(request, assistant_text)
+        lane = self.catalyst_support._infer_lane(f"{request}\n{assistant_text}")
+        try:
+            if kind == "implementation-plan":
+                record = self.catalyst_support.implementation_plan(
+                    actor.display_name,
+                    title,
+                    assistant_text,
+                    constraints=f"Captured automatically from conversation in {room}. Keep it family-serving and explicit.",
+                    work_id=seed_work_id,
+                )
+            elif kind == "project-brief":
+                record = self.catalyst_support.project_brief(
+                    actor.display_name,
+                    title,
+                    request,
+                    assistant_text,
+                    constraints=f"Captured automatically from conversation in {room}. Treat Catalyst as the family portfolio layer.",
+                    work_id=seed_work_id,
+                )
+            else:
+                record = self.catalyst_support.hypothesis_generation(
+                    actor.display_name,
+                    title,
+                    assistant_text,
+                    lane=lane,
+                    supporting_signals=[request],
+                    work_id=seed_work_id,
+                    source_agent="ambient-router",
+                )
+            self._invalidate_snapshot_cache(actor.display_name, surfaces=("pipeline_review", "pipeline_state", "dashboard", "today_board", "cognitive", "cadence_review"))
+            return {
+                "ok": True,
+                "kind": kind,
+                "lane": str(record.get("lane", lane)).strip() or lane,
+                "title": title,
+                "work_id": str(record.get("work_id", "")).strip(),
+                "record": record,
+                "summary": f"Captured in Catalyst as a {kind.replace('-', ' ')} under {str(record.get('lane', lane)).strip() or lane}.",
+            }
+        except Exception as exc:
+            return {
+                "ok": False,
+                "kind": kind,
+                "lane": lane,
+                "title": title,
+                "error": str(exc),
+            }
+
+    def conversation_snapshot(self, conversation_id: str, limit: int = 24, *, thread: dict | None = None) -> dict:
+        thread = dict(thread) if isinstance(thread, dict) else self.conversation_store.get(conversation_id)
+        if thread is None:
+            return {}
+        turns = [dict(item) for item in thread.get("turns", []) if isinstance(item, dict)]
+        thread["turns"] = turns[-max(1, limit):]
+        return thread
+
+    def chat_state_snapshot(self, actor_name: str = "Chris", conversation_id: str = "", room: str = "office") -> dict:
+        actor = self.get_actor(actor_name)
+
+        def builder() -> dict:
+            active = self.conversation_store.get(conversation_id) if conversation_id.strip() else None
+            if active is None:
+                recent = self.conversation_store.list_recent(actor.display_name, limit=1)
+                active = self.conversation_store.get(str(recent[0].get("conversation_id", ""))) if recent else None
+            if active is None:
+                active = self.conversation_store.ensure(actor.display_name, room, source="shell")
+            active_turns = [dict(item) for item in active.get("turns", []) if isinstance(item, dict)][-24:]
+            active["turns"] = active_turns
+            return {
+                "actor": actor.display_name,
+                "conversation_id": str(active.get("conversation_id", "")),
+                "active_conversation": active,
+                "recent_conversations": self.conversation_store.list_recent(actor.display_name, limit=8),
+                "memory_overview": {
+                    "profile_fact_count": len(self.memory_support.profile_facts(actor, subject_user_id=actor.user_id)),
+                    "pending_proposals": len(
+                        [
+                            item
+                            for item in self.memory_support.proposals(status="pending")
+                            if str(item.get("owner", "")).strip() == actor.display_name
+                            or str(item.get("subject_user_id", "")).strip().lower() == actor.user_id
+                        ]
+                    ),
+                },
+            }
+
+        return self._cached_surface("chat_state", actor.display_name, builder, conversation=conversation_id.strip() or "latest")
 
     def _assistant_action_confidence(self, policy: dict) -> str:
         action_class = str(policy.get("action_class", "")).strip().lower()
@@ -2449,6 +4543,10 @@ class JarvisRuntime:
         interrupt_delta = actor_stats["interrupt_threshold_delta"] + domain_stats["interrupt_threshold_delta"] + device_stats["interrupt_threshold_delta"]
         cooldown_delta = actor_stats["cooldown_delta_minutes"] + domain_stats["cooldown_delta_minutes"] + device_stats["cooldown_delta_minutes"]
         queue_bias = actor_stats["queue_bias"] + domain_stats["queue_bias"] + device_stats["queue_bias"]
+        doctrine_effects = self._doctrine_effect_totals(actor_name, domain=domain_key)
+        interrupt_delta += int(doctrine_effects.get("interrupt_threshold_delta", 0) or 0)
+        cooldown_delta += int(doctrine_effects.get("cooldown_delta_minutes", 0) or 0)
+        queue_bias += int(doctrine_effects.get("queue_bias", 0) or 0)
         return {
             "actor": actor_name,
             "domain": domain_key,
@@ -2460,6 +4558,7 @@ class JarvisRuntime:
             "interrupt_threshold_delta": max(-3, min(3, interrupt_delta)),
             "cooldown_delta_minutes": max(-45, min(120, cooldown_delta)),
             "queue_bias": max(0, min(3, queue_bias)),
+            "doctrine_effects": doctrine_effects,
         }
 
     def _parse_timestamp(self, value: str) -> datetime | None:
@@ -2508,6 +4607,7 @@ class JarvisRuntime:
             "content": {"level": "review-before-publish", "summary": "Content can be developed automatically, but live publishing should be explicit."},
             "growth": {"level": "review-before-commit", "summary": "Growth work can be monitored and staged automatically, but commitments and spend still deserve explicit review."},
             "approvals": {"level": "decision-required", "summary": "This item is waiting on a direct yes or no decision."},
+            "system": {"level": "review-before-code-change", "summary": "JARVIS may inspect, sync required local models, and run health checks automatically, but code changes and broad installs should stay reviewable."},
         }
         return thresholds.get(domain, {"level": "review-as-needed", "summary": "JARVIS may stage this work, then surface it for review when appropriate."})
 
@@ -2519,8 +4619,395 @@ class JarvisRuntime:
             "content": {"owner_agent": "Veronica", "lane": "content-operations"},
             "growth": {"owner_agent": "Black Panther", "lane": "wealth-and-growth"},
             "approvals": {"owner_agent": "Nick Fury", "lane": "decision-command"},
+            "system": {"owner_agent": "Autoforge", "lane": "self-improvement-and-maintenance"},
         }
         return lanes.get(domain, {"owner_agent": "JARVIS", "lane": "general-operations"})
+
+    def _domain_for_plan(self, plan: RequestPlan) -> str:
+        if plan.context_lane == "family":
+            return "family"
+        if plan.context_lane == "workshop":
+            return "workshop"
+        if plan.context_lane in {"executive", "research"}:
+            return "growth"
+        if plan.context_lane == "formation":
+            return "content"
+        if plan.context_lane == "restricted-local":
+            return "memory"
+        return "approvals"
+
+    def _risk_level_for_domain(self, domain: str) -> RiskLevel:
+        mapping = {
+            "approvals": RiskLevel.HIGH,
+            "family": RiskLevel.MODERATE,
+            "workshop": RiskLevel.HIGH,
+            "memory": RiskLevel.MODERATE,
+            "content": RiskLevel.MODERATE,
+            "growth": RiskLevel.HIGH,
+            "system": RiskLevel.MODERATE,
+        }
+        return mapping.get(domain, RiskLevel.LOW)
+
+    def _autonomy_mode_for_level(self, review_level: str) -> AutonomyMode:
+        if review_level == "decision-required":
+            return AutonomyMode.APPROVAL_REQUIRED
+        if review_level.startswith("review-before") or review_level == "review-sensitive":
+            return AutonomyMode.STAGED
+        if review_level == "never-autonomous":
+            return AutonomyMode.FORBIDDEN
+        return AutonomyMode.AUTONOMOUS
+
+    def autonomy_policy_snapshot(self) -> dict[str, Any]:
+        policies: list[AutonomyPolicy] = []
+        constraints_by_domain = {
+            str(item.get("domain", "")).strip(): item for item in self._self_model_domain_constraints() if str(item.get("domain", "")).strip()
+        }
+        for domain in ("family", "workshop", "memory", "content", "growth", "approvals", "system"):
+            threshold = self._approval_threshold_for_domain(domain)
+            lane_info = self._task_lane_for_domain(domain)
+            constraints = constraints_by_domain.get(domain, {})
+            review_level = str(threshold.get("level", "review-as-needed")).strip() or "review-as-needed"
+            policies.append(
+                AutonomyPolicy(
+                    domain=domain,
+                    lane=str(lane_info.get("lane", "")).strip() or "general-operations",
+                    owner_agent=str(lane_info.get("owner_agent", "")).strip() or "JARVIS",
+                    risk_level=self._risk_level_for_domain(domain),
+                    autonomy_mode=self._autonomy_mode_for_level(review_level),
+                    review_level=review_level,
+                    allowed_actions=[str(item).strip() for item in list(constraints.get("allowed", [])) if str(item).strip()],
+                    requires_approval=[str(item).strip() for item in list(constraints.get("requires_approval", [])) if str(item).strip()],
+                    forbidden_actions=[str(item).strip() for item in list(constraints.get("should_not_do", [])) if str(item).strip()],
+                    summary=str(threshold.get("summary", "")).strip(),
+                )
+            )
+        return {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "policies": [asdict(policy) for policy in policies],
+        }
+
+    def model_routing_policy_snapshot(self) -> dict[str, Any]:
+        tiers = [
+            {
+                "tier": RoutingTier.BACKGROUND_DETECTION.value,
+                "default_provider": "ollama",
+                "default_model": self.config.ollama_background_model,
+                "privacy_level": PrivacyLevel.LOCAL_ONLY.value,
+                "summary": "Always-on triage, ranking, classification, and low-stakes background loops stay cheap and local.",
+                "used_for": ["background monitoring", "signal triage", "low-risk escalation checks"],
+            },
+            {
+                "tier": RoutingTier.LOCAL_SYNTHESIS.value,
+                "default_provider": "ollama",
+                "default_model": self.config.ollama_summarize_model,
+                "privacy_level": PrivacyLevel.PREFER_LOCAL.value,
+                "summary": "Family, ambient, and workshop synthesis prefer local models when the task does not need current external data.",
+                "used_for": ["family planning", "ambient conversation", "local summaries"],
+            },
+            {
+                "tier": RoutingTier.HIGH_QUALITY_REASONING.value,
+                "default_provider": "openai",
+                "default_model": self.config.openai_text_model,
+                "privacy_level": PrivacyLevel.CLOUD_OK.value,
+                "summary": "Research, executive reasoning, and higher-ambiguity synthesis escalate to stronger reasoning models.",
+                "used_for": ["research", "executive analysis", "strategy framing"],
+            },
+            {
+                "tier": RoutingTier.USER_FACING_DELIVERY.value,
+                "default_provider": "openai",
+                "default_model": self.config.openai_router_model,
+                "privacy_level": PrivacyLevel.CLOUD_OK.value,
+                "summary": "User-facing polished deliverables use the highest-quality available path unless policy forces local handling.",
+                "used_for": ["polished drafts", "final replies", "artifact generation"],
+            },
+        ]
+        return {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "tiers": tiers,
+            "defaults": {
+                "background_model": self.config.ollama_background_model,
+                "summarize_model": self.config.ollama_summarize_model,
+                "second_brain_model": self.config.second_brain_model,
+                "openai_router_model": self.config.openai_router_model,
+                "openai_text_model": self.config.openai_text_model,
+            },
+        }
+
+    def self_mutation_constitution_snapshot(self) -> dict[str, Any]:
+        return {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "document_path": "docs/JARVIS-SELF-MUTATION-CONSTITUTION.md",
+            "charter": {
+                "title": "JARVIS grows faithfully without losing the family's trust",
+                "summary": "JARVIS may evolve aggressively inside bounded lanes, but it may not silently widen its own mandate, weaken recovery, or erode auditability.",
+                "family_rule": "JARVIS may freely improve its methods more than its mandate.",
+            },
+            "automatic_rewrites": {
+                "mode": "be-bold",
+                "summary": "These changes may be performed automatically when they are logged, recoverable, and do not widen authority.",
+                "allowed": [
+                    "internal prompts and routing heuristics",
+                    "low-risk workflow glue",
+                    "memory organization aids",
+                    "background maintenance logic",
+                    "diagnostics and health checks",
+                    "compile and test harnesses",
+                    "narrow agent instructions",
+                    "non-user-facing refactors",
+                    "inspector and artifact presentation logic",
+                    "sync of already-approved configured local models",
+                    "cost, latency, and caching optimizations that do not widen authority",
+                ],
+                "conditions": [
+                    "change must be logged",
+                    "previous state must be recoverable",
+                    "guardian and runtime health must remain checkable",
+                    "the change may not silently expand access scope",
+                ],
+            },
+            "sandbox_or_worktree_rewrites": {
+                "mode": "be-permissive",
+                "summary": "These changes may be generated and tested freely, but should promote through isolated staging lanes before touching live runtime behavior.",
+                "allowed": [
+                    "broad source refactors",
+                    "new agents with live execution potential",
+                    "new tool integrations",
+                    "dependency upgrades",
+                    "model-routing policy changes",
+                    "automation touching shared household workflows",
+                    "lifecycle or approval-engine behavior",
+                    "data-schema migrations",
+                    "new code generation pipelines",
+                    "multi-domain behavior changes",
+                ],
+                "conditions": [
+                    "must be isolated from the stable runtime",
+                    "must include compile, test, and health checks",
+                    "promotion to live should follow review or standing promotion rules",
+                ],
+            },
+            "approval_required": {
+                "summary": "These mutation classes require explicit principal approval before JARVIS may promote them into live authority.",
+                "actions": [
+                    "installing broad new system tools",
+                    "downloading heavy new models not already part of the approved stack",
+                    "enabling code mutation that touches core household behavior",
+                    "widening network access or connector scope",
+                    "changing financial, family, health, child, or legal operating rules",
+                    "modifying approval thresholds or review posture",
+                    "promoting a sandbox capability into mature live authority",
+                    "changing outward identity-bearing communication behavior",
+                    "introducing new long-running daemons beyond standing system policy",
+                ],
+            },
+            "constitutionally_locked": {
+                "summary": "These are off-limits unless explicitly unlocked by a human principal.",
+                "forbidden": [
+                    "family-serving charter",
+                    "principal identity and authority definitions",
+                    "guardian independence",
+                    "audit logging requirements",
+                    "rollback and recovery posture",
+                    "constitutional hard boundaries",
+                    "trust-zone outer walls",
+                    "silent authority expansion",
+                    "silent deletion of meaningful historical evidence",
+                    "removal of review from high-consequence domains",
+                ],
+            },
+            "faithful_growth_tests": [
+                "family trust increases",
+                "recovery improves",
+                "friction decreases",
+                "clarity increases",
+                "authority remains proportionate",
+                "the system becomes easier to inspect, not harder",
+                "failures become more containable over time",
+            ],
+            "promotion_path": [
+                "observe",
+                "draft",
+                "sandbox or worktree mutation",
+                "reviewed promotion",
+                "live bounded mutation",
+            ],
+            "mutation_routes": [
+                {
+                    "route": "auto-execute",
+                    "summary": "JARVIS may apply the change directly in the live system when it remains bounded, logged, recoverable, and does not widen authority.",
+                },
+                {
+                    "route": "sandbox/worktree-only",
+                    "summary": "JARVIS may build and validate the change aggressively, but only inside isolated staging lanes before any live promotion.",
+                },
+                {
+                    "route": "approval-required",
+                    "summary": "JARVIS may prepare the mutation, rationale, and validation path, but a principal must approve live execution.",
+                },
+                {
+                    "route": "constitutionally-blocked",
+                    "summary": "JARVIS may not execute this mutation without an explicit constitutional unlock from a human principal.",
+                },
+            ],
+        }
+
+    def _self_mutation_route_catalog(self) -> dict[str, dict[str, str]]:
+        constitution = self.self_mutation_constitution_snapshot()
+        catalog = {}
+        for item in list(constitution.get("mutation_routes", [])):
+            route = str(item.get("route", "")).strip()
+            if route:
+                catalog[route] = {
+                    "route": route,
+                    "summary": str(item.get("summary", "")).strip(),
+                }
+        return catalog
+
+    def _classify_self_mutation_route(self, candidate: dict[str, Any]) -> dict[str, Any]:
+        title = str(candidate.get("title", "")).strip().lower()
+        summary = str(candidate.get("summary", "")).strip().lower()
+        target = str(candidate.get("target", "")).strip().lower()
+        job_type = str(candidate.get("job_type", "")).strip().lower()
+        source = str(candidate.get("source", "")).strip().lower()
+        evidence = dict(candidate.get("evidence", {}) or {})
+        heavy = bool(evidence.get("heavy"))
+        combined = " ".join(part for part in (title, summary, target, job_type, source) if part)
+        catalog = self._self_mutation_route_catalog()
+
+        blocked_terms = (
+            "guardian",
+            "charter",
+            "constitution",
+            "audit spine",
+            "rollback",
+            "trust-zone",
+            "trust zone",
+            "principal identity",
+            "authority definition",
+        )
+        if any(term in combined for term in blocked_terms):
+            route = "constitutionally-blocked"
+            return {
+                **catalog.get(route, {"route": route, "summary": ""}),
+                "reason": "This job touches a constitutionally locked surface such as guardian independence, charter boundaries, audit spine, or trust walls.",
+                "execution_allowed": False,
+                "requires_sandbox": False,
+                "requires_approval": False,
+                "blocked": True,
+            }
+
+        if job_type == "sync-ollama-model":
+            if heavy or source == "recommended-upgrade":
+                route = "approval-required"
+                return {
+                    **catalog.get(route, {"route": route, "summary": ""}),
+                    "reason": "Heavy or non-configured model downloads may be prepared automatically, but live installation requires explicit approval.",
+                    "execution_allowed": False,
+                    "requires_sandbox": False,
+                    "requires_approval": True,
+                    "blocked": False,
+                }
+            route = "auto-execute"
+            return {
+                **catalog.get(route, {"route": route, "summary": ""}),
+                "reason": "This model is already part of the approved configured runtime stack, so sync is a bounded maintenance action.",
+                "execution_allowed": True,
+                "requires_sandbox": False,
+                "requires_approval": False,
+                "blocked": False,
+            }
+
+        if job_type == "review-repo-drift":
+            route = "auto-execute"
+            return {
+                **catalog.get(route, {"route": route, "summary": ""}),
+                "reason": "Refreshing repo drift is inspect-only maintenance and does not widen authority or mutate live behavior on its own.",
+                "execution_allowed": True,
+                "requires_sandbox": False,
+                "requires_approval": False,
+                "blocked": False,
+            }
+
+        if job_type in {"stage-runtime-repair", "stage-code-repair", "stage-refactor", "stage-agent-build"}:
+            route = "sandbox/worktree-only"
+            return {
+                **catalog.get(route, {"route": route, "summary": ""}),
+                "reason": "This mutation can be explored boldly, but only in an isolated worktree or sandbox before live promotion.",
+                "execution_allowed": False,
+                "requires_sandbox": True,
+                "requires_approval": False,
+                "blocked": False,
+            }
+
+        if job_type in {"resolve-tool-gap", "install-tool", "install-dependency", "enable-connector", "new-daemon"}:
+            route = "approval-required"
+            return {
+                **catalog.get(route, {"route": route, "summary": ""}),
+                "reason": "Broad tooling, dependency, connector, or daemon changes widen system capability and require explicit principal approval.",
+                "execution_allowed": False,
+                "requires_sandbox": False,
+                "requires_approval": True,
+                "blocked": False,
+            }
+
+        route = "sandbox/worktree-only"
+        return {
+            **catalog.get(route, {"route": route, "summary": ""}),
+            "reason": "Unknown or broader self-mutation work defaults to isolated staging rather than silent live execution.",
+            "execution_allowed": False,
+            "requires_sandbox": True,
+            "requires_approval": False,
+            "blocked": False,
+        }
+
+    def operating_policy_snapshot(self) -> dict[str, Any]:
+        return {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "model_routing": self.model_routing_policy_snapshot(),
+            "autonomy": self.autonomy_policy_snapshot(),
+            "self_mutation_constitution": self.self_mutation_constitution_snapshot(),
+            "lifecycle": {
+                "stages": [
+                    {
+                        "stage": WorkLifecycleStage.SIGNAL.value,
+                        "summary": "A signal or observation was captured but not yet shaped into an explicit opportunity.",
+                    },
+                    {
+                        "stage": WorkLifecycleStage.HYPOTHESIS.value,
+                        "summary": "An opportunity or intervention idea exists and can be reviewed or promoted.",
+                    },
+                    {
+                        "stage": WorkLifecycleStage.PROJECT_BRIEF.value,
+                        "summary": "The idea has been framed into a scoped project brief.",
+                    },
+                    {
+                        "stage": WorkLifecycleStage.IMPLEMENTATION_PLAN.value,
+                        "summary": "The work now has explicit next actions and dependencies.",
+                    },
+                    {
+                        "stage": WorkLifecycleStage.STAGED_ACTION.value,
+                        "summary": "Execution is staged and waiting on a human decision or a later autonomous pass.",
+                    },
+                    {
+                        "stage": WorkLifecycleStage.REVIEW.value,
+                        "summary": "A review loop or approval decision is due now.",
+                    },
+                    {
+                        "stage": WorkLifecycleStage.OUTCOME.value,
+                        "summary": "An action completed and its outcome should feed doctrine and future routing.",
+                    },
+                ],
+                "canonical_flow": [
+                    WorkLifecycleStage.SIGNAL.value,
+                    WorkLifecycleStage.HYPOTHESIS.value,
+                    WorkLifecycleStage.PROJECT_BRIEF.value,
+                    WorkLifecycleStage.IMPLEMENTATION_PLAN.value,
+                    WorkLifecycleStage.STAGED_ACTION.value,
+                    WorkLifecycleStage.REVIEW.value,
+                    WorkLifecycleStage.OUTCOME.value,
+                ],
+            },
+        }
 
     def _suggested_packet_for_item(self, item: dict | None) -> str:
         item = dict(item or {})
@@ -3078,9 +5565,15 @@ class JarvisRuntime:
     def assistant_core_tick(self, actor_name: str = "Chris", *, include_today_board: bool = True) -> dict:
         actor = self.get_actor(actor_name)
         open_loops = self.unified_open_loops(actor.display_name, limit=18)
-        today_board = self.today_board(actor.display_name) if include_today_board else {}
-        world_state = self.world_state_snapshot(actor.display_name, open_loops=open_loops, persist=True)
         cognitive = self.cognitive_snapshot(actor.display_name, include_graph=False, open_loops=open_loops)
+        today_board = (
+            self.today_board(actor.display_name, open_loops=open_loops, cognition=cognitive)
+            if include_today_board
+            else {}
+        )
+        world_state = dict(cognitive.get("world_state") or {})
+        if not world_state:
+            world_state = self.world_state_snapshot(actor.display_name, open_loops=open_loops, persist=False)
         deliberation = dict(cognitive.get("deliberation") or {})
         decision = str(deliberation.get("decision", "hold")).strip().lower()
         summary = dict(open_loops.get("summary", {}))
@@ -3146,6 +5639,349 @@ class JarvisRuntime:
             "sweep": sweep,
             "should_surface": should_surface,
             "notifications": self.assistant_notifications(actor.display_name, limit=6),
+        }
+
+    def shell_state_snapshot(self, actor_name: str = "Chris") -> dict:
+        def builder() -> dict:
+            actor = self.get_actor(actor_name)
+            active_mode = self.family_support.active_mode()
+            home_overview = self.home_overview()
+            cold_storage = self.cold_storage_monitor()
+            overnight_review = self.overnight_review()
+            open_loops = self.unified_open_loops(actor.display_name, limit=18)
+            visible_keys = {
+                self._open_loop_key(str(item.get("domain", "")), str(item.get("item_id", "")))
+                for item in list(open_loops.get("items", []))
+            }
+            assistant_notifications = self.assistant_notifications(
+                actor.display_name,
+                limit=6,
+                visible_keys=visible_keys,
+            )
+
+            def card_payload(card) -> dict:
+                return {
+                    "title": card.title,
+                    "status": card.status,
+                    "summary": card.summary,
+                    "details": list(card.details),
+                }
+
+            return {
+                "location": self.household.location_label,
+                "truth": {
+                    "weather_live": False,
+                    "mission_live": False,
+                    "home_live": home_overview.get("mode") == "live",
+                    "watch_live": cold_storage.get("mode") == "live",
+                },
+                "active_mode": {
+                    "mode": active_mode.mode,
+                    "status": active_mode.status,
+                    "reason": active_mode.reason,
+                    "actor": active_mode.actor,
+                    "timestamp": active_mode.timestamp,
+                },
+                "cards": {
+                    "body": card_payload(self.snapshot.body),
+                    "home": card_payload(self.snapshot.home),
+                    "mission": card_payload(self.snapshot.mission),
+                },
+                "assistant_surface": {
+                    "signal_chips": list(open_loops.get("surface_chips", [])),
+                    "briefing_lines": list(open_loops.get("briefing_lines", [])),
+                    "auto_open_packet": str(open_loops.get("auto_open_packet", "")),
+                    "surface_key": str(open_loops.get("surface_key", "")),
+                    "top_item": open_loops.get("top_item"),
+                },
+                "assistant_notifications": assistant_notifications,
+                "home_overview": home_overview,
+                "cold_storage_monitor": cold_storage,
+                "overnight_review": overnight_review,
+                "brain_graph": self.brain_graph_snapshot(),
+            }
+
+        return self._cached_surface("shell_state", actor_name, builder)
+
+    def shell_state_actor_names(self) -> list[str]:
+        adults = [
+            profile.display_name
+            for profile in self.household.users.values()
+            if str(profile.permissions).strip().lower() == "adult"
+        ]
+        if adults:
+            return adults
+        names = [profile.display_name for profile in self.household.users.values()]
+        return names or ["Chris"]
+
+    def prewarm_shell_state(
+        self,
+        actors: list[str] | None = None,
+        *,
+        include_today_board: bool = False,
+        include_dashboard: bool = False,
+    ) -> dict:
+        actor_names = actors or self.shell_state_actor_names()
+        started = time.perf_counter()
+        weather = self.storm_weather_snapshot(force=False)
+        warmed: list[dict] = []
+        for actor_name in actor_names:
+            actor_started = time.perf_counter()
+            shell_remaining = self._surface_cache_remaining_seconds("shell_state", actor_name)
+            if shell_remaining is None or shell_remaining <= 10:
+                self._invalidate_snapshot_cache(actor_name, surfaces=("shell_state",))
+            shell_state = self.shell_state_snapshot(actor_name)
+            result: dict[str, object] = {
+                "actor": actor_name,
+                "shell_state_cached": bool((shell_state.get("freshness") or {}).get("cached")),
+                "shell_state_remaining_seconds": None if shell_remaining is None else round(shell_remaining, 3),
+            }
+            if include_today_board:
+                tick = self.assistant_core_tick(actor_name, include_today_board=True)
+                result["today_board_cached"] = bool(((tick.get("today_board") or {}).get("freshness") or {}).get("cached"))
+            if include_dashboard:
+                dashboard = self.dashboard_snapshot(actor_name)
+                result["dashboard_cached"] = bool((dashboard.get("freshness") or {}).get("cached"))
+            result["elapsed_ms"] = round((time.perf_counter() - actor_started) * 1000, 1)
+            warmed.append(result)
+        return {
+            "ok": True,
+            "actors": actor_names,
+            "weather_live": bool(weather.get("live")),
+            "warmed": warmed,
+            "elapsed_ms": round((time.perf_counter() - started) * 1000, 1),
+        }
+
+    def proactive_state_snapshot(self, actor_name: str = "Chris") -> dict:
+        def builder() -> dict:
+            actor = self.get_actor(actor_name)
+            active_mode = self.family_support.active_mode()
+            open_loops = self.unified_open_loops(actor.display_name, limit=18)
+            first_light = self.first_light_store.latest_packet(actor.user_id) or {}
+            visible_keys = {
+                self._open_loop_key(str(item.get("domain", "")), str(item.get("item_id", "")))
+                for item in list(open_loops.get("items", []))
+            }
+            notifications = self.assistant_notifications(actor.display_name, limit=8, visible_keys=visible_keys)
+            approval_items: list[dict] = []
+            for item in self.list_pending_approvals():
+                approval_actor = str(item.get("actor", "")).strip()
+                if not self._open_loop_visible_to_actor(actor, domain="approvals", item_actor=approval_actor):
+                    continue
+                approval_items.append(
+                    {
+                        "request_id": str(item.get("request_id", "")).strip(),
+                        "actor": approval_actor,
+                        "title": str(item.get("request", "Approval required")).strip() or "Approval required",
+                        "summary": str(item.get("rationale", "")).strip(),
+                        "status": str(item.get("status", "pending")).strip() or "pending",
+                        "timestamp": str(item.get("timestamp", "") or item.get("created_at", "")).strip(),
+                    }
+                )
+                if len(approval_items) >= 6:
+                    break
+
+            top_item = dict(open_loops.get("top_item") or {})
+            top_packet = str(open_loops.get("auto_open_packet", "")).strip() or "today"
+            briefing_lines = [str(line).strip() for line in list(open_loops.get("briefing_lines", [])) if str(line).strip()]
+            first_light_lines = [str(line).strip() for line in list(first_light.get("first_20_minutes", [])) if str(line).strip()]
+            summary = dict(open_loops.get("summary", {}))
+            carry_lines: list[str] = []
+            if int(summary.get("waiting_on_you", 0) or 0):
+                carry_lines.append(f"{int(summary.get('waiting_on_you', 0) or 0)} item(s) are waiting on your decision.")
+            if int(summary.get("needs_revisit", 0) or 0):
+                carry_lines.append(f"{int(summary.get('needs_revisit', 0) or 0)} item(s) should be brought back into view soon.")
+            if not carry_lines:
+                carry_lines.append("The queue is under control and JARVIS can stay quiet until needed.")
+            voice_lines = _merge_unique(briefing_lines, carry_lines, limit=3)
+            if not voice_lines:
+                voice_lines = _merge_unique(carry_lines, first_light_lines, limit=3)
+            if not voice_lines:
+                voice_lines = ["JARVIS is maintaining the queue quietly until you need it."]
+
+            priorities = [
+                {
+                    "title": str(item.get("title", "Open loop")).strip() or "Open loop",
+                    "owner_agent": str(item.get("owner_agent", "JARVIS")).strip() or "JARVIS",
+                    "next_action": str(item.get("next_action", "follow up")).strip() or "follow up",
+                    "status": str(item.get("status", "open")).strip() or "open",
+                }
+                for item in list(open_loops.get("items", []))[:3]
+            ]
+            headline = str(top_item.get("title", "")).strip() or str((priorities[0] if priorities else {}).get("title", "")).strip() or "JARVIS has the next move staged."
+            summary = str(top_item.get("why_this_surfaced_now", "")).strip() or (voice_lines[0] if voice_lines else "JARVIS has the next move staged.")
+            approval_count = len(approval_items)
+            notification_summary = dict(notifications.get("summary") or {})
+            unread_count = int(notification_summary.get("unread", 0) or 0)
+            quiet_hours_active = self._quiet_hours_active()
+            mode_name = str(active_mode.mode).strip() or "steady-state"
+
+            briefing_packet = {
+                "headline": headline,
+                "summary": summary,
+                "lines": voice_lines,
+                "priorities": priorities,
+                "first_light": first_light_lines[:3],
+                "recommended_packet": top_packet,
+                "active_mode": {
+                    "mode": mode_name,
+                    "status": active_mode.status,
+                    "reason": active_mode.reason,
+                },
+            }
+            approval_queue = {
+                "headline": f"{approval_count} approval item(s) waiting" if approval_count else "No approval bottleneck right now",
+                "summary": (
+                    f"{approval_count} item(s) still need an explicit yes/no before they can move."
+                    if approval_count
+                    else "Approval pressure is light, so JARVIS can keep movement quiet."
+                ),
+                "count": approval_count,
+                "items": approval_items,
+            }
+            notification_items = [
+                {
+                    "notification_id": str(item.get("notification_id", "")).strip(),
+                    "title": str(item.get("title", "Assistant follow-up")).strip() or "Assistant follow-up",
+                    "detail": str(item.get("detail", "")).strip(),
+                    "packet": str(item.get("packet", "")).strip(),
+                    "priority_class": str(item.get("priority_class", "normal")).strip() or "normal",
+                    "interrupt_eligible": bool(item.get("interrupt_eligible")),
+                    "why_this_surfaced_now": str(item.get("why_this_surfaced_now", "")).strip(),
+                }
+                for item in list(notifications.get("items", []))[:5]
+            ]
+            interrupt_items = [
+                item
+                for item in notification_items
+                if item.get("interrupt_eligible") and not quiet_hours_active
+            ][:3]
+            interrupt_count = len(interrupt_items)
+            notification_packet = {
+                "headline": f"{unread_count} unread assistant item(s)" if unread_count else "Assistant inbox is quiet",
+                "summary": (
+                    f"{interrupt_count} item(s) are interrupt-eligible right now."
+                    if interrupt_count
+                    else "Nothing currently warrants interruption."
+                ),
+                "unread_count": unread_count,
+                "interrupt_count": interrupt_count,
+                "items": notification_items,
+                "interrupt_items": interrupt_items,
+            }
+
+            voice_text = " ".join(
+                [
+                    f"{mode_name.replace('-', ' ')}.",
+                    *(voice_lines[:2]),
+                    approval_queue["headline"] + ".",
+                    notification_packet["headline"] + ".",
+                ]
+            ).strip()
+            glance_items = _merge_unique(
+                [headline, approval_queue["headline"], notification_packet["headline"]],
+                voice_lines,
+                limit=4,
+            )
+            action_targets = [top_packet]
+            if approval_count:
+                action_targets.append("approvals")
+            if unread_count:
+                action_targets.append("review" if any(str(item.get("packet", "")).strip() == "review" for item in notification_items) else "tasks")
+            action_targets = _merge_unique(action_targets, [], limit=3)
+
+            clients = {
+                "voice": {
+                    "mode": "audio",
+                    "headline": headline,
+                    "utterance": voice_text,
+                    "recommended_packet": top_packet,
+                    "action_targets": action_targets,
+                },
+                "watch": {
+                    "mode": "glance",
+                    "headline": headline,
+                    "glance_items": glance_items[:3],
+                    "badge_count": approval_count + unread_count,
+                    "recommended_packet": top_packet,
+                },
+                "phone": {
+                    "mode": "compact-rich",
+                    "headline": headline,
+                    "summary": summary,
+                    "cards": [briefing_packet, approval_queue, notification_packet],
+                    "recommended_packet": top_packet,
+                },
+                "carplay": {
+                    "mode": "driving-safe",
+                    "headline": headline,
+                    "utterance": " ".join([headline, approval_queue["headline"], notification_packet["headline"]]).strip(),
+                    "glance_items": glance_items[:2],
+                    "recommended_packet": top_packet,
+                },
+                "vision": {
+                    "mode": "spatial-rich",
+                    "headline": headline,
+                    "summary": summary,
+                    "panels": [briefing_packet, approval_queue, notification_packet],
+                    "recommended_packet": top_packet,
+                },
+                "tv": {
+                    "mode": "ambient-large",
+                    "headline": headline,
+                    "summary": summary,
+                    "panels": [briefing_packet, approval_queue, notification_packet],
+                    "recommended_packet": top_packet,
+                },
+                "hud": {
+                    "mode": "ambient-glance",
+                    "headline": headline,
+                    "signal_chips": list(open_loops.get("surface_chips", []))[:4],
+                    "glance_items": glance_items[:3],
+                    "recommended_packet": top_packet,
+                },
+            }
+
+            return {
+                "actor": actor.display_name,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "active_mode": {
+                    "mode": mode_name,
+                    "status": active_mode.status,
+                    "reason": active_mode.reason,
+                    "timestamp": active_mode.timestamp,
+                },
+                "briefing_packet": briefing_packet,
+                "approval_queue": approval_queue,
+                "notification_summary": notification_packet,
+                "clients": clients,
+            }
+
+        return self._cached_surface("proactive_state", actor_name, builder)
+
+    def prewarm_proactive_state(self, actors: list[str] | None = None) -> dict:
+        actor_names = actors or self.shell_state_actor_names()
+        started = time.perf_counter()
+        warmed: list[dict] = []
+        for actor_name in actor_names:
+            actor_started = time.perf_counter()
+            remaining = self._surface_cache_remaining_seconds("proactive_state", actor_name)
+            if remaining is None or remaining <= 30:
+                self._invalidate_snapshot_cache(actor_name, surfaces=("proactive_state",))
+            payload = self.proactive_state_snapshot(actor_name)
+            warmed.append(
+                {
+                    "actor": actor_name,
+                    "cached": bool((payload.get("freshness") or {}).get("cached")),
+                    "remaining_seconds": None if remaining is None else round(remaining, 3),
+                    "elapsed_ms": round((time.perf_counter() - actor_started) * 1000, 1),
+                }
+            )
+        return {
+            "ok": True,
+            "actors": actor_names,
+            "warmed": warmed,
+            "elapsed_ms": round((time.perf_counter() - started) * 1000, 1),
         }
 
     def assistant_notifications(
@@ -3252,7 +6088,7 @@ class JarvisRuntime:
             device_id=device_id.strip(),
             timing_quality=self._notification_timing_quality(record, normalized_status),
         )
-        self._invalidate_snapshot_cache(actor.display_name)
+        self._invalidate_snapshot_cache(actor.display_name, surfaces=("shared_doctrine", "dashboard", "shell_state", "proactive_state", "today_board", "cognitive"))
         return {
             "ok": True,
             "actor": actor.display_name,
@@ -3278,7 +6114,7 @@ class JarvisRuntime:
             device_id=device_id.strip(),
             timing_quality=self._notification_timing_quality(record, "surfaced"),
         )
-        self._invalidate_snapshot_cache(actor.display_name)
+        self._invalidate_snapshot_cache(actor.display_name, surfaces=("shared_doctrine", "dashboard", "shell_state", "proactive_state", "today_board", "cognitive"))
         return {
             "ok": True,
             "actor": actor.display_name,
@@ -3303,6 +6139,7 @@ class JarvisRuntime:
         runs: list[dict] = []
         notifications: list[dict] = []
         executed_actions: list[dict] = []
+        maintenance = self.background_self_improvement_run(actor_names[0] if actor_names else "Chris")
         for actor_name in actor_names:
             self._invalidate_snapshot_cache(actor_name)
             previous_sweep = self.assistant_core_store.sweep_record(actor_name) or {}
@@ -3367,6 +6204,22 @@ class JarvisRuntime:
                             caused_friction=not succeeded,
                             friction_reason="" if succeeded else result_summary,
                         )
+                        self.catalyst_support.transition_work_item(
+                            actor=actor_name,
+                            title=str(top_item.get("title", "")).strip() or str(action_id).strip() or "Assistant action",
+                            domain=domain or "general",
+                            lane=str(top_item.get("lane", "")).strip() or str(self._task_lane_for_domain(domain).get("lane", "")).strip() or "general-operations",
+                            owner_agent=str(top_item.get("owner_agent", "")).strip() or str(self._task_lane_for_domain(domain).get("owner_agent", "")).strip() or "JARVIS",
+                            stage=WorkLifecycleStage.OUTCOME,
+                            status="succeeded" if succeeded else "failed",
+                            artifact_type="assistant-action",
+                            source="assistant-autonomy",
+                            review_level=str(policy.get("summary", "")).strip() or "review-as-needed",
+                            rationale=result_summary,
+                            work_id=str(top_item.get("lifecycle_work_id", "")).strip() or item_id or str(uuid.uuid4()),
+                            record_id=item_id,
+                            metadata={"action": action_id, "decision": decision},
+                        )
                         actor_executed = succeeded
                         executed_actions.append(
                             {
@@ -3413,6 +6266,22 @@ class JarvisRuntime:
                             succeeded=False,
                             caused_friction=True,
                             friction_reason=failure_summary,
+                        )
+                        self.catalyst_support.transition_work_item(
+                            actor=actor_name,
+                            title=str(top_item.get("title", "")).strip() or str(action_id).strip() or "Assistant action",
+                            domain=domain or "general",
+                            lane=str(top_item.get("lane", "")).strip() or str(self._task_lane_for_domain(domain).get("lane", "")).strip() or "general-operations",
+                            owner_agent=str(top_item.get("owner_agent", "")).strip() or str(self._task_lane_for_domain(domain).get("owner_agent", "")).strip() or "JARVIS",
+                            stage=WorkLifecycleStage.OUTCOME,
+                            status="failed",
+                            artifact_type="assistant-action",
+                            source="assistant-autonomy",
+                            review_level=str(policy.get("summary", "")).strip() or "review-as-needed",
+                            rationale=failure_summary,
+                            work_id=str(top_item.get("lifecycle_work_id", "")).strip() or item_id or str(uuid.uuid4()),
+                            record_id=item_id,
+                            metadata={"action": action_id, "decision": decision},
                         )
             if actor_executed:
                 tick = self.assistant_core_tick(actor_name, include_today_board=False)
@@ -3518,12 +6387,20 @@ class JarvisRuntime:
                 }
             )
             self._invalidate_snapshot_cache(actor_name)
+        prewarm = self.prewarm_shell_state(actor_names, include_today_board=False, include_dashboard=False)
+        proactive_prewarm = self.prewarm_proactive_state(actor_names)
+        doctrine = self.synthesize_shared_doctrine(auto_promote=True, promoted_by="assistant-autonomy")
         return {
             "ok": True,
             "generated_at": datetime.now(timezone.utc).isoformat(),
+            "actors": actor_names,
+            "maintenance": maintenance,
             "runs": runs,
             "notifications_created": notifications,
             "executed_actions": executed_actions,
+            "prewarm": prewarm,
+            "proactive_prewarm": proactive_prewarm,
+            "doctrine": doctrine,
         }
 
     def today_board(
@@ -3543,10 +6420,10 @@ class JarvisRuntime:
             calendar = self._actor_calendar_events(actor, limit=6)
             first_light = self.first_light_store.latest_packet(actor.user_id) or {}
             quiet_hours_active = self._quiet_hours_active()
-            board_cognition = cognition or self.cognitive_snapshot(
+            board_cognition = cognition or self._surface_cognition_snapshot(
                 actor.display_name,
-                include_graph=False,
-                open_loops=board_open_loops,
+                board_open_loops,
+                include_world_state=False,
             )
             growth = board_cognition.get("growth_state") or {}
             growth_guidance = self._growth_loop_guidance(
@@ -3637,10 +6514,10 @@ class JarvisRuntime:
         def builder() -> dict:
             actor = self.get_actor(actor_name)
             review_open_loops = open_loops or self.unified_open_loops(actor.display_name, limit=18)
-            review_cognition = cognition or self.cognitive_snapshot(
+            review_cognition = cognition or self._surface_cognition_snapshot(
                 actor.display_name,
-                include_graph=False,
-                open_loops=review_open_loops,
+                review_open_loops,
+                include_world_state=True,
             )
             cadence = dict(review_cognition.get("cadence") or {})
             growth = dict(review_cognition.get("growth_state") or {})
@@ -5935,6 +8812,493 @@ class JarvisRuntime:
             "weekly_review": self.marketing_state_snapshot(actor_name).get("weekly_review", {}),
         }
 
+    def _lifecycle_stage_rank(self, stage: WorkLifecycleStage | str) -> int:
+        order = {
+            WorkLifecycleStage.SIGNAL.value: 1,
+            WorkLifecycleStage.HYPOTHESIS.value: 2,
+            WorkLifecycleStage.PROJECT_BRIEF.value: 3,
+            WorkLifecycleStage.IMPLEMENTATION_PLAN.value: 4,
+            WorkLifecycleStage.STAGED_ACTION.value: 5,
+            WorkLifecycleStage.REVIEW.value: 6,
+            WorkLifecycleStage.OUTCOME.value: 7,
+        }
+        return order.get(str(stage), 0)
+
+    def _available_lifecycle_actions(self, item: dict[str, Any]) -> list[dict[str, Any]]:
+        stage = str(item.get("stage", item.get("current_stage", ""))).strip() or WorkLifecycleStage.SIGNAL.value
+        actions: list[dict[str, Any]] = []
+        if stage in {WorkLifecycleStage.SIGNAL.value, WorkLifecycleStage.HYPOTHESIS.value}:
+            actions.append({"id": "promote-to-brief", "label": "Promote to Brief", "variant": "primary", "confirm": False})
+            actions.append({"id": "archive", "label": "Archive", "variant": "quiet", "confirm": True})
+        elif stage == WorkLifecycleStage.PROJECT_BRIEF.value:
+            actions.append({"id": "build-plan", "label": "Build Plan", "variant": "primary", "confirm": False})
+            actions.append({"id": "archive", "label": "Archive", "variant": "quiet", "confirm": True})
+        elif stage in {WorkLifecycleStage.IMPLEMENTATION_PLAN.value, WorkLifecycleStage.STAGED_ACTION.value, WorkLifecycleStage.REVIEW.value}:
+            actions.extend(
+                [
+                    {"id": "mark-succeeded", "label": "Mark Succeeded", "variant": "primary", "confirm": False},
+                    {"id": "mark-deferred", "label": "Mark Deferred", "variant": "quiet", "confirm": False},
+                    {"id": "mark-failed", "label": "Mark Failed", "variant": "danger", "confirm": True},
+                    {"id": "mark-abandoned", "label": "Mark Abandoned", "variant": "danger", "confirm": True},
+                    {"id": "mark-learned", "label": "Mark Learned", "variant": "quiet", "confirm": False},
+                ]
+            )
+        elif stage == WorkLifecycleStage.OUTCOME.value:
+            actions.extend(
+                [
+                    {"id": "reopen", "label": "Reopen", "variant": "primary", "confirm": False},
+                    {"id": "clone-forward", "label": "Clone Forward", "variant": "quiet", "confirm": False},
+                ]
+            )
+        return actions
+
+    def _work_item_policy_posture(self, item: dict[str, Any]) -> dict[str, Any]:
+        domain = str(item.get("domain", "growth")).strip().lower() or "growth"
+        lane_info = self._task_lane_for_domain(domain)
+        threshold = self._approval_threshold_for_domain(domain)
+        return {
+            "domain": domain,
+            "lane": str(item.get("lane", "")).strip() or str(lane_info.get("lane", "")).strip() or "general-operations",
+            "owner_agent": str(item.get("owner_agent", "")).strip() or str(lane_info.get("owner_agent", "")).strip() or "JARVIS",
+            "review_level": str(item.get("review_level", "")).strip() or str(threshold.get("level", "")).strip() or "review-as-needed",
+            "approval_summary": str(threshold.get("summary", "")).strip() or "This item follows the default JARVIS review posture for its domain.",
+            "current_stage": str(item.get("stage", item.get("current_stage", ""))).strip() or WorkLifecycleStage.SIGNAL.value,
+        }
+
+    def _work_lifecycle_record(
+        self,
+        *,
+        work_id: str,
+        actor: str,
+        title: str,
+        domain: str,
+        lane: str,
+        owner_agent: str,
+        stage: WorkLifecycleStage,
+        status: str,
+        artifact_type: str,
+        source: str,
+        review_level: str,
+        rationale: str,
+        created_at: str,
+        updated_at: str,
+    ) -> dict[str, Any]:
+        return {
+            "work_id": work_id,
+            "actor": actor,
+            "title": title,
+            "domain": domain,
+            "lane": lane,
+            "owner_agent": owner_agent,
+            "stage": stage.value if isinstance(stage, WorkLifecycleStage) else str(stage),
+            "status": status,
+            "artifact_type": artifact_type,
+            "source": source,
+            "review_level": review_level,
+            "rationale": rationale,
+            "created_at": created_at,
+            "updated_at": updated_at,
+        }
+
+    def work_lifecycle_snapshot(self, actor_name: str = "Chris", limit: int = 28) -> dict[str, Any]:
+        actor = self.get_actor(actor_name)
+        actor_keys = {actor.display_name.strip().lower(), actor.user_id.strip().lower()}
+
+        def _matches_actor(record: dict[str, Any]) -> bool:
+            value = str(record.get("actor", "")).strip().lower()
+            return not value or value in actor_keys
+
+        lifecycle_items = [item for item in self.catalyst_support.work_lifecycle(limit=120, actor=actor.display_name) if _matches_actor(item)]
+        approvals = [item for item in self.list_pending_approvals() if _matches_actor(item)]
+        outcomes = [item for item in self.audit_log.list_recent(limit=18, entry_type="assistant-action") if _matches_actor(item)]
+
+        records: list[dict[str, Any]] = [
+            {
+                "work_id": str(item.get("work_id", "")).strip() or str(uuid.uuid4()),
+                "actor": str(item.get("actor", actor.display_name)).strip() or actor.display_name,
+                "title": str(item.get("title", "")).strip() or "Untitled work item",
+                "domain": str(item.get("domain", "growth")).strip() or "growth",
+                "lane": str(item.get("lane", "general-operations")).strip() or "general-operations",
+                "owner_agent": str(item.get("owner_agent", "JARVIS")).strip() or "JARVIS",
+                "stage": str(item.get("current_stage", item.get("stage", ""))).strip() or WorkLifecycleStage.SIGNAL.value,
+                "status": str(item.get("status", "open")).strip() or "open",
+                "artifact_type": str(item.get("artifact_type", "artifact")).strip() or "artifact",
+                "source": str(item.get("source", "manual")).strip() or "manual",
+                "review_level": str(item.get("review_level", "review-as-needed")).strip() or "review-as-needed",
+                "rationale": str(item.get("rationale", "")).strip(),
+                "created_at": str(item.get("created_at", "")).strip(),
+                "updated_at": str(item.get("updated_at", "")).strip(),
+                "artifact_refs": [dict(ref) for ref in list(item.get("artifact_refs", [])) if isinstance(ref, dict)],
+                "transitions": [dict(ref) for ref in list(item.get("transitions", [])) if isinstance(ref, dict)],
+            }
+            for item in lifecycle_items
+        ]
+
+        existing_work_ids = {str(item.get("work_id", "")).strip() for item in records}
+
+        for item in approvals:
+            domain = str(item.get("domain", "")).strip().lower() or "approvals"
+            lane_info = self._task_lane_for_domain(domain)
+            threshold = self._approval_threshold_for_domain(domain)
+            timestamp = str(item.get("timestamp", "")).strip() or str(item.get("updated_at", "")).strip()
+            work_id = str(item.get("lifecycle_work_id", "")).strip() or str(item.get("request_id", "")).strip() or str(uuid.uuid4())
+            if work_id in existing_work_ids:
+                continue
+            records.append(
+                self._work_lifecycle_record(
+                    work_id=work_id,
+                    actor=actor.display_name,
+                    title=str(item.get("request", "")).strip()[:96] or "Approval required",
+                    domain=domain,
+                    lane=str(lane_info.get("lane", "")).strip() or "decision-command",
+                    owner_agent=str(lane_info.get("owner_agent", "")).strip() or "Nick Fury",
+                    stage=WorkLifecycleStage.REVIEW,
+                    status=str(item.get("status", "pending")).strip() or "pending",
+                    artifact_type="approval",
+                    source="approval-store",
+                    review_level=str(threshold.get("level", "decision-required")).strip() or "decision-required",
+                    rationale=str(threshold.get("summary", "")).strip() or "This item requires an explicit human decision.",
+                    created_at=timestamp,
+                    updated_at=timestamp,
+                )
+            )
+            existing_work_ids.add(work_id)
+
+        for item in outcomes:
+            domain = str(item.get("domain", "")).strip().lower() or "general"
+            lane_info = self._task_lane_for_domain(domain)
+            work_id = str(item.get("work_id", "")).strip() or str(item.get("item_id", "")).strip() or str(uuid.uuid4())
+            if work_id in existing_work_ids:
+                continue
+            records.append(
+                self._work_lifecycle_record(
+                    work_id=work_id,
+                    actor=str(item.get("actor", actor.display_name)).strip() or actor.display_name,
+                    title=str(item.get("action", "")).strip() or "Assistant action",
+                    domain=domain,
+                    lane=str(lane_info.get("lane", "")).strip() or "general-operations",
+                    owner_agent=str(lane_info.get("owner_agent", "")).strip() or "JARVIS",
+                    stage=WorkLifecycleStage.OUTCOME,
+                    status="succeeded" if item.get("succeeded") is True else "failed" if item.get("succeeded") is False else "recorded",
+                    artifact_type="assistant-action",
+                    source="audit-log",
+                    review_level=str(item.get("policy_basis", "")).strip() or "review-as-needed",
+                    rationale=str(item.get("result_summary", "")).strip() or str(item.get("detail", "")).strip() or "Outcome logged for future doctrine and routing.",
+                    created_at=str(item.get("timestamp", "")).strip(),
+                    updated_at=str(item.get("timestamp", "")).strip(),
+                )
+            )
+            existing_work_ids.add(work_id)
+
+        records.sort(
+            key=lambda item: (
+                self._parse_timestamp(str(item.get("updated_at", "")).strip()) or datetime.min.replace(tzinfo=timezone.utc),
+                self._lifecycle_stage_rank(str(item.get("stage", ""))),
+            ),
+            reverse=True,
+        )
+
+        stage_counts: dict[str, int] = {}
+        for item in records:
+            stage = str(item.get("stage", "")).strip() or "unknown"
+            stage_counts[stage] = stage_counts.get(stage, 0) + 1
+
+        return {
+            "actor": actor.display_name,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "stage_counts": stage_counts,
+            "records": records[:limit],
+            "summary": {
+                "open_reviews": stage_counts.get(WorkLifecycleStage.REVIEW.value, 0),
+                "staged_hypotheses": stage_counts.get(WorkLifecycleStage.HYPOTHESIS.value, 0),
+                "ready_plans": stage_counts.get(WorkLifecycleStage.IMPLEMENTATION_PLAN.value, 0),
+                "recent_outcomes": stage_counts.get(WorkLifecycleStage.OUTCOME.value, 0),
+            },
+        }
+
+    def _work_lifecycle_item(self, actor_name: str, work_id: str) -> dict[str, Any] | None:
+        normalized_work_id = str(work_id).strip()
+        if not normalized_work_id:
+            return None
+        stored = self.catalyst_support.store.get_work_item(normalized_work_id)
+        if stored:
+            return {
+                "work_id": normalized_work_id,
+                "actor": str(stored.get("actor", actor_name)).strip() or actor_name,
+                "title": str(stored.get("title", "")).strip() or "Untitled work item",
+                "domain": str(stored.get("domain", "growth")).strip() or "growth",
+                "lane": str(stored.get("lane", "general-operations")).strip() or "general-operations",
+                "owner_agent": str(stored.get("owner_agent", "JARVIS")).strip() or "JARVIS",
+                "stage": str(stored.get("current_stage", stored.get("stage", ""))).strip() or WorkLifecycleStage.SIGNAL.value,
+                "status": str(stored.get("status", "open")).strip() or "open",
+                "artifact_type": str(stored.get("artifact_type", "artifact")).strip() or "artifact",
+                "source": str(stored.get("source", "manual")).strip() or "manual",
+                "review_level": str(stored.get("review_level", "review-as-needed")).strip() or "review-as-needed",
+                "rationale": str(stored.get("rationale", "")).strip(),
+                "created_at": str(stored.get("created_at", "")).strip(),
+                "updated_at": str(stored.get("updated_at", "")).strip(),
+                "artifact_refs": [dict(ref) for ref in list(stored.get("artifact_refs", [])) if isinstance(ref, dict)],
+                "transitions": [dict(ref) for ref in list(stored.get("transitions", [])) if isinstance(ref, dict)],
+            }
+        snapshot = self.work_lifecycle_snapshot(actor_name, limit=120)
+        for item in list(snapshot.get("records", [])):
+            if str(item.get("work_id", "")).strip() == normalized_work_id:
+                return dict(item)
+        return None
+
+    def work_lifecycle_inspector_snapshot(self, actor_name: str, work_id: str) -> dict[str, Any]:
+        item = self._work_lifecycle_item(actor_name, work_id)
+        if item is None:
+            raise KeyError("Work item not found.")
+        artifact_refs = [dict(ref) for ref in list(item.get("artifact_refs", [])) if isinstance(ref, dict)]
+        resolved_artifacts = [
+            self.resolve_work_lifecycle_artifact(actor_name, str(item.get("work_id", "")).strip(), str(ref.get("record_id", "")).strip())
+            for ref in artifact_refs
+            if str(ref.get("record_id", "")).strip()
+        ]
+        transitions = [dict(entry) for entry in list(item.get("transitions", [])) if isinstance(entry, dict)]
+        origin = transitions[0] if transitions else {}
+        contributors = []
+        seen_contributors: set[str] = set()
+        for entry in transitions:
+            label = str(entry.get("owner_agent", "")).strip() or str((entry.get("metadata") or {}).get("source_agent", "")).strip()
+            if label and label not in seen_contributors:
+                seen_contributors.add(label)
+                contributors.append(label)
+        return {
+            "ok": True,
+            "work_id": str(item.get("work_id", "")).strip(),
+            "item": item,
+            "available_actions": self._available_lifecycle_actions(item),
+            "policy_posture": self._work_item_policy_posture(item),
+            "origin": {
+                "source": str(origin.get("source", "")).strip() or str(item.get("source", "")).strip() or "manual",
+                "rationale": str(origin.get("rationale", "")).strip() or str(item.get("rationale", "")).strip(),
+                "timestamp": str(origin.get("timestamp", "")).strip() or str(item.get("created_at", "")).strip(),
+                "owner_agent": str(origin.get("owner_agent", "")).strip() or str(item.get("owner_agent", "")).strip(),
+            },
+            "contributors": contributors,
+            "artifacts": resolved_artifacts,
+        }
+
+    def resolve_work_lifecycle_artifact(self, actor_name: str, work_id: str, record_id: str = "") -> dict[str, Any]:
+        item = self._work_lifecycle_item(actor_name, work_id)
+        if item is None:
+            raise KeyError("Work item not found.")
+        refs = [dict(ref) for ref in list(item.get("artifact_refs", [])) if isinstance(ref, dict)]
+        chosen_ref = None
+        if record_id.strip():
+            chosen_ref = next((ref for ref in refs if str(ref.get("record_id", "")).strip() == record_id.strip()), None)
+        if chosen_ref is None and refs:
+            chosen_ref = refs[-1]
+        if chosen_ref is None:
+            return {
+                "ok": False,
+                "message": "No linked artifacts are attached to this work item yet.",
+                "work_id": str(item.get("work_id", "")).strip(),
+                "work_item": item,
+            }
+
+        artifact_type = str(chosen_ref.get("artifact_type", "")).strip() or str(item.get("artifact_type", "artifact")).strip() or "artifact"
+        resolved_record_id = str(chosen_ref.get("record_id", "")).strip()
+        artifact = self.catalyst_support.store.resolve_artifact(artifact_type, resolved_record_id)
+        if artifact is None and artifact_type in {"approval", "approval-decision", "approval-request"}:
+            approval_pool = self.list_pending_approvals() + self.approval_history()
+            artifact = next((entry for entry in approval_pool if str(entry.get("request_id", "")).strip() == resolved_record_id), None)
+        if artifact is None and artifact_type in {"message-draft", "email-draft"}:
+            artifact = next((entry for entry in self.list_message_drafts(limit=200) if str(entry.get("draft_id", "")).strip() == resolved_record_id), None)
+        if artifact is None and artifact_type == "vendor-prep":
+            artifact = next((entry for entry in self.list_vendor_preps(limit=200) if str(entry.get("prep_id", "")).strip() == resolved_record_id), None)
+        if artifact is None and artifact_type == "self-improvement-job":
+            artifact = self.self_improvement_store.get_job(resolved_record_id)
+        if artifact is None and artifact_type in {"self-improvement-run", "self-improvement-sandbox-run"}:
+            artifact = self.self_improvement_store.get_job(resolved_record_id) or self.self_improvement_store.get_run(resolved_record_id)
+        return {
+            "ok": artifact is not None,
+            "message": "" if artifact is not None else "Linked artifact could not be resolved.",
+            "work_id": str(item.get("work_id", "")).strip(),
+            "work_item": item,
+            "artifact_ref": chosen_ref,
+            "artifact_type": artifact_type,
+            "record_id": resolved_record_id,
+            "artifact": artifact,
+        }
+
+    def _lifecycle_problem_summary(self, item: dict[str, Any], artifact: dict[str, Any] | None) -> str:
+        details = artifact or {}
+        candidate = (
+            str(details.get("problem", "")).strip()
+            or str(details.get("opportunity", "")).strip()
+            or str(details.get("recommendation", "")).strip()
+            or str(details.get("content", "")).strip()
+            or str(item.get("rationale", "")).strip()
+            or str(item.get("title", "")).strip()
+        )
+        return candidate[:1800]
+
+    def _lifecycle_outcome_summary(self, item: dict[str, Any], artifact: dict[str, Any] | None) -> str:
+        details = artifact or {}
+        candidate = (
+            str(details.get("goal", "")).strip()
+            or str(details.get("objective", "")).strip()
+            or str(details.get("recommendation", "")).strip()
+            or str(details.get("why_now", "")).strip()
+            or f"Create a practical next version of {str(item.get('title', 'this work item')).strip()} with clearer scope and execution."
+        )
+        return candidate[:1800]
+
+    def _lifecycle_brief_text(self, item: dict[str, Any], artifact: dict[str, Any] | None) -> str:
+        details = artifact or {}
+        lines = [
+            f"Project: {str(item.get('title', '')).strip() or 'Untitled work item'}",
+            f"Domain: {str(item.get('domain', '')).strip() or 'growth'}",
+            f"Lane: {str(item.get('lane', '')).strip() or 'general-operations'}",
+            f"Current stage: {str(item.get('stage', '')).strip() or 'signal'}",
+        ]
+        for key, label in (
+            ("situation", "Situation"),
+            ("problem", "Problem"),
+            ("goal", "Goal"),
+            ("objective", "Objective"),
+            ("opportunity", "Opportunity"),
+            ("recommendation", "Recommendation"),
+        ):
+            value = str(details.get(key, "")).strip()
+            if value:
+                lines.append(f"{label}: {value}")
+        for key, label in (("first_release", "First release"), ("next_actions", "Next actions"), ("workstreams", "Workstreams")):
+            values = [str(entry).strip() for entry in list(details.get(key, [])) if str(entry).strip()]
+            if values:
+                lines.append(f"{label}: " + "; ".join(values[:6]))
+        rationale = str(item.get("rationale", "")).strip()
+        if rationale:
+            lines.append(f"Lifecycle rationale: {rationale}")
+        return "\n".join(lines).strip()
+
+    def _mark_work_item_outcome(self, actor_name: str, item: dict[str, Any], *, status: str, rationale: str, artifact_type: str = "outcome-note") -> dict[str, Any]:
+        actor = self.get_actor(actor_name)
+        task_lane = self._task_lane_for_domain(str(item.get("domain", "growth")).strip().lower() or "growth")
+        return self.catalyst_support.transition_work_item(
+            actor=actor.display_name,
+            title=str(item.get("title", "")).strip() or "Outcome",
+            domain=str(item.get("domain", "growth")).strip() or "growth",
+            lane=str(item.get("lane", "")).strip() or str(task_lane.get("lane", "")).strip() or "general-operations",
+            owner_agent=str(item.get("owner_agent", "")).strip() or str(task_lane.get("owner_agent", "")).strip() or "JARVIS",
+            stage=WorkLifecycleStage.OUTCOME,
+            status=status,
+            artifact_type=artifact_type,
+            source="work-lifecycle-action",
+            review_level="review-as-needed",
+            rationale=rationale,
+            work_id=str(item.get("work_id", "")).strip(),
+            metadata={"manual": True},
+        )
+
+    def apply_work_lifecycle_action(self, actor_name: str, work_id: str, action: str, note: str = "") -> dict[str, Any]:
+        actor = self.get_actor(actor_name)
+        item = self._work_lifecycle_item(actor.display_name, work_id)
+        if item is None:
+            raise KeyError("Work item not found.")
+        normalized = str(action).strip().lower()
+        artifact_bundle = self.resolve_work_lifecycle_artifact(actor.display_name, work_id)
+        artifact = artifact_bundle.get("artifact") if artifact_bundle.get("ok") else None
+        result: dict[str, Any] = {
+            "ok": True,
+            "actor": actor.display_name,
+            "work_id": str(item.get("work_id", "")).strip(),
+            "action": normalized,
+        }
+
+        if normalized == "promote-to-brief":
+            record = self.catalyst_project_brief(
+                actor.display_name,
+                str(item.get("title", "")).strip() or "Untitled work item",
+                self._lifecycle_problem_summary(item, artifact if isinstance(artifact, dict) else None),
+                self._lifecycle_outcome_summary(item, artifact if isinstance(artifact, dict) else None),
+                constraints=note.strip(),
+                work_id=str(item.get("work_id", "")).strip(),
+            )
+            result["record"] = record
+        elif normalized == "build-plan":
+            if str(item.get("stage", "")).strip() == WorkLifecycleStage.IMPLEMENTATION_PLAN.value:
+                raise ValueError("This work item already has an implementation plan.")
+            brief_text = self._lifecycle_brief_text(item, artifact if isinstance(artifact, dict) else None)
+            record = self.catalyst_implementation_plan(
+                actor.display_name,
+                str(item.get("title", "")).strip() or "Untitled work item",
+                brief_text,
+                constraints=note.strip(),
+                work_id=str(item.get("work_id", "")).strip(),
+            )
+            result["record"] = record
+        elif normalized in {"mark-outcome", "mark-succeeded"}:
+            record = self._mark_work_item_outcome(actor.display_name, item, status="succeeded", rationale=note.strip() or "The work item reached a successful outcome.")
+            result["record"] = record
+        elif normalized == "mark-failed":
+            record = self._mark_work_item_outcome(actor.display_name, item, status="failed", rationale=note.strip() or "The work item ended in failure and should inform future doctrine.")
+            result["record"] = record
+        elif normalized == "mark-abandoned":
+            record = self._mark_work_item_outcome(actor.display_name, item, status="abandoned", rationale=note.strip() or "The work item was intentionally abandoned.")
+            result["record"] = record
+        elif normalized == "mark-deferred":
+            record = self._mark_work_item_outcome(actor.display_name, item, status="deferred", rationale=note.strip() or "The work item is being deferred for later reconsideration.")
+            result["record"] = record
+        elif normalized == "mark-learned":
+            record = self._mark_work_item_outcome(actor.display_name, item, status="learned-but-not-pursued", rationale=note.strip() or "The work item produced a lesson, but is not being actively pursued.")
+            result["record"] = record
+        elif normalized == "archive":
+            record = self._mark_work_item_outcome(actor.display_name, item, status="archived", rationale=note.strip() or "The work item was archived.")
+            result["record"] = record
+        elif normalized == "reopen":
+            transitions = [dict(entry) for entry in list(item.get("transitions", [])) if isinstance(entry, dict)]
+            prior_stage = next(
+                (
+                    str(entry.get("stage", "")).strip()
+                    for entry in reversed(transitions[:-1])
+                    if str(entry.get("stage", "")).strip() and str(entry.get("stage", "")).strip() != WorkLifecycleStage.OUTCOME.value
+                ),
+                WorkLifecycleStage.REVIEW.value,
+            )
+            record = self.catalyst_support.transition_work_item(
+                actor=actor.display_name,
+                title=str(item.get("title", "")).strip() or "Reopened work item",
+                domain=str(item.get("domain", "growth")).strip() or "growth",
+                lane=str(item.get("lane", "")).strip() or "general-operations",
+                owner_agent=str(item.get("owner_agent", "")).strip() or "JARVIS",
+                stage=prior_stage,
+                status="reopened",
+                artifact_type="reopen-note",
+                source="work-lifecycle-action",
+                review_level=str(item.get("review_level", "review-as-needed")).strip() or "review-as-needed",
+                rationale=note.strip() or "The work item was reopened for another iteration.",
+                work_id=str(item.get("work_id", "")).strip(),
+                metadata={"manual": True},
+            )
+            result["record"] = record
+        elif normalized == "clone-forward":
+            cloned = self.catalyst_support.transition_work_item(
+                actor=actor.display_name,
+                title=f"{str(item.get('title', '')).strip() or 'Work item'} · next iteration",
+                domain=str(item.get("domain", "growth")).strip() or "growth",
+                lane=str(item.get("lane", "")).strip() or "general-operations",
+                owner_agent=str(item.get("owner_agent", "")).strip() or "JARVIS",
+                stage=WorkLifecycleStage.HYPOTHESIS,
+                status="staged",
+                artifact_type="cloned-work-item",
+                source="work-lifecycle-action",
+                review_level=str(item.get("review_level", "review-as-needed")).strip() or "review-as-needed",
+                rationale=note.strip() or "A new iteration was cloned forward from the prior outcome.",
+                parent_work_id=str(item.get("work_id", "")).strip(),
+                metadata={"manual": True, "cloned_from": str(item.get("work_id", "")).strip()},
+            )
+            result["record"] = cloned
+        else:
+            raise ValueError("Unsupported work lifecycle action.")
+
+        self._invalidate_snapshot_cache(actor.display_name, surfaces=("pipeline_review", "pipeline_state", "dashboard", "today_board", "cognitive", "cadence_review", "shell_state", "proactive_state"))
+        result["work_item"] = self._work_lifecycle_item(actor.display_name, str(item.get("work_id", "")).strip())
+        return result
+
     def pipeline_state_snapshot(self, actor_name: str = "Chris") -> dict:
         actor = self.get_actor(actor_name)
         actor_keys = {actor.display_name.strip().lower(), actor.user_id.strip().lower()}
@@ -5950,7 +9314,9 @@ class JarvisRuntime:
         project_briefs = [item for item in catalyst_store.list_records(catalyst_store.project_briefs_path, limit=12) if _matches_actor(item)]
         implementation_plans = [item for item in catalyst_store.list_records(catalyst_store.implementation_plans_path, limit=12) if _matches_actor(item)]
         briefings = [item for item in catalyst_store.list_records(catalyst_store.briefing_path, limit=8) if _matches_actor(item)]
+        hypotheses = [item for item in catalyst_store.list_records(catalyst_store.hypotheses_path, limit=10) if _matches_actor(item)]
         manual_opportunities = [item for item in list(state.get("opportunities", [])) if isinstance(item, dict)]
+        portfolio = dict(state.get("portfolio") or {})
 
         crm = dict(state.get("crm") or {})
         thresholds = dict(state.get("thresholds") or {})
@@ -6012,6 +9378,10 @@ class JarvisRuntime:
             entry = _ensure_opportunity(title, stage="signal-captured", source="catalyst-signal", timestamp=str(item.get("timestamp", "")).strip())
             if not entry:
                 continue
+            entry["lane"] = str(item.get("lane", "")).strip() or str(entry.get("lane", "")).strip() or self.catalyst_support._infer_lane(
+                f"{item.get('title', '')}\n{item.get('content', '')}",
+                list(item.get("tags", [])) if isinstance(item.get("tags", []), list) else [],
+            )
             entry.setdefault("signals", []).append(str(item.get("title", "")).strip())
             if str(item.get("content", "")).strip():
                 entry.setdefault("notes", []).append(str(item.get("content", "")).strip()[:180])
@@ -6021,6 +9391,7 @@ class JarvisRuntime:
             entry = _ensure_opportunity(title, stage="project-brief", source="project-brief", timestamp=str(item.get("timestamp", "")).strip())
             if not entry:
                 continue
+            entry["lane"] = str(item.get("lane", "")).strip() or str(entry.get("lane", "")).strip()
             entry.setdefault("signals", []).append(str(item.get("problem", "")).strip())
             entry.setdefault("next_actions", []).extend(list(item.get("first_release", []))[:3])
             entry.setdefault("notes", []).extend(list(item.get("risks", []))[:2])
@@ -6030,8 +9401,19 @@ class JarvisRuntime:
             entry = _ensure_opportunity(title, stage="implementation-ready", source="implementation-plan", timestamp=str(item.get("timestamp", "")).strip())
             if not entry:
                 continue
+            entry["lane"] = str(item.get("lane", "")).strip() or str(entry.get("lane", "")).strip()
             entry.setdefault("next_actions", []).extend(list(item.get("next_actions", []))[:4])
             entry.setdefault("notes", []).extend(list(item.get("dependencies", []))[:2])
+
+        for item in hypotheses:
+            title = _record_title(item) or str(item.get("focus", "")).strip() or str(item.get("opportunity", "")).strip()
+            entry = _ensure_opportunity(title, stage="proposal", source="hypothesis", timestamp=str(item.get("timestamp", "")).strip())
+            if not entry:
+                continue
+            entry["lane"] = str(item.get("lane", "")).strip() or str(entry.get("lane", "")).strip()
+            entry.setdefault("signals", []).extend(list(item.get("hypotheses", []))[:3])
+            entry.setdefault("next_actions", []).extend(list(item.get("first_bets", []))[:3])
+            entry.setdefault("notes", []).extend(list(item.get("risks", []))[:2])
 
         for item in manual_opportunities:
             title = str(item.get("title", "")).strip()
@@ -6046,6 +9428,8 @@ class JarvisRuntime:
             for key in ("status", "value_estimate", "owner", "next_followup_at"):
                 if item.get(key) not in (None, ""):
                     entry[key] = item.get(key)
+            if item.get("lane") not in (None, ""):
+                entry["lane"] = item.get("lane")
             entry["opportunity_id"] = str(item.get("opportunity_id", "")).strip() or str(entry.get("opportunity_id", "")).strip() or str(uuid.uuid4())
             entry.setdefault("notes", []).extend([str(note).strip() for note in list(item.get("notes", [])) if str(note).strip()][:4])
             entry.setdefault("next_actions", []).extend([str(step).strip() for step in list(item.get("next_actions", [])) if str(step).strip()][:4])
@@ -6054,6 +9438,7 @@ class JarvisRuntime:
         stalled: list[dict[str, Any]] = []
         followup_due: list[dict[str, Any]] = []
         stage_counts: dict[str, int] = {}
+        lane_counts: dict[str, int] = {}
 
         for entry in opportunities_by_key.values():
             last_activity_at = str(entry.get("last_activity_at", "")).strip()
@@ -6078,6 +9463,8 @@ class JarvisRuntime:
             opportunities.append(entry)
             stage = str(entry.get("stage", "lead")).strip() or "lead"
             stage_counts[stage] = stage_counts.get(stage, 0) + 1
+            lane = str(entry.get("lane", "")).strip() or "family-operations"
+            lane_counts[lane] = lane_counts.get(lane, 0) + 1
             if is_stalled:
                 stalled.append(entry)
 
@@ -6101,6 +9488,7 @@ class JarvisRuntime:
         active_count = len(active_opportunities)
         plan_count = len(implementation_plans)
         brief_count = len(project_briefs)
+        hypothesis_count = len(hypotheses)
         signal_count = len(catalyst_signals)
 
         score_components = [
@@ -6124,6 +9512,13 @@ class JarvisRuntime:
                 "status": "healthy" if plan_count else ("warming" if brief_count else "warning"),
                 "score": 85 if plan_count else 60 if brief_count else 35,
                 "summary": f"{plan_count} implementation plan(s) and {brief_count} project brief(s) are staged for execution.",
+            },
+            {
+                "id": "hypothesis-flow",
+                "label": "Hypothesis flow",
+                "status": "healthy" if hypothesis_count >= 3 else ("warming" if hypothesis_count else "warning"),
+                "score": 82 if hypothesis_count >= 3 else 58 if hypothesis_count else 30,
+                "summary": f"{hypothesis_count} Catalyst hypothesis run(s) are feeding the family's opportunity portfolio.",
             },
             {
                 "id": "signal-flow",
@@ -6177,10 +9572,25 @@ class JarvisRuntime:
         if not recommended_actions:
             recommended_actions = ["Capture at least one live opportunity so the pipeline lane can start learning from real movement."]
 
+        lifecycle = self.work_lifecycle_snapshot(actor_name, limit=24)
+        review_inbox = [
+            {
+                "title": str(item.get("title", "")).strip(),
+                "stage": str(item.get("stage", "")).strip(),
+                "lane": str(item.get("lane", "")).strip(),
+                "review_level": str(item.get("review_level", "")).strip(),
+                "status": str(item.get("status", "")).strip(),
+                "owner_agent": str(item.get("owner_agent", "")).strip(),
+            }
+            for item in lifecycle.get("records", [])
+            if str(item.get("stage", "")).strip() in {WorkLifecycleStage.REVIEW.value, WorkLifecycleStage.HYPOTHESIS.value, WorkLifecycleStage.IMPLEMENTATION_PLAN.value}
+        ][:10]
+
         return {
             "actor": actor.display_name,
             "generated_at": now.isoformat(),
             "state": {
+                "portfolio": portfolio,
                 "crm": crm,
                 "thresholds": thresholds,
                 "opportunities": opportunities[:12],
@@ -6207,9 +9617,11 @@ class JarvisRuntime:
                 "followups_due_now": len(followup_due),
                 "project_briefs": brief_count,
                 "implementation_plans": plan_count,
+                "hypotheses": hypothesis_count,
                 "signals": signal_count,
                 "average_deal_value": avg_deal_value,
                 "stage_counts": stage_counts,
+                "lane_counts": lane_counts,
             },
             "stalled_opportunities": stalled[:6],
             "daily_followup_loop": {
@@ -6241,10 +9653,13 @@ class JarvisRuntime:
             "history": history[:8],
             "followup_titles": followup_due,
             "recommended_actions": recommended_actions,
+            "recent_hypotheses": hypotheses[:6],
+            "work_lifecycle": lifecycle,
+            "review_inbox": review_inbox,
             "truth": {
                 "sales_live": False,
                 "notes": [
-                    "Pipeline state currently mixes manual opportunity notes with Catalyst-derived signals, briefs, and plans.",
+                    "Catalyst portfolio state currently mixes manual opportunity notes with Catalyst-derived signals, hypotheses, briefs, and plans.",
                     "No live CRM connector is wired yet.",
                 ],
             },
@@ -6308,15 +9723,20 @@ class JarvisRuntime:
                         "id": "stage-map",
                         "title": "Stage Map",
                         "summary": "Pipeline stage coverage and current active opportunity mix.",
-                        "details": [
+                "details": [
                             f"Active opportunities: {int(derived.get('active_opportunities', 0) or 0)}",
                             f"Signals: {int(derived.get('signals', 0) or 0)}",
+                            f"Hypotheses: {int(derived.get('hypotheses', 0) or 0)}",
                             f"Project briefs: {int(derived.get('project_briefs', 0) or 0)}",
                             f"Implementation plans: {int(derived.get('implementation_plans', 0) or 0)}",
                         ]
                         + [
                             f"{stage}: {count}"
                             for stage, count in dict(derived.get("stage_counts") or {}).items()
+                        ]
+                        + [
+                            f"lane/{lane}: {count}"
+                            for lane, count in dict(derived.get("lane_counts") or {}).items()
                         ],
                     },
                     {
@@ -6390,6 +9810,12 @@ class JarvisRuntime:
                 "allowed": ["prepare summary", "refresh brief", "defer", "surface next moves"],
                 "requires_approval": ["revenue-affecting commitments", "payments", "external commitments"],
                 "should_not_do": ["move money or make external financial commitments automatically"],
+            },
+            {
+                "domain": "system",
+                "allowed": ["run repo health checks", "sync configured local models", "refresh tooling inventory", "queue maintenance work"],
+                "requires_approval": ["rewrite code", "install broad system tools", "git pull or upgrade dependencies", "heavy model downloads"],
+                "should_not_do": ["silently change source code or broad local tooling without leaving a reviewable trail"],
             },
         ]
 
@@ -6554,6 +9980,651 @@ class JarvisRuntime:
                 "financial institutions, CRM, and ad-platform telemetry are not connected yet",
             ],
             "uncertainty_model": uncertainty_model,
+        }
+
+    def _self_improvement_settings(self) -> dict[str, Any]:
+        defaults = {
+            "enabled": True,
+            "allow_safe_autonomy": True,
+            "allow_configured_model_sync": True,
+            "allow_heavy_model_downloads": False,
+            "allow_tool_installs": False,
+            "allow_code_changes": False,
+            "max_auto_actions_per_run": 1,
+        }
+        stored = self.self_improvement_store.settings()
+        merged = {**defaults, **stored}
+        if merged != stored:
+            self.self_improvement_store.save_settings(merged)
+        return merged
+
+    def _command_available(self, command: str) -> bool:
+        return shutil.which(str(command).strip()) is not None
+
+    def _run_maintenance_command(self, args: list[str], *, timeout: int = 60) -> dict[str, Any]:
+        try:
+            completed = subprocess.run(
+                args,
+                cwd=str(self._repo_root()),
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                check=False,
+            )
+        except Exception as exc:
+            return {
+                "ok": False,
+                "command": list(args),
+                "returncode": None,
+                "stdout": "",
+                "stderr": str(exc).strip(),
+            }
+        return {
+            "ok": completed.returncode == 0,
+            "command": list(args),
+            "returncode": int(completed.returncode),
+            "stdout": str(completed.stdout or "").strip(),
+            "stderr": str(completed.stderr or "").strip(),
+        }
+
+    def _self_improvement_worktree_root(self) -> Path:
+        path = self._repo_root() / "data" / "system" / "worktrees"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def _self_improvement_report_root(self) -> Path:
+        path = self._repo_root() / "data" / "system" / "sandbox_reports"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def _slugify_runtime_text(self, value: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "-", str(value or "").strip().lower()).strip("-") or "item"
+
+    def _runtime_python_validation_files(self) -> list[Path]:
+        return [path for path in self._service_build_paths() if path.exists() and path.suffix == ".py"]
+
+    def _installed_ollama_models(self) -> list[str]:
+        if not self._command_available("ollama"):
+            return []
+        probe = self._run_maintenance_command(["ollama", "list"], timeout=20)
+        if not probe.get("ok"):
+            return []
+        installed: list[str] = []
+        for raw_line in str(probe.get("stdout", "")).splitlines():
+            line = raw_line.strip()
+            if not line or line.lower().startswith("name"):
+                continue
+            model = line.split()[0].strip()
+            if model:
+                installed.append(model)
+        return installed
+
+    def _repo_health_report(self) -> dict[str, Any]:
+        tracked_files = [path for path in self._service_build_paths() if path.exists()]
+        python_files = [str(path) for path in self._runtime_python_validation_files()]
+        compile_report = self._run_maintenance_command(["python3", "-m", "py_compile", *python_files], timeout=90) if python_files else {"ok": True, "stdout": "", "stderr": ""}
+        git_status = self._run_maintenance_command(["git", "status", "--short"], timeout=20) if self._command_available("git") else {
+            "ok": False,
+            "stdout": "",
+            "stderr": "git is not available.",
+        }
+        diff_count = len([line for line in str(git_status.get("stdout", "")).splitlines() if line.strip()])
+        branch = ""
+        if self._command_available("git"):
+            branch_probe = self._run_maintenance_command(["git", "branch", "--show-current"], timeout=10)
+            branch = str(branch_probe.get("stdout", "")).strip()
+        return {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "compile_ok": bool(compile_report.get("ok")),
+            "compile_stdout": str(compile_report.get("stdout", "")).strip(),
+            "compile_stderr": str(compile_report.get("stderr", "")).strip(),
+            "git_available": self._command_available("git"),
+            "branch": branch,
+            "dirty": bool(diff_count),
+            "diff_count": diff_count,
+            "git_status_excerpt": str(git_status.get("stdout", "")).splitlines()[:20],
+            "tracked_files": [str(path.relative_to(self._repo_root())) for path in tracked_files],
+            "compiled_python_files": [str(path.relative_to(self._repo_root())) for path in tracked_files if path.suffix == ".py"],
+        }
+
+    def _recommended_self_improvement_models(self) -> list[dict[str, Any]]:
+        configured = {
+            str(self.config.second_brain_model).strip(),
+            str(self.config.ollama_summarize_model).strip(),
+            str(self.config.ollama_background_model).strip(),
+        }
+        configured = {item for item in configured if item}
+        recommendations: list[dict[str, Any]] = []
+        for model_name in sorted(configured):
+            recommendations.append(
+                {
+                    "model": model_name,
+                    "reason": "This model is already part of the configured local routing stack and should stay synced locally.",
+                    "auto_allowed": True,
+                    "heavy": False,
+                    "source": "configured-runtime",
+                }
+            )
+        recommendations.append(
+            {
+                "model": "gpt-oss:20b",
+                "reason": "A stronger local reasoner is useful for second-brain work, but it is heavier and should remain reviewable.",
+                "auto_allowed": False,
+                "heavy": True,
+                "source": "recommended-upgrade",
+            }
+        )
+        return recommendations
+
+    def _tool_inventory(self) -> list[dict[str, Any]]:
+        inventory = [
+            {"name": "git", "available": self._command_available("git"), "required": True, "installable": False},
+            {"name": "rg", "available": self._command_available("rg"), "required": True, "installable": False},
+            {"name": "ollama", "available": self._command_available("ollama"), "required": True, "installable": False},
+            {"name": "uv", "available": self._command_available("uv"), "required": False, "installable": False},
+            {"name": "pytest", "available": self._command_available("pytest"), "required": False, "installable": False},
+        ]
+        return inventory
+
+    def _self_improvement_opportunities(self) -> dict[str, Any]:
+        settings = self._self_improvement_settings()
+        installed_models = self._installed_ollama_models()
+        tool_inventory = self._tool_inventory()
+        repo_health = self._repo_health_report()
+        opportunities: list[dict[str, Any]] = []
+
+        for candidate in self._recommended_self_improvement_models():
+            model_name = str(candidate.get("model", "")).strip()
+            if not model_name or model_name in installed_models:
+                continue
+            heavy = bool(candidate.get("heavy"))
+            review_level = "review-before-download" if heavy else "review-as-needed"
+            opportunity = {
+                "job_key": f"sync-model::{model_name}",
+                "title": f"Sync local model {model_name}",
+                "summary": str(candidate.get("reason", "")).strip() or f"Install the missing local model {model_name}.",
+                "job_type": "sync-ollama-model",
+                "target": model_name,
+                "risk_level": "moderate" if heavy else "low",
+                "review_level": review_level,
+                "source": str(candidate.get("source", "configured-runtime")).strip() or "configured-runtime",
+                "evidence": {"installed_models": installed_models[:12], "heavy": heavy},
+            }
+            opportunity["mutation_route"] = self._classify_self_mutation_route(opportunity)
+            opportunity["auto_allowed"] = bool(opportunity["mutation_route"].get("execution_allowed")) and bool(settings.get("allow_safe_autonomy")) and bool(settings.get("allow_configured_model_sync"))
+            if heavy and not bool(settings.get("allow_heavy_model_downloads")):
+                opportunity["auto_allowed"] = False
+            opportunities.append(opportunity)
+
+        if not repo_health.get("compile_ok"):
+            opportunity = {
+                "job_key": "repair-runtime-compile",
+                "title": "Repair runtime compile regressions",
+                "summary": "Runtime compilation failed during the self-improvement sweep, so JARVIS should stage a repair brief instead of pretending the build is healthy.",
+                "job_type": "stage-runtime-repair",
+                "target": "runtime-py-compile",
+                "risk_level": "high",
+                "review_level": "review-before-code-change",
+                "source": "repo-health",
+                "evidence": {"compile_stderr": str(repo_health.get("compile_stderr", "")).strip()},
+            }
+            opportunity["mutation_route"] = self._classify_self_mutation_route(opportunity)
+            opportunity["auto_allowed"] = False
+            opportunities.append(opportunity)
+
+        if repo_health.get("dirty"):
+            opportunity = {
+                "job_key": "review-runtime-drift",
+                "title": "Review runtime drift",
+                "summary": "The JARVIS repo has uncommitted changes, so background maintenance should acknowledge the drift and avoid blind upgrades.",
+                "job_type": "review-repo-drift",
+                "target": "git-status",
+                "risk_level": "moderate",
+                "review_level": "review-before-code-change",
+                "source": "repo-health",
+                "evidence": {"git_status_excerpt": list(repo_health.get("git_status_excerpt", []))[:12]},
+            }
+            opportunity["mutation_route"] = self._classify_self_mutation_route(opportunity)
+            opportunity["auto_allowed"] = bool(opportunity["mutation_route"].get("execution_allowed")) and bool(settings.get("allow_safe_autonomy"))
+            opportunities.append(opportunity)
+
+        for tool in tool_inventory:
+            if tool.get("required") and not tool.get("available"):
+                tool_name = str(tool.get("name", "")).strip()
+                opportunity = {
+                    "job_key": f"tool-gap::{tool_name}",
+                    "title": f"Resolve missing tool: {tool_name}",
+                    "summary": f"JARVIS depends on {tool_name} for its local maintenance posture, but that tool is not available on this machine.",
+                    "job_type": "resolve-tool-gap",
+                    "target": tool_name,
+                    "risk_level": "moderate",
+                    "review_level": "review-before-tool-install",
+                    "source": "tool-inventory",
+                    "evidence": {"tool": tool},
+                }
+                opportunity["mutation_route"] = self._classify_self_mutation_route(opportunity)
+                opportunity["auto_allowed"] = False
+                opportunities.append(opportunity)
+
+        return {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "settings": settings,
+            "installed_models": installed_models,
+            "tool_inventory": tool_inventory,
+            "repo_health": repo_health,
+            "opportunities": opportunities,
+        }
+
+    def _sync_self_improvement_jobs(self, snapshot: dict[str, Any]) -> list[dict[str, Any]]:
+        now = datetime.now(timezone.utc).isoformat()
+        existing_jobs = [dict(item) for item in self.self_improvement_store.jobs() if isinstance(item, dict)]
+        jobs_by_key = {
+            str(item.get("job_key", "")).strip(): dict(item)
+            for item in existing_jobs
+            if str(item.get("job_key", "")).strip()
+        }
+        active_keys = {
+            str(item.get("job_key", "")).strip()
+            for item in list(snapshot.get("opportunities", []))
+            if str(item.get("job_key", "")).strip()
+        }
+        synced: list[dict[str, Any]] = []
+        for opportunity in list(snapshot.get("opportunities", [])):
+            job_key = str(opportunity.get("job_key", "")).strip()
+            if not job_key:
+                continue
+            existing = dict(jobs_by_key.get(job_key) or {})
+            status = str(existing.get("status", "")).strip() or "queued"
+            if status in {"completed", "resolved"} and opportunity.get("job_type") != "sync-ollama-model":
+                status = "queued"
+            if opportunity.get("job_type") == "sync-ollama-model" and status in {"completed", "resolved"}:
+                status = "completed"
+            mutation_route = dict(opportunity.get("mutation_route", {}) or {})
+            route_name = str(mutation_route.get("route", "")).strip() or "sandbox/worktree-only"
+            if route_name == "constitutionally-blocked":
+                status = "blocked"
+            record = {
+                "job_id": str(existing.get("job_id", "")).strip() or str(uuid.uuid4()),
+                "job_key": job_key,
+                "title": str(opportunity.get("title", "")).strip() or "Self-improvement job",
+                "summary": str(opportunity.get("summary", "")).strip(),
+                "job_type": str(opportunity.get("job_type", "")).strip() or "maintenance",
+                "target": str(opportunity.get("target", "")).strip(),
+                "status": status,
+                "domain": "system",
+                "lane": "self-improvement-and-maintenance",
+                "owner_agent": "Autoforge",
+                "risk_level": str(opportunity.get("risk_level", "moderate")).strip() or "moderate",
+                "review_level": str(opportunity.get("review_level", "review-as-needed")).strip() or "review-as-needed",
+                "auto_allowed": bool(opportunity.get("auto_allowed")),
+                "mutation_route": mutation_route,
+                "source": str(opportunity.get("source", "maintenance")).strip() or "maintenance",
+                "evidence": dict(opportunity.get("evidence", {}) or {}),
+                "created_at": str(existing.get("created_at", "")).strip() or now,
+                "updated_at": now,
+                "last_result": dict(existing.get("last_result", {}) or {}),
+                "last_run_at": str(existing.get("last_run_at", "")).strip(),
+            }
+            self.self_improvement_store.upsert_job(record)
+            synced.append(record)
+        auto_sources = {"configured-runtime", "recommended-upgrade", "repo-health", "tool-inventory"}
+        for existing in existing_jobs:
+            job_key = str(existing.get("job_key", "")).strip()
+            if not dict(existing.get("mutation_route", {}) or {}):
+                patched = {
+                    **existing,
+                    "mutation_route": self._classify_self_mutation_route(existing),
+                    "updated_at": now,
+                }
+                self.self_improvement_store.upsert_job(patched)
+                existing = patched
+            if not job_key or job_key in active_keys:
+                continue
+            if str(existing.get("source", "")).strip() not in auto_sources:
+                continue
+            status = str(existing.get("status", "")).strip()
+            if status in {"completed", "resolved", "archived", "sandboxed"}:
+                continue
+            resolved = {
+                **existing,
+                "status": "resolved",
+                "updated_at": now,
+                "last_result": {
+                    **dict(existing.get("last_result", {}) or {}),
+                    "ok": True,
+                    "summary": "The triggering maintenance condition is no longer active.",
+                    "resolved_at": now,
+                },
+            }
+            self.self_improvement_store.upsert_job(resolved)
+        return synced
+
+    def self_improvement_snapshot(self) -> dict[str, Any]:
+        observed = self._self_improvement_opportunities()
+        synced_jobs = self._sync_self_improvement_jobs(observed)
+        jobs = self.self_improvement_store.jobs()
+        jobs.sort(key=lambda item: str(item.get("updated_at", "")).strip(), reverse=True)
+        constitution = self.self_mutation_constitution_snapshot()
+        return {
+            "generated_at": observed.get("generated_at"),
+            "settings": observed.get("settings", {}),
+            "constitution": {
+                "document_path": constitution.get("document_path"),
+                "automatic_rewrites": dict(constitution.get("automatic_rewrites", {}) or {}),
+                "sandbox_or_worktree_rewrites": dict(constitution.get("sandbox_or_worktree_rewrites", {}) or {}),
+                "approval_required": dict(constitution.get("approval_required", {}) or {}),
+                "constitutionally_locked": dict(constitution.get("constitutionally_locked", {}) or {}),
+            },
+            "repo_health": observed.get("repo_health", {}),
+            "tool_inventory": observed.get("tool_inventory", []),
+            "installed_models": observed.get("installed_models", []),
+            "opportunities": observed.get("opportunities", []),
+            "jobs": jobs[:24],
+            "recent_runs": self.self_improvement_store.recent_runs(limit=10),
+            "summary": {
+                "queued_jobs": len([item for item in jobs if str(item.get("status", "")).strip() == "queued"]),
+                "auto_runnable_jobs": len([item for item in jobs if str(item.get("status", "")).strip() == "queued" and item.get("auto_allowed")]),
+                "sandbox_jobs": len([item for item in jobs if str((item.get("mutation_route") or {}).get("route", "")).strip() == "sandbox/worktree-only" and str(item.get("status", "")).strip() in {"queued", "blocked", "sandboxed"}]),
+                "approval_jobs": len([item for item in jobs if str((item.get("mutation_route") or {}).get("route", "")).strip() == "approval-required" and str(item.get("status", "")).strip() in {"queued", "blocked"}]),
+                "blocked_jobs": len([item for item in jobs if str((item.get("mutation_route") or {}).get("route", "")).strip() == "constitutionally-blocked"]),
+                "synced_opportunities": len(synced_jobs),
+            },
+        }
+
+    def _stage_self_improvement_job(self, actor_name: str, job: dict[str, Any]) -> None:
+        existing = self._work_lifecycle_item(actor_name, str(job.get("job_id", "")).strip())
+        if existing is not None:
+            return
+        self.catalyst_support.transition_work_item(
+            actor=actor_name,
+            title=str(job.get("title", "")).strip() or "Self-improvement job",
+            domain="system",
+            lane="self-improvement-and-maintenance",
+            owner_agent="Autoforge",
+            stage=WorkLifecycleStage.HYPOTHESIS,
+            status="queued",
+            artifact_type="self-improvement-job",
+            source="background-self-improvement",
+            review_level=str(job.get("review_level", "review-as-needed")).strip() or "review-as-needed",
+            rationale=str(job.get("summary", "")).strip() or "JARVIS detected a maintenance opportunity worth tracking.",
+            work_id=str(job.get("job_id", "")).strip(),
+            record_id=str(job.get("job_id", "")).strip(),
+            metadata={
+                "job_type": str(job.get("job_type", "")).strip(),
+                "target": str(job.get("target", "")).strip(),
+                "mutation_route": str((job.get("mutation_route") or {}).get("route", "")).strip(),
+            },
+        )
+
+    def _ensure_self_improvement_worktree(self, job: dict[str, Any]) -> dict[str, Any]:
+        job_id = str(job.get("job_id", "")).strip()
+        if not job_id:
+            raise ValueError("Self-improvement job is missing job_id.")
+        root = self._self_improvement_worktree_root()
+        slug = self._slugify_runtime_text(str(job.get("title", "")).strip())[:40]
+        path = root / f"{job_id[:8]}-{slug}"
+        if path.exists() and (path / ".git").exists():
+            return {"ok": True, "path": str(path), "created": False}
+        if path.exists() and not (path / ".git").exists():
+            shutil.rmtree(path, ignore_errors=True)
+        result = self._run_maintenance_command(["git", "worktree", "add", "--detach", str(path), "HEAD"], timeout=120)
+        return {"ok": bool(result.get("ok")), "path": str(path), "created": bool(result.get("ok")), "command_result": result}
+
+    def _sandbox_report_for_job(self, job: dict[str, Any], worktree_path: Path) -> dict[str, Any]:
+        python_bin = self._repo_root() / ".venv" / "bin" / "python"
+        compile_paths = [
+            worktree_path / path.relative_to(self._repo_root())
+            for path in self._runtime_python_validation_files()
+            if (worktree_path / path.relative_to(self._repo_root())).exists()
+        ]
+        compile_targets = [str(path) for path in compile_paths]
+        compile_report = self._run_maintenance_command([str(python_bin), "-m", "py_compile", *compile_targets], timeout=120) if compile_targets else {"ok": True, "stdout": "", "stderr": ""}
+        git_status = subprocess.run(
+            ["git", "status", "--short"],
+            cwd=str(worktree_path),
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+        )
+        head_probe = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(worktree_path),
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+        )
+        pytest_probe = shutil.which("pytest")
+        test_report: dict[str, Any]
+        if pytest_probe:
+            tested = subprocess.run(
+                [pytest_probe, "-q", "tests"],
+                cwd=str(worktree_path),
+                capture_output=True,
+                text=True,
+                timeout=180,
+                check=False,
+            )
+            test_report = {
+                "ok": tested.returncode == 0,
+                "returncode": int(tested.returncode),
+                "stdout": str(tested.stdout or "").strip()[:6000],
+                "stderr": str(tested.stderr or "").strip()[:4000],
+                "mode": "pytest",
+            }
+        else:
+            test_report = {
+                "ok": True,
+                "returncode": None,
+                "stdout": "",
+                "stderr": "",
+                "mode": "skipped",
+                "reason": "pytest is not available on this machine.",
+            }
+        recommendations: list[str] = []
+        if not compile_report.get("ok"):
+            recommendations.append("Repair compile failures inside the sandbox before considering promotion.")
+        if test_report.get("mode") == "pytest" and not test_report.get("ok"):
+            recommendations.append("Address failing tests or narrow the sandbox test scope before promotion.")
+        if not recommendations:
+            recommendations.append("Sandbox lane is healthy enough for patch generation or a reviewed promotion step.")
+        report = {
+            "run_id": str(uuid.uuid4()),
+            "job_id": str(job.get("job_id", "")).strip(),
+            "job_title": str(job.get("title", "")).strip(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "mode": "sandbox-worktree",
+            "mutation_route": dict(job.get("mutation_route", {}) or {}),
+            "worktree_path": str(worktree_path),
+            "head_sha": str(head_probe.stdout or "").strip(),
+            "compile": compile_report,
+            "compile_targets": [str(path.relative_to(worktree_path)) for path in compile_paths],
+            "tests": test_report,
+            "git_status_excerpt": str(git_status.stdout or "").splitlines()[:40],
+            "recommendations": recommendations,
+        }
+        report_path = self._self_improvement_report_root() / f"{report['run_id']}.json"
+        report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        report["report_path"] = str(report_path)
+        return report
+
+    def run_self_improvement_sandbox_job(self, actor_name: str, job_id: str, *, triggered_by: str = "sandbox-run") -> dict[str, Any]:
+        job = self.self_improvement_store.get_job(job_id)
+        if job is None:
+            raise KeyError("Self-improvement job not found.")
+        mutation_route = dict(job.get("mutation_route", {}) or self._classify_self_mutation_route(job))
+        route_name = str(mutation_route.get("route", "")).strip() or "sandbox/worktree-only"
+        if route_name != "sandbox/worktree-only":
+            raise ValueError("This job is not routed to the sandbox/worktree executor.")
+        lane = self._ensure_self_improvement_worktree(job)
+        if not lane.get("ok"):
+            raise ValueError(str((lane.get("command_result") or {}).get("stderr", "")).strip() or "Unable to create sandbox worktree.")
+        worktree_path = Path(str(lane.get("path", "")).strip())
+        report = self._sandbox_report_for_job(job, worktree_path)
+        now = datetime.now(timezone.utc).isoformat()
+        updated = {
+            **job,
+            "status": "sandboxed",
+            "updated_at": now,
+            "last_run_at": now,
+            "last_result": report,
+            "mutation_route": mutation_route,
+            "sandbox_worktree_path": str(worktree_path),
+            "last_sandbox_run_id": str(report.get("run_id", "")).strip(),
+        }
+        self.self_improvement_store.upsert_job(updated)
+        self.self_improvement_store.record_run(report)
+        self.catalyst_support.transition_work_item(
+            actor=actor_name,
+            title=str(updated.get("title", "")).strip() or "Self-improvement sandbox job",
+            domain="system",
+            lane="self-improvement-and-maintenance",
+            owner_agent="Autoforge",
+            stage=WorkLifecycleStage.STAGED_ACTION,
+            status="sandboxed",
+            artifact_type="self-improvement-sandbox-run",
+            source=triggered_by,
+            review_level=str(updated.get("review_level", "review-before-code-change")).strip() or "review-before-code-change",
+            rationale="JARVIS created an isolated worktree mutation lane and validated it with compile/test reporting.",
+            work_id=str(updated.get("job_id", "")).strip(),
+            record_id=str(report.get("run_id", "")).strip(),
+            metadata={"job_type": str(updated.get("job_type", "")).strip(), "mutation_route": route_name, "worktree_path": str(worktree_path)},
+        )
+        self.catalyst_support.transition_work_item(
+            actor=actor_name,
+            title=str(updated.get("title", "")).strip() or "Self-improvement sandbox job",
+            domain="system",
+            lane="self-improvement-and-maintenance",
+            owner_agent="Autoforge",
+            stage=WorkLifecycleStage.REVIEW,
+            status="ready-for-review",
+            artifact_type="self-improvement-sandbox-run",
+            source=triggered_by,
+            review_level=str(updated.get("review_level", "review-before-code-change")).strip() or "review-before-code-change",
+            rationale="Sandbox/worktree run is complete and ready for inspected promotion or further patch generation.",
+            work_id=str(updated.get("job_id", "")).strip(),
+            record_id=str(report.get("run_id", "")).strip(),
+            metadata={"job_type": str(updated.get("job_type", "")).strip(), "mutation_route": route_name, "report_path": str(report.get("report_path", "")).strip()},
+        )
+        return {"ok": True, "job": updated, "sandbox_run": report}
+
+    def run_self_improvement_job(self, actor_name: str, job_id: str, *, triggered_by: str = "manual") -> dict[str, Any]:
+        job = self.self_improvement_store.get_job(job_id)
+        if job is None:
+            raise KeyError("Self-improvement job not found.")
+        mutation_route = dict(job.get("mutation_route", {}) or self._classify_self_mutation_route(job))
+        route_name = str(mutation_route.get("route", "")).strip() or "sandbox/worktree-only"
+        if route_name == "constitutionally-blocked":
+            raise ValueError("This self-improvement job is constitutionally blocked unless explicitly unlocked.")
+        if route_name == "approval-required" and triggered_by != "approved-principal":
+            raise ValueError("This self-improvement job requires principal approval before execution.")
+        if route_name == "sandbox/worktree-only":
+            raise ValueError("This self-improvement job must run in a sandbox or worktree before any live promotion.")
+        job_type = str(job.get("job_type", "")).strip()
+        target = str(job.get("target", "")).strip()
+        now = datetime.now(timezone.utc).isoformat()
+        result: dict[str, Any]
+        if job_type == "sync-ollama-model":
+            result = self._run_maintenance_command(["ollama", "pull", target], timeout=1800)
+        elif job_type == "stage-runtime-repair":
+            record = self.catalyst_support.project_brief(
+                actor_name,
+                "Repair JARVIS runtime regressions",
+                "The autonomous maintenance sweep detected runtime compile failures that block trustworthy background operation.",
+                "Produce a concrete repair brief and sequence the next implementation steps.",
+                [str((job.get("evidence") or {}).get("compile_stderr", "")).strip()],
+                work_id=str(job.get("job_id", "")).strip(),
+            )
+            result = {"ok": True, "record": record, "stdout": "Repair brief staged in Catalyst.", "stderr": ""}
+        elif job_type == "review-repo-drift":
+            result = {"ok": True, "record": self._repo_health_report(), "stdout": "Repo drift was refreshed.", "stderr": ""}
+        else:
+            raise ValueError("Unsupported self-improvement job.")
+
+        updated = {
+            **job,
+            "status": "completed" if result.get("ok") else "failed",
+            "updated_at": now,
+            "last_run_at": now,
+            "last_result": result,
+            "mutation_route": mutation_route,
+        }
+        self.self_improvement_store.upsert_job(updated)
+        self.catalyst_support.transition_work_item(
+            actor=actor_name,
+            title=str(updated.get("title", "")).strip() or "Self-improvement job",
+            domain="system",
+            lane="self-improvement-and-maintenance",
+            owner_agent="Autoforge",
+            stage=WorkLifecycleStage.STAGED_ACTION,
+            status="executed" if result.get("ok") else "failed",
+            artifact_type="self-improvement-run",
+            source=triggered_by,
+            review_level=str(updated.get("review_level", "review-as-needed")).strip() or "review-as-needed",
+            rationale=str(updated.get("summary", "")).strip() or "JARVIS executed a maintenance job.",
+            work_id=str(updated.get("job_id", "")).strip(),
+            record_id=str(updated.get("job_id", "")).strip(),
+            metadata={"job_type": job_type, "target": target, "mutation_route": route_name},
+        )
+        self.catalyst_support.transition_work_item(
+            actor=actor_name,
+            title=str(updated.get("title", "")).strip() or "Self-improvement job",
+            domain="system",
+            lane="self-improvement-and-maintenance",
+            owner_agent="Autoforge",
+            stage=WorkLifecycleStage.OUTCOME,
+            status="succeeded" if result.get("ok") else "failed",
+            artifact_type="self-improvement-run",
+            source=triggered_by,
+            review_level=str(updated.get("review_level", "review-as-needed")).strip() or "review-as-needed",
+            rationale=str(result.get("stderr", "")).strip() or str(result.get("stdout", "")).strip() or ("Self-improvement job completed." if result.get("ok") else "Self-improvement job failed."),
+            work_id=str(updated.get("job_id", "")).strip(),
+            record_id=str(updated.get("job_id", "")).strip(),
+            metadata={"job_type": job_type, "target": target, "triggered_by": triggered_by, "mutation_route": route_name},
+        )
+        return {"ok": bool(result.get("ok")), "job": updated, "result": result}
+
+    def background_self_improvement_run(self, actor_name: str = "Chris") -> dict[str, Any]:
+        snapshot = self.self_improvement_snapshot()
+        for job in list(snapshot.get("jobs", [])):
+            self._stage_self_improvement_job(actor_name, job)
+        settings = self._self_improvement_settings()
+        max_auto = max(0, int(settings.get("max_auto_actions_per_run", 1) or 1))
+        executed: list[dict[str, Any]] = []
+        if settings.get("enabled") and settings.get("allow_safe_autonomy"):
+            candidates = [
+                dict(item)
+                for item in list(snapshot.get("jobs", []))
+                if str(item.get("status", "")).strip() == "queued" and bool(item.get("auto_allowed"))
+            ]
+            for job in candidates[:max_auto]:
+                executed.append(self.run_self_improvement_job(actor_name, str(job.get("job_id", "")).strip(), triggered_by="assistant-autonomy"))
+        run_record = {
+            "run_id": str(uuid.uuid4()),
+            "actor": actor_name,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "settings": settings,
+            "queued_job_count": int(snapshot.get("summary", {}).get("queued_jobs", 0) or 0),
+            "executed_job_count": len(executed),
+            "executed_jobs": [
+                {
+                    "job_id": str(item.get("job", {}).get("job_id", "")).strip(),
+                    "title": str(item.get("job", {}).get("title", "")).strip(),
+                    "ok": bool(item.get("ok")),
+                }
+                for item in executed
+            ],
+            "repo_health": dict(snapshot.get("repo_health", {}) or {}),
+            "tool_inventory": [dict(item) for item in list(snapshot.get("tool_inventory", []))[:10] if isinstance(item, dict)],
+        }
+        self.self_improvement_store.record_run(run_record)
+        refreshed = self.self_improvement_snapshot()
+        return {
+            "ok": True,
+            "actor": actor_name,
+            "run": run_record,
+            "snapshot": refreshed,
         }
 
     def goal_stack_snapshot(self, actor_name: str = "Chris", *, open_loops: dict | None = None) -> dict:
@@ -6900,16 +10971,18 @@ class JarvisRuntime:
             )
         actor = self.get_actor(actor_name)
         open_loops = open_loops or self.unified_open_loops(actor.display_name, limit=18)
+        tasks = {
+            "self_model": lambda: self.self_model_snapshot(actor.display_name),
+            "world_state": lambda: self.world_state_snapshot(actor.display_name, open_loops=open_loops, persist=False),
+            "growth_state": lambda: self.growth_state_snapshot(actor.display_name),
+            "goal_stack": lambda: self.goal_stack_snapshot(actor.display_name, open_loops=open_loops),
+            "cadence": lambda: self.cognitive_cadence_snapshot(actor.display_name, open_loops=open_loops),
+            "deliberation": lambda: self.deliberation_snapshot(actor.display_name, open_loops=open_loops),
+            "internal_council": lambda: self.internal_council_snapshot(actor.display_name, open_loops=open_loops),
+        }
         payload = {
             "actor": actor.display_name,
             "generated_at": datetime.now(timezone.utc).isoformat(),
-            "self_model": self.self_model_snapshot(actor.display_name),
-            "world_state": self.world_state_snapshot(actor.display_name, open_loops=open_loops, persist=False),
-            "growth_state": self.growth_state_snapshot(actor.display_name),
-            "goal_stack": self.goal_stack_snapshot(actor.display_name, open_loops=open_loops),
-            "cadence": self.cognitive_cadence_snapshot(actor.display_name, open_loops=open_loops),
-            "deliberation": self.deliberation_snapshot(actor.display_name, open_loops=open_loops),
-            "internal_council": self.internal_council_snapshot(actor.display_name, open_loops=open_loops),
             "notification_policy": {
                 "quiet_hours_active": self._quiet_hours_active(),
                 "quiet_window": {
@@ -6918,9 +10991,45 @@ class JarvisRuntime:
                 },
             },
         }
+        with ThreadPoolExecutor(max_workers=len(tasks)) as executor:
+            futures = {name: executor.submit(task) for name, task in tasks.items()}
+            for name, future in futures.items():
+                payload[name] = future.result()
         if include_graph:
             payload["world_graph"] = self.world_graph_snapshot(actor.display_name, open_loops=open_loops)
         return payload
+
+    def _surface_cognition_snapshot(self, actor_name: str, open_loops: dict, *, include_world_state: bool) -> dict:
+        actor = self.get_actor(actor_name)
+        world_state = (
+            self.world_state_view(actor.display_name)
+            if include_world_state
+            else {
+                "summary": {},
+                "delta": {},
+                "event_summary": {},
+                "events": [],
+                "blocked_work": [],
+                "hidden_load": [],
+                "pressure_clusters": [],
+                "conflicts": [],
+                "likely_next": [],
+            }
+        )
+        return {
+            "actor": actor.display_name,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "world_state": world_state,
+            "growth_state": self.growth_state_snapshot(actor.display_name),
+            "cadence": self.cognitive_cadence_snapshot(actor.display_name, open_loops=open_loops),
+            "notification_policy": {
+                "quiet_hours_active": self._quiet_hours_active(),
+                "quiet_window": {
+                    "start": getattr(self.household, "quiet_start", "22:00"),
+                    "end": getattr(self.household, "quiet_end", "06:00"),
+                },
+            },
+        }
 
     def world_state_view(self, actor_name: str = "Chris") -> dict:
         return self._cached_surface(
@@ -7294,7 +11403,43 @@ class JarvisRuntime:
         }
 
     def update_approval(self, request_id: str, status: str) -> dict | None:
-        return self.approval_store.update_status(request_id, status)
+        updated = self.approval_store.update_status(request_id, status)
+        if updated is not None:
+            normalized = str(status).strip().lower()
+            lifecycle_work_id = str(updated.get("lifecycle_work_id", "")).strip()
+            domain = str(updated.get("domain", "")).strip().lower() or "approvals"
+            task_lane = self._task_lane_for_domain(domain)
+            if normalized in {"approved", "accepted", "rejected", "denied"}:
+                self.assistant_core_store.record_outcome(
+                    str(updated.get("actor", "")).strip(),
+                    source="approval",
+                    initiator="human",
+                    status="acted" if normalized in {"approved", "accepted"} else "ignored",
+                    domain="approvals",
+                    item_id=str(updated.get("request_id", "")).strip(),
+                    detail=str(updated.get("request", "")).strip() or str(updated.get("rationale", "")).strip(),
+                    timing_quality="right-time" if normalized in {"approved", "accepted"} else "not-useful",
+                    caused_friction=normalized in {"rejected", "denied"},
+                    friction_reason="" if normalized in {"approved", "accepted"} else "Human rejected the staged approval request.",
+                )
+                self.catalyst_support.transition_work_item(
+                    actor=str(updated.get("actor", "")).strip() or "Chris",
+                    title=str(updated.get("request", "")).strip()[:96] or "Approval decision",
+                    domain=domain,
+                    lane=str(updated.get("lane", "")).strip() or str(task_lane.get("lane", "")).strip() or "decision-command",
+                    owner_agent=str(updated.get("owner_agent", "")).strip() or str(task_lane.get("owner_agent", "")).strip() or "Nick Fury",
+                    stage=WorkLifecycleStage.OUTCOME,
+                    status="approved" if normalized in {"approved", "accepted"} else "rejected",
+                    artifact_type="approval-decision",
+                    source="approval-store",
+                    review_level=str(self._approval_threshold_for_domain(domain).get("level", "decision-required")).strip(),
+                    rationale="A human resolved the staged approval request.",
+                    work_id=lifecycle_work_id or str(updated.get("request_id", "")).strip(),
+                    record_id=str(updated.get("request_id", "")).strip(),
+                    metadata={"decision": normalized},
+                )
+            self._invalidate_snapshot_cache(surfaces=("shared_doctrine", "dashboard", "shell_state", "proactive_state"))
+        return updated
 
     def _default_defer_until(self, action: str) -> str:
         if action == "defer-tomorrow-am":
@@ -7494,6 +11639,104 @@ class JarvisRuntime:
         result["open_loops"] = self.unified_open_loops(actor.display_name, limit=18)
         return result
 
+    def converse(
+        self,
+        actor_name: str,
+        room: str,
+        request: str,
+        *,
+        conversation_id: str = "",
+        source: str = "shell",
+    ) -> dict:
+        actor = self.get_actor(actor_name)
+        thread = self.conversation_store.ensure(actor.display_name, room, conversation_id, source=source)
+        resolved_conversation_id = str(thread.get("conversation_id", "")).strip()
+        user_thread = self.conversation_store.append_turn(
+            resolved_conversation_id,
+            role="user",
+            text=request,
+            actor=actor.display_name,
+            room=room,
+            source=source,
+        )
+        continuity_context = self._conversation_context_excerpt(
+            actor,
+            resolved_conversation_id,
+            room,
+            request,
+            thread=user_thread,
+        )
+        plan = self.plan_request(actor_name, room, request)
+        if not plan.allowed:
+            result = OpenAIResult(
+                provider="policy",
+                model="policy",
+                output_text=self.tutoring_support.denial_response(actor, request, plan.rationale),
+            )
+            self.audit_log.log_response(
+                plan,
+                provider=result.provider,
+                model=result.model,
+                active_nodes=self._active_nodes_for(plan, result.provider),
+                output_text=result.output_text,
+            )
+        else:
+            result = run_response_graph(self, plan, continuity_context=continuity_context)
+            self.audit_log.log_response(
+                plan,
+                provider=result.provider,
+                model=result.model,
+                active_nodes=self._active_nodes_for(plan, result.provider),
+                output_text=result.output_text,
+            )
+        catalyst_capture = self._auto_capture_to_catalyst(
+            actor,
+            room,
+            request,
+            result.output_text,
+            seed_work_id=self._conversation_seed_work_id(user_thread),
+        )
+        final_output_text = result.output_text
+        if catalyst_capture and catalyst_capture.get("ok"):
+            capture_line = str(catalyst_capture.get("summary", "")).strip()
+            if capture_line:
+                final_output_text = f"{final_output_text.rstrip()}\n\n{capture_line}".strip()
+        assistant_thread = self.conversation_store.append_turn(
+            resolved_conversation_id,
+            role="assistant",
+            text=final_output_text,
+            actor=actor.display_name,
+            room=room,
+            source=source,
+            metadata={"provider": result.provider, "model": result.model, "catalyst_capture": catalyst_capture or {}},
+        )
+        learned_memory = self._record_conversation_learning(
+            actor,
+            resolved_conversation_id,
+            room,
+            thread=assistant_thread,
+        )
+        if catalyst_capture:
+            thread_captures = [item for item in list((assistant_thread or {}).get("catalyst_captures", [])) if isinstance(item, dict)]
+            thread_captures.append({k: v for k, v in catalyst_capture.items() if k != "record"})
+            assistant_thread = self.conversation_store.update_thread(
+                resolved_conversation_id,
+                catalyst_captures=thread_captures[-12:],
+            ) or assistant_thread
+        self._invalidate_snapshot_cache(actor.display_name, surfaces=("chat_state",))
+        return {
+            "provider": result.provider,
+            "model": result.model,
+            "output_text": final_output_text,
+            "conversation_id": resolved_conversation_id,
+            "active_conversation": self.conversation_snapshot(
+                resolved_conversation_id,
+                thread=assistant_thread,
+            ),
+            "learned_memory": learned_memory,
+            "catalyst_capture": catalyst_capture or {},
+        }
+
     def respond(self, actor_name: str, room: str, request: str) -> OpenAIResult:
         plan = self.plan_request(actor_name, room, request)
         actor = self.get_actor(actor_name)
@@ -7552,6 +11795,7 @@ class JarvisRuntime:
         }
 
     def agent_registry_snapshot(self) -> dict:
+        doctrine = self.shared_doctrine_snapshot()
         return {
             "agents": [
                 {
@@ -7564,9 +11808,11 @@ class JarvisRuntime:
                     "memory_scope": list(agent.memory_scope),
                     "owns": list(agent.owns),
                     "quiet_hours_behavior": agent.quiet_hours_behavior,
+                    "shared_doctrine": self.doctrine_store.rules_for(agent_id=agent.agent_id, active_only=True),
                 }
                 for agent in self.agent_registry.list()
-            ]
+            ],
+            "doctrine_summary": dict((doctrine.get("summary") or {})),
         }
 
     def background_agent_status(
@@ -7578,11 +11824,19 @@ class JarvisRuntime:
         active_mode = self.family_support.active_mode().mode
         activity = recent_activity if recent_activity is not None else self.recent_activity(limit=20)
         status_items = integration_status if integration_status is not None else self.status()
-        return self.background_cycle(
+        snapshot = self.background_cycle(
             active_mode=active_mode,
             recent_activity=activity,
             integration_status=status_items,
         )["scheduler"]
+        statuses = []
+        for item in list(snapshot.get("statuses", [])):
+            status = dict(item)
+            status["shared_doctrine"] = self.doctrine_store.rules_for(agent_id=str(status.get("agent_id", "")).strip(), active_only=True)
+            statuses.append(status)
+        snapshot["statuses"] = statuses
+        snapshot["doctrine_summary"] = self.shared_doctrine_snapshot().get("summary", {})
+        return snapshot
 
     def memory_curator_snapshot(self, *, recent_activity: list[dict] | None = None) -> dict:
         activity = recent_activity if recent_activity is not None else self.recent_activity(limit=20)
@@ -7601,6 +11855,7 @@ class JarvisRuntime:
         recent_activity: list[dict] | None = None,
         integration_status: list[dict] | None = None,
     ) -> dict:
+        self.storm_weather_snapshot(force=False)
         resolved_mode = active_mode or self.family_support.active_mode().mode
         activity = recent_activity if recent_activity is not None else self.recent_activity(limit=20)
         status_items = integration_status if integration_status is not None else self.status()
@@ -7763,6 +12018,39 @@ class JarvisRuntime:
     def chronicle_theme_summary(self, limit: int = 25) -> dict:
         return self.chronicle_support.prayer_theme_summary(limit=limit)
 
+    def catalyst_live_workspace(self, ttl_seconds: int = 30) -> dict:
+        url = os.getenv("JARVIS_CATALYST_STATE_URL", "http://127.0.0.1:3001/api/catalyst/state").strip()
+        key = self._cache_key("catalyst-live", "Chris", url=url)
+        cached, freshness = self._snapshot_cache_get(key, ttl_seconds=ttl_seconds)
+        if isinstance(cached, dict):
+            payload = dict(cached)
+            payload["freshness"] = freshness
+            return payload
+
+        payload: dict[str, object]
+        try:
+            request = urllib.request.Request(url, headers={"Accept": "application/json"})
+            with urllib.request.urlopen(request, timeout=10) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            if not isinstance(payload, dict):
+                raise ValueError("Catalyst live workspace payload was not an object.")
+            payload["live"] = bool(payload.get("available"))
+        except Exception as exc:  # pragma: no cover - network state varies live
+            payload = {
+                "available": False,
+                "calendar": {"items": [], "source": {"generatedAt": None, "source": "unavailable"}},
+                "email": {"items": [], "source": {"generatedAt": None, "source": "unavailable"}, "stats": {}},
+                "error": str(exc),
+                "live": False,
+                "projects": {"items": [], "stats": {}},
+                "retrievedAt": datetime.now(timezone.utc).isoformat(),
+                "tasks": {"items": [], "stats": {}},
+            }
+
+        freshness = self._snapshot_cache_put(key, payload, ttl_seconds=ttl_seconds)
+        payload["freshness"] = freshness
+        return payload
+
     def catalyst_overview(self) -> dict:
         overview = self.catalyst_support.overview()
         accounts = self.list_personal_accounts()
@@ -7812,6 +12100,7 @@ class JarvisRuntime:
                     connector["status"] = "connected" if family_calendar.get("configured") and not family_calendar.get("error") else "disconnected"
                     connector["notes"] = family_calendar.get("detail", "Family shared calendar feed is not configured yet.")
         overview["connectors"] = connectors
+        overview["live_workspace"] = self.catalyst_live_workspace()
         overview["google_workspace"] = google_summary
         overview["family_calendar"] = family_calendar
         overview["personal_accounts"] = accounts
@@ -7852,6 +12141,15 @@ class JarvisRuntime:
 
     def google_save_client_secret(self, raw_json: str) -> dict:
         return self.google_workspace.save_client_secret_json(raw_json)
+
+    def google_bridge_status(self) -> dict:
+        return self.google_workspace.bridge_status()
+
+    def google_bridge_export(self) -> dict:
+        return self.google_workspace.export_bridge_bundle()
+
+    def google_bridge_import(self, account_id: str = "") -> dict:
+        return self.google_workspace.import_bridge_bundle(account_id=account_id)
 
     def google_disconnect_account(self, account_id: str) -> dict:
         account = self.account_registry.get(account_id)
@@ -7899,6 +12197,51 @@ class JarvisRuntime:
                 account = updated
         summary["account"] = account.to_dict()
         return summary
+
+    def _resolve_google_mailbox_account(self, mailbox_id: str, owner_principal: str = "") -> PersonalAccount | None:
+        mailbox_key = str(mailbox_id or "").strip()
+        owner_key = str(owner_principal or "").strip().lower()
+        if mailbox_key:
+            direct = self.account_registry.get(mailbox_key)
+            if direct and direct.provider == "google" and direct.service_scope in {"mail", "mail_calendar"}:
+                return direct
+
+        accounts = self.account_registry.list_accounts()
+        if mailbox_key:
+            mailbox_lower = mailbox_key.lower()
+            for account in accounts:
+                if account.provider != "google" or account.service_scope not in {"mail", "mail_calendar"}:
+                    continue
+                aliases = {
+                    account.account_id.lower(),
+                    account.label.lower(),
+                    account.login_hint.lower(),
+                }
+                if mailbox_lower in aliases:
+                    return account
+
+        preferred_aliases = {"gmail_primary", "google_primary", "primary", "default"}
+        if mailbox_key.lower() in preferred_aliases or not mailbox_key:
+            for account in accounts:
+                if account.provider != "google" or account.service_scope not in {"mail", "mail_calendar"}:
+                    continue
+                if owner_key and account.owner_user_id != owner_key:
+                    continue
+                if account.status == "connected":
+                    return account
+            bridge_default = str(self.google_workspace.bridge_status().get("default_account_id", "")).strip()
+            if bridge_default:
+                fallback = self.account_registry.get(bridge_default)
+                if fallback and fallback.provider == "google" and fallback.service_scope in {"mail", "mail_calendar"}:
+                    return fallback
+        return None
+
+    @staticmethod
+    def _gmail_reply_subject(subject: str, intent_type: str) -> str:
+        cleaned = str(subject or "").strip() or "Email"
+        if str(intent_type or "").strip().lower() == "reply" and not cleaned.lower().startswith("re:"):
+            return f"Re: {cleaned}"
+        return cleaned
 
     def merged_calendar_events(self, limit: int = 20) -> list[dict]:
         events: list[dict] = []
@@ -8013,6 +12356,7 @@ class JarvisRuntime:
         *,
         sender: str = "",
         tags: list[str] | None = None,
+        work_id: str = "",
     ) -> dict:
         actor = self.get_actor(actor_name)
         record = self.catalyst_support.capture_signal(
@@ -8022,6 +12366,7 @@ class JarvisRuntime:
             content,
             sender=sender,
             tags=tags,
+            work_id=work_id,
         )
         self._invalidate_snapshot_cache(actor.display_name, surfaces=("pipeline_review", "pipeline_state", "dashboard", "today_board", "cognitive", "cadence_review"))
         return record
@@ -8245,9 +12590,35 @@ class JarvisRuntime:
         problem: str,
         desired_outcome: str,
         constraints: str = "",
+        *,
+        work_id: str = "",
     ) -> dict:
         actor = self.get_actor(actor_name)
-        result = self.catalyst_support.project_brief(actor.display_name, project_name, problem, desired_outcome, constraints)
+        result = self.catalyst_support.project_brief(actor.display_name, project_name, problem, desired_outcome, constraints, work_id=work_id)
+        self._invalidate_snapshot_cache(actor.display_name, surfaces=("pipeline_review", "pipeline_state", "dashboard", "today_board", "cognitive", "cadence_review"))
+        return result
+
+    def catalyst_hypothesis_generation(
+        self,
+        actor_name: str,
+        focus: str,
+        context: str = "",
+        lane: str = "",
+        supporting_signals: list[str] | None = None,
+        *,
+        work_id: str = "",
+        source_agent: str = "",
+    ) -> dict:
+        actor = self.get_actor(actor_name)
+        result = self.catalyst_support.hypothesis_generation(
+            actor.display_name,
+            focus,
+            context,
+            lane,
+            supporting_signals,
+            work_id=work_id,
+            source_agent=source_agent,
+        )
         self._invalidate_snapshot_cache(actor.display_name, surfaces=("pipeline_review", "pipeline_state", "dashboard", "today_board", "cognitive", "cadence_review"))
         return result
 
@@ -8257,9 +12628,11 @@ class JarvisRuntime:
         project_name: str,
         brief: str,
         constraints: str = "",
+        *,
+        work_id: str = "",
     ) -> dict:
         actor = self.get_actor(actor_name)
-        result = self.catalyst_support.implementation_plan(actor.display_name, project_name, brief, constraints)
+        result = self.catalyst_support.implementation_plan(actor.display_name, project_name, brief, constraints, work_id=work_id)
         self._invalidate_snapshot_cache(actor.display_name, surfaces=("pipeline_review", "pipeline_state", "dashboard", "today_board", "cognitive", "cadence_review"))
         return result
 
@@ -8335,22 +12708,52 @@ class JarvisRuntime:
         def builder() -> dict:
             actor = self.get_actor(actor_name)
             active_mode = self.family_support.active_mode()
-            adult_names = [profile.display_name for profile in self.household.users.values() if profile.permissions == "adult"]
-            parent_viewer = "Rebekah" if "Rebekah" in adult_names else (adult_names[0] if adult_names else "Chris")
-            recent_activity = self.recent_activity(limit=20)
-            integration_status = self.status()
-            background_cycle = self.background_cycle(
-                active_mode=active_mode.mode,
-                recent_activity=recent_activity,
-                integration_status=integration_status,
-            )
-            background_agents = background_cycle["scheduler"]
-            memory_curator = background_cycle["memory_curator"]
             open_loops = self.unified_open_loops(actor.display_name, limit=18)
-            cognitive = self.cognitive_snapshot(actor.display_name, include_graph=False, open_loops=open_loops)
-            today_board = self.today_board(actor.display_name, open_loops=open_loops, cognition=cognitive)
-            cadence_review = self.cadence_review(actor.display_name, open_loops=open_loops, cognition=cognitive)
-            growth_state = cognitive.get("growth_state") or self.growth_state_snapshot(actor.display_name)
+            growth_state = self.growth_state_snapshot(actor.display_name)
+            cadence = self.cognitive_cadence_snapshot(actor.display_name, open_loops=open_loops)
+
+            growth_summary = dict(growth_state.get("summary", {})) if isinstance(growth_state, dict) else {}
+            open_loop_summary = dict(open_loops.get("summary", {}))
+            carry: list[str] = []
+            if open_loop_summary.get("waiting_on_you", 0):
+                carry.append(f"{open_loop_summary.get('waiting_on_you', 0)} item(s) are waiting on a decision or review from you.")
+            if open_loop_summary.get("needs_revisit", 0):
+                carry.append(f"{open_loop_summary.get('needs_revisit', 0)} item(s) have aged enough that JARVIS should bring them back today.")
+            if str(growth_summary.get("pressure", "quiet")).strip().lower() in {"active", "warming"}:
+                carry.append(
+                    f"Growth pressure is {str(growth_summary.get('pressure', 'quiet'))}, with {int(growth_summary.get('tracked_signal_count', 0) or 0)} signal(s) worth keeping in view."
+                )
+            if not carry:
+                carry.append("The open-loop pressure is light right now; JARVIS can keep most follow-up quiet.")
+
+            compact_today_board = {
+                "actor": actor.display_name,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "priorities": [
+                    {
+                        "title": str(item.get("title", "Open loop")),
+                        "owner_agent": str(item.get("owner_agent", "JARVIS")),
+                        "next_action": str(item.get("next_action", "follow up")),
+                        "status": str(item.get("status", "open")),
+                    }
+                    for item in list(open_loops.get("items", []))[:3]
+                ],
+                "carry": carry,
+                "open_loops": {
+                    "summary": open_loop_summary,
+                    "top_item": open_loops.get("top_item"),
+                },
+                "growth": growth_state,
+                "cognition": {
+                    "growth_state": growth_state,
+                    "cadence": cadence,
+                    "world_state": {
+                        "blocked_work": [],
+                        "conflicts": [],
+                        "likely_next": [],
+                    },
+                },
+            }
 
             def card_payload(card) -> dict:
                 return {
@@ -8368,13 +12771,15 @@ class JarvisRuntime:
                     "note": event.note,
                 }
 
+            storm_weather = self.storm_weather_snapshot(force=False)
             payload = {
                 "day_label": self.snapshot.day_label,
                 "location": self.household.location_label,
-                "weather": self.snapshot.weather,
+                "weather": str((storm_weather.get("current") or {}).get("condition") or self.snapshot.weather),
+                "storm_weather": storm_weather,
                 "house_note": self.snapshot.house_note,
                 "truth": {
-                    "weather_live": False,
+                    "weather_live": bool(storm_weather.get("live")),
                     "mission_live": False,
                     "home_live": self.home_overview().get("mode") == "live",
                     "watch_live": self.cold_storage_monitor().get("mode") == "live",
@@ -8401,32 +12806,8 @@ class JarvisRuntime:
                 "merged_calendar": self.merged_calendar_events(limit=12),
                 "watch_items": self.snapshot.watch_items,
                 "mode_brief": self.family_mode_brief(active_mode.mode),
-                "departure_checklist": self.family_support.departure_checklist(),
-                "departure_runs": self.list_departure_runs(limit=5),
-                "message_drafts": self.family_support.list_drafts(limit=5),
-                "anomalies": self.family_support.anomaly_watch(
-                    self.snapshot.home.details,
-                    self.snapshot.watch_items,
-                ),
-                "meal_plans": self.list_meal_plans(limit=5),
-                "vehicle_plans": self.list_vehicle_plans(limit=5),
-                "weather_plans": self.list_weather_plans(limit=5),
-                "child_boundaries": self.child_boundaries(),
-                "tutoring_summaries": self.tutoring_summaries(parent_viewer, limit=6),
-                "printer_status": self.printer_status(),
-                "workshop_inspections": self.list_workshop_inspections(limit=5),
-                "vendor_preps": self.list_vendor_preps(limit=5),
-                "cad_packages": self.list_cad_packages(limit=5),
-                "print_preps": self.list_print_preps(limit=5),
-                "material_recommendations": self.list_material_recommendations(limit=5),
-                "safety_checks": self.list_safety_checks(limit=5),
-                "inventory_summary": self.inventory_summary(),
-                "voice_note_tasks": self.list_voice_note_tasks(limit=5),
                 "open_loops": open_loops,
-                "today_board": today_board,
-                "cadence_review": cadence_review,
-                "cognitive": cognitive,
-                "growth_state": growth_state,
+                "today_board": compact_today_board,
                 "assistant_surface": {
                     "signal_chips": list(open_loops.get("surface_chips", [])),
                     "briefing_lines": list(open_loops.get("briefing_lines", [])),
@@ -8435,42 +12816,8 @@ class JarvisRuntime:
                     "top_item": open_loops.get("top_item"),
                 },
                 "assistant_notifications": self.assistant_notifications(actor.display_name, limit=6),
-                "home_overview": self.home_overview(),
-                "environment_status": self.environment_status_snapshot(actor.display_name),
-                "home_actions": self.list_home_actions(limit=8),
-                "climate_status": self.climate_status(),
-                "access_overview": self.access_overview(),
-                "garage_status": self.garage_status(),
-                "leak_monitor": self.leak_monitor(),
-                "cold_storage_monitor": self.cold_storage_monitor(),
-                "outage_readiness": self.outage_readiness(),
-                "perception_overview": self.perception_overview(),
-                "memory_overview": self.memory_overview(actor.display_name),
-                "catalyst_overview": self.catalyst_overview(),
-                "google_workspace": self.google_workspace_summary(),
-                "family_calendar": self.family_calendar_summary(),
-                "chronicle_timeline": self.chronicle_timeline(limit=5),
-                "chronicle_theme_summary": self.chronicle_theme_summary(limit=20),
-                "device_boundaries": self.list_device_boundaries(limit=6),
-                "security_incidents": self.list_security_incidents(limit=8),
-                "weather_advisories": self.list_weather_advisories(limit=5),
-                "arrival_events": self.list_arrival_events(limit=5),
-                "unlock_assessments": self.list_unlock_assessments(limit=5),
-                "overnight_review": self.overnight_review(),
-                "explainability": self.explainability_snapshot(),
-                "brain_graph": self.brain_graph_snapshot(),
-                "background_agents": background_agents,
-                "background_cycle": background_cycle,
-                "agent_registry": self.agent_registry_snapshot(),
-                "memory_curator": memory_curator,
             }
             degraded_inputs = []
-            if self._is_degraded_payload(today_board):
-                degraded_inputs.append("Today Board")
-            if self._is_degraded_payload(cadence_review):
-                degraded_inputs.append("Cadence Review")
-            if self._is_degraded_payload(cognitive):
-                degraded_inputs.append("Cognitive snapshot")
             if degraded_inputs:
                 payload["degraded"] = {
                     "active": True,
@@ -9467,6 +13814,7 @@ class JarvisRuntime:
 
     def departure_plan(self, actor_name: str, context: str = "") -> dict:
         actor = self.get_actor(actor_name)
+        storm_weather = self.storm_weather_snapshot(force=False)
         garage_items = self.garage_status()
         garage_note = ""
         if garage_items:
@@ -9477,7 +13825,7 @@ class JarvisRuntime:
         return self.family_support.departure_orchestration(
             actor.display_name,
             enriched_context,
-            self.snapshot.weather,
+            str((storm_weather.get("current") or {}).get("condition") or storm_weather.get("summary") or self.snapshot.weather),
             garage_state=garage_note,
             family_focus=self.snapshot.family_focus,
         )
@@ -9494,7 +13842,12 @@ class JarvisRuntime:
 
     def vehicle_plan(self, actor_name: str, request: str) -> dict:
         actor = self.get_actor(actor_name)
-        return self.family_support.vehicle_assignment(actor.display_name, request, self.snapshot.weather)
+        storm_weather = self.storm_weather_snapshot(force=False)
+        return self.family_support.vehicle_assignment(
+            actor.display_name,
+            request,
+            str((storm_weather.get("current") or {}).get("condition") or storm_weather.get("summary") or self.snapshot.weather),
+        )
 
     def list_vehicle_plans(self, limit: int = 20) -> list[dict]:
         return self.family_support.list_vehicle_plans(limit=limit)
@@ -9502,10 +13855,11 @@ class JarvisRuntime:
     def weather_contingency(self, actor_name: str, request: str) -> dict:
         actor = self.get_actor(actor_name)
         active_mode = self.family_support.active_mode().mode
+        storm_weather = self.storm_weather_snapshot(force=False)
         return self.family_support.weather_contingency(
             actor.display_name,
             request,
-            self.snapshot.weather,
+            str((storm_weather.get("current") or {}).get("condition") or storm_weather.get("summary") or self.snapshot.weather),
             active_mode,
         )
 
@@ -9533,6 +13887,23 @@ class JarvisRuntime:
     ) -> dict:
         actor = self.get_actor(actor_name)
         draft = self.family_support.stage_parent_message(actor.display_name, audience, purpose, context, tone)
+        task_lane = self._task_lane_for_domain("family")
+        threshold = self._approval_threshold_for_domain("family")
+        lifecycle = self.catalyst_support.transition_work_item(
+            actor=actor.display_name,
+            title=f"Parent message to {audience}",
+            domain="family",
+            lane=str(task_lane.get("lane", "")).strip() or "household-execution",
+            owner_agent=str(task_lane.get("owner_agent", "")).strip() or "Pepper",
+            stage=WorkLifecycleStage.STAGED_ACTION,
+            status="pending-approval",
+            artifact_type="message-draft",
+            source="family-stage-parent-message",
+            review_level=str(threshold.get("level", "review-before-send")).strip() or "review-before-send",
+            rationale="Family-facing messages should be staged before sending.",
+            record_id=str(draft.get("draft_id", "")).strip(),
+            metadata={"audience": audience, "purpose": purpose},
+        )
         approval_request = ApprovalRequest(
             request_id=str(uuid.uuid4()),
             actor=actor.display_name,
@@ -9542,16 +13913,296 @@ class JarvisRuntime:
             second_factor_required=False,
             status="pending",
             rationale="Parent-facing communication must be reviewed before sending.",
+            domain="family",
+            lane=str(task_lane.get("lane", "")).strip(),
+            owner_agent=str(task_lane.get("owner_agent", "")).strip(),
+            lifecycle_work_id=str(lifecycle.get("work_id", "")).strip(),
         )
         self.approval_store.add(approval_request)
         draft["approval_request_id"] = approval_request.request_id
+        draft["work_id"] = str(lifecycle.get("work_id", "")).strip()
         return draft
 
     def list_message_drafts(self, limit: int = 20) -> list[dict]:
         return self.family_support.list_drafts(limit=limit)
 
     def update_message_draft(self, draft_id: str, status: str) -> dict | None:
-        return self.family_support.update_draft_status(draft_id, status)
+        updated = self.family_support.update_draft_status(draft_id, status)
+        if updated is None:
+            return None
+        work_id = str(updated.get("work_id", "")).strip()
+        normalized = str(status).strip().lower()
+        if work_id:
+            if normalized in {"staged", "pending-approval", "draft_saved", "draft_sync_required"}:
+                self.catalyst_support.transition_work_item(
+                    actor=str(updated.get("actor", "Chris")).strip() or "Chris",
+                    title=f"Parent message to {str(updated.get('audience', 'recipient')).strip() or 'recipient'}",
+                    domain="family",
+                    lane="household-execution" if str(updated.get("intent_type", "")).strip() != "reply" else "shared-communications",
+                    owner_agent="Pepper" if str(updated.get("intent_type", "")).strip() != "reply" else "JARVIS",
+                    stage=WorkLifecycleStage.STAGED_ACTION,
+                    status=normalized,
+                    artifact_type="message-draft" if str(updated.get("intent_type", "")).strip() != "reply" else "email-draft",
+                    source="family-update-message-draft",
+                    review_level="review-before-send",
+                    rationale="The staged message artifact changed state.",
+                    work_id=work_id,
+                    record_id=str(updated.get("draft_id", "")).strip(),
+                )
+            elif normalized in {"sent", "completed"}:
+                self._mark_work_item_outcome(str(updated.get("actor", "Chris")).strip() or "Chris", {"work_id": work_id, "title": f"Message draft {draft_id}", "domain": "family", "lane": "household-execution", "owner_agent": "Pepper"}, status="succeeded", rationale="The staged message was completed and sent.", artifact_type="message-draft")
+            elif normalized in {"archived", "cancelled"}:
+                self._mark_work_item_outcome(str(updated.get("actor", "Chris")).strip() or "Chris", {"work_id": work_id, "title": f"Message draft {draft_id}", "domain": "family", "lane": "household-execution", "owner_agent": "Pepper"}, status="abandoned", rationale="The staged message was archived instead of sent.", artifact_type="message-draft")
+        self._invalidate_snapshot_cache(surfaces=("pipeline_review", "pipeline_state", "dashboard", "shell_state", "proactive_state"))
+        return updated
+
+    def list_trust_zones(self) -> list[dict]:
+        return self.trust_support.list_trust_zones()
+
+    def create_trust_zone(self, payload: dict[str, object]) -> dict:
+        now = datetime.now(timezone.utc).isoformat()
+        zone = TrustZone(
+            zone_id=str(payload["zone_id"]),
+            name=str(payload["name"]),
+            description=str(payload.get("description", "")),
+            zone_type=str(payload["zone_type"]),
+            resource_scope=dict(payload["resource_scope"]),
+            allowed_actions=[str(item) for item in list(payload["allowed_actions"])],
+            approval_mode=str(payload["approval_mode"]),
+            audit_mode=str(payload["audit_mode"]),
+            reporting_cadence=str(payload.get("reporting_cadence", "on_request")),
+            promotion_rules=dict(payload["promotion_rules"]),
+            demotion_rules=dict(payload["demotion_rules"]),
+            status=str(payload.get("status", "active")),
+            created_at=str(payload.get("created_at", now)),
+            updated_at=now,
+        )
+        return self.trust_support.upsert_trust_zone(zone)
+
+    def list_resource_arenas(self) -> list[dict]:
+        return self.trust_support.list_resource_arenas()
+
+    def create_resource_arena(self, payload: dict[str, object]) -> dict:
+        now = datetime.now(timezone.utc).isoformat()
+        arena = ResourceArena(
+            arena_id=str(payload["arena_id"]),
+            name=str(payload["name"]),
+            description=str(payload.get("description", "")),
+            resource_type=str(payload["resource_type"]),
+            linked_zone_id=str(payload["linked_zone_id"]),
+            owner_principal=str(payload["owner_principal"]),
+            risk_class=str(payload["risk_class"]),
+            resource_refs=dict(payload.get("resource_refs", {})),
+            limits=dict(payload["limits"]),
+            pause_conditions=[str(item) for item in list(payload["pause_conditions"])],
+            promotion_eligibility=dict(payload.get("promotion_eligibility", {})),
+            status=str(payload.get("status", "active")),
+            created_at=str(payload.get("created_at", now)),
+            updated_at=now,
+        )
+        return self.trust_support.upsert_resource_arena(arena)
+
+    def list_authority_stages(self) -> list[dict]:
+        return self.trust_support.list_authority_stages()
+
+    def list_stage_queue(self, limit: int = 50) -> list[dict]:
+        return self.trust_support.list_stage_queue(limit=limit)
+
+    def stage_email_draft(self, payload: dict[str, object]) -> dict:
+        request = EmailDraftStagingRequest(
+            request_id=str(payload["request_id"]),
+            arena_id=str(payload["arena_id"]),
+            principal_id=str(payload["principal_id"]),
+            source_message=dict(payload["source_message"]),
+            draft_intent=dict(payload["draft_intent"]),
+            stage_policy=dict(payload["stage_policy"]),
+            context_refs=dict(payload.get("context_refs", {})),
+        )
+        arena = self.trust_support.get_resource_arena(request.arena_id)
+        if arena is None:
+            raise KeyError(f"Unknown resource arena: {request.arena_id}")
+        zone = self.trust_support.get_trust_zone(str(arena.get("linked_zone_id", "")))
+        if zone is None:
+            raise KeyError(f"Unknown trust zone for arena: {request.arena_id}")
+        actor = self.get_actor(request.principal_id)
+        source_message_id = str(request.source_message.get("message_id", "")).strip()
+        thread_id = str(request.source_message.get("thread_id", "")).strip()
+        mailbox_id = str(request.source_message.get("mailbox_id", "")).strip() or str((arena.get("resource_refs") or {}).get("mailbox_id", "")).strip()
+        from_label = str(request.source_message.get("from", "")).strip() or "Unknown sender"
+        subject = str(request.source_message.get("subject", "")).strip() or "Email"
+        draft_intent = request.draft_intent
+        intent_type = str(draft_intent.get("intent_type", "reply"))
+        key_points = [str(item) for item in list(draft_intent.get("key_points", [])) if str(item).strip()]
+        draft = self.family_support.stage_email_draft(
+            actor=actor.display_name,
+            request_id=request.request_id,
+            arena_id=request.arena_id,
+            mailbox_id=mailbox_id,
+            thread_id=thread_id,
+            source_message_id=source_message_id,
+            source_subject=subject,
+            from_label=from_label,
+            intent_type=intent_type,
+            tone=str(draft_intent.get("tone", "warm")),
+            goal=str(draft_intent.get("goal", "")).strip(),
+            key_points=key_points,
+            context_refs=request.context_refs,
+        )
+        gmail_account = self._resolve_google_mailbox_account(
+            mailbox_id=mailbox_id or str((arena.get("resource_refs") or {}).get("mailbox_id", "")),
+            owner_principal=str(arena.get("owner_principal", request.principal_id)),
+        )
+        if gmail_account is not None:
+            gmail_result = self.google_workspace.create_gmail_draft(
+                gmail_account,
+                to_value=from_label,
+                subject=self._gmail_reply_subject(subject, intent_type),
+                body=str(draft.get("body", "")),
+                thread_id=thread_id,
+                in_reply_to=str(request.source_message.get("internet_message_id", "")).strip(),
+                references=[
+                    str(item).strip()
+                    for item in list(request.source_message.get("references", []))
+                    if str(item).strip()
+                ],
+            )
+        else:
+            gmail_result = {
+                "ok": False,
+                "reason": "mailbox_unresolved",
+                "detail": f"Could not resolve shared mailbox '{mailbox_id or 'gmail_primary'}' to a connected Google account.",
+                "provider": "gmail",
+            }
+
+        gmail_ok = bool(gmail_result.get("ok"))
+        local_only_mode = str(gmail_result.get("reason", "")).strip() == "draft_write_disabled"
+        persisted_draft = self.family_support.update_draft(
+            str(draft.get("draft_id", "")).strip(),
+            {
+                "provider": "gmail",
+                "mailbox_account_id": str(getattr(gmail_account, "account_id", "") or gmail_result.get("account_id", "")).strip(),
+                "external_draft_id": str(gmail_result.get("draft_id", "")).strip(),
+                "external_message_id": str(gmail_result.get("message_id", "")).strip(),
+                "external_thread_id": str(gmail_result.get("thread_id", "")).strip(),
+                "sync_status": (
+                    "synced"
+                    if gmail_ok
+                    else ("local_only" if local_only_mode else str(gmail_result.get("reason", "gmail_write_failed")).strip() or "gmail_write_failed")
+                ),
+                "sync_error": "" if gmail_ok or local_only_mode else str(gmail_result.get("detail", "")).strip(),
+                "stage_status": "draft_saved" if (gmail_ok or local_only_mode) else "draft_write_failed",
+                "alert_status": "queued",
+            },
+        )
+        if persisted_draft:
+            draft = persisted_draft
+
+        queue_status = "awaiting_principal_review" if (gmail_ok or local_only_mode) else "draft_sync_required"
+        queue_item = self.trust_support.enqueue_stage_action(
+            StagedActionQueueItem(
+                request_id=request.request_id,
+                arena_id=request.arena_id,
+                action_type="email_draft_review",
+                status=queue_status,
+                created_at=datetime.now(timezone.utc).isoformat(),
+                draft_id=str(draft.get("draft_id", "")).strip(),
+                principal_id=request.principal_id,
+            )
+        )
+        lifecycle = self.catalyst_support.transition_work_item(
+            actor=actor.display_name,
+            title=f"Shared email draft: {subject[:72]}",
+            domain="family",
+            lane="shared-communications",
+            owner_agent="JARVIS",
+            stage=WorkLifecycleStage.STAGED_ACTION,
+            status="awaiting-principal-review" if (gmail_ok or local_only_mode) else "draft-sync-required",
+            artifact_type="email-draft",
+            source="trust-zone-email-draft",
+            review_level="stage-and-alert",
+            rationale=(
+                "Shared email begins in draft-and-alert mode before any live send authority."
+                if (gmail_ok or local_only_mode)
+                else "Shared email draft was prepared locally but Gmail draft sync still needs mailbox reconnect or mapping repair."
+            ),
+            record_id=str(draft.get("draft_id", "")).strip(),
+            metadata={
+                "arena_id": request.arena_id,
+                "zone_id": str(zone.get("zone_id", "")).strip(),
+                "source_message_id": source_message_id,
+                "queue_request_id": request.request_id,
+                "gmail_sync": gmail_result,
+            },
+        )
+        persisted_draft = self.family_support.update_draft(
+            str(draft.get("draft_id", "")).strip(),
+            {"work_id": str(lifecycle.get("work_id", "")).strip()},
+        )
+        if persisted_draft:
+            draft = persisted_draft
+        self.audit_log.log_assistant_action(
+            actor=actor.display_name,
+            domain="shared-email",
+            item_id=str(draft.get("draft_id", "")).strip(),
+            action="stage-email-draft",
+            detail=(
+                f"Drafted reply for '{subject}' in arena {request.arena_id}, wrote it to Gmail drafts, and queued principal review."
+                if gmail_ok
+                else (
+                    f"Drafted reply for '{subject}' in arena {request.arena_id} and queued principal review in read-only mailbox mode."
+                    if local_only_mode
+                    else f"Drafted reply for '{subject}' in arena {request.arena_id}, but Gmail draft sync failed and principal attention is required."
+                )
+            ),
+            mode="stage-and-alert",
+            action_class="PREPARE",
+            policy_basis=f"trust-zone:{zone.get('zone_id', '')}",
+            decision="staged" if (gmail_ok or local_only_mode) else "degraded",
+            surface_key="shared-email-stage",
+            result_summary=(
+                "Draft saved to Gmail drafts and principal alert queued."
+                if gmail_ok
+                else (
+                    "Local draft saved and principal alert queued. Gmail remains intentionally read-only."
+                    if local_only_mode
+                    else f"Local draft saved, but Gmail draft write failed: {gmail_result.get('detail', 'unknown error')}"
+                )
+            ),
+            succeeded=gmail_ok or local_only_mode,
+        )
+        alert_message = (
+            "Email draft prepared, written to Gmail drafts, and queued for review."
+            if gmail_ok
+            else (
+                "Email draft prepared locally and queued for review. Gmail is intentionally read-only right now."
+                if local_only_mode
+                else f"Email draft prepared locally, but Gmail draft sync failed: {gmail_result.get('detail', 'review required')}."
+            )
+        )
+        response = EmailDraftStagingResponse(
+            request_id=request.request_id,
+            draft_id=str(draft.get("draft_id", "")).strip(),
+            arena_id=request.arena_id,
+            stage_status="alerted" if (gmail_ok or local_only_mode) else "failed",
+            draft_location={
+                "mailbox_id": mailbox_id,
+                "folder": "drafts",
+                "thread_id": str(draft.get("external_thread_id", "")).strip() or thread_id,
+                "draft_message_id": str(draft.get("external_draft_id", "")).strip() or str(draft.get("draft_id", "")).strip(),
+            },
+            alert={
+                "status": "queued",
+                "channel": "in_app",
+                "message": alert_message,
+            },
+            promotion_signal={
+                "eligible_for_review": True,
+                "stage_id": "draft",
+                "queue_status": str(queue_item.get("status", "")).strip(),
+            },
+            audit_ref=f"stage-email:{request.request_id}",
+        )
+        return asdict(response)
 
     def anomaly_watch(self) -> list[dict]:
         return self.family_support.anomaly_watch(
@@ -9595,7 +14246,12 @@ class JarvisRuntime:
 
     def weather_advisory(self, actor_name: str, context: str) -> dict:
         actor = self.get_actor(actor_name)
-        return self.security_support.weather_advisory(actor.display_name, context, self.snapshot.weather)
+        storm_weather = self.storm_weather_snapshot(force=False)
+        return self.security_support.weather_advisory(
+            actor.display_name,
+            context,
+            str((storm_weather.get("current") or {}).get("condition") or storm_weather.get("summary") or self.snapshot.weather),
+        )
 
     def child_arrival(self, actor_name: str, location: str, detail: str) -> dict:
         actor = self.get_actor(actor_name)
@@ -9704,6 +14360,7 @@ class JarvisRuntime:
         family_hint: str,
         printer_hint: str,
         profile_hint: str,
+        creative_profile: str,
     ) -> dict:
         actor = self.get_actor(actor_name)
         return self.workshop_support.cad_package_advanced(
@@ -9714,6 +14371,43 @@ class JarvisRuntime:
             family_hint,
             printer_hint,
             profile_hint,
+            creative_profile,
+        )
+
+    def concept_studio_chat(
+        self,
+        actor_name: str,
+        prompt: str,
+        object_type: str,
+        goals: str,
+        constraints: str,
+        *,
+        session_id: str = "",
+        image_path: str = "",
+        capture_id: str = "",
+        reference_note: str = "",
+        silhouette_preference: str = "",
+        vision_object_label: str = "",
+        vision_contour_confidence: str = "",
+        vision_asymmetry_hint: str = "",
+        vision_dimension_seed: str = "",
+    ) -> dict:
+        actor = self.get_actor(actor_name)
+        return self.workshop_support.concept_studio_chat(
+            actor.display_name,
+            prompt,
+            object_type,
+            goals,
+            constraints,
+            session_id=session_id,
+            image_path=image_path,
+            capture_id=capture_id,
+            reference_note=reference_note,
+            silhouette_preference=silhouette_preference,
+            vision_object_label=vision_object_label,
+            vision_contour_confidence=vision_contour_confidence,
+            vision_asymmetry_hint=vision_asymmetry_hint,
+            vision_dimension_seed=vision_dimension_seed,
         )
 
     def print_prep(
@@ -9767,6 +14461,12 @@ class JarvisRuntime:
     def list_cad_packages(self, limit: int = 10) -> list[dict]:
         return self.workshop_support.list_cad_packages(limit=limit)
 
+    def list_concept_sessions(self, limit: int = 10) -> list[dict]:
+        return self.workshop_support.list_concept_sessions(limit=limit)
+
+    def get_concept_session(self, session_id: str) -> dict | None:
+        return self.workshop_support.get_concept_session(session_id)
+
     def get_cad_package(self, package_id: str) -> dict | None:
         return self.workshop_support.store.get_cad_package(package_id)
 
@@ -9809,6 +14509,23 @@ class JarvisRuntime:
             material,
             notes,
         )
+        task_lane = self._task_lane_for_domain("workshop")
+        threshold = self._approval_threshold_for_domain("workshop")
+        lifecycle = self.catalyst_support.transition_work_item(
+            actor=actor.display_name,
+            title=f"Vendor package for {part_name}",
+            domain="workshop",
+            lane=str(task_lane.get("lane", "")).strip() or "fabrication-and-vendors",
+            owner_agent=str(task_lane.get("owner_agent", "")).strip() or "Rocket",
+            stage=WorkLifecycleStage.STAGED_ACTION,
+            status="pending-approval",
+            artifact_type="vendor-prep",
+            source="workshop-vendor-prep",
+            review_level=str(threshold.get("level", "review-before-external")).strip() or "review-before-external",
+            rationale="External vendor work must be staged before any external commitment.",
+            record_id=str(prep.get("prep_id", "")).strip(),
+            metadata={"vendor_target": vendor_target, "process": process, "material": material},
+        )
         approval_request = ApprovalRequest(
             request_id=str(uuid.uuid4()),
             actor=actor.display_name,
@@ -9818,14 +14535,46 @@ class JarvisRuntime:
             second_factor_required=False,
             status="pending",
             rationale="External vendor submission requires explicit approval before any quote request is sent.",
+            domain="workshop",
+            lane=str(task_lane.get("lane", "")).strip(),
+            owner_agent=str(task_lane.get("owner_agent", "")).strip(),
+            lifecycle_work_id=str(lifecycle.get("work_id", "")).strip(),
         )
         self.approval_store.add(approval_request)
         prep["approval_request_id"] = approval_request.request_id
         prep["status"] = "pending-approval"
+        prep["work_id"] = str(lifecycle.get("work_id", "")).strip()
         return self.workshop_support.save_vendor_prep(prep)
 
     def list_vendor_preps(self, limit: int = 10) -> list[dict]:
         return self.workshop_support.list_vendor_preps(limit=limit)
 
     def update_vendor_prep_status(self, prep_id: str, status: str) -> dict | None:
-        return self.workshop_support.update_vendor_prep_status(prep_id, status)
+        updated = self.workshop_support.update_vendor_prep_status(prep_id, status)
+        if updated is None:
+            return None
+        work_id = str(updated.get("work_id", "")).strip()
+        normalized = str(status).strip().lower()
+        if work_id:
+            if normalized in {"staged", "pending-approval"}:
+                self.catalyst_support.transition_work_item(
+                    actor=str(updated.get("actor", "Chris")).strip() or "Chris",
+                    title=f"Vendor package for {str(updated.get('part_name', 'part')).strip() or 'part'}",
+                    domain="workshop",
+                    lane="fabrication-and-vendors",
+                    owner_agent="Rocket",
+                    stage=WorkLifecycleStage.STAGED_ACTION,
+                    status=normalized,
+                    artifact_type="vendor-prep",
+                    source="workshop-update-vendor-prep",
+                    review_level="review-before-external",
+                    rationale="The vendor prep artifact changed state.",
+                    work_id=work_id,
+                    record_id=str(updated.get("prep_id", "")).strip(),
+                )
+            elif normalized in {"completed", "sent"}:
+                self._mark_work_item_outcome(str(updated.get("actor", "Chris")).strip() or "Chris", {"work_id": work_id, "title": f"Vendor prep {prep_id}", "domain": "workshop", "lane": "fabrication-and-vendors", "owner_agent": "Rocket"}, status="succeeded", rationale="The vendor prep completed successfully.", artifact_type="vendor-prep")
+            elif normalized in {"archived", "cancelled"}:
+                self._mark_work_item_outcome(str(updated.get("actor", "Chris")).strip() or "Chris", {"work_id": work_id, "title": f"Vendor prep {prep_id}", "domain": "workshop", "lane": "fabrication-and-vendors", "owner_agent": "Rocket"}, status="abandoned", rationale="The vendor prep was archived instead of executed.", artifact_type="vendor-prep")
+        self._invalidate_snapshot_cache(surfaces=("pipeline_review", "pipeline_state", "dashboard", "shell_state", "proactive_state"))
+        return updated

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import math
 import re
@@ -12,8 +13,10 @@ from pathlib import Path
 from typing import Any
 
 from .config import AppConfig
+from .data_hygiene import filter_records
 from .models import (
     CadPackage,
+    ConceptStudioSession,
     InventoryItem,
     MaterialRecommendation,
     PrinterStatus,
@@ -42,6 +45,7 @@ class WorkshopStore:
         self.print_preps_path = self.root / "print_preps.json"
         self.material_recommendations_path = self.root / "material_recommendations.json"
         self.safety_checks_path = self.root / "safety_checks.json"
+        self.concept_sessions_path = self.root / "concept_sessions.json"
 
     def add_inspection(self, inspection: WorkshopInspection) -> None:
         with self.inspections_path.open("a", encoding="utf-8") as handle:
@@ -52,7 +56,8 @@ class WorkshopStore:
             return []
         lines = self.inspections_path.read_text(encoding="utf-8").splitlines()
         records = [json.loads(line) for line in lines if line.strip()]
-        return list(reversed(records[-limit:]))
+        cleaned = filter_records(records)
+        return list(reversed(cleaned[-limit:]))
 
     def latest_inspection_for_part(self, part_name: str) -> dict | None:
         lowered = part_name.strip().lower()
@@ -64,7 +69,8 @@ class WorkshopStore:
     def _load_vendor_preps(self) -> list[dict]:
         if not self.vendor_preps_path.exists():
             return []
-        return json.loads(self.vendor_preps_path.read_text(encoding="utf-8"))
+        records = json.loads(self.vendor_preps_path.read_text(encoding="utf-8"))
+        return filter_records(records if isinstance(records, list) else [])
 
     def _save_vendor_preps(self, records: list[dict]) -> None:
         self.vendor_preps_path.write_text(json.dumps(records, indent=2) + "\n", encoding="utf-8")
@@ -93,7 +99,8 @@ class WorkshopStore:
     def _load_json_records(self, path: Path) -> list[dict]:
         if not path.exists():
             return []
-        return json.loads(path.read_text(encoding="utf-8"))
+        records = json.loads(path.read_text(encoding="utf-8"))
+        return filter_records(records if isinstance(records, list) else [])
 
     def _save_json_records(self, path: Path, records: list[dict]) -> None:
         path.write_text(json.dumps(records, indent=2) + "\n", encoding="utf-8")
@@ -147,6 +154,32 @@ class WorkshopStore:
 
     def list_safety_checks(self, limit: int = 10) -> list[dict]:
         return list(reversed(self._load_json_records(self.safety_checks_path)[-limit:]))
+
+    def add_concept_session(self, session: ConceptStudioSession) -> None:
+        records = self._load_json_records(self.concept_sessions_path)
+        records.append(asdict(session))
+        self._save_json_records(self.concept_sessions_path, records)
+
+    def list_concept_sessions(self, limit: int = 10) -> list[dict]:
+        return list(reversed(self._load_json_records(self.concept_sessions_path)[-limit:]))
+
+    def get_concept_session(self, session_id: str) -> dict | None:
+        for item in self._load_json_records(self.concept_sessions_path):
+            if item.get("session_id") == session_id:
+                return item
+        return None
+
+    def update_concept_session(self, session_id: str, patch: dict[str, Any]) -> dict | None:
+        records = self._load_json_records(self.concept_sessions_path)
+        updated = None
+        for item in records:
+            if item.get("session_id") == session_id:
+                item.update(patch)
+                updated = item
+                break
+        if updated is not None:
+            self._save_json_records(self.concept_sessions_path, records)
+        return updated
 
 
 class WorkshopSupport:
@@ -227,8 +260,174 @@ class WorkshopSupport:
         self.store.add_material_recommendation(recommendation)
         return asdict(recommendation)
 
+    def concept_studio_chat(
+        self,
+        actor: str,
+        prompt: str,
+        object_type: str,
+        goals: str,
+        constraints: str,
+        *,
+        session_id: str = "",
+        image_path: str = "",
+        capture_id: str = "",
+        reference_note: str = "",
+        silhouette_preference: str = "",
+        vision_object_label: str = "",
+        vision_contour_confidence: str = "",
+        vision_asymmetry_hint: str = "",
+        vision_dimension_seed: str = "",
+    ) -> dict:
+        existing_raw = self.store.get_concept_session(session_id.strip()) if session_id.strip() else None
+        existing = dict(existing_raw) if isinstance(existing_raw, dict) else {}
+        active_session_id = session_id.strip() or str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        transcript_source = existing.get("transcript", [])
+        transcript = [dict(item) for item in transcript_source if isinstance(item, dict)]
+        user_turn = {
+            "role": "user",
+            "content": prompt.strip() or "Help me shape a unique printable design.",
+        }
+        transcript.append(user_turn)
+        active_object_type = object_type.strip() or str(existing.get("object_type", "")).strip() or "custom object"
+        active_goals = goals.strip() or str(existing.get("goals", "")).strip()
+        active_constraints = constraints.strip() or str(existing.get("constraints", "")).strip()
+        active_image_path = image_path.strip() or str(existing.get("image_path", "")).strip()
+        active_capture_id = capture_id.strip() or str(existing.get("capture_id", "")).strip()
+        active_reference_note = reference_note.strip()
+        active_silhouette_preference = silhouette_preference.strip() or str(existing.get("silhouette_preference", "")).strip()
+        active_vision_object_label = vision_object_label.strip() or str(existing.get("vision_object_label", "")).strip()
+        active_vision_contour_confidence = vision_contour_confidence.strip() or str(existing.get("vision_contour_confidence", "")).strip()
+        active_vision_asymmetry_hint = vision_asymmetry_hint.strip() or str(existing.get("vision_asymmetry_hint", "")).strip()
+        active_vision_dimension_seed = vision_dimension_seed.strip() or str(existing.get("vision_dimension_seed", "")).strip()
+        transcript_window = "\n".join(
+            f"{item.get('role', 'user').upper()}: {str(item.get('content', '')).strip()}"
+            for item in transcript[-8:]
+        )
+        system = build_specialist_prompt(
+            "forge concept studio",
+            "Collaborate on original printable object ideas before any CAD package is generated.",
+            extra_guidance=(
+                "Think like a creative fabrication partner. Explore concept, use case, geometry strategy, printability, and next design move. "
+                "Do not jump straight into bracket-like assumptions unless the request points there. "
+                "If the idea does not cleanly fit bracket, enclosure, spacer, or mount, leave Suggested Family blank instead of forcing it. "
+                "Use the user's silhouette preference when one is supplied, or propose one when the object wants a stronger shape language. "
+                "When a photo reference exists, use it as inspiration or evidence, not as permission to invent hidden details. "
+                "Return labeled sections exactly as: Title:, Concept Summary:, Design Direction:, Suggested Silhouette:, Suggested Family:, Suggested Part Name:, Suggested Dimensions:, Suggested Constraints:, Print Strategy:, Questions:, Next Step:, Variant A:, Variant B:, Variant C:. "
+                "Each Variant section must include labeled sub-lines exactly as: Name:, Silhouette:, Pitch:, Dimensions:, Constraints:, Print Posture:. "
+                f"Known materials: {', '.join(self.profile.get('materials', []))}. "
+                f"Design notes: {' '.join(self.profile.get('designNotes', []))}. "
+                f"CAD notes: {' '.join(self.profile.get('cadNotes', []))}."
+            ),
+        )
+        user = (
+            f"Actor: {actor}\n"
+            f"Object type: {active_object_type}\n"
+            f"Goals:\n{active_goals or 'Not specified yet.'}\n\n"
+            f"Constraints:\n{active_constraints or 'No hard constraints yet.'}\n\n"
+            f"Silhouette preference: {active_silhouette_preference or 'No silhouette locked yet.'}\n"
+            f"Reference note: {active_reference_note or 'None provided.'}\n"
+            f"Vision object label: {active_vision_object_label or 'Unknown.'}\n"
+            f"Vision contour confidence: {active_vision_contour_confidence or 'Unknown.'}\n"
+            f"Vision asymmetry hint: {active_vision_asymmetry_hint or 'Unknown.'}\n"
+            f"Vision dimension seed: {active_vision_dimension_seed or 'None.'}\n"
+            f"Transcript so far:\n{transcript_window}\n"
+        )
+        response_text = ""
+        if active_image_path:
+            image_file = Path(active_image_path)
+            if image_file.exists():
+                suffix = image_file.suffix.lower().lstrip(".") or "jpeg"
+                mime = "image/png" if suffix == "png" else "image/jpeg"
+                image_data_url = f"data:{mime};base64," + base64.b64encode(image_file.read_bytes()).decode("ascii")
+                response_text = self.openai_client.analyze_images(
+                    (
+                        f"{system}\n\n"
+                        "A user-provided reference image is attached. Use it to ground the concept discussion while following the required labeled response format.\n\n"
+                        f"{user}"
+                    ),
+                    [image_data_url],
+                    max_output_tokens=700,
+                )
+        if not response_text:
+            response_text = self.openai_client.prompt_text(system, user, max_output_tokens=700)
+
+        title = self._extract_section(response_text, "Title") or str(existing.get("title", "")).strip() or f"{active_object_type.title()} concept"
+        concept_summary = self._extract_section(response_text, "Concept Summary") or response_text.strip()
+        design_direction = self._extract_section(response_text, "Design Direction") or "Explore one strong direction before locking geometry."
+        suggested_silhouette = self._normalize_silhouette(
+            self._extract_section(response_text, "Suggested Silhouette")
+            or active_silhouette_preference
+        )
+        suggested_family = self._normalize_concept_family(self._extract_section(response_text, "Suggested Family"))
+        suggested_part_name = self._extract_section(response_text, "Suggested Part Name") or title
+        suggested_dimensions = self._extract_section(response_text, "Suggested Dimensions")
+        suggested_constraints = self._extract_section(response_text, "Suggested Constraints") or active_constraints
+        print_strategy = self._extract_section(response_text, "Print Strategy") or "Prototype the form in simple material before final tuning."
+        questions = self._split_lines(self._extract_section(response_text, "Questions"))
+        next_step = self._extract_section(response_text, "Next Step") or "Refine the concept, then send the chosen direction into package generation."
+        variants = self._extract_concept_variants(
+            response_text,
+            active_object_type,
+            active_silhouette_preference,
+            suggested_part_name,
+            suggested_dimensions,
+            suggested_constraints,
+        )
+        if not suggested_silhouette and variants:
+            suggested_silhouette = str(variants[0].get("silhouette", "")).strip()
+        assistant_turn = {
+            "role": "assistant",
+            "content": concept_summary,
+        }
+        transcript.append(assistant_turn)
+        session_payload = ConceptStudioSession(
+            session_id=active_session_id,
+            actor=actor,
+            object_type=active_object_type,
+            silhouette_preference=active_silhouette_preference,
+            title=title,
+            goals=active_goals,
+            constraints=active_constraints,
+            concept_summary=concept_summary,
+            design_direction=design_direction,
+            suggested_silhouette=suggested_silhouette,
+            suggested_family=suggested_family,
+            suggested_part_name=suggested_part_name,
+            suggested_dimensions=suggested_dimensions,
+            suggested_constraints=suggested_constraints,
+            print_strategy=print_strategy,
+            questions=questions,
+            next_step=next_step,
+            capture_id=active_capture_id,
+            image_path=active_image_path,
+            vision_object_label=active_vision_object_label,
+            vision_contour_confidence=active_vision_contour_confidence,
+            vision_asymmetry_hint=active_vision_asymmetry_hint,
+            vision_dimension_seed=active_vision_dimension_seed,
+            variants=variants,
+            transcript=transcript,
+            status="active",
+            created_at=str(existing.get("created_at", now)),
+            updated_at=now,
+        )
+        if self.store.get_concept_session(active_session_id):
+            self.store.update_concept_session(active_session_id, asdict(session_payload))
+        else:
+            self.store.add_concept_session(session_payload)
+        result = asdict(session_payload)
+        result["apply_payload"] = {
+            "family": suggested_family or ("custom-form" if suggested_silhouette else ""),
+            "part": suggested_part_name,
+            "dimensions": suggested_dimensions,
+            "constraints": suggested_constraints,
+            "creative_profile": suggested_silhouette,
+        }
+        result["response_text"] = response_text
+        return result
+
     def cad_package(self, actor: str, part_name: str, dimensions: str, constraints: str) -> dict:
-        return self.cad_package_advanced(actor, part_name, dimensions, constraints, "", "", "")
+        return self.cad_package_advanced(actor, part_name, dimensions, constraints, "", "", "", "")
 
     def cad_package_advanced(
         self,
@@ -239,6 +438,7 @@ class WorkshopSupport:
         family_hint: str,
         printer_hint: str,
         profile_hint: str,
+        creative_profile: str,
     ) -> dict:
         system = build_specialist_prompt(
             "CAD generation",
@@ -273,6 +473,7 @@ class WorkshopSupport:
             family_hint=family_hint,
             printer_hint=printer_hint,
             profile_hint=profile_hint,
+            creative_profile=creative_profile,
         )
         timestamp = datetime.now(timezone.utc).isoformat()
         metadata = {
@@ -293,6 +494,7 @@ class WorkshopSupport:
             "printer_id": export["printer_id"],
             "profile_name": export["profile_name"],
             "material": export["material"],
+            "creative_profile": creative_profile,
             "export_status": export["export_status"],
             "export_detail": export["export_detail"],
             "export_engine": export["export_engine"],
@@ -303,6 +505,7 @@ class WorkshopSupport:
             package_id=package_id,
             actor=actor,
             part_name=part_name,
+            family=export["family"],
             summary=metadata["summary"],
             parameters=parameters,
             openscad_stub=openscad_stub,
@@ -314,6 +517,7 @@ class WorkshopSupport:
             step_path=export["step_path"],
             mesh_3mf_path=export["mesh_3mf_path"],
             slicer_pack_dir=export["slicer_pack_dir"],
+            creative_profile=creative_profile,
             export_status=export["export_status"],
             export_detail=export["export_detail"],
             export_engine=export["export_engine"],
@@ -523,6 +727,12 @@ class WorkshopSupport:
     def list_safety_checks(self, limit: int = 10) -> list[dict]:
         return self.store.list_safety_checks(limit=limit)
 
+    def list_concept_sessions(self, limit: int = 10) -> list[dict]:
+        return self.store.list_concept_sessions(limit=limit)
+
+    def get_concept_session(self, session_id: str) -> dict | None:
+        return self.store.get_concept_session(session_id)
+
     def _extract_section(self, text: str, heading: str) -> str:
         marker = f"{heading}:"
         if marker not in text:
@@ -530,6 +740,20 @@ class WorkshopSupport:
         fragment = text.split(marker, 1)[1]
         lines = []
         headings = (
+            "Title:",
+            "Concept Summary:",
+            "Design Direction:",
+            "Suggested Silhouette:",
+            "Suggested Family:",
+            "Suggested Part Name:",
+            "Suggested Dimensions:",
+            "Suggested Constraints:",
+            "Print Strategy:",
+            "Questions:",
+            "Next Step:",
+            "Variant A:",
+            "Variant B:",
+            "Variant C:",
             "Summary:",
             "Parameters:",
             "OpenSCAD Stub:",
@@ -564,6 +788,190 @@ class WorkshopSupport:
             if cleaned:
                 items.append(cleaned)
         return items
+
+    def _normalize_concept_family(self, value: str) -> str:
+        normalized = (value or "").strip().lower()
+        if normalized in {"bracket", "enclosure", "spacer", "mount", "custom-form"}:
+            return normalized
+        mapping = {
+            "functional mount": "mount",
+            "camera mount": "mount",
+            "display mount": "mount",
+            "protective shell": "enclosure",
+            "case": "enclosure",
+            "housing": "enclosure",
+            "fit spacer": "spacer",
+            "brace": "bracket",
+            "custom form": "custom-form",
+            "sculpture": "custom-form",
+            "organic form": "custom-form",
+            "prop or decor": "custom-form",
+            "sporting good": "custom-form",
+            "organic reconstruction": "custom-form",
+        }
+        return mapping.get(normalized, "")
+
+    def _extract_variant_block(self, text: str, heading: str) -> str:
+        marker = f"{heading}:"
+        if marker not in text:
+            return ""
+        fragment = text.split(marker, 1)[1]
+        lines = []
+        for line in fragment.splitlines():
+            stripped = line.strip()
+            if stripped.startswith(("Variant A:", "Variant B:", "Variant C:")) and not stripped.startswith(marker):
+                break
+            lines.append(line)
+        return "\n".join(line.strip() for line in lines).strip()
+
+    def _extract_variant_field(self, block: str, heading: str) -> str:
+        marker = f"{heading}:"
+        if marker not in block:
+            return ""
+        fragment = block.split(marker, 1)[1]
+        lines = []
+        headings = ("Name:", "Silhouette:", "Pitch:", "Dimensions:", "Constraints:", "Print Posture:")
+        for line in fragment.splitlines():
+            stripped = line.strip()
+            if stripped and any(stripped.startswith(item) for item in headings):
+                if stripped.startswith(marker):
+                    continue
+                break
+            lines.append(line)
+        return "\n".join(line.strip() for line in lines).strip()
+
+    def _extract_concept_variants(
+        self,
+        text: str,
+        object_type: str,
+        silhouette_preference: str,
+        suggested_part_name: str,
+        suggested_dimensions: str,
+        suggested_constraints: str,
+    ) -> list[dict[str, str]]:
+        variants: list[dict[str, str]] = []
+        for heading in ("Variant A", "Variant B", "Variant C"):
+            block = self._extract_variant_block(text, heading)
+            if not block:
+                continue
+            name = self._extract_variant_field(block, "Name") or f"{suggested_part_name} {heading[-1]}"
+            pitch = self._extract_variant_field(block, "Pitch") or "A different direction to compare before package generation."
+            silhouette = self._normalize_silhouette(self._extract_variant_field(block, "Silhouette"))
+            if not silhouette:
+                silhouette = self._infer_variant_silhouette(name, pitch, object_type, silhouette_preference, len(variants))
+            dimensions = self._extract_variant_field(block, "Dimensions") or suggested_dimensions
+            constraints = self._extract_variant_field(block, "Constraints") or suggested_constraints
+            variant = {
+                "id": heading.lower().replace(" ", "-"),
+                "label": heading,
+                "name": name,
+                "silhouette": silhouette,
+                "pitch": pitch,
+                "dimensions": dimensions,
+                "constraints": constraints,
+                "print_posture": self._extract_variant_field(block, "Print Posture") or "Prototype first.",
+                "object_type": object_type,
+            }
+            variant["apply_payload"] = {
+                "family": "custom-form" if silhouette else "",
+                "part": name,
+                "dimensions": dimensions,
+                "constraints": constraints,
+                "creative_profile": silhouette,
+            }
+            variants.append(variant)
+        fallback_silhouette = self._normalize_silhouette(silhouette_preference) or "calm-spiral"
+        fallback_profiles = [fallback_silhouette]
+        for candidate in ("split-ribbon", "monolith", "racket-frame", "display-prop", "organic-reconstruction"):
+            if candidate not in fallback_profiles:
+                fallback_profiles.append(candidate)
+            if len(fallback_profiles) == 5:
+                break
+        while len(variants) < 3:
+            index = len(variants) + 1
+            silhouette = fallback_profiles[min(index - 1, len(fallback_profiles) - 1)]
+            variants.append(
+                {
+                    "id": f"variant-{index}",
+                    "label": f"Variant {chr(64 + index)}",
+                    "name": f"{suggested_part_name} {chr(64 + index)}",
+                    "silhouette": silhouette,
+                    "pitch": f"Explore the {silhouette.replace('-', ' ')} direction before locking geometry.",
+                    "dimensions": suggested_dimensions,
+                    "constraints": suggested_constraints,
+                    "print_posture": "Prototype and compare.",
+                    "object_type": object_type,
+                    "apply_payload": {
+                        "family": "custom-form" if silhouette else "",
+                        "part": f"{suggested_part_name} {chr(64 + index)}",
+                        "dimensions": suggested_dimensions,
+                        "constraints": suggested_constraints,
+                        "creative_profile": silhouette,
+                    },
+                }
+            )
+        return variants[:3]
+
+    def _infer_variant_silhouette(
+        self,
+        name: str,
+        pitch: str,
+        object_type: str,
+        silhouette_preference: str,
+        variant_index: int,
+    ) -> str:
+        inferred = self._normalize_silhouette(f"{name} {pitch}")
+        if inferred:
+            return inferred
+        object_type_key = (object_type or "").strip().lower()
+        if "sport" in object_type_key:
+            return "racket-frame"
+        if "prop" in object_type_key or "decor" in object_type_key:
+            return "display-prop"
+        if "organic" in object_type_key:
+            return "organic-reconstruction"
+        if "sculpt" in object_type_key:
+            ordered = ["split-ribbon", "tense-twist", "monolith"]
+            return ordered[min(variant_index, len(ordered) - 1)]
+        preferred = self._normalize_silhouette(silhouette_preference)
+        if preferred:
+            return preferred
+        ordered = ["split-ribbon", "display-prop", "organic-reconstruction"]
+        return ordered[min(variant_index, len(ordered) - 1)]
+
+    def _normalize_silhouette(self, value: str) -> str:
+        normalized = (value or "").strip().lower()
+        allowed = {
+            "calm-spiral",
+            "tense-twist",
+            "split-ribbon",
+            "monolith",
+            "racket-frame",
+            "organic-shell",
+            "display-prop",
+            "organic-reconstruction",
+        }
+        if normalized in allowed:
+            return normalized
+        mapping = {
+            "calm spiral": "calm-spiral",
+            "spiral": "calm-spiral",
+            "tense twist": "tense-twist",
+            "twist": "tense-twist",
+            "split ribbon": "split-ribbon",
+            "ribbon": "split-ribbon",
+            "monolith": "monolith",
+            "racket frame": "racket-frame",
+            "tennis racket": "racket-frame",
+            "organic shell": "organic-shell",
+            "shell": "organic-shell",
+            "display prop": "display-prop",
+            "prop": "display-prop",
+            "decor": "display-prop",
+            "organic reconstruction": "organic-reconstruction",
+            "reconstruction": "organic-reconstruction",
+        }
+        return mapping.get(normalized, "")
 
     def _fallback_safety_notes(self) -> list[str]:
         return [
@@ -612,6 +1020,7 @@ class WorkshopSupport:
         family_hint: str,
         printer_hint: str,
         profile_hint: str,
+        creative_profile: str = "",
     ) -> dict[str, str]:
         dims = self._merge_measurements(dimensions, parameters)
         family = family_hint or self._infer_part_family(part_name, constraints, parameters)
@@ -623,7 +1032,7 @@ class WorkshopSupport:
 
         cq, exporters = cadquery
         try:
-            shape, script, profile = self._build_cadquery_shape(cq, family, part_name, dims, constraints)
+            shape, script, profile = self._build_cadquery_shape(cq, family, part_name, dims, constraints, creative_profile=creative_profile)
             profile = self._apply_slicer_hints(profile, printer_hint, profile_hint)
             cadquery_script_path = artifact_dir / "model_cadquery.py"
             cadquery_script_path.write_text(script.rstrip() + "\n", encoding="utf-8")
@@ -748,6 +1157,8 @@ class WorkshopSupport:
 
     def _infer_part_family(self, part_name: str, constraints: str, parameters: list[str]) -> str:
         text = f"{part_name} {constraints} {' '.join(parameters)}".lower()
+        if any(token in text for token in ("sculpture", "totem", "monolith", "ribbon", "helix", "racket", "organic")):
+            return "custom-form"
         if any(token in text for token in ("enclosure", "case", "box", "housing")):
             return "enclosure"
         if any(token in text for token in ("spacer", "standoff", "bushing")):
@@ -765,6 +1176,8 @@ class WorkshopSupport:
         part_name: str,
         dims: dict[str, float],
         constraints: str,
+        *,
+        creative_profile: str = "",
     ) -> tuple[Any, str, dict[str, str]]:
         if family == "bracket":
             return self._build_cadquery_bracket(cq, part_name, dims, constraints)
@@ -772,7 +1185,158 @@ class WorkshopSupport:
             return self._build_cadquery_enclosure(cq, part_name, dims, constraints)
         if family == "spacer":
             return self._build_cadquery_spacer(cq, part_name, dims, constraints)
+        if family == "custom-form":
+            return self._build_cadquery_custom_form(cq, part_name, dims, constraints, creative_profile)
         return self._build_cadquery_mount(cq, part_name, dims, constraints)
+
+    def _build_cadquery_custom_form(
+        self,
+        cq: Any,
+        part_name: str,
+        dims: dict[str, float],
+        constraints: str,
+        creative_profile: str,
+    ) -> tuple[Any, str, dict[str, str]]:
+        height = self._dim_or_default(dims, 120.0, "height", "overall height", "tall")
+        width = self._dim_or_default(dims, 70.0, "width", "overall width", "span")
+        depth = self._dim_or_default(dims, 45.0, "depth", "overall depth")
+        base_height = self._dim_or_default(dims, max(10.0, height * 0.08), "base height", "base thickness")
+        thickness = self._dim_or_default(dims, max(4.0, min(width, depth) * 0.12), "thickness", "wall thickness", "ribbon thickness")
+        profile = self._normalize_silhouette(creative_profile) or "calm-spiral"
+
+        if profile == "split-ribbon":
+            left = self._lofted_ribbon(cq, height, width * 0.34, depth * 0.28, thickness, x_shift=-width * 0.12, twist_scale=0.55, y_wave=depth * 0.08)
+            right = self._lofted_ribbon(cq, height * 0.94, width * 0.30, depth * 0.24, thickness * 0.88, x_shift=width * 0.13, twist_scale=-0.5, y_wave=-depth * 0.06)
+            base = cq.Workplane("XY").ellipse(width * 0.28, depth * 0.22).extrude(base_height)
+            shape = base.union(left.translate((0, 0, base_height * 0.25))).union(right.translate((0, 0, base_height * 0.25)))
+        elif profile == "tense-twist":
+            tower = self._lofted_ribbon(cq, height, width * 0.32, depth * 0.18, thickness, x_shift=width * 0.08, twist_scale=0.9, y_wave=depth * 0.12)
+            base = cq.Workplane("XY").ellipse(width * 0.26, depth * 0.18).extrude(base_height)
+            shape = base.union(tower.translate((0, 0, base_height * 0.2)))
+        elif profile == "monolith":
+            tower = self._lofted_ribbon(cq, height, width * 0.26, depth * 0.22, thickness * 1.15, x_shift=0, twist_scale=0.18, y_wave=depth * 0.03)
+            base = cq.Workplane("XY").ellipse(width * 0.24, depth * 0.2).extrude(base_height)
+            shape = base.union(tower.translate((0, 0, base_height * 0.2)))
+        elif profile == "racket-frame":
+            ring_outer = cq.Workplane("XY").ellipse(width * 0.28, height * 0.34).extrude(thickness)
+            ring_inner = cq.Workplane("XY").ellipse(max(width * 0.20, 6.0), max(height * 0.26, 12.0)).extrude(thickness + 2.0)
+            head = ring_outer.cut(ring_inner.translate((0, 0, -1.0))).translate((0, 0, base_height + height * 0.25))
+            handle = cq.Workplane("XY").rect(width * 0.12, depth * 0.12).extrude(height * 0.34).translate((0, 0, base_height))
+            throat = cq.Workplane("XZ").polyline([
+                (-width * 0.08, base_height + height * 0.24),
+                (-width * 0.16, base_height + height * 0.1),
+                (width * 0.16, base_height + height * 0.1),
+                (width * 0.08, base_height + height * 0.24),
+            ]).close().extrude(depth * 0.1, both=True)
+            base = cq.Workplane("XY").ellipse(width * 0.16, depth * 0.14).extrude(base_height)
+            shape = base.union(handle).union(throat).union(head)
+        elif profile == "display-prop":
+            body = (
+                cq.Workplane("XY")
+                .ellipse(width * 0.22, depth * 0.18)
+                .workplane(offset=height * 0.22)
+                .ellipse(width * 0.30, depth * 0.22)
+                .workplane(offset=height * 0.28)
+                .ellipse(width * 0.24, depth * 0.18)
+                .workplane(offset=height * 0.26)
+                .ellipse(width * 0.18, depth * 0.12)
+                .loft(combine=True)
+            )
+            pedestal = cq.Workplane("XY").rect(width * 0.28, depth * 0.22).extrude(base_height)
+            crown = cq.Workplane("XY").ellipse(width * 0.12, depth * 0.08).extrude(thickness * 1.6).translate((0, 0, base_height + height * 0.76))
+            shape = pedestal.union(body.translate((0, 0, base_height * 0.15))).union(crown)
+        elif profile == "organic-reconstruction":
+            shell = (
+                cq.Workplane("XY")
+                .ellipse(width * 0.24, depth * 0.2)
+                .workplane(offset=height * 0.18)
+                .ellipse(width * 0.30, depth * 0.24)
+                .workplane(offset=height * 0.22)
+                .ellipse(width * 0.22, depth * 0.18)
+                .center(width * 0.04, depth * 0.03)
+                .workplane(offset=height * 0.20)
+                .ellipse(width * 0.14, depth * 0.12)
+                .loft(combine=True)
+            )
+            inner = (
+                cq.Workplane("XY")
+                .ellipse(width * 0.14, depth * 0.11)
+                .workplane(offset=height * 0.18)
+                .ellipse(width * 0.18, depth * 0.14)
+                .workplane(offset=height * 0.18)
+                .ellipse(width * 0.12, depth * 0.09)
+                .center(width * 0.02, depth * 0.02)
+                .workplane(offset=height * 0.16)
+                .ellipse(width * 0.07, depth * 0.05)
+                .loft(combine=True)
+                .translate((0, 0, thickness * 0.65))
+            )
+            base = cq.Workplane("XY").ellipse(width * 0.22, depth * 0.18).extrude(base_height)
+            shape = base.union(shell).cut(inner)
+        else:
+            tower = self._lofted_ribbon(cq, height, width * 0.3, depth * 0.24, thickness, x_shift=-width * 0.05, twist_scale=0.55, y_wave=depth * 0.08)
+            base = cq.Workplane("XY").ellipse(width * 0.24, depth * 0.2).extrude(base_height)
+            shape = base.union(tower.translate((0, 0, base_height * 0.2)))
+
+        try:
+            shape = shape.edges("|Z").fillet(min(thickness * 0.25, 2.4))
+        except Exception:
+            pass
+        script = f"""import cadquery as cq
+
+height = {height}
+width = {width}
+depth = {depth}
+base_height = {base_height}
+thickness = {thickness}
+creative_profile = "{profile}"
+
+# Custom-form concept generated from Forge Concept Studio.
+# Use this as a starting point for refinement, not as final industrial geometry.
+result = cq.Workplane("XY").ellipse(width * 0.24, depth * 0.2).extrude(base_height)
+show_object(result, name="{self._slugify(part_name)}")
+"""
+        slicer_profile = {
+            "printer_id": self._default_slicer_profile("mount", thickness)["printer_id"],
+            "profile_name": "creative-concept-balanced",
+            "material": "PLA",
+            "layer_height": "0.20 mm",
+            "infill": "18% gyroid",
+            "supports": "Tree or organic supports only where the silhouette truly needs them",
+        }
+        return shape, script, slicer_profile
+
+    def _lofted_ribbon(
+        self,
+        cq: Any,
+        height: float,
+        width: float,
+        depth: float,
+        thickness: float,
+        *,
+        x_shift: float,
+        twist_scale: float,
+        y_wave: float,
+    ) -> Any:
+        steps = 7
+        segment_height = max(height / steps, thickness * 1.15)
+        shape = None
+        for index in range(steps):
+            ratio = index / max(steps - 1, 1)
+            z = ratio * (height - segment_height)
+            x = x_shift * math.sin(ratio * math.pi)
+            y = y_wave * math.sin(ratio * math.pi * 1.2)
+            scale = 1.0 - 0.18 * math.cos(ratio * math.pi)
+            angle = twist_scale * ratio * 56.0
+            segment = (
+                cq.Workplane("XY")
+                .rect(max(width * scale, thickness), max(depth * (1.0 - ratio * 0.08), thickness * 0.9))
+                .extrude(segment_height)
+                .translate((x, y, z + segment_height * 0.5))
+                .rotate((0, 0, 0), (0, 0, 1), angle)
+            )
+            shape = segment if shape is None else shape.union(segment)
+        return shape
 
     def _build_cadquery_bracket(self, cq: Any, part_name: str, dims: dict[str, float], constraints: str) -> tuple[Any, str, dict[str, str]]:
         width = self._dim_or_default(dims, 30.0, "plate width", "width")
@@ -927,6 +1491,15 @@ show_object(result, name="{self._slugify(part_name)}")
                 "infill": "20% gyroid",
                 "supports": "Support top openings only if needed",
             }
+        if family == "custom-form":
+            return {
+                "printer_id": printer_id,
+                "profile_name": "creative-concept-balanced",
+                "material": "PLA",
+                "layer_height": "0.20 mm",
+                "infill": "18% gyroid",
+                "supports": "Tree supports only where the form needs them",
+            }
         return {
             "printer_id": printer_id,
             "profile_name": "fit-check-fast",
@@ -954,6 +1527,7 @@ show_object(result, name="{self._slugify(part_name)}")
             {"id": "enclosure", "label": "Enclosure"},
             {"id": "spacer", "label": "Spacer"},
             {"id": "mount", "label": "Mount"},
+            {"id": "custom-form", "label": "Custom Form"},
         ]
         printers = [
             {

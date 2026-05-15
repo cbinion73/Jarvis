@@ -1,0 +1,64 @@
+{
+  "conversation_id": "a55722b4-c5b0-4891-8b83-9009bcd32dfb",
+  "actor": "Chris",
+  "room": "bedroom",
+  "source": "shell",
+  "title": "Testing messenger send behavior from the browser.",
+  "status": "active",
+  "summary": "",
+  "memory_signals": [],
+  "created_at": "2026-05-12T04:02:24.863898+00:00",
+  "updated_at": "2026-05-12T04:02:44.853853+00:00",
+  "last_activity_at": "2026-05-12T04:02:44.853853+00:00",
+  "turn_count": 4,
+  "latest_user_text": "Testing messenger send behavior from the browser.",
+  "latest_assistant_text": "Sir, JARVIS hit an AI-service problem while handling the household associate request. Reason: Error code: 400 - {'error': {'message': \"The requested model 'qwen2.5:7b' does not exist.\", 'type': 'invalid_request_error', 'param': 'model', 'code': 'model_not_found'}}. Manual fallback is in effect: keep the scope tight, avoid external actions, and stage the next concrete step for review.",
+  "turns": [
+    {
+      "turn_id": "49018820-9523-42cc-9459-dcb5da1ffed9",
+      "role": "user",
+      "text": "Testing messenger send behavior from the browser.",
+      "actor": "Chris",
+      "room": "bedroom",
+      "source": "shell",
+      "created_at": "2026-05-12T04:02:24.894356+00:00",
+      "metadata": {}
+    },
+    {
+      "turn_id": "6d5b3d7d-046e-4cee-bb76-52872cbb8eb4",
+      "role": "assistant",
+      "text": "Sir, JARVIS hit an AI-service problem while handling the household associate request. Reason: Error code: 400 - {'error': {'message': \"The requested model 'qwen2.5:7b' does not exist.\", 'type': 'invalid_request_error', 'param': 'model', 'code': 'model_not_found'}}. Manual fallback is in effect: keep the scope tight, avoid external actions, and stage the next concrete step for review.",
+      "actor": "Chris",
+      "room": "bedroom",
+      "source": "shell",
+      "created_at": "2026-05-12T04:02:27.865714+00:00",
+      "metadata": {
+        "provider": "fallback",
+        "model": "fallback"
+      }
+    },
+    {
+      "turn_id": "f7ee34ea-b068-467a-875a-7980128460b7",
+      "role": "user",
+      "text": "Testing messenger send behavior from the browser.",
+      "actor": "Chris",
+      "room": "bedroom",
+      "source": "shell",
+      "created_at": "2026-05-12T04:02:43.770347+00:00",
+      "metadata": {}
+    },
+    {
+      "turn_id": "1a8ea4f7-a309-481e-8a1b-7dd11dc1fc20",
+      "role": "assistant",
+      "text": "Sir, JARVIS hit an AI-service problem while handling the household associate request. Reason: Error code: 400 - {'error': {'message': \"The requested model 'qwen2.5:7b' does not exist.\", 'type': 'invalid_request_error', 'param': 'model', 'code': 'model_not_found'}}. Manual fallback is in effect: keep the scope tight, avoid external actions, and stage the next concrete step for review.",
+      "actor": "Chris",
+      "room": "bedroom",
+      "source": "shell",
+      "created_at": "2026-05-12T04:02:44.853853+00:00",
+      "metadata": {
+        "provider": "fallback",
+        "model": "fallback"
+      }
+    }
+  ]
+}

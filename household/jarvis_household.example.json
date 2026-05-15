@@ -13,10 +13,13 @@
       "role": "director",
       "permissions": "adult",
       "priorities": [
+        "innovation-strategy",
         "executive-briefing",
+        "jarvis-architecture",
+        "chronicle-formation",
         "manuscript-editing",
         "workshop-copilot",
-        "faith-formation"
+        "scout-service"
       ]
     },
     {

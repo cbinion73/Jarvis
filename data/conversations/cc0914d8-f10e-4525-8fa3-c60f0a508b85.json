@@ -1,0 +1,41 @@
+{
+  "conversation_id": "cc0914d8-f10e-4525-8fa3-c60f0a508b85",
+  "actor": "Chris",
+  "room": "office",
+  "source": "shell",
+  "title": "Can you help me think through my day in a natural conversational way?",
+  "status": "active",
+  "summary": "",
+  "memory_signals": [],
+  "created_at": "2026-05-12T16:48:09.711231+00:00",
+  "updated_at": "2026-05-12T16:48:14.548809+00:00",
+  "last_activity_at": "2026-05-12T16:48:14.548809+00:00",
+  "turn_count": 2,
+  "latest_user_text": "Can you help me think through my day in a natural conversational way?",
+  "latest_assistant_text": "Absolutely. I\u2019m in thinking-partner mode.\n\nWe can treat the day like a live map: what\u2019s already on your plate, what actually matters, what can be dropped, and where the pressure points are. If you want, just talk me through what\u2019s in front of you in rough order, and I\u2019ll help you sort it into:\nwhat must happen,\nwhat should happen,\nwhat can wait,\nand what\u2019s probably just noise wearing a fake mustache.\n\nStart wherever feels easiest: the first thing on your mind, the biggest looming item, or the part of the day that already feels wobbly.",
+  "turns": [
+    {
+      "turn_id": "aa41650a-7093-46c2-8a01-996f2e113f21",
+      "role": "user",
+      "text": "Can you help me think through my day in a natural conversational way?",
+      "actor": "Chris",
+      "room": "office",
+      "source": "shell",
+      "created_at": "2026-05-12T16:48:09.714395+00:00",
+      "metadata": {}
+    },
+    {
+      "turn_id": "f77dc344-5fb6-4d56-a249-246bab67e658",
+      "role": "assistant",
+      "text": "Absolutely. I\u2019m in thinking-partner mode.\n\nWe can treat the day like a live map: what\u2019s already on your plate, what actually matters, what can be dropped, and where the pressure points are. If you want, just talk me through what\u2019s in front of you in rough order, and I\u2019ll help you sort it into:\nwhat must happen,\nwhat should happen,\nwhat can wait,\nand what\u2019s probably just noise wearing a fake mustache.\n\nStart wherever feels easiest: the first thing on your mind, the biggest looming item, or the part of the day that already feels wobbly.",
+      "actor": "Chris",
+      "room": "office",
+      "source": "shell",
+      "created_at": "2026-05-12T16:48:14.548809+00:00",
+      "metadata": {
+        "provider": "openai",
+        "model": "gpt-5.4-mini-2026-03-17"
+      }
+    }
+  ]
+}

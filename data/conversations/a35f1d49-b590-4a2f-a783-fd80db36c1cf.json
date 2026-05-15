@@ -1,0 +1,48 @@
+{
+  "conversation_id": "a35f1d49-b590-4a2f-a783-fd80db36c1cf",
+  "actor": "Chris",
+  "room": "office",
+  "source": "shell",
+  "title": "Remember this: I want JARVIS to learn from normal conversation, carry co",
+  "status": "active",
+  "summary": "",
+  "memory_signals": [
+    {
+      "summary": "Chris wants jarvis to learn from normal conversation, carry context forward naturally, and feel much more like chatgpt when i talk to it",
+      "status": "stored",
+      "occurrences": 1,
+      "memory_type": "project"
+    }
+  ],
+  "created_at": "2026-05-12T03:35:49.570054+00:00",
+  "updated_at": "2026-05-12T03:36:02.038860+00:00",
+  "last_activity_at": "2026-05-12T03:35:50.509952+00:00",
+  "turn_count": 2,
+  "latest_user_text": "Remember this: I want JARVIS to learn from normal conversation, carry context forward naturally, and feel much more like ChatGPT when I talk to it.",
+  "latest_assistant_text": "Sir, JARVIS hit an AI-service problem while handling the executive work request. Reason: Error code: 400 - {'error': {'message': \"The requested model, 'gpt-realtime-1.5' was not found.\", 'type': 'invalid_request_error', 'param': 'model', 'code': 'model_not_found'}}. Manual fallback is in effect: keep the scope tight, avoid external actions, and stage the next concrete step for review.",
+  "turns": [
+    {
+      "turn_id": "afd45ca4-1d63-46bf-976e-24b217a3163e",
+      "role": "user",
+      "text": "Remember this: I want JARVIS to learn from normal conversation, carry context forward naturally, and feel much more like ChatGPT when I talk to it.",
+      "actor": "Chris",
+      "room": "office",
+      "source": "shell",
+      "created_at": "2026-05-12T03:35:49.571208+00:00",
+      "metadata": {}
+    },
+    {
+      "turn_id": "a7a33e05-c7cd-4bc3-a9a4-22ce87c54c44",
+      "role": "assistant",
+      "text": "Sir, JARVIS hit an AI-service problem while handling the executive work request. Reason: Error code: 400 - {'error': {'message': \"The requested model, 'gpt-realtime-1.5' was not found.\", 'type': 'invalid_request_error', 'param': 'model', 'code': 'model_not_found'}}. Manual fallback is in effect: keep the scope tight, avoid external actions, and stage the next concrete step for review.",
+      "actor": "Chris",
+      "room": "office",
+      "source": "shell",
+      "created_at": "2026-05-12T03:35:50.509952+00:00",
+      "metadata": {
+        "provider": "fallback",
+        "model": "fallback"
+      }
+    }
+  ]
+}

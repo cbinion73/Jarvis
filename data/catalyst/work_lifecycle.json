@@ -1,0 +1,550 @@
+[
+  {
+    "work_id": "40846fb0-4fbc-4ea6-b365-db76a76204f1",
+    "actor": "Chris",
+    "title": "stage-email-draft",
+    "domain": "shared-email",
+    "lane": "general-operations",
+    "owner_agent": "JARVIS",
+    "current_stage": "review",
+    "status": "reopened",
+    "artifact_type": "reopen-note",
+    "source": "work-lifecycle-action",
+    "review_level": "review-as-needed",
+    "rationale": "The work item was reopened for another iteration.",
+    "created_at": "2026-05-15T14:16:37.256192+00:00",
+    "updated_at": "2026-05-15T14:35:14.440384+00:00",
+    "parent_work_id": "",
+    "artifact_refs": [],
+    "transitions": [
+      {
+        "transition_id": "d97568c9-613b-42b6-943f-f5ee9ec3b362",
+        "stage": "outcome",
+        "status": "recorded",
+        "artifact_type": "outcome-note",
+        "source": "work-lifecycle-action",
+        "owner_agent": "JARVIS",
+        "lane": "general-operations",
+        "review_level": "review-as-needed",
+        "rationale": "Outcome recorded from the lifecycle workspace.",
+        "timestamp": "2026-05-15T14:16:37.256192+00:00",
+        "record_id": "",
+        "metadata": {
+          "manual": true
+        }
+      },
+      {
+        "transition_id": "ba78714b-e9bf-4351-adb0-cabe11fe1309",
+        "stage": "outcome",
+        "status": "recorded",
+        "artifact_type": "outcome-note",
+        "source": "work-lifecycle-action",
+        "owner_agent": "JARVIS",
+        "lane": "general-operations",
+        "review_level": "review-as-needed",
+        "rationale": "Outcome recorded from the lifecycle workspace.",
+        "timestamp": "2026-05-15T14:18:49.967447+00:00",
+        "record_id": "",
+        "metadata": {
+          "manual": true
+        }
+      },
+      {
+        "transition_id": "71a5399f-6d18-44ad-8488-6af3b3c8e61c",
+        "stage": "outcome",
+        "status": "recorded",
+        "artifact_type": "outcome-note",
+        "source": "work-lifecycle-action",
+        "owner_agent": "JARVIS",
+        "lane": "general-operations",
+        "review_level": "review-as-needed",
+        "rationale": "Outcome recorded from the lifecycle workspace.",
+        "timestamp": "2026-05-15T14:19:00.347128+00:00",
+        "record_id": "",
+        "metadata": {
+          "manual": true
+        }
+      },
+      {
+        "transition_id": "142cefce-af82-41c0-be79-e6109056613c",
+        "stage": "outcome",
+        "status": "recorded",
+        "artifact_type": "outcome-note",
+        "source": "work-lifecycle-action",
+        "owner_agent": "JARVIS",
+        "lane": "general-operations",
+        "review_level": "review-as-needed",
+        "rationale": "Outcome recorded from the lifecycle workspace.",
+        "timestamp": "2026-05-15T14:19:08.555812+00:00",
+        "record_id": "",
+        "metadata": {
+          "manual": true
+        }
+      },
+      {
+        "transition_id": "6648332d-cd1d-4983-bcc6-e0113d9cc6e5",
+        "stage": "outcome",
+        "status": "recorded",
+        "artifact_type": "outcome-note",
+        "source": "work-lifecycle-action",
+        "owner_agent": "JARVIS",
+        "lane": "general-operations",
+        "review_level": "review-as-needed",
+        "rationale": "Outcome recorded from the lifecycle workspace.",
+        "timestamp": "2026-05-15T14:19:18.097644+00:00",
+        "record_id": "",
+        "metadata": {
+          "manual": true
+        }
+      },
+      {
+        "transition_id": "a7965a5b-a58b-4d45-b8fc-76ba8f3e9569",
+        "stage": "review",
+        "status": "reopened",
+        "artifact_type": "reopen-note",
+        "source": "work-lifecycle-action",
+        "owner_agent": "JARVIS",
+        "lane": "general-operations",
+        "review_level": "review-as-needed",
+        "rationale": "The work item was reopened for another iteration.",
+        "timestamp": "2026-05-15T14:35:14.440384+00:00",
+        "record_id": "",
+        "metadata": {
+          "manual": true
+        }
+      }
+    ]
+  },
+  {
+    "work_id": "a3858c58-5f8f-44d8-8a30-634efe8452ff",
+    "actor": "Chris",
+    "title": "Sync local model gpt-oss:20b",
+    "domain": "system",
+    "lane": "self-improvement-and-maintenance",
+    "owner_agent": "Autoforge",
+    "current_stage": "hypothesis",
+    "status": "queued",
+    "artifact_type": "self-improvement-job",
+    "source": "background-self-improvement",
+    "review_level": "review-before-download",
+    "rationale": "A stronger local reasoner is useful for second-brain work, but it is heavier and should remain reviewable.",
+    "created_at": "2026-05-15T15:45:09.410195+00:00",
+    "updated_at": "2026-05-15T15:45:09.410195+00:00",
+    "parent_work_id": "",
+    "artifact_refs": [
+      {
+        "record_id": "a3858c58-5f8f-44d8-8a30-634efe8452ff",
+        "artifact_type": "self-improvement-job",
+        "stage": "hypothesis",
+        "source": "background-self-improvement",
+        "timestamp": "2026-05-15T15:45:09.410195+00:00"
+      }
+    ],
+    "transitions": [
+      {
+        "transition_id": "583b80a4-6dce-441c-b972-97f8a4f6d85b",
+        "stage": "hypothesis",
+        "status": "queued",
+        "artifact_type": "self-improvement-job",
+        "source": "background-self-improvement",
+        "owner_agent": "Autoforge",
+        "lane": "self-improvement-and-maintenance",
+        "review_level": "review-before-download",
+        "rationale": "A stronger local reasoner is useful for second-brain work, but it is heavier and should remain reviewable.",
+        "timestamp": "2026-05-15T15:45:09.410195+00:00",
+        "record_id": "a3858c58-5f8f-44d8-8a30-634efe8452ff",
+        "metadata": {
+          "job_type": "sync-ollama-model",
+          "target": "gpt-oss:20b"
+        }
+      }
+    ]
+  },
+  {
+    "work_id": "d2d39c35-4d6c-402e-a4c7-bf75cf1042d8",
+    "actor": "Chris",
+    "title": "Repair runtime compile regressions",
+    "domain": "system",
+    "lane": "self-improvement-and-maintenance",
+    "owner_agent": "Autoforge",
+    "current_stage": "review",
+    "status": "ready-for-review",
+    "artifact_type": "self-improvement-sandbox-run",
+    "source": "sandbox-live",
+    "review_level": "review-before-code-change",
+    "rationale": "Sandbox/worktree run is complete and ready for inspected promotion or further patch generation.",
+    "created_at": "2026-05-15T15:45:09.413224+00:00",
+    "updated_at": "2026-05-15T18:41:36.196732+00:00",
+    "parent_work_id": "",
+    "artifact_refs": [
+      {
+        "record_id": "d2d39c35-4d6c-402e-a4c7-bf75cf1042d8",
+        "artifact_type": "self-improvement-job",
+        "stage": "hypothesis",
+        "source": "background-self-improvement",
+        "timestamp": "2026-05-15T15:45:09.413224+00:00"
+      },
+      {
+        "record_id": "9255f50d-75a3-4206-a15a-0c2827a78092",
+        "artifact_type": "self-improvement-sandbox-run",
+        "stage": "staged-action",
+        "source": "sandbox-test",
+        "timestamp": "2026-05-15T18:40:41.588483+00:00"
+      },
+      {
+        "record_id": "9255f50d-75a3-4206-a15a-0c2827a78092",
+        "artifact_type": "self-improvement-sandbox-run",
+        "stage": "review",
+        "source": "sandbox-test",
+        "timestamp": "2026-05-15T18:40:41.590303+00:00"
+      },
+      {
+        "record_id": "c921689a-92d7-4143-8704-52601b086815",
+        "artifact_type": "self-improvement-sandbox-run",
+        "stage": "staged-action",
+        "source": "sandbox-test-2",
+        "timestamp": "2026-05-15T18:41:20.148729+00:00"
+      },
+      {
+        "record_id": "c921689a-92d7-4143-8704-52601b086815",
+        "artifact_type": "self-improvement-sandbox-run",
+        "stage": "review",
+        "source": "sandbox-test-2",
+        "timestamp": "2026-05-15T18:41:20.154006+00:00"
+      },
+      {
+        "record_id": "c6395017-827a-472f-bdc8-9422b62977a3",
+        "artifact_type": "self-improvement-sandbox-run",
+        "stage": "staged-action",
+        "source": "sandbox-live",
+        "timestamp": "2026-05-15T18:41:36.193097+00:00"
+      },
+      {
+        "record_id": "c6395017-827a-472f-bdc8-9422b62977a3",
+        "artifact_type": "self-improvement-sandbox-run",
+        "stage": "review",
+        "source": "sandbox-live",
+        "timestamp": "2026-05-15T18:41:36.196732+00:00"
+      }
+    ],
+    "transitions": [
+      {
+        "transition_id": "870b7ad3-2f04-4ba1-9c03-77348aff2b95",
+        "stage": "hypothesis",
+        "status": "queued",
+        "artifact_type": "self-improvement-job",
+        "source": "background-self-improvement",
+        "owner_agent": "Autoforge",
+        "lane": "self-improvement-and-maintenance",
+        "review_level": "review-before-code-change",
+        "rationale": "Runtime compilation failed during the self-improvement sweep, so JARVIS should stage a repair brief instead of pretending the build is healthy.",
+        "timestamp": "2026-05-15T15:45:09.413224+00:00",
+        "record_id": "d2d39c35-4d6c-402e-a4c7-bf75cf1042d8",
+        "metadata": {
+          "job_type": "stage-runtime-repair",
+          "target": "runtime-py-compile"
+        }
+      },
+      {
+        "transition_id": "e98ab026-3655-46b6-9162-8c438f110265",
+        "stage": "staged-action",
+        "status": "sandboxed",
+        "artifact_type": "self-improvement-sandbox-run",
+        "source": "sandbox-test",
+        "owner_agent": "Autoforge",
+        "lane": "self-improvement-and-maintenance",
+        "review_level": "review-before-code-change",
+        "rationale": "JARVIS created an isolated worktree mutation lane and validated it with compile/test reporting.",
+        "timestamp": "2026-05-15T18:40:41.588483+00:00",
+        "record_id": "9255f50d-75a3-4206-a15a-0c2827a78092",
+        "metadata": {
+          "job_type": "stage-runtime-repair",
+          "mutation_route": "sandbox/worktree-only",
+          "worktree_path": "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions"
+        }
+      },
+      {
+        "transition_id": "37664c8b-3fcd-4d00-8d03-6e7159458994",
+        "stage": "review",
+        "status": "ready-for-review",
+        "artifact_type": "self-improvement-sandbox-run",
+        "source": "sandbox-test",
+        "owner_agent": "Autoforge",
+        "lane": "self-improvement-and-maintenance",
+        "review_level": "review-before-code-change",
+        "rationale": "Sandbox/worktree run is complete and ready for inspected promotion or further patch generation.",
+        "timestamp": "2026-05-15T18:40:41.590303+00:00",
+        "record_id": "9255f50d-75a3-4206-a15a-0c2827a78092",
+        "metadata": {
+          "job_type": "stage-runtime-repair",
+          "mutation_route": "sandbox/worktree-only",
+          "report_path": "/Users/chris/Desktop/CODE/JARVIS/data/system/sandbox_reports/9255f50d-75a3-4206-a15a-0c2827a78092.json"
+        }
+      },
+      {
+        "transition_id": "2845448f-cde2-481b-b8da-3f64de48b3d0",
+        "stage": "staged-action",
+        "status": "sandboxed",
+        "artifact_type": "self-improvement-sandbox-run",
+        "source": "sandbox-test-2",
+        "owner_agent": "Autoforge",
+        "lane": "self-improvement-and-maintenance",
+        "review_level": "review-before-code-change",
+        "rationale": "JARVIS created an isolated worktree mutation lane and validated it with compile/test reporting.",
+        "timestamp": "2026-05-15T18:41:20.148729+00:00",
+        "record_id": "c921689a-92d7-4143-8704-52601b086815",
+        "metadata": {
+          "job_type": "stage-runtime-repair",
+          "mutation_route": "sandbox/worktree-only",
+          "worktree_path": "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions"
+        }
+      },
+      {
+        "transition_id": "48cc8313-13d9-4a43-9975-c79d617b9caf",
+        "stage": "review",
+        "status": "ready-for-review",
+        "artifact_type": "self-improvement-sandbox-run",
+        "source": "sandbox-test-2",
+        "owner_agent": "Autoforge",
+        "lane": "self-improvement-and-maintenance",
+        "review_level": "review-before-code-change",
+        "rationale": "Sandbox/worktree run is complete and ready for inspected promotion or further patch generation.",
+        "timestamp": "2026-05-15T18:41:20.154006+00:00",
+        "record_id": "c921689a-92d7-4143-8704-52601b086815",
+        "metadata": {
+          "job_type": "stage-runtime-repair",
+          "mutation_route": "sandbox/worktree-only",
+          "report_path": "/Users/chris/Desktop/CODE/JARVIS/data/system/sandbox_reports/c921689a-92d7-4143-8704-52601b086815.json"
+        }
+      },
+      {
+        "transition_id": "cd87edd6-3e83-4bec-a6ec-c17cf2c6111f",
+        "stage": "staged-action",
+        "status": "sandboxed",
+        "artifact_type": "self-improvement-sandbox-run",
+        "source": "sandbox-live",
+        "owner_agent": "Autoforge",
+        "lane": "self-improvement-and-maintenance",
+        "review_level": "review-before-code-change",
+        "rationale": "JARVIS created an isolated worktree mutation lane and validated it with compile/test reporting.",
+        "timestamp": "2026-05-15T18:41:36.193097+00:00",
+        "record_id": "c6395017-827a-472f-bdc8-9422b62977a3",
+        "metadata": {
+          "job_type": "stage-runtime-repair",
+          "mutation_route": "sandbox/worktree-only",
+          "worktree_path": "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions"
+        }
+      },
+      {
+        "transition_id": "5b6a8868-9f50-499c-9f58-a6dc7e429201",
+        "stage": "review",
+        "status": "ready-for-review",
+        "artifact_type": "self-improvement-sandbox-run",
+        "source": "sandbox-live",
+        "owner_agent": "Autoforge",
+        "lane": "self-improvement-and-maintenance",
+        "review_level": "review-before-code-change",
+        "rationale": "Sandbox/worktree run is complete and ready for inspected promotion or further patch generation.",
+        "timestamp": "2026-05-15T18:41:36.196732+00:00",
+        "record_id": "c6395017-827a-472f-bdc8-9422b62977a3",
+        "metadata": {
+          "job_type": "stage-runtime-repair",
+          "mutation_route": "sandbox/worktree-only",
+          "report_path": "/Users/chris/Desktop/CODE/JARVIS/data/system/sandbox_reports/c6395017-827a-472f-bdc8-9422b62977a3.json"
+        }
+      }
+    ]
+  },
+  {
+    "work_id": "49d47581-358b-43a9-be9d-8c5a9cac52ea",
+    "actor": "Chris",
+    "title": "Review runtime drift",
+    "domain": "system",
+    "lane": "self-improvement-and-maintenance",
+    "owner_agent": "Autoforge",
+    "current_stage": "outcome",
+    "status": "succeeded",
+    "artifact_type": "self-improvement-run",
+    "source": "assistant-autonomy",
+    "review_level": "review-before-code-change",
+    "rationale": "Repo drift was refreshed.",
+    "created_at": "2026-05-15T15:45:09.416099+00:00",
+    "updated_at": "2026-05-15T16:14:37.573829+00:00",
+    "parent_work_id": "",
+    "artifact_refs": [
+      {
+        "record_id": "49d47581-358b-43a9-be9d-8c5a9cac52ea",
+        "artifact_type": "self-improvement-job",
+        "stage": "hypothesis",
+        "source": "background-self-improvement",
+        "timestamp": "2026-05-15T15:45:09.416099+00:00"
+      },
+      {
+        "record_id": "49d47581-358b-43a9-be9d-8c5a9cac52ea",
+        "artifact_type": "self-improvement-run",
+        "stage": "staged-action",
+        "source": "assistant-autonomy",
+        "timestamp": "2026-05-15T16:05:20.620404+00:00"
+      },
+      {
+        "record_id": "49d47581-358b-43a9-be9d-8c5a9cac52ea",
+        "artifact_type": "self-improvement-run",
+        "stage": "outcome",
+        "source": "assistant-autonomy",
+        "timestamp": "2026-05-15T16:05:20.622109+00:00"
+      },
+      {
+        "record_id": "49d47581-358b-43a9-be9d-8c5a9cac52ea",
+        "artifact_type": "self-improvement-run",
+        "stage": "staged-action",
+        "source": "assistant-autonomy",
+        "timestamp": "2026-05-15T16:14:37.569093+00:00"
+      },
+      {
+        "record_id": "49d47581-358b-43a9-be9d-8c5a9cac52ea",
+        "artifact_type": "self-improvement-run",
+        "stage": "outcome",
+        "source": "assistant-autonomy",
+        "timestamp": "2026-05-15T16:14:37.573829+00:00"
+      }
+    ],
+    "transitions": [
+      {
+        "transition_id": "f67e852e-e1bd-47f5-a59c-396b2608a9c9",
+        "stage": "hypothesis",
+        "status": "queued",
+        "artifact_type": "self-improvement-job",
+        "source": "background-self-improvement",
+        "owner_agent": "Autoforge",
+        "lane": "self-improvement-and-maintenance",
+        "review_level": "review-before-code-change",
+        "rationale": "The JARVIS repo has uncommitted changes, so background maintenance should acknowledge the drift and avoid blind upgrades.",
+        "timestamp": "2026-05-15T15:45:09.416099+00:00",
+        "record_id": "49d47581-358b-43a9-be9d-8c5a9cac52ea",
+        "metadata": {
+          "job_type": "review-repo-drift",
+          "target": "git-status"
+        }
+      },
+      {
+        "transition_id": "40a5aea1-293d-470a-89d6-afd31f1c354e",
+        "stage": "staged-action",
+        "status": "executed",
+        "artifact_type": "self-improvement-run",
+        "source": "assistant-autonomy",
+        "owner_agent": "Autoforge",
+        "lane": "self-improvement-and-maintenance",
+        "review_level": "review-before-code-change",
+        "rationale": "The JARVIS repo has uncommitted changes, so background maintenance should acknowledge the drift and avoid blind upgrades.",
+        "timestamp": "2026-05-15T16:05:20.620404+00:00",
+        "record_id": "49d47581-358b-43a9-be9d-8c5a9cac52ea",
+        "metadata": {
+          "job_type": "review-repo-drift",
+          "target": "git-status",
+          "mutation_route": "auto-execute"
+        }
+      },
+      {
+        "transition_id": "4ee3f5b4-5c3f-4ed2-b4b5-d5091dd63e81",
+        "stage": "outcome",
+        "status": "succeeded",
+        "artifact_type": "self-improvement-run",
+        "source": "assistant-autonomy",
+        "owner_agent": "Autoforge",
+        "lane": "self-improvement-and-maintenance",
+        "review_level": "review-before-code-change",
+        "rationale": "Repo drift was refreshed.",
+        "timestamp": "2026-05-15T16:05:20.622109+00:00",
+        "record_id": "49d47581-358b-43a9-be9d-8c5a9cac52ea",
+        "metadata": {
+          "job_type": "review-repo-drift",
+          "target": "git-status",
+          "triggered_by": "assistant-autonomy",
+          "mutation_route": "auto-execute"
+        }
+      },
+      {
+        "transition_id": "417391ba-c7de-4934-acbb-43d1ae78ea31",
+        "stage": "staged-action",
+        "status": "executed",
+        "artifact_type": "self-improvement-run",
+        "source": "assistant-autonomy",
+        "owner_agent": "Autoforge",
+        "lane": "self-improvement-and-maintenance",
+        "review_level": "review-before-code-change",
+        "rationale": "The JARVIS repo has uncommitted changes, so background maintenance should acknowledge the drift and avoid blind upgrades.",
+        "timestamp": "2026-05-15T16:14:37.569093+00:00",
+        "record_id": "49d47581-358b-43a9-be9d-8c5a9cac52ea",
+        "metadata": {
+          "job_type": "review-repo-drift",
+          "target": "git-status",
+          "mutation_route": "auto-execute"
+        }
+      },
+      {
+        "transition_id": "17bac7ff-3a75-4a7b-88f1-42719bf4e5cb",
+        "stage": "outcome",
+        "status": "succeeded",
+        "artifact_type": "self-improvement-run",
+        "source": "assistant-autonomy",
+        "owner_agent": "Autoforge",
+        "lane": "self-improvement-and-maintenance",
+        "review_level": "review-before-code-change",
+        "rationale": "Repo drift was refreshed.",
+        "timestamp": "2026-05-15T16:14:37.573829+00:00",
+        "record_id": "49d47581-358b-43a9-be9d-8c5a9cac52ea",
+        "metadata": {
+          "job_type": "review-repo-drift",
+          "target": "git-status",
+          "triggered_by": "assistant-autonomy",
+          "mutation_route": "auto-execute"
+        }
+      }
+    ]
+  },
+  {
+    "work_id": "95a6c34d-08a9-4bfa-8d3b-78ee1425c5ca",
+    "actor": "Chris",
+    "title": "Resolve missing tool: rg",
+    "domain": "system",
+    "lane": "self-improvement-and-maintenance",
+    "owner_agent": "Autoforge",
+    "current_stage": "hypothesis",
+    "status": "queued",
+    "artifact_type": "self-improvement-job",
+    "source": "background-self-improvement",
+    "review_level": "review-before-tool-install",
+    "rationale": "JARVIS depends on rg for its local maintenance posture, but that tool is not available on this machine.",
+    "created_at": "2026-05-15T15:45:57.005942+00:00",
+    "updated_at": "2026-05-15T15:45:57.005942+00:00",
+    "parent_work_id": "",
+    "artifact_refs": [
+      {
+        "record_id": "95a6c34d-08a9-4bfa-8d3b-78ee1425c5ca",
+        "artifact_type": "self-improvement-job",
+        "stage": "hypothesis",
+        "source": "background-self-improvement",
+        "timestamp": "2026-05-15T15:45:57.005942+00:00"
+      }
+    ],
+    "transitions": [
+      {
+        "transition_id": "6a77d7c8-de04-4f1d-a630-0c1b15842664",
+        "stage": "hypothesis",
+        "status": "queued",
+        "artifact_type": "self-improvement-job",
+        "source": "background-self-improvement",
+        "owner_agent": "Autoforge",
+        "lane": "self-improvement-and-maintenance",
+        "review_level": "review-before-tool-install",
+        "rationale": "JARVIS depends on rg for its local maintenance posture, but that tool is not available on this machine.",
+        "timestamp": "2026-05-15T15:45:57.005942+00:00",
+        "record_id": "95a6c34d-08a9-4bfa-8d3b-78ee1425c5ca",
+        "metadata": {
+          "job_type": "resolve-tool-gap",
+          "target": "rg"
+        }
+      }
+    ]
+  }
+]

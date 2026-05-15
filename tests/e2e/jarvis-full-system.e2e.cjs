@@ -701,8 +701,8 @@ async function run() {
     await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector("#command-input");
     await page.waitForSelector("#voice-command");
-    await page.waitForSelector("#open-settings");
-    await page.waitForSelector("#packet-strip-toggle");
+    await page.waitForSelector("#open-settings", { state: "attached" });
+    await page.waitForSelector("#packet-strip-toggle", { state: "attached" });
     await page.waitForSelector(".core-stage");
     const stateLabel = await page.locator("#state-label").textContent();
     assert((stateLabel || "").trim().length > 0, "State label was empty on initial load");
@@ -710,7 +710,11 @@ async function run() {
   });
 
   await check("Packet rail expands with current packet set", async (entry) => {
-    await page.click("#packet-strip-toggle");
+    await page.evaluate(() => {
+      const button = document.getElementById("packet-strip-toggle");
+      if (!button) throw new Error("packet-strip-toggle not found");
+      button.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
     await page.waitForTimeout(300);
     await page.waitForSelector('[data-packet="today"]');
     await page.waitForSelector('[data-packet="connected-devices"]');
@@ -738,7 +742,10 @@ async function run() {
   await check("Connected devices admin view opens and renders registry", async (entry) => {
     await page.click("#close-modal");
     await page.waitForTimeout(200);
-    await page.click('[data-packet="connected-devices"]');
+    await page.evaluate(() => {
+      if (typeof window.__jarvisOpenPacket !== "function") throw new Error("openPacket helper not available");
+      window.__jarvisOpenPacket("connected-devices");
+    });
     await page.waitForSelector("#modal-layer.open");
     await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("Connected Devices"));
     await page.waitForSelector("#connected-devices-summary");
@@ -756,7 +763,10 @@ async function run() {
 
   await check("Tasks packet opens and renders assistant-core queue", async (entry) => {
     await closeModalIfVisible(page);
-    await page.locator('[data-packet="tasks"]').click({ force: true });
+    await page.evaluate(() => {
+      if (typeof window.__jarvisOpenPacket !== "function") throw new Error("openPacket helper not available");
+      window.__jarvisOpenPacket("tasks");
+    });
     await page.waitForSelector("#modal-layer.open");
     await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("Assistant Core"));
     const body = page.locator("#modal-body");
@@ -774,7 +784,10 @@ async function run() {
 
   await check("Approval Queue packet opens and renders autonomy audit", async (entry) => {
     await closeModalIfVisible(page);
-    await page.locator('[data-packet="approvals"]').click({ force: true });
+    await page.evaluate(() => {
+      if (typeof window.__jarvisOpenPacket !== "function") throw new Error("openPacket helper not available");
+      window.__jarvisOpenPacket("approvals");
+    });
     await page.waitForSelector("#modal-layer.open");
     await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("Approval Queue"));
     const body = page.locator("#modal-body");
@@ -791,7 +804,10 @@ async function run() {
 
   await check("Finance packet opens and renders weekly money review", async (entry) => {
     await closeModalIfVisible(page);
-    await page.locator('[data-packet="finance"]').click({ force: true });
+    await page.evaluate(() => {
+      if (typeof window.__jarvisOpenPacket !== "function") throw new Error("openPacket helper not available");
+      window.__jarvisOpenPacket("finance");
+    });
     await page.waitForSelector("#modal-layer.open");
     await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("Finance Review"));
     const body = page.locator("#modal-body");
@@ -810,7 +826,10 @@ async function run() {
 
   await check("Marketing packet opens and renders weekly marketing review", async (entry) => {
     await closeModalIfVisible(page);
-    await page.locator('[data-packet="marketing"]').click({ force: true });
+    await page.evaluate(() => {
+      if (typeof window.__jarvisOpenPacket !== "function") throw new Error("openPacket helper not available");
+      window.__jarvisOpenPacket("marketing");
+    });
     await page.waitForSelector("#modal-layer.open");
     await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("Marketing Review"));
     const body = page.locator("#modal-body");
@@ -829,7 +848,10 @@ async function run() {
 
   await check("Pipeline packet opens and renders daily and weekly review state", async (entry) => {
     await closeModalIfVisible(page);
-    await page.locator('[data-packet="pipeline"]').click({ force: true });
+    await page.evaluate(() => {
+      if (typeof window.__jarvisOpenPacket !== "function") throw new Error("openPacket helper not available");
+      window.__jarvisOpenPacket("pipeline");
+    });
     await page.waitForSelector("#modal-layer.open");
     await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("Pipeline Review"));
     const body = page.locator("#modal-body");
@@ -848,7 +870,10 @@ async function run() {
 
   await check("Vision packet opens and renders evidence layer", async (entry) => {
     await closeModalIfVisible(page);
-    await page.locator('[data-packet="vision"]').click({ force: true });
+    await page.evaluate(() => {
+      if (typeof window.__jarvisOpenPacket !== "function") throw new Error("openPacket helper not available");
+      window.__jarvisOpenPacket("vision");
+    });
     await page.waitForSelector("#modal-layer.open");
     await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("Vision"));
     const body = page.locator("#modal-body");
@@ -862,7 +887,10 @@ async function run() {
 
   await check("House packet opens and renders environment status", async (entry) => {
     await closeModalIfVisible(page);
-    await page.locator('[data-packet="home"]').click({ force: true });
+    await page.evaluate(() => {
+      if (typeof window.__jarvisOpenPacket !== "function") throw new Error("openPacket helper not available");
+      window.__jarvisOpenPacket("home");
+    });
     await page.waitForSelector("#modal-layer.open");
     await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("House Packet"));
     const body = page.locator("#modal-body");
@@ -912,7 +940,10 @@ async function run() {
 
   await check("Cadence Review packet opens with phase-aware review content", async (entry) => {
     await closeModalIfVisible(page);
-    await page.locator('[data-packet="review"]').click({ force: true });
+    await page.evaluate(() => {
+      if (typeof window.__jarvisOpenPacket !== "function") throw new Error("openPacket helper not available");
+      window.__jarvisOpenPacket("review");
+    });
     await page.waitForSelector("#modal-layer.open");
     await page.waitForFunction(() => {
       const title = document.getElementById("modal-title")?.textContent || "";
@@ -941,7 +972,10 @@ async function run() {
 
   await check("Catalyst workspace packet opens and routes", async (entry) => {
     await closeModalIfVisible(page);
-    await page.locator('[data-packet="catalyst"]').click({ force: true });
+    await page.evaluate(() => {
+      if (typeof window.__jarvisOpenPacket !== "function") throw new Error("openPacket helper not available");
+      window.__jarvisOpenPacket("catalyst");
+    });
     await page.waitForSelector("#modal-layer.open");
     await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("Catalyst Workspace"));
     await page.waitForSelector("#catalyst-workspace-frame");

@@ -1,0 +1,6 @@
+Package 70a38271-2ebb-4129-b79c-8484983b34f9 exported a CadQuery-backed custom-form model.
+Primary mesh: ceremonial-shelf-totem.3mf
+Fallback mesh: ceremonial-shelf-totem.stl
+Solid exchange: ceremonial-shelf-totem.step
+Recommended material: PLA
+Suggested slicer profile: creative-concept-balanced

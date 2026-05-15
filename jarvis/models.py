@@ -27,6 +27,43 @@ class TaskClass(StrEnum):
     BACKGROUND = "background"
 
 
+class RoutingTier(StrEnum):
+    BACKGROUND_DETECTION = "background-detection"
+    LOCAL_SYNTHESIS = "local-synthesis"
+    HIGH_QUALITY_REASONING = "high-quality-reasoning"
+    USER_FACING_DELIVERY = "user-facing-delivery"
+
+
+class PrivacyLevel(StrEnum):
+    LOCAL_ONLY = "local-only"
+    PREFER_LOCAL = "prefer-local"
+    CLOUD_OK = "cloud-ok"
+    RESTRICTED = "restricted"
+
+
+class RiskLevel(StrEnum):
+    LOW = "low"
+    MODERATE = "moderate"
+    HIGH = "high"
+
+
+class AutonomyMode(StrEnum):
+    AUTONOMOUS = "autonomous"
+    STAGED = "staged"
+    APPROVAL_REQUIRED = "approval-required"
+    FORBIDDEN = "forbidden"
+
+
+class WorkLifecycleStage(StrEnum):
+    SIGNAL = "signal"
+    HYPOTHESIS = "hypothesis"
+    PROJECT_BRIEF = "project-brief"
+    IMPLEMENTATION_PLAN = "implementation-plan"
+    STAGED_ACTION = "staged-action"
+    REVIEW = "review"
+    OUTCOME = "outcome"
+
+
 @dataclass(slots=True)
 class UserProfile:
     user_id: str
@@ -93,6 +130,48 @@ class PermissionDecision:
 
 
 @dataclass(slots=True)
+class ModelRoutingPolicy:
+    tier: RoutingTier
+    provider: str
+    model: str
+    privacy_level: PrivacyLevel
+    risk_level: RiskLevel
+    summary: str
+
+
+@dataclass(slots=True)
+class AutonomyPolicy:
+    domain: str
+    lane: str
+    owner_agent: str
+    risk_level: RiskLevel
+    autonomy_mode: AutonomyMode
+    review_level: str
+    allowed_actions: list[str] = field(default_factory=list)
+    requires_approval: list[str] = field(default_factory=list)
+    forbidden_actions: list[str] = field(default_factory=list)
+    summary: str = ""
+
+
+@dataclass(slots=True)
+class WorkLifecycleRecord:
+    work_id: str
+    actor: str
+    title: str
+    domain: str
+    lane: str
+    owner_agent: str
+    stage: WorkLifecycleStage
+    status: str
+    artifact_type: str
+    source: str
+    review_level: str
+    rationale: str
+    created_at: str
+    updated_at: str
+
+
+@dataclass(slots=True)
 class RequestPlan:
     request_id: str
     actor: str
@@ -105,6 +184,9 @@ class RequestPlan:
     preferred_provider: str
     context_lane: str
     model: str
+    routing_tier: RoutingTier
+    privacy_level: PrivacyLevel
+    risk_level: RiskLevel
     action_class: ActionClass
     allowed: bool
     needs_approval: bool
@@ -122,6 +204,10 @@ class ApprovalRequest:
     second_factor_required: bool
     status: str
     rationale: str
+    domain: str = ""
+    lane: str = ""
+    owner_agent: str = ""
+    lifecycle_work_id: str = ""
 
 
 @dataclass(slots=True)
@@ -187,6 +273,108 @@ class MessageDraft:
     body: str
     status: str
     timestamp: str
+    request_id: str = ""
+    arena_id: str = ""
+    mailbox_id: str = ""
+    thread_id: str = ""
+    source_message_id: str = ""
+    source_subject: str = ""
+    stage_status: str = ""
+    alert_status: str = ""
+    draft_folder: str = "drafts"
+    approval_request_id: str = ""
+    work_id: str = ""
+    provider: str = ""
+    mailbox_account_id: str = ""
+    external_draft_id: str = ""
+    external_message_id: str = ""
+    external_thread_id: str = ""
+    sync_status: str = ""
+    sync_error: str = ""
+
+
+@dataclass(slots=True)
+class TrustZone:
+    zone_id: str
+    name: str
+    zone_type: str
+    resource_scope: dict[str, object]
+    allowed_actions: list[str]
+    approval_mode: str
+    audit_mode: str
+    promotion_rules: dict[str, object]
+    demotion_rules: dict[str, object]
+    status: str
+    description: str = ""
+    reporting_cadence: str = "on_request"
+    created_at: str = ""
+    updated_at: str = ""
+
+
+@dataclass(slots=True)
+class ResourceArena:
+    arena_id: str
+    name: str
+    resource_type: str
+    linked_zone_id: str
+    owner_principal: str
+    risk_class: str
+    limits: dict[str, object]
+    pause_conditions: list[str]
+    status: str
+    description: str = ""
+    resource_refs: dict[str, object] = field(default_factory=dict)
+    promotion_eligibility: dict[str, object] = field(default_factory=dict)
+    created_at: str = ""
+    updated_at: str = ""
+
+
+@dataclass(slots=True)
+class AuthorityStage:
+    stage_id: str
+    name: str
+    sequence: int
+    allowed_action_types: list[str]
+    approval_requirements: dict[str, object]
+    reporting_requirements: dict[str, object]
+    promotion_criteria: dict[str, object]
+    demotion_triggers: list[str]
+    status: str
+    description: str = ""
+
+
+@dataclass(slots=True)
+class EmailDraftStagingRequest:
+    request_id: str
+    arena_id: str
+    principal_id: str
+    source_message: dict[str, object]
+    draft_intent: dict[str, object]
+    stage_policy: dict[str, object]
+    context_refs: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class EmailDraftStagingResponse:
+    request_id: str
+    draft_id: str
+    arena_id: str
+    stage_status: str
+    draft_location: dict[str, object]
+    alert: dict[str, object]
+    audit_ref: str
+    promotion_signal: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class StagedActionQueueItem:
+    request_id: str
+    arena_id: str
+    action_type: str
+    status: str
+    created_at: str
+    draft_id: str = ""
+    principal_id: str = ""
 
 
 @dataclass(slots=True)
@@ -288,6 +476,7 @@ class CadPackage:
     package_id: str
     actor: str
     part_name: str
+    family: str
     summary: str
     parameters: list[str]
     openscad_stub: str
@@ -299,10 +488,43 @@ class CadPackage:
     step_path: str
     mesh_3mf_path: str
     slicer_pack_dir: str
+    creative_profile: str
     export_status: str
     export_detail: str
     export_engine: str
     timestamp: str
+
+
+@dataclass(slots=True)
+class ConceptStudioSession:
+    session_id: str
+    actor: str
+    object_type: str
+    silhouette_preference: str
+    title: str
+    goals: str
+    constraints: str
+    concept_summary: str
+    design_direction: str
+    suggested_silhouette: str
+    suggested_family: str
+    suggested_part_name: str
+    suggested_dimensions: str
+    suggested_constraints: str
+    print_strategy: str
+    questions: list[str]
+    next_step: str
+    capture_id: str
+    image_path: str
+    vision_object_label: str
+    vision_contour_confidence: str
+    vision_asymmetry_hint: str
+    vision_dimension_seed: str
+    variants: list[dict[str, str]]
+    transcript: list[dict[str, str]]
+    status: str
+    created_at: str
+    updated_at: str
 
 
 @dataclass(slots=True)

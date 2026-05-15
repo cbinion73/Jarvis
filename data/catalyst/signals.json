@@ -50,5 +50,61 @@
       "policy"
     ],
     "timestamp": "2026-05-07T04:18:37.097589+00:00"
+  },
+  {
+    "signal_id": "ae55f638-4799-4eaa-8819-0c71ffd5b4ac",
+    "actor": "Chris",
+    "source": "hypothesis",
+    "title": "Find AI-driven family savings and side-hustle opportunities we can execute over the next 30 days",
+    "content": "Use AI to find and execute a small set of high-probability family savings and side-hustle plays in the next 30 days, with Catalyst as the tracking layer. The win is not \u201cbig transformation.\u201d It\u2019s a few practical moves that lower friction, recover cash, and test revenue without creating chaos.",
+    "sender": "",
+    "tags": [
+      "catalyst",
+      "hypothesis",
+      "family-savings"
+    ],
+    "timestamp": "2026-05-12T17:31:04.061213+00:00"
+  },
+  {
+    "signal_id": "809d5392-da7a-441e-a4a0-4191f43a53e2",
+    "actor": "Chris",
+    "source": "hypothesis",
+    "title": "Create a family portfolio hypothesis around book writing, consulting, and social media leverage",
+    "content": "Build Catalyst into a family \u201cidea-to-asset\u201d engine where books, consulting, and social media all feed one another instead of living as separate efforts. The core hypothesis is that one strong point of view, packaged well, can create both income and durable family leverage.",
+    "sender": "",
+    "tags": [
+      "catalyst",
+      "hypothesis",
+      "writing-and-ip"
+    ],
+    "timestamp": "2026-05-12T17:33:10.530540+00:00"
+  },
+  {
+    "signal_id": "220ae8da-a49d-4ca9-a1cc-9b5a5d75a1f7",
+    "actor": "Chris",
+    "source": "hypothesis",
+    "title": "use AI to audit subscriptions and lower our monthly expenses",
+    "content": "Use AI to surface every recurring charge, sort them by value and frequency, and build a clean cancellation/downgrade shortlist before the next billing cycle.",
+    "sender": "",
+    "tags": [
+      "catalyst",
+      "hypothesis",
+      "family-savings"
+    ],
+    "timestamp": "2026-05-15T02:19:22.851433+00:00"
+  },
+  {
+    "signal_id": "9305b7c7-3171-492d-82e8-a3b584172a44",
+    "actor": "Chris",
+    "source": "hypothesis",
+    "title": "build a simple family savings tracker for recurring subscriptions",
+    "content": "Build a very simple recurring subscription tracker that shows what the family is paying each month, who uses it, and what could be saved if it were canceled. The likely win is not just savings; it is visibility. Most subscription waste survives because nobody has a clean list.",
+    "sender": "",
+    "tags": [
+      "catalyst",
+      "hypothesis",
+      "family-savings"
+    ],
+    "timestamp": "2026-05-15T02:56:08.801677+00:00"
   }
 ]

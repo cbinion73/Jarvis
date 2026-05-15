@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/email-draft-staging-request.v1.json",
+  "title": "EmailDraftStagingRequestV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "request_id",
+    "arena_id",
+    "principal_id",
+    "source_message",
+    "draft_intent",
+    "stage_policy"
+  ],
+  "properties": {
+    "request_id": {
+      "type": "string"
+    },
+    "arena_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9._-]+$"
+    },
+    "principal_id": {
+      "type": "string"
+    },
+    "source_message": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["message_id", "thread_id", "mailbox_id"],
+      "properties": {
+        "message_id": { "type": "string" },
+        "thread_id": { "type": "string" },
+        "mailbox_id": { "type": "string" },
+        "from": { "type": "string" },
+        "subject": { "type": "string" }
+      }
+    },
+    "draft_intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["intent_type", "tone", "goal"],
+      "properties": {
+        "intent_type": {
+          "type": "string",
+          "enum": ["reply", "follow_up", "intro", "decline", "reschedule", "custom"]
+        },
+        "tone": {
+          "type": "string"
+        },
+        "goal": {
+          "type": "string"
+        },
+        "key_points": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "stage_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["save_to_drafts", "send_enabled", "alert_required"],
+      "properties": {
+        "save_to_drafts": { "const": true },
+        "send_enabled": { "const": false },
+        "alert_required": { "const": true }
+      }
+    },
+    "context_refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "calendar_event_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "relationship_memory_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "prior_thread_message_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

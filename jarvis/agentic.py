@@ -110,6 +110,13 @@ class BackgroundStateStore:
         with self.tick_log_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(snapshot) + "\n")
 
+    def list_ticks(self, limit: int = 40) -> list[dict]:
+        if not self.tick_log_path.exists():
+            return []
+        lines = self.tick_log_path.read_text(encoding="utf-8").splitlines()
+        records = [json.loads(line) for line in lines if line.strip()]
+        return list(reversed(records[-max(1, int(limit)):]))
+
 
 class AgentRegistry:
     def __init__(self) -> None:
@@ -195,6 +202,17 @@ class AgentRegistry:
                 owns=["incident review", "overnight watch", "anomaly triage"],
             ),
             AgentDefinition(
+                agent_id="storm",
+                label="Storm",
+                purpose="Track authoritative live weather, route conditions, forecast shifts, and alert posture so JARVIS can brief the household clearly about trips, outings, campouts, events, and real-world weather risk.",
+                cadence_minutes=10,
+                triggers=["weather request", "forecast change", "live alert", "travel planning", "outing prep", "campout planning", "event timing"],
+                dependencies=[],
+                memory_scope=["safety", "household", "system"],
+                owns=["live weather retrieval", "forecast posture", "alert surfacing", "travel weather routing", "outing readiness", "family warning posture"],
+                quiet_hours_behavior="speak only for meaningful change",
+            ),
+            AgentDefinition(
                 agent_id="memory-curator",
                 label="Memory Curator",
                 purpose="Decide what deserves durable memory instead of allowing the system to become a sentimental junk drawer.",
@@ -203,6 +221,17 @@ class AgentRegistry:
                 dependencies=[],
                 memory_scope=["household", "personal", "project", "safety"],
                 owns=["memory proposals", "forget posture", "curation rules"],
+            ),
+            AgentDefinition(
+                agent_id="system-steward",
+                label="System Steward",
+                purpose="Watch JARVIS itself for tooling gaps, model readiness, runtime drift, and safe self-improvement opportunities.",
+                cadence_minutes=30,
+                triggers=["idle window", "runtime drift", "model gap", "tooling gap", "maintenance window"],
+                dependencies=[],
+                memory_scope=["system", "project", "safety"],
+                owns=["self-improvement jobs", "model sync", "repo health", "maintenance posture"],
+                quiet_hours_behavior="maintenance only",
             ),
         ]
 
@@ -319,8 +348,8 @@ class LifeAgentStudioStore:
                 category="orchestrator",
                 role="Front-door intelligence that routes work, protects permissions, and keeps the house coherent.",
                 purpose="Serve as the singular front-door intelligence of the system and preserve coherence across domains.",
-                personality="Calm, formal, dry, and highly competent. Speaks like an executive household associate rather than a chatbot.",
-                instructions="Own the conversation, decide which specialist should weigh in, and preserve the single JARVIS persona at the surface.",
+                personality="Calm, sharp, warm, and highly competent. Speaks like a trusted strategic partner rather than a chatbot or a butler.",
+                instructions="Own the conversation, decide which specialist should weigh in, preserve one coherent JARVIS voice at the surface, and keep the interaction natural rather than ceremonial.",
                 knowledge="Household operating modes, approvals, active routines, and the current state of the JARVIS system.",
                 logic="Route, stage, challenge risky decisions politely, ask for approval before consequential action, and synthesize multiple agents when needed.",
                 authority_level="stage",
@@ -359,6 +388,35 @@ class LifeAgentStudioStore:
                 escalation_rules=["Escalate when stale context is being treated as present truth."],
                 success_markers=["Cleaner recall", "Fewer dropped threads", "Lower duplication"],
                 connections=["jarvis-orchestrator", "formation-director", "executive-counsel"],
+            ),
+            LifeAgentProfile(
+                agent_id="autoforge",
+                label="Autoforge",
+                tier="execution",
+                title="System Steward",
+                domain="system",
+                category="operator",
+                role="Keep JARVIS healthy, truthful, and improving through governed maintenance work.",
+                purpose="Search for local improvement opportunities, sync required models, run health checks, and stage higher-risk repairs cleanly.",
+                personality="Practical, quiet, methodical, and slightly relentless.",
+                instructions="Prefer low-risk local maintenance automatically, but stage tool installs, code changes, and broad upgrades for review unless policy explicitly allows them.",
+                knowledge="Runtime health, local tooling, model availability, repo drift, and maintenance history.",
+                logic="Inspect first, execute the safe fixes, and leave a clear artifact trail for anything riskier.",
+                authority_level="execute",
+                memory_read=["core", "system", "workshop"],
+                memory_write=["system"],
+                memory_blocked=["finance", "health", "family"],
+                cross_domain_access=False,
+                tools_allowed=["repo-health", "model-sync", "tooling", "maintenance", "tests"],
+                tools_blocked=["external-send", "payments", "account-modification", "public-sharing"],
+                party_role="Maintenance lead who turns drift into concrete repair work.",
+                escalation_rules=[
+                    "Escalate before changing code automatically.",
+                    "Escalate before installing broad system tools or making account-level changes.",
+                    "Keep heavy downloads reviewable unless the user has explicitly enabled them.",
+                ],
+                success_markers=["Fewer runtime surprises", "Healthy local models", "Clear maintenance trail"],
+                connections=["jarvis-orchestrator", "watcher", "ultron", "nebula"],
             ),
             LifeAgentProfile(
                 agent_id="ultron",
@@ -759,6 +817,35 @@ class LifeAgentStudioStore:
                 escalation_rules=["Escalate before booking, spending, or changing anyone else's travel commitments."],
                 success_markers=["Smoother departures", "Fewer missed details", "Better contingency posture"],
                 connections=["jarvis-orchestrator", "calendar-steward", "family-chief"],
+            ),
+            LifeAgentProfile(
+                agent_id="storm",
+                label="Storm",
+                tier="execution",
+                title="Weather Intelligence Lead",
+                domain="security",
+                category="scout",
+                role="Monitor live weather, travel-route conditions, outdoor risk, and family-impacting forecast changes with authority and restraint.",
+                purpose="Keep JARVIS weather-aware using live authoritative sources and surface what matters for family plans, events, trips, campouts, route timing, and safety.",
+                personality="Composed, cinematic, and alert without melodrama.",
+                instructions="Use authoritative live weather sources, prefer clarity over flourish, and translate weather into practical expectations for the family. Warn early for meaningful risk, especially when trips, outings, campouts, events, school flow, or travel routes could be affected.",
+                knowledge="Current conditions, hourly and daily forecast changes, alerts, travel weather impact, route weather posture, event timing risk, campout readiness, outdoor timing risk, and family warning thresholds.",
+                logic="Check live conditions first, compare change over time, map weather onto active family plans, trips, routes, and events, then summarize the next practical implication for the household.",
+                authority_level="advise",
+                memory_read=["family", "community", "security", "system"],
+                memory_write=["security", "system"],
+                memory_blocked=["finance", "health"],
+                cross_domain_access=False,
+                tools_allowed=["weather", "alerts", "forecasting", "travel-planning", "route-weather", "outing-briefs", "family-warnings"],
+                tools_blocked=["external-send", "payments", "publishing"],
+                party_role="Atmosphere, forecast truth, route risk, and weather consequence voice.",
+                escalation_rules=[
+                    "Escalate immediately for severe weather, travel-impacting weather, or fast-changing outdoor risk.",
+                    "Warn the family early when incoming weather could materially affect departures, school flow, campouts, events, or evening plans.",
+                    "Escalate when route conditions or timing windows materially change the safest or easiest travel plan.",
+                ],
+                success_markers=["No staged weather", "Timely alerting", "Actionable forecast guidance", "Better trip timing", "Clearer outing expectations"],
+                connections=["jarvis-orchestrator", "watchtower", "family-chief", "calendar-steward", "maria-hill", "troop-pathfinder"],
             ),
             LifeAgentProfile(
                 agent_id="professor-x",
@@ -1508,6 +1595,7 @@ class BackgroundTaskScheduler:
             or (agent_id == "workshop-watch" and "workshop" in lowered)
             or (agent_id == "home-ops" and any(key in lowered for key in ("night", "watchtower", "family", "movie")))
             or (agent_id == "watchtower" and any(key in lowered for key in ("watch", "night", "goodnight")))
+            or (agent_id == "storm" and any(key in lowered for key in ("weather", "travel", "watch", "family", "outdoor", "storm")))
         )
 
     def _within_quiet_hours(self, now: datetime, start: str, end: str) -> bool:

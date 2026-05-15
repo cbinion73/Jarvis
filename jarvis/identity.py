@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from .data_hygiene import record_looks_like_test_data
 from .models import HouseholdProfile
 
 
@@ -281,6 +282,8 @@ class IdentityRegistry:
     def _load_devices(self, payload: list[Any]) -> list[DeviceIdentity]:
         devices: list[DeviceIdentity] = []
         for raw in payload if isinstance(payload, list) else []:
+            if record_looks_like_test_data(raw):
+                continue
             try:
                 devices.append(self._coerce_device(raw))
             except Exception:

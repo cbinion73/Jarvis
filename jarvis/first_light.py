@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from .data_hygiene import filter_records
+
 
 FIRST_LIGHT_PATH = Path.cwd() / "data" / "settings" / "first_light.json"
 
@@ -31,6 +33,8 @@ class FirstLightStore:
             return default
         payload.setdefault("users", {})
         payload.setdefault("history", [])
+        history = payload.get("history", [])
+        payload["history"] = filter_records(history if isinstance(history, list) else [])
         return payload
 
     def save(self, payload: dict[str, Any]) -> None:
