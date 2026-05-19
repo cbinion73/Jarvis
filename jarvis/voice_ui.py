@@ -42,6 +42,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         "today",
         "review",
         "tasks",
+        "mission-control",
         "storm",
         "home",
         "family",
@@ -55,6 +56,8 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         "brains",
         "approvals",
         "agents",
+        "finance-review",
+        "wealth",
     }
     initial_packet_key = initial_packet.strip().lower()
     if initial_packet_key not in allowed_initial_packets:
@@ -71,7 +74,9 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
                     {"id": "scene-day-open", "label": "Open Day Scene", "description": "Focus the shell on today's operating picture.", "scene": "day"},
                     {"id": "scene-day-review", "label": "Cadence Review", "description": "Inspect rhythm, drift, and timing pressure.", "packet": "review"},
                     {"id": "scene-day-tasks", "label": "Assistant Core", "description": "Open the task and open-loops queue.", "packet": "tasks"},
+                    {"id": "scene-day-mission-control", "label": "Mission Control", "description": "Inspect delegated family missions, dossiers, and approvals.", "packet": "mission-control"},
                     {"id": "scene-day-approvals", "label": "Approvals", "description": "Review actions waiting for release.", "packet": "approvals"},
+                    {"id": "scene-day-wealth", "label": "Fisk Review", "description": "Inspect truthful wealth workstreams and finance signals.", "packet": "wealth"},
                     {"id": "scene-day-catalyst", "label": "Catalyst Workspace", "description": "Hand work into Catalyst.", "packet": "catalyst", "catalystPage": "home"},
                 ],
             },
@@ -192,6 +197,18 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       --shadow: 0 30px 80px rgba(0, 0, 0, 0.42);
       --energy: 0.45;
       --motion-rate: 1;
+      /* === Living Briefing warm-study palette === */
+      --warm: #c8a97e;
+      --warm-dim: rgba(200, 169, 126, 0.12);
+      --wood: rgba(180, 140, 90, 0.08);
+      --zone-bg: rgba(6, 13, 22, 0.72);
+      --zone-border: rgba(200, 169, 126, 0.14);
+      --zone-glow: rgba(111, 229, 255, 0.06);
+      --briefing-accent: rgba(242, 200, 112, 0.7);
+      --already-accent: rgba(82, 199, 217, 0.7);
+      --needs-accent: rgba(76, 160, 255, 0.7);
+      --drift-accent: rgba(255, 123, 123, 0.7);
+      --speak-accent: rgba(111, 229, 255, 0.5);
     }}
     * {{ box-sizing: border-box; }}
     html, body {{ min-height: 100%; }}
@@ -434,13 +451,14 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
     .viewport {{
       position: relative;
       display: grid;
-      grid-template-columns: minmax(640px, 820px) minmax(320px, 420px);
+      grid-template-columns: minmax(900px, 1180px);
       grid-template-areas:
-        "core chat"
-        "scene chat";
+        "core"
+        "chat"
+        "scene";
       align-items: start;
       justify-content: center;
-      gap: 22px;
+      gap: 24px;
       min-height: 0;
       overflow: visible;
     }}
@@ -453,10 +471,13 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       display: grid;
       justify-items: center;
       align-content: start;
-      gap: 18px;
-      width: min(100%, 760px);
+      gap: 20px;
+      width: min(100%, 1120px);
       place-self: center;
       z-index: 1;
+    }}
+    body[data-shell-layout="quiet-home"]:not([data-work-focus="true"]):not([data-layout-edit="true"]) .core-cluster {{
+      gap: 26px;
     }}
     .layout-editable-panel.floating {{
       position: fixed !important;
@@ -514,10 +535,11 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       cursor: grabbing;
     }}
     body[data-core-dock="corner"] .viewport {{
-      grid-template-columns: minmax(640px, 820px) minmax(320px, 420px);
+      grid-template-columns: minmax(900px, 1180px);
       grid-template-areas:
-        "core chat"
-        "scene chat";
+        "core"
+        "chat"
+        "scene";
     }}
     .signal-rail-toggle {{
       display: none;
@@ -672,12 +694,18 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
     }}
     .core-stage {{
       position: relative;
-      width: 100%;
+      width: min(100%, 760px);
       aspect-ratio: 1;
       display: grid;
       place-items: center;
       transform: none;
       z-index: 1;
+      opacity: 0.92;
+    }}
+    body[data-shell-layout="quiet-home"]:not([data-work-focus="true"]):not([data-layout-edit="true"]) .core-stage {{
+      width: min(100%, 700px);
+      margin-top: clamp(240px, 34vh, 420px);
+      opacity: 0.74;
     }}
     .core-stage.floating {{
       transform: none !important;
@@ -703,7 +731,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       position: fixed;
       top: 92px;
       left: 22px;
-      width: min(30vw, 360px);
+      width: min(44vw, 620px);
       z-index: 15;
       filter: drop-shadow(0 18px 32px rgba(0, 0, 0, 0.32));
     }}
@@ -727,7 +755,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       position: fixed;
       top: 18px;
       left: 18px;
-      width: min(72vw, 820px);
+      width: min(84vw, 1180px);
       z-index: 24;
     }}
     body.modal-open .core-cluster .core-stage {{
@@ -1015,12 +1043,13 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       text-shadow: 0 0 16px rgba(9, 16, 28, 0.8);
     }}
     .core-home-summary {{
+      order: -1;
       position: relative;
       z-index: 6;
-      width: min(520px, 82%);
+      width: min(980px, 98%);
       display: grid;
-      gap: 12px;
-      padding: 18px 20px 16px;
+      gap: 10px;
+      padding: 18px 22px 16px;
       border: 1px solid rgba(209, 241, 255, 0.14);
       border-radius: 20px;
       background:
@@ -1065,31 +1094,51 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       display: flex;
       align-items: start;
       justify-content: space-between;
-      gap: 12px;
+      gap: 10px;
       cursor: grab;
       user-select: none;
     }}
     .core-home-head-copy {{
       display: grid;
-      gap: 6px;
+      gap: 4px;
       min-width: 0;
       flex: 1 1 auto;
     }}
     .core-home-line {{
       color: rgba(239, 247, 255, 0.96);
-      font-size: 18px;
-      line-height: 1.5;
+      font-size: 19px;
+      line-height: 1.42;
+      max-width: 54ch;
     }}
     .core-home-grid {{
       display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 14px;
+      grid-template-columns: minmax(0, 1.1fr) minmax(340px, 0.9fr);
+      gap: 14px 16px;
       align-items: start;
+    }}
+    .core-home-grid.route-mobile,
+    .core-home-grid.route-family {{
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }}
+    .core-home-grid.route-tablet {{
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }}
+    .core-home-grid.route-desktop {{
+      grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+      gap: 14px 16px;
+    }}
+    .core-home-span-two {{
+      grid-column: 1 / -1;
     }}
     .core-home-block {{
       display: grid;
-      gap: 8px;
+      gap: 6px;
       min-width: 0;
+    }}
+    .core-home-block.quiet {{
+      opacity: 0.82;
     }}
     .core-home-label {{
       color: rgba(173, 227, 243, 0.72);
@@ -1099,11 +1148,11 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
     }}
     .core-home-list {{
       display: grid;
-      gap: 8px;
+      gap: 7px;
     }}
     .core-home-item {{
-      padding: 10px 12px 10px 14px;
-      border-radius: 14px;
+      padding: 9px 12px 9px 13px;
+      border-radius: 13px;
       border: 1px solid rgba(211, 241, 255, 0.12);
       border-left: 2px solid rgba(179, 236, 255, 0.24);
       background:
@@ -1112,41 +1161,203 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
       color: rgba(220, 238, 248, 0.86);
       font-size: 13px;
-      line-height: 1.45;
+      line-height: 1.4;
     }}
     .core-home-item strong {{
       color: #eef8ff;
+    }}
+    .core-home-item.quiet {{
+      border-color: rgba(211, 241, 255, 0.08);
+      border-left-color: rgba(179, 236, 255, 0.14);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 42%),
+        linear-gradient(180deg, rgba(10, 20, 33, 0.18), rgba(6, 14, 24, 0.08));
+      color: rgba(198, 219, 232, 0.76);
+    }}
+    .core-home-item.quiet strong {{
+      color: rgba(229, 240, 248, 0.88);
     }}
     .core-home-item.approval {{
       border-color: rgba(255, 204, 112, 0.08);
       border-left-color: rgba(255, 204, 112, 0.42);
       background: linear-gradient(180deg, rgba(46, 32, 10, 0.26), rgba(26, 18, 8, 0.1));
     }}
+    .core-home-hero {{
+      display: grid;
+      gap: 10px;
+      padding: 14px 15px 13px;
+      border-radius: 16px;
+      border: 1px solid rgba(111, 229, 255, 0.14);
+      background:
+        radial-gradient(circle at 88% 0%, rgba(111, 229, 255, 0.14), transparent 22%),
+        linear-gradient(180deg, rgba(13, 28, 43, 0.48), rgba(7, 16, 27, 0.16));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 10px 28px rgba(2, 8, 18, 0.14);
+    }}
+    .core-home-hero-kicker {{
+      color: rgba(173, 227, 243, 0.78);
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }}
+    .core-home-hero-title {{
+      color: rgba(244, 250, 255, 0.98);
+      font-size: 18px;
+      line-height: 1.28;
+      font-weight: 600;
+      max-width: 34ch;
+    }}
+    .core-home-hero-body {{
+      color: rgba(209, 228, 241, 0.84);
+      font-size: 13px;
+      line-height: 1.45;
+      max-width: 52ch;
+    }}
+    .core-home-hero-meta {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }}
+    .core-home-hero-chip {{
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(111, 229, 255, 0.1);
+      background: rgba(111, 229, 255, 0.035);
+      color: rgba(219, 237, 250, 0.74);
+      font-size: 9.5px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }}
+    .core-home-hero.family {{
+      border-color: rgba(190, 236, 199, 0.14);
+      background:
+        radial-gradient(circle at 88% 0%, rgba(129, 216, 152, 0.12), transparent 24%),
+        linear-gradient(180deg, rgba(12, 28, 22, 0.42), rgba(7, 16, 27, 0.16));
+    }}
+    .core-home-hero.family .core-home-hero-kicker {{
+      color: rgba(194, 234, 203, 0.82);
+    }}
+    .core-home-hero.mobile .core-home-hero-title {{
+      font-size: 17px;
+      max-width: 26ch;
+    }}
+    .core-home-overflow {{
+      color: rgba(173, 227, 243, 0.54);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 2px 2px 0;
+    }}
     .core-home-status {{
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
     }}
+    .core-home-footer {{
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px 12px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(211, 241, 255, 0.08);
+    }}
+    .core-home-footer .core-home-status {{
+      flex: 1 1 420px;
+      min-width: 0;
+    }}
     .core-home-chip {{
-      padding: 5px 10px;
+      padding: 4px 9px;
       border-radius: 999px;
       border: 1px solid rgba(111, 229, 255, 0.08);
       background: rgba(111, 229, 255, 0.03);
       color: rgba(214, 232, 255, 0.8);
-      font-size: 10px;
-      letter-spacing: 0.12em;
+      font-size: 9.5px;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
       white-space: nowrap;
     }}
     .core-home-actions {{
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 8px;
+      justify-content: flex-end;
+      flex: 0 1 auto;
     }}
     .core-home-actions .dock-button {{
-      min-height: 36px;
-      padding: 9px 12px;
-      font-size: 12px;
+      min-height: 32px;
+      padding: 7px 10px;
+      font-size: 11.5px;
+    }}
+    #core-home-speak-action {{
+      display: none;
+    }}
+    body[data-interface-route="mobile-remote-briefing"] .core-home-footer,
+    body[data-interface-route="mobile-companion"] .core-home-footer {{
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: max(10px, calc(env(safe-area-inset-bottom, 0px) + 8px));
+      width: min(100vw - 14px, 620px);
+      align-items: stretch;
+      gap: 8px;
+      padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+      border-radius: 22px;
+      border: 1px solid rgba(211, 241, 255, 0.12);
+      background:
+        radial-gradient(circle at 14% 0%, rgba(255, 255, 255, 0.08), transparent 18%),
+        linear-gradient(180deg, rgba(9, 18, 29, 0.82), rgba(5, 12, 20, 0.94));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 16px 38px rgba(0, 0, 0, 0.26);
+      backdrop-filter: blur(18px) saturate(145%);
+      z-index: 32;
+    }}
+    body[data-interface-route="mobile-remote-briefing"] .core-home-footer .core-home-status,
+    body[data-interface-route="mobile-companion"] .core-home-footer .core-home-status {{
+      flex: 1 1 100%;
+    }}
+    body[data-interface-route="mobile-remote-briefing"] .core-home-actions,
+    body[data-interface-route="mobile-companion"] .core-home-actions {{
+      width: 100%;
+      justify-content: stretch;
+    }}
+    body[data-interface-route="mobile-remote-briefing"] .core-home-actions .dock-button,
+    body[data-interface-route="mobile-companion"] .core-home-actions .dock-button {{
+      flex: 1 1 0;
+      justify-content: center;
+      min-height: 42px;
+      padding: 10px 10px;
+      font-size: 11px;
+      border-radius: 14px;
+    }}
+    body[data-interface-route="mobile-remote-briefing"] #core-home-speak-action,
+    body[data-interface-route="mobile-companion"] #core-home-speak-action {{
+      display: inline-flex;
+    }}
+    body[data-interface-route="mobile-remote-briefing"] .core-home-summary,
+    body[data-interface-route="mobile-companion"] .core-home-summary {{
+      padding-bottom: calc(132px + env(safe-area-inset-bottom, 0px));
+    }}
+    body[data-interface-route="mobile-remote-briefing"] .transcript-rail,
+    body[data-interface-route="mobile-companion"] .transcript-rail {{
+      margin-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+    }}
+    body[data-interface-route="mobile-remote-briefing"][data-mobile-variant="child-safe-remote"] .core-home-hero,
+    body[data-interface-route="mobile-companion"][data-mobile-variant="child-safe-remote"] .core-home-hero {{
+      border-color: rgba(190, 236, 199, 0.16);
+      background:
+        radial-gradient(circle at 88% 0%, rgba(129, 216, 152, 0.12), transparent 22%),
+        linear-gradient(180deg, rgba(12, 28, 22, 0.42), rgba(7, 16, 27, 0.16));
+    }}
+    body[data-interface-route="mobile-remote-briefing"][data-mobile-variant="child-safe-remote"] .core-home-hero-kicker,
+    body[data-interface-route="mobile-companion"][data-mobile-variant="child-safe-remote"] .core-home-hero-kicker {{
+      color: rgba(194, 234, 203, 0.82);
+    }}
+    body[data-interface-route="family-display"] .core-home-status {{
+      justify-content: center;
     }}
     .core-home-empty {{
       color: rgba(173, 227, 243, 0.62);
@@ -1319,9 +1530,9 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       position: relative;
       grid-area: scene;
       display: grid;
-      width: min(100%, 820px);
+      width: min(100%, 1120px);
       min-height: 0;
-      justify-self: start;
+      justify-self: center;
       margin-top: -34px;
       padding-top: 34px;
       animation: sceneDockIn 260ms ease;
@@ -1567,18 +1778,18 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       cursor: default;
     }}
     .transcript-rail {{
-      position: sticky;
-      top: 18px;
+      position: relative;
+      top: auto;
       grid-area: chat;
-      width: min(100%, 420px);
-      justify-self: end;
+      width: min(100%, 980px);
+      justify-self: center;
       display: grid;
       grid-template-rows: minmax(0, 1fr) auto;
       gap: 12px;
-      height: clamp(360px, calc(100vh - 220px), 620px);
-      min-height: 360px;
-      max-height: calc(100vh - 150px);
-      padding: 14px 14px 12px;
+      height: clamp(320px, 42vh, 520px);
+      min-height: 320px;
+      max-height: 520px;
+      padding: 16px 16px 14px;
       border: 1px solid rgba(211, 241, 255, 0.14);
       border-radius: 28px;
       background:
@@ -1593,6 +1804,23 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       backdrop-filter: blur(24px) saturate(155%);
       transition: opacity 180ms ease, transform 180ms ease;
       overflow: hidden;
+    }}
+    body[data-shell-layout="quiet-home"]:not([data-work-focus="true"]):not([data-layout-edit="true"]) .transcript-rail {{
+      width: min(860px, 88vw);
+      height: clamp(210px, 26vh, 300px);
+      min-height: 210px;
+      max-height: 300px;
+      padding: 12px 12px 10px;
+      border-radius: 24px;
+      border-color: rgba(211, 241, 255, 0.1);
+      background:
+        radial-gradient(circle at 10% 0%, rgba(255, 255, 255, 0.08), transparent 18%),
+        radial-gradient(circle at top left, rgba(111, 229, 255, 0.06), transparent 30%),
+        linear-gradient(180deg, rgba(8, 16, 26, 0.52), rgba(5, 12, 20, 0.68));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 14px 34px rgba(0, 0, 0, 0.16);
+      opacity: 0.94;
     }}
     body[data-work-focus="true"] .transcript-rail {{
       position: fixed;
@@ -1653,6 +1881,14 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
       overflow: hidden;
     }}
+    body[data-shell-layout="quiet-home"]:not([data-work-focus="true"]):not([data-layout-edit="true"]) .chat-window {{
+      gap: 8px;
+      padding: 8px 8px 0;
+      border-color: rgba(211, 241, 255, 0.08);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 24%),
+        linear-gradient(180deg, rgba(8, 16, 26, 0.18), rgba(5, 12, 20, 0.14));
+    }}
     body[data-work-focus="true"] .chat-window,
     body[data-work-focus="true"] .transcript-empty-state {{
       display: none;
@@ -1670,6 +1906,122 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         inset 0 1px 0 rgba(255, 255, 255, 0.07),
         0 -18px 28px rgba(2, 6, 14, 0.24);
       backdrop-filter: blur(20px) saturate(150%);
+    }}
+    body[data-shell-layout="quiet-home"]:not([data-work-focus="true"]):not([data-layout-edit="true"]) .chat-interface {{
+      gap: 8px;
+      padding: 9px 8px 7px;
+      border-color: rgba(211, 241, 255, 0.08);
+      border-radius: 18px;
+      background:
+        radial-gradient(circle at 8% 0%, rgba(255, 255, 255, 0.04), transparent 16%),
+        linear-gradient(180deg, rgba(10, 18, 29, 0.12), rgba(5, 12, 20, 0.48));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 -12px 22px rgba(2, 6, 14, 0.18);
+    }}
+    body[data-interface-route="mobile-remote-briefing"] .signal-rail-shell,
+    body[data-interface-route="mobile-remote-briefing"] .signal-rail-toggle,
+    body[data-interface-route="mobile-remote-briefing"] .brain-graph-panel,
+    body[data-interface-route="mobile-remote-briefing"] .core-stage,
+    body[data-interface-route="mobile-companion"] .signal-rail-shell,
+    body[data-interface-route="mobile-companion"] .signal-rail-toggle,
+    body[data-interface-route="mobile-companion"] .brain-graph-panel,
+    body[data-interface-route="mobile-companion"] .core-stage,
+    body[data-interface-route="tablet-chamber"] .core-stage,
+    body[data-interface-route="family-display"] .core-stage {{
+      display: none;
+    }}
+    body[data-interface-route="mobile-remote-briefing"] .core-cluster,
+    body[data-interface-route="mobile-companion"] .core-cluster {{
+      max-width: min(100vw - 14px, 620px);
+      gap: 10px;
+      padding-inline: 0;
+    }}
+    body[data-interface-route="mobile-remote-briefing"] .core-home-summary,
+    body[data-interface-route="mobile-companion"] .core-home-summary {{
+      width: min(100vw - 14px, 620px);
+      padding: 14px 14px 12px;
+      border-radius: 24px;
+    }}
+    body[data-interface-route="mobile-remote-briefing"] .core-home-opening,
+    body[data-interface-route="mobile-companion"] .core-home-opening {{
+      font-size: 17px;
+      line-height: 1.35;
+      margin-bottom: 8px;
+    }}
+    body[data-interface-route="mobile-remote-briefing"] .core-home-grid,
+    body[data-interface-route="mobile-companion"] .core-home-grid {{
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }}
+    body[data-interface-route="mobile-remote-briefing"] .transcript-rail,
+    body[data-interface-route="mobile-companion"] .transcript-rail {{
+      width: min(100vw - 14px, 620px);
+      max-width: calc(100vw - 14px);
+      border-radius: 20px;
+    }}
+    body[data-interface-route="mobile-remote-briefing"] .chat-window,
+    body[data-interface-route="mobile-companion"] .chat-window {{
+      padding: 8px 8px 0;
+      gap: 8px;
+    }}
+    body[data-interface-route="tablet-chamber"] .core-cluster {{
+      max-width: min(100vw - 26px, 860px);
+      gap: 14px;
+    }}
+    body[data-interface-route="tablet-chamber"] .core-home-summary,
+    body[data-interface-route="tablet-chamber"] .transcript-rail {{
+      width: min(860px, calc(100vw - 26px));
+      max-width: calc(100vw - 26px);
+    }}
+    body[data-interface-route="tablet-chamber"] .core-home-grid {{
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }}
+    body[data-interface-route="desktop-command"] .core-cluster,
+    body[data-interface-route="desktop-remote-command"] .core-cluster {{
+      max-width: 1240px;
+      gap: 18px;
+    }}
+    body[data-interface-route="desktop-command"] .core-home-summary,
+    body[data-interface-route="desktop-remote-command"] .core-home-summary,
+    body[data-interface-route="desktop-command"] .transcript-rail,
+    body[data-interface-route="desktop-remote-command"] .transcript-rail {{
+      width: min(1120px, calc(100vw - 48px));
+      max-width: calc(100vw - 48px);
+    }}
+    body[data-interface-route="desktop-command"] .core-stage,
+    body[data-interface-route="desktop-remote-command"] .core-stage {{
+      display: grid;
+      width: min(1120px, calc(100vw - 48px));
+      margin-top: 240px;
+      opacity: 0.68;
+    }}
+    body[data-interface-route="family-display"] .transcript-rail,
+    body[data-interface-route="family-display"] .signal-rail-shell,
+    body[data-interface-route="family-display"] .signal-rail-toggle,
+    body[data-interface-route="family-display"] .packet-strip,
+    body[data-interface-route="family-display"] .context-stack,
+    body[data-interface-route="family-display"] .controls,
+    body[data-interface-route="family-display"] .quick-actions,
+    body[data-interface-route="family-display"] .composer-tools {{
+      display: none !important;
+    }}
+    body[data-interface-route="family-display"] .core-cluster {{
+      max-width: min(100vw - 40px, 1120px);
+      gap: 16px;
+    }}
+    body[data-interface-route="family-display"] .core-home-summary {{
+      width: min(1120px, calc(100vw - 40px));
+      padding: 22px 22px 18px;
+      border-radius: 28px;
+    }}
+    body[data-interface-route="family-display"] .core-home-grid {{
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }}
+    body[data-interface-route="family-display"] .core-home-action-row {{
+      display: none;
     }}
     body[data-work-focus="true"] .chat-interface {{
       padding: 0;
@@ -3195,6 +3547,28 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       font-size: 13px;
       margin-bottom: 8px;
     }}
+    .connected-device-card {{
+      display: block;
+      width: 100%;
+    }}
+    .connected-device-meta {{
+      display: block;
+      white-space: normal;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }}
+    .connected-device-form {{
+      grid-template-columns: minmax(0, 1fr);
+      width: 100%;
+    }}
+    .connected-device-form label,
+    .connected-device-form input,
+    .connected-device-form select,
+    .connected-device-form textarea {{
+      min-width: 0;
+      width: 100%;
+      box-sizing: border-box;
+    }}
     .metric strong {{
       color: var(--cyan);
       font-weight: 600;
@@ -4207,6 +4581,223 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         grid-template-columns: 1fr;
       }}
     }}
+
+    /* Override viewport to stretch chamber to full available width */
+    .viewport:has(.chamber) {{
+      grid-template-columns: 1fr;
+      grid-template-areas: none;
+      max-width: none;
+      justify-content: stretch;
+      min-height: calc(100vh - 180px);
+    }}
+    .chamber {{
+      grid-column: 1;
+      align-self: stretch;
+    }}
+
+    /* ============================================================
+       LIVING BRIEFING — 5-ZONE CHAMBER GRID
+       ============================================================ */
+    .chamber {{
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      grid-template-rows: 1fr 1fr auto;
+      gap: 14px;
+      height: 100%;
+      min-height: 0;
+      padding: 0 4px;
+    }}
+    .zone-briefing {{
+      grid-column: 1;
+      grid-row: 1 / 3;
+    }}
+    .zone-already {{
+      grid-column: 2;
+      grid-row: 1;
+    }}
+    .zone-needs {{
+      grid-column: 2;
+      grid-row: 2;
+    }}
+    .zone-drift {{
+      grid-column: 1;
+      grid-row: 3;
+    }}
+    .zone-speak {{
+      grid-column: 2;
+      grid-row: 3;
+    }}
+    .zone {{
+      background: var(--zone-bg);
+      border: 1px solid var(--zone-border);
+      border-radius: 12px;
+      padding: 18px 20px 16px;
+      backdrop-filter: blur(20px) saturate(130%);
+      box-shadow: 0 2px 40px var(--zone-glow), inset 0 1px 0 rgba(255,255,255,0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow: hidden;
+      position: relative;
+    }}
+    .zone::before {{
+      content: '';
+      position: absolute;
+      top: 0; left: 20px; right: 20px;
+      height: 1px;
+    }}
+    .zone-briefing::before {{ background: var(--briefing-accent); }}
+    .zone-already::before  {{ background: var(--already-accent);  }}
+    .zone-needs::before    {{ background: var(--needs-accent);    }}
+    .zone-drift::before    {{ background: var(--drift-accent);    }}
+    .zone-speak::before    {{ background: var(--speak-accent);    }}
+    .zone-launch::before   {{ background: var(--warm);            }}
+    .zone-launch {{ border-left: 3px solid var(--warm); }}
+    .launch-project-header {{ font-size: 1.1em; font-weight: 600; margin-bottom: 8px; color: var(--warm); }}
+    .launch-tracks {{ display: flex; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }}
+    .launch-track {{ flex: 1; min-width: 120px; }}
+    .launch-track-label {{ font-size: 0.75em; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.05em; }}
+    .launch-track-progress {{ height: 4px; background: rgba(255,255,255,0.15); border-radius: 2px; margin-top: 4px; }}
+    .launch-track-fill {{ height: 100%; background: var(--warm); border-radius: 2px; transition: width 0.5s ease; }}
+    .launch-reviews {{ padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.08); }}
+    .launch-queue {{ padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.9em; opacity: 0.85; }}
+    .launch-performance {{ padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.08); }}
+    .launch-perf-row {{ display: flex; gap: 16px; flex-wrap: wrap; }}
+    .launch-perf-item {{ font-size: 0.85em; }}
+    .launch-perf-value {{ font-size: 1.1em; font-weight: 600; color: var(--warm); }}
+    .launch-next-action {{ margin-top: 8px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 6px; border-left: 3px solid var(--warm); font-size: 0.9em; }}
+    .launch-action-btn {{ display: inline-block; margin-top: 6px; padding: 4px 12px; background: var(--warm); color: #1a1612; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 600; }}
+    .zone-label {{
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      opacity: 0.7;
+      flex-shrink: 0;
+    }}
+    .zone-label-row {{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }}
+    /* Zone item components */
+    .zone-empty {{
+      color: var(--muted);
+      font-size: 13px;
+      font-style: italic;
+      opacity: 0.6;
+      margin: auto 0;
+    }}
+    .briefing-items {{
+      overflow-y: auto;
+      flex: 1;
+    }}
+    .briefing-item {{
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(111, 207, 255, 0.06);
+    }}
+    .briefing-dot {{
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--briefing-accent);
+      flex-shrink: 0;
+      margin-top: 5px;
+      box-shadow: 0 0 8px var(--briefing-accent);
+    }}
+    .briefing-text {{ font-size: 13px; line-height: 1.5; color: var(--ink); }}
+    .briefing-sub  {{ font-size: 11px; color: var(--muted); margin-top: 2px; }}
+    .briefing-item[data-priority="high"] .briefing-dot {{ background: var(--amber); box-shadow: 0 0 8px var(--amber); }}
+    .working-items, .needs-items, .drift-items {{
+      overflow-y: auto;
+      flex: 1;
+    }}
+    .working-item {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(111, 207, 255, 0.06);
+    }}
+    .working-agent {{ font-size: 11px; color: var(--teal); letter-spacing: 0.06em; }}
+    .working-action {{ font-size: 12px; color: var(--muted); max-width: 60%; text-align: right; }}
+    .needs-item {{ padding: 8px 0; border-bottom: 1px solid rgba(111, 207, 255, 0.06); }}
+    .needs-text {{ font-size: 13px; color: var(--ink); margin-bottom: 6px; }}
+    .needs-actions {{ display: flex; gap: 6px; }}
+    .needs-btn {{ font-size: 11px; padding: 3px 10px; border-radius: 999px; cursor: pointer; border: 1px solid; }}
+    .needs-approve {{ border-color: var(--ok); color: var(--ok); background: rgba(108, 255, 175, 0.06); }}
+    .needs-dismiss {{ border-color: var(--muted); color: var(--muted); background: transparent; }}
+    .needs-badge {{ font-size: 10px; padding: 1px 6px; border-radius: 999px; background: var(--needs-accent); color: #050a12; margin-left: 6px; }}
+    .drift-item {{ display: flex; gap: 8px; align-items: center; padding: 4px 0; }}
+    .drift-indicator {{ width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }}
+    .drift-item[data-severity="warn"] .drift-indicator {{ background: var(--warn); }}
+    .drift-item[data-severity="alert"] .drift-indicator {{ background: var(--alert); }}
+    .drift-text {{ font-size: 12px; color: var(--ink); }}
+    .drift-ok {{ display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ok); }}
+    .drift-ok-dot {{ width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px var(--ok); flex-shrink: 0; }}
+    /* Speak Freely zone — chat composer embedded */
+    .zone-speak .zone-speak-composer {{
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }}
+    .zone-speak .zone-speak-input {{
+      width: 100%;
+      min-height: 52px;
+      max-height: 120px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(111, 229, 255, 0.22);
+      background: rgba(5, 12, 22, 0.72);
+      color: var(--ink);
+      font: inherit;
+      font-size: 13px;
+      line-height: 1.5;
+      resize: none;
+      outline: none;
+    }}
+    .zone-speak .zone-speak-input::placeholder {{
+      color: rgba(140, 165, 191, 0.5);
+    }}
+    .zone-speak .zone-speak-input:focus {{
+      border-color: rgba(111, 229, 255, 0.40);
+      box-shadow: 0 0 0 1px rgba(111, 229, 255, 0.14);
+    }}
+    .zone-speak .zone-speak-actions {{
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }}
+    /* Shimmer skeleton for loading states */
+    @keyframes zone-shimmer {{
+      0%   {{ background-position: -200% 0; }}
+      100% {{ background-position: 200% 0; }}
+    }}
+    .zone-skeleton {{
+      height: 12px;
+      border-radius: 6px;
+      background: linear-gradient(90deg, rgba(111,229,255,0.04) 25%, rgba(111,229,255,0.10) 50%, rgba(111,229,255,0.04) 75%);
+      background-size: 200% 100%;
+      animation: zone-shimmer 1.6s ease-in-out infinite;
+    }}
+    .zone-skeleton + .zone-skeleton {{ margin-top: 8px; }}
+    /* Mobile responsive */
+    @media (max-width: 768px) {{
+      .chamber {{
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        height: auto;
+      }}
+      .zone-briefing, .zone-already, .zone-needs, .zone-drift, .zone-launch, .zone-speak {{
+        grid-column: 1;
+        grid-row: auto;
+      }}
+      .zone-briefing {{ min-height: 220px; }}
+    }}
   </style>
 </head>
 <body data-voice-state="idle" data-shell-layout="quiet-home">
@@ -4227,6 +4818,14 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         <button class="meta-weather" id="storm-weather-button" type="button" title="Live weather from Storm">
           <span class="meta-weather-icon" id="storm-weather-icon">--</span>
           <span class="meta-weather-temp" id="storm-weather-temp">--°</span>
+        </button>
+        <button class="meta-dashboard" id="finance-review-launcher" type="button" title="Open Family Finance Review">
+          <span class="meta-dashboard-icon" id="finance-review-launcher-icon">$</span>
+          <span class="meta-dashboard-count" id="finance-review-launcher-count">--</span>
+        </button>
+        <button class="meta-dashboard" id="wealth-launcher" type="button" title="Open Wealth Review">
+          <span class="meta-dashboard-icon" id="wealth-launcher-icon">₿</span>
+          <span class="meta-dashboard-count" id="wealth-launcher-count">--</span>
         </button>
         <button class="meta-dashboard" id="dashboard-launcher" type="button" title="Open dashboard report">
           <span class="meta-dashboard-icon" id="dashboard-launcher-icon">◉</span>
@@ -4270,6 +4869,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
     </div>
 
     <main class="viewport">
+      <!-- Packet strip and signal rail kept for existing JS compatibility -->
       <button class="packet-strip-toggle" id="packet-strip-toggle" type="button">Packets</button>
       <div class="packet-strip collapsed" id="packet-strip" aria-hidden="true"></div>
       <button class="signal-rail-toggle" id="signal-rail-toggle" type="button">Status</button>
@@ -4295,7 +4895,8 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         <div class="layout-resize-handle" data-layout-resize="brain" title="Resize brain panel when layout edit mode is on"></div>
       </div>
 
-      <div class="transcript-rail layout-editable-panel" id="chat-panel">
+      <!-- Hidden transcript rail kept for JS compatibility (transcript-history, last-user-text, last-jarvis-text) -->
+      <div class="transcript-rail layout-editable-panel" id="chat-panel" style="display:none;" aria-hidden="true">
         <div class="chat-window">
           <div class="transcript-head" id="chat-drag-handle" data-layout-drag="chat" title="Drag chat panel when layout edit mode is on">
             <div class="transcript-title">Jarvis</div>
@@ -4306,35 +4907,6 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
           </div>
           <div class="transcript-history" id="transcript-history"></div>
         </div>
-        <div class="chat-interface">
-          <div class="chat-composer">
-            <div class="attachment-tray" id="attachment-tray">
-              <div class="attachment-dropzone" id="attachment-dropzone">
-                <strong>Drop files into chat</strong>
-                <span>PDF, PowerPoint, Word, text, spreadsheets, and similar files can be staged here for the next message.</span>
-              </div>
-              <div class="attachment-list" id="attachment-list"></div>
-            </div>
-            <div class="input-cluster">
-              <button class="dock-icon-button" id="open-context-controls" type="button" title="Actor and room controls">≡</button>
-              <div class="composer-shell">
-                <textarea id="command-input" class="dock-input" rows="1" placeholder="Message JARVIS. Example: Jarvis, show me the calm version of tonight."></textarea>
-                <div class="composer-hint">
-                  <span>Enter sends</span>
-                  <span>Shift+Enter adds a line</span>
-                </div>
-              </div>
-              <div class="context-action-dock" id="context-action-dock" aria-label="Context actions"></div>
-              <div class="composer-actions">
-                <input id="chat-file-input" type="file" multiple hidden />
-                <button class="dock-button" id="add-attachment" type="button" title="Attach files to chat">Attach</button>
-                <button class="dock-button" id="toggle-speech-output" type="button" title="Toggle JARVIS voice output">Voice On</button>
-                <button class="dock-button" id="voice-command" title="Speak to JARVIS">Talk</button>
-                <button class="dock-button primary" id="send-command">Send</button>
-              </div>
-            </div>
-          </div>
-        </div>
         <div class="transcript-status-store" aria-hidden="true">
           <div id="last-user-text">Awaiting command.</div>
           <div id="last-jarvis-text">Standing by.</div>
@@ -4342,43 +4914,14 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         <div class="layout-resize-handle" data-layout-resize="chat" title="Resize chat panel when layout edit mode is on"></div>
       </div>
 
-      <div class="core-cluster" id="core-cluster">
+      <!-- Hidden orb/core cluster kept for JS that references holo-core-canvas, core-command-ring, etc. -->
+      <div class="core-cluster" id="core-cluster" style="display:none;" aria-hidden="true">
         <div class="core-stage layout-editable-panel" id="core-panel">
           <div class="layout-panel-handle" id="core-drag-handle" data-layout-drag="core" title="Drag core panel when layout edit mode is on">Core</div>
           <div class="core-backdrop"></div>
           <div class="holo-core-shell" id="holo-core-shell">
             <div class="holo-core-fallback" aria-hidden="true">
               <div class="holo-core-fallback-dust"></div>
-              <div class="holo-core-fallback-ring tight" style="--ring-size: 52; --ring-speed: 26s; --ring-opacity: 0.98;">
-                <span class="holo-core-fallback-dot" style="--dot-angle: 18; --dot-radius: 26;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 76; --dot-radius: 26;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 108; --dot-radius: 26;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 162; --dot-radius: 26;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 214; --dot-radius: 26;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 258; --dot-radius: 26;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 302; --dot-radius: 26;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 336; --dot-radius: 26;"></span>
-              </div>
-              <div class="holo-core-fallback-ring tight reverse" style="--ring-size: 68; --ring-speed: 34s; --ring-opacity: 0.88;">
-                <span class="holo-core-fallback-dot" style="--dot-angle: 24; --dot-radius: 34;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 64; --dot-radius: 34;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 112; --dot-radius: 34;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 160; --dot-radius: 34;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 206; --dot-radius: 34;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 248; --dot-radius: 34;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 296; --dot-radius: 34;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 332; --dot-radius: 34;"></span>
-              </div>
-              <div class="holo-core-fallback-ring" style="--ring-size: 84; --ring-speed: 44s; --ring-opacity: 0.74;">
-                <span class="holo-core-fallback-dot" style="--dot-angle: 18; --dot-radius: 42;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 66; --dot-radius: 42;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 114; --dot-radius: 42;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 162; --dot-radius: 42;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 210; --dot-radius: 42;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 258; --dot-radius: 42;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 306; --dot-radius: 42;"></span>
-                <span class="holo-core-fallback-dot" style="--dot-angle: 342; --dot-radius: 42;"></span>
-              </div>
               <div class="holo-core-fallback-core"></div>
             </div>
             <canvas class="holo-core-canvas" id="holo-core-canvas" aria-hidden="true"></canvas>
@@ -4428,22 +4971,106 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
                 <button class="window-control maximize" id="triage-summary-maximize" type="button" aria-label="Maximize triage sidecar"></button>
               </div>
               <div class="core-home-head-copy">
-                <div class="core-home-kicker">Triage And Transition</div>
+                <div class="core-home-kicker" id="core-home-kicker">Private Intelligence Chamber</div>
               </div>
             </div>
           </div>
-          <div class="core-home-line" id="core-home-line">Standing by. No priority signals are loaded yet.</div>
+          <div class="core-home-line" id="core-home-line">You are not carrying this alone.</div>
           <div class="core-home-list" id="core-home-preview">
-            <div class="core-home-empty">No priority signals yet.</div>
+            <div class="core-home-empty">The chamber is warming up.</div>
           </div>
-          <div class="core-home-status" id="core-home-status"></div>
-          <div class="core-home-actions">
-            <button class="dock-button primary" type="button" data-home-open-packet="triage">Open Triage</button>
-            <button class="dock-button" type="button" data-home-open-packet="today">Open Day</button>
-            <button class="dock-button" type="button" data-home-open-packet="catalyst">Resume Work</button>
+          <div class="core-home-footer">
+            <div class="core-home-status" id="core-home-status"></div>
+            <div class="core-home-actions">
+              <button class="dock-button primary" id="core-home-primary-action" type="button" data-home-open-packet="briefing">Open Briefing</button>
+              <button class="dock-button" id="core-home-secondary-action" type="button" data-home-open-packet="approvals">Needs You</button>
+              <button class="dock-button" id="core-home-tertiary-action" type="button" data-home-open-packet="catalyst">Resume Work</button>
+              <button class="dock-button" id="core-home-speak-action" type="button" data-home-action="focus-speak">Speak</button>
+            </div>
           </div>
         </section>
       </div>
+
+      <!-- ===================================================
+           LIVING BRIEFING — 5-ZONE CHAMBER
+           =================================================== -->
+      <div class="chamber" id="chamber">
+
+        <!-- Zone 1: The Briefing — heart of the screen -->
+        <div class="zone zone-briefing" id="zone-briefing">
+          <div class="zone-label-row">
+            <span class="zone-label">The Briefing</span>
+          </div>
+          <div class="briefing-items" id="briefing-items">
+            <p class="zone-empty">I've been watching. Here's what matters.</p>
+          </div>
+        </div>
+
+        <!-- Zone 2: Already Working — background agent preparation -->
+        <div class="zone zone-already" id="zone-already">
+          <div class="zone-label">Already Working</div>
+          <div class="working-items" id="working-items">
+            <p class="zone-empty">Agents standing by.</p>
+          </div>
+        </div>
+
+        <!-- Zone 3: Needs You — decisions and approvals -->
+        <div class="zone zone-needs" id="zone-needs">
+          <div class="zone-label-row">
+            <span class="zone-label">Needs You</span>
+            <span class="needs-badge" id="needs-badge" style="display:none;">0</span>
+          </div>
+          <div class="needs-items" id="needs-items">
+            <p class="zone-empty">Nothing waiting.</p>
+          </div>
+        </div>
+
+        <!-- Zone 4: Drift / Risk — gentle alerts -->
+        <div class="zone zone-drift" id="zone-drift">
+          <div class="zone-label">Drift / Risk</div>
+          <div class="drift-items" id="drift-items">
+            <div class="drift-ok"><span class="drift-ok-dot"></span> On course.</div>
+          </div>
+        </div>
+
+        <!-- Zone 5: Launch Control — publishing project dashboard -->
+        <div class="zone zone-launch" id="zone-launch" style="display:none">
+          <div class="zone-label">LAUNCH CONTROL</div>
+          <div id="launch-project-header" class="launch-project-header"></div>
+          <div id="launch-tracks" class="launch-tracks"></div>
+          <div id="launch-reviews" class="launch-reviews"></div>
+          <div id="launch-queue" class="launch-queue"></div>
+          <div id="launch-performance" class="launch-performance"></div>
+          <div id="launch-next-action" class="launch-next-action"></div>
+        </div>
+
+        <!-- Zone 6: Speak Freely — conversational input -->
+        <div class="zone zone-speak" id="zone-speak">
+          <div class="zone-label">Speak freely.</div>
+          <div class="zone-speak-composer">
+            <!-- Attachment tray kept for existing JS -->
+            <div class="attachment-tray" id="attachment-tray">
+              <div class="attachment-dropzone" id="attachment-dropzone">
+                <strong>Drop files into chat</strong>
+                <span>PDF, PowerPoint, Word, text, spreadsheets, and similar files can be staged here for the next message.</span>
+              </div>
+              <div class="attachment-list" id="attachment-list"></div>
+            </div>
+            <textarea id="command-input" class="zone-speak-input" rows="1" placeholder="Say anything."></textarea>
+            <div class="context-action-dock" id="context-action-dock" aria-label="Context actions"></div>
+            <div class="zone-speak-actions">
+              <input id="chat-file-input" type="file" multiple hidden />
+              <button class="dock-button" id="add-attachment" type="button" title="Attach files">Attach</button>
+              <button class="dock-button" id="toggle-speech-output" type="button" title="Toggle JARVIS voice output">Voice On</button>
+              <button class="dock-button" id="voice-command" title="Speak to JARVIS">Talk</button>
+              <button class="dock-button" id="open-context-controls" type="button" title="Actor and room controls">Context</button>
+              <button class="dock-button primary" id="send-command">Send</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <!-- /chamber -->
 
       <section class="scene-stage hidden" id="scene-stage" aria-live="polite">
         <div class="scene-shell">
@@ -4518,7 +5145,6 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       <strong id="lifecycle-toast-title">Lifecycle Update</strong>
       <span id="lifecycle-toast-body">Ready.</span>
     </div>
-
   <script type="importmap">
     {{
       "imports": {{
@@ -4535,6 +5161,13 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
     const hardCenterDesign = {center_design};
     const state = {{
       dashboard: null,
+      currentDevice: null,
+      financeReview: null,
+      wealthReview: null,
+      wealthRunsByLane: {{}},
+      wealthAgent: null,
+      wealthSelectedLane: "passive-income",
+      wealthSelectedItemId: "",
       lastBriefing: "",
       conversationId: "",
       transcriptTurns: [],
@@ -4599,6 +5232,8 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       energyCurrent: 0.35,
       energyTarget: 0.35,
       catalystPage: "home",
+      missionControl: null,
+      activeMissionId: "",
       activeScene: "",
       coreCommandOpen: false,
       packetStripExpanded: false,
@@ -4960,6 +5595,20 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       }};
     }}
 
+    function wealthLauncherSummary(review = state.wealthReview || {{}}) {{
+      const summary = review.summary || {{}};
+      const tracked = Number(summary.tracked_items || 0);
+      const staged = Number(summary.staged_items || 0);
+      const researched = Number(summary.researched_items || 0);
+      const total = staged || researched || tracked;
+      return {{
+        tracked,
+        staged,
+        researched,
+        total,
+      }};
+    }}
+
     function updateDashboardLauncher(data = state.dashboard || {{}}) {{
       const button = document.getElementById("dashboard-launcher");
       const icon = document.getElementById("dashboard-launcher-icon");
@@ -4974,6 +5623,23 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       button.title = summary.total > 0
         ? `Dashboard report · ${{summary.priorities}} priorities, ${{summary.approvals}} approvals, ${{summary.unread}} assistant item(s)`
         : "Dashboard report · No active items are waiting right now.";
+      button.disabled = false;
+    }}
+
+    function updateWealthLauncher(review = state.wealthReview || {{}}) {{
+      const button = document.getElementById("wealth-launcher");
+      const icon = document.getElementById("wealth-launcher-icon");
+      const count = document.getElementById("wealth-launcher-count");
+      if (!button || !icon || !count) {{
+        return;
+      }}
+      const summary = wealthLauncherSummary(review);
+      const displayCount = summary.total > 99 ? "99+" : String(summary.total || 0);
+      icon.textContent = summary.staged > 0 ? "₿" : summary.researched > 0 ? "ƒ" : "⟡";
+      count.textContent = displayCount;
+      button.title = summary.total > 0
+        ? `Wealth review · ${{summary.staged}} staged, ${{summary.researched}} researching, ${{summary.tracked}} tracked`
+        : "Wealth review · No staged Fisk items are waiting right now.";
       button.disabled = false;
     }}
 
@@ -5593,12 +6259,19 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       state.dashboard = {{
         ...previous,
         ...next,
+        chamber_home: next.chamber_home || previous.chamber_home || null,
         today_board: next.today_board || previous.today_board || null,
         cadence_review: next.cadence_review || previous.cadence_review || null,
         open_loops: next.open_loops || previous.open_loops || null,
         cognitive: next.cognitive || previous.cognitive || null,
         assistant_notifications: next.assistant_notifications || previous.assistant_notifications || null,
+        mission_control: next.mission_control || previous.mission_control || null,
       }};
+      state.missionControl = state.dashboard.mission_control || null;
+      if (!state.activeMissionId) {{
+        const firstMission = Array.isArray(state.missionControl?.active_missions) ? state.missionControl.active_missions[0] : null;
+        state.activeMissionId = firstMission?.mission_id || "";
+      }}
       return state.dashboard;
     }}
 
@@ -5611,13 +6284,31 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       modal.setAttribute("aria-hidden", isOpen ? "false" : "true");
     }}
 
+    function chamberHomeModeActive() {{
+      return document.body.dataset.shellLayout === "quiet-home" && !state.layoutEditMode;
+    }}
+
+    function triageSummaryCanFloat() {{
+      return !chamberHomeModeActive();
+    }}
+
     function defaultTriageSummaryPlacement() {{
       const shell = document.getElementById("core-home-summary");
       const cluster = document.getElementById("core-cluster");
-      const width = Math.min(360, Math.max(320, Number(shell?.offsetWidth || 360)));
+      const width = chamberHomeModeActive()
+        ? Math.min(980, Math.max(760, Number(shell?.offsetWidth || 900)))
+        : Math.min(360, Math.max(320, Number(shell?.offsetWidth || 360)));
       const height = Math.min(420, Math.max(220, Number(shell?.offsetHeight || 290)));
       let left = 28;
       let top = 168;
+      if (chamberHomeModeActive()) {{
+        return {{
+          left: null,
+          top: null,
+          width,
+          height: null,
+        }};
+      }}
       if (document.body.dataset.coreDock === "corner" && cluster) {{
         const rect = cluster.getBoundingClientRect();
         left = rect.left;
@@ -5649,7 +6340,9 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
 
     function openTriageSummary() {{
       state.triageSummaryVisible = true;
-      if (!state.windowPlacements.triageSummary?.left && !state.windowPlacements.triageSummary?.top) {{
+      if (chamberHomeModeActive()) {{
+        state.windowPlacements.triageSummary = defaultTriageSummaryPlacement();
+      }} else if (!state.windowPlacements.triageSummary?.left && !state.windowPlacements.triageSummary?.top) {{
         state.windowPlacements.triageSummary = defaultTriageSummaryPlacement();
       }}
       state.windowStates.triageSummary.minimized = false;
@@ -5735,7 +6428,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
           !windowState.maximized &&
           Number.isFinite(Number(placement.left)) &&
           Number.isFinite(Number(placement.top)) &&
-          (windowId !== "triageSummary" || state.triageSummaryVisible);
+          (windowId !== "triageSummary" || (state.triageSummaryVisible && triageSummaryCanFloat()));
         shell.classList.toggle("floating", shouldFloat);
         if (shouldFloat) {{
           shell.style.left = `${{Number(placement.left)}}px`;
@@ -5748,7 +6441,9 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
           shell.classList.remove("floating");
           shell.style.removeProperty("left");
           shell.style.removeProperty("top");
-          shell.style.removeProperty("width");
+          if (windowId !== "triageSummary" || triageSummaryCanFloat()) {{
+            shell.style.removeProperty("width");
+          }}
           if (windowId === "scene" || windowId === "triageSummary") {{
             shell.style.removeProperty("height");
           }}
@@ -7808,30 +8503,332 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       }};
     }}
 
+    function chamberHomeSectionMarkup(items = [], label = "", options = {{}}) {{
+      const approval = !!options.approval;
+      const quiet = !!options.quiet;
+      const maxItems = Math.max(1, Number(options.maxItems || items.length || 1));
+      const visibleItems = items.slice(0, maxItems);
+      const overflowCount = Math.max(0, items.length - visibleItems.length);
+      const extraClass = String(options.className || "").trim();
+      const blockClass = `core-home-block${{quiet ? " quiet" : ""}}${{extraClass ? ` ${{extraClass}}` : ""}}`;
+      const itemClass = `core-home-item${{approval ? " approval" : ""}}${{quiet ? " quiet" : ""}}`;
+      if (!items.length) {{
+        return `
+          <div class="${{blockClass}}">
+            <div class="core-home-label">${{escapeHtml(label)}}</div>
+            <div class="core-home-list">
+              <div class="core-home-empty">${{escapeHtml(options.emptyLabel || "Nothing is waiting here right now.")}}</div>
+            </div>
+          </div>
+        `;
+      }}
+      return `
+        <div class="${{blockClass}}">
+          <div class="core-home-label">${{escapeHtml(label)}}</div>
+          <div class="core-home-list">
+            ${{
+              visibleItems.map((item) => `
+                <div class="${{itemClass}}">
+                  <strong>${{escapeHtml(item.title || label)}}</strong><br>
+                  ${{escapeHtml(item.body || "")}}
+                </div>
+              `).join("")
+            }}
+            ${{
+              overflowCount > 0
+                ? `<div class="core-home-overflow">${{escapeHtml(`+${{overflowCount}} more waiting`)}}</div>`
+                : ""
+            }}
+          </div>
+        </div>
+      `;
+    }}
+
+    function chamberRouteId(chamber = {{}}) {{
+      const routeId = chamber?.device_context?.route?.route_id
+        || state.currentDevice?.interface_route?.route_id
+        || document.body.dataset.interfaceRoute
+        || "";
+      return String(routeId || "").trim().toLowerCase() || "standard-chamber";
+    }}
+
+    function chamberHeroMarkup(chamber = {{}}, routeId = "standard-chamber") {{
+      const recommendation = chamber.recommendation || {{}};
+      const summary = chamber.summary || {{}};
+      const mobileVariant = chamber?.device_context?.mobile_remote_variant || state.currentDevice?.mobile_remote_variant || {{}};
+      const isChildSafeRemote = mobileVariant.variant_id === "child-safe-remote";
+      const heroClass = routeId === "family-display"
+        ? "family"
+        : (routeId === "mobile-remote-briefing" || routeId === "mobile-companion" ? "mobile" : "");
+      const meta = [
+        Number(summary.needs_you_count || 0) > 0 ? `${{summary.needs_you_count}} decision${{Number(summary.needs_you_count) === 1 ? "" : "s"}}` : "",
+        Number(summary.already_working_count || 0) > 0 ? `${{summary.already_working_count}} prepared` : "",
+        routeId === "family-display" ? "household-safe view" : "",
+        routeId === "mobile-remote-briefing" ? "remote quick brief" : "",
+        isChildSafeRemote ? "simple safe view" : "",
+      ].filter(Boolean);
+      return `
+        <div class="core-home-hero core-home-span-two ${{heroClass}}">
+          <div class="core-home-hero-kicker">${{escapeHtml(
+            routeId === "family-display"
+              ? "Household view"
+              : isChildSafeRemote
+                ? "What matters next"
+                : "Recommended next move"
+          )}}</div>
+          <div class="core-home-hero-title">${{escapeHtml(recommendation.label || "Start with a calm briefing")}}</div>
+          <div class="core-home-hero-body">${{escapeHtml(recommendation.body || "JARVIS has the next move ready.")}}</div>
+          ${{
+            meta.length
+              ? `<div class="core-home-hero-meta">${{meta.map((item) => `<div class="core-home-hero-chip">${{escapeHtml(item)}}</div>`).join("")}}</div>`
+              : ""
+          }}
+        </div>
+      `;
+    }}
+
+    function applyCoreHomeActions(chamber = {{}}) {{
+      const primary = document.getElementById("core-home-primary-action");
+      const secondary = document.getElementById("core-home-secondary-action");
+      const tertiary = document.getElementById("core-home-tertiary-action");
+      const speak = document.getElementById("core-home-speak-action");
+      const recommendation = chamber.recommendation || {{}};
+      const routeId = chamberRouteId(chamber);
+      const mobileVariant = chamber?.device_context?.mobile_remote_variant || state.currentDevice?.mobile_remote_variant || {{}};
+      const isChildSafeRemote = mobileVariant.variant_id === "child-safe-remote";
+      if (primary) {{
+        primary.textContent =
+          routeId === "mobile-remote-briefing" || routeId === "mobile-companion"
+            ? "Next"
+            : routeId === "desktop-command"
+            ? (recommendation.label || "Open Command Brief")
+            : routeId === "family-display"
+              ? "Open Household View"
+              : (recommendation.label || "Open Briefing");
+        primary.setAttribute("data-home-open-packet", recommendation.packet || "briefing");
+      }}
+      if (secondary) {{
+        secondary.textContent =
+          routeId === "family-display"
+            ? "Family"
+            : isChildSafeRemote
+              ? ((chamber.needs_you || []).length ? "Needs You" : "Today")
+            : (chamber.needs_you || []).length
+              ? (routeId === "desktop-command" ? "Decision Queue" : "Needs You")
+              : "Open Day";
+        secondary.setAttribute("data-home-open-packet", (chamber.needs_you || []).length ? "approvals" : "today");
+      }}
+      if (tertiary) {{
+        tertiary.textContent =
+          routeId === "family-display"
+            ? "Watchlist"
+            : routeId === "mobile-remote-briefing" || routeId === "mobile-companion"
+              ? ((chamber.already_working || []).length ? "Prepared" : "Ready")
+            : (chamber.already_working || []).length
+              ? (routeId === "desktop-command" ? "Prepared Work" : "See Prepared Work")
+              : "Resume Work";
+        tertiary.setAttribute("data-home-open-packet", (chamber.already_working || [])[0]?.packet || "catalyst");
+      }}
+      if (speak) {{
+        speak.textContent = isChildSafeRemote ? "Ask" : "Speak";
+      }}
+    }}
+
     function renderCoreHomeSummary(data = {{}}) {{
+      const kicker = document.getElementById("core-home-kicker");
       const line = document.getElementById("core-home-line");
       const preview = document.getElementById("core-home-preview");
       const status = document.getElementById("core-home-status");
       if (!line || !preview || !status) {{
         return;
       }}
-      const summary = triageSummaryModel(data);
-      line.textContent = summary.line;
-      const previewItems = summary.priorityItems.slice(0, 1).map((item) => `
-        <div class="core-home-item">
-          <strong>${{escapeHtml(item.title || "Priority")}}</strong><br>
-          ${{escapeHtml(item.next_action || item.status || "Needs attention")}}
-        </div>
-      `).concat(summary.resumeItems.slice(0, 1).map((item) => `
-        <div class="core-home-item${{item.approval ? " approval" : ""}}">
-          <strong>${{escapeHtml(item.title || "Resume")}}</strong><br>
-          ${{escapeHtml(item.body || "Return to the active thread.")}}
-        </div>
-      `));
-      preview.innerHTML = previewItems.length
-        ? previewItems.join("")
-        : `<div class="core-home-empty">No approvals or resume targets are waiting.</div>`;
-      status.innerHTML = summary.chips.map((chip) => `<div class="core-home-chip">${{escapeHtml(chip)}}</div>`).join("");
+      const chamber = data.chamber_home || null;
+      const compactLaptopHome = window.innerHeight <= 940;
+      if (!chamber) {{
+        const summary = triageSummaryModel(data);
+        if (kicker) kicker.textContent = "Triage And Transition";
+        line.textContent = summary.line;
+        const previewItems = summary.priorityItems.slice(0, 1).map((item) => `
+          <div class="core-home-item">
+            <strong>${{escapeHtml(item.title || "Priority")}}</strong><br>
+            ${{escapeHtml(item.next_action || item.status || "Needs attention")}}
+          </div>
+        `).concat(summary.resumeItems.slice(0, 1).map((item) => `
+          <div class="core-home-item${{item.approval ? " approval" : ""}}">
+            <strong>${{escapeHtml(item.title || "Resume")}}</strong><br>
+            ${{escapeHtml(item.body || "Return to the active thread.")}}
+          </div>
+        `));
+        preview.innerHTML = previewItems.length
+          ? previewItems.join("")
+          : `<div class="core-home-empty">No approvals or resume targets are waiting.</div>`;
+        status.innerHTML = summary.chips.map((chip) => `<div class="core-home-chip">${{escapeHtml(chip)}}</div>`).join("");
+        return;
+      }}
+      if (kicker) {{
+        kicker.textContent = chamber.kicker || "Private Intelligence Chamber";
+      }}
+      const routeId = chamberRouteId(chamber);
+      preview.dataset.route = routeId;
+      const mobileVariant = chamber?.device_context?.mobile_remote_variant || state.currentDevice?.mobile_remote_variant || {{}};
+      const isChildSafeRemote = mobileVariant.variant_id === "child-safe-remote";
+      const greetingText = String(chamber.greeting || "").trim();
+      const stateLineText = String(chamber.state_line || "").trim();
+      const normalizedStateLine = /^good\\s+(morning|afternoon|evening)\\b/i.test(stateLineText)
+        ? stateLineText.replace(/^good\\s+(morning|afternoon|evening)\\s*,?\\s+[^.?!]+[.?!-:]\\s*/i, "").trim()
+        : stateLineText;
+      line.textContent = [greetingText, normalizedStateLine].filter(Boolean).join(" ");
+      const recommendationCards = (chamber.drift_risk || []).concat(
+        chamber.recommendation
+          ? [{{ title: chamber.recommendation.label || "Recommended next move", body: chamber.recommendation.body || "" }}]
+          : []
+      );
+      let previewMarkup = "";
+      if (routeId === "mobile-remote-briefing" || routeId === "mobile-companion") {{
+        previewMarkup = `
+          <div class="core-home-grid route-mobile">
+            ${{chamberHeroMarkup(chamber, routeId)}}
+            ${{
+              chamberHomeSectionMarkup(chamber.needs_you || [], isChildSafeRemote ? "Today" : "Needs You", {{
+                emptyLabel: isChildSafeRemote
+                  ? "Nothing hard is waiting on you right now."
+                  : "No approvals or decisions are waiting right now.",
+                approval: true,
+                maxItems: isChildSafeRemote ? 1 : 2,
+              }})
+            }}
+            ${{
+              chamberHomeSectionMarkup(chamber.briefing_items || [], isChildSafeRemote ? "For Today" : "Briefing", {{
+                emptyLabel: isChildSafeRemote
+                  ? "JARVIS has a calm day view ready."
+                  : "No major briefing items are pressing right now.",
+                maxItems: 1,
+              }})
+            }}
+            ${{
+              chamberHomeSectionMarkup(
+                (chamber.already_working || []).length ? (chamber.already_working || []) : recommendationCards,
+                isChildSafeRemote
+                  ? ((chamber.already_working || []).length ? "Ready" : "Keep In View")
+                  : ((chamber.already_working || []).length ? "Prepared" : "Keep In View"),
+                {{
+                  emptyLabel: isChildSafeRemote
+                    ? "JARVIS has nothing extra waiting in the background."
+                    : "JARVIS is quiet in the background at the moment.",
+                  quiet: true,
+                  maxItems: 1,
+                }}
+              )
+            }}
+          </div>
+        `;
+      }} else if (routeId === "tablet-chamber") {{
+        previewMarkup = `
+          <div class="core-home-grid route-tablet">
+            ${{chamberHeroMarkup(chamber, routeId)}}
+            ${{
+              chamberHomeSectionMarkup(chamber.briefing_items || [], "Briefing", {{
+                emptyLabel: "No major briefing items are pressing right now.",
+                maxItems: 2,
+              }})
+            }}
+            ${{
+              chamberHomeSectionMarkup(chamber.needs_you || [], "Needs You", {{
+                emptyLabel: "No approvals or decisions are waiting right now.",
+                approval: true,
+                maxItems: 2,
+              }})
+            }}
+            ${{
+              chamberHomeSectionMarkup(chamber.already_working || [], "Prepared Work", {{
+                emptyLabel: "JARVIS is quiet in the background at the moment.",
+                quiet: true,
+                maxItems: compactLaptopHome ? 1 : 2,
+              }})
+            }}
+            ${{
+              chamberHomeSectionMarkup(recommendationCards, "Watchlist And Next", {{
+                emptyLabel: "The chamber is calm right now.",
+                quiet: true,
+                maxItems: compactLaptopHome ? 1 : 2,
+              }})
+            }}
+          </div>
+        `;
+      }} else if (routeId === "family-display") {{
+        previewMarkup = `
+          <div class="core-home-grid route-family">
+            ${{chamberHeroMarkup(chamber, routeId)}}
+            ${{
+              chamberHomeSectionMarkup(chamber.briefing_items || [], "Household Watch", {{
+                emptyLabel: "No household pressure is surfacing right now.",
+                maxItems: 2,
+              }})
+            }}
+            ${{
+              chamberHomeSectionMarkup(chamber.already_working || [], "Quietly In Motion", {{
+                emptyLabel: "Nothing household-facing is being staged right now.",
+                quiet: true,
+                maxItems: 1,
+              }})
+            }}
+            ${{
+              chamberHomeSectionMarkup(recommendationCards, "Keep In View", {{
+                emptyLabel: "The household picture is calm right now.",
+                quiet: true,
+                maxItems: 1,
+              }})
+            }}
+          </div>
+        `;
+      }} else {{
+        previewMarkup = `
+          <div class="core-home-grid route-desktop">
+            ${{chamberHeroMarkup(chamber, routeId)}}
+            ${{
+              chamberHomeSectionMarkup(chamber.briefing_items || [], "Briefing", {{
+                emptyLabel: "No major briefing items are pressing right now.",
+                maxItems: compactLaptopHome ? 2 : 2,
+              }})
+            }}
+            ${{
+              chamberHomeSectionMarkup(chamber.needs_you || [], "Decision Queue", {{
+                emptyLabel: "No approvals or decisions are waiting right now.",
+                approval: true,
+                maxItems: compactLaptopHome ? 2 : 2,
+              }})
+            }}
+            ${{
+              chamberHomeSectionMarkup(chamber.already_working || [], "Prepared Work", {{
+                emptyLabel: "JARVIS is quiet in the background at the moment.",
+                quiet: true,
+                maxItems: compactLaptopHome ? 1 : 2,
+              }})
+            }}
+            ${{
+              chamberHomeSectionMarkup(recommendationCards, "Watchlist And Next", {{
+                emptyLabel: "The chamber is calm right now.",
+                quiet: true,
+                maxItems: compactLaptopHome ? 1 : 2,
+              }})
+            }}
+          </div>
+        `;
+      }}
+      preview.innerHTML = previewMarkup;
+      const visibleChips = routeId === "family-display"
+        ? (chamber.chips || []).slice(0, 2)
+        : isChildSafeRemote
+          ? (chamber.chips || []).slice(0, 2)
+        : (routeId === "mobile-remote-briefing" || routeId === "mobile-companion"
+            ? (chamber.chips || []).slice(0, 3)
+            : (chamber.chips || []));
+      status.innerHTML = visibleChips.map((chip) => `<div class="core-home-chip">${{escapeHtml(chip)}}</div>`).join("");
+      applyCoreHomeActions(chamber);
+      const input = document.getElementById("command-input");
+      if (input && chamber.speak_freely?.placeholder) {{
+        input.setAttribute("placeholder", chamber.speak_freely.placeholder);
+      }}
     }}
 
     function sceneSettingsMarkup(data = {{}}) {{
@@ -10539,6 +11536,23 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       return document.getElementById("command-input");
     }}
 
+    function focusSpeakComposer() {{
+      const rail = document.getElementById("chat-panel");
+      const input = commandInputElement();
+      if (rail) {{
+        rail.scrollIntoView({{ behavior: "smooth", block: "nearest" }});
+      }}
+      if (input) {{
+        input.focus();
+        const length = String(input.value || "").length;
+        try {{
+          input.setSelectionRange(length, length);
+        }} catch (_error) {{
+          // noop
+        }}
+      }}
+    }}
+
     function autosizeCommandInput() {{
       const input = commandInputElement();
       if (!input) return;
@@ -10864,6 +11878,556 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       return `<section class="packet-block"><h3>${{escapeHtml(title)}}</h3>${{inner}}</section>`;
     }}
 
+    function financeReviewLauncherSummary(review = state.financeReview || {{}}) {{
+      const weekly = review.weekly_review || {{}};
+      const scorecard = review.scorecard || {{}};
+      if (weekly.due) {{
+        return {{
+          count: "!",
+          title: "Family finance review is due now.",
+        }};
+      }}
+      if (scorecard.score !== undefined && scorecard.score !== null && String(scorecard.score).trim() !== "") {{
+        return {{
+          count: String(scorecard.score),
+          title: String(review.summary || "Family finance review is ready.").trim() || "Family finance review is ready.",
+        }};
+      }}
+      return {{
+        count: "--",
+        title: "Family finance review is standing by.",
+      }};
+    }}
+
+    function updateFinanceReviewLauncher(review = state.financeReview || {{}}) {{
+      const button = document.getElementById("finance-review-launcher");
+      const icon = document.getElementById("finance-review-launcher-icon");
+      const count = document.getElementById("finance-review-launcher-count");
+      if (!button || !icon || !count) {{
+        return;
+      }}
+      const summary = financeReviewLauncherSummary(review);
+      count.textContent = summary.count;
+      icon.textContent = review.weekly_review?.due ? "!" : "$";
+      button.title = summary.title;
+    }}
+
+    function renderFinanceReviewMarkup(review = state.financeReview || {{}}) {{
+      const sections = Array.isArray(review.sections) ? review.sections : [];
+      const adjacentWealth = review.adjacent_wealth_lane || {{}};
+      return `
+        <div class="packet-grid">
+          ${{
+            packetBlock(
+              "Family Finance",
+              `
+                <div class="metric"><strong>Summary</strong> ${{escapeHtml(review.summary || "Family finance review is standing by.")}}</div>
+                <div class="metric"><strong>Boundary</strong> Household stewardship only · passive-income capital stays ring-fenced</div>
+                <div class="metric"><strong>Next Move</strong> ${{escapeHtml(review.recommended_next_move || "Capture household cash, burn, and obligations.")}}</div>
+              `
+            )
+          }}
+          ${{
+            sections.map((section) => packetBlock(
+              section.title || "Section",
+              `
+                <p>${{escapeHtml(section.summary || "")}}</p>
+                ${{renderList((section.details || []).map((item) => `<div>${{escapeHtml(item)}}</div>`))}}
+              `
+            )).join("")
+          }}
+          ${{
+            packetBlock(
+              "Separate Wealth Lane",
+              `
+                <div class="metric"><strong>Summary</strong> ${{escapeHtml(adjacentWealth.summary || "Wealth experiments remain separate from family operating cash.")}}</div>
+                <div class="metric"><strong>Staged Wealth Items</strong> ${{escapeHtml(String(adjacentWealth.staged_items ?? 0))}}</div>
+                <div class="metric"><strong>Recent Wealth Runs</strong> ${{escapeHtml(String(adjacentWealth.recent_runs ?? 0))}}</div>
+                <div class="metric"><strong>Wealth Next Move</strong> ${{escapeHtml(adjacentWealth.next_move || "Open Wealth Review for Fisk's ring-fenced workstream.")}}</div>
+                <div class="inline-actions" style="margin-top:10px;">
+                  <button type="button" class="ghost-toggle finance-open-wealth">Open Wealth Review</button>
+                </div>
+              `
+            )
+          }}
+        </div>
+      `;
+    }}
+
+    async function refreshFinanceReview(options = {{}}) {{
+      const force = Boolean(options.force);
+      if (state.financeReview && !force) {{
+        updateFinanceReviewLauncher(state.financeReview);
+        return state.financeReview;
+      }}
+      const actor = preferredActorLabel();
+      state.financeReview = await loadJSON(`/api/finance-review?actor=${{encodeURIComponent(actor)}}`);
+      updateFinanceReviewLauncher(state.financeReview);
+      return state.financeReview;
+    }}
+
+    function wealthLaneLabel(laneId = "") {{
+      const normalized = String(laneId || "").trim().toLowerCase();
+      if (normalized === "passive-income") return "Passive Income";
+      if (normalized === "market-intelligence") return "Market Intelligence";
+      return normalized ? normalized.replace(/-/g, " ").replace(/\\b\\w/g, (char) => char.toUpperCase()) : "Lane";
+    }}
+
+    function wealthCandidateTypeLabel(candidateType = "") {{
+      return String(candidateType || "").trim().replace(/-/g, " ").replace(/\\b\\w/g, (char) => char.toUpperCase()) || "Candidate";
+    }}
+
+    function wealthTruthStateLabel(value = "") {{
+      const normalized = String(value || "").trim();
+      return normalized ? normalized.replace(/_/g, " ").replace(/-/g, " ").replace(/\\b\\w/g, (char) => char.toUpperCase()) : "Unknown";
+    }}
+
+    function wealthRunsSummary(laneId = "") {{
+      return Array.isArray(state.wealthRunsByLane?.[laneId]) ? state.wealthRunsByLane[laneId] : [];
+    }}
+
+    function wealthPendingQueue(review = state.wealthReview || {{}}, laneId = "") {{
+      const rows = Array.isArray(review.queue) ? review.queue : [];
+      return rows.filter((item) => {{
+        const status = String(item.status || "").trim().toLowerCase();
+        if (status === "closed" || status === "approved" || status === "dismissed") return false;
+        if (!laneId) return true;
+        return String(item.lane_id || "") === String(laneId || "");
+      }});
+    }}
+
+    function wealthArtifactsForItem(item = {{}}, review = state.wealthReview || {{}}) {{
+      const itemArtifacts = Array.isArray(item.artifacts) ? item.artifacts : [];
+      if (itemArtifacts.length) return itemArtifacts;
+      const artifacts = Array.isArray(review.artifacts) ? review.artifacts : [];
+      return artifacts.filter((artifact) => String(artifact.item_id || "") === String(item.item_id || ""));
+    }}
+
+    function wealthApprovalsForItem(item = {{}}, review = state.wealthReview || {{}}) {{
+      const approvals = Array.isArray(review.approvals) ? review.approvals : [];
+      return approvals.filter((approval) => String(approval.item_id || "") === String(item.item_id || ""));
+    }}
+
+    function wealthLaneItemCounts(items = []) {{
+      const counts = {{}};
+      items.forEach((item) => {{
+        const key = String(item.status || "unknown").trim().toLowerCase() || "unknown";
+        counts[key] = Number(counts[key] || 0) + 1;
+      }});
+      return counts;
+    }}
+
+    function wealthReviewerStatus(item = {{}}, reviewer = {{}}) {{
+      const reviews = Array.isArray(item.guardrail_reviews) ? item.guardrail_reviews : [];
+      const label = String(reviewer.label || "").trim().toLowerCase();
+      const latest = reviews
+        .filter((entry) => String(entry.reviewer || "").trim().toLowerCase() === label)
+        .sort((left, right) => String(right.timestamp || "").localeCompare(String(left.timestamp || "")))[0];
+      if (!latest) {{
+        return {{
+          label: "Pending",
+          note: "No guardrail review recorded yet.",
+        }};
+      }}
+      const status = String(latest.status || "").trim().toLowerCase();
+      if (status === "approved") {{
+        return {{ label: "Approved", note: String(latest.note || "").trim() || "Reviewer approved this item." }};
+      }}
+      if (status === "dismissed" || status === "rejected") {{
+        return {{ label: "Dismissed", note: String(latest.note || "").trim() || "Reviewer dismissed this item." }};
+      }}
+      return {{
+        label: "Reviewed",
+        note: String(latest.note || "").trim() || "Reviewer left a progress note.",
+      }};
+    }}
+
+    function wealthReviewerMatrix(item = {{}}) {{
+      const reviewers = Array.isArray(item.required_reviewers) ? item.required_reviewers : [];
+      if (!reviewers.length) {{
+        return `<div class="empty">No guardrail reviewers are attached to this item yet.</div>`;
+      }}
+      return `
+        <div class="stack">
+          ${{
+            reviewers.map((reviewer) => {{
+              const status = wealthReviewerStatus(item, reviewer);
+              return `
+                <div class="metric">
+                  <strong>${{escapeHtml(reviewer.label || "Reviewer")}}</strong> · ${{escapeHtml(status.label)}}
+                  <br><span class="muted">${{escapeHtml(reviewer.role || "")}}</span>
+                  <br><span class="muted">${{escapeHtml(status.note)}}</span>
+                </div>
+              `;
+            }}).join("")
+          }}
+        </div>
+      `;
+    }}
+
+    function wealthTruthBucketsMarkup(item = {{}}) {{
+      const sections = [
+        ["Observed", item.observed || []],
+        ["Inferred", item.inferred || []],
+        ["Prepared", item.prepared || []],
+        ["Recommended", item.recommended || []],
+        ["Requires Approval", item.requires_approval || []],
+        ["Not Done", item.not_done || []],
+      ];
+      return sections.map(([label, values]) => packetBlock(
+        label,
+        Array.isArray(values) && values.length
+          ? renderList(values.map((entry) => `<div>${{escapeHtml(entry)}}</div>`))
+          : `<div class="empty">No ${{
+              String(label).toLowerCase()
+            }} entries recorded for this item.</div>`
+      )).join("");
+    }}
+
+    function wealthSummaryText(review = state.wealthReview || {{}}) {{
+      const runs = Array.isArray(review.recent_runs) ? review.recent_runs : [];
+      const items = Array.isArray(review.items) ? review.items : [];
+      const queue = wealthPendingQueue(review);
+      const staged = queue.length || items.filter((item) => item.approval_required === true).length;
+      const blockedRuns = Array.isArray(review.blocked_runs) ? review.blocked_runs : [];
+      if (!runs.length && !items.length) {{
+        return "Fisk has not staged any truthful wealth work yet. The lane is quiet until new reviewable records exist.";
+      }}
+      const mostRecentRun = runs[0] || null;
+      if (mostRecentRun) {{
+        const laneLabel = wealthLaneLabel(mostRecentRun.lane_id || "");
+        const count = Number(mostRecentRun.items_staged || 0);
+        const status = String(mostRecentRun.status || "").trim().toLowerCase();
+        if (status === "skipped" || status === "failed" || String(mostRecentRun.blocked_reason || "").trim()) {{
+          const why = String(mostRecentRun.blocked_reason || "blocked").trim().replace(/-/g, " ");
+          return `Fisk most recently checked ${{laneLabel}}, but it did not run because ${{why}}. ${{staged ? `${{staged}} queue item(s) still need review.` : "No new execution was claimed."}}`;
+        }}
+        return `Fisk most recently ran ${{laneLabel}} and staged ${{count}} reviewable item(s). ${{staged ? `${{staged}} still need approval or guardrail review.` : "Nothing here claims execution beyond research and staging."}}`;
+      }}
+      return `Fisk is currently holding ${{items.length}} tracked wealth item(s), with ${{staged}} still requiring explicit review posture and ${{blockedRuns.length}} blocked or skipped run(s) recorded.`;
+    }}
+
+    function selectedWealthItem(review = state.wealthReview || {{}}) {{
+      const items = Array.isArray(review.items) ? review.items : [];
+      const selected = items.find((item) => String(item.item_id || "") === String(state.wealthSelectedItemId || ""));
+      if (selected) {{
+        return selected;
+      }}
+      const laneItems = items.filter((item) => String(item.lane_id || "") === String(state.wealthSelectedLane || ""));
+      return laneItems[0] || items[0] || null;
+    }}
+
+    function wealthReportDetailMarkup(item = null) {{
+      if (!item) {{
+        return `<div class="empty">Select a staged Fisk item to inspect its structured report.</div>`;
+      }}
+      const artifacts = wealthArtifactsForItem(item);
+      const approvals = wealthApprovalsForItem(item);
+      const approval = approvals[0] || null;
+      const opportunity = item.opportunity_report || null;
+      const market = item.market_report || null;
+      const reportSummary = opportunity
+        ? `
+            <div class="metric"><strong>Opportunity</strong> ${{escapeHtml(opportunity.opportunity || item.title || "Opportunity")}}</div>
+            <div class="metric"><strong>Category</strong> ${{escapeHtml(opportunity.category || wealthCandidateTypeLabel(item.candidate_type || ""))}}</div>
+            <div class="metric"><strong>Fisk Recommendation</strong> ${{escapeHtml(opportunity.fisk_recommendation || item.recommended_action || "Review")}}</div>
+            <div class="metric"><strong>Approval Needed</strong> ${{opportunity.approval_needed ? "yes" : "no"}}</div>
+            <p>${{escapeHtml(opportunity.summary || item.summary || "")}}</p>
+            <div class="metric"><strong>Leverage Point</strong> ${{escapeHtml(opportunity.leverage_point || "Not yet bounded.")}}</div>
+            <div class="metric"><strong>Where Money Flows</strong> ${{escapeHtml(opportunity.where_money_flows || "Not yet bounded.")}}</div>
+            <div class="metric"><strong>Hidden Labor</strong> ${{escapeHtml(opportunity.risk?.hidden_labor || "Not recorded yet.")}}</div>
+          `
+        : market
+          ? `
+              <div class="metric"><strong>Ticker / Asset</strong> ${{escapeHtml(market.ticker_or_asset || item.title || "Asset")}}</div>
+              <div class="metric"><strong>Time Horizon</strong> ${{escapeHtml(market.time_horizon || "Not set")}}</div>
+              <div class="metric"><strong>Recommendation</strong> ${{escapeHtml(market.recommendation || item.recommended_action || "Review")}}</div>
+              <div class="metric"><strong>Approval Required</strong> ${{market.approval_required ? "yes" : "no"}}</div>
+              <p>${{escapeHtml(market.thesis || item.summary || "")}}</p>
+              <div class="metric"><strong>Base Case</strong> ${{escapeHtml(market.prediction?.base_case || "Not recorded yet.")}}</div>
+              <div class="metric"><strong>Bull / Bear</strong> ${{escapeHtml(market.prediction?.bull_case || "Not recorded")}} · ${{escapeHtml(market.prediction?.bear_case || "Not recorded")}}</div>
+              <div class="metric"><strong>What Changes The View</strong> ${{escapeHtml(market.prediction?.what_would_change_the_view || "Not recorded yet.")}}</div>
+            `
+          : `<div class="metric"><strong>Summary</strong> ${{escapeHtml(item.summary || "No structured report is attached yet.")}}</div>`;
+      return `
+        <div class="packet-grid">
+          ${{
+            packetBlock(
+              "Structured Report",
+              `
+                <div class="metric"><strong>Truth State</strong> ${{escapeHtml(wealthTruthStateLabel(item.truth_state || item.status || ""))}}</div>
+                <div class="metric"><strong>Owner</strong> ${{escapeHtml(item.owner_agent || "Fisk")}}</div>
+                <div class="metric"><strong>Lane</strong> ${{escapeHtml(wealthLaneLabel(item.lane_id || ""))}}</div>
+                <div class="metric"><strong>Candidate Type</strong> ${{escapeHtml(wealthCandidateTypeLabel(item.candidate_type || ""))}}</div>
+                ${{reportSummary}}
+              `
+            )
+          }}
+          ${{
+            packetBlock(
+              "Decision Controls",
+              `
+                <div class="metric"><strong>Approval Status</strong> ${{escapeHtml(item.approval_status || approval?.status || (item.approval_required ? "pending" : "not required"))}}</div>
+                <div class="metric"><strong>Recommended Action</strong> ${{escapeHtml(item.recommended_action || item.next_action || "Review")}}</div>
+                <div class="inline-actions" style="margin-top:10px; flex-wrap:wrap;">
+                  <button type="button" class="ghost-toggle wealth-item-action" data-wealth-action="approve" data-wealth-item-id="${{escapeHtml(item.item_id || "")}}">Approve</button>
+                  <button type="button" class="ghost-toggle wealth-item-action" data-wealth-action="dismiss" data-wealth-item-id="${{escapeHtml(item.item_id || "")}}">Dismiss</button>
+                  <button type="button" class="ghost-toggle wealth-item-action" data-wealth-action="route" data-wealth-route="Nebula" data-wealth-item-id="${{escapeHtml(item.item_id || "")}}">Route Nebula</button>
+                  <button type="button" class="ghost-toggle wealth-item-action" data-wealth-action="route" data-wealth-route="Pepper" data-wealth-item-id="${{escapeHtml(item.item_id || "")}}">Route Pepper</button>
+                  <button type="button" class="ghost-toggle wealth-item-action" data-wealth-action="route" data-wealth-route="deeper-research" data-wealth-item-id="${{escapeHtml(item.item_id || "")}}">Deeper Research</button>
+                </div>
+              `
+            )
+          }}
+          ${{
+            packetBlock("Guardrail Reviewers", wealthReviewerMatrix(item))
+          }}
+          ${{
+            packetBlock(
+              "Kernel Records",
+              `
+                <div class="metric"><strong>Queue Entries</strong> ${{escapeHtml(String(Array.isArray(item.queue_entries) ? item.queue_entries.length : 0))}}</div>
+                <div class="metric"><strong>Approvals</strong> ${{escapeHtml(String(approvals.length))}}</div>
+                <div class="metric"><strong>Artifacts</strong> ${{escapeHtml(String(artifacts.length))}}</div>
+                ${{artifacts.length ? renderList(artifacts.slice(0, 5).map((artifact) => `<div><strong>${{escapeHtml(artifact.artifact_type || "artifact")}}</strong><br>${{escapeHtml(artifact.summary || artifact.title || "")}}</div>`)) : `<div class="empty">No artifact records are attached yet.</div>`}}
+              `
+            )
+          }}
+          ${{
+            wealthTruthBucketsMarkup(item)
+          }}
+        </div>
+      `;
+    }}
+
+    function renderWealthReviewMarkup(review = state.wealthReview || {{}}) {{
+      const lanes = Array.isArray(review.lanes) ? review.lanes : [];
+      const items = Array.isArray(review.items) ? review.items : [];
+      const queue = wealthPendingQueue(review);
+      const blockedRuns = Array.isArray(review.blocked_runs) ? review.blocked_runs : [];
+      const recentRuns = Array.isArray(review.recent_runs) ? review.recent_runs : [];
+      const selectedItem = selectedWealthItem(review);
+      const fisk = state.wealthAgent || {{}};
+      const capital = review.capital_posture || {{}};
+      const laneCards = lanes.filter((lane) => ["passive-income", "market-intelligence"].includes(String(lane.lane_id || "")));
+      const laneMarkup = laneCards.map((lane) => {{
+        const laneId = String(lane.lane_id || "");
+        const laneItems = items.filter((item) => String(item.lane_id || "") === laneId);
+        const laneQueue = wealthPendingQueue(review, laneId);
+        const counts = wealthLaneItemCounts(laneItems);
+        const runs = wealthRunsSummary(laneId);
+        const recommended = laneQueue[0]?.recommended_action || laneItems.find((item) => String(item.recommended_action || "").trim())?.recommended_action || "Review";
+        const active = laneId === String(state.wealthSelectedLane || "");
+        const stagedCount = Number(counts.staged_for_approval || 0) + Number(counts.experiment_planned || 0) + Number(counts.buy_candidate || 0) + Number(counts.trim_candidate || 0) + Number(counts.exit_candidate || 0);
+        return `
+          <div class="packet-block">
+            <h3>${{escapeHtml(wealthLaneLabel(laneId))}}</h3>
+            <div class="metric"><strong>Mission</strong> ${{escapeHtml(lane.objective || lane.summary || "No mission loaded.")}}</div>
+            <div class="metric"><strong>Cadence</strong> ${{escapeHtml(lane.cadence || "background + on demand")}}</div>
+            <div class="metric"><strong>Tracked</strong> ${{escapeHtml(String(laneItems.length))}} · <strong>Staged</strong> ${{escapeHtml(String(stagedCount))}}</div>
+            <div class="metric"><strong>Researching</strong> ${{escapeHtml(String(counts.researching || 0))}} · <strong>Runs</strong> ${{escapeHtml(String(runs.length))}}</div>
+            <div class="metric"><strong>Queue</strong> ${{escapeHtml(String(laneQueue.length))}} · <strong>Last status</strong> ${{escapeHtml(wealthTruthStateLabel(runs[0]?.truth_state || runs[0]?.status || ""))}}</div>
+            <div class="metric"><strong>Next Move</strong> ${{escapeHtml(recommended)}}</div>
+            <div class="inline-actions" style="margin-top:10px;">
+              <button type="button" class="${{active ? "ghost-toggle" : ""}} wealth-lane-select" data-wealth-lane="${{escapeHtml(laneId)}}">${{active ? "Viewing" : "Open Lane"}}</button>
+            </div>
+          </div>
+        `;
+      }}).join("");
+      const queueMarkup = queue.length
+        ? renderList(queue.map((entry) => `
+            <div>
+              <strong>${{escapeHtml(entry.title || "Queue item")}}</strong>
+              <br>${{escapeHtml(wealthLaneLabel(entry.lane_id || ""))}} · ${{escapeHtml(entry.queue_type || "review")}} · ${{escapeHtml(entry.approval_status || "pending")}}
+              <br><span class="muted">${{escapeHtml(entry.summary || "")}}</span>
+              <div class="inline-actions" style="margin-top:10px; flex-wrap:wrap;">
+                <button type="button" class="ghost-toggle wealth-item-select" data-wealth-item-id="${{escapeHtml(entry.item_id || "")}}" data-wealth-item-lane="${{escapeHtml(entry.lane_id || "")}}">Inspect</button>
+                <button type="button" class="ghost-toggle wealth-item-action" data-wealth-action="approve" data-wealth-item-id="${{escapeHtml(entry.item_id || "")}}">Approve</button>
+                <button type="button" class="ghost-toggle wealth-item-action" data-wealth-action="dismiss" data-wealth-item-id="${{escapeHtml(entry.item_id || "")}}">Dismiss</button>
+                <button type="button" class="ghost-toggle wealth-item-action" data-wealth-action="route" data-wealth-route="Nebula" data-wealth-item-id="${{escapeHtml(entry.item_id || "")}}">Route Nebula</button>
+                <button type="button" class="ghost-toggle wealth-item-action" data-wealth-action="route" data-wealth-route="deeper-research" data-wealth-item-id="${{escapeHtml(entry.item_id || "")}}">Deeper Research</button>
+              </div>
+            </div>
+          `))
+        : `<div class="empty">No pending wealth decisions are waiting right now.</div>`;
+      const runLedgerMarkup = recentRuns.length
+        ? renderList(recentRuns.slice(0, 8).map((run) => `
+            <div>
+              <strong>${{escapeHtml(wealthLaneLabel(run.lane_id || ""))}}</strong> · ${{escapeHtml(wealthTruthStateLabel(run.status || run.truth_state || ""))}}
+              <br><span class="muted">${{escapeHtml(run.summary || "")}}</span>
+              <br><span class="muted">Outcome: ${{escapeHtml(wealthTruthStateLabel(run.truth_state || run.action_status || ""))}} · Verification: ${{escapeHtml(wealthTruthStateLabel(run.verification_status || ""))}}</span>
+              ${{run.blocked_reason ? `<br><span class="muted">Blocked: ${{escapeHtml(String(run.blocked_reason || "").replace(/-/g, " "))}}</span>` : ""}}
+            </div>
+          `))
+        : `<div class="empty">No workstream runs are recorded yet.</div>`;
+      const laneItems = items.filter((item) => {{
+        const selectedLane = String(state.wealthSelectedLane || "");
+        return !selectedLane || String(item.lane_id || "") === selectedLane;
+      }});
+      const stagedMarkup = laneItems.length
+        ? renderList(laneItems.map((item) => {{
+            const selected = String(item.item_id || "") === String(selectedItem?.item_id || "");
+            const reviewState = Array.isArray(item.required_reviewers) && item.required_reviewers.length
+              ? item.required_reviewers.map((reviewer) => `${{reviewer.label}}: ${{wealthReviewerStatus(item, reviewer).label}}`).join(" · ")
+              : "No guardrail reviewers attached yet.";
+            return `
+              <div>
+                <strong>${{escapeHtml(item.title || "Wealth item")}}</strong>
+                <br>${{escapeHtml(wealthLaneLabel(item.lane_id || ""))}} · ${{escapeHtml(wealthTruthStateLabel(item.truth_state || item.status || ""))}} · ${{escapeHtml(item.owner_agent || "Fisk")}}
+                <br><span class="muted">${{escapeHtml(item.summary || "")}}</span>
+                <br><span class="muted">Recommendation: ${{escapeHtml(item.recommended_action || "Review")}} · Approval: ${{item.approval_required ? "required" : "not required"}}</span>
+                <br><span class="muted">${{escapeHtml(reviewState)}}</span>
+                <div class="inline-actions" style="margin-top:10px;">
+                  <button type="button" class="${{selected ? "ghost-toggle" : ""}} wealth-item-select" data-wealth-item-id="${{escapeHtml(item.item_id || "")}}" data-wealth-item-lane="${{escapeHtml(item.lane_id || "")}}">${{selected ? "Inspecting" : "Inspect Report"}}</button>
+                  ${{item.work_id ? `<button type="button" class="work-item-action-button" data-work-action="inspect" data-work-id="${{escapeHtml(item.work_id)}}" data-variant="quiet">Open Lifecycle</button>` : ""}}
+                </div>
+              </div>
+            `;
+          }}))
+        : `<div class="empty">No staged work exists for this lane yet.</div>`;
+      return `
+        <div class="packet-grid">
+          ${{
+            packetBlock(
+              "Fisk",
+              `
+                <div class="metric"><strong>${{escapeHtml(fisk.name || fisk.label || "Fisk")}}</strong> · ${{escapeHtml(fisk.title || "Market Power & Capital Growth Agent")}}</div>
+                <p>${{escapeHtml(review.doctrine || "Find leverage. Quantify risk. Reject fantasy. Route the opportunity.")}}</p>
+                <p>${{escapeHtml(wealthSummaryText(review))}}</p>
+                <div class="metric"><strong>Boundary</strong> ${{escapeHtml(review.family_boundary || "Wealth experimentation is ring-fenced from family operating cash.")}}</div>
+                <div class="metric"><strong>Review posture</strong> research and staged recommendations only · no money movement · no live trading</div>
+                <div class="metric"><strong>Blocked / skipped runs</strong> ${{escapeHtml(String(blockedRuns.length))}} · <strong>Pending queue</strong> ${{escapeHtml(String(queue.length))}}</div>
+              `
+            )
+          }}
+          ${{
+            packetBlock(
+              "Wealth Capital Posture",
+              `
+                <div class="metric"><strong>Available</strong> ${{escapeHtml(String(capital.wealth_account_available ?? "unknown"))}}</div>
+                <div class="metric"><strong>Reserved</strong> ${{escapeHtml(String(capital.wealth_account_reserved ?? "unknown"))}}</div>
+                <div class="metric"><strong>Transfer Policy</strong> ${{escapeHtml(capital.transfer_policy_note || "Passive-income capital stays separate until an explicit transfer workflow exists.")}}</div>
+                ${{Array.isArray(capital.wealth_account_notes) && capital.wealth_account_notes.length ? renderList(capital.wealth_account_notes.map((item) => `<div>${{escapeHtml(item)}}</div>`)) : `<div class="empty">No wealth-account notes are recorded yet.</div>`}}
+              `
+            )
+          }}
+          ${{
+            packetBlock(
+              "Lane Summary",
+              laneMarkup || `<div class="empty">No wealth lanes are available yet.</div>`
+            )
+          }}
+          ${{
+            packetBlock(
+              "Decision Queue",
+              queueMarkup
+            )
+          }}
+          ${{
+            packetBlock(
+              "Staged Work",
+              stagedMarkup
+            )
+          }}
+          ${{
+            packetBlock(
+              "Run Ledger",
+              runLedgerMarkup
+            )
+          }}
+          ${{
+            packetBlock(
+              "Report Detail",
+              wealthReportDetailMarkup(selectedItem)
+            )
+          }}
+        </div>
+      `;
+    }}
+
+    async function refreshWealthReview(options = {{}}) {{
+      const force = Boolean(options.force);
+      if (state.wealthReview && !force) {{
+        updateWealthLauncher(state.wealthReview);
+        return state.wealthReview;
+      }}
+      const actor = preferredActorLabel();
+      const [wealthReview, workstreams] = await Promise.all([
+        loadJSON(`/api/wealth-review?actor=${{encodeURIComponent(actor)}}`),
+        loadJSON(`/api/workstreams?actor=${{encodeURIComponent(actor)}}`),
+      ]);
+      state.wealthReview = {{
+        ...wealthReview,
+        lanes: Array.isArray(workstreams?.lanes) ? workstreams.lanes.filter((lane) => ["passive-income", "market-intelligence"].includes(String(lane.lane_id || ""))) : [],
+        items: Array.isArray(workstreams?.items) ? workstreams.items.filter((item) => ["passive-income", "market-intelligence"].includes(String(item.lane_id || ""))) : [],
+        recent_runs: Array.isArray(workstreams?.recent_runs) ? workstreams.recent_runs.filter((item) => ["passive-income", "market-intelligence"].includes(String(item.lane_id || ""))) : [],
+        queue: Array.isArray(workstreams?.queue) ? workstreams.queue.filter((item) => ["passive-income", "market-intelligence"].includes(String(item.lane_id || ""))) : [],
+        approvals: Array.isArray(workstreams?.approvals) ? workstreams.approvals.filter((item) => ["passive-income", "market-intelligence"].includes(String(item.lane_id || ""))) : [],
+        artifacts: Array.isArray(workstreams?.artifacts) ? workstreams.artifacts.filter((item) => ["passive-income", "market-intelligence"].includes(String(item.lane_id || ""))) : [],
+        lane_readiness: Array.isArray(workstreams?.lane_readiness) ? workstreams.lane_readiness.filter((item) => ["passive-income", "market-intelligence"].includes(String(item.lane_id || ""))) : [],
+        blocked_runs: Array.isArray(wealthReview?.blocked_runs)
+          ? wealthReview.blocked_runs
+          : (Array.isArray(workstreams?.recent_runs) ? workstreams.recent_runs.filter((item) => ["skipped", "failed"].includes(String(item.status || "").trim().toLowerCase()) || String(item.blocked_reason || "").trim()) : []),
+        status_counts: workstreams?.status_counts || wealthReview?.status_counts || {{}},
+        summary: {{
+          ...(wealthReview?.summary || {{}}),
+          ...(workstreams?.summary || {{}}),
+        }},
+      }};
+      state.wealthRunsByLane = {{
+        "passive-income": Array.isArray(state.wealthReview?.recent_runs)
+          ? state.wealthReview.recent_runs.filter((item) => String(item.lane_id || "") === "passive-income")
+          : [],
+        "market-intelligence": Array.isArray(state.wealthReview?.recent_runs)
+          ? state.wealthReview.recent_runs.filter((item) => String(item.lane_id || "") === "market-intelligence")
+          : [],
+      }};
+      state.wealthAgent = state.wealthReview?.agent || null;
+      state.wealthReview.summary_text = wealthSummaryText(state.wealthReview);
+      const items = Array.isArray(state.wealthReview.items) ? state.wealthReview.items : [];
+      if (!items.find((item) => String(item.item_id || "") === String(state.wealthSelectedItemId || ""))) {{
+        const preferred = items.find((item) => String(item.lane_id || "") === String(state.wealthSelectedLane || "")) || items[0] || null;
+        state.wealthSelectedItemId = String(preferred?.item_id || "");
+        state.wealthSelectedLane = String(preferred?.lane_id || state.wealthSelectedLane || "passive-income");
+      }}
+      updateWealthLauncher(state.wealthReview);
+      return state.wealthReview;
+    }}
+
+    async function runWealthItemAction(action = "", itemId = "", routeTo = "") {{
+      const actor = preferredActorLabel();
+      const normalizedAction = String(action || "").trim().toLowerCase();
+      const normalizedItemId = String(itemId || "").trim();
+      if (!normalizedAction || !normalizedItemId) {{
+        return null;
+      }}
+      let url = "";
+      let payload = {{ actor }};
+      if (normalizedAction === "approve") {{
+        url = `/api/workstreams/items/${{encodeURIComponent(normalizedItemId)}}/approve`;
+        payload.note = "Approved from Wealth Review.";
+      }} else if (normalizedAction === "dismiss") {{
+        url = `/api/workstreams/items/${{encodeURIComponent(normalizedItemId)}}/dismiss`;
+        payload.note = "Dismissed from Wealth Review.";
+      }} else if (normalizedAction === "route") {{
+        url = `/api/workstreams/items/${{encodeURIComponent(normalizedItemId)}}/route`;
+        payload.route_to = String(routeTo || "").trim() || "deeper-research";
+        payload.note = payload.route_to === "deeper-research"
+          ? "Requested deeper research from Wealth Review."
+          : `Routed to ${{payload.route_to}} from Wealth Review.`;
+      }} else {{
+        return null;
+      }}
+      await loadJSON(url, {{
+        method: "POST",
+        headers: {{ "Content-Type": "application/json" }},
+        body: JSON.stringify(payload),
+      }});
+      await refreshWealthReview({{ force: true }});
+      openPacket("wealth");
+      return true;
+    }}
+
     function renderAssistantInboxItems(items, emptyLabel = "No unread assistant nudges are waiting right now.") {{
       const rows = Array.isArray(items) ? items : [];
       if (!rows.length) {{
@@ -10926,6 +12490,68 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       }});
     }}
 
+    function detectShellClientProfile() {{
+      const ua = navigator.userAgent || "";
+      const lowered = ua.toLowerCase();
+      let osName = "Unknown";
+      if (lowered.includes("iphone") || lowered.includes("ipad") || lowered.includes("cpu iphone os") || lowered.includes("cpu os")) {{
+        osName = "iOS";
+      }} else if (lowered.includes("android")) {{
+        osName = "Android";
+      }} else if (lowered.includes("macintosh") || lowered.includes("mac os x")) {{
+        osName = "macOS";
+      }} else if (lowered.includes("windows nt")) {{
+        osName = "Windows";
+      }} else if (lowered.includes("linux")) {{
+        osName = "Linux";
+      }}
+
+      let browserName = "Unknown browser";
+      if (lowered.includes("edg/")) {{
+        browserName = "Microsoft Edge";
+      }} else if (lowered.includes("opr/") || lowered.includes("opera")) {{
+        browserName = "Opera";
+      }} else if (lowered.includes("fxios") || lowered.includes("firefox")) {{
+        browserName = "Firefox";
+      }} else if (lowered.includes("crios") || lowered.includes("chrome/")) {{
+        browserName = "Chrome";
+      }} else if (lowered.includes("safari/") && !lowered.includes("chrome/") && !lowered.includes("crios")) {{
+        browserName = "Safari";
+      }}
+
+      let deviceType = "browser";
+      let hardwareLabel = "Browser";
+      if (lowered.includes("iphone")) {{
+        deviceType = "phone";
+        hardwareLabel = "iPhone";
+      }} else if (lowered.includes("ipad")) {{
+        deviceType = "tablet";
+        hardwareLabel = "iPad";
+      }} else if (lowered.includes("android") && lowered.includes("mobile")) {{
+        deviceType = "phone";
+        hardwareLabel = "Android phone";
+      }} else if (lowered.includes("android")) {{
+        deviceType = "tablet";
+        hardwareLabel = "Android tablet";
+      }} else if (lowered.includes("macintosh") || lowered.includes("mac os x")) {{
+        deviceType = "desktop";
+        hardwareLabel = "Mac";
+      }} else if (lowered.includes("windows nt")) {{
+        deviceType = "desktop";
+        hardwareLabel = "Windows PC";
+      }} else if (lowered.includes("linux")) {{
+        deviceType = "desktop";
+        hardwareLabel = "Linux device";
+      }}
+
+      return {{
+        os_name: osName,
+        browser_name: browserName,
+        device_type: deviceType,
+        hardware_label: hardwareLabel,
+      }};
+    }}
+
     function getShellDeviceIdentity() {{
       let deviceId = "";
       try {{
@@ -10938,16 +12564,18 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         deviceId = `jarvis-device-${{Date.now()}}`;
       }}
       state.shellDeviceId = deviceId;
-      const platform = navigator.userAgentData?.platform || navigator.platform || "Unknown platform";
-      const label = `${{platform}} browser`;
+      const clientProfile = detectShellClientProfile();
+      const label = `${{clientProfile.hardware_label}} browser`;
       const fingerprint = [navigator.userAgent || "", navigator.language || "", String(window.screen?.width || 0), String(window.screen?.height || 0)].join("|");
       return {{
         device_id: deviceId,
         label,
-        device_type: "browser",
+        device_type: clientProfile.device_type || "browser",
         room: document.getElementById("room")?.value || "office",
         user_agent: navigator.userAgent || "",
         fingerprint,
+        last_host: window.location.host || "",
+        last_origin: window.location.origin || "",
       }};
     }}
 
@@ -11001,6 +12629,40 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
           saveSessionActorOverride(data.resolved_actor_id || "");
         }}
       }}
+      await refreshCurrentDeviceProfile().catch(() => null);
+      return data;
+    }}
+
+    function applyCurrentDeviceRouting(data = null) {{
+      const normalized = data?.normalized_device || {{}};
+      const profile = data?.device_profile || {{}};
+      const route = data?.interface_route || {{}};
+      const binding = data?.user_profile_binding || {{}};
+      const mobileVariant = data?.mobile_remote_variant || {{}};
+      const setValue = (key, value, fallback = "unknown") => {{
+        document.body.dataset[key] = String(value || fallback)
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "") || fallback;
+      }};
+      setValue("deviceProfile", profile.device_profile_id, "general-browser-session");
+      setValue("interfaceRoute", route.route_id, "standard-chamber");
+      setValue("interfaceType", normalized.interface_type, "device");
+      setValue("accessMethod", normalized.access_method, "unknown");
+      setValue("boundProfile", binding.user_id || binding.source, "unassigned");
+      setValue("mobileVariant", mobileVariant.variant_id, "standard");
+    }}
+
+    async function refreshCurrentDeviceProfile() {{
+      if (!state.shellDeviceId) {{
+        state.currentDevice = null;
+        applyCurrentDeviceRouting(null);
+        return null;
+      }}
+      const data = await loadJSON(`/api/current-device?device_id=${{encodeURIComponent(state.shellDeviceId || "")}}`);
+      state.currentDevice = data;
+      applyCurrentDeviceRouting(data);
       return data;
     }}
 
@@ -11333,12 +12995,14 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         return;
       }}
       const needsDashboardHydration =
-        !state.dashboard ||
+        ((packetId === "dashboard" || packetId === "triage" || packetId === "today" || packetId === "review" || packetId === "tasks") && !state.dashboard) ||
         (packetId === "dashboard" && !data.assistant_notifications) ||
         (packetId === "triage" && !data.today_board) ||
         (packetId === "today" && !data.today_board) ||
         (packetId === "review" && !data.cadence_review) ||
-        (packetId === "tasks" && !data.open_loops);
+        (packetId === "tasks" && !data.open_loops) ||
+        (packetId === "finance-review" && !state.financeReview) ||
+        (packetId === "wealth" && !state.wealthReview);
       let heading = "Packet";
       let content = "";
 
@@ -11353,6 +13017,10 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
             :
           packetId === "today"
             ? "Today Board"
+            : packetId === "wealth"
+              ? "Wealth Review"
+            : packetId === "finance-review"
+              ? "Family Finance Review"
             : packetId === "review"
               ? "Cadence Review"
               : packetId === "tasks"
@@ -11364,6 +13032,10 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
           :
           packetId === "today"
             ? "Loading Today Board..."
+            : packetId === "wealth"
+              ? "Loading Wealth Review..."
+            : packetId === "finance-review"
+              ? "Loading Family Finance Review..."
             : packetId === "dashboard"
               ? "Loading Dashboard Report..."
             : packetId === "review"
@@ -11378,6 +13050,10 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         const actor = preferredActorLabel();
         const hydrate = packetId === "triage" || packetId === "today" || packetId === "review" || packetId === "dashboard"
           ? refreshDashboard({{ minIntervalMs: 10000 }})
+          : packetId === "finance-review"
+            ? refreshFinanceReview({{ force: true }})
+          : packetId === "wealth"
+            ? refreshWealthReview({{ force: true }})
           : packetId === "tasks"
             ? loadJSON(`/api/open-loops?actor=${{encodeURIComponent(actor)}}&limit=18`).then((openLoops) => {{
                 mergeDashboardState({{
@@ -11624,6 +13300,12 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
                 : ""
             }}
           </div>`;
+      }} else if (packetId === "finance-review") {{
+        heading = "Family Finance Review";
+        content = renderFinanceReviewMarkup(state.financeReview || {{}});
+      }} else if (packetId === "wealth") {{
+        heading = "Wealth Review";
+        content = renderWealthReviewMarkup(state.wealthReview || {{}});
       }} else if (packetId === "storm") {{
         heading = "Storm Weather Dashboard";
         content = `
@@ -11753,12 +13435,20 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
                 <div class="inline-actions">
                   <button type="button" id="connected-devices-refresh">Refresh Devices</button>
                   <button type="button" id="connected-devices-bind-current">Bind Current Browser</button>
+                  <button type="button" id="connected-devices-prune" class="ghost-toggle">Prune Old Browser Sessions</button>
                 </div>
+                <label class="toggle-row" style="margin-top:10px;">
+                  <input type="checkbox" id="connected-devices-hide-stale" checked>
+                  Hide stale and test-like browser sessions
+                </label>
                 <div class="settings-note" id="connected-devices-status">Loading connected devices…</div>
               `)
             }}
             ${{
               packetBlock("Summary", `<div class="stack" id="connected-devices-summary"><div class="metric">Loading device summary…</div></div>`)
+            }}
+            ${{
+              packetBlock("Current Connection", `<div class="stack" id="connected-device-current"><div class="metric">Loading current device…</div></div>`)
             }}
             ${{
               packetBlock("Registry", `<div class="stack" id="connected-devices-list"><div class="metric">Loading device registry…</div></div>`)
@@ -12122,6 +13812,135 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       }} else if (packetId === "workshop") {{
         heading = "Workshop Packet";
         content = renderWorkshopPacketMarkup(data);
+      }} else if (packetId === "mission-control") {{
+        heading = "Mission Control";
+        const missionControl = data.mission_control || state.missionControl || {{}};
+        const missions = Array.isArray(missionControl.active_missions) ? missionControl.active_missions : [];
+        const selectedMission = missions.find((item) => item.mission_id === state.activeMissionId) || missions[0] || null;
+        if (selectedMission?.mission_id) {{
+          state.activeMissionId = selectedMission.mission_id;
+        }}
+        const summary = missionControl.summary || {{}};
+        const missionCards = missions.length ? renderList(missions.map((item) => `
+          <button
+            type="button"
+            class="ghost-toggle mission-control-select ${{item.mission_id === state.activeMissionId ? "active" : ""}}"
+            data-mission-id="${{escapeHtml(item.mission_id || "")}}"
+          >
+            <strong>${{escapeHtml(item.title || "Mission")}}</strong>
+            <br>${{escapeHtml(item.primary_domain || "general")}} · ${{escapeHtml(item.status || "active")}}
+            <br><span class="muted">${{escapeHtml(item.brief || "")}}</span>
+          </button>
+        `)) : `<div class="empty">No active missions yet. Create one from this console.</div>`;
+        const selectedActions = Array.isArray(selectedMission?.action_decisions) ? selectedMission.action_decisions : [];
+        const selectedSubtasks = Array.isArray(selectedMission?.subtasks) ? selectedMission.subtasks : [];
+        const selectedEvidence = Array.isArray(selectedMission?.evidence) ? selectedMission.evidence : [];
+        const selectedApprovals = Array.isArray(selectedMission?.approvals_detail) ? selectedMission.approvals_detail : [];
+        const selectedAgents = Array.isArray(selectedMission?.agent_profiles) ? selectedMission.agent_profiles : [];
+        const selectedOutputs = Array.isArray(selectedMission?.outputs) ? selectedMission.outputs : [];
+        content = `
+          <div class="stack">
+            <div class="packet-grid">
+              ${{
+                packetBlock("Mission Engine", `
+                  <div class="metric"><strong>Active missions</strong> ${{escapeHtml(String(summary.active_missions || 0))}}</div>
+                  <div class="metric"><strong>Pending approvals</strong> ${{escapeHtml(String(summary.pending_approvals || 0))}}</div>
+                  <div class="metric"><strong>Task agents</strong> ${{escapeHtml(String(summary.task_agents || 0))}}</div>
+                  <div class="metric"><strong>Promoted agents</strong> ${{escapeHtml(String(summary.promoted_agents || 0))}}</div>
+                  <div class="settings-grid" style="margin-top: 14px;">
+                    <label>
+                      New family mission
+                      <textarea id="mission-control-request" placeholder="Example: Keep the family ahead of tomorrow's storms, morning schedule, and outbound messages."></textarea>
+                    </label>
+                    <div class="inline-actions">
+                      <button id="mission-control-create" type="button">Create Mission</button>
+                    </div>
+                  </div>
+                `)
+              }}
+              ${{
+                packetBlock("Active Dossiers", missionCards)
+              }}
+              ${{
+                packetBlock("Trust Zones", renderList((missionControl.trust_zones || []).slice(0, 5).map((zone) => `
+                  <div>
+                    <strong>${{escapeHtml(zone.name || zone.zone_id || "Trust zone")}}</strong>
+                    <br>${{escapeHtml(zone.approval_mode || "bounded-autonomy")}} · ${{escapeHtml(zone.status || "active")}}
+                    <br><span class="muted">${{escapeHtml(zone.description || "")}}</span>
+                  </div>
+                `)))
+              }}
+            </div>
+            ${{
+              selectedMission ? `
+                <div class="packet-grid">
+                  ${{
+                    packetBlock("Selected Dossier", `
+                      <div class="metric"><strong>${{escapeHtml(selectedMission.title || "Mission")}}</strong></div>
+                      <div class="metric"><strong>Status</strong> ${{escapeHtml(selectedMission.status || "active")}}</div>
+                      <div class="metric"><strong>Domain</strong> ${{escapeHtml(selectedMission.primary_domain || "general")}}</div>
+                      <div class="metric"><strong>Trust zone</strong> ${{escapeHtml(selectedMission.trust_zone || "family-bmad.personal-local")}}</div>
+                      <div class="metric"><strong>Autonomy</strong> ${{escapeHtml(selectedMission.autonomy_posture || "bounded-autonomy")}}</div>
+                      <div class="metric"><strong>Family impact</strong> ${{escapeHtml((selectedMission.family_impact || []).join(" · ") || "No direct impact noted yet.")}}</div>
+                      <div class="inline-actions" style="margin-top:10px;">
+                        <button class="ghost-toggle mission-status-action" type="button" data-mission-id="${{escapeHtml(selectedMission.mission_id || "")}}" data-status="active">Set Active</button>
+                        <button class="ghost-toggle mission-status-action" type="button" data-mission-id="${{escapeHtml(selectedMission.mission_id || "")}}" data-status="completed">Mark Complete</button>
+                        <button class="ghost-toggle mission-status-action" type="button" data-mission-id="${{escapeHtml(selectedMission.mission_id || "")}}" data-status="blocked">Mark Blocked</button>
+                      </div>
+                    `)
+                  }}
+                  ${{
+                    packetBlock("Delegated Agents", selectedAgents.length ? renderList(selectedAgents.map((item) => `
+                      <div>
+                        <strong>${{escapeHtml(item.label || item.agent_id || "Agent")}}</strong>
+                        <br>${{escapeHtml(item.class_type || item.agent_class || "agent")}} · ${{escapeHtml(item.primary_domain || item.domain || "general")}}
+                        <br><span class="muted">${{escapeHtml((item.mission_roles || []).join(", ") || item.purpose || "")}}</span>
+                      </div>
+                    `)) : `<div class="empty">No delegated agents recorded.</div>`)
+                  }}
+                  ${{
+                    packetBlock("Action Resolutions", selectedActions.length ? renderList(selectedActions.map((item) => `
+                      <div>
+                        <strong>${{escapeHtml(item.action_type || "action")}}</strong> · ${{escapeHtml(item.resolution || "review")}}
+                        <br>${{escapeHtml(item.trust_zone || "")}}
+                        <br><span class="muted">${{escapeHtml(item.rationale || "")}}</span>
+                      </div>
+                    `)) : `<div class="empty">No action decisions recorded.</div>`)
+                  }}
+                  ${{
+                    packetBlock("Subtasks", selectedSubtasks.length ? renderList(selectedSubtasks.map((item) => `
+                      <div>
+                        <strong>${{escapeHtml(item.title || "Subtask")}}</strong> · ${{escapeHtml(item.status || "active")}}
+                        <br>${{escapeHtml(item.owner_agent || "JARVIS")}} · ${{escapeHtml(item.domain || "general")}}
+                        <br><span class="muted">${{escapeHtml(item.description || "")}}</span>
+                      </div>
+                    `)) : `<div class="empty">No subtasks recorded yet.</div>`)
+                  }}
+                  ${{
+                    packetBlock("Evidence", selectedEvidence.length ? renderList(selectedEvidence.slice(0, 8).map((item) => `
+                      <div>
+                        <strong>${{escapeHtml(item.title || "Evidence")}}</strong>
+                        <br>${{escapeHtml(item.source_agent || item.source_system || "source")}} · ${{escapeHtml(item.kind || "signal")}}
+                        <br><span class="muted">${{escapeHtml(item.summary || item.detail || "")}}</span>
+                      </div>
+                    `)) : `<div class="empty">No evidence captured yet.</div>`)
+                  }}
+                  ${{
+                    packetBlock("Approvals + Outputs", `
+                      <div class="metric"><strong>Approvals</strong> ${{escapeHtml(String(selectedApprovals.length || 0))}}</div>
+                      ${{selectedApprovals.length ? renderList(selectedApprovals.map((item) => `
+                        <div><strong>${{escapeHtml(item.status || "pending")}}</strong><br>${{escapeHtml(item.request || "")}}</div>
+                      `)) : `<div class="empty">No approvals are attached to this mission.</div>`}}
+                      <div class="metric" style="margin-top:12px;"><strong>Outputs</strong> ${{escapeHtml(String(selectedOutputs.length || 0))}}</div>
+                      ${{selectedOutputs.length ? renderList(selectedOutputs.map((item) => `
+                        <div><strong>${{escapeHtml(item.title || item.kind || "Output")}}</strong><br>${{escapeHtml(item.summary || "")}}</div>
+                      `)) : `<div class="empty">No outputs have been committed yet.</div>`}}
+                    `)
+                  }}
+                </div>
+              ` : `` 
+            }}
+          </div>`;
       }} else if (packetId === "catalyst") {{
         heading = "Catalyst";
         const catalystLive = data.catalyst_overview?.live_workspace || {{}};
@@ -12703,7 +14522,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
               packetBlock("Personal Accounts", `
                 <div class="settings-grid">
                   <div class="settings-note">
-                    Each household member can have separate mail and calendar identities. Chris and Rebekah do not need to share a provider or a login.
+                    Each household member can have separate mail and calendar identities. Google is wired through Google OAuth. Outlook is wired through Microsoft Graph once the JARVIS_MICROSOFT_* values are present in your local .env.
                   </div>
                   <div class="stack">
                     ${{
@@ -12719,8 +14538,8 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
                             <br>
                             Status: ${{escapeHtml(account.connection?.detail || account.status || "planned")}}
                             <div class="inline-actions" style="margin-top:8px;">
-                              <button class="account-connect" type="button" data-account-id="${{escapeHtml(account.account_id)}}">${{account.provider === "google" ? "Connect" : "Provider Setup Pending"}}</button>
-                              <button class="ghost-toggle account-disconnect" type="button" data-account-id="${{escapeHtml(account.account_id)}}"${{account.provider === "google" ? "" : " disabled"}}>Disconnect</button>
+                              <button class="account-connect" type="button" data-account-id="${{escapeHtml(account.account_id)}}">${{account.provider === "google" ? "Connect Google" : (account.provider === "outlook" ? "Connect Outlook" : "Provider Setup Pending")}}</button>
+                              <button class="ghost-toggle account-disconnect" type="button" data-account-id="${{escapeHtml(account.account_id)}}"${{account.provider === "google" || account.provider === "outlook" ? "" : " disabled"}}>Disconnect</button>
                             </div>
                           </div>
                         `).join("")
@@ -12760,7 +14579,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
                   <div class="inline-actions">
                     <button id="save-personal-account" type="button">Save Account</button>
                   </div>
-                  <div class="settings-note" id="account-settings-status">Create one account per person per provider.</div>
+                  <div class="settings-note" id="account-settings-status">You can connect multiple accounts per person and provider when JARVIS needs a separate mailbox or calendar identity.</div>
                 </div>`)
             }}
           </div>`;
@@ -12809,6 +14628,95 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       }} else if (packetId === "review") {{
         wireReviewActions();
         wireAssistantInboxActions("review");
+      }} else if (packetId === "mission-control") {{
+        document.getElementById("mission-control-create")?.addEventListener("click", async () => {{
+          const request = (document.getElementById("mission-control-request")?.value || "").trim();
+          if (!request) return;
+          const actor = preferredActorLabel();
+          const room = document.getElementById("room")?.value || "office";
+          try {{
+            const created = await loadJSON("/api/missions", {{
+              method: "POST",
+              headers: {{ "Content-Type": "application/json" }},
+              body: JSON.stringify({{ actor, room, request }}),
+            }});
+            state.activeMissionId = created.mission_id || "";
+            await refreshDashboard({{ force: true, reopenPacket: false }});
+            openPacket("mission-control");
+          }} catch (error) {{
+            console.warn("Mission creation failed", error);
+          }}
+        }});
+        document.querySelectorAll(".mission-control-select").forEach((button) => {{
+          button.addEventListener("click", () => {{
+            state.activeMissionId = button.getAttribute("data-mission-id") || "";
+            openPacket("mission-control");
+          }});
+        }});
+        document.querySelectorAll(".mission-status-action").forEach((button) => {{
+          button.addEventListener("click", async () => {{
+            const missionId = button.getAttribute("data-mission-id") || "";
+            const status = button.getAttribute("data-status") || "active";
+            if (!missionId) return;
+            try {{
+              await loadJSON(`/api/missions/${{encodeURIComponent(missionId)}}/status`, {{
+                method: "POST",
+                headers: {{ "Content-Type": "application/json" }},
+                body: JSON.stringify({{
+                  status,
+                  note: status === "completed"
+                    ? "Mission closed from Mission Control."
+                    : status === "blocked"
+                      ? "Mission blocked and waiting for intervention."
+                      : "Mission returned to active work.",
+                }}),
+              }});
+              await refreshDashboard({{ force: true, reopenPacket: false }});
+              openPacket("mission-control");
+            }} catch (error) {{
+              console.warn("Mission status update failed", error);
+            }}
+          }});
+        }});
+      }} else if (packetId === "finance-review") {{
+        document.querySelectorAll(".finance-open-wealth").forEach((button) => {{
+          button.addEventListener("click", () => {{
+            openPacket("wealth");
+          }});
+        }});
+      }} else if (packetId === "wealth") {{
+        document.querySelectorAll(".wealth-lane-select").forEach((button) => {{
+          button.addEventListener("click", () => {{
+            state.wealthSelectedLane = button.getAttribute("data-wealth-lane") || "passive-income";
+            const laneItems = (state.wealthReview?.items || []).filter((item) => String(item.lane_id || "") === String(state.wealthSelectedLane || ""));
+            state.wealthSelectedItemId = String(laneItems[0]?.item_id || "");
+            openPacket("wealth");
+          }});
+        }});
+        document.querySelectorAll(".wealth-item-select").forEach((button) => {{
+          button.addEventListener("click", () => {{
+            state.wealthSelectedItemId = button.getAttribute("data-wealth-item-id") || "";
+            state.wealthSelectedLane = button.getAttribute("data-wealth-item-lane") || state.wealthSelectedLane || "passive-income";
+            openPacket("wealth");
+          }});
+        }});
+        document.querySelectorAll(".wealth-item-action").forEach((button) => {{
+          button.addEventListener("click", async () => {{
+            const action = button.getAttribute("data-wealth-action") || "";
+            const itemId = button.getAttribute("data-wealth-item-id") || "";
+            const routeTo = button.getAttribute("data-wealth-route") || "";
+            button.setAttribute("disabled", "disabled");
+            try {{
+              await runWealthItemAction(action, itemId, routeTo);
+            }} catch (error) {{
+              console.warn("Wealth action failed", error);
+              document.getElementById("last-jarvis-text").textContent = error?.message || "Wealth action failed.";
+              syncTranscriptRail();
+            }} finally {{
+              button.removeAttribute("disabled");
+            }}
+          }});
+        }});
       }} else if (packetId === "tasks") {{
         wireTaskQueueActions();
       }} else if (packetId === "workshop") {{
@@ -12842,7 +14750,19 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       bringWindowToFront("modal");
       syncDesignReviewPanel();
     }}
-    window.__jarvisOpenPacket = openPacket;
+    window.__jarvisOpenPacket = async (packetId, options = {{}}) => {{
+      openPacket(packetId, options);
+      for (let attempt = 0; attempt < 120; attempt += 1) {{
+        const pendingForPacket = state.packetHydrationPending === packetId;
+        const modalOpen = document.getElementById("modal-layer")?.classList.contains("open");
+        const bodyText = (document.getElementById("modal-body")?.textContent || "").trim();
+        if (!pendingForPacket && modalOpen && bodyText && !/^Loading\\b/i.test(bodyText)) {{
+          return true;
+        }}
+        await new Promise((resolve) => window.setTimeout(resolve, 50));
+      }}
+      return false;
+    }};
 
     function closePacket() {{
       stopVisionPreview();
@@ -13004,14 +14924,31 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
 
     function wireConnectedDevicesAdmin() {{
       const summary = document.getElementById("connected-devices-summary");
+      const current = document.getElementById("connected-device-current");
       const list = document.getElementById("connected-devices-list");
       const status = document.getElementById("connected-devices-status");
       const refreshButton = document.getElementById("connected-devices-refresh");
       const bindCurrentButton = document.getElementById("connected-devices-bind-current");
+      const pruneButton = document.getElementById("connected-devices-prune");
+      const hideStaleToggle = document.getElementById("connected-devices-hide-stale");
 
-      if (!summary || !list || !status) {{
+      if (!summary || !current || !list || !status) {{
         return;
       }}
+
+      const isStaleOrTestLike = (device) => {{
+        const ua = String(device.user_agent || "").toLowerCase();
+        const label = String(device.label || "").toLowerCase();
+        const host = String(device.last_host || "").toLowerCase();
+        const mapped = !!(device.owner_user_id || device.default_actor_id || device.suggested_default_actor_id);
+        const shared = !!device.shared;
+        const alwaysAvailable = !!device.always_available;
+        const seen = Date.parse(String(device.last_seen_at || ""));
+        const ageDays = Number.isFinite(seen) ? ((Date.now() - seen) / 86400000) : 9999;
+        const testLike = ua.includes("headlesschrome") || ua.includes("electron") || ua.includes("codex/") || label === "macintel browser";
+        const stale = ageDays >= 7 && !mapped && !shared && !alwaysAvailable && !host.endsWith(".ts.net");
+        return testLike || stale;
+      }};
 
       const renderSummary = (data) => {{
         const counts = data.summary || {{}};
@@ -13021,6 +14958,32 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
           <div class="metric"><strong>Shared</strong> ${{escapeHtml(String(counts.shared || 0))}} · <strong>Personal</strong> ${{escapeHtml(String(counts.personal || 0))}}</div>
           <div class="metric"><strong>Suggested defaults</strong> ${{escapeHtml(String(counts.suggested_defaults || 0))}}</div>
           <div class="metric"><strong>Current browser</strong> ${{escapeHtml(state.shellDeviceId || "--")}}</div>
+        `;
+      }};
+
+      const renderCurrentConnection = (data) => {{
+        const device = data.current_device || {{}};
+        const normalized = device.normalized_device || {{}};
+        const profile = device.device_profile || {{}};
+        const route = device.interface_route || {{}};
+        const binding = device.user_profile_binding || {{}};
+        if (!device.device_id) {{
+          current.innerHTML = `<div class="metric">Current browser has not been bound yet. Use <strong>Bind Current Browser</strong> first.</div>`;
+          return;
+        }}
+        const mappedTo = device.owner_display_name || device.default_actor_display_name || normalized.likely_actor_display_name || "unassigned";
+        current.innerHTML = `
+          <div class="metric"><strong>Device</strong> ${{escapeHtml(normalized.hardware_label || device.label || "Unknown device")}}</div>
+          <div class="metric"><strong>OS</strong> ${{escapeHtml(normalized.os_name || "Unknown")}} · <strong>Browser</strong> ${{escapeHtml(normalized.browser_name || "Unknown browser")}}</div>
+          <div class="metric"><strong>Interface</strong> ${{escapeHtml(device.device_type || normalized.interface_type || "device")}} · <strong>Access</strong> ${{escapeHtml(normalized.access_label || "Unknown path")}}</div>
+          <div class="metric"><strong>Device profile</strong> ${{escapeHtml(profile.device_profile_label || "General Browser Session")}}</div>
+          <div class="metric"><strong>Interface route</strong> ${{escapeHtml(route.route_label || "Standard Chamber")}} · <strong>Chat</strong> ${{escapeHtml(route.chat_mode || "lower-rail")}}</div>
+          <div class="metric"><strong>Mapped to</strong> ${{escapeHtml(mappedTo)}} · <strong>Confidence</strong> ${{escapeHtml((device.owner_confidence || {{}}).confidence || normalized.owner_confidence || "low")}}</div>
+          <div class="metric"><strong>User profile binding</strong> ${{escapeHtml(binding.display_name || binding.user_id || binding.source || "unassigned")}} · <strong>Source</strong> ${{escapeHtml(binding.source || "unassigned")}}</div>
+          <div class="settings-note">${{escapeHtml(profile.summary || "")}}</div>
+          <div class="settings-note">${{escapeHtml(binding.summary || "")}}</div>
+          <div class="metric"><strong>Host</strong> ${{escapeHtml(normalized.host || "--")}}</div>
+          <div class="settings-note">${{escapeHtml(device.device_id || "")}}</div>
         `;
       }};
 
@@ -13035,17 +14998,32 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         const lastActor = device.last_actor_display_name || device.last_actor_id || "--";
         const suggested = device.suggested_default_actor_id || "--";
         const sharedLabel = device.shared ? "shared" : "personal";
+        const normalized = device.normalized_device || {{}};
+        const profile = device.device_profile || {{}};
+        const route = device.interface_route || {{}};
+        const binding = device.user_profile_binding || {{}};
         return `
-          <div class="metric" data-device-card="${{escapeHtml(device.device_id || "")}}">
-            <strong>${{escapeHtml(device.label || "Unnamed device")}}</strong> · ${{escapeHtml(device.device_type || "device")}} · ${{escapeHtml(sharedLabel)}} · ${{escapeHtml(device.posture || "unassigned")}}
-            <br>
-            Mapped to: ${{escapeHtml(mappedLabel)}} · Trust: ${{escapeHtml(device.trust_level || "trusted")}}
-            <br>
-            Last actor: ${{escapeHtml(lastActor)}} · Suggested default: ${{escapeHtml(suggested)}}
-            <br>
-            Last seen: ${{escapeHtml(device.last_seen_at || "never")}} · Fingerprint: ${{escapeHtml(fingerprintLabel)}}
+          <div class="metric connected-device-card" data-device-card="${{escapeHtml(device.device_id || "")}}">
+            <div class="connected-device-meta">
+              <strong>${{escapeHtml(device.label || "Unnamed device")}}</strong> · ${{escapeHtml(device.device_type || "device")}} · ${{escapeHtml(sharedLabel)}} · ${{escapeHtml(device.posture || "unassigned")}}
+              <br>
+              Mapped to: ${{escapeHtml(mappedLabel)}} · Trust: ${{escapeHtml(device.trust_level || "trusted")}}
+              <br>
+              OS: ${{escapeHtml(normalized.os_name || "Unknown")}} · Browser: ${{escapeHtml(normalized.browser_name || "Unknown browser")}} · Access: ${{escapeHtml(normalized.access_label || "Unknown path")}}
+              <br>
+              Profile: ${{escapeHtml(profile.device_profile_label || "General Browser Session")}} · Route: ${{escapeHtml(route.route_label || "Standard Chamber")}}
+              <br>
+              Suggested user: ${{escapeHtml(binding.display_name || binding.user_id || binding.source || "unassigned")}} · Source: ${{escapeHtml(binding.source || "unassigned")}}
+              <br>
+              Last actor: ${{escapeHtml(lastActor)}} · Suggested default: ${{escapeHtml(suggested)}}
+              <br>
+              Last seen: ${{escapeHtml(device.last_seen_at || "never")}} · Fingerprint: ${{escapeHtml(fingerprintLabel)}}
+            </div>
             ${{currentBadge}}
-            <div class="settings-grid" style="margin-top:12px;">
+            <div class="inline-actions" style="margin-top:10px; margin-bottom:8px;">
+              <button class="connected-device-save" type="button" data-device-id="${{escapeHtml(device.device_id || "")}}">Save Mapping</button>
+            </div>
+            <div class="settings-grid connected-device-form" style="margin-top:12px;">
               <label>
                 Label
                 <input data-field="label" value="${{escapeHtml(device.label || "")}}">
@@ -13129,27 +15107,36 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       async function refreshDevices() {{
         status.textContent = "Refreshing connected devices…";
         summary.innerHTML = `<div class="metric">Loading device summary…</div>`;
+        current.innerHTML = `<div class="metric">Loading current device…</div>`;
         list.innerHTML = `<div class="metric">Loading device registry…</div>`;
         try {{
-          const data = await loadJSON("/api/connected-devices");
+          const data = await loadJSON(`/api/connected-devices?current_device_id=${{encodeURIComponent(state.shellDeviceId || "")}}`);
           state.connectedDevices = data;
+          state.currentDevice = data.current_device || state.currentDevice || null;
+          applyCurrentDeviceRouting(state.currentDevice);
           renderSummary(data);
-          const devices = data.devices || [];
+          renderCurrentConnection(data);
+          const allDevices = data.devices || [];
+          const hideStale = !!hideStaleToggle?.checked;
+          const devices = hideStale ? allDevices.filter((device) => !isStaleOrTestLike(device)) : allDevices;
           list.innerHTML = devices.length
             ? devices.map((device) => renderDeviceCard(device, data)).join("")
             : `<div class="metric">No device sessions have been registered yet. Open JARVIS on the device and bind the current browser first.</div>`;
           wireDeviceButtons(data);
+          const hiddenCount = Math.max(0, allDevices.length - devices.length);
           status.textContent = devices.length
-            ? `Showing ${{devices.length}} known device sessions. Unassigned devices can be mapped directly here.`
+            ? `Showing ${{devices.length}} device session(s)${{hiddenCount ? ` · ${{hiddenCount}} hidden as stale/test-like` : ""}}. Unassigned devices can be mapped directly here.`
             : "No device sessions have been registered yet.";
         }} catch (error) {{
           summary.innerHTML = `<div class="metric">Connected device summary unavailable.</div>`;
+          current.innerHTML = `<div class="metric">Current device unavailable: ${{escapeHtml(error.message || "request failed")}}</div>`;
           list.innerHTML = `<div class="metric">Connected device registry unavailable: ${{escapeHtml(error.message || "request failed")}}</div>`;
           status.textContent = error.message || "Connected device refresh failed.";
         }}
       }}
 
       refreshButton?.addEventListener("click", refreshDevices);
+      hideStaleToggle?.addEventListener("change", refreshDevices);
       bindCurrentButton?.addEventListener("click", async () => {{
         try {{
           const data = await bindShellIdentity();
@@ -13159,6 +15146,21 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
           await refreshDevices();
         }} catch (error) {{
           status.textContent = error.message || "Failed to bind the current browser.";
+        }}
+      }});
+      pruneButton?.addEventListener("click", async () => {{
+        status.textContent = "Pruning old browser sessions…";
+        try {{
+          const result = await loadJSON("/api/identity/devices/prune", {{
+            method: "POST",
+            headers: {{ "Content-Type": "application/json" }},
+            body: JSON.stringify({{ stale_days: 7, prune_test_like: true }}),
+          }});
+          state.identity = result.identity || state.identity;
+          status.textContent = `Pruned ${{result.removed_count || 0}} old browser session(s).`;
+          await refreshDevices();
+        }} catch (error) {{
+          status.textContent = error.message || "Failed to prune old browser sessions.";
         }}
       }});
 
@@ -13542,11 +15544,30 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       }}
     }}
 
+    async function refreshLaunchZone() {{
+      const now = Date.now();
+      if (state._launchZoneRefreshedAt && (now - state._launchZoneRefreshedAt) < 60000) {{
+        return;
+      }}
+      state._launchZoneRefreshedAt = now;
+      try {{
+        const data = await loadJSON('/api/publishing/launch-control');
+        populateLaunchZone(data);
+      }} catch (err) {{
+        // Silently hide zone if endpoint unavailable
+        populateLaunchZone(null);
+      }}
+    }}
+
     async function applyShellChrome(data, options = {{}}) {{
       if (options.refreshStorm !== false && (!state.storm.lastFetchedAt || (Date.now() - state.storm.lastFetchedAt) > 900000)) {{
         refreshStormWeather().catch((error) => console.warn("Storm shell refresh failed", error));
       }}
+      refreshLaunchZone().catch((error) => console.warn("Launch zone refresh failed", error));
       updateRuntimeFreshness(data);
+      if (state.currentDevice) {{
+        applyCurrentDeviceRouting(state.currentDevice);
+      }}
       updateDashboardLauncher(data);
       renderCoreHomeSummary(data);
       syncShellFocusMode();
@@ -13612,8 +15633,9 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         return state.dashboard;
       }}
       const actor = preferredActorLabel();
+      const deviceParam = `&device_id=${{encodeURIComponent(state.shellDeviceId || "")}}`;
       state.shellStateRefreshPromise = (async () => {{
-        const data = mergeDashboardState(await loadJSON(`/api/shell-state?actor=${{encodeURIComponent(actor)}}`));
+        const data = mergeDashboardState(await loadJSON(`/api/shell-state?actor=${{encodeURIComponent(actor)}}${{deviceParam}}`));
         state.lastShellStateRefreshAt = Date.now();
         return applyShellChrome(data, options);
       }})();
@@ -13635,8 +15657,9 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         return state.dashboard;
       }}
       const actor = preferredActorLabel();
+      const deviceParam = `&device_id=${{encodeURIComponent(state.shellDeviceId || "")}}`;
       state.dashboardRefreshPromise = (async () => {{
-        const data = mergeDashboardState(await loadJSON(`/api/dashboard?actor=${{encodeURIComponent(actor)}}`));
+        const data = mergeDashboardState(await loadJSON(`/api/dashboard?actor=${{encodeURIComponent(actor)}}${{deviceParam}}`));
         state.lastDashboardRefreshAt = Date.now();
         state.lastShellStateRefreshAt = state.lastDashboardRefreshAt;
         return applyShellChrome(data, options);
@@ -14055,11 +16078,21 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       }}
       try {{
         stopRecognition();
-        const response = await fetch("/api/tts", {{
+        // Epic 7: Use /api/voice/synthesize (FridayPersona text cleaning + provider cascade)
+        // Falls back gracefully to /api/tts if voice pipeline is unavailable.
+        const currentActorId = (typeof actor !== "undefined" ? actor : "") || "chris";
+        const response = await fetch("/api/voice/synthesize", {{
           method: "POST",
           headers: {{ "Content-Type": "application/json" }},
-          body: JSON.stringify({{ text }})
-        }});
+          body: JSON.stringify({{ text, actor_id: currentActorId }})
+        }}).catch(() =>
+          // Fallback to legacy /api/tts if voice pipeline endpoint is unavailable
+          fetch("/api/tts", {{
+            method: "POST",
+            headers: {{ "Content-Type": "application/json" }},
+            body: JSON.stringify({{ text }})
+          }})
+        );
         if (!response.ok) {{
           throw new Error(`Voice output unavailable (${{response.status}})`);
         }}
@@ -14071,6 +16104,12 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         audio.onplay = () => {{
           startAudioReactivePulse(audio);
           setVoiceState("speaking", "JARVIS is speaking.");
+          // Notify server of speaking state for voice state tracking
+          fetch("/api/voice/state", {{
+            method: "POST",
+            headers: {{ "Content-Type": "application/json" }},
+            body: JSON.stringify({{ state: "speaking" }})
+          }}).catch(() => {{}});
         }};
         audio.onended = () => {{
           stopAudioReactivePulse();
@@ -14084,6 +16123,12 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
           armImmediateReplyWindow(text);
           setVoiceState("idle", conversationWindowActive() ? "Awaiting your answer." : 'Standing by for "Hey Jarvis", "Jarvis", or a double clap.');
           queueAlwaysOnListening();
+          // Notify server playback finished
+          fetch("/api/voice/state", {{
+            method: "POST",
+            headers: {{ "Content-Type": "application/json" }},
+            body: JSON.stringify({{ state: "idle" }})
+          }}).catch(() => {{}});
         }};
         audio.onerror = () => {{
           stopAudioReactivePulse();
@@ -14098,6 +16143,11 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
             setVoiceState("idle", "Voice output unavailable. Standing by.");
             queueAlwaysOnListening();
           }}
+          fetch("/api/voice/state", {{
+            method: "POST",
+            headers: {{ "Content-Type": "application/json" }},
+            body: JSON.stringify({{ state: "idle" }})
+          }}).catch(() => {{}});
         }};
         await audio.play();
       }} catch (error) {{
@@ -14247,7 +16297,10 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
     function packetFromRequest(request) {{
       const lowered = request.toLowerCase();
       if (lowered.includes("dashboard") || lowered.includes("full report")) return "dashboard";
+      if (lowered.includes("finance review for passive income") || lowered.includes("wealth") || lowered.includes("fisk") || lowered.includes("passive income") || lowered.includes("market intelligence")) return "wealth";
+      if (lowered.includes("family finances") || lowered.includes("family finance") || lowered.includes("spending") || lowered.includes("budget") || lowered.includes("cash") || lowered.includes("runway") || lowered.includes("finance review") || lowered.includes("finance")) return "finance-review";
       if (lowered.includes("today board") || lowered.includes("run my day") || lowered.includes("what needs my attention")) return "today";
+      if (lowered.includes("mission control") || lowered.includes("mission") || lowered.includes("dossier") || lowered.includes("orchestrate")) return "mission-control";
       if (lowered.includes("brief") || lowered.includes("agenda") || lowered.includes("today")) return "briefing";
       if (lowered.includes("weather")) return "storm";
       if (lowered.includes("home") || lowered.includes("garage") || lowered.includes("freezer")) return "home";
@@ -14492,6 +16545,18 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         .catch(() => state.dashboard)
         .finally(() => openPacket("dashboard"));
     }});
+    document.getElementById("finance-review-launcher")?.addEventListener("click", () => {{
+      state.manualPacketIntentUntil = Date.now() + 5000;
+      refreshFinanceReview({{ force: true }})
+        .catch(() => state.financeReview)
+        .finally(() => openPacket("finance-review"));
+    }});
+    document.getElementById("wealth-launcher")?.addEventListener("click", () => {{
+      state.manualPacketIntentUntil = Date.now() + 5000;
+      refreshWealthReview({{ force: true }})
+        .catch(() => state.wealthReview)
+        .finally(() => openPacket("wealth"));
+    }});
 
     document.getElementById("mode-window-close").addEventListener("click", closeModePanel);
     document.getElementById("mode-window-minimize").addEventListener("click", () => toggleWindowMinimized("mode"));
@@ -14579,6 +16644,11 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         if (packet) {{
           openPacket(packet);
         }}
+      }});
+    }});
+    document.querySelectorAll("[data-home-action='focus-speak']").forEach((button) => {{
+      button.addEventListener("click", () => {{
+        focusSpeakComposer();
       }});
     }});
     document.querySelector("#scene-stage .scene-shell-head")?.addEventListener("pointerdown", (event) => {{
@@ -14820,6 +16890,24 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       socket.addEventListener("message", (event) => {{
         try {{
           const payload = JSON.parse(event.data);
+          if (String(payload.type || "") === "finance-review.completed" && (state.packet === "finance-review" || state.financeReview)) {{
+            refreshFinanceReview({{ force: true }})
+              .then(() => {{
+                if (state.packet === "finance-review") {{
+                  openPacket("finance-review");
+                }}
+              }})
+              .catch((error) => console.warn("Finance review refresh from event stream failed", error));
+          }}
+          if (String(payload.type || "").startsWith("autonomous-workstream.") && (state.packet === "wealth" || state.wealthReview)) {{
+            refreshWealthReview({{ force: true }})
+              .then(() => {{
+                if (state.packet === "wealth") {{
+                  openPacket("wealth");
+                }}
+              }})
+              .catch((error) => console.warn("Wealth review refresh from event stream failed", error));
+          }}
           if (payload.dashboard) {{
             mergeDashboardState(payload.dashboard);
             applyShellChrome(state.dashboard).catch((error) => console.warn("Dashboard event apply failed", error));
@@ -14846,8 +16934,12 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
     function updateCoreDockMode() {{
       const mobileStack = window.innerWidth <= 1080;
       const compactThreshold = 1480;
-      const shouldDockCorner = !mobileStack && window.innerWidth < compactThreshold;
+      const quietHome = chamberHomeModeActive();
+      const shouldDockCorner = !quietHome && !mobileStack && window.innerWidth < compactThreshold;
       document.body.dataset.coreDock = shouldDockCorner ? "corner" : "center";
+      if (quietHome) {{
+        state.windowPlacements.triageSummary = defaultTriageSummaryPlacement();
+      }}
       applyPanelLayouts();
       applyModalPlacement();
     }}
@@ -15202,6 +17294,173 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         );
       }}
     }});
+
+    // ============================================================
+    // LIVING BRIEFING — Zone population functions
+    // ============================================================
+    function populateBriefingZone(items) {{
+      const el = document.querySelector('.briefing-items');
+      if (!el) return;
+      if (!items || items.length === 0) {{
+        el.innerHTML = '<p class="zone-empty">I\'ve been watching. Here\'s what matters.</p>';
+        return;
+      }}
+      el.innerHTML = items.map(item => `
+        <div class="briefing-item" data-priority="${{item.priority || 'normal'}}">
+          <span class="briefing-dot"></span>
+          <div class="briefing-content">
+            <div class="briefing-text">${{item.text || item.message || item.summary || ''}}</div>
+            ${{item.sub ? `<div class="briefing-sub">${{item.sub}}</div>` : ''}}
+          </div>
+        </div>
+      `).join('');
+    }}
+
+    function populateAlreadyZone(items) {{
+      const el = document.querySelector('.working-items');
+      if (!el) return;
+      if (!items || items.length === 0) {{
+        el.innerHTML = '<p class="zone-empty">Agents standing by.</p>';
+        return;
+      }}
+      el.innerHTML = items.slice(0, 4).map(item => `
+        <div class="working-item">
+          <span class="working-agent">${{item.agent || item.label || 'JARVIS'}}</span>
+          <span class="working-action">${{item.action || item.text || ''}}</span>
+        </div>
+      `).join('');
+    }}
+
+    function populateNeedsZone(items) {{
+      const el = document.querySelector('.needs-items');
+      if (!el) return;
+      const badge = document.getElementById('needs-badge');
+      if (!items || items.length === 0) {{
+        el.innerHTML = '<p class="zone-empty">Nothing waiting.</p>';
+        if (badge) {{ badge.style.display = 'none'; badge.textContent = '0'; }}
+        return;
+      }}
+      if (badge) {{ badge.style.display = 'inline'; badge.textContent = String(items.length); }}
+      el.innerHTML = items.map(item => `
+        <div class="needs-item" data-id="${{item.id || ''}}">
+          <div class="needs-text">${{item.text || item.message || ''}}</div>
+          <div class="needs-actions">
+            <button class="needs-btn needs-approve" onclick="approveNeedsItem('${{item.id || ''}}')">Approve</button>
+            <button class="needs-btn needs-dismiss" onclick="dismissNeedsItem('${{item.id || ''}}')">Dismiss</button>
+          </div>
+        </div>
+      `).join('');
+    }}
+
+    function populateDriftZone(items) {{
+      const el = document.querySelector('.drift-items');
+      if (!el) return;
+      if (!items || items.length === 0) {{
+        el.innerHTML = '<div class="drift-ok"><span class="drift-ok-dot"></span> On course.</div>';
+        return;
+      }}
+      el.innerHTML = items.map(item => `
+        <div class="drift-item" data-severity="${{item.severity || 'warn'}}">
+          <span class="drift-indicator"></span>
+          <span class="drift-text">${{item.text || item.message || ''}}</span>
+        </div>
+      `).join('');
+    }}
+
+    function populateLaunchZone(data) {{
+      if (!data || !data.active_project) {{
+        document.getElementById('zone-launch').style.display = 'none';
+        return;
+      }}
+      document.getElementById('zone-launch').style.display = '';
+
+      const p = data.active_project;
+
+      // Header
+      const daysToLaunch = p.days_to_launch >= 0
+        ? `${{p.days_to_launch}}d to launch`
+        : `${{Math.abs(p.days_to_launch)}}d post-launch`;
+      document.getElementById('launch-project-header').innerHTML =
+        `<span>${{p.title}}</span> <span style="opacity:0.6;font-size:0.85em;font-weight:400">${{p.phase}} · ${{daysToLaunch}}</span>`;
+
+      // Tracks
+      const tracks = [
+        {{ label: 'Book',     done: p.book_chapters_done     || 0, total: p.book_chapters_total     || 0 }},
+        {{ label: 'Workbook', done: p.workbook_chapters_done || 0, total: p.workbook_chapters_total || 0 }},
+        {{ label: 'Course',   done: p.course_modules_done    || 0, total: p.course_modules_total    || 0 }},
+      ];
+      document.getElementById('launch-tracks').innerHTML = tracks.map(t => {{
+        const pct = t.total > 0 ? Math.round((t.done / t.total) * 100) : 0;
+        return `<div class="launch-track">
+          <div class="launch-track-label">${{t.label}} · ${{t.done}}/${{t.total}}</div>
+          <div class="launch-track-progress"><div class="launch-track-fill" style="width:${{pct}}%"></div></div>
+        </div>`;
+      }}).join('');
+
+      // Reviews
+      const reviewCount = data.pending_reviews || 0;
+      document.getElementById('launch-reviews').innerHTML = reviewCount > 0
+        ? `<span style="color:var(--warm)">📄 ${{reviewCount}} draft${{reviewCount > 1 ? 's' : ''}} waiting for your review</span> <button class="launch-action-btn" onclick="openReviews()">Review</button>`
+        : `<span style="opacity:0.6">No drafts pending review</span>`;
+
+      // Queue
+      const queueTotal   = data.posts_scheduled         || 0;
+      const queuePending = data.posts_pending_approval  || 0;
+      document.getElementById('launch-queue').innerHTML =
+        `📱 ${{queueTotal}} posts scheduled · <span style="color:var(--warm)">${{queuePending}} awaiting approval</span>`;
+
+      // Performance (post-launch)
+      const perf = data.performance || {{}};
+      if (perf.amazon_rank || perf.coursera_enrollments || perf.top_post_engagement) {{
+        document.getElementById('launch-performance').innerHTML = `<div class="launch-perf-row">
+          ${{perf.amazon_rank          ? `<div class="launch-perf-item">Amazon Rank <div class="launch-perf-value">#${{perf.amazon_rank}}</div></div>` : ''}}
+          ${{perf.coursera_enrollments ? `<div class="launch-perf-item">Enrollments <div class="launch-perf-value">${{perf.coursera_enrollments}}</div></div>` : ''}}
+          ${{perf.top_post_engagement  ? `<div class="launch-perf-item">Top Post <div class="launch-perf-value">${{perf.top_post_engagement}} engagements</div></div>` : ''}}
+        </div>`;
+      }} else {{
+        document.getElementById('launch-performance').innerHTML = '';
+      }}
+
+      // Next action
+      const next = data.next_action || 'All caught up.';
+      document.getElementById('launch-next-action').innerHTML = `<strong>Next:</strong> ${{next}}`;
+    }}
+
+    function openReviews() {{
+      fetch('/api/publishing/reviews/pending')
+        .then(r => r.json())
+        .then(d => {{
+          const reviews = d.reviews || d.pending || d || [];
+          alert('Pending reviews:\n' + reviews.map(r => `• ${{r.title}} (${{r.track_type}} ch.${{r.chapter_number}})`).join('\n'));
+        }})
+        .catch(err => console.warn('openReviews fetch failed', err));
+    }}
+
+    function approveNeedsItem(id) {{
+      if (!id) return;
+      const item = document.querySelector(`.needs-item[data-id="${{id}}"]`);
+      if (item) item.remove();
+      const remaining = document.querySelectorAll('.needs-item').length;
+      if (remaining === 0) populateNeedsZone([]);
+      else {{ const badge = document.getElementById('needs-badge'); if (badge) badge.textContent = String(remaining); }}
+    }}
+
+    function dismissNeedsItem(id) {{
+      if (!id) return;
+      const item = document.querySelector(`.needs-item[data-id="${{id}}"]`);
+      if (item) item.remove();
+      const remaining = document.querySelectorAll('.needs-item').length;
+      if (remaining === 0) populateNeedsZone([]);
+      else {{ const badge = document.getElementById('needs-badge'); if (badge) badge.textContent = String(remaining); }}
+    }}
+
+    // Initialize zones with empty states on load
+    populateBriefingZone([]);
+    populateAlreadyZone([]);
+    populateNeedsZone([]);
+    populateDriftZone([]);
+    populateLaunchZone(null);
+    // ============================================================
 
     updateClock();
     window.setInterval(updateClock, 1000);

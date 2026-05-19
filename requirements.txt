@@ -1,3 +1,4 @@
+# On-device voice stack (Apple Silicon): pip install -r requirements_voice.txt
 openai>=2.0.0
 elevenlabs>=2.0.0
 fastapi>=0.136.1

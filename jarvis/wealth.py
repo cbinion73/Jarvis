@@ -189,30 +189,48 @@ class WealthLeverageSupport:
     def default_finance_state(self) -> dict[str, Any]:
         return {
             "updated_at": _now_iso(),
-            "cash": {
-                "available": None,
-                "reserve_target": None,
-                "monthly_revenue": None,
-                "monthly_burn": None,
-                "obligations_due_30d": None,
+            "family_finance": {
+                "cash": {
+                    "available": None,
+                    "reserve_target": None,
+                    "monthly_revenue": None,
+                    "monthly_burn": None,
+                    "obligations_due_30d": None,
+                },
+                "goals": {
+                    "reserve_target_months": None,
+                    "savings_buffer_target": None,
+                    "current_savings_buffer": None,
+                },
+                "thresholds": {
+                    "low_cash_runway_months": 3.0,
+                    "unusual_spend_amount": 1000.0,
+                    "goal_progress_min_ratio": 0.25,
+                },
+                "spend_events": [],
+                "notes": [
+                    "Family finance is currently a local planning model until live financial connectors are wired.",
+                ],
             },
-            "goals": {
-                "financial_independence_target": None,
-                "current_financial_independence_value": None,
-                "passive_income_target_monthly": None,
-                "current_passive_income_monthly": None,
-                "compounding_asset_target": None,
-                "compounding_assets_live": None,
+            "wealth": {
+                "capital": {
+                    "wealth_account_available": None,
+                    "wealth_account_reserved": None,
+                    "wealth_account_notes": [],
+                    "transfer_policy_note": "Passive-income capital stays ring-fenced in a separate account and does not count as household operating cash.",
+                },
+                "market_intelligence": {
+                    "watchlist": [],
+                    "theses": [],
+                    "catalysts": [],
+                    "notes": [
+                        "Market intelligence is currently a local planning model until live market connectors are wired.",
+                    ],
+                },
+                "notes": [
+                    "Wealth experiments and passive-income capital are kept separate from family operating finances.",
+                ],
             },
-            "thresholds": {
-                "low_cash_runway_months": 3.0,
-                "unusual_spend_amount": 1000.0,
-                "goal_progress_min_ratio": 0.25,
-            },
-            "spend_events": [],
-            "notes": [
-                "Finance state is currently a local planning model until live financial connectors are wired.",
-            ],
         }
 
     def finance_state(self) -> dict[str, Any]:
@@ -228,7 +246,28 @@ class WealthLeverageSupport:
                     merged[key] = value
             return merged
 
-        merged = _merge(defaults, saved if isinstance(saved, dict) else {})
+        saved = saved if isinstance(saved, dict) else {}
+        legacy_family_patch: dict[str, Any] = {}
+        if any(key in saved for key in ("cash", "goals", "thresholds", "spend_events", "notes")):
+            legacy_family_patch = {
+                "family_finance": {
+                    "cash": dict(saved.get("cash") or {}),
+                    "goals": dict(saved.get("goals") or {}),
+                    "thresholds": dict(saved.get("thresholds") or {}),
+                    "spend_events": list(saved.get("spend_events", [])),
+                    "notes": list(saved.get("notes", [])),
+                }
+            }
+        legacy_wealth_patch: dict[str, Any] = {}
+        if "market_intelligence" in saved or "wealth" in saved:
+            legacy_wealth_patch = {
+                "wealth": {
+                    "market_intelligence": dict(saved.get("market_intelligence") or {}),
+                }
+            }
+        merged = _merge(defaults, legacy_family_patch)
+        merged = _merge(merged, legacy_wealth_patch)
+        merged = _merge(merged, saved)
         if not saved:
             self.store.save_finance_state(merged)
         return merged

@@ -14,11 +14,15 @@ class OpenVikingSupport:
 
     @property
     def enabled(self) -> bool:
+        # Local servers (127.0.0.1 / localhost) don't require an API key
+        _base = self.config.openviking_base_url or ""
+        _is_local = "127.0.0.1" in _base or "localhost" in _base
+        _has_key = bool(self.config.openviking_api_key)
         return bool(
             self.config.openviking_enabled
-            and self.config.openviking_base_url
-            and self.config.openviking_api_key
+            and _base
             and self.config.openviking_memory_uri_root
+            and (_has_key or _is_local)
         )
 
     @property
@@ -83,34 +87,41 @@ class OpenVikingSupport:
         entry_id = str(entry.get("entry_id", "")).strip()
         uri = f"{self.memory_uri_root}{entry_type}-{entry_id}.md"
         content = self._render_memory_entry(entry)
+        try:
+            response = self._write(uri, content, mode="create")
+            if response.status_code == 409:
+                response = self._write(uri, content, mode="replace")
 
-        response = self._write(uri, content, mode="create")
-        if response.status_code == 409:
-            response = self._write(uri, content, mode="replace")
-
-        if response.ok:
-            payload = response.json()
-            return {
-                "ok": True,
-                "entry_id": entry_id,
-                "uri": uri,
-                "detail": payload.get("result", {}),
-            }
-        if "resource is busy" in self._response_detail(response).lower():
-            existing = self._read(uri)
-            if existing.ok:
+            if response.ok:
+                payload = response.json()
                 return {
                     "ok": True,
                     "entry_id": entry_id,
                     "uri": uri,
-                    "detail": {"status": "present", "mode": "read-after-busy"},
+                    "detail": payload.get("result", {}),
                 }
-        return {
-            "ok": False,
-            "entry_id": entry_id,
-            "uri": uri,
-            "detail": self._response_detail(response),
-        }
+            if "resource is busy" in self._response_detail(response).lower():
+                existing = self._read(uri)
+                if existing.ok:
+                    return {
+                        "ok": True,
+                        "entry_id": entry_id,
+                        "uri": uri,
+                        "detail": {"status": "present", "mode": "read-after-busy"},
+                    }
+            return {
+                "ok": False,
+                "entry_id": entry_id,
+                "uri": uri,
+                "detail": self._response_detail(response),
+            }
+        except requests.RequestException as exc:
+            return {
+                "ok": False,
+                "entry_id": entry_id,
+                "uri": uri,
+                "detail": str(exc),
+            }
 
     def sync_memory_entries(self, entries: list[dict]) -> dict:
         results = [self.sync_memory_entry(entry) for entry in entries]

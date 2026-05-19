@@ -378,6 +378,108 @@ class StagedActionQueueItem:
 
 
 @dataclass(slots=True)
+class MissionActionDecision:
+    action_type: str
+    trust_zone: str
+    resolution: str
+    rationale: str
+    approval_required: bool
+    approval_request_id: str = ""
+
+
+@dataclass(slots=True)
+class MissionSubtask:
+    subtask_id: str
+    title: str
+    description: str
+    status: str
+    owner_agent: str
+    domain: str
+    trust_zone: str
+    action_type: str
+    resolution: str
+    dependencies: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class MissionEvidence:
+    evidence_id: str
+    source_agent: str
+    source_system: str
+    kind: str
+    title: str
+    summary: str
+    detail: str
+    timestamp: str
+    refs: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class MissionOutput:
+    output_id: str
+    kind: str
+    title: str
+    summary: str
+    status: str
+    timestamp: str
+    payload_ref: str = ""
+
+
+@dataclass(slots=True)
+class TaskAgentProfile:
+    agent_id: str
+    label: str
+    class_type: str
+    origin: str
+    mission_id: str
+    template_id: str
+    domain: str
+    trust_zone: str
+    autonomy_level: str
+    promotion_status: str
+    purpose: str
+    mission_roles: list[str]
+    allowed_tools: list[str] = field(default_factory=list)
+    approval_triggers: list[str] = field(default_factory=list)
+    success_metrics: list[str] = field(default_factory=list)
+    status: str = "active"
+    usage_count: int = 0
+    success_count: int = 0
+    last_used_at: str = ""
+    memory_boundary: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+    promoted_at: str = ""
+
+
+@dataclass(slots=True)
+class MissionDossier:
+    mission_id: str
+    actor: str
+    room: str
+    request: str
+    title: str
+    brief: str
+    status: str
+    primary_domain: str
+    trust_zone: str
+    autonomy_posture: str
+    owner_agent: str
+    selected_agents: list[str]
+    subtasks: list[MissionSubtask] = field(default_factory=list)
+    action_decisions: list[MissionActionDecision] = field(default_factory=list)
+    evidence: list[MissionEvidence] = field(default_factory=list)
+    approvals: list[str] = field(default_factory=list)
+    outputs: list[MissionOutput] = field(default_factory=list)
+    follow_ups: list[str] = field(default_factory=list)
+    memory_snapshot: dict[str, object] = field(default_factory=dict)
+    family_impact: list[str] = field(default_factory=list)
+    created_at: str = ""
+    updated_at: str = ""
+
+
+@dataclass(slots=True)
 class TutoringSession:
     session_id: str
     actor: str
@@ -434,6 +536,7 @@ class VendorPrep:
     approval_request_id: str
     status: str
     timestamp: str
+    work_id: str = ""
 
 
 @dataclass(slots=True)
