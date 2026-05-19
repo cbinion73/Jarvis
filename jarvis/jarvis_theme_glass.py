@@ -4136,7 +4136,7 @@ function mdToHtml(md) {{
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>');
 
-  const lines = md.split('\n');
+  const lines = md.split('\\n');
   const out = [];
   let inUl = false, inOl = false, inP = false;
 
