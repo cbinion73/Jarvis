@@ -801,10 +801,14 @@ class LLMGateway:
         stream: bool = False,
         force_model: str = "",
         allow_escalation: bool = True,
+        tools: list[dict] | None = None,
     ) -> LLMResponse:
         """
         Main entry point.  Routes, calls, checks confidence, escalates if needed.
         Never raises — returns an LLMResponse with error set on failure.
+
+        tools: optional list of OpenAI-style tool dicts. For voice task_types,
+               the voice allowlist is applied automatically before the backend call.
         """
         if temperature is None:
             temperature = TASK_TEMPERATURE_MAP.get(task_type, 0.7)
@@ -862,6 +866,14 @@ class LLMGateway:
                     escalated=False,
                     error="Both Ollama and OpenAI are offline.",
                 )
+
+        # Apply voice tool allowlist to keep prefill fast
+        if task_type in ("voice", "voice_quick") and tools:
+            try:
+                from .voice_pipeline import filter_tools_for_voice
+                tools = filter_tools_for_voice(tools)
+            except ImportError:
+                pass
 
         t_start = time.monotonic()
         response = self._call_backend(messages, model, temperature, max_tokens, stream)
