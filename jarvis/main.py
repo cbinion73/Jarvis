@@ -1969,6 +1969,14 @@ def command_voice(runtime: JarvisRuntime, args: argparse.Namespace) -> int:
             force_quiet=args.quiet,
             force_whisper=args.whisper,
         )
+    if args.listen:
+        return voice_shell.run_continuous_listen_loop(
+            actor=args.actor,
+            room=args.room,
+            record_duration=args.duration,
+            input_device=args.input_device,
+            silent=args.silent,
+        )
     if args.loop:
         return voice_shell.run_push_to_talk_loop(
             duration=args.duration,
