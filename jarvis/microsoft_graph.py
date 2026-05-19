@@ -367,6 +367,108 @@ class MicrosoftGraphSupport:
             detail = exc.read().decode("utf-8", errors="replace")
             raise RuntimeError(f"Microsoft token exchange failed: {detail}") from exc
 
+    def create_todo_task(
+        self,
+        title: str,
+        *,
+        due_date: str | None = None,
+        reminder_date: str | None = None,
+        body: str = "",
+        account: PersonalAccount | None = None,
+    ) -> dict[str, Any]:
+        """Create a Microsoft To-Do task (shows up in Outlook Tasks + To-Do app).
+
+        Args:
+            title: Task title / reminder text.
+            due_date: ISO date string e.g. '2026-05-20' — converted to UTC midnight.
+            reminder_date: ISO datetime string for the reminder alert (optional).
+            body: Optional longer description.
+            account: PersonalAccount to use (defaults to configured account).
+
+        Returns:
+            The created task as a dict with at minimum {'id', 'title', 'status'}.
+        """
+        token = self._load_token(account)
+        if not token:
+            raise RuntimeError("No Microsoft token available — please reconnect in Settings.")
+
+        task: dict[str, Any] = {
+            "title": title,
+            "status": "notStarted",
+            "importance": "normal",
+        }
+        if body:
+            task["body"] = {"content": body, "contentType": "text"}
+        if due_date:
+            # Graph expects dateTime in UTC
+            task["dueDateTime"] = {"dateTime": f"{due_date}T00:00:00", "timeZone": "UTC"}
+        if reminder_date:
+            task["isReminderOn"] = True
+            task["reminderDateTime"] = {"dateTime": reminder_date, "timeZone": "UTC"}
+
+        # Tasks go into the default "Tasks" list — list ID "AQMkADA" magic or just use /tasks shortcut
+        result = self._graph_post(token["access_token"], "/me/todo/lists/tasks/tasks", task)
+        return {
+            "id": result.get("id", ""),
+            "title": result.get("title", title),
+            "status": result.get("status", "notStarted"),
+            "due": result.get("dueDateTime", {}).get("dateTime", ""),
+            "created": result.get("createdDateTime", ""),
+            "web_link": result.get("webLink", ""),
+        }
+
+    def create_calendar_event(
+        self,
+        title: str,
+        *,
+        start: str,
+        end: str | None = None,
+        body: str = "",
+        is_reminder: bool = False,
+        account: PersonalAccount | None = None,
+    ) -> dict[str, Any]:
+        """Create an Outlook calendar event.
+
+        Args:
+            title: Event subject.
+            start: ISO datetime string e.g. '2026-05-20T09:00:00'.
+            end: ISO datetime string — defaults to start + 15 minutes.
+            body: Optional event body text.
+            is_reminder: If True, sets a 0-minute reminder pop-up.
+            account: PersonalAccount to use.
+
+        Returns:
+            Dict with {'id', 'title', 'start', 'end', 'web_link'}.
+        """
+        token = self._load_token(account)
+        if not token:
+            raise RuntimeError("No Microsoft token available — please reconnect in Settings.")
+
+        if end is None:
+            # Default 15-minute block
+            from datetime import datetime as _dt
+            _start = _dt.fromisoformat(start)
+            end = (_start + timedelta(minutes=15)).isoformat()
+
+        event: dict[str, Any] = {
+            "subject": title,
+            "start": {"dateTime": start, "timeZone": "America/Chicago"},
+            "end": {"dateTime": end, "timeZone": "America/Chicago"},
+            "isReminderOn": True,
+            "reminderMinutesBeforeStart": 0 if is_reminder else 15,
+        }
+        if body:
+            event["body"] = {"contentType": "text", "content": body}
+
+        result = self._graph_post(token["access_token"], "/me/events", event)
+        return {
+            "id": result.get("id", ""),
+            "title": result.get("subject", title),
+            "start": result.get("start", {}).get("dateTime", start),
+            "end": result.get("end", {}).get("dateTime", end),
+            "web_link": result.get("webLink", ""),
+        }
+
     def _graph_get(self, access_token: str, path: str) -> dict[str, Any]:
         req = request.Request(
             f"{GRAPH_BASE}{path}",
@@ -382,3 +484,22 @@ class MicrosoftGraphSupport:
         except error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")
             raise RuntimeError(f"Microsoft Graph request failed: {detail}") from exc
+
+    def _graph_post(self, access_token: str, path: str, body: dict[str, Any]) -> dict[str, Any]:
+        data = json.dumps(body).encode("utf-8")
+        req = request.Request(
+            f"{GRAPH_BASE}{path}",
+            data=data,
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            method="POST",
+        )
+        try:
+            with request.urlopen(req, timeout=20) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"Microsoft Graph POST failed: {detail}") from exc
