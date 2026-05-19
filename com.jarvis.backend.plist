@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+
+  <!-- ================================================================== -->
+  <!-- JARVIS Backend — launchd Agent                                      -->
+  <!-- Manages the FastAPI/Uvicorn process on localhost:8787               -->
+  <!-- ================================================================== -->
+
+  <key>Label</key>
+  <string>com.jarvis.backend</string>
+
+  <!-- Run on login and keep alive forever (restart on crash) -->
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <dict>
+    <!-- Restart on crash but not on clean exit (e.g. manual stop) -->
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+
+  <!-- Throttle restart attempts to avoid tight crash loops -->
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+
+  <!-- ================================================================== -->
+  <!-- Command                                                             -->
+  <!-- ================================================================== -->
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/chris/.jarvis/venv/bin/python</string>
+    <string>-m</string>
+    <string>jarvis.main</string>
+    <string>serve</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/chris/Desktop/CODE/JARVIS</string>
+
+  <!-- ================================================================== -->
+  <!-- Environment Variables                                               -->
+  <!-- NOTE: launchd cannot source a .env file directly. These values     -->
+  <!-- must be set here explicitly. Keep this in sync with ~/.jarvis/.env  -->
+  <!-- After editing, reload with:                                         -->
+  <!--   launchctl unload ~/Library/LaunchAgents/com.jarvis.backend.plist  -->
+  <!--   launchctl load   ~/Library/LaunchAgents/com.jarvis.backend.plist  -->
+  <!-- ================================================================== -->
+
+  <key>EnvironmentVariables</key>
+  <dict>
+
+    <!-- OpenAI — escalation calls and Friday voice sessions -->
+    <key>OPENAI_API_KEY</key>
+    <string>sk-your-key-here</string>
+
+    <!-- ElevenLabs TTS (optional — Kokoro is default on-device) -->
+    <key>ELEVENLABS_API_KEY</key>
+    <string>your-elevenlabs-key-here</string>
+
+    <!-- OpenWeather — weather connector (Alexandria VA default) -->
+    <key>OPENWEATHER_API_KEY</key>
+    <string>your-openweather-key-here</string>
+
+    <!-- Home Assistant -->
+    <key>HA_URL</key>
+    <string>http://homeassistant.local:8123</string>
+
+    <key>HA_TOKEN</key>
+    <string>your-ha-long-lived-token-here</string>
+
+    <!-- Google Calendar + Gmail OAuth -->
+    <key>GOOGLE_CLIENT_ID</key>
+    <string>your-google-client-id-here</string>
+
+    <key>GOOGLE_CLIENT_SECRET</key>
+    <string>your-google-client-secret-here</string>
+
+    <!-- Ollama model selection -->
+    <key>JARVIS_OLLAMA_FAST_MODEL</key>
+    <string>phi3.5</string>
+
+    <!-- NOTE: gpt-oss-20b may not be a published Ollama model name.       -->
+    <!-- Update this value once the correct model ID is confirmed.          -->
+    <!-- setup.sh will fall back to 'openhermes' if unavailable.            -->
+    <key>JARVIS_OLLAMA_REASONING_MODEL</key>
+    <string>gpt-oss-20b</string>
+
+    <!-- OpenAI escalation model -->
+    <key>JARVIS_OPENAI_MODEL</key>
+    <string>gpt-5.4-mini</string>
+
+    <!-- Ollama server endpoint -->
+    <key>OLLAMA_BASE_URL</key>
+    <string>http://localhost:11434/v1</string>
+
+    <!-- PATH — ensure venv and Homebrew binaries are reachable -->
+    <key>PATH</key>
+    <string>/Users/chris/.jarvis/venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+
+  </dict>
+
+  <!-- ================================================================== -->
+  <!-- Logs                                                                -->
+  <!-- ================================================================== -->
+
+  <key>StandardOutPath</key>
+  <string>/Users/chris/.jarvis/logs/jarvis.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/chris/.jarvis/logs/jarvis.error.log</string>
+
+</dict>
+</plist>

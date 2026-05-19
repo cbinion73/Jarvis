@@ -42,7 +42,7 @@ except Exception:  # pragma: no cover
 from .apple_api import _register_apple_api
 
 try:
-    from .voice_pipeline import get_friday, get_pipeline, init_voice as _init_voice_pipeline
+    from .voice_pipeline import get_friday, get_pipeline, get_time_aware_greeting, init_voice as _init_voice_pipeline
     _VOICE_PIPELINE_AVAILABLE = True
 except Exception:  # pragma: no cover
     _VOICE_PIPELINE_AVAILABLE = False
@@ -55,6 +55,9 @@ except Exception:  # pragma: no cover
 
     def _init_voice_pipeline(config):  # type: ignore[misc]
         return None
+
+    def get_time_aware_greeting(name: str = "boss") -> str:  # type: ignore[misc]
+        return f"Good day, {name}."
 from .render_pages import render_agent_hierarchy_page, render_agent_workspace_page, render_catalyst_workspace_page
 
 try:
@@ -1199,7 +1202,40 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
     @app.get("/api/briefing")
     async def api_briefing(actor: str = "Chris") -> JSONResponse:
-        return _json({"actor": actor, "briefing": runtime.morning_brief(actor)})
+        from .rss_briefing import fetch_briefing_context
+
+        # Fetch live RSS context in a background thread (non-blocking, 8s max)
+        rss: dict = {}
+        try:
+            rss = await asyncio.wait_for(
+                asyncio.to_thread(fetch_briefing_context),
+                timeout=8.0,
+            )
+        except Exception:
+            pass  # fall back to LLM-only brief
+
+        # Build base briefing (morning_brief returns a plain string)
+        briefing: str = runtime.morning_brief(actor)
+
+        # Prepend live news context when RSS data is available
+        if rss.get("total_articles", 0) > 0:
+            parts: list[str] = ["## Live News Context"]
+            if rss.get("world_text"):
+                parts.append(rss["world_text"])
+            if rss.get("finance_text"):
+                parts.append(rss["finance_text"])
+            news_prefix = "\n\n".join(parts)
+            briefing = news_prefix + "\n\n---\n\n" + briefing
+
+        return _json(
+            {
+                "actor": actor,
+                "briefing": briefing,
+                "rss_articles": rss.get("total_articles", 0),
+                "rss_sources": rss.get("sources_hit", []),
+                "live_news": rss.get("total_articles", 0) > 0,
+            }
+        )
 
     @app.get("/api/first-light")
     async def api_first_light(
@@ -2887,9 +2923,13 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/voice/greeting")
     async def api_voice_greeting() -> JSONResponse:
         """Return a time-appropriate greeting text and the TTS endpoint URL."""
-        friday = get_friday()
-        greeting = friday.get_greeting() if friday else "Good day."
+        greeting = get_time_aware_greeting("boss")
         return _json({"text": greeting, "audio_url": "/api/voice/synthesize"})
+
+    @app.get("/api/greet")
+    async def api_greet(name: str = "boss") -> JSONResponse:
+        """Return a time-aware JARVIS greeting for the given name."""
+        return _json({"greeting": get_time_aware_greeting(name)})
 
     @app.post("/api/approvals/{request_id}")
     async def api_update_approval(request_id: str, payload: dict[str, Any]) -> JSONResponse:
