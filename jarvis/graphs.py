@@ -44,10 +44,66 @@ class BackgroundGraphState(TypedDict, total=False):
     openviking_sync: dict[str, Any]
 
 
+def _build_live_context(runtime) -> str:
+    """Build a compact live-data block: weather + today's calendar events."""
+    import datetime
+    lines: list[str] = []
+
+    # ── Weather ──────────────────────────────────────────────────────────────
+    try:
+        wx = runtime.storm_weather_summary()
+        if wx.get("available"):
+            cur = wx.get("current", {})
+            temp = cur.get("temperature_f")
+            cond = cur.get("condition", "")
+            loc  = cur.get("location", "")
+            wind = cur.get("wind", "")
+            alerts = wx.get("alerts", [])
+            wx_line = f"Weather ({loc}): {temp}°F, {cond}"
+            if wind:
+                wx_line += f", {wind}"
+            if alerts:
+                wx_line += f" — ⚠ {alerts[0].get('headline', 'Alert active')}"
+            lines.append(wx_line)
+    except Exception:
+        pass
+
+    # ── Calendar ─────────────────────────────────────────────────────────────
+    try:
+        today = datetime.date.today().isoformat()
+        cal = runtime.family_calendar.summary()
+        all_events = cal.get("events", []) if isinstance(cal, dict) else []
+        events = [e for e in all_events if str(e.get("start_date", "") or e.get("start", ""))[:10] == today]
+        if events:
+            lines.append(f"Today's calendar ({today}):")
+            for ev in events[:8]:
+                title = ev.get("title") or ev.get("summary", "Untitled")
+                start = ev.get("start_time") or ev.get("start", "")
+                who   = ev.get("actor") or ev.get("calendar", "")
+                entry = f"  • {title}"
+                if start:
+                    entry += f" at {start}"
+                if who:
+                    entry += f" ({who})"
+                lines.append(entry)
+        else:
+            lines.append(f"Today's calendar ({today}): No events found.")
+    except Exception:
+        pass
+
+    return "\n".join(lines)
+
+
 def run_response_graph(runtime, plan: RequestPlan, continuity_context: str = "") -> OpenAIResult:
     def load_context(state: ResponseGraphState) -> ResponseGraphState:
         current_plan = state["plan"]
         context_parts: list[str] = []
+
+        # Live weather + calendar — always injected so JARVIS knows the day
+        live = _build_live_context(runtime)
+        if live.strip():
+            context_parts.append(live.strip())
+
         if runtime.openviking_support.enabled and current_plan.context_lane != "restricted-local":
             retrieved = runtime.openviking_support.party_mode_context(
                 current_plan.request,
