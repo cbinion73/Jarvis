@@ -329,17 +329,22 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 pass
             await asyncio.sleep(interval_seconds)
 
-    # ── MCP server — mount at /mcp (SSE transport for Claude Desktop / Cursor) ──
-    try:
-        from .mcp_server import mcp as _mcp_server
-        # FastMCP ≥ 2.x: get_asgi_app() returns an ASGI app; mount at /mcp
-        _mcp_app = _mcp_server.http_app(path="/", transport="sse")
-        app.mount("/mcp", _mcp_app)
+    @app.on_event("startup")
+    async def _start_mcp_server() -> None:
+        """Start FastMCP on its own port (8788) to avoid lifespan/ASGI mount conflicts."""
         import logging as _mcp_log
-        _mcp_log.getLogger("jarvis.service").info("MCP server mounted at /mcp (SSE)")
-    except Exception as _mcp_exc:
-        import logging as _mcp_log
-        _mcp_log.getLogger("jarvis.service").warning("MCP server unavailable: %s", _mcp_exc)
+        _log = _mcp_log.getLogger("jarvis.service")
+        try:
+            from .mcp_server import mcp as _mcp_server
+            import uvicorn as _uvi
+            mcp_port = int(os.getenv("JARVIS_MCP_PORT", "8788"))
+            _mcp_app = _mcp_server.http_app(path="/", transport="streamable-http")
+            _mcp_config = _uvi.Config(_mcp_app, host="127.0.0.1", port=mcp_port, log_level="warning")
+            _mcp_srv = _uvi.Server(_mcp_config)
+            asyncio.create_task(_mcp_srv.serve(), name="jarvis-mcp-server")
+            _log.info("MCP server started at http://127.0.0.1:%d (streamable-http)", mcp_port)
+        except Exception as _mcp_exc:
+            _log.warning("MCP server unavailable: %s", _mcp_exc)
 
     @app.on_event("startup")
     async def _start_shell_state_warmer() -> None:

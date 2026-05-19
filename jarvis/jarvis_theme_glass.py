@@ -3406,7 +3406,7 @@ body::after {{
 <!-- Weather modal -->
 <div class="weather-modal-overlay hidden" id="weather-modal-overlay" onclick="closeWeatherModal(event)">
   <div class="weather-modal" id="weather-modal">
-    <div class="weather-modal-header">
+    <div class="weather-modal-header" id="weather-modal-header">
       <div class="weather-modal-title" id="weather-modal-title">Live Weather</div>
       <button class="weather-modal-close" onclick="closeWeatherModal()">✕</button>
     </div>
@@ -4237,8 +4237,8 @@ function mdToHtml(md) {{
   const e = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   // Inline: bold, italic (applied to already-escaped text)
   const inline = s => s
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>');
+    .replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>')
+    .replace(/\\*(.+?)\\*/g, '<em>$1</em>');
 
   const lines = md.split('\\n');
   const out = [];
@@ -4261,13 +4261,13 @@ function mdToHtml(md) {{
     }}
 
     // heading
-    const h3 = line.match(/^###?\s+(.*)/);
-    const h4 = line.match(/^####\s+(.*)/);
+    const h3 = line.match(/^###?\\s+(.*)/);
+    const h4 = line.match(/^####\\s+(.*)/);
     if (h4) {{ closeList(); closeP(); out.push('<h4>' + inline(e(h4[1])) + '</h4>'); continue; }}
     if (h3) {{ closeList(); closeP(); out.push('<h3>' + inline(e(h3[1])) + '</h3>'); continue; }}
 
     // unordered list item
-    const ul = line.match(/^[-*•]\s+(.*)/);
+    const ul = line.match(/^[-*•]\\s+(.*)/);
     if (ul) {{
       closeP();
       if (!inUl) {{ if (inOl) {{ out.push('</ol>'); inOl=false; }} out.push('<ul>'); inUl=true; }}
@@ -4276,7 +4276,7 @@ function mdToHtml(md) {{
     }}
 
     // ordered list item
-    const ol = line.match(/^\d+\.\s+(.*)/);
+    const ol = line.match(/^\\d+\\.\\s+(.*)/);
     if (ol) {{
       closeP();
       if (!inOl) {{ if (inUl) {{ out.push('</ul>'); inUl=false; }} out.push('<ol>'); inOl=true; }}
@@ -4445,7 +4445,7 @@ async function loadOverviewAgents() {{
       const s = agents[n].state || 'idle';
       const dot = s === 'awake' ? 'dot-success' : s === 'blocked' ? 'dot-error' : 'dot-standby';
       const label = s.toUpperCase();
-      const niceName = n.replace(/-/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+      const niceName = n.replace(/-/g,' ').replace(/\\b\\w/g, c => c.toUpperCase());
       return `<div class="list-row"><span class="dot ${{dot}}"></span><div style="flex:1"><div class="list-row-name">${{escHtml(niceName)}}</div></div><span style="font-size:9px;color:var(--text-3);font-family:var(--font-mono);">${{label}}</span></div>`;
     }}).join('');
 
