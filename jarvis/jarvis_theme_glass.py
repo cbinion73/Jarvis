@@ -4672,6 +4672,32 @@ function closeWeatherModal(e) {{
   if (overlay) overlay.classList.add('hidden');
 }}
 
+/* Map visual_key → storm-assets filename */
+const _VISUAL_ASSET = {{
+  'clear_day':              'clear_day.png',
+  'clear_night':            'clear_night_no_moon.png',
+  'partly_cloudy_day':      'partly_cloudy_day.png',
+  'partly_cloudy_night':    'partly_cloudy_day.png',
+  'cloudy':                 'partly_cloudy_day.png',
+  'light_rain_day':         'light_rain.png',
+  'light_rain_night':       'light_rain.png',
+  'heavy_rain_day':         'heavy_rain.png',
+  'heavy_rain_night':       'heavy_rain.png',
+  'thunderstorm_day':       'thunderstorm.png',
+  'thunderstorm_night':     'thunderstorm.png',
+  'severe_weather_alert':   'thunderstorm.png',
+  'snow_day':               'light_snow.png',
+  'snow_night':             'light_snow.png',
+  'heavy_snow':             'heavy_snow.png',
+  'freezing_rain':          'light_snow.png',
+  'blizzard':               'blizzard.png',
+  'windy':                  'clear_day.png',
+  'fog':                    'partly_cloudy_day.png',
+  'haze_smoke':             'partly_cloudy_day.png',
+  'extreme_heat':           'clear_day.png',
+  'extreme_cold':           'light_snow.png',
+}};
+
 function renderWeatherModal(d) {{
   const cur = d.current || {{}};
   const icon = cur.icon || _weatherIcon(cur.condition || '');
@@ -4682,9 +4708,28 @@ function renderWeatherModal(d) {{
   const humidity = cur.humidity_pct != null ? cur.humidity_pct + '% humidity' : '';
   const sunrise = cur.sunrise || '';
   const sunset = cur.sunset || '';
+  const visualKey = cur.visual_key || '';
+  const assetFile = _VISUAL_ASSET[visualKey] || '';
 
   const title = document.getElementById('weather-modal-title');
   if (title) title.textContent = (d.location || 'Live Weather') + ' · ' + (cur.stamp_label || '');
+
+  // Condition image — full-width banner above hero
+  const modal = document.getElementById('weather-modal');
+  let imgBanner = document.getElementById('wm-condition-img');
+  if (assetFile) {{
+    if (!imgBanner) {{
+      imgBanner = document.createElement('img');
+      imgBanner.id = 'wm-condition-img';
+      imgBanner.style.cssText = 'width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:16px;display:block;';
+      modal.insertBefore(imgBanner, document.getElementById('weather-modal-header').nextSibling);
+    }}
+    imgBanner.src = '/storm-assets/' + assetFile;
+    imgBanner.alt = cond;
+    imgBanner.style.display = 'block';
+  }} else if (imgBanner) {{
+    imgBanner.style.display = 'none';
+  }}
 
   const iconEl = document.getElementById('wm-icon');
   if (iconEl) iconEl.textContent = icon;
