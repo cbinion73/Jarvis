@@ -119,7 +119,7 @@ async function run() {
     await check("Vendor prep path creates record and pending approval", async (entry) => {
       const response = await postJson("/api/vendor-prep", {
         actor: "Chris",
-        part: `QA Bracket ${seed}`,
+        part: `Validation Bracket ${seed}`,
         vendor: "Xometry",
         process: "CNC",
         material: "6061 aluminum",

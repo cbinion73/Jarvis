@@ -20,7 +20,7 @@ class JarvisOrchestrator:
         workstream = self._select_workstream(mode, module, lowered)
         task_class = self._select_task_class(mode, module, workstream, lowered)
         preferred_provider = self._select_provider(task_class, module, workstream, lowered)
-        context_lane = self._select_context_lane(task_class, module, workstream)
+        context_lane = self._select_context_lane(task_class, module, workstream, lowered)
         model = self._select_model(task_class, preferred_provider, lowered)
         routing_tier = self._select_routing_tier(task_class, preferred_provider, lowered)
         privacy_level = self._select_privacy_level(task_class, lowered)
@@ -139,6 +139,8 @@ class JarvisOrchestrator:
         return mapping.get(module, TaskClass.AMBIENT)
 
     def _select_provider(self, task_class: TaskClass, module: str, workstream: str, request: str) -> str:
+        if self._is_operating_status_request(request):
+            return "openai"
         if task_class in {TaskClass.SENSITIVE_DRAFTING, TaskClass.BACKGROUND}:
             return "ollama"
         if task_class in {TaskClass.FAMILY, TaskClass.AMBIENT} and not any(
@@ -149,7 +151,9 @@ class JarvisOrchestrator:
             return "ollama"
         return "openai"
 
-    def _select_context_lane(self, task_class: TaskClass, module: str, workstream: str) -> str:
+    def _select_context_lane(self, task_class: TaskClass, module: str, workstream: str, request: str) -> str:
+        if self._is_operating_status_request(request):
+            return "operating-status"
         if task_class == TaskClass.PARTY_MODE:
             return "party-mode"
         if task_class == TaskClass.RESEARCH:
@@ -167,6 +171,8 @@ class JarvisOrchestrator:
         return "ambient"
 
     def _select_model(self, task_class: TaskClass, provider: str, request: str) -> str:
+        if provider == "openai" and self._is_operating_status_request(request):
+            return self.config.openai_text_model
         if provider == "ollama":
             if task_class == TaskClass.BACKGROUND:
                 return self.config.ollama_background_model
@@ -201,12 +207,41 @@ class JarvisOrchestrator:
     def _select_routing_tier(self, task_class: TaskClass, provider: str, request: str) -> RoutingTier:
         if task_class == TaskClass.BACKGROUND:
             return RoutingTier.BACKGROUND_DETECTION
+        if self._is_operating_status_request(request):
+            return RoutingTier.HIGH_QUALITY_REASONING
         if provider == "ollama":
             return RoutingTier.LOCAL_SYNTHESIS
         lowered = request.lower()
         if any(keyword in lowered for keyword in ("draft", "write", "respond", "message", "brief", "plan")):
             return RoutingTier.USER_FACING_DELIVERY
         return RoutingTier.HIGH_QUALITY_REASONING
+
+    def _is_operating_status_request(self, request: str) -> bool:
+        lowered = str(request or "").strip().lower()
+        if not lowered:
+            return False
+        phrases = (
+            "status read",
+            "status update",
+            "status check",
+            "what is active right now",
+            "what's active right now",
+            "what is active",
+            "what's active",
+            "what is going on right now",
+            "what's going on right now",
+            "what is going on",
+            "what's going on",
+            "what do you have active",
+            "what do you know is active",
+            "operating picture",
+            "short status read",
+            "give me a status",
+            "give me a short status",
+        )
+        if any(phrase in lowered for phrase in phrases):
+            return True
+        return "status" in lowered and any(token in lowered for token in ("active", "right now", "now", "running", "live"))
 
     def _select_privacy_level(self, task_class: TaskClass, request: str) -> PrivacyLevel:
         if task_class in {TaskClass.SENSITIVE_DRAFTING, TaskClass.BACKGROUND}:

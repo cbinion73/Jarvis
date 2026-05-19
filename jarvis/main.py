@@ -16,6 +16,61 @@ from .runtime import JarvisRuntime
 from .openclaw_bridge import build_openclaw_envelope, envelope_to_json
 from .speech import voice_stack_status
 from .service import serve
+from .fresh_start import FreshStartProtocol
+
+try:
+    from .scheduler import init_scheduler as _init_scheduler
+    _SCHEDULER_IMPORT_OK = True
+except Exception:  # pragma: no cover
+    _SCHEDULER_IMPORT_OK = False
+
+    def _init_scheduler(runtime):  # type: ignore[misc]
+        return None, None
+
+try:
+    from .approvals import init_approvals as _init_approvals
+    _APPROVALS_IMPORT_OK = True
+except Exception:  # pragma: no cover
+    _APPROVALS_IMPORT_OK = False
+
+    def _init_approvals():  # type: ignore[misc]
+        return None, None
+
+try:
+    from .data_connectors import init_connectors as _init_connectors
+    _CONNECTORS_IMPORT_OK = True
+except Exception:  # pragma: no cover
+    _CONNECTORS_IMPORT_OK = False
+
+    def _init_connectors(config):  # type: ignore[misc]
+        return None
+
+try:
+    from .known_facts import init_memory as _init_memory
+    _KNOWN_FACTS_IMPORT_OK = True
+except Exception:  # pragma: no cover
+    _KNOWN_FACTS_IMPORT_OK = False
+
+    def _init_memory():  # type: ignore[misc]
+        return None
+
+try:
+    from .chronicle_bridge import init_chronicle_bridge as _init_chronicle_bridge
+    _CHRONICLE_BRIDGE_IMPORT_OK = True
+except Exception:  # pragma: no cover
+    _CHRONICLE_BRIDGE_IMPORT_OK = False
+
+    def _init_chronicle_bridge(chronicle_client=None, memory_store=None):  # type: ignore[misc]
+        return None, None
+
+try:
+    from .catalyst_bridge import init_catalyst_bridge as _init_catalyst_bridge
+    _CATALYST_BRIDGE_IMPORT_OK = True
+except Exception:  # pragma: no cover
+    _CATALYST_BRIDGE_IMPORT_OK = False
+
+    def _init_catalyst_bridge(catalyst_client=None, scheduler=None, memory_store=None):  # type: ignore[misc]
+        return None, None
 
 try:
     from .voice import JarvisVoiceShell, build_voice_parser
@@ -28,12 +83,123 @@ except Exception as exc:  # pragma: no cover - optional dependency path
         parser = subparsers.add_parser("voice", help="Run JARVIS voice and text conversation surfaces")
         parser.set_defaults(_voice_unavailable=True)
 
+try:
+    from .voice_pipeline import init_voice as _init_voice
+    _VOICE_PIPELINE_IMPORT_OK = True
+except Exception:  # pragma: no cover
+    _VOICE_PIPELINE_IMPORT_OK = False
+
+    def _init_voice(config):  # type: ignore[misc]
+        return None
+
+try:
+    from .publishing_suite import init_publishing as _init_publishing
+    _PUBLISHING_IMPORT_OK = True
+except Exception:  # pragma: no cover
+    _PUBLISHING_IMPORT_OK = False
+
+    def _init_publishing(runtime=None):  # type: ignore[misc]
+        return None
+
+try:
+    from .family_profiles import init_family as _init_family, get_family_manager as _get_family_manager
+    _FAMILY_PROFILES_IMPORT_OK = True
+except Exception:  # pragma: no cover
+    _FAMILY_PROFILES_IMPORT_OK = False
+
+    def _init_family(runtime=None):  # type: ignore[misc]
+        return None
+
+    def _get_family_manager():  # type: ignore[misc]
+        return None
+
+try:
+    from .workshop_copilot import init_workshop as _init_workshop
+    _WORKSHOP_COPILOT_IMPORT_OK = True
+except Exception:  # pragma: no cover
+    _WORKSHOP_COPILOT_IMPORT_OK = False
+
+    def _init_workshop(runtime=None):  # type: ignore[misc]
+        return None
+
+try:
+    from .financial_intelligence import init_finance as _init_finance
+    _FINANCIAL_INTELLIGENCE_IMPORT_OK = True
+except Exception:  # pragma: no cover
+    _FINANCIAL_INTELLIGENCE_IMPORT_OK = False
+
+    def _init_finance(runtime=None):  # type: ignore[misc]
+        return None
+
+try:
+    from .growth_intelligence import init_growth as _init_growth
+    _GROWTH_INTELLIGENCE_IMPORT_OK = True
+except Exception:  # pragma: no cover
+    _GROWTH_INTELLIGENCE_IMPORT_OK = False
+
+    def _init_growth(runtime=None):  # type: ignore[misc]
+        return None
+
+try:
+    from .llm_gateway import init_gateway as _init_gateway
+    _LLM_GATEWAY_IMPORT_OK = True
+except Exception:  # pragma: no cover
+    _LLM_GATEWAY_IMPORT_OK = False
+
+    def _init_gateway(config=None):  # type: ignore[misc]
+        return None
+
+try:
+    from .ghostwritr_bridge import init_ghostwritr_bridge as _init_ghostwritr_bridge
+    _GHOSTWRITR_BRIDGE_IMPORT_OK = True
+except Exception:  # pragma: no cover
+    _GHOSTWRITR_BRIDGE_IMPORT_OK = False
+
+    def _init_ghostwritr_bridge():  # type: ignore[misc]
+        return None
+
+try:
+    from .social_engine import init_social_engine as _init_social_engine
+    _SOCIAL_ENGINE_IMPORT_OK = True
+except Exception:  # pragma: no cover
+    _SOCIAL_ENGINE_IMPORT_OK = False
+
+    def _init_social_engine():  # type: ignore[misc]
+        return None
+
+
+# ── Home Intelligence (email, calendar, projects, tasks) ──────────────────────
+try:
+    from .home_projects import init_home_db as _init_home_db
+    from .gmail_bridge import init_gmail_bridge as _init_gmail_bridge
+    from .gcal_bridge import init_gcal_bridge as _init_gcal_bridge
+    from .outlook_bridge import init_outlook_bridge as _init_outlook_bridge
+    from .cozi_bridge import init_cozi_bridge as _init_cozi_bridge
+    from .unified_inbox import init_unified_inbox as _init_unified_inbox
+    from .signal_router import init_signal_router as _init_signal_router
+    _HOME_INTELLIGENCE_IMPORT_OK = True
+except Exception as _home_exc:  # pragma: no cover
+    import logging as _log
+    _log.getLogger("jarvis.main").warning("Home intelligence imports failed: %s", _home_exc)
+    _HOME_INTELLIGENCE_IMPORT_OK = False
+
+    def _init_home_db(db_url): return None  # type: ignore[misc]
+    def _init_gmail_bridge(**kw): return None  # type: ignore[misc]
+    def _init_gcal_bridge(**kw): return None  # type: ignore[misc]
+    def _init_outlook_bridge(**kw): return None  # type: ignore[misc]
+    def _init_cozi_bridge(**kw): return None  # type: ignore[misc]
+    def _init_unified_inbox(**kw): return None  # type: ignore[misc]
+    def _init_signal_router(**kw): return None  # type: ignore[misc]
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="JARVIS household runtime scaffold")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser("summary", help="Show configured household runtime summary")
+    fresh_start = subparsers.add_parser("fresh-start", help="Preview or execute a fresh-start reset and rebuild protocol")
+    fresh_start.add_argument("--execute", action="store_true", help="Actually wipe derived user state and rebuild from preserved sources.")
+    fresh_start.add_argument("--no-backup", action="store_true", help="Skip the backup snapshot before deleting reset targets.")
     subparsers.add_parser("status", help="Check integration status")
     subparsers.add_parser("approvals", help="List pending approvals")
     subparsers.add_parser("voice-stack", help="Show configured STT/TTS provider order and readiness")
@@ -569,7 +735,307 @@ def command_summary(runtime: JarvisRuntime) -> int:
     return 0
 
 
+def command_fresh_start(runtime: JarvisRuntime, *, execute: bool, no_backup: bool) -> int:
+    protocol = FreshStartProtocol(runtime.config)
+    payload = protocol.execute(create_backup=not no_backup) if execute else protocol.preview()
+    print(json.dumps(payload, indent=2))
+    return 0
+
+
+def _ensure_ollama_running() -> None:
+    """
+    Check whether Ollama is reachable at the configured base URL.
+    If not, attempt to start it via `ollama serve` as a detached background process.
+    Logs outcome but never raises — JARVIS degrades gracefully if Ollama can't start.
+    """
+    import logging
+    import os
+    import shutil
+    import subprocess
+    import time
+    import urllib.request
+
+    _log = logging.getLogger("jarvis.ollama-bootstrap")
+
+    ollama_url = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/v1").rstrip("/")
+    health_url = f"{ollama_url}/api/tags"
+
+    # 1 — Already running?
+    try:
+        with urllib.request.urlopen(health_url, timeout=2):
+            _log.info("Ollama already running at %s", ollama_url)
+            return
+    except Exception:
+        pass
+
+    # 2 — Find the binary
+    ollama_bin = shutil.which("ollama") or os.path.expanduser("~/.local/bin/ollama")
+    if not ollama_bin or not os.path.isfile(ollama_bin):
+        _log.warning("Ollama binary not found — skipping auto-start. Install from https://ollama.com")
+        return
+
+    # 3 — Launch detached
+    try:
+        log_path = os.path.expanduser("~/.jarvis/logs/ollama.log")
+        os.makedirs(os.path.dirname(log_path), exist_ok=True)
+        with open(log_path, "a") as log_fh:
+            proc = subprocess.Popen(
+                [ollama_bin, "serve"],
+                stdout=log_fh,
+                stderr=log_fh,
+                start_new_session=True,   # detach from JARVIS process group
+            )
+        _log.info("Ollama started (PID %d) — waiting for readiness…", proc.pid)
+    except Exception as exc:
+        _log.warning("Could not start Ollama: %s", exc)
+        return
+
+    # 4 — Wait up to 12 s for Ollama to be ready
+    deadline = time.monotonic() + 12
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(health_url, timeout=2):
+                _log.info("Ollama ready after %.1f s", 12 - (deadline - time.monotonic()))
+                return
+        except Exception:
+            time.sleep(1)
+
+    _log.warning("Ollama did not become ready within 12 s — gateway will fall back to OpenAI")
+
+
 def command_serve(runtime: JarvisRuntime, host: str, port: int) -> int:
+    # Initialise Being Known memory layer before the HTTP server
+    if _KNOWN_FACTS_IMPORT_OK:
+        try:
+            _init_memory()
+        except Exception as exc:  # pragma: no cover
+            import logging
+            logging.getLogger("jarvis.main").warning(
+                "Could not initialise known_facts memory layer: %s", exc
+            )
+    # Initialise data connectors (Epic 4) before the scheduler consumes them
+    if _CONNECTORS_IMPORT_OK:
+        try:
+            _init_connectors(runtime.config)
+        except Exception as exc:  # pragma: no cover
+            import logging
+            logging.getLogger("jarvis.main").warning(
+                "Could not initialise data connectors: %s", exc
+            )
+    # Initialise the Approval & Permission Layer (Epic 6) before the scheduler
+    if _APPROVALS_IMPORT_OK:
+        try:
+            _init_approvals()
+        except Exception as exc:  # pragma: no cover
+            import logging
+            logging.getLogger("jarvis.main").warning(
+                "Could not initialise approval layer: %s", exc
+            )
+    # Ensure Ollama is running (local inference backend)
+    _ensure_ollama_running()
+    # Initialise the LLM Gateway before the scheduler (agents need it)
+    if _LLM_GATEWAY_IMPORT_OK:
+        try:
+            _init_gateway(runtime.config)
+        except Exception as exc:  # pragma: no cover
+            import logging
+            logging.getLogger("jarvis.main").warning(
+                "Could not initialise LLM gateway: %s", exc
+            )
+    # Start the autonomous background scheduler before the HTTP server
+    if _SCHEDULER_IMPORT_OK:
+        try:
+            _init_scheduler(runtime)
+        except Exception as exc:  # pragma: no cover
+            import logging
+            logging.getLogger("jarvis.main").warning(
+                "Could not start background scheduler: %s", exc
+            )
+    # Initialise the Chronicle bridge + Disciple workflow (Epic 9)
+    if _CHRONICLE_BRIDGE_IMPORT_OK:
+        try:
+            _chronicle_client = getattr(runtime, "chronicle_support", None)
+            _init_chronicle_bridge(chronicle_client=_chronicle_client)
+        except Exception as exc:  # pragma: no cover
+            import logging
+            logging.getLogger("jarvis.main").warning(
+                "Could not initialise Chronicle bridge: %s", exc
+            )
+    # Initialise the Catalyst bridge + Mantis workflow (Epic 8)
+    if _CATALYST_BRIDGE_IMPORT_OK:
+        try:
+            _catalyst_client = getattr(runtime, "catalyst_support", None)
+            _init_catalyst_bridge(catalyst_client=_catalyst_client)
+        except Exception as exc:  # pragma: no cover
+            import logging
+            logging.getLogger("jarvis.main").warning(
+                "Could not initialise Catalyst bridge: %s", exc
+            )
+    # Initialise the Epic 7 Voice Shell pipeline
+    if _VOICE_PIPELINE_IMPORT_OK:
+        try:
+            _init_voice(runtime.config)
+        except Exception as exc:  # pragma: no cover
+            import logging
+            logging.getLogger("jarvis.main").warning(
+                "Could not initialise voice pipeline: %s", exc
+            )
+    # Initialise Epic 10 Family Profiles & Household Modes
+    if _FAMILY_PROFILES_IMPORT_OK:
+        try:
+            _init_family(runtime)
+        except Exception as exc:  # pragma: no cover
+            import logging
+            logging.getLogger("jarvis.main").warning(
+                "Could not initialise family profiles: %s", exc
+            )
+    # Initialise Epic 11 Publishing & Revenue Suite
+    if _PUBLISHING_IMPORT_OK:
+        try:
+            _init_publishing(runtime)
+        except Exception as exc:  # pragma: no cover
+            import logging
+            logging.getLogger("jarvis.main").warning(
+                "Could not initialise publishing suite: %s", exc
+            )
+    # Initialise Ghostwritr Bridge (Stan Lee — book authoring pipeline)
+    if _GHOSTWRITR_BRIDGE_IMPORT_OK:
+        try:
+            import os as _os
+            _init_ghostwritr_bridge(config={
+                "base_url": _os.environ.get("GHOSTWRITR_BASE_URL", "http://localhost:3000"),
+                "db_url": _os.environ.get("GHOSTWRITR_DB_URL", "postgresql://chris@127.0.0.1:5432/book_platform_builder"),
+                "internal_token": _os.environ.get("GHOSTWRITR_INTERNAL_TOKEN", ""),
+            })
+        except Exception as exc:  # pragma: no cover
+            import logging
+            logging.getLogger("jarvis.main").warning(
+                "Could not initialise Ghostwritr bridge: %s", exc
+            )
+    # Initialise Social Engine (JJJ / Quicksilver / Sage / Loki — launch + adapt)
+    if _SOCIAL_ENGINE_IMPORT_OK:
+        try:
+            _init_social_engine()
+        except Exception as exc:  # pragma: no cover
+            import logging
+            logging.getLogger("jarvis.main").warning(
+                "Could not initialise social engine: %s", exc
+            )
+    # Initialise Epic 12 Workshop Copilot
+    if _WORKSHOP_COPILOT_IMPORT_OK:
+        try:
+            _init_workshop(runtime)
+        except Exception as exc:  # pragma: no cover
+            import logging
+            logging.getLogger("jarvis.main").warning(
+                "Could not initialise workshop copilot: %s", exc
+            )
+    # Initialise Epic 13 Financial Intelligence
+    if _FINANCIAL_INTELLIGENCE_IMPORT_OK:
+        try:
+            _init_finance(runtime)
+        except Exception as exc:  # pragma: no cover
+            import logging
+            logging.getLogger("jarvis.main").warning(
+                "Could not initialise financial intelligence: %s", exc
+            )
+    # Initialise Epic 15 Growth Intelligence
+    if _GROWTH_INTELLIGENCE_IMPORT_OK:
+        try:
+            _init_growth(runtime)
+        except Exception as exc:  # pragma: no cover
+            import logging
+            logging.getLogger("jarvis.main").warning(
+                "Could not initialise growth intelligence: %s", exc
+            )
+
+    # ── Home Intelligence: email, calendar, projects, tasks ───────────────────
+    if _HOME_INTELLIGENCE_IMPORT_OK:
+        import logging as _log
+        _hi_log = _log.getLogger("jarvis.main")
+        try:
+            import os as _os
+            _home_db_url = _os.environ.get(
+                "JARVIS_HOME_DB_URL",
+                "postgresql://chris@127.0.0.1:5432/jarvis_home",
+            )
+            _home_db = _init_home_db(_home_db_url)
+            _hi_log.info("Home DB connected at %s", _home_db_url)
+
+            # Google bridges — resolve token from bridge directory
+            _google_acct = _os.environ.get("JARVIS_GOOGLE_ACCOUNT_ID", "")
+            _bridge_token_dir = _os.path.join(
+                _os.path.dirname(__file__), "..", "data", "google", "bridge", "tokens"
+            )
+            _token_path = _os.path.join(_bridge_token_dir, f"{_google_acct}.json") if _google_acct else ""
+            if _token_path and _os.path.exists(_token_path) and _os.path.getsize(_token_path) > 0:
+                _gmail = _init_gmail_bridge(credentials_path=_token_path)
+                _gcal  = _init_gcal_bridge(credentials_path=_token_path)
+                _hi_log.info("Gmail + Google Calendar bridges initialised")
+            else:
+                _gmail = _gcal = None
+                _hi_log.warning("Google token not found or empty — Gmail/GCal bridges skipped")
+
+            # Outlook bridge — uses delegated OAuth token (authorisation-code flow)
+            # Resolve token path: check JARVIS_MICROSOFT_TOKEN_PATH, then scan the
+            # data/microsoft_graph/ directory for any account token file.
+            _ms_token_path_raw = _os.environ.get(
+                "JARVIS_MICROSOFT_TOKEN_PATH",
+                _os.path.join(_os.path.dirname(__file__), "..", "data", "microsoft_graph", "token.json"),
+            )
+            _ms_token_path = Path(_ms_token_path_raw)
+            if not _ms_token_path.exists() or _ms_token_path.stat().st_size == 0:
+                # Scan sibling directory for any account-specific token file.
+                _ms_token_dir = _ms_token_path.parent
+                _candidates = sorted(
+                    [
+                        p for p in _ms_token_dir.glob("*.json")
+                        if p.stem not in ("pending_oauth", "token")
+                        and p.stat().st_size > 0
+                    ],
+                    key=lambda p: p.stat().st_mtime,
+                    reverse=True,
+                )
+                if _candidates:
+                    _ms_token_path = _candidates[0]
+                    _hi_log.info("Resolved Outlook delegated token: %s", _ms_token_path)
+                else:
+                    _hi_log.warning("No Outlook delegated token found in %s", _ms_token_dir)
+            _outlook = _init_outlook_bridge(
+                token_path=_ms_token_path,
+                client_id=_os.environ.get("JARVIS_MICROSOFT_CLIENT_ID", ""),
+                client_secret=_os.environ.get("JARVIS_MICROSOFT_CLIENT_SECRET", ""),
+                redirect_uri=_os.environ.get("JARVIS_MICROSOFT_REDIRECT_URI", ""),
+                authority=_os.environ.get("JARVIS_MICROSOFT_AUTHORITY", "common"),
+            )
+
+            # Cozi bridge (ICS feed)
+            _cozi = _init_cozi_bridge(
+                username=_os.environ.get("COZI_USERNAME", ""),
+                password=_os.environ.get("COZI_PASSWORD", ""),
+            )
+
+            # Unified inbox
+            _init_unified_inbox(
+                home_db=_home_db,
+                gmail_bridge=_gmail,
+                gcal_bridge=_gcal,
+                outlook_bridge=_outlook,
+                cozi_bridge=_cozi,
+            )
+
+            # Signal router
+            _init_signal_router(
+                home_db=_home_db,
+                openai_api_key=_os.environ.get("OPENAI_API_KEY", ""),
+            )
+            _hi_log.info("Home intelligence layer initialised")
+        except Exception as exc:
+            import logging
+            logging.getLogger("jarvis.main").warning(
+                "Could not initialise home intelligence: %s", exc
+            )
+
     serve(runtime, host, port)
     return 0
 
@@ -1545,6 +2011,8 @@ def main() -> int:
 
     if args.command == "summary":
         return command_summary(runtime)
+    if args.command == "fresh-start":
+        return command_fresh_start(runtime, execute=args.execute, no_backup=args.no_backup)
     if args.command == "serve":
         return command_serve(runtime, args.host, args.port)
     if args.command == "status":

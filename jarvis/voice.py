@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import base64
 import json
+import logging
 import os
 import queue
 import ssl
@@ -11,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 from pathlib import Path
 
 import numpy as np
@@ -22,6 +24,7 @@ from .models import InferredContext, VoiceContextProfile
 from .runtime import JarvisRuntime
 from .speech import synthesize_speech
 
+logger = logging.getLogger("jarvis.voice")
 
 TRANSCRIBE_PROMPT = (
     "This is a live household assistant conversation. Important names may include "
@@ -36,12 +39,104 @@ except ModuleNotFoundError:  # pragma: no cover - optional at runtime
     certifi = None
 
 
+class WakeWordListener:
+    """
+    Continuously monitors the microphone for the JARVIS wake word.
+    Runs in a daemon thread. Fires callback when wake word detected.
+
+    Uses OpenWakeWord with the 'hey_jarvis' model or a custom model.
+    Falls back gracefully if openwakeword is not installed.
+    """
+
+    CHUNK_SIZE = 1280     # 80ms at 16kHz
+    SAMPLE_RATE = 16000
+    DETECTION_THRESHOLD = 0.5
+
+    def __init__(self, callback: callable, model_name: str = "hey_jarvis"):
+        self._callback = callback
+        self._model_name = model_name
+        self._running = False
+        self._thread: threading.Thread | None = None
+
+    def start(self) -> bool:
+        """Start listening. Returns True if started, False if unavailable."""
+        try:
+            import openwakeword  # noqa
+        except ImportError:
+            logger.warning(
+                "OpenWakeWord not installed — wake word detection unavailable. "
+                "Run: pip install openwakeword"
+            )
+            return False
+
+        self._running = True
+        self._thread = threading.Thread(
+            target=self._listen_loop, daemon=True, name="wake-word-listener"
+        )
+        self._thread.start()
+        logger.info(f"Wake word listener started (model: {self._model_name})")
+        return True
+
+    def stop(self) -> None:
+        self._running = False
+        if self._thread:
+            self._thread.join(timeout=2.0)
+
+    def _listen_loop(self) -> None:
+        try:
+            import openwakeword  # noqa
+            from openwakeword.model import Model as OWWModel
+            import numpy as np
+
+            # Load model — downloads on first use
+            oww_model = OWWModel(
+                wakeword_models=[self._model_name],
+                inference_framework="onnx",
+            )
+
+            def audio_callback(indata, frames, time_info, status):
+                if not self._running:
+                    return
+                audio_chunk = (indata[:, 0] * 32767).astype(np.int16)
+                predictions = oww_model.predict(audio_chunk)
+                for model_name, score in predictions.items():
+                    if score > self.DETECTION_THRESHOLD:
+                        logger.info(f"Wake word detected: {model_name} (score: {score:.2f})")
+                        try:
+                            self._callback(model_name, score)
+                        except Exception as e:
+                            logger.error(f"Wake word callback error: {e}")
+                        # Reset to avoid re-triggering
+                        oww_model.reset()
+                        break
+
+            with sd.InputStream(
+                samplerate=self.SAMPLE_RATE,
+                channels=1,
+                dtype="float32",
+                blocksize=self.CHUNK_SIZE,
+                callback=audio_callback,
+            ):
+                while self._running:
+                    time.sleep(0.1)
+
+        except Exception as e:
+            logger.error(f"Wake word listener crashed: {e}")
+            self._running = False
+
+    @property
+    def is_running(self) -> bool:
+        return self._running and bool(self._thread and self._thread.is_alive())
+
+
 class JarvisVoiceShell:
     def __init__(self, runtime: JarvisRuntime) -> None:
         self.runtime = runtime
         self.voice_context = runtime.config.load_voice_context()
         self._playback_lock = threading.Lock()
         self._playback_process: subprocess.Popen[str] | None = None
+        self._wake_word_listener: WakeWordListener | None = None
+        self._wake_word_queue: queue.Queue = queue.Queue()
 
     def list_input_devices(self) -> int:
         devices = sd.query_devices()
@@ -330,6 +425,93 @@ class JarvisVoiceShell:
                 if not receiver_task.done():
                     receiver_task.cancel()
                 await asyncio.gather(sender_task, receiver_task, return_exceptions=True)
+
+        return 0
+
+    def start_wake_word_listener(self) -> bool:
+        """
+        Start continuous wake word monitoring.
+        When wake word detected, queues a signal for the main voice loop.
+        """
+        model = os.getenv("JARVIS_WAKE_WORD_MODEL", "hey_jarvis")
+
+        def on_wake_word(model_name: str, score: float):
+            self._wake_word_queue.put({"model": model_name, "score": score, "ts": time.time()})
+
+        self._wake_word_listener = WakeWordListener(callback=on_wake_word, model_name=model)
+        return self._wake_word_listener.start()
+
+    def stop_wake_word_listener(self) -> None:
+        if self._wake_word_listener:
+            self._wake_word_listener.stop()
+
+    def run_continuous_listen_loop(
+        self,
+        actor: str | None,
+        room: str | None,
+        record_duration: float = 4.0,
+        input_device: str | None = None,
+        silent: bool = False,
+    ) -> int:
+        """
+        Continuous listening loop with wake word detection.
+        Waits for wake word -> records -> transcribes -> responds -> speaks -> repeat.
+
+        This is the production voice mode for the Mac Mini.
+        """
+        print("JARVIS continuous listening mode. Say 'Hey JARVIS' to activate.")
+        started = self.start_wake_word_listener()
+        if not started:
+            print("Wake word unavailable — falling back to push-to-talk.")
+            return self.run_push_to_talk_loop(
+                duration=record_duration,
+                actor=actor,
+                room=room,
+                input_device=input_device,
+                silent=silent,
+                require_wake_word=False,
+            )
+
+        try:
+            while True:
+                try:
+                    # Wait for wake word (blocks until detected)
+                    wake_event = self._wake_word_queue.get(timeout=60.0)
+                    print(f"\n[Wake word detected — listening...]")
+
+                    # Record after wake word
+                    audio_path = self.record_audio(
+                        duration=record_duration,
+                        input_device=input_device,
+                    )
+                    transcript = self.transcribe_audio(audio_path)
+                    print(f"Heard: {transcript}")
+
+                    if not transcript.strip():
+                        continue
+
+                    handled = self.handle_text_turn(
+                        raw_text=transcript,
+                        explicit_actor=actor,
+                        explicit_room=room,
+                        require_wake_word=False,  # already detected
+                    )
+                    if not handled:
+                        continue
+                    inferred, reply = handled
+                    print(f"JARVIS: {reply}")
+                    if not silent:
+                        self.speak(reply, quiet=inferred.quiet_mode, whisper=inferred.whisper_mode)
+
+                except queue.Empty:
+                    continue  # No wake word — keep listening
+                except KeyboardInterrupt:
+                    print("\nStopping.", file=sys.stderr)
+                    return 130
+                except Exception as exc:
+                    logger.error(f"Continuous loop error: {exc}")
+        finally:
+            self.stop_wake_word_listener()
 
         return 0
 

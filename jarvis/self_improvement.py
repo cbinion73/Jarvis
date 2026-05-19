@@ -16,6 +16,7 @@ class SelfImprovementStore:
         self.root.mkdir(parents=True, exist_ok=True)
         self.jobs_path = self.root / "jobs.json"
         self.runs_path = self.root / "runs.json"
+        self.active_runs_path = self.root / "active_runs.json"
         self.settings_path = self.root / "settings.json"
 
     def _load_json(self, path: Path, *, default: Any) -> Any:
@@ -112,3 +113,34 @@ class SelfImprovementStore:
             if str(item.get("run_id", "")).strip() == needle:
                 return dict(item)
         return None
+
+    def active_runs(self) -> dict[str, dict[str, Any]]:
+        payload = self._load_json(self.active_runs_path, default={})
+        if not isinstance(payload, dict):
+            return {}
+        return {str(key): value for key, value in payload.items() if isinstance(value, dict)}
+
+    def save_active_runs(self, payload: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        self._save_json(self.active_runs_path, payload)
+        return payload
+
+    def get_active_run(self, job_id: str) -> dict[str, Any] | None:
+        return dict(self.active_runs().get(str(job_id).strip()) or {}) or None
+
+    def upsert_active_run(self, job_id: str, record: dict[str, Any]) -> dict[str, Any]:
+        needle = str(job_id).strip()
+        if not needle:
+            raise ValueError("job_id is required")
+        payload = self.active_runs()
+        payload[needle] = record
+        self.save_active_runs(payload)
+        return record
+
+    def clear_active_run(self, job_id: str) -> None:
+        needle = str(job_id).strip()
+        if not needle:
+            return
+        payload = self.active_runs()
+        if needle in payload:
+            payload.pop(needle, None)
+            self.save_active_runs(payload)
