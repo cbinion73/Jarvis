@@ -42,10 +42,11 @@ except Exception:  # pragma: no cover
 from .apple_api import _register_apple_api
 
 try:
-    from .voice_pipeline import get_friday, get_pipeline, get_time_aware_greeting, init_voice as _init_voice_pipeline
+    from .voice_pipeline import get_friday, get_pipeline, get_time_aware_greeting, init_voice as _init_voice_pipeline, VOICE_TOOL_ALLOWLIST
     _VOICE_PIPELINE_AVAILABLE = True
 except Exception:  # pragma: no cover
     _VOICE_PIPELINE_AVAILABLE = False
+    VOICE_TOOL_ALLOWLIST: list = []  # type: ignore[assignment]
 
     def get_pipeline():  # type: ignore[misc]
         return None
@@ -327,6 +328,18 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             except Exception:
                 pass
             await asyncio.sleep(interval_seconds)
+
+    # ── MCP server — mount at /mcp (SSE transport for Claude Desktop / Cursor) ──
+    try:
+        from .mcp_server import mcp as _mcp_server
+        # FastMCP ≥ 2.x: get_asgi_app() returns an ASGI app; mount at /mcp
+        _mcp_app = _mcp_server.http_app(path="/", transport="sse")
+        app.mount("/mcp", _mcp_app)
+        import logging as _mcp_log
+        _mcp_log.getLogger("jarvis.service").info("MCP server mounted at /mcp (SSE)")
+    except Exception as _mcp_exc:
+        import logging as _mcp_log
+        _mcp_log.getLogger("jarvis.service").warning("MCP server unavailable: %s", _mcp_exc)
 
     @app.on_event("startup")
     async def _start_shell_state_warmer() -> None:
@@ -2924,12 +2937,58 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_voice_greeting() -> JSONResponse:
         """Return a time-appropriate greeting text and the TTS endpoint URL."""
         greeting = get_time_aware_greeting("boss")
-        return _json({"text": greeting, "audio_url": "/api/voice/synthesize"})
+        return _json({
+            "text": greeting,
+            "audio_url": "/api/voice/synthesize",
+            "voice_tools": VOICE_TOOL_ALLOWLIST,
+            "voice_tools_count": len(VOICE_TOOL_ALLOWLIST),
+        })
 
     @app.get("/api/greet")
     async def api_greet(name: str = "boss") -> JSONResponse:
         """Return a time-aware JARVIS greeting for the given name."""
         return _json({"greeting": get_time_aware_greeting(name)})
+
+    # ── Reminders ────────────────────────────────────────────────
+    from .reminders import (
+        list_reminders, add_reminder, complete_reminder,
+        delete_reminder, snooze_reminder, pending_reminders,
+    )
+
+    @app.get("/api/reminders")
+    async def api_reminders_list(include_done: bool = False) -> JSONResponse:
+        items = list_reminders() if include_done else pending_reminders()
+        return _json({"reminders": items, "total": len(items)})
+
+    @app.post("/api/reminders")
+    async def api_reminders_add(payload: dict[str, Any]) -> JSONResponse:
+        text = (payload.get("text") or "").strip()
+        if not text:
+            return JSONResponse({"error": "text required"}, status_code=400)
+        r = add_reminder(
+            text=text,
+            due_iso=payload.get("due"),
+            priority=payload.get("priority", "normal"),
+        )
+        return _json({"reminder": r})
+
+    @app.post("/api/reminders/{reminder_id}/complete")
+    async def api_reminders_complete(reminder_id: str) -> JSONResponse:
+        ok = complete_reminder(reminder_id)
+        return _json({"ok": ok})
+
+    @app.delete("/api/reminders/{reminder_id}")
+    async def api_reminders_delete(reminder_id: str) -> JSONResponse:
+        ok = delete_reminder(reminder_id)
+        return _json({"ok": ok})
+
+    @app.post("/api/reminders/{reminder_id}/snooze")
+    async def api_reminders_snooze(reminder_id: str, payload: dict[str, Any]) -> JSONResponse:
+        new_due = payload.get("due")
+        if not new_due:
+            return JSONResponse({"error": "due required"}, status_code=400)
+        ok = snooze_reminder(reminder_id, new_due)
+        return _json({"ok": ok})
 
     @app.post("/api/approvals/{request_id}")
     async def api_update_approval(request_id: str, payload: dict[str, Any]) -> JSONResponse:

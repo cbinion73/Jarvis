@@ -2515,6 +2515,24 @@ body::after {{
         </div>
       </div>
 
+      <!-- Reminders -->
+      <div class="card card-tactical">
+        <div class="card-inner">
+          <div class="card-header">
+            <span class="card-title">Reminders</span>
+            <span class="pill pill-hue" id="reminders-count">—</span>
+          </div>
+          <div id="overview-reminders">
+            <div class="list-row"><div class="skel" style="height:10px;width:70%;"></div></div>
+            <div class="list-row"><div class="skel" style="height:10px;width:55%;"></div></div>
+          </div>
+          <div style="margin-top:10px;display:flex;gap:6px;">
+            <input id="reminder-input" type="text" placeholder="Add reminder…" style="flex:1;background:rgba(255,255,255,0.4);border:1px solid rgba(255,255,255,0.5);border-radius:6px;padding:5px 8px;font-size:12px;color:var(--text-1);outline:none;" onkeydown="if(event.key==='Enter')addReminder()">
+            <button onclick="addReminder()" style="background:var(--hue);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;">+</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Active Agents -->
       <div class="card card-tactical">
         <div class="card-inner">
@@ -3461,6 +3479,7 @@ function init() {{
   loadOverviewCatalyst();
   loadOverviewChronicle();
   loadOverviewPublishing();
+  loadOverviewReminders();
 
   // Handle initial packet from server
   if (INITIAL_PACKET && typeof INITIAL_PACKET === 'object') {{
@@ -3499,7 +3518,7 @@ function loadViewData(name) {{
   if (_agentsRefreshTimer) {{ clearInterval(_agentsRefreshTimer); _agentsRefreshTimer = null; }}
 
   switch (name) {{
-    case 'overview':     loadApprovals(); loadBriefing(); loadHomeDashboard(); loadOverviewAgents(); loadOverviewCatalyst(); loadOverviewChronicle(); loadOverviewPublishing(); break;
+    case 'overview':     loadApprovals(); loadBriefing(); loadHomeDashboard(); loadOverviewAgents(); loadOverviewCatalyst(); loadOverviewChronicle(); loadOverviewPublishing(); loadOverviewReminders(); break;
     case 'agents':
       loadLiveAgents();
       // Auto-refresh every 30s while on this view
@@ -4430,6 +4449,64 @@ async function loadOverviewPublishing() {{
       </div>`;
     }}).join('');
   }} catch(e) {{ console.error('loadOverviewPublishing failed', e); }}
+}}
+
+/* ═══════════════════════════════════════════════════════════════
+   REMINDERS
+═══════════════════════════════════════════════════════════════ */
+async function loadOverviewReminders() {{
+  try {{
+    const res = await fetch('/api/reminders');
+    if (!res.ok) {{ console.warn('loadOverviewReminders', res.status); return; }}
+    const d = await res.json();
+    const items = d.reminders || [];
+    const countEl = document.getElementById('reminders-count');
+    if (countEl) countEl.textContent = items.length || '0';
+    const el = document.getElementById('overview-reminders');
+    if (!el) return;
+    if (items.length === 0) {{
+      el.innerHTML = '<div class="list-row-sub" style="color:var(--text-3);font-style:italic;">No pending reminders.</div>';
+      return;
+    }}
+    el.innerHTML = items.slice(0, 5).map(r => {{
+      const pri = r.priority === 'high' ? 'dot-error' : r.priority === 'low' ? 'dot-standby' : 'dot-active';
+      const due = r.due ? ' <span style="font-size:9px;color:var(--text-3);">' + new Date(r.due).toLocaleDateString([], {{month:'short',day:'numeric'}}) + '</span>' : '';
+      return `<div class="list-row" style="align-items:center;">
+        <span class="dot ${{pri}}" style="cursor:pointer;flex-shrink:0;" onclick="completeReminder('${{escHtml(r.id)}}')" title="Mark done"></span>
+        <div style="flex:1;font-size:12px;color:var(--text-1);">${{escHtml(r.text)}}${{due}}</div>
+        <span style="font-size:10px;color:var(--text-3);cursor:pointer;" onclick="deleteReminder('${{escHtml(r.id)}}')" title="Delete">✕</span>
+      </div>`;
+    }}).join('');
+  }} catch(e) {{ console.error('loadOverviewReminders failed', e); }}
+}}
+
+async function addReminder() {{
+  const input = document.getElementById('reminder-input');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  try {{
+    const res = await fetch('/api/reminders', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{text}})
+    }});
+    if (res.ok) {{ input.value = ''; loadOverviewReminders(); }}
+  }} catch(e) {{ console.error('addReminder failed', e); }}
+}}
+
+async function completeReminder(id) {{
+  try {{
+    await fetch('/api/reminders/' + id + '/complete', {{method: 'POST'}});
+    loadOverviewReminders();
+  }} catch(e) {{}}
+}}
+
+async function deleteReminder(id) {{
+  try {{
+    await fetch('/api/reminders/' + id, {{method: 'DELETE'}});
+    loadOverviewReminders();
+  }} catch(e) {{}}
 }}
 
 function updateOverviewHomeCards(d) {{

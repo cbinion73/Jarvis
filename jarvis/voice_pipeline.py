@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import re
 import shutil
 import subprocess
@@ -41,6 +42,42 @@ VOICE_PERSONA_RULES = """
 5. Use contractions and natural speech patterns. "What's" not "What is". "I've got" not "I have obtained".
 6. Address Chris by name occasionally — not every sentence, just naturally.
 """
+
+# ---------------------------------------------------------------------------
+# Voice tool allowlist
+# ---------------------------------------------------------------------------
+
+# Default tool allowlist for voice mode — keeps LLM prefill fast.
+# Override with JARVIS_VOICE_TOOLS env var (comma-separated tool IDs).
+# Set to empty string to allow all tools.
+VOICE_TOOL_ALLOWLIST: list[str] = [
+    t.strip()
+    for t in os.environ.get(
+        "JARVIS_VOICE_TOOLS",
+        "briefing,weather,calendar,reminders,home_assistant,chronicle,timer,math,reminder",
+    ).split(",")
+    if t.strip()
+]
+
+
+def filter_tools_for_voice(tools: list[dict]) -> list[dict]:
+    """
+    Filter a list of OpenAI-style tool dicts to only the voice allowlist.
+
+    If VOICE_TOOL_ALLOWLIST is empty, returns all tools unchanged.
+    Matching is case-insensitive and checks tool['function']['name'].
+    """
+    if not VOICE_TOOL_ALLOWLIST:
+        return tools
+    allowed = {t.lower() for t in VOICE_TOOL_ALLOWLIST}
+    return [
+        t for t in tools
+        if (
+            t.get("function", {}).get("name", "").lower() in allowed
+            or any(kw in t.get("function", {}).get("name", "").lower() for kw in allowed)
+        )
+    ]
+
 
 # ---------------------------------------------------------------------------
 # Config
