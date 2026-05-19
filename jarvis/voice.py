@@ -753,6 +753,7 @@ class JarvisVoiceShell:
 def build_voice_parser(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser("voice", help="Run JARVIS voice and text conversation surfaces")
     parser.add_argument("--list-devices", action="store_true")
+    parser.add_argument("--listen", action="store_true", help="Continuous wake-word mode: say 'Hey JARVIS' to activate.")
     parser.add_argument("--loop", action="store_true", help="Run a push-to-talk microphone loop.")
     parser.add_argument("--text-loop", action="store_true", help="Run a typed conversation loop.")
     parser.add_argument("--realtime", action="store_true", help="Run Realtime API transcription loop.")
