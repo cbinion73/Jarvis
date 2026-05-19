@@ -410,6 +410,76 @@ body::after {{
   transition: background 0.45s ease, color 0.45s ease, border-color 0.45s ease;
 }}
 
+/* ── Weather widget ── */
+.nav-weather {{
+  display: flex; align-items: center; gap: 5px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 99px; padding: 3px 10px;
+  cursor: pointer; transition: background 0.2s;
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-1);
+  white-space: nowrap;
+}}
+.nav-weather:hover {{ background: var(--surface-hi); }}
+.nav-weather-icon {{ font-size: 14px; line-height: 1; }}
+.nav-clock {{ font-family: var(--font-mono); font-size: 11px; color: var(--text-2); white-space: nowrap; }}
+
+/* ── Weather modal ── */
+.weather-modal-overlay {{
+  position: fixed; inset: 0; z-index: 3000;
+  background: rgba(15,23,42,0.55); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+}}
+.weather-modal-overlay.hidden {{ display: none; }}
+.weather-modal {{
+  background: var(--surface-hi); border: 1px solid var(--border-hi);
+  border-radius: 20px; padding: 28px;
+  width: min(680px, 95vw); max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+}}
+.weather-modal-header {{
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px;
+}}
+.weather-modal-title {{ font-size: 18px; font-weight: 700; color: var(--text-1); }}
+.weather-modal-close {{
+  width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
+  background: transparent; cursor: pointer; color: var(--text-2);
+  font-size: 16px; display: flex; align-items: center; justify-content: center;
+}}
+.weather-hero {{
+  display: flex; align-items: center; gap: 20px; margin-bottom: 24px;
+  padding: 20px; background: rgba(255,255,255,0.4); border-radius: 14px;
+}}
+.weather-hero-icon {{ font-size: 56px; line-height: 1; }}
+.weather-hero-temp {{ font-size: 48px; font-weight: 700; font-family: var(--font-mono); color: var(--text-1); }}
+.weather-hero-detail {{ color: var(--text-2); font-size: 13px; line-height: 1.6; }}
+.weather-grid {{
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+  gap: 10px; margin-bottom: 20px;
+}}
+.weather-stat {{
+  background: rgba(255,255,255,0.4); border-radius: 10px; padding: 12px;
+  text-align: center;
+}}
+.weather-stat-val {{ font-size: 18px; font-weight: 700; font-family: var(--font-mono); color: var(--text-1); }}
+.weather-stat-lbl {{ font-size: 10px; color: var(--text-3); text-transform: uppercase; margin-top: 2px; }}
+.weather-radar-frame {{
+  border-radius: 12px; overflow: hidden; border: 1px solid var(--border);
+  margin-bottom: 20px; background: #000;
+}}
+.weather-radar-frame img {{ width: 100%; display: block; }}
+.weather-forecast-row {{
+  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
+}}
+.weather-forecast-item {{
+  flex-shrink: 0; background: rgba(255,255,255,0.4); border-radius: 10px;
+  padding: 10px 14px; text-align: center; min-width: 70px;
+}}
+.weather-forecast-label {{ font-size: 10px; color: var(--text-3); margin-bottom: 4px; }}
+.weather-forecast-icon {{ font-size: 18px; }}
+.weather-forecast-hi {{ font-size: 13px; font-weight: 700; color: var(--text-1); }}
+.weather-forecast-lo {{ font-size: 11px; color: var(--text-3); }}
+
 .settings-btn {{
   width: 32px; height: 32px;
   display: flex; align-items: center; justify-content: center;
@@ -2428,6 +2498,12 @@ body::after {{
   </div>
 
   <div class="nav-right">
+    <span class="nav-clock" id="nav-clock"></span>
+    <button class="nav-weather" id="nav-weather-btn" onclick="openWeatherModal()" title="Live weather">
+      <span class="nav-weather-icon" id="nav-weather-icon">⛅</span>
+      <span id="nav-weather-temp">--°</span>
+      <span id="nav-weather-cond" style="color:var(--text-2);">--</span>
+    </button>
     <span class="agent-badge-pill" id="active-count">▲ — ACTIVE</span>
     <button class="settings-btn" onclick="openSettings()" title="Settings">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -3327,6 +3403,26 @@ body::after {{
   </div>
 </div>
 
+<!-- Weather modal -->
+<div class="weather-modal-overlay hidden" id="weather-modal-overlay" onclick="closeWeatherModal(event)">
+  <div class="weather-modal" id="weather-modal">
+    <div class="weather-modal-header">
+      <div class="weather-modal-title" id="weather-modal-title">Live Weather</div>
+      <button class="weather-modal-close" onclick="closeWeatherModal()">✕</button>
+    </div>
+    <div class="weather-hero">
+      <div class="weather-hero-icon" id="wm-icon">⛅</div>
+      <div>
+        <div class="weather-hero-temp" id="wm-temp">--°F</div>
+        <div class="weather-hero-detail" id="wm-detail">Loading…</div>
+      </div>
+    </div>
+    <div class="weather-grid" id="wm-stats"></div>
+    <div id="wm-radar-wrap"></div>
+    <div id="wm-forecast-wrap"></div>
+  </div>
+</div>
+
 <!-- Toast container -->
 <div id="toast-wrap"></div>
 
@@ -3480,6 +3576,14 @@ function init() {{
   loadOverviewChronicle();
   loadOverviewPublishing();
   loadOverviewReminders();
+
+  // Clock — update every minute
+  updateNavClock();
+  setInterval(updateNavClock, 30000);
+
+  // Weather widget — load once, refresh every 10 min
+  loadWeatherWidget();
+  setInterval(loadWeatherWidget, 600000);
 
   // Handle initial packet from server
   if (INITIAL_PACKET && typeof INITIAL_PACKET === 'object') {{
@@ -4507,6 +4611,143 @@ async function deleteReminder(id) {{
     await fetch('/api/reminders/' + id, {{method: 'DELETE'}});
     loadOverviewReminders();
   }} catch(e) {{}}
+}}
+
+/* ═══════════════════════════════════════════════════════════════
+   WEATHER WIDGET + MODAL
+═══════════════════════════════════════════════════════════════ */
+let _weatherData = null;
+
+function _weatherIcon(cond) {{
+  if (!cond) return '⛅';
+  const c = cond.toLowerCase();
+  if (c.includes('thunder') || c.includes('lightning')) return '⛈';
+  if (c.includes('snow') || c.includes('blizzard')) return '❄';
+  if (c.includes('freezing')) return '❄';
+  if (c.includes('rain') || c.includes('shower') || c.includes('drizzle')) return '☂';
+  if (c.includes('fog') || c.includes('mist') || c.includes('haze')) return '🌫';
+  if (c.includes('cloud') || c.includes('overcast')) return '☁';
+  if (c.includes('clear') || c.includes('sunny')) return '☀';
+  if (c.includes('wind')) return '💨';
+  return '⛅';
+}}
+
+async function loadWeatherWidget() {{
+  try {{
+    const res = await fetch('/api/storm-weather');
+    if (!res.ok) return;
+    const d = await res.json();
+    _weatherData = d;
+    const cur = d.current || {{}};
+    const icon = cur.icon || _weatherIcon(cur.condition || '');
+    const temp = cur.temperature_f != null ? cur.temperature_f + '°' : '--°';
+    const cond = cur.condition || '--';
+    const el = document.getElementById('nav-weather-btn');
+    if (el) el.title = (d.location || '') + ' · ' + cond;
+    const iconEl = document.getElementById('nav-weather-icon');
+    if (iconEl) iconEl.textContent = icon;
+    const tempEl = document.getElementById('nav-weather-temp');
+    if (tempEl) tempEl.textContent = temp;
+    const condEl = document.getElementById('nav-weather-cond');
+    if (condEl) condEl.textContent = cond.length > 12 ? cond.slice(0,12) + '…' : cond;
+  }} catch(e) {{ console.warn('weather widget failed', e); }}
+}}
+
+function openWeatherModal() {{
+  const overlay = document.getElementById('weather-modal-overlay');
+  if (overlay) overlay.classList.remove('hidden');
+  if (_weatherData) {{
+    renderWeatherModal(_weatherData);
+  }} else {{
+    fetch('/api/storm-weather').then(r => r.json()).then(d => {{
+      _weatherData = d;
+      renderWeatherModal(d);
+    }}).catch(() => {{}});
+  }}
+}}
+
+function closeWeatherModal(e) {{
+  if (e && e.target !== document.getElementById('weather-modal-overlay')) return;
+  const overlay = document.getElementById('weather-modal-overlay');
+  if (overlay) overlay.classList.add('hidden');
+}}
+
+function renderWeatherModal(d) {{
+  const cur = d.current || {{}};
+  const icon = cur.icon || _weatherIcon(cur.condition || '');
+  const temp = cur.temperature_f != null ? cur.temperature_f + '°F' : '--°F';
+  const feels = cur.feels_like_f != null ? 'Feels like ' + cur.feels_like_f + '°F · ' : '';
+  const cond = cur.condition || '';
+  const wind = cur.wind || '';
+  const humidity = cur.humidity_pct != null ? cur.humidity_pct + '% humidity' : '';
+  const sunrise = cur.sunrise || '';
+  const sunset = cur.sunset || '';
+
+  const title = document.getElementById('weather-modal-title');
+  if (title) title.textContent = (d.location || 'Live Weather') + ' · ' + (cur.stamp_label || '');
+
+  const iconEl = document.getElementById('wm-icon');
+  if (iconEl) iconEl.textContent = icon;
+  const tempEl = document.getElementById('wm-temp');
+  if (tempEl) tempEl.textContent = temp;
+  const detailEl = document.getElementById('wm-detail');
+  if (detailEl) detailEl.innerHTML = escHtml(cond) + '<br>' +
+    escHtml(feels) + escHtml(wind ? 'Wind: ' + wind : '') + '<br>' +
+    escHtml(humidity) + (sunrise ? ' · 🌅 ' + escHtml(sunrise) : '') + (sunset ? ' · 🌇 ' + escHtml(sunset) : '');
+
+  // Stats grid
+  const stats = [
+    {{ val: cur.humidity_pct != null ? cur.humidity_pct + '%' : '--', lbl: 'Humidity' }},
+    {{ val: cur.dew_point_f != null ? cur.dew_point_f + '°F' : '--', lbl: 'Dew Point' }},
+    {{ val: cur.wind || '--', lbl: 'Wind' }},
+    {{ val: cur.visibility_miles != null ? cur.visibility_miles + ' mi' : '--', lbl: 'Visibility' }},
+    {{ val: cur.pressure_hpa != null ? cur.pressure_hpa + ' hPa' : '--', lbl: 'Pressure' }},
+    {{ val: cur.precip_probability != null ? cur.precip_probability + '%' : '--', lbl: 'Precip %' }},
+  ];
+  const statsEl = document.getElementById('wm-stats');
+  if (statsEl) statsEl.innerHTML = stats.map(s =>
+    `<div class="weather-stat"><div class="weather-stat-val">${{escHtml(String(s.val))}}</div><div class="weather-stat-lbl">${{escHtml(s.lbl)}}</div></div>`
+  ).join('');
+
+  // Radar image
+  const radar = d.radar || {{}};
+  const radarWrap = document.getElementById('wm-radar-wrap');
+  if (radarWrap) {{
+    if (radar.loop_image_url) {{
+      radarWrap.innerHTML = `<div class="section-label" style="margin:16px 0 8px;">Radar</div>
+        <div class="weather-radar-frame">
+          <img src="${{escHtml(radar.loop_image_url)}}" alt="Radar loop" onerror="this.parentElement.style.display='none'">
+        </div>`;
+    }} else {{
+      radarWrap.innerHTML = '';
+    }}
+  }}
+
+  // Forecast
+  const forecast = d.forecast || [];
+  const forecastWrap = document.getElementById('wm-forecast-wrap');
+  if (forecastWrap && forecast.length > 0) {{
+    forecastWrap.innerHTML = `<div class="section-label" style="margin:16px 0 8px;">Forecast</div>
+      <div class="weather-forecast-row">` +
+      forecast.slice(0, 7).map(f => `
+        <div class="weather-forecast-item">
+          <div class="weather-forecast-label">${{escHtml(f.label || f.name || '')}}</div>
+          <div class="weather-forecast-icon">${{f.icon || _weatherIcon(f.condition || '')}}</div>
+          <div class="weather-forecast-hi">${{f.temperature != null ? f.temperature + '°' : '--'}}</div>
+          <div class="weather-forecast-lo">${{f.condition ? f.condition.slice(0,10) : ''}}</div>
+        </div>`).join('') +
+      `</div>`;
+  }} else if (forecastWrap) {{
+    forecastWrap.innerHTML = '';
+  }}
+}}
+
+/* ── Clock ── */
+function updateNavClock() {{
+  const el = document.getElementById('nav-clock');
+  if (!el) return;
+  const now = new Date();
+  el.textContent = now.toLocaleTimeString([], {{hour:'2-digit', minute:'2-digit'}});
 }}
 
 function updateOverviewHomeCards(d) {{
