@@ -572,8 +572,8 @@ class JarvisVoiceShell:
                 block=block,
             )
             return
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Primary TTS/playback failed (%s) — falling back to system say", exc)
 
         self._local_fallback_tts(text, quiet=quiet, whisper=whisper, block=block)
 
