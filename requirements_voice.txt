@@ -1,0 +1,17 @@
+# JARVIS on-device voice stack
+# Install with: pip install -r requirements_voice.txt
+
+# Apple Silicon STT (Neural Engine accelerated)
+mlx-whisper>=0.4.0
+
+# High-quality on-device TTS
+kokoro>=0.9.0
+soundfile>=0.12.0
+
+# Wake word detection (continuous listening)
+openwakeword>=0.6.0
+
+# Audio I/O (likely already installed)
+sounddevice>=0.4.6
+scipy>=1.11.0
+numpy>=1.24.0

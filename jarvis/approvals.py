@@ -1,0 +1,1006 @@
+from __future__ import annotations
+
+"""
+JARVIS Approval & Permission Layer — Epic 6
+============================================
+Unified approval gate ensuring JARVIS never takes consequential actions
+without Chris's explicit sign-off.
+
+Design:
+- ApprovalRequest dataclass — single record per staged action
+- ApprovalQueue — thread-safe store persisted to ~/.jarvis/approvals/
+- ApprovalGuard — primary agent-facing interface
+- ActionExecutors — stub dispatchers per action type (real wiring added per integration)
+- GUARDRAIL_OVERRIDES — hard rules that elevate risk tiers for sensitive contexts
+
+Persistence:
+- ~/.jarvis/approvals/queue.jsonl   — active (pending/running) requests
+- ~/.jarvis/approvals/history.jsonl — completed records, capped at 500
+"""
+
+import json
+import logging
+import threading
+import uuid
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone, timedelta
+from enum import Enum
+from pathlib import Path
+from typing import Any
+
+logger = logging.getLogger("jarvis.approvals")
+
+
+# ---------------------------------------------------------------------------
+# Risk tier enum
+# ---------------------------------------------------------------------------
+
+class RiskTier(str, Enum):
+    SAFE = "safe"          # No approval needed: weather lookups, calendar reads
+    LOW = "low"            # Soft approval (auto-approves after 30 min if no response)
+    MEDIUM = "medium"      # Explicit approval required — never auto-approves
+    HIGH = "high"          # Explicit approval + confirmation (2-step)
+    CRITICAL = "critical"  # Blocks until approved; push notification immediately
+
+
+# ---------------------------------------------------------------------------
+# Risk classification tables
+# ---------------------------------------------------------------------------
+
+ACTION_RISK_MAP: dict[str, str] = {
+    "send_message":     RiskTier.MEDIUM,
+    "calendar_change":  RiskTier.MEDIUM,
+    "purchase":         RiskTier.HIGH,
+    "home_control":     RiskTier.MEDIUM,
+    "social_post":      RiskTier.MEDIUM,
+    "deploy":           RiskTier.HIGH,
+    "document_send":    RiskTier.MEDIUM,
+    "document_review":  RiskTier.MEDIUM,
+    "external_api":     RiskTier.LOW,
+    "file_write":       RiskTier.LOW,
+    "other":            RiskTier.MEDIUM,
+}
+
+# Auto-approve timeouts by tier in seconds; None = never auto-approve
+AUTO_APPROVE_TIMEOUTS: dict[str, int | None] = {
+    RiskTier.SAFE:     0,
+    RiskTier.LOW:      1800,   # 30 minutes
+    RiskTier.MEDIUM:   None,
+    RiskTier.HIGH:     None,
+    RiskTier.CRITICAL: None,
+}
+
+# Expiry windows — how long a request stays open before it expires
+EXPIRY_WINDOWS: dict[str, int] = {
+    RiskTier.SAFE:     300,      # 5 min (academic; SAFE is immediate)
+    RiskTier.LOW:      7200,     # 2 h
+    RiskTier.MEDIUM:   86400,    # 24 h
+    RiskTier.HIGH:     43200,    # 12 h
+    RiskTier.CRITICAL: 3600,     # 1 h (push sent; must be acted on fast)
+}
+
+# Guardrail overrides: (action_type, context_key, context_value) → minimum tier
+# These can only elevate, never lower.
+GUARDRAIL_OVERRIDES: list[dict] = [
+    # External messaging is always MEDIUM minimum
+    {
+        "action_types": ["send_message", "document_send", "social_post"],
+        "context_key": None,
+        "context_value": None,
+        "minimum_tier": RiskTier.MEDIUM,
+        "reason": "No automatic external messaging allowed",
+    },
+    # Any action flagged as child-related → elevate one tier
+    {
+        "action_types": None,   # all action types
+        "context_key": "involves_children",
+        "context_value": True,
+        "minimum_tier": None,   # special: elevate_one
+        "elevate_one": True,
+        "reason": "Child-related external actions require elevated caution",
+    },
+    # Home unlock from outside network → CRITICAL
+    {
+        "action_types": ["home_control"],
+        "context_key": "remote_unlock",
+        "context_value": True,
+        "minimum_tier": RiskTier.CRITICAL,
+        "reason": "Remote door unlock requires CRITICAL approval",
+    },
+    # Voice-only unlock → CRITICAL + typed confirmation
+    {
+        "action_types": ["home_control"],
+        "context_key": "voice_only_unlock",
+        "context_value": True,
+        "minimum_tier": RiskTier.CRITICAL,
+        "reason": "Voice-only unlock is prohibited; requires typed second factor",
+    },
+    # Bedroom / bathroom camera commands → CRITICAL
+    {
+        "action_types": ["home_control"],
+        "context_key": "camera_zone",
+        "context_value": "private",
+        "minimum_tier": RiskTier.CRITICAL,
+        "reason": "Bedroom/bathroom camera commands require CRITICAL approval",
+    },
+    # Purchase > $500 → CRITICAL
+    {
+        "action_types": ["purchase"],
+        "context_key": "amount_usd",
+        "context_value": 500,   # ≥ this value
+        "context_comparison": "gte",
+        "minimum_tier": RiskTier.CRITICAL,
+        "reason": "Purchases above $500 require CRITICAL approval",
+    },
+    # Purchase > $100 → HIGH minimum
+    {
+        "action_types": ["purchase"],
+        "context_key": "amount_usd",
+        "context_value": 100,
+        "context_comparison": "gte",
+        "minimum_tier": RiskTier.HIGH,
+        "reason": "Purchases above $100 require HIGH approval",
+    },
+]
+
+_TIER_ORDER = [
+    RiskTier.SAFE,
+    RiskTier.LOW,
+    RiskTier.MEDIUM,
+    RiskTier.HIGH,
+    RiskTier.CRITICAL,
+]
+
+
+def _tier_index(tier: str) -> int:
+    try:
+        return _TIER_ORDER.index(RiskTier(tier))
+    except (ValueError, AttributeError):
+        return 2  # default to MEDIUM
+
+
+def _elevate_tier(current: str) -> str:
+    idx = _tier_index(current)
+    if idx < len(_TIER_ORDER) - 1:
+        return _TIER_ORDER[idx + 1].value
+    return current
+
+
+def classify_action(
+    action_type: str,
+    payload: dict | None = None,
+    context: dict | None = None,
+) -> str:
+    """
+    Determine risk tier for an action. Applies guardrail overrides that can
+    only elevate the base tier — never lower it.
+    """
+    payload = payload or {}
+    context = context or {}
+
+    base_tier = ACTION_RISK_MAP.get(action_type, RiskTier.MEDIUM)
+    current_idx = _tier_index(base_tier)
+
+    for rule in GUARDRAIL_OVERRIDES:
+        # Check action type match
+        rule_types = rule.get("action_types")
+        if rule_types is not None and action_type not in rule_types:
+            continue
+
+        # Check context condition
+        ctx_key = rule.get("context_key")
+        if ctx_key is not None:
+            ctx_val_required = rule.get("context_value")
+            ctx_actual = context.get(ctx_key) if ctx_key in context else payload.get(ctx_key)
+            comparison = rule.get("context_comparison", "eq")
+
+            if ctx_actual is None:
+                continue
+
+            if comparison == "gte":
+                try:
+                    if float(ctx_actual) < float(ctx_val_required):
+                        continue
+                except (TypeError, ValueError):
+                    continue
+            else:  # eq
+                if ctx_actual != ctx_val_required:
+                    continue
+
+        # Apply elevation
+        if rule.get("elevate_one"):
+            elevated = _elevate_tier(base_tier)
+            new_idx = _tier_index(elevated)
+            if new_idx > current_idx:
+                current_idx = new_idx
+        else:
+            min_tier = rule.get("minimum_tier")
+            if min_tier is not None:
+                min_idx = _tier_index(min_tier)
+                if min_idx > current_idx:
+                    current_idx = min_idx
+
+    return _TIER_ORDER[current_idx].value
+
+
+# ---------------------------------------------------------------------------
+# Confirmation phrase generator
+# ---------------------------------------------------------------------------
+
+_CONFIRMATION_PHRASES: dict[str, str] = {
+    "purchase":     "confirm purchase",
+    "home_control": "confirm action",
+    "deploy":       "confirm deploy",
+    "social_post":  "confirm post",
+    "send_message": "confirm send",
+    "other":        "confirm",
+}
+
+
+def _make_confirmation_phrase(action_type: str, title: str) -> str:
+    base = _CONFIRMATION_PHRASES.get(action_type, "confirm")
+    # Use first 3 words of title for uniqueness
+    words = title.lower().split()[:3]
+    return f"{base}: {' '.join(words)}" if words else base
+
+
+# ---------------------------------------------------------------------------
+# Timestamp helpers
+# ---------------------------------------------------------------------------
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _iso_plus_seconds(seconds: int) -> str:
+    return (datetime.now(timezone.utc) + timedelta(seconds=seconds)).isoformat()
+
+
+def _expires_in_human(expires_at: str) -> str:
+    """Return a human-readable 'expires in X min' string."""
+    if not expires_at:
+        return ""
+    try:
+        exp = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+        delta = exp - datetime.now(timezone.utc)
+        total_secs = int(delta.total_seconds())
+        if total_secs <= 0:
+            return "expired"
+        if total_secs < 3600:
+            mins = (total_secs + 59) // 60
+            return f"expires in {mins} min"
+        hours = total_secs // 3600
+        mins = (total_secs % 3600) // 60
+        if mins:
+            return f"expires in {hours}h {mins}m"
+        return f"expires in {hours}h"
+    except (ValueError, AttributeError):
+        return ""
+
+
+# ---------------------------------------------------------------------------
+# ApprovalRequest dataclass
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ApprovalRequest:
+    request_id: str
+    agent_id: str
+    agent_label: str
+    action_type: str       # see ACTION_RISK_MAP keys
+    title: str             # short label shown in UI
+    description: str       # what exactly will happen
+    payload: dict          # staged action data
+    risk_tier: str         # RiskTier value
+    actor_id: str          # who this affects ("chris", "rebekah", …)
+    requested_at: str      # ISO timestamp
+    expires_at: str        # ISO timestamp
+    status: str            # pending | approved | rejected | expired | executed | cancelled
+    approved_by: str = ""
+    approved_at: str = ""
+    executed_at: str = ""
+    rejection_reason: str = ""
+    auto_approve_at: str = ""   # set for LOW risk tier
+    priority: int = 5           # 1=urgent, 5=normal, 10=low
+    tags: list = field(default_factory=list)
+    requires_confirmation: bool = False
+    confirmation_phrase: str = ""
+
+
+# ---------------------------------------------------------------------------
+# ApprovalQueue
+# ---------------------------------------------------------------------------
+
+class ApprovalQueue:
+    """
+    Thread-safe approval request store.
+
+    Persistence:
+    - queue.jsonl   — all active (pending) records
+    - history.jsonl — completed records (approved/rejected/expired/cancelled/executed)
+                      capped at HISTORY_LIMIT entries
+    """
+
+    ROOT = Path.home() / ".jarvis" / "approvals"
+    HISTORY_LIMIT = 500
+
+    def __init__(self) -> None:
+        self.ROOT.mkdir(parents=True, exist_ok=True)
+        self._queue_path = self.ROOT / "queue.jsonl"
+        self._history_path = self.ROOT / "history.jsonl"
+        self._lock = threading.Lock()
+        self._items: list[ApprovalRequest] = []
+        self._load()
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def submit(self, request: ApprovalRequest) -> str:
+        """Submit a new approval request. Returns request_id."""
+        with self._lock:
+            self._items.append(request)
+            self._save()
+        logger.info(
+            "Approval submitted: %s agent=%s action=%s tier=%s",
+            request.request_id,
+            request.agent_id,
+            request.action_type,
+            request.risk_tier,
+        )
+        return request.request_id
+
+    def approve(self, request_id: str, approved_by: str = "chris") -> ApprovalRequest | None:
+        """Mark a pending request as approved. Returns the request for execution."""
+        with self._lock:
+            for item in self._items:
+                if item.request_id == request_id and item.status == "pending":
+                    item.status = "approved"
+                    item.approved_by = approved_by
+                    item.approved_at = _now_iso()
+                    self._save()
+                    logger.info("Approved: %s by=%s", request_id, approved_by)
+                    return item
+        return None
+
+    def reject(self, request_id: str, reason: str = "", rejected_by: str = "chris") -> bool:
+        """Mark a pending request as rejected. Returns True if found."""
+        with self._lock:
+            for item in self._items:
+                if item.request_id == request_id and item.status == "pending":
+                    item.status = "rejected"
+                    item.rejection_reason = reason
+                    item.approved_by = rejected_by
+                    item.approved_at = _now_iso()
+                    self._archive_completed(item)
+                    self._save()
+                    logger.info("Rejected: %s reason=%s", request_id, reason)
+                    return True
+        return False
+
+    def cancel(self, request_id: str) -> bool:
+        """Cancel a pending request. Returns True if found."""
+        with self._lock:
+            for item in self._items:
+                if item.request_id == request_id and item.status == "pending":
+                    item.status = "cancelled"
+                    self._archive_completed(item)
+                    self._save()
+                    logger.info("Cancelled: %s", request_id)
+                    return True
+        return False
+
+    def mark_executed(self, request_id: str) -> bool:
+        """Mark an approved request as executed."""
+        with self._lock:
+            for item in self._items:
+                if item.request_id == request_id and item.status == "approved":
+                    item.status = "executed"
+                    item.executed_at = _now_iso()
+                    self._archive_completed(item)
+                    self._save()
+                    logger.info("Executed: %s", request_id)
+                    return True
+        return False
+
+    def get_pending(self, actor_id: str | None = None) -> list[ApprovalRequest]:
+        """Return pending requests, expiring stale ones first."""
+        with self._lock:
+            self._expire_old_unlocked()
+            pending = [
+                item for item in self._items
+                if item.status == "pending"
+                and (actor_id is None or item.actor_id.lower() == actor_id.lower())
+            ]
+        # Sort: priority asc, then requested_at asc
+        pending.sort(key=lambda x: (x.priority, x.requested_at))
+        return pending
+
+    def get_by_id(self, request_id: str) -> ApprovalRequest | None:
+        with self._lock:
+            for item in self._items:
+                if item.request_id == request_id:
+                    return item
+        return None
+
+    def get_history(self, limit: int = 50, action_type: str | None = None) -> list[ApprovalRequest]:
+        """Return completed records from history file, newest first."""
+        records = self._load_history()
+        if action_type:
+            records = [r for r in records if r.action_type == action_type]
+        return list(reversed(records[-max(1, limit):]))
+
+    def process_auto_approvals(self) -> int:
+        """
+        Check LOW risk items that have passed their auto_approve_at time.
+        Auto-approve them and return the count auto-approved.
+        """
+        now = datetime.now(timezone.utc)
+        count = 0
+        with self._lock:
+            for item in self._items:
+                if item.status != "pending" or item.risk_tier != RiskTier.LOW:
+                    continue
+                if not item.auto_approve_at:
+                    continue
+                try:
+                    auto_at = datetime.fromisoformat(item.auto_approve_at.replace("Z", "+00:00"))
+                except (ValueError, AttributeError):
+                    continue
+                if now >= auto_at:
+                    item.status = "approved"
+                    item.approved_by = "system_auto"
+                    item.approved_at = _now_iso()
+                    count += 1
+                    logger.info("Auto-approved LOW risk request: %s", item.request_id)
+            if count:
+                self._save()
+        return count
+
+    def pending_count(self, actor_id: str | None = None) -> int:
+        return len(self.get_pending(actor_id))
+
+    def get_document_reviews_pending(self) -> list[ApprovalRequest]:
+        """
+        Return all pending approval requests where action_type == 'document_review',
+        sorted by submitted_at (requested_at) ascending.
+        """
+        pending = self.get_pending()
+        doc_reviews = [r for r in pending if r.action_type == "document_review"]
+        doc_reviews.sort(key=lambda r: r.requested_at)
+        return doc_reviews
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _expire_old_unlocked(self) -> int:
+        """Must be called while holding self._lock. Marks expired items."""
+        now = datetime.now(timezone.utc)
+        count = 0
+        for item in self._items:
+            if item.status != "pending" or not item.expires_at:
+                continue
+            try:
+                exp = datetime.fromisoformat(item.expires_at.replace("Z", "+00:00"))
+            except (ValueError, AttributeError):
+                continue
+            if now >= exp:
+                item.status = "expired"
+                self._archive_completed_unlocked(item)
+                count += 1
+                logger.debug("Expired: %s", item.request_id)
+        if count:
+            self._save_unlocked()
+        return count
+
+    def _archive_completed(self, item: ApprovalRequest) -> None:
+        """Caller must hold lock."""
+        self._archive_completed_unlocked(item)
+
+    def _archive_completed_unlocked(self, item: ApprovalRequest) -> None:
+        history = self._load_history()
+        history.append(item)
+        # Cap at HISTORY_LIMIT
+        if len(history) > self.HISTORY_LIMIT:
+            history = history[-self.HISTORY_LIMIT:]
+        try:
+            lines = [json.dumps(asdict(r)) for r in history]
+            self._history_path.write_text(
+                "\n".join(lines) + ("\n" if lines else ""),
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            logger.warning("Failed to write history: %s", exc)
+        # Remove from active items
+        self._items = [i for i in self._items if i.request_id != item.request_id]
+
+    def _save(self) -> None:
+        """Caller must hold lock."""
+        self._save_unlocked()
+
+    def _save_unlocked(self) -> None:
+        try:
+            active = [i for i in self._items if i.status in ("pending", "approved")]
+            lines = [json.dumps(asdict(i)) for i in active]
+            self._queue_path.write_text(
+                "\n".join(lines) + ("\n" if lines else ""),
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            logger.warning("Failed to persist queue: %s", exc)
+
+    def _load(self) -> None:
+        self._items = []
+        if not self._queue_path.exists():
+            return
+        try:
+            for line in self._queue_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                    # Ensure list fields are lists
+                    data.setdefault("tags", [])
+                    self._items.append(ApprovalRequest(**data))
+                except Exception:
+                    logger.debug("Skipping corrupt queue line", exc_info=True)
+        except OSError:
+            pass
+
+    def _load_history(self) -> list[ApprovalRequest]:
+        if not self._history_path.exists():
+            return []
+        records: list[ApprovalRequest] = []
+        try:
+            for line in self._history_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                    data.setdefault("tags", [])
+                    records.append(ApprovalRequest(**data))
+                except Exception:
+                    pass
+        except OSError:
+            pass
+        return records
+
+
+# ---------------------------------------------------------------------------
+# Action executors
+# ---------------------------------------------------------------------------
+
+class ActionExecutors:
+    """
+    Dispatches approved actions. Currently stubs for integrations not yet
+    wired. The home_control executor is live via HomeAssistantConnector.
+    """
+
+    @staticmethod
+    def send_message(payload: dict) -> dict:
+        """Send email / SMS / Slack. Stub pending Gmail/Twilio integration."""
+        channel = payload.get("channel", "email")
+        recipient = payload.get("to", payload.get("recipient", "unknown"))
+        logger.info("STUB send_message: channel=%s to=%s", channel, recipient)
+        return {
+            "status": "staged",
+            "channel": channel,
+            "recipient": recipient,
+            "note": "Gmail / messaging integration pending",
+        }
+
+    @staticmethod
+    def calendar_change(payload: dict) -> dict:
+        """Create / update a calendar event. Stub pending Google Calendar integration."""
+        event_title = payload.get("title", payload.get("event_title", ""))
+        logger.info("STUB calendar_change: event=%s", event_title)
+        return {
+            "status": "staged",
+            "event_title": event_title,
+            "note": "Google Calendar integration pending",
+        }
+
+    @staticmethod
+    def home_control(payload: dict) -> dict:
+        """
+        Call a Home Assistant service. Live via HomeAssistantConnector when
+        the data aggregator is available; otherwise stubs gracefully.
+        """
+        try:
+            from .data_connectors import get_aggregator
+            agg = get_aggregator()
+            if agg and hasattr(agg, "ha") and agg.ha is not None:
+                domain = str(payload.get("ha_domain", "light"))
+                service = str(payload.get("ha_service", "turn_on"))
+                entity_id = str(payload.get("entity_id", ""))
+                success = agg.ha.call_service(domain, service, entity_id)
+                return {
+                    "status": "executed" if success else "failed",
+                    "entity": entity_id,
+                    "domain": domain,
+                    "service": service,
+                }
+        except Exception as exc:
+            logger.debug("home_control live dispatch failed: %s", exc)
+        entity_id = payload.get("entity_id", "")
+        logger.info("STUB home_control: entity=%s", entity_id)
+        return {
+            "status": "staged",
+            "entity": entity_id,
+            "note": "Home Assistant not configured or connector unavailable",
+        }
+
+    @staticmethod
+    def social_post(payload: dict) -> dict:
+        """Post to a social platform. Stub pending social integration."""
+        platform = payload.get("platform", "unknown")
+        logger.info("STUB social_post: platform=%s", platform)
+        return {
+            "status": "staged",
+            "platform": platform,
+            "note": "Social media integration pending",
+        }
+
+    @staticmethod
+    def purchase(payload: dict) -> dict:
+        """Execute a purchase. Stub — always requires HIGH/CRITICAL approval."""
+        vendor = payload.get("vendor", "unknown")
+        amount = payload.get("amount_usd", "unknown")
+        logger.info("STUB purchase: vendor=%s amount=%s", vendor, amount)
+        return {
+            "status": "staged",
+            "vendor": vendor,
+            "amount_usd": amount,
+            "note": "Purchase integration pending; manual completion required",
+        }
+
+    @staticmethod
+    def deploy(payload: dict) -> dict:
+        """Deploy content or code. Stub pending deploy integration."""
+        target = payload.get("target", "unknown")
+        logger.info("STUB deploy: target=%s", target)
+        return {
+            "status": "staged",
+            "target": target,
+            "note": "Deploy integration pending",
+        }
+
+    @staticmethod
+    def document_send(payload: dict) -> dict:
+        """Send a document to a recipient. Stub."""
+        recipient = payload.get("to", payload.get("recipient", "unknown"))
+        doc = payload.get("document_title", payload.get("filename", "document"))
+        logger.info("STUB document_send: to=%s doc=%s", recipient, doc)
+        return {
+            "status": "staged",
+            "recipient": recipient,
+            "document": doc,
+            "note": "Document send integration pending",
+        }
+
+    @staticmethod
+    def external_api(payload: dict) -> dict:
+        """Call an external API endpoint. Stub."""
+        url = payload.get("url", "unknown")
+        logger.info("STUB external_api: url=%s", url)
+        return {
+            "status": "staged",
+            "url": url,
+            "note": "External API integration pending",
+        }
+
+    @staticmethod
+    def file_write(payload: dict) -> dict:
+        """Write a file to disk. Stub."""
+        path = payload.get("path", "unknown")
+        logger.info("STUB file_write: path=%s", path)
+        return {
+            "status": "staged",
+            "path": path,
+            "note": "File write integration pending",
+        }
+
+    @staticmethod
+    def other(payload: dict) -> dict:
+        logger.info("STUB other action: payload keys=%s", list(payload.keys()))
+        return {"status": "staged", "note": "Action type 'other' — manual completion required"}
+
+    _DISPATCH: dict[str, Any] = {}  # populated after class definition
+
+
+# Populate dispatch table after class body
+ActionExecutors._DISPATCH = {
+    "send_message":    ActionExecutors.send_message,
+    "calendar_change": ActionExecutors.calendar_change,
+    "home_control":    ActionExecutors.home_control,
+    "social_post":     ActionExecutors.social_post,
+    "purchase":        ActionExecutors.purchase,
+    "deploy":          ActionExecutors.deploy,
+    "document_send":   ActionExecutors.document_send,
+    "external_api":    ActionExecutors.external_api,
+    "file_write":      ActionExecutors.file_write,
+    "other":           ActionExecutors.other,
+}
+
+
+# ---------------------------------------------------------------------------
+# ApprovalGuard
+# ---------------------------------------------------------------------------
+
+class ApprovalGuard:
+    """
+    Primary agent-facing interface for requesting approval before acting.
+
+    Usage pattern:
+
+        guard = get_approval_guard()
+
+        if guard.can_execute(action_type="file_write", payload={"path": "..."}):
+            # SAFE tier — act immediately
+            ...
+        else:
+            request_id = guard.request_approval(
+                agent_id="natasha",
+                agent_label="Natasha",
+                action_type="send_message",
+                title="Send follow-up to John Smith",
+                description="Reply to John's email about the Q3 proposal.",
+                payload={"to": "john@example.com", "subject": "Re: Q3 Proposal", "body": "..."},
+            )
+            # Execution happens when approved via approve() + execute_approved()
+    """
+
+    def __init__(self, queue: ApprovalQueue) -> None:
+        self._queue = queue
+
+    # ------------------------------------------------------------------
+    # Agent-facing API
+    # ------------------------------------------------------------------
+
+    def can_execute(
+        self,
+        action_type: str,
+        payload: dict | None = None,
+        context: dict | None = None,
+    ) -> bool:
+        """Returns True only for SAFE tier actions (no approval needed)."""
+        tier = classify_action(action_type, payload, context)
+        return tier == RiskTier.SAFE
+
+    def request_approval(
+        self,
+        agent_id: str,
+        agent_label: str,
+        action_type: str,
+        title: str,
+        description: str,
+        payload: dict,
+        actor_id: str = "chris",
+        priority: int = 5,
+        tags: list[str] | None = None,
+        context: dict | None = None,
+    ) -> str:
+        """
+        Build and submit an ApprovalRequest. Returns the request_id.
+        Agents call this instead of acting directly for non-SAFE actions.
+        """
+        context = context or {}
+        tier = classify_action(action_type, payload, context)
+        now = _now_iso()
+        expiry_secs = EXPIRY_WINDOWS.get(tier, 86400)
+        expires_at = _iso_plus_seconds(expiry_secs)
+
+        auto_approve_at = ""
+        auto_timeout = AUTO_APPROVE_TIMEOUTS.get(tier)
+        if auto_timeout is not None and auto_timeout > 0:
+            auto_approve_at = _iso_plus_seconds(auto_timeout)
+
+        requires_confirmation = tier in (RiskTier.HIGH, RiskTier.CRITICAL)
+        confirmation_phrase = ""
+        if requires_confirmation:
+            confirmation_phrase = _make_confirmation_phrase(action_type, title)
+
+        request = ApprovalRequest(
+            request_id=str(uuid.uuid4()),
+            agent_id=agent_id,
+            agent_label=agent_label,
+            action_type=action_type,
+            title=title,
+            description=description,
+            payload=payload,
+            risk_tier=tier,
+            actor_id=actor_id,
+            requested_at=now,
+            expires_at=expires_at,
+            status="pending",
+            auto_approve_at=auto_approve_at,
+            priority=priority,
+            tags=list(tags or []),
+            requires_confirmation=requires_confirmation,
+            confirmation_phrase=confirmation_phrase,
+        )
+        return self._queue.submit(request)
+
+    def execute_approved(self, request_id: str) -> dict:
+        """
+        Execute an approved action by dispatching to the appropriate executor.
+        Logs execution to the audit trail (if audit log available).
+        Returns result dict.
+        """
+        item = self._queue.get_by_id(request_id)
+        if item is None:
+            return {"status": "error", "detail": "Request not found"}
+        if item.status != "approved":
+            return {"status": "error", "detail": f"Request status is '{item.status}', not 'approved'"}
+
+        executor = ActionExecutors._DISPATCH.get(
+            item.action_type, ActionExecutors.other
+        )
+        try:
+            result = executor(item.payload)
+        except Exception as exc:
+            logger.error("Executor failed for %s: %s", request_id, exc)
+            result = {"status": "failed", "error": str(exc)}
+
+        self._queue.mark_executed(request_id)
+
+        # Best-effort audit log
+        self._write_audit(item, result)
+
+        logger.info(
+            "Executed approved action: %s agent=%s action=%s result_status=%s",
+            request_id,
+            item.agent_id,
+            item.action_type,
+            result.get("status"),
+        )
+        return result
+
+    def get_pending_for_ui(self, actor_id: str = "chris") -> list[dict]:
+        """
+        Returns pending approvals formatted for the Needs You zone in the UI.
+
+        Format matches the Chamber's needs_items schema:
+          [{"id": str, "text": str, "agent": str, "risk": str, "expires_in": str,
+            "action_type": str, "requires_confirmation": bool, "confirmation_phrase": str}]
+        """
+        pending = self._queue.get_pending(actor_id=actor_id)
+        result = []
+        for item in pending:
+            expires_in = _expires_in_human(item.expires_at)
+            result.append({
+                "id": item.request_id,
+                "text": item.title,
+                "sub": item.description,
+                "agent": item.agent_label,
+                "risk": item.risk_tier,
+                "expires_in": expires_in,
+                "action_type": item.action_type,
+                "priority": item.priority,
+                "tags": item.tags,
+                "requires_confirmation": item.requires_confirmation,
+                "confirmation_phrase": item.confirmation_phrase,
+                "requested_at": item.requested_at,
+                "auto_approve_at": item.auto_approve_at,
+            })
+        return result
+
+    # ------------------------------------------------------------------
+    # Internal
+    # ------------------------------------------------------------------
+
+    def _write_audit(self, item: ApprovalRequest, result: dict) -> None:
+        try:
+            from .audit import AuditLog
+            audit_root = Path.home() / ".jarvis" / "audit"
+            audit = AuditLog(audit_root)
+            audit.log_assistant_action(
+                actor=item.agent_id,
+                domain="approvals",
+                item_id=item.request_id,
+                action=item.action_type,
+                detail=item.title,
+                mode="approved",
+                action_class=item.risk_tier,
+                policy_basis="approval_gate",
+                result_summary=str(result.get("status", "")),
+                succeeded=result.get("status") not in ("failed", "error"),
+            )
+        except Exception:
+            logger.debug("Audit log write failed (non-fatal)", exc_info=True)
+
+
+# ---------------------------------------------------------------------------
+# Module-level singleton
+# ---------------------------------------------------------------------------
+
+_guard_singleton: ApprovalGuard | None = None
+_queue_singleton: ApprovalQueue | None = None
+
+
+def get_approval_guard() -> ApprovalGuard | None:
+    return _guard_singleton
+
+
+def get_approval_queue() -> ApprovalQueue | None:
+    return _queue_singleton
+
+
+def init_approvals() -> tuple[ApprovalQueue, ApprovalGuard]:
+    """
+    Initialize the module-level ApprovalQueue and ApprovalGuard singletons.
+    Safe to call multiple times — subsequent calls are no-ops.
+    """
+    global _guard_singleton, _queue_singleton
+
+    if _guard_singleton is not None:
+        assert _queue_singleton is not None
+        return _queue_singleton, _guard_singleton
+
+    queue = ApprovalQueue()
+    guard = ApprovalGuard(queue)
+
+    _queue_singleton = queue
+    _guard_singleton = guard
+
+    # Process any auto-approvals that accumulated while offline
+    auto_count = queue.process_auto_approvals()
+    if auto_count:
+        logger.info("init_approvals: auto-approved %d LOW risk requests on startup", auto_count)
+
+    logger.info("ApprovalQueue and ApprovalGuard initialised (root=%s)", ApprovalQueue.ROOT)
+    return queue, guard
+
+
+def request_document_review(
+    title: str,
+    preview: str,
+    submission_id: str,
+    track_type: str,
+    project_id: str = "",
+    chapter_number: int | None = None,
+    ghostwritr_url: str = "",
+) -> str | None:
+    """
+    Convenience function: submit a document_review ApprovalRequest to the
+    module-level queue. Returns the request_id, or None if the queue is not
+    initialised.
+
+    All fields are pre-filled for the Ghostwritr / Stan Lee use case.
+    """
+    queue = get_approval_queue()
+    if queue is None:
+        logger.warning("request_document_review: ApprovalQueue not initialised")
+        return None
+
+    description = (
+        f"Draft review for {track_type}: {title}\n\n"
+        f"Preview: {preview[:300]}{'...' if len(preview) > 300 else ''}"
+    )
+    expiry_secs = EXPIRY_WINDOWS.get(RiskTier.MEDIUM, 86400)
+    request = ApprovalRequest(
+        request_id=str(uuid.uuid4()),
+        agent_id="stan-lee",
+        agent_label="Stan Lee",
+        action_type="document_review",
+        title=f"Review draft: {title}",
+        description=description,
+        payload={
+            "submission_id": submission_id,
+            "project_id": project_id,
+            "track_type": track_type,
+            "chapter_number": chapter_number,
+            "ghostwritr_url": ghostwritr_url,
+        },
+        risk_tier=RiskTier.MEDIUM,
+        actor_id="chris",
+        requested_at=_now_iso(),
+        expires_at=_iso_plus_seconds(expiry_secs),
+        status="pending",
+        priority=5,
+        tags=["writing", "ghostwritr", track_type],
+    )
+    return queue.submit(request)

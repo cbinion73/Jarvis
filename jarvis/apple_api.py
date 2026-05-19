@@ -1,0 +1,599 @@
+"""
+JARVIS Apple API — Epic 14
+===========================
+Provides the REST endpoints consumed by JarvisPhone, JarvisWatch, and JarvisMac.
+
+All responses use a consistent envelope:
+  {"ok": bool, "data": {...}, "error": str, "ts": str}
+
+Endpoints
+---------
+GET  /api/apple/briefing                    Chamber home-screen packet (5 zones)
+GET  /api/apple/status                      Quick status for Watch complications
+GET  /api/apple/needs                       Approval queue (Needs You zone)
+POST /api/apple/speak                       Text command → agent response
+GET  /api/apple/health/summary              Health summary for HealthKit display
+POST /api/apple/health/log                  Log HealthKit samples from iPhone
+GET  /api/apple/home/state                  House state for Home tab
+POST /api/apple/home/command                Issue a home command (staged for approval)
+GET  /api/apple/notifications/pending       Pending notifications for APNs delivery
+POST /api/apple/presence                    Phone reports user presence / location
+GET  /api/apple/voice/greeting              Voice greeting for wake
+POST /api/apple/approvals/{id}/approve      One-tap approval from Watch / Phone
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+from fastapi import FastAPI, HTTPException
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _ts() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _ok(data: Any) -> dict:
+    return {"ok": True, "data": data, "error": None, "ts": _ts()}
+
+
+def _err(message: str, status: int = 400) -> tuple[dict, int]:
+    return {"ok": False, "data": None, "error": message, "ts": _ts()}, status
+
+
+# ---------------------------------------------------------------------------
+# HealthSampleStore
+# ---------------------------------------------------------------------------
+
+class HealthSampleStore:
+    """
+    Lightweight append-only store for raw HealthKit samples.
+    Samples are written as newline-delimited JSON (JSONL) to
+    ~/.jarvis/health/samples.jsonl so they can be replayed or aggregated.
+    """
+
+    ROOT = Path.home() / ".jarvis" / "health"
+
+    def _samples_path(self, actor_id: str) -> Path:
+        return self.ROOT / actor_id / "samples.jsonl"
+
+    def log_samples(self, actor_id: str, samples: list[dict]) -> int:
+        """
+        Append raw samples to JSONL.  Returns the number of records logged.
+        Each record is enriched with a server-side received_at timestamp.
+        """
+        if not samples:
+            return 0
+        path = self._samples_path(actor_id)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        received_at = _ts()
+        with path.open("a", encoding="utf-8") as fh:
+            for sample in samples:
+                row = dict(sample)
+                row["received_at"] = received_at
+                fh.write(json.dumps(row, default=str) + "\n")
+        return len(samples)
+
+    def _read_samples(self, actor_id: str) -> list[dict]:
+        path = self._samples_path(actor_id)
+        if not path.exists():
+            return []
+        rows: list[dict] = []
+        with path.open("r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if line:
+                    try:
+                        rows.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        pass
+        return rows
+
+    def get_summary(self, actor_id: str, date: str | None = None) -> dict:
+        """
+        Aggregate samples for a given date (default today, YYYY-MM-DD).
+        Returns a dict with keys:
+          steps, heart_rate_avg, sleep_hours, active_calories, stand_hours, hrv, last_sync
+        """
+        target_date = date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        samples = self._read_samples(actor_id)
+
+        steps = 0
+        hr_values: list[float] = []
+        sleep_hours = 0.0
+        active_calories = 0
+        stand_hours = 0
+        hrv_values: list[float] = []
+        last_sync: str | None = None
+
+        for s in samples:
+            # Match by date prefix (handles both date-only and datetime strings)
+            sample_date = str(s.get("date", ""))[:10]
+            if sample_date != target_date:
+                continue
+            sample_type = str(s.get("type", "")).lower()
+            value = float(s.get("value", 0) or 0)
+            if sample_type == "steps":
+                steps = max(steps, int(value))
+            elif sample_type in ("heart_rate", "resting_heart_rate"):
+                hr_values.append(value)
+            elif sample_type == "sleep":
+                sleep_hours = max(sleep_hours, value)
+            elif sample_type in ("active_calories", "active_energy"):
+                active_calories = max(active_calories, int(value))
+            elif sample_type == "stand_hours":
+                stand_hours = max(stand_hours, int(value))
+            elif sample_type == "hrv":
+                hrv_values.append(value)
+            received = s.get("received_at")
+            if received and (last_sync is None or received > last_sync):
+                last_sync = received
+
+        return {
+            "steps": steps,
+            "heart_rate_avg": int(sum(hr_values) / len(hr_values)) if hr_values else 0,
+            "sleep_hours": round(sleep_hours, 1),
+            "active_calories": active_calories,
+            "stand_hours": stand_hours,
+            "hrv": int(sum(hrv_values) / len(hrv_values)) if hrv_values else 0,
+            "last_sync": last_sync or "",
+        }
+
+    def get_recent(self, actor_id: str, sample_type: str, days: int = 7) -> list[dict]:
+        """Recent samples of a given type, newest first, limited to *days* days back."""
+        from datetime import timedelta
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
+        samples = self._read_samples(actor_id)
+        result = [
+            s for s in samples
+            if str(s.get("type", "")).lower() == sample_type.lower()
+            and str(s.get("date", ""))[:10] >= cutoff
+        ]
+        # newest first
+        result.sort(key=lambda s: str(s.get("date", "")), reverse=True)
+        return result
+
+
+# ---------------------------------------------------------------------------
+# Pending-notification store (in-memory, cleared on delivery)
+# ---------------------------------------------------------------------------
+
+class _NotificationStore:
+    def __init__(self) -> None:
+        self._pending: list[dict] = []
+
+    def push(self, title: str, body: str, category: str = "general", badge: int = 0) -> str:
+        nid = str(uuid.uuid4())
+        self._pending.append({
+            "id": nid,
+            "title": title,
+            "body": body,
+            "category": category,
+            "badge": badge,
+            "created_at": _ts(),
+        })
+        return nid
+
+    def drain(self) -> list[dict]:
+        items = list(self._pending)
+        self._pending.clear()
+        return items
+
+
+_notification_store = _NotificationStore()
+_health_store = HealthSampleStore()
+
+
+# ---------------------------------------------------------------------------
+# Greeting helpers
+# ---------------------------------------------------------------------------
+
+def _time_of_day_greeting() -> tuple[str, str]:
+    """Return (greeting, mode) based on local hour."""
+    hour = datetime.now().hour
+    if hour < 12:
+        return "Good morning, Sir.", "morning"
+    elif hour < 17:
+        return "Good afternoon, Sir.", "afternoon"
+    elif hour < 21:
+        return "Good evening, Sir.", "evening"
+    return "Good night, Sir.", "night"
+
+
+# ---------------------------------------------------------------------------
+# Route registration
+# ---------------------------------------------------------------------------
+
+def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
+    """Register all /api/apple/* routes onto *app*."""
+
+    # ------------------------------------------------------------------
+    # GET /api/apple/briefing
+    # ------------------------------------------------------------------
+    @app.get("/api/apple/briefing")
+    async def apple_briefing(actor: str = "chris"):
+        """
+        Return the full 5-zone Chamber home-screen packet.
+        Tries the BriefingBuilder cache first; falls back to chamber_home_snapshot.
+        """
+        try:
+            from .scheduler import get_briefing_builder
+            builder = get_briefing_builder()
+        except Exception:
+            builder = None
+
+        greeting, mode = _time_of_day_greeting()
+
+        # Attempt live briefing
+        packet: dict | None = None
+        if builder is not None:
+            try:
+                import asyncio
+                cached = await asyncio.to_thread(builder.get_cached)
+                if cached:
+                    packet = cached
+                else:
+                    packet = await asyncio.to_thread(builder.build, actor)
+            except Exception as exc:
+                logger.warning("apple_briefing: briefing builder failed: %s", exc)
+
+        # Fallback: chamber_home_snapshot
+        if packet is None:
+            try:
+                import asyncio
+                packet = await asyncio.to_thread(runtime.chamber_home_snapshot, actor)
+            except Exception as exc:
+                logger.warning("apple_briefing: chamber_home_snapshot failed: %s", exc)
+                packet = {}
+
+        # Normalise into the Apple briefing shape
+        data = {
+            "briefing_items": packet.get("briefing_items") or packet.get("feed", []),
+            "working_items": packet.get("working_items") or packet.get("in_progress", []),
+            "needs_items": packet.get("needs_items") or packet.get("needs_you", []),
+            "drift_items": packet.get("drift_items") or packet.get("drift", []),
+            "greeting": packet.get("greeting") or greeting,
+            "mode": packet.get("mode") or mode,
+            "generated_at": packet.get("generated_at") or _ts(),
+        }
+        return _ok(data)
+
+    # ------------------------------------------------------------------
+    # GET /api/apple/status  (Watch complication data)
+    # ------------------------------------------------------------------
+    @app.get("/api/apple/status")
+    async def apple_status():
+        """Lightweight status payload for Apple Watch complications."""
+        try:
+            status = runtime.status()
+        except Exception:
+            status = {}
+
+        # Attempt to read pending-approval count
+        needs_count = 0
+        try:
+            from .approvals import get_approval_queue
+            queue = get_approval_queue()
+            if queue is not None:
+                needs_count = len(queue.list_pending())
+        except Exception:
+            pass
+
+        # Attempt to read current mode from status
+        mode = status.get("mode") or status.get("current_mode") or "home"
+
+        # Weather — best-effort from runtime
+        weather = ""
+        try:
+            world = runtime.world_state_view("chris")
+            weather = world.get("weather", {}).get("summary") or ""
+        except Exception:
+            pass
+
+        # Drift flag
+        drift = False
+        try:
+            snap = runtime.chamber_home_snapshot("chris")
+            drift = bool(snap.get("drift_items") or snap.get("drift"))
+        except Exception:
+            pass
+
+        data = {
+            "needs_count": needs_count,
+            "mode": str(mode),
+            "weather": str(weather),
+            "drift": drift,
+            "ts": _ts(),
+        }
+        return _ok(data)
+
+    # ------------------------------------------------------------------
+    # GET /api/apple/needs
+    # ------------------------------------------------------------------
+    @app.get("/api/apple/needs")
+    async def apple_needs():
+        """
+        Return the Needs You items formatted for Watch display:
+        shorter text, action buttons included.
+        """
+        items: list[dict] = []
+        try:
+            pending = runtime.list_pending_approvals()
+            raw = pending if isinstance(pending, list) else pending.get("items", [])
+            for item in raw:
+                items.append({
+                    "id": str(item.get("id") or item.get("request_id") or uuid.uuid4()),
+                    "text": _truncate(str(item.get("title") or item.get("text") or ""), 80),
+                    "agent": str(item.get("agent") or item.get("requester") or "JARVIS"),
+                    "risk": str(item.get("risk") or item.get("risk_tier") or "medium"),
+                    "expires_in": item.get("expires_in"),
+                })
+        except Exception as exc:
+            logger.warning("apple_needs: %s", exc)
+        return _ok(items)
+
+    # ------------------------------------------------------------------
+    # POST /api/apple/speak
+    # ------------------------------------------------------------------
+    @app.post("/api/apple/speak")
+    async def apple_speak(payload: dict):
+        """
+        Route a text command from Phone / Siri through the JARVIS agent router.
+        """
+        text = str(payload.get("text") or "").strip()
+        actor_id = str(payload.get("actor_id") or "chris").strip()
+        if not text:
+            raise HTTPException(status_code=400, detail="text is required")
+
+        response_text = ""
+        agent_name = "JARVIS"
+        speak = True
+
+        # Try the main respond path
+        try:
+            result = runtime.respond(actor_id, "apple", text)
+            if isinstance(result, dict):
+                response_text = str(
+                    result.get("output_text")
+                    or result.get("response")
+                    or result.get("text")
+                    or ""
+                )
+                agent_name = str(result.get("agent") or result.get("actor") or "JARVIS")
+            else:
+                response_text = str(result)
+        except Exception as exc:
+            logger.warning("apple_speak: respond failed: %s", exc)
+            response_text = "I'm working on that for you, Sir."
+
+        return _ok({
+            "response": response_text or "Understood.",
+            "agent": agent_name,
+            "speak": speak,
+        })
+
+    # ------------------------------------------------------------------
+    # GET /api/apple/health/summary
+    # ------------------------------------------------------------------
+    @app.get("/api/apple/health/summary")
+    async def apple_health_summary(actor: str = "chris"):
+        """Health summary for HealthKit display and Watch complication."""
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        agg = _health_store.get_summary(actor, today)
+
+        # Thor note — best effort
+        thor_note = "Keep it up today."
+        try:
+            snap = runtime.chamber_home_snapshot(actor)
+            health_cards = [
+                item for item in (snap.get("briefing_items") or snap.get("feed") or [])
+                if isinstance(item, dict) and "health" in str(item.get("domain", "")).lower()
+            ]
+            if health_cards:
+                thor_note = str(health_cards[0].get("text") or health_cards[0].get("sub") or thor_note)
+        except Exception:
+            pass
+
+        # Readiness heuristic
+        steps = agg.get("steps", 0)
+        sleep = agg.get("sleep_hours", 0.0)
+        hr = agg.get("heart_rate_avg", 0)
+        if sleep >= 7 and steps >= 3000:
+            readiness = "good"
+        elif sleep >= 5:
+            readiness = "moderate"
+        else:
+            readiness = "low"
+
+        data = {
+            "steps_today": agg["steps"],
+            "heart_rate_avg": agg["heart_rate_avg"],
+            "sleep_hours": agg["sleep_hours"],
+            "active_calories": agg["active_calories"],
+            "stand_hours": agg["stand_hours"],
+            "hrv": agg["hrv"],
+            "readiness": readiness,
+            "thor_note": thor_note,
+            "last_sync": agg["last_sync"],
+        }
+        return _ok(data)
+
+    # ------------------------------------------------------------------
+    # POST /api/apple/health/log
+    # ------------------------------------------------------------------
+    @app.post("/api/apple/health/log")
+    async def apple_health_log(payload: dict):
+        """
+        Receive HealthKit samples pushed from iPhone and persist them.
+        Body: {"actor_id": str, "samples": [{type, value, date, source}]}
+        """
+        actor_id = str(payload.get("actor_id") or "chris").strip()
+        samples = payload.get("samples") or []
+        if not isinstance(samples, list):
+            raise HTTPException(status_code=400, detail="samples must be a list")
+
+        logged = _health_store.log_samples(actor_id, samples)
+        return _ok({"logged": logged})
+
+    # ------------------------------------------------------------------
+    # GET /api/apple/home/state
+    # ------------------------------------------------------------------
+    @app.get("/api/apple/home/state")
+    async def apple_home_state():
+        """Return current house state via HomeAssistantConnector."""
+        try:
+            from .data_connectors import get_ha
+            ha = get_ha()
+            if ha is not None:
+                state = ha.get_house_state()
+            else:
+                state = _mock_home_state()
+        except Exception as exc:
+            logger.warning("apple_home_state: %s", exc)
+            state = _mock_home_state()
+        return _ok(state)
+
+    # ------------------------------------------------------------------
+    # POST /api/apple/home/command
+    # ------------------------------------------------------------------
+    @app.post("/api/apple/home/command")
+    async def apple_home_command(payload: dict):
+        """
+        Stage a home command for approval before execution.
+        Body: {"command": str, "entity_id": str, "service": str}
+        """
+        command = str(payload.get("command") or "").strip()
+        entity_id = str(payload.get("entity_id") or "").strip()
+        service = str(payload.get("service") or "").strip()
+        if not command:
+            raise HTTPException(status_code=400, detail="command is required")
+
+        request_id = str(uuid.uuid4())
+        try:
+            from .approvals import get_approval_guard
+            guard = get_approval_guard()
+            if guard is not None:
+                request_id = guard.request_approval(
+                    title=command,
+                    description=f"Home command: {service} on {entity_id}",
+                    action_type="home_control",
+                    payload={"command": command, "entity_id": entity_id, "service": service},
+                )
+        except Exception as exc:
+            logger.warning("apple_home_command: approval guard failed: %s", exc)
+
+        return _ok({"request_id": request_id, "status": "pending_approval"})
+
+    # ------------------------------------------------------------------
+    # POST /api/apple/presence
+    # ------------------------------------------------------------------
+    @app.post("/api/apple/presence")
+    async def apple_presence(payload: dict):
+        """
+        Phone reports presence events (arrived_home / left_home).
+        Fires the matching scheduler event so Home Assistant agents react.
+        """
+        actor_id = str(payload.get("actor_id") or "chris").strip()
+        event = str(payload.get("event") or "").strip()
+        lat = float(payload.get("lat") or 0)
+        lon = float(payload.get("lon") or 0)
+
+        if event not in ("arrived_home", "left_home"):
+            raise HTTPException(status_code=400, detail="event must be arrived_home or left_home")
+
+        # Fire scheduler event (non-fatal if scheduler unavailable)
+        try:
+            from .scheduler import get_scheduler, EVENT_HOME_ARRIVAL, EVENT_HOME_DEPARTURE
+            scheduler = get_scheduler()
+            if scheduler is not None:
+                event_type = EVENT_HOME_ARRIVAL if event == "arrived_home" else EVENT_HOME_DEPARTURE
+                scheduler.fire_event(event_type, {"actor": actor_id, "lat": lat, "lon": lon})
+        except Exception as exc:
+            logger.warning("apple_presence: scheduler fire_event failed: %s", exc)
+
+        # Also call runtime presence update for immediate effect
+        try:
+            runtime.phone_presence_update(actor_id, event, lat=lat, lon=lon)
+        except Exception:
+            try:
+                runtime.presence_update(actor_id, event)
+            except Exception as exc2:
+                logger.warning("apple_presence: runtime presence update failed: %s", exc2)
+
+        return _ok({"event": event, "actor_id": actor_id, "ts": _ts()})
+
+    # ------------------------------------------------------------------
+    # GET /api/apple/notifications/pending
+    # ------------------------------------------------------------------
+    @app.get("/api/apple/notifications/pending")
+    async def apple_notifications_pending():
+        """
+        Pull-based notification delivery.
+        Returns any queued notifications and clears them so they are not
+        delivered twice.
+        """
+        notifications = _notification_store.drain()
+        return _ok({"notifications": notifications})
+
+    # ------------------------------------------------------------------
+    # GET /api/apple/voice/greeting
+    # ------------------------------------------------------------------
+    @app.get("/api/apple/voice/greeting")
+    async def apple_voice_greeting(actor: str = "chris"):
+        """Return a voice greeting suitable for wake-word or app launch."""
+        greeting, mode = _time_of_day_greeting()
+        return _ok({"greeting": greeting, "mode": mode})
+
+    # ------------------------------------------------------------------
+    # POST /api/apple/approvals/{request_id}/approve
+    # ------------------------------------------------------------------
+    @app.post("/api/apple/approvals/{request_id}/approve")
+    async def apple_approve(request_id: str, payload: dict = {}):
+        """One-tap approval from Watch or Phone."""
+        from .approvals import get_approval_queue
+        queue = get_approval_queue()
+        if queue is None:
+            raise HTTPException(status_code=503, detail="Approval system not initialised")
+
+        approved_by = str(payload.get("approved_by") or "chris")
+        from dataclasses import asdict as _asdict
+        item = queue.approve(request_id, approved_by=approved_by)
+        if item is None:
+            raise HTTPException(status_code=404, detail="Pending approval request not found")
+
+        try:
+            item_dict = _asdict(item)
+        except Exception:
+            item_dict = dict(item) if hasattr(item, "__dict__") else {}
+
+        return _ok({"status": "approved", "request": item_dict})
+
+
+# ---------------------------------------------------------------------------
+# Private helpers
+# ---------------------------------------------------------------------------
+
+def _truncate(text: str, max_len: int) -> str:
+    return text if len(text) <= max_len else text[: max_len - 1] + "…"
+
+
+def _mock_home_state() -> dict:
+    """Stub home state returned when HomeAssistant is not configured."""
+    return {
+        "present_members": [],
+        "doors": {"front": "locked", "garage": "closed"},
+        "temperature": {"inside": 70.0, "target": 72.0, "mode": "cool"},
+        "lights_on": [],
+        "alerts": [],
+        "source": "mock",
+    }
