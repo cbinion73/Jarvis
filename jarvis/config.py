@@ -77,6 +77,12 @@ class AppConfig:
     catalyst_profile_path: Path
     google_client_secret_path: Path
     google_token_path: Path
+    microsoft_client_id: str
+    microsoft_tenant_id: str
+    microsoft_client_secret: str
+    microsoft_redirect_uri: str
+    microsoft_token_path: Path
+    microsoft_authority: str
     openviking_enabled: bool
     openviking_base_url: str
     openviking_api_key: str
@@ -84,6 +90,8 @@ class AppConfig:
     openviking_user: str
     openviking_agent_id: str
     openviking_memory_uri_root: str
+    autonomous_workstreams_enabled: bool
+    autonomous_workstream_lanes: tuple[str, ...]
 
     @classmethod
     def from_env(cls) -> "AppConfig":
@@ -222,6 +230,20 @@ class AppConfig:
                     "data/google/google_token.json",
                 )
             ),
+            microsoft_client_id=os.getenv("JARVIS_MICROSOFT_CLIENT_ID", "").strip(),
+            microsoft_tenant_id=os.getenv("JARVIS_MICROSOFT_TENANT_ID", "").strip(),
+            microsoft_client_secret=os.getenv("JARVIS_MICROSOFT_CLIENT_SECRET", "").strip(),
+            microsoft_redirect_uri=os.getenv(
+                "JARVIS_MICROSOFT_REDIRECT_URI",
+                "http://localhost:8787/auth/microsoft/callback",
+            ).strip(),
+            microsoft_token_path=Path(
+                os.getenv(
+                    "JARVIS_MICROSOFT_TOKEN_PATH",
+                    "data/microsoft_graph/token.json",
+                )
+            ),
+            microsoft_authority=os.getenv("JARVIS_MICROSOFT_AUTHORITY", "common").strip().lower() or "common",
             openviking_enabled=_bool_env("JARVIS_OPENVIKING_ENABLED", False),
             openviking_base_url=os.getenv("OPENVIKING_BASE_URL", "http://127.0.0.1:1933").rstrip("/"),
             openviking_api_key=os.getenv("OPENVIKING_API_KEY", "").strip(),
@@ -232,6 +254,8 @@ class AppConfig:
                 "JARVIS_OPENVIKING_MEMORY_URI_ROOT",
                 "viking://user/chris/memories/",
             ).strip(),
+            autonomous_workstreams_enabled=_bool_env("JARVIS_AUTONOMOUS_WORKSTREAMS_ENABLED", True),
+            autonomous_workstream_lanes=_csv_env("JARVIS_AUTONOMOUS_WORKSTREAM_LANES", ("passive-income", "market-intelligence")),
         )
 
     def load_household(self) -> HouseholdProfile:

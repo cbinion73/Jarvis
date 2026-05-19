@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import AppConfig
+from .data_hygiene import filter_records
 from .openai_tasks import JarvisOpenAIClient
 
 
@@ -21,12 +22,16 @@ class ContentOpsStore:
     idea_runs_path: Path = field(init=False)
     queue_path: Path = field(init=False)
     exports_root: Path = field(init=False)
+    marketing_state_path: Path = field(init=False)
+    marketing_review_path: Path = field(init=False)
 
     def __post_init__(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
         self.idea_runs_path = self.root / "veronica_idea_runs.json"
         self.queue_path = self.root / "veronica_queue.json"
         self.exports_root = self.root / "exports"
+        self.marketing_state_path = self.root / "marketing_state.json"
+        self.marketing_review_path = self.root / "marketing_reviews.json"
         self.exports_root.mkdir(parents=True, exist_ok=True)
 
     def _load(self, path: Path) -> list[dict[str, Any]]:
@@ -36,7 +41,8 @@ class ContentOpsStore:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             return []
-        return payload if isinstance(payload, list) else []
+        records = payload if isinstance(payload, list) else []
+        return filter_records(records)
 
     def _save(self, path: Path, records: list[dict[str, Any]]) -> None:
         path.write_text(json.dumps(records, indent=2) + "\n", encoding="utf-8")
@@ -60,6 +66,54 @@ class ContentOpsStore:
                 return item
         return None
 
+    def _load_json(self, path: Path, *, default: Any) -> Any:
+        if not path.exists():
+            return default
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return default
+        return payload
+
+    def _save_json(self, path: Path, payload: Any) -> None:
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    def marketing_state(self) -> dict[str, Any]:
+        payload = self._load_json(self.marketing_state_path, default={})
+        return payload if isinstance(payload, dict) else {}
+
+    def save_marketing_state(self, payload: dict[str, Any]) -> dict[str, Any]:
+        self._save_json(self.marketing_state_path, payload)
+        return payload
+
+    def update_marketing_state(self, patch: dict[str, Any]) -> dict[str, Any]:
+        current = self.marketing_state()
+
+        def _merge(base: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
+            merged = dict(base)
+            for key, value in incoming.items():
+                if isinstance(value, dict) and isinstance(base.get(key), dict):
+                    merged[key] = _merge(dict(base.get(key) or {}), value)
+                else:
+                    merged[key] = value
+            return merged
+
+        updated = _merge(current, patch)
+        self.save_marketing_state(updated)
+        return updated
+
+    def recent_marketing_reviews(self, limit: int = 12) -> list[dict[str, Any]]:
+        payload = self._load_json(self.marketing_review_path, default=[])
+        records = payload if isinstance(payload, list) else []
+        return list(reversed(records[-limit:]))
+
+    def append_marketing_review(self, record: dict[str, Any]) -> dict[str, Any]:
+        payload = self._load_json(self.marketing_review_path, default=[])
+        records = payload if isinstance(payload, list) else []
+        records.append(record)
+        self._save_json(self.marketing_review_path, records)
+        return record
+
 
 class ContentOpsSupport:
     def __init__(self, config: AppConfig, openai_client: JarvisOpenAIClient, store: ContentOpsStore) -> None:
@@ -81,6 +135,62 @@ class ContentOpsSupport:
                 "live": live_count,
             },
         }
+
+    def default_marketing_state(self) -> dict[str, Any]:
+        return {
+            "updated_at": _now_iso(),
+            "campaigns": [],
+            "offer_links": [],
+            "audience_signals": [],
+            "thresholds": {
+                "minimum_live_assets": 1,
+                "minimum_exported_assets": 2,
+                "stale_campaign_after_days": 10,
+                "minimum_leverage_score": 55,
+            },
+            "notes": [
+                "Marketing state is currently a local operating model until live audience-growth and performance connectors are wired.",
+            ],
+        }
+
+    def marketing_state(self) -> dict[str, Any]:
+        saved = self.store.marketing_state()
+        defaults = self.default_marketing_state()
+        if not saved:
+            self.store.save_marketing_state(defaults)
+            return defaults
+        merged = dict(defaults)
+        for key, value in saved.items():
+            if isinstance(value, dict) and isinstance(merged.get(key), dict):
+                merged[key] = {**dict(merged.get(key) or {}), **value}
+            else:
+                merged[key] = value
+        if merged != saved:
+            self.store.save_marketing_state(merged)
+        return merged
+
+    def update_marketing_state(self, patch: dict[str, Any]) -> dict[str, Any]:
+        current = self.marketing_state()
+        current["updated_at"] = _now_iso()
+        merged = self.store.update_marketing_state({**patch, "updated_at": current["updated_at"]})
+        return self.marketing_state() if merged else current
+
+    def recent_marketing_reviews(self, limit: int = 12) -> list[dict[str, Any]]:
+        return self.store.recent_marketing_reviews(limit=limit)
+
+    def complete_marketing_review(self, actor: str, payload: dict[str, Any]) -> dict[str, Any]:
+        review = {
+            "review_id": str(uuid.uuid4()),
+            "actor": actor,
+            "review_type": str(payload.get("review_type", "weekly")).strip() or "weekly",
+            "completed_at": _now_iso(),
+            "summary": str(payload.get("summary", "")).strip(),
+            "score": payload.get("score"),
+            "band": str(payload.get("band", "")).strip(),
+            "note": str(payload.get("note", "")).strip(),
+        }
+        self.store.append_marketing_review(review)
+        return review
 
     def generate_options(self, actor: str, topic: str, channel: str = "YouTube", context: str = "") -> dict[str, Any]:
         prompt = (

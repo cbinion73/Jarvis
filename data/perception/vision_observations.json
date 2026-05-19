@@ -1,0 +1,37 @@
+[
+  {
+    "observation_id": "7536e2fc-a4ed-47d0-b6e8-9cd22a730463",
+    "actor": "Chris",
+    "camera_label": "USB Camera (0c45:632e)",
+    "camera_id": "USB Camera (0c45:632e)",
+    "zone": "unknown",
+    "mode": "measure",
+    "observation_type": "measurement",
+    "summary": "Measured 2.40 x 1.80 cm",
+    "detail": "Measured test span from automated verification.",
+    "confidence": "medium",
+    "capture_id": "094b2f84-782b-4b8b-830a-171c1ea46149",
+    "image_path": "data/vision/captures/094b2f84-782b-4b8b-830a-171c1ea46149.jpg",
+    "observed_object": "",
+    "measurement": {
+      "width": 2.4,
+      "height": 1.8,
+      "diagonal": 3.0,
+      "unit": "cm"
+    },
+    "evidence": {
+      "selection": {
+        "x": 10,
+        "y": 12,
+        "width": 100,
+        "height": 20
+      },
+      "calibration_reference": {
+        "reference_length": 10.0,
+        "reference_pixels": 425.0,
+        "unit": "cm"
+      }
+    },
+    "timestamp": "2026-05-11T07:31:06.407847+00:00"
+  }
+]

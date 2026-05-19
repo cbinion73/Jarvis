@@ -1,0 +1,23 @@
+{
+  "updated_at": "2026-05-11T05:17:52.887121+00:00",
+  "portfolio": {
+    "mission": "Coordinate family savings, revenue creation, stewardship, and compounding projects in one place.",
+    "active_project_target": 6,
+    "hypothesis_review_target": 5,
+    "lanes": []
+  },
+  "crm": {
+    "active_opportunity_target": 3,
+    "weekly_followup_target": 5,
+    "average_deal_value": null
+  },
+  "opportunities": [],
+  "thresholds": {
+    "stalled_after_days": 7,
+    "hot_followup_within_days": 2,
+    "minimum_active_opportunities": 3
+  },
+  "notes": [
+    "Pipeline state is currently inferred from Catalyst signals, project briefs, and implementation plans until a live CRM connector is wired."
+  ]
+}

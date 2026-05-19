@@ -1,0 +1,6 @@
+Package 57862183-643a-4f68-9e0b-237b069976b7 exported a CadQuery-backed custom-form model.
+Primary mesh: twin-wake.3mf
+Fallback mesh: twin-wake.stl
+Solid exchange: twin-wake.step
+Recommended material: PLA
+Suggested slicer profile: creative-concept-balanced

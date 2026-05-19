@@ -8,7 +8,7 @@
     "material": "carbon-fiber nylon",
     "package_summary": "**Vendor Package Summary \u2014 For Review / Approval**\n\n**Actor:** Chris  \n**Part:** Garden bench bracket  \n**Vendor target:** Carbon-fiber service bureau  \n**Requested process:** CNC or reinforced nylon fabrication  \n**Requested material:** Carbon-fiber nylon  \n\n**Part Purpose**  \nOutdoor bench bracket replacement.\n\n**Functional Requirements**  \n- Preserve existing hole spacing and mounting geometry.  \n- Add a drain path to reduce water retention.  \n- Maintain structural suitability for outdoor use.  \n- Keep Scout motif subtle, if included.\n\n**Notes / Constraints**  \n- No latest inspection diagnosis available.  \n- Final geometry should be checked against the existing bracket before release.  \n- Prefer a clean, durable finish appropriate for exterior service.\n\n**Status**  \nStaged for approval only.",
     "approval_request_id": "b31a6101-ec76-410a-8f8a-86cfaaf4cc3d",
-    "status": "pending-approval",
+    "status": "archived",
     "timestamp": "2026-05-06T07:57:16.371695+00:00"
   },
   {
@@ -20,7 +20,7 @@
     "material": "carbon-fiber nylon",
     "package_summary": "**Vendor Package Summary \u2014 Staged for Approval**\n\n**Requestor/Actor:** Chris  \n**Part:** Garden bench bracket  \n**Target Vendor:** Carbon-fiber service bureau  \n**Requested Process:** CNC or reinforced nylon fabrication  \n**Requested Material:** Carbon-fiber nylon\n\n### Part Function\nOutdoor bench bracket replacement. Preserve existing mounting geometry and hole spacing exactly. Add a drain path if possible. Keep Scout motif subtle, if feasible.\n\n### Issue / Diagnosis Summary\nCurrent failure is consistent with **bend-radius fatigue and overstress at the inner corner** of the bracket. The crack location suggests repeated load cycling combined with a stress concentration from a tight bend. Since the hole spacing is intact, that geometry should be preserved. Outdoor exposure and possible trapped water may also have contributed through corrosion, freeze/thaw, or water entrapment.\n\n### Likely Failure Modes\n- Crack initiation at inner bend radius from stress concentration\n- Progressive fatigue from bench loading/flexing\n- Corrosion-assisted cracking if moisture collected in the bend area\n- Water entrapment accelerating degradation\n\n### Recommended Prototype Path\n1. Measure and model the bracket exactly, preserving hole spacing and overall envelope.\n2. Increase the inner bend radius if geometry allows.\n3. Add drainage or vent relief at the low point.\n4. Produce a quick-fit PLA prototype only if fit check is needed.\n5. Produce a functional prototype in **PETG-CF or carbon-fiber nylon** for load testing.\n6. Test in temporary installation and inspect for bending, creep, or crack growth.\n7. If satisfactory",
     "approval_request_id": "7cac83d3-f032-4c2c-bce4-7adc81ec0ed6",
-    "status": "pending-approval",
+    "status": "archived",
     "timestamp": "2026-05-06T07:58:16.595360+00:00"
   }
 ]

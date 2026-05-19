@@ -44,16 +44,20 @@ class BackgroundGraphState(TypedDict, total=False):
     openviking_sync: dict[str, Any]
 
 
-def run_response_graph(runtime, plan: RequestPlan) -> OpenAIResult:
+def run_response_graph(runtime, plan: RequestPlan, continuity_context: str = "") -> OpenAIResult:
     def load_context(state: ResponseGraphState) -> ResponseGraphState:
         current_plan = state["plan"]
-        context_excerpt = ""
+        context_parts: list[str] = []
         if runtime.openviking_support.enabled and current_plan.context_lane != "restricted-local":
-            context_excerpt = runtime.openviking_support.party_mode_context(
+            retrieved = runtime.openviking_support.party_mode_context(
                 current_plan.request,
                 limit=4 if current_plan.context_lane == "party-mode" else 3,
             )
-        return {"context_excerpt": context_excerpt}
+            if retrieved.strip():
+                context_parts.append(retrieved.strip())
+        if continuity_context.strip():
+            context_parts.append(continuity_context.strip())
+        return {"context_excerpt": "\n\n".join(context_parts).strip()}
 
     def generate(state: ResponseGraphState) -> ResponseGraphState:
         current_plan = state["plan"]

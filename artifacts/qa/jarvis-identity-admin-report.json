@@ -1,45 +1,19 @@
 {
-  "started_at": "2026-05-10T20:29:57.902Z",
+  "started_at": "2026-05-15T15:57:14.302Z",
+  "finished_at": "2026-05-15T15:57:14.302Z",
   "base_url": "http://127.0.0.1:8787",
-  "checks": [
+  "checks": [],
+  "failures": [
     {
-      "name": "Identity member save persists and restores",
-      "status": "passed",
-      "details": "Mutated and restored member chris",
-      "kind": "automated"
-    },
-    {
-      "name": "Identity device save preserves mapping fields and restores",
-      "status": "passed",
-      "details": "Mutated and restored device test-browser-1",
-      "kind": "automated"
-    },
-    {
-      "name": "Session binding resolves actor and can be restored",
-      "status": "passed",
-      "details": "Session override resolved to Caleb",
-      "kind": "automated"
-    },
-    {
-      "name": "Service identity save persists and restores",
-      "status": "passed",
-      "details": "Mutated and restored service hostname",
-      "kind": "automated"
-    },
-    {
-      "name": "Connected devices snapshot stays consistent after admin round-trip",
-      "status": "passed",
-      "details": "Connected devices total 61",
-      "kind": "automated"
+      "name": "identity-admin-battery-bootstrap",
+      "error": "TypeError: fetch failed"
     }
   ],
-  "failures": [],
   "warnings": [],
   "summary": {
-    "passed": 5,
-    "failed": 0,
+    "passed": 0,
+    "failed": 1,
     "warned": 0,
     "skipped": 0
-  },
-  "finished_at": "2026-05-10T20:30:05.912Z"
+  }
 }

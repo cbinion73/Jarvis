@@ -1,62 +1,74 @@
 # JARVIS
 
-JARVIS is a whole-home household associate, not just a voice assistant. This workspace now contains:
+JARVIS is a private intelligence chamber for the household — not a chatbot, not a smart speaker. It runs on a dedicated M4 Mac Mini, knows your home, your family, your rhythms, and your work, and it operates with clear trust boundaries between people and the things it's allowed to do on your behalf. Every action is either pre-approved, proposable, or held until a human says go. The goal is a system that makes the household feel cared for without surrendering control or privacy to a cloud platform.
 
-- the original APEX-style OpenAI voice starter
-- BMAD-shaped planning artifacts for JARVIS
-- a Python scaffold for the household orchestrator, permission engine, and family-mode runtime
+---
 
-## Current Direction
+## Quick Start
 
-The target system is:
+1. **Clone / open the project**
+   ```bash
+   git clone <repo-url> JARVIS
+   cd JARVIS
+   ```
 
-- local-first for home state, sensors, automations, and sensitive memory
-- OpenAI-powered for voice, reasoning, summaries, and multimodal assistance
-- OpenClaw-backed for agent shell, chat, approvals, and future tool orchestration
-- Home Assistant-backed for the house nervous system
+2. **Run setup**
+   ```bash
+   bash scripts/setup.sh
+   ```
 
-## Setup
+3. **Edit `.env` with your API keys**
+   ```bash
+   cp .env.example .env
+   # Fill in OPENAI_API_KEY, ELEVENLABS_API_KEY, and any integration keys
+   ```
+
+4. **Verify everything is up**
+   ```bash
+   python scripts/verify.py
+   ```
+
+5. **Open the dashboard**
+   ```
+   http://localhost:8787
+   ```
+
+---
+
+## Architecture
+
+- **Python backend (FastAPI, port 8787)** — household orchestrator, permission engine, family-mode runtime, agent dispatch, memory core, and all subsystem integrations
+- **Local models via Ollama** — `phi3.5` for fast routing/classification (~200ms), `gpt-oss-20b` (or `qwen2.5:14b` as stand-in) for local reasoning; no cloud dependency for sensitive household data
+- **Apple clients** — `JarvisPhone` and `JarvisWatch` connect via `JarvisKit`; health, location, and watch context flow through a typed API contract and do not leave the local network
+
+---
+
+## Docs
+
+- [`docs/OLLAMA-SETUP.md`](docs/OLLAMA-SETUP.md) — install Ollama, pull models, verify the local model stack, RAM usage, troubleshooting
+- [`docs/JARVIS-APPLE-HANDOFF-PACK.md`](docs/JARVIS-APPLE-HANDOFF-PACK.md) — Apple platform integration details, JarvisKit design, handoff protocol
+- [`JarvisApple/HEALTH-API-CONTRACT.md`](JarvisApple/HEALTH-API-CONTRACT.md) — typed contract for health and watch data flowing from Apple devices to the JARVIS backend
+
+---
+
+## Python Commands
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
+python -m jarvis serve --host 0.0.0.0 --port 8787   # start the server
+python -m jarvis summary                              # household summary
+python -m jarvis briefing --actor Chris              # morning briefing
+python -m jarvis home-overview                       # house state
+python -m jarvis mode-status                         # current household mode
+python -m jarvis memory-overview --viewer Chris      # memory core status
+python -m jarvis voice --text "Good morning"         # single voice turn
+python -m jarvis voice --text-loop                   # typed conversation loop
+python -m jarvis voice --realtime                    # OpenAI Realtime with VAD
 ```
 
-Key environment values:
+Full command reference is preserved below for developer reference.
 
-```bash
-OPENAI_API_KEY=sk-proj-your-key-here
-ELEVENLABS_API_KEY=your-elevenlabs-key-here
-OPENAI_TEXT_MODEL=gpt-5.4-mini
-OPENAI_ROUTER_MODEL=gpt-5.4-nano
-OPENAI_REALTIME_MODEL=gpt-realtime-1.5
-JARVIS_TTS_PROVIDER=auto
-JARVIS_STT_PROVIDER=auto
-LOCALAI_BASE_URL=http://127.0.0.1:8080
-PIPER_MODEL_PATH=/share/piper/en_GB-alan-medium.onnx
-JARVIS_GOOGLE_CLIENT_SECRET=config/google_client_secret.json
-```
-
-## Planning Artifacts
-
-BMAD-shaped first drafts live in:
-
-- [_bmad-output/planning-artifacts/jarvis-prd-v1.md](/Users/chris/Desktop/CODE/JARVIS/_bmad-output/planning-artifacts/jarvis-prd-v1.md)
-- [_bmad-output/planning-artifacts/jarvis-architecture-v1.md](/Users/chris/Desktop/CODE/JARVIS/_bmad-output/planning-artifacts/jarvis-architecture-v1.md)
-- [_bmad-output/planning-artifacts/jarvis-epics-v1.md](/Users/chris/Desktop/CODE/JARVIS/_bmad-output/planning-artifacts/jarvis-epics-v1.md)
-
-Shared context for future agent work lives in:
-
-- [docs/project-context.md](/Users/chris/Desktop/CODE/JARVIS/docs/project-context.md)
-- [docs/household-hardware-and-integration-matrix.md](/Users/chris/Desktop/CODE/JARVIS/docs/household-hardware-and-integration-matrix.md)
-
-## Python Scaffold
-
-The first runtime scaffold lives in [jarvis](/Users/chris/Desktop/CODE/JARVIS/jarvis).
-
-Useful commands:
+<details>
+<summary>Full command list</summary>
 
 ```bash
 python -m jarvis summary
@@ -125,10 +137,10 @@ python -m jarvis privacy-update --kind microphone --target kitchen-alexa-dot --m
 python -m jarvis memory-overview --viewer Chris
 python -m jarvis memory-remember --actor Chris --type personal --scope personal --owner Chris --summary "Chris prefers the executive brief after coffee." --detail "Hold the dense briefing until caffeine has entered the bloodstream." --tags "preference,morning,executive"
 python -m jarvis memory-review --viewer Chris
+python -m jarvis memory-forget --viewer Chris --entry-id <entry-id>
+python -m jarvis memory-export --viewer Chris
 python -m jarvis memory-proposals --status pending
 python -m jarvis memory-approve --proposal-id <proposal-id> --decision approved
-python -m jarvis memory-export --viewer Chris
-python -m jarvis memory-forget --viewer Chris --entry-id <entry-id>
 python -m jarvis voice-note --actor Rebekah --source van --note "Permission forms, snack rotation, and summer camp shirt sizes need follow-up."
 python -m jarvis voice-notes --limit 5
 python -m jarvis child-boundaries
@@ -157,224 +169,16 @@ python -m jarvis voice --list-devices
 python -m jarvis catalyst-overview
 python -m jarvis catalyst-email-triage --actor Chris --sender "name@example.com" --subject "Subject" --body "Email body"
 python -m jarvis catalyst-project-brief --actor Chris --project-name "Project" --problem "Problem" --desired-outcome "Outcome"
-python apex_hello.py
-python apex_hello.py --loop
-python apex_hello.py --loop --text-input
-python apex_hello.py --list-devices
 ```
 
-See [docs/catalyst-personal.md](/Users/chris/Desktop/CODE/JARVIS/docs/catalyst-personal.md) for the personal-safe Catalyst backend now embedded in JARVIS.
-See [docs/google-connect.md](/Users/chris/Desktop/CODE/JARVIS/docs/google-connect.md) for personal Gmail and Google Calendar connection setup.
+</details>
 
-## Local Product Surface
+---
 
-The current MVP product is a local JARVIS dashboard with:
+## Related Docs
 
-- household summary
-- Body Home Mission framing
-- morning briefing generation
-- request planning
-- approval queue
-- integration status
-- recent activity log
-- explainability and approval-history review
-- family-facing low-clutter display mode
-- live OpenAI-backed response generation
-
-Once running, open:
-
-```text
-http://127.0.0.1:8787
-```
-
-## Voice Shell
-
-Epic 2 now has a dedicated JARVIS voice shell inside `python -m jarvis voice`.
-
-- `--text` runs one inferred turn through the real runtime
-- `--text-loop` runs a typed conversation loop with wake-word handling
-- `--loop` runs push-to-talk mic capture
-- `--realtime` runs OpenAI Realtime transcription with server-side VAD
-- `--list-devices` shows local input devices
-
-The local voice context map lives in [household/jarvis_voice_context.example.json](/Users/chris/Desktop/CODE/JARVIS/household/jarvis_voice_context.example.json).
-
-Additional voice-shell behavior now in place:
-
-- `--quiet` lowers reply intensity and playback volume for calmer interactions
-- `--whisper` pushes the shell into a softer, low-disruption mode
-- spoken playback is now interruptible, so a new turn can cut off the previous reply
-- local macOS fallback TTS is available when ElevenLabs is unavailable
-- local-first provider routing is now available through `Piper` and `LocalAI`
-- on this machine, run the voice shell from [`.venv`](/Users/chris/Desktop/CODE/JARVIS/.venv) if you want the full audio dependency path instead of the reduced parser fallback from the system Python
-
-The local voice stack guide lives in [docs/local-voice-stack.md](/Users/chris/Desktop/CODE/JARVIS/docs/local-voice-stack.md).
-
-Supporting local-voice assets now live in:
-
-- [infra/docker-compose.local-voice.yml](/Users/chris/Desktop/CODE/JARVIS/infra/docker-compose.local-voice.yml)
-- [infra/localai/models/whisper-1.yaml](/Users/chris/Desktop/CODE/JARVIS/infra/localai/models/whisper-1.yaml)
-- [infra/localai/models/jarvis-piper.yaml](/Users/chris/Desktop/CODE/JARVIS/infra/localai/models/jarvis-piper.yaml)
-- [infra/livekit/jarvis_agent.py](/Users/chris/Desktop/CODE/JARVIS/infra/livekit/jarvis_agent.py)
-
-## House Nervous System
-
-Epic 3 now has a dedicated local home-control subsystem:
-
-- `home-overview` for the staged household control picture
-- `room-scene` for room scenes and practical lighting intent
-- `climate-status` and `climate-control` for Nest-shaped climate state and changes
-- `access-overview` and `access-control` for lock and monitored-door state
-- `garage-status` and `garage-check` for MyQ-shaped garage state and safe-close review
-- `leak-monitor` for leak sensor summaries
-- `cold-storage-monitor` for freezer and fridge variance status
-- `energy-window` for utility-aware appliance timing
-- `outage-readiness` for outage posture, degrade order, and manual fallbacks
-
-The home-control profile lives in [household/jarvis_home_assistant.example.json](/Users/chris/Desktop/CODE/JARVIS/household/jarvis_home_assistant.example.json).
-
-## Perception Mesh
-
-Epic 4 now has a dedicated local perception subsystem:
-
-- `perception-overview` for the ambient sensing rollup
-- `mic-ingress` for far-field microphone events
-- `presence-update` for room occupancy changes
-- `phone-presence` for iPhone-based arrival and departure context
-- `camera-event` for workshop, porch, and garage camera events
-- `package-rule` for preferred delivery-drop logic
-- `object-recognition` for workshop-part recognition events
-- `environmental-anomaly` for freezer, weather, motion, and network anomalies
-- `privacy-state` and `privacy-update` for camera/microphone indicators and mute state
-
-## Family Modes
-
-Epic 6 now has a fuller household-rhythm layer:
-
-- `mode-brief` for mode-specific playbooks across Dawn Protocol, Family Morning, Steward Mode, Work Mode, Deep Work, Dinner Mode, Chronicle Mode, Goodnight, and Watchtower
-- `departure-plan` for mudroom-style leaving-the-house choreography
-- `meal-plan` for structured low-complexity meal support with grocery grouping
-- `vehicle-plan` for van/car assignment and route posture
-- `weather-contingency` for rain-aware family logistics
-
-The family-mode profile lives in [household/jarvis_family_profile.example.json](/Users/chris/Desktop/CODE/JARVIS/household/jarvis_family_profile.example.json).
-
-The perception profile lives in [household/jarvis_perception_profile.example.json](/Users/chris/Desktop/CODE/JARVIS/household/jarvis_perception_profile.example.json).
-
-## Memory Core
-
-Epic 5 now has a dedicated local memory subsystem:
-
-- `memory-overview` for schema, counts, encryption posture, and pending proposals
-- `memory-remember` for household, personal, project, and safety memory capture
-- `memory-review` for permission-filtered entry review
-- `memory-forget` for explicit deletion
-- `memory-export` for local decrypted export
-- `memory-proposals` and `memory-approve` for sensitive-fact approval workflow
-
-The memory profile lives in [household/jarvis_memory_profile.example.json](/Users/chris/Desktop/CODE/JARVIS/household/jarvis_memory_profile.example.json).
-
-## Executive and Chronicle Tools
-
-Epic 3 now has local specialist surfaces:
-
-- `meeting-brief` for executive prep
-- `meeting-followup` for transcript follow-up matrices
-- `decision-framework` for criteria-first steering when a meeting is drifting
-- `research-summary` for evidence-tiered summaries
-- `confidentiality-review` for Thermo-safe redaction checks
-- `manuscript-review` for executive editing support
-- `ironclad-editor` for the named Iron-Clad Executive Editor protocol
-- `venture-brief` for venture and market-monitoring pattern briefs
-- `devotional-pause` for Scripture, interpretation, prayer, silence, and next-step framing
-- `family-devotional` for family-table devotional preparation
-- `chronicle-capture`, `chronicle-timeline`, and `chronicle-themes` for local Chronicle reflection storage and recurring-theme review
-
-## Family Modes and Logistics
-
-Epic 4 now has local family-mode and logistics surfaces:
-
-- `mode-status` and `mode-transition` for household mode state
-- `family-plan` for calm sequencing and contingency planning
-- `message-draft` and `message-drafts` for staged family communication
-- `anomaly-watch` for explicit watch items and household tensions
-
-The family-mode profile lives in [household/jarvis_family_profile.example.json](/Users/chris/Desktop/CODE/JARVIS/household/jarvis_family_profile.example.json).
-
-## Rebekah Coordination
-
-Epic 8 now has a dedicated Rebekah-facing coordination lane:
-
-- `rebekah-center` for the calm command-brief surface
-- `troop-plan` for weather, backup, supplies, and parent-note planning
-- `parent-message` for staged parent communication with approval handoff
-- `grocery-support` for grouped groceries and an easy dinner suggestion
-- `voice-note` and `voice-notes` for van-style follow-up capture
-
-## Security and Watchtower
-
-Epic 12 now has a dedicated security subsystem:
-
-- `security-event` for package and unusual-motion incident capture
-- `safety-alert` for smoke, CO, and leak escalation
-- `weather-alert` for departure and event timing advisories
-- `child-arrival` for safe-home and arrival event capture
-- `unlock-policy` for no-unlock-with-voice-only enforcement checks
-- `overnight-review` for the quiet overnight watchtower rollup
-- `security-incidents` for recent incident review
-
-## Infrastructure and Deployment
-
-Epic 14 now has explicit deployment artifacts:
-
-- [infrastructure-and-deployment.md](/Users/chris/Desktop/CODE/JARVIS/docs/infrastructure-and-deployment.md) for the target household footprint
-- [operations-runbook.md](/Users/chris/Desktop/CODE/JARVIS/docs/operations-runbook.md) for day-to-day runtime operations
-- [jarvis_infra_profile.example.json](/Users/chris/Desktop/CODE/JARVIS/household/jarvis_infra_profile.example.json) for host, display, storage, power, and network planning
-- [com.chris.jarvis.dashboard.plist](/Users/chris/Desktop/CODE/JARVIS/infra/launchd/com.chris.jarvis.dashboard.plist) and [com.chris.jarvis.voice-shell.plist](/Users/chris/Desktop/CODE/JARVIS/infra/launchd/com.chris.jarvis.voice-shell.plist) for launchd packaging
-- [install_launchd_services.sh](/Users/chris/Desktop/CODE/JARVIS/infra/scripts/install_launchd_services.sh) for installing the local dashboard service template
-
-## Child-Safe Tutoring
-
-Epic 5 now has a dedicated tutoring subsystem:
-
-- `child-boundaries` shows the enforced boundaries for Caleb and Anna
-- `tutor` runs a child-safe tutoring turn with persistent session logging
-- `tutoring-summaries` gives an adult-only parent view of recent coaching patterns
-- `device-boundary` and `device-boundaries` handle device dock and study-boundary routines
-
-The tutoring policy profile lives in [household/jarvis_tutoring_profile.example.json](/Users/chris/Desktop/CODE/JARVIS/household/jarvis_tutoring_profile.example.json).
-
-## Workshop Copilot
-
-Epic 6 now has a dedicated workshop subsystem:
-
-- `workshop-plan` for prototype and material sequencing
-- `printer-status` for the local Bambu status seam
-- `inspect-part` for persistent diagnosis from observations
-- `material-recommendation` for prototype-vs-final material guidance
-- `cad-package` and `cad-packages` for persistent rough CAD package generation
-- `print-prep` and `print-preps` for staged slicer handoff guidance
-- `safety-check` for workshop interlocks and warnings
-- `inventory` for filament, consumable, and hardware status
-- `vendor-prep` and `vendor-preps` for staged external fabrication packages behind approval
-
-The current workshop profile now reflects the real maker fleet:
-
-- Creality K2 Pro Combo
-- Creality HALOT-ONE
-- Creality Falcon 5W laser
-- Titoe 4540 CNC
-- Cricut Joy Xtra
-
-The workshop profile lives in [household/jarvis_workshop_profile.example.json](/Users/chris/Desktop/CODE/JARVIS/household/jarvis_workshop_profile.example.json).
-
-## Build Guide Mapping
-
-| Guide Layer | Original | This Workspace |
-| --- | --- | --- |
-| Brain SDK | `anthropic` | `openai` |
-| Brain env var | `ANTHROPIC_API_KEY` | `OPENAI_API_KEY` |
-| Brain client | `anthropic.Anthropic()` | `OpenAI()` |
-| Generation call | `messages.create(...)` | `responses.create(...)` |
-| Text output | `response.content[0].text` | `response.output_text` |
-| Voice SDK | `elevenlabs` | `elevenlabs` |
+- [docs/local-voice-stack.md](docs/local-voice-stack.md) — Piper, LocalAI, and voice shell setup
+- [docs/catalyst-personal.md](docs/catalyst-personal.md) — personal-safe Catalyst backend
+- [docs/google-connect.md](docs/google-connect.md) — Gmail and Google Calendar connection
+- [docs/infrastructure-and-deployment.md](docs/infrastructure-and-deployment.md) — household deployment footprint
+- [docs/operations-runbook.md](docs/operations-runbook.md) — day-to-day runtime operations

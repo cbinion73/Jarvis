@@ -1,0 +1,41 @@
+{
+  "conversation_id": "1c891da6-69e2-4304-9025-57e9a99fc6e8",
+  "actor": "Chris",
+  "room": "office",
+  "source": "shell",
+  "title": "Quick chat path check.",
+  "status": "active",
+  "summary": "",
+  "memory_signals": [],
+  "created_at": "2026-05-12T04:04:07.329877+00:00",
+  "updated_at": "2026-05-12T04:04:13.353214+00:00",
+  "last_activity_at": "2026-05-12T04:04:13.353214+00:00",
+  "turn_count": 2,
+  "latest_user_text": "Quick chat path check.",
+  "latest_assistant_text": "Understood, Sir. We are on the quick chat path: concise, continuous, and no unnecessary ceremonial footwork.\n\nI am here and tracking the thread normally. State the next task.",
+  "turns": [
+    {
+      "turn_id": "4c308853-fd03-4f95-af14-3ba1788b8f3e",
+      "role": "user",
+      "text": "Quick chat path check.",
+      "actor": "Chris",
+      "room": "office",
+      "source": "shell",
+      "created_at": "2026-05-12T04:04:07.335620+00:00",
+      "metadata": {}
+    },
+    {
+      "turn_id": "548d9d46-8572-4cfe-817b-487b9bc7faf4",
+      "role": "assistant",
+      "text": "Understood, Sir. We are on the quick chat path: concise, continuous, and no unnecessary ceremonial footwork.\n\nI am here and tracking the thread normally. State the next task.",
+      "actor": "Chris",
+      "room": "office",
+      "source": "shell",
+      "created_at": "2026-05-12T04:04:13.353214+00:00",
+      "metadata": {
+        "provider": "openai",
+        "model": "gpt-5.4-mini-2026-03-17"
+      }
+    }
+  ]
+}

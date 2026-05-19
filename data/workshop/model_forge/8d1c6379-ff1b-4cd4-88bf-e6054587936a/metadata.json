@@ -1,0 +1,43 @@
+{
+  "package_id": "8d1c6379-ff1b-4cd4-88bf-e6054587936a",
+  "part_name": "QA Camera Mount 1778871030009",
+  "actor": "Chris",
+  "summary": "Rough parameter-driven concept for a QA camera mount with a flat base, vertical riser, and a simple top camera pad. I kept the geometry clean and adjustable, with fastener access zones cleared around the likely hole locations and a printable fit-check profile included as a separate part. This is intentionally a stub for hand refinement, not a finished production model.",
+  "parameters": [
+    "Part: QA Camera Mount 1778871030009",
+    "Base length: 90",
+    "Base width: 40",
+    "Base thickness: 6",
+    "Riser height: 35",
+    "Riser thickness: 10",
+    "Top pad length: 30",
+    "Top pad width: 30",
+    "Top pad thickness: 6",
+    "Mount hole diameter: 5.5",
+    "Hole edge margin: 12",
+    "Riser setback from rear edge: 10",
+    "Fastener clearance diameter: 12",
+    "Fit-check tolerance: 0.25"
+  ],
+  "fit_checks": [
+    "Confirm hole spacing on the QA Camera Mount 1778871030009.",
+    "Check fastener clearance and wrench access.",
+    "Verify drain path does not weaken the load path."
+  ],
+  "family": "mount",
+  "artifact_dir": "data/workshop/model_forge/8d1c6379-ff1b-4cd4-88bf-e6054587936a",
+  "script_path": "data/workshop/model_forge/8d1c6379-ff1b-4cd4-88bf-e6054587936a/model.scad",
+  "cadquery_script_path": "data/workshop/model_forge/8d1c6379-ff1b-4cd4-88bf-e6054587936a/model_cadquery.py",
+  "model_path": "data/workshop/model_forge/8d1c6379-ff1b-4cd4-88bf-e6054587936a/qa-camera-mount-1778871030009.stl",
+  "step_path": "data/workshop/model_forge/8d1c6379-ff1b-4cd4-88bf-e6054587936a/qa-camera-mount-1778871030009.step",
+  "mesh_3mf_path": "data/workshop/model_forge/8d1c6379-ff1b-4cd4-88bf-e6054587936a/qa-camera-mount-1778871030009.3mf",
+  "slicer_pack_dir": "data/workshop/model_forge/8d1c6379-ff1b-4cd4-88bf-e6054587936a/slicer_pack",
+  "printer_id": "creality-k2-pro-combo",
+  "profile_name": "fit-check-fast",
+  "material": "PETG-CF",
+  "creative_profile": "organic-reconstruction",
+  "export_status": "cadquery-mount",
+  "export_detail": "Exported CadQuery mount assets as STL, STEP, and 3MF, then assembled a slicer pack for creality-k2-pro-combo using the fit-check-fast profile.",
+  "export_engine": "cadquery",
+  "timestamp": "2026-05-15T18:50:38.242576+00:00"
+}

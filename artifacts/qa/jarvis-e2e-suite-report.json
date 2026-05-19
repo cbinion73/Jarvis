@@ -1,17 +1,17 @@
 {
-  "started_at": "2026-05-10T20:26:46.170Z",
-  "finished_at": "2026-05-10T20:30:36.983Z",
+  "started_at": "2026-05-15T15:53:04.664Z",
+  "finished_at": "2026-05-15T15:57:14.537Z",
   "base_url": "http://127.0.0.1:8787",
   "batteries": [
     {
       "name": "platform",
       "script": "/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs",
       "report_path": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/jarvis-platform-report.json",
-      "exit_code": 0,
+      "exit_code": 1,
       "signal": null,
       "summary": {
-        "passed": 10,
-        "failed": 0,
+        "passed": 1,
+        "failed": 9,
         "warned": 0,
         "skipped": 0
       }
@@ -20,37 +20,37 @@
       "name": "provider-layer",
       "script": "/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-provider-layer.e2e.cjs",
       "report_path": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/jarvis-provider-layer-report.json",
-      "exit_code": 0,
+      "exit_code": 1,
       "signal": null,
       "summary": {
-        "passed": 9,
-        "failed": 0,
+        "passed": 0,
+        "failed": 1,
         "warned": 0,
-        "skipped": 1
+        "skipped": 0
       }
     },
     {
       "name": "full-system",
       "script": "/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-full-system.e2e.cjs",
       "report_path": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/jarvis-full-system-report.json",
-      "exit_code": 0,
+      "exit_code": 1,
       "signal": null,
       "summary": {
-        "passed": 12,
-        "failed": 0,
+        "passed": 0,
+        "failed": 10,
         "warned": 0,
-        "skipped": 1
+        "skipped": 0
       }
     },
     {
       "name": "workbench",
       "script": "/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-workbench.e2e.cjs",
       "report_path": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/jarvis-workbench-report.json",
-      "exit_code": 0,
+      "exit_code": 1,
       "signal": null,
       "summary": {
-        "passed": 4,
-        "failed": 0,
+        "passed": 0,
+        "failed": 1,
         "warned": 0,
         "skipped": 0
       }
@@ -59,11 +59,11 @@
       "name": "identity-admin",
       "script": "/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-identity-admin.e2e.cjs",
       "report_path": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/jarvis-identity-admin-report.json",
-      "exit_code": 0,
+      "exit_code": 1,
       "signal": null,
       "summary": {
-        "passed": 5,
-        "failed": 0,
+        "passed": 0,
+        "failed": 1,
         "warned": 0,
         "skipped": 0
       }
@@ -72,11 +72,11 @@
       "name": "memory-governance",
       "script": "/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-memory-governance.e2e.cjs",
       "report_path": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/jarvis-memory-governance-report.json",
-      "exit_code": 0,
+      "exit_code": 1,
       "signal": null,
       "summary": {
-        "passed": 5,
-        "failed": 0,
+        "passed": 0,
+        "failed": 5,
         "warned": 0,
         "skipped": 0
       }
@@ -85,21 +85,64 @@
       "name": "approval-queue",
       "script": "/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-approval-queue.e2e.cjs",
       "report_path": "/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/jarvis-approval-queue-report.json",
-      "exit_code": 0,
+      "exit_code": 1,
       "signal": null,
       "summary": {
-        "passed": 5,
-        "failed": 0,
+        "passed": 0,
+        "failed": 5,
         "warned": 0,
         "skipped": 0
       }
     }
   ],
   "totals": {
-    "passed": 50,
-    "failed": 0,
+    "passed": 1,
+    "failed": 32,
     "warned": 0,
-    "skipped": 2
+    "skipped": 0
   },
-  "failures": []
+  "failures": [
+    {
+      "name": "platform",
+      "exit_code": 1,
+      "stderr_tail": "",
+      "stdout_tail": "},\n    {\n      \"name\": \"Catalyst workspace opens as modal app\",\n      \"error\": \"page.click: Timeout 30000ms exceeded.\\nCall log:\\n\\u001b[2m  - waiting for locator('#close-modal')\\u001b[22m\\n\\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:195:16\\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:194:9)\"\n    },\n    {\n      \"name\": \"Modal state hides packet rail and shrinks core\",\n      \"error\": \"locator.boundingBox: Timeout 30000ms exceeded.\\nCall log:\\n\\u001b[2m  - waiting for locator('#packet-strip-toggle')\\u001b[22m\\n\\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:214:72\\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:213:9)\"\n    },\n    {\n      \"name\": \"Talk button remains interactive\",\n      \"error\": \"page.click: Timeout 30000ms exceeded.\\nCall log:\\n\\u001b[2m  - waiting for locator('#close-modal')\\u001b[22m\\n\\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:223:16\\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:222:9)\"\n    }\n  ],\n  \"summary\": {\n    \"passed\": 1,\n    \"failed\": 9\n  },\n  \"finished_at\": \"2026-05-15T15:56:56.157Z\"\n}"
+    },
+    {
+      "name": "provider-layer",
+      "exit_code": 1,
+      "stderr_tail": "[TypeError: fetch failed] {\n  [cause]: Error: connect ECONNREFUSED 127.0.0.1:8787\n      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1645:16) {\n    errno: -61,\n    code: 'ECONNREFUSED',\n    syscall: 'connect',\n    address: '127.0.0.1',\n    port: 8787\n  }\n}",
+      "stdout_tail": ""
+    },
+    {
+      "name": "full-system",
+      "exit_code": 1,
+      "stderr_tail": "[jarvis-full-system] fail: Operational platform endpoints have expected shape\n[jarvis-full-system] start: Cognitive platform endpoints have expected shape\n[jarvis-full-system] fail: Cognitive platform endpoints have expected shape\n[jarvis-full-system] start: First Light and persona APIs respond\n[jarvis-full-system] fail: First Light and persona APIs respond\n[jarvis-full-system] start: Assistant background autonomy run responds\n[jarvis-full-system] fail: Assistant background autonomy run responds\n[jarvis-full-system] start: TTS endpoint returns downloadable audio\n[jarvis-full-system] fail: TTS endpoint returns downloadable audio\n[TypeError: fetch failed] {\n  [cause]: Error: connect ECONNREFUSED 127.0.0.1:8787\n      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1645:16) {\n    errno: -61,\n    code: 'ECONNREFUSED',\n    syscall: 'connect',\n    address: '127.0.0.1',\n    port: 8787\n  }\n}",
+      "stdout_tail": ""
+    },
+    {
+      "name": "workbench",
+      "exit_code": 1,
+      "stderr_tail": "[TypeError: fetch failed] {\n  [cause]: Error: connect ECONNREFUSED 127.0.0.1:8787\n      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1645:16) {\n    errno: -61,\n    code: 'ECONNREFUSED',\n    syscall: 'connect',\n    address: '127.0.0.1',\n    port: 8787\n  }\n}",
+      "stdout_tail": ""
+    },
+    {
+      "name": "identity-admin",
+      "exit_code": 1,
+      "stderr_tail": "[TypeError: fetch failed] {\n  [cause]: Error: connect ECONNREFUSED 127.0.0.1:8787\n      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1645:16) {\n    errno: -61,\n    code: 'ECONNREFUSED',\n    syscall: 'connect',\n    address: '127.0.0.1',\n    port: 8787\n  }\n}",
+      "stdout_tail": ""
+    },
+    {
+      "name": "memory-governance",
+      "exit_code": 1,
+      "stderr_tail": "",
+      "stdout_tail": "\"error\": \"TypeError: fetch failed\"\n    },\n    {\n      \"name\": \"Rejected learning proposal stays out of stored memory\",\n      \"error\": \"TypeError: fetch failed\"\n    },\n    {\n      \"name\": \"Memory curation API remains healthy after governance mutations\",\n      \"error\": \"TypeError: fetch failed\"\n    }\n  ],\n  \"warnings\": [],\n  \"summary\": {\n    \"passed\": 0,\n    \"failed\": 5,\n    \"warned\": 0,\n    \"skipped\": 0\n  },\n  \"finished_at\": \"2026-05-15T15:57:14.416Z\"\n}"
+    },
+    {
+      "name": "approval-queue",
+      "exit_code": 1,
+      "stderr_tail": "",
+      "stdout_tail": "\"error\": \"TypeError: fetch failed\"\n    },\n    {\n      \"name\": \"Approval history reflects both decisions\",\n      \"error\": \"TypeError: fetch failed\"\n    },\n    {\n      \"name\": \"Draft and vendor records remain reachable after queue updates\",\n      \"error\": \"TypeError: fetch failed\"\n    }\n  ],\n  \"warnings\": [],\n  \"summary\": {\n    \"passed\": 0,\n    \"failed\": 5,\n    \"warned\": 0,\n    \"skipped\": 0\n  },\n  \"finished_at\": \"2026-05-15T15:57:14.533Z\"\n}"
+    }
+  ]
 }

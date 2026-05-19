@@ -1,0 +1,42 @@
+[
+  {
+    "review_id": "5da46abc-00bf-498e-b578-72aff85500b2",
+    "actor": "Chris",
+    "review_type": "daily",
+    "completed_at": "2026-05-11T05:18:00.384396+00:00",
+    "summary": "4 opportunity(ies) are stale enough to deserve follow-up now.",
+    "score": 62,
+    "band": "building",
+    "note": "Story 3.3 verification daily review"
+  },
+  {
+    "review_id": "6eab99b2-c8b5-470c-8471-969a6f4408ea",
+    "actor": "Chris",
+    "review_type": "daily",
+    "completed_at": "2026-05-11T05:18:41.986348+00:00",
+    "summary": "4 opportunity(ies) are stale enough to deserve follow-up now.",
+    "score": 62,
+    "band": "building",
+    "note": "Story 3.3 verification daily review"
+  },
+  {
+    "review_id": "3dccfbea-e733-408d-8080-fda5346210b7",
+    "actor": "Chris",
+    "review_type": "daily",
+    "completed_at": "2026-05-11T05:19:26.076783+00:00",
+    "summary": "4 opportunity(ies) are stale enough to deserve follow-up now.",
+    "score": 62,
+    "band": "building",
+    "note": "Story 3.3 verification daily review"
+  },
+  {
+    "review_id": "a239c8bf-6860-4f00-a1ce-180d38f54195",
+    "actor": "Chris",
+    "review_type": "weekly",
+    "completed_at": "2026-05-11T05:24:04.527853+00:00",
+    "summary": "Weekly pipeline review is due now.",
+    "score": 62,
+    "band": "building",
+    "note": "Story 3.3 service verification weekly review"
+  }
+]

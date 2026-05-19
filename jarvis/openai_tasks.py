@@ -27,6 +27,20 @@ class JarvisOpenAIClient:
         self.second_brain = OllamaBrainClient(config)
 
     def respond(self, plan: RequestPlan, supplemental_context: str = "") -> OpenAIResult:
+        # ── Free browser-based web search — inject results before LLM call ──
+        # Replaces paid OpenAI web_search tool for most queries.
+        if self._should_enable_web_search(plan) and not supplemental_context:
+            try:
+                from .browser_search import search_to_text as _browser_search
+                web_results = _browser_search(plan.request, num_results=5)
+                if web_results and "No web results" not in web_results:
+                    supplemental_context = (
+                        "Live web search results retrieved via browser:\n\n"
+                        + web_results
+                    )
+            except Exception:
+                pass  # Fall through — OpenAI tool will be used as fallback
+
         if self._should_use_second_brain_for_plan(plan):
             try:
                 result = self.second_brain.chat(
@@ -257,6 +271,14 @@ class JarvisOpenAIClient:
     def _web_search_payload(self, plan: RequestPlan) -> dict:
         if not self._should_enable_web_search(plan):
             return {}
+        # If browser_search is installed (Playwright), skip the paid OpenAI web_search
+        # tool — results were already injected into supplemental_context by respond().
+        try:
+            import importlib
+            if importlib.util.find_spec("playwright") is not None:
+                return {}  # browser search handled upstream; no paid tool needed
+        except Exception:
+            pass
         payload: dict = {"tools": [{"type": "web_search"}]}
         if self._must_use_web_search(plan):
             payload["tool_choice"] = "required"
@@ -381,7 +403,7 @@ class JarvisOpenAIClient:
         module = plan.module.replace("-", " ")
         return self._normalize_response_text(
             (
-            f"Sir, JARVIS hit an AI-service problem while handling the {module} request. "
+            f"JARVIS hit an AI-service problem while handling the {module} request. "
             f"Reason: {exc}. "
             "Manual fallback is in effect: keep the scope tight, avoid external actions, and stage the next concrete step for review."
             )

@@ -1,0 +1,38 @@
+{
+  "package_id": "a8c06e1e-3122-488d-a6f1-44e4d06cc082",
+  "part_name": "Recovered Shell Study",
+  "actor": "Chris",
+  "summary": "This is a rough, parameter-driven OpenSCAD starter for a recovered-shell style study: organic outer form, intentionally asymmetrical, with a flat stable base and a hollowed interior. I\u2019ve kept the geometry simple enough to edit by hand later rather than trying to overfit the shape too early.",
+  "parameters": [
+    "overall_h = 145;",
+    "overall_w = 82;",
+    "overall_d = 54;",
+    "base_h = 12;",
+    "wall = 5;",
+    "shape_steps = 9;",
+    "profile_scale = [1.0, 0.92, 1.08, 0.98, 1.03, 0.95, 1.06, 0.91, 1.0];",
+    "side_bulge = [0.0, 2.5, -1.5, 3.0, -2.0, 1.5, 0.0, -1.0, 0.0];",
+    "twist_deg = [0, 4, -3, 6, -4, 3, 0, -2, 0];"
+  ],
+  "fit_checks": [
+    "Confirm hole spacing on the Recovered Shell Study.",
+    "Check fastener clearance and wrench access.",
+    "Verify drain path does not weaken the load path."
+  ],
+  "family": "custom-form",
+  "artifact_dir": "data/workshop/model_forge/a8c06e1e-3122-488d-a6f1-44e4d06cc082",
+  "script_path": "data/workshop/model_forge/a8c06e1e-3122-488d-a6f1-44e4d06cc082/model.scad",
+  "cadquery_script_path": "data/workshop/model_forge/a8c06e1e-3122-488d-a6f1-44e4d06cc082/model_cadquery.py",
+  "model_path": "data/workshop/model_forge/a8c06e1e-3122-488d-a6f1-44e4d06cc082/recovered-shell-study.stl",
+  "step_path": "data/workshop/model_forge/a8c06e1e-3122-488d-a6f1-44e4d06cc082/recovered-shell-study.step",
+  "mesh_3mf_path": "data/workshop/model_forge/a8c06e1e-3122-488d-a6f1-44e4d06cc082/recovered-shell-study.3mf",
+  "slicer_pack_dir": "data/workshop/model_forge/a8c06e1e-3122-488d-a6f1-44e4d06cc082/slicer_pack",
+  "printer_id": "creality-k2-pro-combo",
+  "profile_name": "creative-concept-balanced",
+  "material": "PLA",
+  "creative_profile": "organic-reconstruction",
+  "export_status": "cadquery-custom-form",
+  "export_detail": "Exported CadQuery custom-form assets as STL, STEP, and 3MF, then assembled a slicer pack for creality-k2-pro-combo using the creative-concept-balanced profile.",
+  "export_engine": "cadquery",
+  "timestamp": "2026-05-15T14:44:39.220386+00:00"
+}

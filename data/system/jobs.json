@@ -1,0 +1,242 @@
+[
+  {
+    "job_id": "a3858c58-5f8f-44d8-8a30-634efe8452ff",
+    "job_key": "sync-model::gpt-oss:20b",
+    "title": "Sync local model gpt-oss:20b",
+    "summary": "A stronger local reasoner is useful for second-brain work, but it is heavier and should remain reviewable.",
+    "job_type": "sync-ollama-model",
+    "target": "gpt-oss:20b",
+    "status": "queued",
+    "domain": "system",
+    "lane": "self-improvement-and-maintenance",
+    "owner_agent": "Autoforge",
+    "risk_level": "moderate",
+    "review_level": "review-before-download",
+    "auto_allowed": false,
+    "source": "recommended-upgrade",
+    "evidence": {
+      "installed_models": [
+        "qwen2.5:7b",
+        "qwen2.5:1.5b"
+      ],
+      "heavy": true
+    },
+    "created_at": "2026-05-15T15:45:08.940160+00:00",
+    "updated_at": "2026-05-15T18:50:44.093497+00:00",
+    "last_result": {},
+    "last_run_at": ""
+  },
+  {
+    "job_id": "d2d39c35-4d6c-402e-a4c7-bf75cf1042d8",
+    "job_key": "repair-runtime-compile",
+    "title": "Repair runtime compile regressions",
+    "summary": "Runtime compilation failed during the self-improvement sweep, so JARVIS should stage a repair brief instead of pretending the build is healthy.",
+    "job_type": "stage-runtime-repair",
+    "target": "runtime-py-compile",
+    "status": "resolved",
+    "domain": "system",
+    "lane": "self-improvement-and-maintenance",
+    "owner_agent": "Autoforge",
+    "risk_level": "high",
+    "review_level": "review-before-code-change",
+    "auto_allowed": false,
+    "source": "repo-health",
+    "evidence": {
+      "compile_stderr": "File \"/Users/chris/Desktop/CODE/JARVIS/ops/install_launchd_services.sh\", line 2\n    set -euo pipefail\n             ^^^^^^^^\nSyntaxError: invalid syntax"
+    },
+    "created_at": "2026-05-15T15:45:08.940160+00:00",
+    "updated_at": "2026-05-15T18:50:43.786107+00:00",
+    "last_result": {
+      "run_id": "c6395017-827a-472f-bdc8-9422b62977a3",
+      "job_id": "d2d39c35-4d6c-402e-a4c7-bf75cf1042d8",
+      "job_title": "Repair runtime compile regressions",
+      "generated_at": "2026-05-15T18:41:36.188199+00:00",
+      "mode": "sandbox-worktree",
+      "mutation_route": {
+        "route": "sandbox/worktree-only",
+        "summary": "JARVIS may build and validate the change aggressively, but only inside isolated staging lanes before any live promotion.",
+        "reason": "This mutation can be explored boldly, but only in an isolated worktree or sandbox before live promotion.",
+        "execution_allowed": false,
+        "requires_sandbox": true,
+        "requires_approval": false,
+        "blocked": false
+      },
+      "worktree_path": "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions",
+      "head_sha": "1fdf0553895cda6503f3fd97fc3cdb3e878fc30d",
+      "compile": {
+        "ok": true,
+        "command": [
+          "/Users/chris/Desktop/CODE/JARVIS/.venv/bin/python",
+          "-m",
+          "py_compile",
+          "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/runtime.py",
+          "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/service.py",
+          "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/voice_ui.py",
+          "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/main.py",
+          "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/assistant_core.py"
+        ],
+        "returncode": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "compile_targets": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py"
+      ],
+      "tests": {
+        "ok": true,
+        "returncode": null,
+        "stdout": "",
+        "stderr": "",
+        "mode": "skipped",
+        "reason": "pytest is not available on this machine."
+      },
+      "git_status_excerpt": [],
+      "recommendations": [
+        "Sandbox lane is healthy enough for patch generation or a reviewed promotion step."
+      ],
+      "report_path": "/Users/chris/Desktop/CODE/JARVIS/data/system/sandbox_reports/c6395017-827a-472f-bdc8-9422b62977a3.json",
+      "ok": true,
+      "summary": "The triggering maintenance condition is no longer active.",
+      "resolved_at": "2026-05-15T18:50:43.786107+00:00"
+    },
+    "last_run_at": "2026-05-15T18:41:36.189243+00:00",
+    "mutation_route": {
+      "route": "sandbox/worktree-only",
+      "summary": "JARVIS may build and validate the change aggressively, but only inside isolated staging lanes before any live promotion.",
+      "reason": "This mutation can be explored boldly, but only in an isolated worktree or sandbox before live promotion.",
+      "execution_allowed": false,
+      "requires_sandbox": true,
+      "requires_approval": false,
+      "blocked": false
+    },
+    "sandbox_worktree_path": "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions",
+    "last_sandbox_run_id": "c6395017-827a-472f-bdc8-9422b62977a3"
+  },
+  {
+    "job_id": "49d47581-358b-43a9-be9d-8c5a9cac52ea",
+    "job_key": "review-runtime-drift",
+    "title": "Review runtime drift",
+    "summary": "The JARVIS repo has uncommitted changes, so background maintenance should acknowledge the drift and avoid blind upgrades.",
+    "job_type": "review-repo-drift",
+    "target": "git-status",
+    "status": "queued",
+    "domain": "system",
+    "lane": "self-improvement-and-maintenance",
+    "owner_agent": "Autoforge",
+    "risk_level": "moderate",
+    "review_level": "review-before-code-change",
+    "auto_allowed": false,
+    "source": "repo-health",
+    "evidence": {
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M artifacts/qa/screenshots/workbench-model-forge-generated.png"
+      ]
+    },
+    "created_at": "2026-05-15T15:45:08.940160+00:00",
+    "updated_at": "2026-05-15T18:50:44.093497+00:00",
+    "last_result": {
+      "ok": true,
+      "record": {
+        "generated_at": "2026-05-15T16:14:37.564294+00:00",
+        "compile_ok": true,
+        "compile_stdout": "",
+        "compile_stderr": "",
+        "git_available": true,
+        "branch": "codex/material3-checkpoint",
+        "dirty": true,
+        "diff_count": 86,
+        "git_status_excerpt": [
+          "M .env.example",
+          " M artifacts/qa/jarvis-approval-queue-report.json",
+          " M artifacts/qa/jarvis-e2e-suite-report.json",
+          " M artifacts/qa/jarvis-e2e-suite-summary.md",
+          " M artifacts/qa/jarvis-full-system-report.json",
+          " M artifacts/qa/jarvis-identity-admin-report.json",
+          " M artifacts/qa/jarvis-memory-governance-report.json",
+          " M artifacts/qa/jarvis-platform-report.json",
+          " M artifacts/qa/jarvis-provider-layer-report.json",
+          " M artifacts/qa/jarvis-workbench-report.json",
+          " M artifacts/qa/screenshots/provider-settings-modal.png",
+          " M data/agents/background_state.json",
+          " M data/agents/life_agents.json",
+          " M data/agents/tick_log.jsonl",
+          " M data/approvals/pending.json",
+          " M data/catalyst/implementation_plans.json",
+          " M data/catalyst/pipeline_state.json",
+          " M data/catalyst/signals.json",
+          " M data/family/message_drafts.json",
+          " M data/logs/actions.jsonl"
+        ],
+        "tracked_files": [
+          "jarvis/runtime.py",
+          "jarvis/service.py",
+          "jarvis/voice_ui.py",
+          "jarvis/main.py",
+          "jarvis/assistant_core.py",
+          "jarvis/self_improvement.py",
+          "ops/install_launchd_services.sh",
+          "ops/launchd/com.jarvis.runtime.plist.template",
+          "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+        ],
+        "compiled_python_files": [
+          "jarvis/runtime.py",
+          "jarvis/service.py",
+          "jarvis/voice_ui.py",
+          "jarvis/main.py",
+          "jarvis/assistant_core.py",
+          "jarvis/self_improvement.py"
+        ]
+      },
+      "stdout": "Repo drift was refreshed.",
+      "stderr": ""
+    },
+    "last_run_at": "2026-05-15T16:14:36.841299+00:00"
+  },
+  {
+    "job_id": "95a6c34d-08a9-4bfa-8d3b-78ee1425c5ca",
+    "job_key": "tool-gap::rg",
+    "title": "Resolve missing tool: rg",
+    "summary": "JARVIS depends on rg for its local maintenance posture, but that tool is not available on this machine.",
+    "job_type": "resolve-tool-gap",
+    "target": "rg",
+    "status": "queued",
+    "domain": "system",
+    "lane": "self-improvement-and-maintenance",
+    "owner_agent": "Autoforge",
+    "risk_level": "moderate",
+    "review_level": "review-before-tool-install",
+    "auto_allowed": false,
+    "source": "tool-inventory",
+    "evidence": {
+      "tool": {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      }
+    },
+    "created_at": "2026-05-15T15:45:57.000505+00:00",
+    "updated_at": "2026-05-15T18:50:44.093497+00:00",
+    "last_result": {
+      "ok": true,
+      "summary": "The triggering maintenance condition is no longer active.",
+      "resolved_at": "2026-05-15T18:42:35.041038+00:00"
+    },
+    "last_run_at": ""
+  }
+]

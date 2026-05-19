@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/email-draft-staging-response.v1.json",
+  "title": "EmailDraftStagingResponseV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "request_id",
+    "draft_id",
+    "arena_id",
+    "stage_status",
+    "draft_location",
+    "alert",
+    "audit_ref"
+  ],
+  "properties": {
+    "request_id": {
+      "type": "string"
+    },
+    "draft_id": {
+      "type": "string"
+    },
+    "arena_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9._-]+$"
+    },
+    "stage_status": {
+      "type": "string",
+      "enum": ["draft_created", "draft_saved", "alerted", "failed"]
+    },
+    "draft_location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mailbox_id", "folder", "thread_id"],
+      "properties": {
+        "mailbox_id": { "type": "string" },
+        "folder": { "const": "drafts" },
+        "thread_id": { "type": "string" },
+        "draft_message_id": { "type": "string" }
+      }
+    },
+    "alert": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "channel"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["queued", "sent", "failed"]
+        },
+        "channel": {
+          "type": "string",
+          "enum": ["in_app", "push", "email_summary"]
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "promotion_signal": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "eligible_for_review": { "type": "boolean" },
+        "stage_id": {
+          "type": "string",
+          "enum": ["draft", "stage_alert"]
+        }
+      }
+    },
+    "audit_ref": {
+      "type": "string"
+    }
+  }
+}

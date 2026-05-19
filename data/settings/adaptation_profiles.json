@@ -3,7 +3,7 @@
     "chris": {
       "user_id": "chris",
       "actor": "Chris",
-      "generated_at": "2026-05-11T04:31:44.056332+00:00",
+      "generated_at": "2026-05-15T16:14:35.791628+00:00",
       "voice_identity": {
         "preferred_voice": "",
         "voice_aliases": [],
@@ -16,38 +16,264 @@
         "actor_presence": "unknown",
         "occupied_rooms": [
           "kitchen"
+        ],
+        "room_confidence": [
+          {
+            "room": "kitchen",
+            "occupied": true,
+            "confidence": "medium",
+            "score": 4,
+            "age_bucket": "aged",
+            "evidence": [
+              "The latest room signal says this room is occupied."
+            ]
+          }
+        ],
+        "presence_event_history": [],
+        "likely_here_now": [
+          {
+            "actor_id": "anna",
+            "actor": "Anna",
+            "confidence": "medium",
+            "score": 4,
+            "presence_state": "arriving",
+            "likely_room": "",
+            "evidence": [
+              "Phone presence currently reads arriving."
+            ]
+          },
+          {
+            "actor_id": "rebekah",
+            "actor": "Rebekah",
+            "confidence": "low",
+            "score": 3,
+            "presence_state": "unknown",
+            "likely_room": "kitchen",
+            "evidence": [
+              "Recent microphone activity hinted at this speaker."
+            ]
+          },
+          {
+            "actor_id": "chris",
+            "actor": "Chris",
+            "confidence": "low",
+            "score": 2,
+            "presence_state": "unknown",
+            "likely_room": "",
+            "evidence": []
+          },
+          {
+            "actor_id": "caleb",
+            "actor": "Caleb",
+            "confidence": "low",
+            "score": 2,
+            "presence_state": "unknown",
+            "likely_room": "",
+            "evidence": []
+          }
+        ],
+        "active_user_resolution": {
+          "target_actor": "Chris",
+          "resolved_actor_now": "Chris",
+          "device_id": "",
+          "confidence": "low",
+          "score": 3,
+          "state": "uncertain",
+          "evidence": [
+            "Household presence signals still make this actor plausible right now."
+          ]
+        },
+        "device_owner_confidence": {
+          "active_device": {},
+          "relevant_devices": []
+        }
+      },
+      "personalization": {
+        "settings": {
+          "enabled": true,
+          "learn_from_outcomes": true,
+          "learn_from_presence": true,
+          "learn_from_first_light": true,
+          "review_required": true,
+          "suppressed_insights": [],
+          "updated_at": "2026-05-11T08:27:23.394880+00:00",
+          "updated_by": "Chris"
+        },
+        "governance": {
+          "visible": true,
+          "reversible": true,
+          "review_required": true,
+          "enabled": true
+        },
+        "signals": {
+          "outcome_samples": 0,
+          "profile_facts": 8,
+          "first_light_runs": 4,
+          "device_samples": 0,
+          "timing_mix": {}
+        },
+        "rhythms": [
+          "Morning briefings usually land around 2026-05-15T09:12:15.550601-04:00."
+        ],
+        "learned_preferences": [
+          "Chris wants personal growth coaching to focus on repeatable rhythms, identity, sustainable habits, and discipline without shame.",
+          "Chris wants creative work to bring imagination with structure, with curated options and a recommended strongest direction.",
+          "Chris wants executive and professional communication to be clear, business-ready, and free from corporate buzzword fog.",
+          "Lean quieter unless the signal is strong enough to justify interruption."
+        ],
+        "insights": [
+          {
+            "insight_id": "briefing-rhythm",
+            "title": "Briefing rhythm",
+            "summary": "Morning briefings usually land around 2026-05-15T09:12:15.550601-04:00.",
+            "confidence": "medium",
+            "source": "first-light-history",
+            "reversible": true,
+            "status": "active"
+          },
+          {
+            "insight_id": "interrupt-tolerance",
+            "title": "Interrupt tolerance",
+            "summary": "Recent outcomes support a slightly quieter surfacing posture.",
+            "confidence": "low",
+            "source": "outcome-tuning",
+            "reversible": true,
+            "status": "active"
+          },
+          {
+            "insight_id": "device-affinity",
+            "title": "Device affinity",
+            "summary": "No device has enough outcome history yet to claim affinity.",
+            "confidence": "low",
+            "source": "device-outcomes",
+            "reversible": true,
+            "status": "active"
+          },
+          {
+            "insight_id": "dominant-domain",
+            "title": "Domain preference",
+            "summary": "No single work lane dominates recent learning yet.",
+            "confidence": "low",
+            "source": "outcome-history",
+            "reversible": true,
+            "status": "active"
+          }
+        ],
+        "history": [
+          {
+            "user_id": "chris",
+            "timestamp": "2026-05-11T08:27:23.394880+00:00",
+            "actor": "Chris",
+            "event": "settings-updated",
+            "changes": {
+              "enabled": true,
+              "learn_from_outcomes": true,
+              "learn_from_presence": true,
+              "learn_from_first_light": true,
+              "review_required": true
+            }
+          },
+          {
+            "user_id": "chris",
+            "timestamp": "2026-05-11T08:27:21.966954+00:00",
+            "actor": "Chris",
+            "event": "insight-updated",
+            "insight_id": "interrupt-tolerance",
+            "status": "active"
+          },
+          {
+            "user_id": "chris",
+            "timestamp": "2026-05-11T08:27:21.964565+00:00",
+            "actor": "Chris",
+            "event": "settings-updated",
+            "changes": {
+              "enabled": true,
+              "learn_from_outcomes": true,
+              "learn_from_presence": true,
+              "learn_from_first_light": true,
+              "review_required": false
+            }
+          },
+          {
+            "user_id": "chris",
+            "timestamp": "2026-05-11T08:27:20.549152+00:00",
+            "actor": "Chris",
+            "event": "insight-updated",
+            "insight_id": "interrupt-tolerance",
+            "status": "suppressed"
+          },
+          {
+            "user_id": "chris",
+            "timestamp": "2026-05-11T08:27:20.546496+00:00",
+            "actor": "Chris",
+            "event": "settings-updated",
+            "changes": {
+              "enabled": true,
+              "learn_from_outcomes": true,
+              "learn_from_presence": true,
+              "learn_from_first_light": true,
+              "review_required": false
+            }
+          },
+          {
+            "user_id": "chris",
+            "timestamp": "2026-05-11T08:27:19.064831+00:00",
+            "actor": "Chris",
+            "event": "settings-updated",
+            "changes": {
+              "enabled": true,
+              "learn_from_outcomes": true,
+              "learn_from_presence": true,
+              "learn_from_first_light": true,
+              "review_required": false
+            }
+          }
         ]
       },
       "morning_pattern": {
         "briefing_style": "first-light",
         "anticipation_style": "quietly proactive",
         "morning_room": "",
-        "latest_first_light_local_time": "2026-05-10T06:16:12.380594+00:00",
-        "watch_line": "Family coordination begins to stack soon; keep an eye on rain windows, the workshop overbuild risk, and your voice tightening before the day fragments."
+        "latest_first_light_local_time": "2026-05-15T09:12:15.550601-04:00",
+        "watch_line": "The front-door unlock is high-risk and should stay parked until you\u2019re truly ready; also keep an eye on the aging family message and the six stalled pipeline items so they don\u2019t leak into the afternoon."
       },
       "device_identity": {
         "active_device": null,
         "owned_devices": [],
         "suggested_defaults": []
       },
-      "stable_preferences": [],
+      "stable_preferences": [
+        "Chris wants personal growth coaching to focus on repeatable rhythms, identity, sustainable habits, and discipline without shame.",
+        "Chris wants creative work to bring imagination with structure, with curated options and a recommended strongest direction.",
+        "Chris wants executive and professional communication to be clear, business-ready, and free from corporate buzzword fog.",
+        "Chris wants useful depth that clarifies the real issue, shows implications, and helps him act.",
+        "Chris wants JARVIS to start with the useful thing, avoid long preambles, and match response weight to request complexity."
+      ],
       "signal_counts": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       },
       "digital_twin": {
         "headline": "Chris is best served with first-light briefings and quietly proactive anticipation.",
         "likely_next_needs": [
-          "First Light is already leaning toward: pack school folders, devices, and water",
-          "Core priorities still pulling strongest: executive-briefing, manuscript-editing, workshop-copilot",
-          "Near-term calendar pressure: Chris: Stag Setup; Chris: Stag",
+          "First Light is already leaning toward: drink water and reset at the desk; check the two likely family coordination points and note anything needing a quick reply; clear or defer one aged troop-parent draft so it stops hanging over the morning",
+          "Core priorities still pulling strongest: innovation-strategy, executive-briefing, jarvis-architecture",
+          "Near-term calendar pressure: Chris: Stag; Rebekah/Chris: Anniversary",
           "There are 6 approval items waiting in the system."
         ],
-        "stable_preferences": [],
+        "stable_preferences": [
+          "Chris wants personal growth coaching to focus on repeatable rhythms, identity, sustainable habits, and discipline without shame.",
+          "Chris wants creative work to bring imagination with structure, with curated options and a recommended strongest direction.",
+          "Chris wants executive and professional communication to be clear, business-ready, and free from corporate buzzword fog.",
+          "Chris wants useful depth that clarifies the real issue, shows implications, and helps him act.",
+          "Chris wants JARVIS to start with the useful thing, avoid long preambles, and match response weight to request complexity."
+        ],
         "limits": [
           "Voice identity is profile-backed and device-aware, not biometric.",
-          "Presence is only as good as the connected room and phone signals."
+          "Presence is only as good as the connected room and phone signals.",
+          "Active-user resolution is confidence-based and should not be treated as biometric proof."
         ]
       }
     },
@@ -147,803 +373,967 @@
   "history": [
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T22:12:22.421114+00:00",
+      "generated_at": "2026-05-12T15:05:52.522992+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T22:17:02.773157+00:00",
+      "generated_at": "2026-05-12T15:28:14.933391+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T22:17:04.091937+00:00",
+      "generated_at": "2026-05-12T15:28:16.395936+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T22:26:58.174905+00:00",
+      "generated_at": "2026-05-12T15:29:31.764011+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T22:26:59.436433+00:00",
+      "generated_at": "2026-05-12T15:29:33.231141+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T22:37:24.987062+00:00",
+      "generated_at": "2026-05-12T15:30:50.041572+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T22:37:26.303249+00:00",
+      "generated_at": "2026-05-12T15:30:51.561262+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T22:44:31.413376+00:00",
+      "generated_at": "2026-05-12T15:31:03.894417+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T22:44:32.694387+00:00",
+      "generated_at": "2026-05-12T15:31:05.319296+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T22:46:34.285912+00:00",
+      "generated_at": "2026-05-12T15:31:25.157009+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T22:46:35.626627+00:00",
+      "generated_at": "2026-05-12T15:31:26.710448+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T23:02:20.577089+00:00",
+      "generated_at": "2026-05-12T15:31:29.763234+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T23:02:21.866186+00:00",
+      "generated_at": "2026-05-12T15:31:31.255600+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T23:09:03.129961+00:00",
+      "generated_at": "2026-05-12T15:32:20.282423+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T23:10:35.923519+00:00",
+      "generated_at": "2026-05-12T15:32:21.752228+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T23:10:37.353604+00:00",
+      "generated_at": "2026-05-12T15:33:07.554596+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T23:22:20.873259+00:00",
+      "generated_at": "2026-05-12T15:33:09.052156+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T23:22:22.142077+00:00",
+      "generated_at": "2026-05-12T16:02:00.952130+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T23:24:12.328934+00:00",
+      "generated_at": "2026-05-12T16:02:02.910190+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T23:24:13.602857+00:00",
+      "generated_at": "2026-05-12T16:17:00.651020+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T23:40:48.168560+00:00",
+      "generated_at": "2026-05-12T16:17:02.295636+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T23:40:49.698306+00:00",
+      "generated_at": "2026-05-12T16:47:10.806076+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T23:43:16.286668+00:00",
+      "generated_at": "2026-05-12T16:47:12.320684+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-10T23:43:17.629557+00:00",
+      "generated_at": "2026-05-12T16:47:15.974998+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T00:06:16.794263+00:00",
+      "generated_at": "2026-05-12T16:47:17.421043+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T00:06:18.169522+00:00",
+      "generated_at": "2026-05-12T16:47:28.970287+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T00:32:09.729594+00:00",
+      "generated_at": "2026-05-12T16:47:30.965336+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T00:32:58.302072+00:00",
+      "generated_at": "2026-05-12T16:47:38.684755+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T00:35:13.700597+00:00",
+      "generated_at": "2026-05-12T16:47:40.135395+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T00:36:33.865674+00:00",
+      "generated_at": "2026-05-12T16:49:07.945484+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T00:52:25.141169+00:00",
+      "generated_at": "2026-05-12T16:49:09.758888+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T01:14:47.997254+00:00",
+      "generated_at": "2026-05-12T17:14:02.328588+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T01:15:14.757543+00:00",
+      "generated_at": "2026-05-12T17:14:03.910227+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T01:15:16.058015+00:00",
+      "generated_at": "2026-05-12T17:15:38.723828+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T01:16:13.847205+00:00",
+      "generated_at": "2026-05-12T17:15:40.701355+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T01:19:12.140152+00:00",
+      "generated_at": "2026-05-12T17:15:45.717135+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T01:19:13.455485+00:00",
+      "generated_at": "2026-05-12T17:15:47.918886+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T01:20:44.001411+00:00",
+      "generated_at": "2026-05-12T17:18:42.721323+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T01:23:52.820132+00:00",
+      "generated_at": "2026-05-12T17:18:44.620245+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T01:23:54.210700+00:00",
+      "generated_at": "2026-05-12T20:28:13.215079+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T01:31:02.906949+00:00",
+      "generated_at": "2026-05-12T20:28:14.555013+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T01:31:04.305164+00:00",
+      "generated_at": "2026-05-12T20:28:47.608439+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T01:37:30.409510+00:00",
+      "generated_at": "2026-05-12T20:28:49.123663+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T01:37:31.769434+00:00",
+      "generated_at": "2026-05-12T20:28:50.559647+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T01:46:54.707939+00:00",
+      "generated_at": "2026-05-12T20:28:52.069108+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T01:46:55.973055+00:00",
+      "generated_at": "2026-05-13T03:38:31.478760+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T01:54:30.493273+00:00",
+      "generated_at": "2026-05-13T03:38:32.955007+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T01:54:31.779382+00:00",
+      "generated_at": "2026-05-15T02:21:30.667052+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T02:00:30.272893+00:00",
+      "generated_at": "2026-05-15T02:21:32.444427+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 2,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T02:26:27.740109+00:00",
+      "generated_at": "2026-05-15T02:40:33.079647+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 3,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T02:26:29.013951+00:00",
+      "generated_at": "2026-05-15T13:12:36.276019+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T02:31:09.835627+00:00",
+      "generated_at": "2026-05-15T13:50:42.232542+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T02:43:47.535250+00:00",
+      "generated_at": "2026-05-15T13:50:42.660198+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T02:45:29.797957+00:00",
+      "generated_at": "2026-05-15T13:50:44.373410+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T02:46:27.882523+00:00",
+      "generated_at": "2026-05-15T13:50:44.830346+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T02:49:12.093748+00:00",
+      "generated_at": "2026-05-15T13:51:32.579712+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T02:51:14.777367+00:00",
+      "generated_at": "2026-05-15T13:51:33.008277+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T03:00:14.366002+00:00",
+      "generated_at": "2026-05-15T13:51:51.112610+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T03:03:47.784840+00:00",
+      "generated_at": "2026-05-15T13:51:51.580698+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T03:03:49.069817+00:00",
+      "generated_at": "2026-05-15T13:53:55.141975+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T03:12:27.832404+00:00",
+      "generated_at": "2026-05-15T13:53:55.636259+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T03:12:29.164698+00:00",
+      "generated_at": "2026-05-15T13:53:56.733078+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T03:20:26.885298+00:00",
+      "generated_at": "2026-05-15T13:53:57.238328+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T03:20:28.244961+00:00",
+      "generated_at": "2026-05-15T13:54:02.507460+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T03:25:05.320197+00:00",
+      "generated_at": "2026-05-15T13:54:03.001732+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T03:25:06.604534+00:00",
+      "generated_at": "2026-05-15T13:54:03.493081+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T03:33:51.226030+00:00",
+      "generated_at": "2026-05-15T13:54:09.531082+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T03:33:52.566540+00:00",
+      "generated_at": "2026-05-15T13:54:10.075405+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T03:38:52.670441+00:00",
+      "generated_at": "2026-05-15T13:54:10.787766+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T03:38:53.963426+00:00",
+      "generated_at": "2026-05-15T13:57:05.126796+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T03:49:23.407339+00:00",
+      "generated_at": "2026-05-15T13:57:05.672501+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T03:49:24.659327+00:00",
+      "generated_at": "2026-05-15T13:59:14.830067+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T03:56:20.119540+00:00",
+      "generated_at": "2026-05-15T13:59:15.333481+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T03:56:21.434373+00:00",
+      "generated_at": "2026-05-15T13:59:41.290650+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T04:07:47.123127+00:00",
+      "generated_at": "2026-05-15T13:59:42.140950+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T04:07:48.381891+00:00",
+      "generated_at": "2026-05-15T15:57:07.262436+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T04:19:02.089668+00:00",
+      "generated_at": "2026-05-15T15:57:08.867916+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T04:19:03.372078+00:00",
+      "generated_at": "2026-05-15T16:14:32.876954+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T04:31:42.705989+00:00",
+      "generated_at": "2026-05-15T16:14:34.414848+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     },
     {
       "user_id": "chris",
-      "generated_at": "2026-05-11T04:31:44.056332+00:00",
+      "generated_at": "2026-05-15T16:14:35.791628+00:00",
       "summary": "Chris is best served with first-light briefings and quietly proactive anticipation.",
       "signals": {
-        "profile_facts": 0,
-        "first_light_runs": 1,
-        "owned_devices": 0
+        "profile_facts": 8,
+        "first_light_runs": 4,
+        "owned_devices": 0,
+        "personalization_insights": 4
       }
     }
-  ]
+  ],
+  "personalization": {
+    "settings": {
+      "chris": {
+        "enabled": true,
+        "learn_from_outcomes": true,
+        "learn_from_presence": true,
+        "learn_from_first_light": true,
+        "review_required": true,
+        "suppressed_insights": [],
+        "updated_at": "2026-05-11T08:27:23.394880+00:00",
+        "updated_by": "Chris"
+      }
+    },
+    "history": [
+      {
+        "user_id": "chris",
+        "timestamp": "2026-05-11T08:27:19.064831+00:00",
+        "actor": "Chris",
+        "event": "settings-updated",
+        "changes": {
+          "enabled": true,
+          "learn_from_outcomes": true,
+          "learn_from_presence": true,
+          "learn_from_first_light": true,
+          "review_required": false
+        }
+      },
+      {
+        "user_id": "chris",
+        "timestamp": "2026-05-11T08:27:20.546496+00:00",
+        "actor": "Chris",
+        "event": "settings-updated",
+        "changes": {
+          "enabled": true,
+          "learn_from_outcomes": true,
+          "learn_from_presence": true,
+          "learn_from_first_light": true,
+          "review_required": false
+        }
+      },
+      {
+        "user_id": "chris",
+        "timestamp": "2026-05-11T08:27:20.549152+00:00",
+        "actor": "Chris",
+        "event": "insight-updated",
+        "insight_id": "interrupt-tolerance",
+        "status": "suppressed"
+      },
+      {
+        "user_id": "chris",
+        "timestamp": "2026-05-11T08:27:21.964565+00:00",
+        "actor": "Chris",
+        "event": "settings-updated",
+        "changes": {
+          "enabled": true,
+          "learn_from_outcomes": true,
+          "learn_from_presence": true,
+          "learn_from_first_light": true,
+          "review_required": false
+        }
+      },
+      {
+        "user_id": "chris",
+        "timestamp": "2026-05-11T08:27:21.966954+00:00",
+        "actor": "Chris",
+        "event": "insight-updated",
+        "insight_id": "interrupt-tolerance",
+        "status": "active"
+      },
+      {
+        "user_id": "chris",
+        "timestamp": "2026-05-11T08:27:23.394880+00:00",
+        "actor": "Chris",
+        "event": "settings-updated",
+        "changes": {
+          "enabled": true,
+          "learn_from_outcomes": true,
+          "learn_from_presence": true,
+          "learn_from_first_light": true,
+          "review_required": true
+        }
+      }
+    ]
+  }
 }
