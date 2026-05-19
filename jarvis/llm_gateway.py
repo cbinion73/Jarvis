@@ -27,42 +27,48 @@ _log = logging.getLogger("jarvis.llm_gateway")
 # Model configuration (all overridable via env vars)
 # ---------------------------------------------------------------------------
 
-_FAST_MODEL          = lambda: os.getenv("JARVIS_OLLAMA_FAST_MODEL",        "phi3.5")
-_REASONING_MODEL     = lambda: os.getenv("JARVIS_OLLAMA_REASONING_MODEL",   "gpt-oss:20b")
-_OPENAI_MODEL        = lambda: os.getenv("JARVIS_OPENAI_MODEL",             "gpt-5.4-mini")
-_THINKING_MODEL      = lambda: os.getenv("JARVIS_THINKING_MODEL",           "gpt-5.4")
-_MAX_THINKING_MODEL  = lambda: os.getenv("JARVIS_MAX_THINKING_MODEL",       "gpt-5.5")
-_GROQ_MODEL          = lambda: os.getenv("JARVIS_GROQ_MODEL",                "llama-3.1-8b-instant")
+_FAST_MODEL              = lambda: os.getenv("JARVIS_OLLAMA_FAST_MODEL",        "phi3.5")
+_SUBSTANTIVE_MODEL       = lambda: os.getenv("JARVIS_OLLAMA_SUBSTANTIVE_MODEL", "qwen2.5:14b")
+_BACKGROUND_MODEL        = lambda: os.getenv("JARVIS_OLLAMA_BACKGROUND_MODEL",  "qwen2.5:7b")
+_REASONING_MODEL         = lambda: os.getenv("JARVIS_OLLAMA_REASONING_MODEL",   "qwen2.5:14b")
+_OPENAI_MODEL            = lambda: os.getenv("JARVIS_OPENAI_MODEL",             "gpt-5.4-mini")
+_THINKING_MODEL          = lambda: os.getenv("JARVIS_THINKING_MODEL",           "gpt-5.4")
+_MAX_THINKING_MODEL      = lambda: os.getenv("JARVIS_MAX_THINKING_MODEL",       "gpt-5.5")
+_GROQ_MODEL              = lambda: os.getenv("JARVIS_GROQ_MODEL",               "llama-3.3-70b-versatile")
+_GROQ_REASONING_MODEL    = lambda: os.getenv("JARVIS_GROQ_REASONING_MODEL",     "openai/gpt-oss-120b")
 
 # ---------------------------------------------------------------------------
 # Task routing tables
 # ---------------------------------------------------------------------------
 
 TASK_MODEL_MAP: dict[str, str] = {
-    # phi3.5: instant decisions
+    # phi3.5: instant classification (2.2 GB, ~100ms)
     "classify":    "phi3.5",
     "route":       "phi3.5",
     "tag":         "phi3.5",
     "detect":      "phi3.5",
     "check":       "phi3.5",
-    # qwen2.5:7b: all substantive local work (gpt-oss:20b is currently broken — returns empty)
-    "agent_work":  "qwen2.5",
-    "summarize":   "qwen2.5",
-    "converse":    "qwen2.5",
-    "reason":      "qwen2.5",
-    "draft":       "qwen2.5",
-    "analyze":     "qwen2.5",
-    "plan":        "qwen2.5",
-    "extract":     "qwen2.5",
-    "format":      "qwen2.5",
-    "briefing":    "qwen2.5",
-    # Groq: live voice — needs <200ms first token
+    # qwen2.5:14b: substantive local work — planning, drafting, reasoning (9 GB, M4 local)
+    "agent_work":  "substantive",
+    "converse":    "substantive",
+    "reason":      "substantive",
+    "draft":       "substantive",
+    "analyze":     "substantive",
+    "plan":        "substantive",
+    # qwen2.5:7b: background / lightweight tasks (4.7 GB)
+    "summarize":   "background",
+    "extract":     "background",
+    "format":      "background",
+    "briefing":    "background",
+    # Groq gpt-oss-120b: heavy reasoning — free, 120B, 131k ctx
+    "reason_deep": "groq-reasoning",
+    # Groq llama-3.3-70b: live voice — fast LPU, much smarter than 8b
     "voice":           "groq",
     "voice_quick":     "groq",
-    # OpenAI tier 1: standard escalation
+    # OpenAI tier 1: strategy / cloud drafts
     "strategy":        "gpt-5.4-mini",
     "voice_draft":     "gpt-5.4-mini",
-    # OpenAI tier 2: extended thinking — used when gpt-5.4-mini confidence is low
+    # OpenAI tier 2: extended thinking
     "high_stakes":     "gpt-5.4-thinking",
     "deep_reason":     "gpt-5.4-thinking",
     "legal":           "gpt-5.4-thinking",
@@ -103,20 +109,24 @@ ESCALATION_THRESHOLD = 0.68
 # ---------------------------------------------------------------------------
 # Five-tier escalation ladder
 # ---------------------------------------------------------------------------
-# Tier 1  phi3.5            — local, ~200ms,  classify/route/tag
-# Tier 2  gpt-oss:20b       — local, ~6s,     all agent reasoning
-# Tier 3  gpt-5.4-mini      — cloud, fast,    strategy / drafts
-# Tier 4  gpt-5.4-thinking  — cloud, slow,    high-stakes + extended thinking
-# Tier 5  gpt-5.5-thinking  — cloud, slowest, critical decisions — APPROVAL REQUIRED
+# Tier 1  phi3.5                  — local, ~100ms,  classify/route/tag
+# Tier 2a qwen2.5:14b (substantive) — local, ~2s,   converse/plan/draft/reason
+# Tier 2b qwen2.5:7b  (background)  — local, ~1s,   summarize/extract/format
+# Tier 2c openai/gpt-oss-120b (Groq) — cloud free, 120B, deep reasoning
+# Tier 3  gpt-5.4-mini            — cloud, fast,    strategy / drafts
+# Tier 4  gpt-5.4-thinking        — cloud, slow,    high-stakes + extended thinking
+# Tier 5  gpt-5.5-thinking        — cloud, slowest, critical decisions — APPROVAL REQUIRED
 # ---------------------------------------------------------------------------
 
 ESCALATION_PATH: dict[str, str] = {
-    "phi3.5":            "qwen2.5",       # phi3.5 → qwen2.5:7b (gpt-oss:20b broken)
-    "qwen2.5":           "gpt-5.4-mini",  # local → cloud
-    "gpt-oss:20b":       "gpt-5.4-mini",  # legacy alias
+    "phi3.5":            "qwen2.5:14b",      # phi3.5 → substantive local
+    "qwen2.5:14b":       "gpt-5.4-mini",     # substantive local → cloud
+    "qwen2.5:7b":        "qwen2.5:14b",      # background → substantive
+    "qwen2.5":           "gpt-5.4-mini",     # legacy alias
+    "gpt-oss:20b":       "gpt-5.4-mini",     # legacy alias (broken local)
     "gpt-5.4-mini":      "gpt-5.4-thinking",
-    "gpt-5.4-thinking":  "gpt-5.5-thinking",   # approval gate fires here
-    "gpt-5.5-thinking":  "gpt-5.5-thinking",   # already at top
+    "gpt-5.4-thinking":  "gpt-5.5-thinking", # approval gate fires here
+    "gpt-5.5-thinking":  "gpt-5.5-thinking", # already at top
 }
 
 # Models that use OpenAI's reasoning/thinking mode (reasoning_effort=high)
@@ -652,11 +662,17 @@ class LLMGateway:
         """Return the canonical model name for a given task type."""
         if force_model:
             return force_model
-        raw = TASK_MODEL_MAP.get(task_type, "gpt-oss:20b")
+        raw = TASK_MODEL_MAP.get(task_type, "substantive")
         if raw == "phi3.5":
             return _FAST_MODEL()
+        if raw == "substantive":
+            return _SUBSTANTIVE_MODEL()
+        if raw == "background":
+            return _BACKGROUND_MODEL()
         if raw in ("gpt-oss-20b", "gpt-oss:20b"):
             return _REASONING_MODEL()
+        if raw == "groq-reasoning":
+            return _GROQ_REASONING_MODEL()
         if raw == "gpt-5.4-mini":
             return _OPENAI_MODEL()
         if raw == "groq":
@@ -673,21 +689,28 @@ class LLMGateway:
         openai_model = _OPENAI_MODEL()
         if model == openai_model:
             return "openai"
-        # Groq: "groq" alias, llama-* families, groq-* prefixed model names
-        if model == "groq" or model.startswith("llama") or model.startswith("groq-"):
+        # Groq: voice alias, llama-* families, groq-* prefixed, openai/* OSS models on Groq
+        if (model == "groq"
+                or model.startswith("llama")
+                or model.startswith("groq-")
+                or model.startswith("openai/")
+                or model.startswith("meta-llama/")
+                or model.startswith("qwen/")):
             return "groq"
-        # Ollama handles everything else (including gpt-oss:20b)
+        # Ollama handles local models (qwen2.5:*, phi3.5, etc.)
         return "ollama"
 
     def _escalate_model(self, model: str) -> str | None:
         """Return the next-tier model, or None if already at the top."""
         fast = _FAST_MODEL()
-        reasoning = _REASONING_MODEL()
+        substantive = _SUBSTANTIVE_MODEL()
+        background = _BACKGROUND_MODEL()
         openai_m = _OPENAI_MODEL()
 
-        if model == fast:         return reasoning
-        if model == reasoning:    return openai_m
-        if model == openai_m:     return "gpt-5.4-thinking"
+        if model == fast:          return substantive
+        if model == background:    return substantive
+        if model == substantive:   return openai_m
+        if model == openai_m:      return "gpt-5.4-thinking"
         if model == "gpt-5.4-thinking": return "gpt-5.5-thinking"
         return None   # already at top
 
@@ -1175,8 +1198,9 @@ def init_gateway(config=None) -> LLMGateway:
             groq=GroqBackend(api_key=groq_key),
         )
         _log.info(
-            "LLM Gateway initialised — ollama=%s fast=%s reasoning=%s openai=%s groq=%s",
-            ollama_url_v1, _FAST_MODEL(), _REASONING_MODEL(), _OPENAI_MODEL(), _GROQ_MODEL(),
+            "LLM Gateway initialised — fast=%s substantive=%s background=%s groq-voice=%s groq-reasoning=%s openai=%s",
+            _FAST_MODEL(), _SUBSTANTIVE_MODEL(), _BACKGROUND_MODEL(),
+            _GROQ_MODEL(), _GROQ_REASONING_MODEL(), _OPENAI_MODEL(),
         )
         return _gateway
 
