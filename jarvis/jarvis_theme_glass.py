@@ -3312,6 +3312,11 @@ body::after {{
 <!-- Toast container -->
 <div id="toast-wrap"></div>
 
+<!-- Debug panel — hidden by default, shown on JS errors -->
+<div id="_dbg-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:99999;background:rgba(220,30,30,0.92);color:#fff;font-family:monospace;font-size:13px;padding:12px 16px;max-height:200px;overflow-y:auto;">
+  <strong>⚠ JARVIS Init Errors</strong> (open DevTools Console for full trace)
+</div>
+
 <!-- ═══════════════════════════════════════════════════════════════════
      JAVASCRIPT
 ══════════════════════════════════════════════════════════════════════ -->
@@ -3413,9 +3418,39 @@ let emailFilter    = 'all';
 /* ═══════════════════════════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════════════════════════ */
+/* ── Global error catcher — surfaces JS crashes on remote machines ── */
+window.onerror = function(msg, src, line, col, err) {{
+  const panel = document.getElementById('_dbg-panel');
+  if (panel) {{
+    panel.style.display = 'block';
+    panel.innerHTML += '<p><b>' + (src||'?').split('/').pop() + ':' + line + '</b> — ' + escHtml(String(msg)) + '</p>';
+  }}
+  console.error('[JARVIS init error]', msg, src, line, col, err);
+}};
+window.onunhandledrejection = function(e) {{
+  const panel = document.getElementById('_dbg-panel');
+  if (panel) {{
+    panel.style.display = 'block';
+    panel.innerHTML += '<p><b>UnhandledPromise</b> — ' + escHtml(String(e.reason)) + '</p>';
+  }}
+  console.error('[JARVIS promise error]', e.reason);
+}};
+
+function _showDbg(label, msg) {{
+  const panel = document.getElementById('_dbg-panel');
+  if (panel) {{
+    panel.style.display = 'block';
+    panel.innerHTML += '<p><b>' + escHtml(label) + '</b> — ' + escHtml(String(msg)) + '</p>';
+  }}
+}}
+
 function init() {{
-  switchView('overview');
-  renderAgents('all');
+  try {{
+    switchView('overview');
+  }} catch(e) {{ _showDbg('switchView', e); }}
+  try {{
+    renderAgents('all');
+  }} catch(e) {{ _showDbg('renderAgents', e); }}
   loadStatus();
   loadApprovals();
   loadBriefing();
@@ -3429,7 +3464,7 @@ function init() {{
 
   // Handle initial packet from server
   if (INITIAL_PACKET && typeof INITIAL_PACKET === 'object') {{
-    handlePacket(INITIAL_PACKET);
+    try {{ handlePacket(INITIAL_PACKET); }} catch(e) {{ _showDbg('handlePacket', e); }}
   }}
 }}
 
@@ -3486,46 +3521,46 @@ function loadViewData(name) {{
 async function loadStatus() {{
   try {{
     const res = await fetch('/api/status');
-    if (!res.ok) return;
+    if (!res.ok) {{ console.warn('loadStatus', res.status); return; }}
     const data = await res.json();
     renderStatus(data);
-  }} catch(e) {{ /* silent */ }}
+  }} catch(e) {{ console.error('loadStatus failed', e); }}
 }}
 
 async function loadApprovals() {{
   try {{
     const res = await fetch('/api/approvals');
-    if (!res.ok) return;
+    if (!res.ok) {{ console.warn('loadApprovals', res.status); return; }}
     const data = await res.json();
     renderApprovals(data);
-  }} catch(e) {{ /* silent */ }}
+  }} catch(e) {{ console.error('loadApprovals failed', e); }}
 }}
 
 async function loadPublishing() {{
   try {{
     const res = await fetch('/api/publishing/dashboard');
-    if (!res.ok) return;
+    if (!res.ok) {{ console.warn('loadPublishing', res.status); return; }}
     const data = await res.json();
     renderPublishing(data);
-  }} catch(e) {{ /* silent */ }}
+  }} catch(e) {{ console.error('loadPublishing failed', e); }}
 }}
 
 async function loadBriefing() {{
   try {{
     const res = await fetch('/api/briefing');
-    if (!res.ok) return;
+    if (!res.ok) {{ console.warn('loadBriefing', res.status); return; }}
     const data = await res.json();
     renderBriefing(data);
-  }} catch(e) {{ /* silent */ }}
+  }} catch(e) {{ console.error('loadBriefing failed', e); }}
 }}
 
 async function loadChronicle() {{
   try {{
     const res = await fetch('/api/chronicle/recent');
-    if (!res.ok) return;
+    if (!res.ok) {{ console.warn('loadChronicle', res.status); return; }}
     const data = await res.json();
     renderChronicle(data);
-  }} catch(e) {{ /* silent */ }}
+  }} catch(e) {{ console.error('loadChronicle failed', e); }}
 }}
 
 /* ═══════════════════════════════════════════════════════════════
@@ -4321,7 +4356,7 @@ async function loadOverviewCatalyst() {{
         <div><div class="list-row-name">${{escHtml(lane.label)}}</div></div>
       </div>
     `).join('') + (lanes.length > 3 ? `<div class="list-row-sub" style="text-align:right;cursor:pointer;color:var(--accent,#8b5cf6);" onclick="switchView('catalyst')" title="View all lanes">+${{lanes.length - 3}} more lanes →</div>` : '');
-  }} catch(e) {{ /* silent */ }}
+  }} catch(e) {{ console.error('loadOverviewCatalyst failed', e); }}
 }}
 
 async function loadOverviewChronicle() {{
@@ -4359,7 +4394,7 @@ async function loadOverviewChronicle() {{
     if (total > 2) {{
       el.innerHTML += `<div class="list-row-sub" style="text-align:right;cursor:pointer;color:var(--accent,#8b5cf6);margin-top:4px;" onclick="switchView('chronicle')" title="View all entries">+${{total - 2}} more entries →</div>`;
     }}
-  }} catch(e) {{ /* silent */ }}
+  }} catch(e) {{ console.error('loadOverviewChronicle failed', e); }}
 }}
 
 async function loadOverviewPublishing() {{
@@ -4394,7 +4429,7 @@ async function loadOverviewPublishing() {{
         ${{barHtml}}
       </div>`;
     }}).join('');
-  }} catch(e) {{ /* silent */ }}
+  }} catch(e) {{ console.error('loadOverviewPublishing failed', e); }}
 }}
 
 function updateOverviewHomeCards(d) {{
