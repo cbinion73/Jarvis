@@ -212,7 +212,6 @@ class GoogleWorkspaceSupport:
         state = secrets.token_urlsafe(24)
         authorization_url, returned_state = flow.authorization_url(
             access_type="offline",
-            include_granted_scopes="true",
             prompt="consent",
             login_hint=account.login_hint or None,
             state=state,
@@ -244,7 +243,13 @@ class GoogleWorkspaceSupport:
             code_verifier = pending.get("code_verifier", "")
             if code_verifier:
                 flow.code_verifier = code_verifier
-            flow.fetch_token(code=code)
+            try:
+                flow.fetch_token(code=code)
+            except Warning:
+                # oauthlib raises Warning (not Exception) when returned scopes
+                # differ from requested scopes (e.g. Google bundles in previously
+                # granted scopes). The credentials are still valid — continue.
+                pass
             credentials = flow.credentials
             self._save_credentials(credentials, account_id=account_id)
             self._clear_pending_payload(pending)
