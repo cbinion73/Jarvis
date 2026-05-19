@@ -14203,6 +14203,18 @@ class JarvisRuntime:
                 output_text=result.output_text,
             )
             return result
+        # ── Reminder intercept ────────────────────────────────────────────────
+        reminder_result = self._try_handle_reminder(request)
+        if reminder_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=reminder_result.provider,
+                model=reminder_result.model,
+                active_nodes=["reminder-engine"],
+                output_text=reminder_result.output_text,
+            )
+            return reminder_result
+        # ─────────────────────────────────────────────────────────────────────
         result = run_response_graph(self, plan)
         self.audit_log.log_response(
             plan,
@@ -14212,6 +14224,71 @@ class JarvisRuntime:
             output_text=result.output_text,
         )
         return result
+
+    # ── Reminder helper ───────────────────────────────────────────────────────
+
+    _REMINDER_SET_RE = re.compile(
+        r"\b(remind(?:er)?|set\s+(?:a\s+)?reminder|add\s+(?:a\s+)?reminder|"
+        r"don'?t\s+let\s+me\s+forget|remember\s+to|note\s+(?:to\s+(?:self|me))?)\b",
+        re.IGNORECASE,
+    )
+    _TOMORROW_RE = re.compile(r"\btomorrow\b", re.IGNORECASE)
+    _DATE_RE = re.compile(
+        r"\b(?:on\s+)?(\d{4}-\d{2}-\d{2}|\w+day|\w+\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?)\b",
+        re.IGNORECASE,
+    )
+
+    def _try_handle_reminder(self, request: str) -> OpenAIResult | None:
+        """Detect reminder-setting intents and actually create the reminder.
+
+        Returns an OpenAIResult if we handled it, None to fall through to the LLM.
+        """
+        import datetime as _dt
+        from .reminders import add_reminder
+
+        if not self._REMINDER_SET_RE.search(request):
+            return None
+
+        # Extract due date
+        due_iso: str | None = None
+        today = _dt.date.today()
+        if self._TOMORROW_RE.search(request):
+            due_iso = (today + _dt.timedelta(days=1)).isoformat()
+
+        # Strip out the preamble ("remind me tomorrow to", "set a reminder for tomorrow to")
+        text = request.strip()
+        # Remove common lead-ins to get at the actual reminder content
+        text = re.sub(
+            r"(?i)^(?:hey\s+jarvis[,\s]*)?(?:please\s+)?(?:set\s+(?:a\s+)?reminder|"
+            r"add\s+(?:a\s+)?reminder|remind\s+me|reminder)[,:\s]*(?:for\s+)?(?:tomorrow|today)?[,:\s]*(?:to\s+)?",
+            "",
+            text,
+        ).strip()
+        if not text:
+            text = request.strip()
+
+        # Create the local reminder
+        reminder = add_reminder(text, due_iso=due_iso, priority="normal")
+
+        # Build a confirmation string
+        if due_iso:
+            from datetime import date as _date
+            try:
+                d = _date.fromisoformat(due_iso)
+                friendly = d.strftime("%A, %B %-d")  # e.g. "Wednesday, May 20"
+            except Exception:
+                friendly = due_iso
+            confirmation = f"Done. I'll remind you {friendly} to {text}."
+        else:
+            confirmation = f"Reminder set: {text}."
+
+        return OpenAIResult(
+            provider="reminder-engine",
+            model="reminder-engine",
+            output_text=confirmation,
+        )
+
+    # ─────────────────────────────────────────────────────────────────────────
 
     def brain_graph_snapshot(self) -> dict:
         second_brain = self.openai_client.second_brain_status()
