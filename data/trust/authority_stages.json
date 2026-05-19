@@ -1,0 +1,195 @@
+[
+  {
+    "stage_id": "observe",
+    "name": "Observe",
+    "sequence": 0,
+    "allowed_action_types": [
+      "observe",
+      "classify",
+      "infer",
+      "recommend"
+    ],
+    "approval_requirements": {
+      "pre_action": "none",
+      "boundary_crossing": "escalate"
+    },
+    "reporting_requirements": {
+      "summary_level": "minimal",
+      "cadence": "on_request",
+      "must_capture_outcomes": false
+    },
+    "promotion_criteria": {
+      "minimum_success_rate": 0.9,
+      "minimum_review_count": 5,
+      "maximum_boundary_violations": 0
+    },
+    "demotion_triggers": [
+      "boundary_violation",
+      "false_confidence",
+      "principal_override"
+    ],
+    "status": "active",
+    "description": "Read, analyze, and recommend without mutating external state."
+  },
+  {
+    "stage_id": "draft",
+    "name": "Draft Only",
+    "sequence": 1,
+    "allowed_action_types": [
+      "observe",
+      "classify",
+      "draft"
+    ],
+    "approval_requirements": {
+      "pre_action": "draft_only",
+      "boundary_crossing": "escalate"
+    },
+    "reporting_requirements": {
+      "summary_level": "standard",
+      "cadence": "per_action",
+      "must_capture_outcomes": true
+    },
+    "promotion_criteria": {
+      "minimum_success_rate": 0.95,
+      "minimum_review_count": 25,
+      "maximum_boundary_violations": 0
+    },
+    "demotion_triggers": [
+      "hidden_action",
+      "error_rate_breach",
+      "principal_override"
+    ],
+    "status": "active",
+    "description": "Prepare artifacts without finalizing or sending them."
+  },
+  {
+    "stage_id": "stage_alert",
+    "name": "Stage and Alert",
+    "sequence": 2,
+    "allowed_action_types": [
+      "observe",
+      "classify",
+      "draft",
+      "stage",
+      "alert"
+    ],
+    "approval_requirements": {
+      "pre_action": "stage_and_alert",
+      "boundary_crossing": "escalate"
+    },
+    "reporting_requirements": {
+      "summary_level": "standard",
+      "cadence": "per_action",
+      "must_capture_outcomes": true
+    },
+    "promotion_criteria": {
+      "minimum_success_rate": 0.97,
+      "minimum_review_count": 40,
+      "maximum_boundary_violations": 0
+    },
+    "demotion_triggers": [
+      "hidden_action",
+      "error_rate_breach",
+      "reporting_failure",
+      "principal_override"
+    ],
+    "status": "active",
+    "description": "Stage the action and notify the principal for review."
+  },
+  {
+    "stage_id": "sandbox_live",
+    "name": "Sandbox Live",
+    "sequence": 3,
+    "allowed_action_types": [
+      "observe",
+      "infer",
+      "simulate",
+      "execute_in_zone"
+    ],
+    "approval_requirements": {
+      "pre_action": "none",
+      "boundary_crossing": "require_human_approval"
+    },
+    "reporting_requirements": {
+      "summary_level": "detailed",
+      "cadence": "per_action",
+      "must_capture_outcomes": true
+    },
+    "promotion_criteria": {
+      "minimum_success_rate": 0.98,
+      "minimum_review_count": 50,
+      "maximum_boundary_violations": 0
+    },
+    "demotion_triggers": [
+      "boundary_violation",
+      "false_confidence",
+      "error_rate_breach",
+      "principal_override"
+    ],
+    "status": "active",
+    "description": "Execute directly inside a ring-fenced environment."
+  },
+  {
+    "stage_id": "mature_live",
+    "name": "Mature Delegated Live",
+    "sequence": 4,
+    "allowed_action_types": [
+      "observe",
+      "infer",
+      "draft",
+      "stage",
+      "simulate",
+      "execute_in_zone",
+      "spawn_agent_in_zone"
+    ],
+    "approval_requirements": {
+      "pre_action": "none",
+      "boundary_crossing": "require_human_approval"
+    },
+    "reporting_requirements": {
+      "summary_level": "standard",
+      "cadence": "daily",
+      "must_capture_outcomes": true
+    },
+    "promotion_criteria": {
+      "minimum_success_rate": 0.99,
+      "minimum_review_count": 100,
+      "maximum_boundary_violations": 0
+    },
+    "demotion_triggers": [
+      "boundary_violation",
+      "hidden_action",
+      "error_rate_breach",
+      "principal_override"
+    ],
+    "status": "active",
+    "description": "Operate with broader standing authority under explicit family policy."
+  },
+  {
+    "stage_id": "suspended",
+    "name": "Suspended",
+    "sequence": 99,
+    "allowed_action_types": [
+      "observe"
+    ],
+    "approval_requirements": {
+      "pre_action": "required",
+      "boundary_crossing": "deny"
+    },
+    "reporting_requirements": {
+      "summary_level": "minimal",
+      "cadence": "on_request",
+      "must_capture_outcomes": false
+    },
+    "promotion_criteria": {
+      "minimum_success_rate": 1.0,
+      "minimum_review_count": 0,
+      "maximum_boundary_violations": 0
+    },
+    "demotion_triggers": [
+      "principal_override"
+    ],
+    "status": "active",
+    "description": "No autonomous actions allowed until re-enabled."
+  }
+]

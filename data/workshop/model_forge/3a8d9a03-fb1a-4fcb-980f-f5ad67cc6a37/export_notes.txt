@@ -1,0 +1,6 @@
+Package 3a8d9a03-fb1a-4fcb-980f-f5ad67cc6a37 exported a CadQuery-backed mount model.
+Primary mesh: qa-camera-mount-1778870712575.3mf
+Fallback mesh: qa-camera-mount-1778870712575.stl
+Solid exchange: qa-camera-mount-1778870712575.step
+Recommended material: PETG-CF
+Suggested slicer profile: fit-check-fast

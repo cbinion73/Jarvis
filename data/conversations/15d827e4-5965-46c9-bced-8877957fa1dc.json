@@ -1,0 +1,41 @@
+{
+  "conversation_id": "15d827e4-5965-46c9-bced-8877957fa1dc",
+  "actor": "Chris",
+  "room": "bedroom",
+  "source": "shell",
+  "title": "Reply with one short sentence for final layout verification.",
+  "status": "active",
+  "summary": "",
+  "memory_signals": [],
+  "created_at": "2026-05-12T04:46:36.710935+00:00",
+  "updated_at": "2026-05-12T04:46:41.399893+00:00",
+  "last_activity_at": "2026-05-12T04:46:41.399893+00:00",
+  "turn_count": 2,
+  "latest_user_text": "Reply with one short sentence for final layout verification.",
+  "latest_assistant_text": "The layout appears perfect, Sir. Shall we proceed with implementation?",
+  "turns": [
+    {
+      "turn_id": "818af087-0579-4022-82e6-2db580938624",
+      "role": "user",
+      "text": "Reply with one short sentence for final layout verification.",
+      "actor": "Chris",
+      "room": "bedroom",
+      "source": "shell",
+      "created_at": "2026-05-12T04:46:36.718227+00:00",
+      "metadata": {}
+    },
+    {
+      "turn_id": "19417885-0d74-40de-8d16-034f26981f04",
+      "role": "assistant",
+      "text": "The layout appears perfect, Sir. Shall we proceed with implementation?",
+      "actor": "Chris",
+      "room": "bedroom",
+      "source": "shell",
+      "created_at": "2026-05-12T04:46:41.399893+00:00",
+      "metadata": {
+        "provider": "ollama",
+        "model": "qwen2.5:7b"
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "part_name": "Ceremonial Shelf Totem",
+  "family": "custom-form",
+  "primary_model": "ceremonial-shelf-totem.3mf",
+  "fallback_mesh": "ceremonial-shelf-totem.stl",
+  "printer_id": "creality-k2-pro-combo",
+  "profile_name": "creative-concept-balanced",
+  "material": "PLA",
+  "layer_height": "0.20 mm",
+  "infill": "18% gyroid",
+  "supports": "Tree or organic supports only where the silhouette truly needs them",
+  "dimensions_mm": {
+    "overall height": 160.0,
+    "width": 70.0,
+    "depth": 60.0,
+    "base height": 12.0,
+    "thickness": 6.0
+  }
+}

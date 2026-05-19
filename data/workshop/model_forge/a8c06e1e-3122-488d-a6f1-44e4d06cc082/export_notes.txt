@@ -1,0 +1,6 @@
+Package a8c06e1e-3122-488d-a6f1-44e4d06cc082 exported a CadQuery-backed custom-form model.
+Primary mesh: recovered-shell-study.3mf
+Fallback mesh: recovered-shell-study.stl
+Solid exchange: recovered-shell-study.step
+Recommended material: PLA
+Suggested slicer profile: creative-concept-balanced

@@ -1,0 +1,53 @@
+{
+  "run_id": "c6395017-827a-472f-bdc8-9422b62977a3",
+  "job_id": "d2d39c35-4d6c-402e-a4c7-bf75cf1042d8",
+  "job_title": "Repair runtime compile regressions",
+  "generated_at": "2026-05-15T18:41:36.188199+00:00",
+  "mode": "sandbox-worktree",
+  "mutation_route": {
+    "route": "sandbox/worktree-only",
+    "summary": "JARVIS may build and validate the change aggressively, but only inside isolated staging lanes before any live promotion.",
+    "reason": "This mutation can be explored boldly, but only in an isolated worktree or sandbox before live promotion.",
+    "execution_allowed": false,
+    "requires_sandbox": true,
+    "requires_approval": false,
+    "blocked": false
+  },
+  "worktree_path": "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions",
+  "head_sha": "1fdf0553895cda6503f3fd97fc3cdb3e878fc30d",
+  "compile": {
+    "ok": true,
+    "command": [
+      "/Users/chris/Desktop/CODE/JARVIS/.venv/bin/python",
+      "-m",
+      "py_compile",
+      "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/runtime.py",
+      "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/service.py",
+      "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/voice_ui.py",
+      "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/main.py",
+      "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/assistant_core.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "compile_targets": [
+    "jarvis/runtime.py",
+    "jarvis/service.py",
+    "jarvis/voice_ui.py",
+    "jarvis/main.py",
+    "jarvis/assistant_core.py"
+  ],
+  "tests": {
+    "ok": true,
+    "returncode": null,
+    "stdout": "",
+    "stderr": "",
+    "mode": "skipped",
+    "reason": "pytest is not available on this machine."
+  },
+  "git_status_excerpt": [],
+  "recommendations": [
+    "Sandbox lane is healthy enough for patch generation or a reviewed promotion step."
+  ]
+}

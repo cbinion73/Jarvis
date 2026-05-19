@@ -1,0 +1,3430 @@
+[
+  {
+    "run_id": "bf84f3fc-59fc-4aa2-a4f3-d35db61578e3",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T15:45:09.417241+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T15:45:09.405339+00:00",
+      "compile_ok": false,
+      "compile_stdout": "",
+      "compile_stderr": "File \"/Users/chris/Desktop/CODE/JARVIS/ops/install_launchd_services.sh\", line 2\n    set -euo pipefail\n             ^^^^^^^^\nSyntaxError: invalid syntax",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 71,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl",
+        " M data/memory/entries.json",
+        " M data/memory/profile_facts.json",
+        " M data/memory/proposals.json",
+        " M data/security/weather_advisories.json",
+        " M data/settings/adaptation_profiles.json",
+        " M data/settings/assistant_core.json",
+        " M data/settings/first_light.json",
+        " M data/settings/identity.json",
+        " M data/workshop/cad_packages.json",
+        " M data/workshop/vendor_preps.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": true,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "e15efa6a-c107-4539-a12d-fb036d34dac7",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T15:45:09.432182+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T15:45:09.428649+00:00",
+      "compile_ok": false,
+      "compile_stdout": "",
+      "compile_stderr": "File \"/Users/chris/Desktop/CODE/JARVIS/ops/install_launchd_services.sh\", line 2\n    set -euo pipefail\n             ^^^^^^^^\nSyntaxError: invalid syntax",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 71,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl",
+        " M data/memory/entries.json",
+        " M data/memory/profile_facts.json",
+        " M data/memory/proposals.json",
+        " M data/security/weather_advisories.json",
+        " M data/settings/adaptation_profiles.json",
+        " M data/settings/assistant_core.json",
+        " M data/settings/first_light.json",
+        " M data/settings/identity.json",
+        " M data/workshop/cad_packages.json",
+        " M data/workshop/vendor_preps.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": true,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "5c377b45-9196-4b54-a491-629a58294ea6",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T15:45:10.201834+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T15:45:10.198625+00:00",
+      "compile_ok": false,
+      "compile_stdout": "",
+      "compile_stderr": "File \"/Users/chris/Desktop/CODE/JARVIS/ops/install_launchd_services.sh\", line 2\n    set -euo pipefail\n             ^^^^^^^^\nSyntaxError: invalid syntax",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 71,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl",
+        " M data/memory/entries.json",
+        " M data/memory/profile_facts.json",
+        " M data/memory/proposals.json",
+        " M data/security/weather_advisories.json",
+        " M data/settings/adaptation_profiles.json",
+        " M data/settings/assistant_core.json",
+        " M data/settings/first_light.json",
+        " M data/settings/identity.json",
+        " M data/workshop/cad_packages.json",
+        " M data/workshop/vendor_preps.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": true,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "d7a5796b-d4e0-4f76-8af8-d621054ec561",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T15:45:57.007837+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 4,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T15:45:56.999540+00:00",
+      "compile_ok": false,
+      "compile_stdout": "",
+      "compile_stderr": "File \"/Users/chris/Desktop/CODE/JARVIS/ops/install_launchd_services.sh\", line 2\n    set -euo pipefail\n             ^^^^^^^^\nSyntaxError: invalid syntax",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 71,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl",
+        " M data/memory/entries.json",
+        " M data/memory/profile_facts.json",
+        " M data/memory/proposals.json",
+        " M data/security/weather_advisories.json",
+        " M data/settings/adaptation_profiles.json",
+        " M data/settings/assistant_core.json",
+        " M data/settings/first_light.json",
+        " M data/settings/identity.json",
+        " M data/workshop/cad_packages.json",
+        " M data/workshop/vendor_preps.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "9903e725-9475-4ba0-9801-35c0a88dcc34",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T15:46:08.486960+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 4,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T15:46:08.482770+00:00",
+      "compile_ok": false,
+      "compile_stdout": "",
+      "compile_stderr": "File \"/Users/chris/Desktop/CODE/JARVIS/ops/install_launchd_services.sh\", line 2\n    set -euo pipefail\n             ^^^^^^^^\nSyntaxError: invalid syntax",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 71,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl",
+        " M data/memory/entries.json",
+        " M data/memory/profile_facts.json",
+        " M data/memory/proposals.json",
+        " M data/security/weather_advisories.json",
+        " M data/settings/adaptation_profiles.json",
+        " M data/settings/assistant_core.json",
+        " M data/settings/first_light.json",
+        " M data/settings/identity.json",
+        " M data/workshop/cad_packages.json",
+        " M data/workshop/vendor_preps.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "fb5bf4dd-3e22-45ac-bf64-4c6359d28479",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T15:46:39.649939+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 4,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T15:46:39.640215+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 71,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl",
+        " M data/memory/entries.json",
+        " M data/memory/profile_facts.json",
+        " M data/memory/proposals.json",
+        " M data/security/weather_advisories.json",
+        " M data/settings/adaptation_profiles.json",
+        " M data/settings/assistant_core.json",
+        " M data/settings/first_light.json",
+        " M data/settings/identity.json",
+        " M data/workshop/cad_packages.json",
+        " M data/workshop/vendor_preps.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "83438570-239b-4755-ae6d-12cf76eca0f7",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T15:47:00.558932+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 4,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T15:47:00.552925+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 71,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl",
+        " M data/memory/entries.json",
+        " M data/memory/profile_facts.json",
+        " M data/memory/proposals.json",
+        " M data/security/weather_advisories.json",
+        " M data/settings/adaptation_profiles.json",
+        " M data/settings/assistant_core.json",
+        " M data/settings/first_light.json",
+        " M data/settings/identity.json",
+        " M data/workshop/cad_packages.json",
+        " M data/workshop/vendor_preps.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "10e7cfe1-ee7d-4c17-bbe4-83baf304bc4f",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T15:47:33.152435+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T15:47:33.147000+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 71,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl",
+        " M data/memory/entries.json",
+        " M data/memory/profile_facts.json",
+        " M data/memory/proposals.json",
+        " M data/security/weather_advisories.json",
+        " M data/settings/adaptation_profiles.json",
+        " M data/settings/assistant_core.json",
+        " M data/settings/first_light.json",
+        " M data/settings/identity.json",
+        " M data/workshop/cad_packages.json",
+        " M data/workshop/vendor_preps.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "a024683f-2ea1-494c-9b2d-9a90fe39b639",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T15:52:22.981641+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T15:52:22.975404+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 75,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl",
+        " M data/memory/entries.json",
+        " M data/memory/profile_facts.json",
+        " M data/memory/proposals.json",
+        " M data/security/weather_advisories.json",
+        " M data/settings/adaptation_profiles.json",
+        " M data/settings/assistant_core.json",
+        " M data/settings/first_light.json",
+        " M data/settings/identity.json",
+        " M data/workshop/cad_packages.json",
+        " M data/workshop/vendor_preps.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "4feba227-89b0-4b56-b8b7-0c9076f2fe03",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T15:52:53.009716+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T15:52:53.005669+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 75,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl",
+        " M data/memory/entries.json",
+        " M data/memory/profile_facts.json",
+        " M data/memory/proposals.json",
+        " M data/security/weather_advisories.json",
+        " M data/settings/adaptation_profiles.json",
+        " M data/settings/assistant_core.json",
+        " M data/settings/first_light.json",
+        " M data/settings/identity.json",
+        " M data/workshop/cad_packages.json",
+        " M data/workshop/vendor_preps.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "a6f872c5-8e66-4443-b414-0bf31de6ec59",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T15:53:48.592094+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T15:53:48.587249+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 75,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl",
+        " M data/memory/entries.json",
+        " M data/memory/profile_facts.json",
+        " M data/memory/proposals.json",
+        " M data/security/weather_advisories.json",
+        " M data/settings/adaptation_profiles.json",
+        " M data/settings/assistant_core.json",
+        " M data/settings/first_light.json",
+        " M data/settings/identity.json",
+        " M data/workshop/cad_packages.json",
+        " M data/workshop/vendor_preps.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "47cf88d2-7688-4a00-a4c4-385259bc62fa",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T15:54:46.888065+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T15:54:46.881094+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 75,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl",
+        " M data/memory/entries.json",
+        " M data/memory/profile_facts.json",
+        " M data/memory/proposals.json",
+        " M data/security/weather_advisories.json",
+        " M data/settings/adaptation_profiles.json",
+        " M data/settings/assistant_core.json",
+        " M data/settings/first_light.json",
+        " M data/settings/identity.json",
+        " M data/workshop/cad_packages.json",
+        " M data/workshop/vendor_preps.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "ffb8fd23-47bb-453b-a74f-28eb6dff068d",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T15:55:42.116160+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T15:55:42.110867+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 75,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl",
+        " M data/memory/entries.json",
+        " M data/memory/profile_facts.json",
+        " M data/memory/proposals.json",
+        " M data/security/weather_advisories.json",
+        " M data/settings/adaptation_profiles.json",
+        " M data/settings/assistant_core.json",
+        " M data/settings/first_light.json",
+        " M data/settings/identity.json",
+        " M data/workshop/cad_packages.json",
+        " M data/workshop/vendor_preps.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "248afde5-c8c5-4413-b115-90bb84232d8c",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T15:56:38.416963+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T15:56:38.409375+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 75,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl",
+        " M data/memory/entries.json",
+        " M data/memory/profile_facts.json",
+        " M data/memory/proposals.json",
+        " M data/security/weather_advisories.json",
+        " M data/settings/adaptation_profiles.json",
+        " M data/settings/assistant_core.json",
+        " M data/settings/first_light.json",
+        " M data/settings/identity.json",
+        " M data/workshop/cad_packages.json",
+        " M data/workshop/vendor_preps.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "4ec09759-c3df-4891-adc4-2b964c5cff57",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T15:58:21.142612+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T15:58:21.137907+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 85,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "1828bc4c-69f3-401a-b4a6-5c1d3a2e7751",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T15:59:19.593038+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T15:59:19.568208+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 86,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "4f4f4161-a4b5-4b2f-9dae-4027590bb1e5",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T16:03:13.247379+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T16:03:13.241732+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 86,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "ec039927-3218-436b-a343-6daaf51e1241",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T16:05:20.623546+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 1,
+    "executed_jobs": [
+      {
+        "job_id": "49d47581-358b-43a9-be9d-8c5a9cac52ea",
+        "title": "Review runtime drift",
+        "ok": true
+      }
+    ],
+    "repo_health": {
+      "generated_at": "2026-05-15T16:05:20.325425+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 86,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "42804acb-7396-416e-87a4-a7f95a1db5d6",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T16:14:37.580140+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 1,
+    "executed_jobs": [
+      {
+        "job_id": "49d47581-358b-43a9-be9d-8c5a9cac52ea",
+        "title": "Review runtime drift",
+        "ok": true
+      }
+    ],
+    "repo_health": {
+      "generated_at": "2026-05-15T16:14:36.726801+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 86,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "6538781e-c779-47c9-831e-07b7b80e6f65",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T16:15:15.868581+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T16:15:15.851242+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 86,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json",
+        " M data/logs/actions.jsonl"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "8f3324aa-1306-4eef-a887-a2e450c14164",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T16:27:50.752496+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T16:27:50.746781+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 90,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M artifacts/qa/screenshots/workbench-vision-modal.png",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "9a068584-92b8-47f7-9f30-cc6bf3f6e077",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T16:39:45.124515+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T16:39:45.119385+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 90,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M artifacts/qa/screenshots/workbench-vision-modal.png",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "b004f659-9032-4759-8ca7-8bd95f9eae64",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T16:51:38.970385+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T16:51:38.965404+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 90,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M artifacts/qa/screenshots/workbench-vision-modal.png",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "78131ebd-0345-4519-a575-384cc85ca54d",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T17:03:36.358481+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T17:03:36.353740+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 90,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M artifacts/qa/screenshots/workbench-vision-modal.png",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "d61c8e4c-7f81-4068-a24b-807adbdef742",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T17:15:31.448638+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T17:15:31.444274+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 90,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M artifacts/qa/screenshots/workbench-vision-modal.png",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "c236139f-1288-40d1-afa4-72d0bb9562b2",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T17:27:29.307550+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T17:27:29.303152+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 90,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M artifacts/qa/screenshots/workbench-vision-modal.png",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "5781c94b-baa9-4007-a31a-19f6f0731517",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T17:39:11.242404+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T17:39:11.237956+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 90,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M artifacts/qa/screenshots/workbench-vision-modal.png",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "1b2bee4f-391f-4644-a302-27edc118179d",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T17:51:05.359912+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T17:51:05.355220+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 90,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M artifacts/qa/screenshots/workbench-vision-modal.png",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "bcd5e634-09f9-4664-b01a-fa1453b657ab",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T18:03:00.815388+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T18:03:00.810982+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 90,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M artifacts/qa/screenshots/workbench-vision-modal.png",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "023f2b9d-5143-4ce3-9dd3-8ef15757b0a2",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T18:14:55.476764+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T18:14:55.471841+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 90,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M artifacts/qa/screenshots/workbench-vision-modal.png",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "b9f6f808-7aa2-48d0-94f7-1a8c0c55a3c1",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T18:26:42.056245+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T18:26:42.051846+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 90,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M artifacts/qa/screenshots/workbench-vision-modal.png",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "eacf9ea4-ba02-49c0-84a1-0e33618a1b23",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T18:38:46.931461+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T18:38:46.924005+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 90,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M artifacts/qa/screenshots/workbench-vision-modal.png",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json",
+        " M data/family/message_drafts.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  },
+  {
+    "run_id": "9255f50d-75a3-4206-a15a-0c2827a78092",
+    "job_id": "d2d39c35-4d6c-402e-a4c7-bf75cf1042d8",
+    "job_title": "Repair runtime compile regressions",
+    "generated_at": "2026-05-15T18:40:41.585764+00:00",
+    "mode": "sandbox-worktree",
+    "mutation_route": {
+      "route": "sandbox/worktree-only",
+      "summary": "JARVIS may build and validate the change aggressively, but only inside isolated staging lanes before any live promotion.",
+      "reason": "This mutation can be explored boldly, but only in an isolated worktree or sandbox before live promotion.",
+      "execution_allowed": false,
+      "requires_sandbox": true,
+      "requires_approval": false,
+      "blocked": false
+    },
+    "worktree_path": "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions",
+    "head_sha": "1fdf0553895cda6503f3fd97fc3cdb3e878fc30d",
+    "compile": {
+      "ok": false,
+      "command": [
+        "/Users/chris/Desktop/CODE/JARVIS/.venv/bin/python",
+        "-m",
+        "py_compile",
+        "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/runtime.py",
+        "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/service.py",
+        "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/voice_ui.py",
+        "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/main.py",
+        "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/assistant_core.py",
+        "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/self_improvement.py"
+      ],
+      "returncode": 1,
+      "stdout": "",
+      "stderr": "[Errno 2] No such file or directory: '/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/self_improvement.py'"
+    },
+    "tests": {
+      "ok": true,
+      "returncode": null,
+      "stdout": "",
+      "stderr": "",
+      "mode": "skipped",
+      "reason": "pytest is not available on this machine."
+    },
+    "git_status_excerpt": [],
+    "recommendations": [
+      "Repair compile failures inside the sandbox before considering promotion."
+    ],
+    "report_path": "/Users/chris/Desktop/CODE/JARVIS/data/system/sandbox_reports/9255f50d-75a3-4206-a15a-0c2827a78092.json"
+  },
+  {
+    "run_id": "c921689a-92d7-4143-8704-52601b086815",
+    "job_id": "d2d39c35-4d6c-402e-a4c7-bf75cf1042d8",
+    "job_title": "Repair runtime compile regressions",
+    "generated_at": "2026-05-15T18:41:20.144099+00:00",
+    "mode": "sandbox-worktree",
+    "mutation_route": {
+      "route": "sandbox/worktree-only",
+      "summary": "JARVIS may build and validate the change aggressively, but only inside isolated staging lanes before any live promotion.",
+      "reason": "This mutation can be explored boldly, but only in an isolated worktree or sandbox before live promotion.",
+      "execution_allowed": false,
+      "requires_sandbox": true,
+      "requires_approval": false,
+      "blocked": false
+    },
+    "worktree_path": "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions",
+    "head_sha": "1fdf0553895cda6503f3fd97fc3cdb3e878fc30d",
+    "compile": {
+      "ok": true,
+      "command": [
+        "/Users/chris/Desktop/CODE/JARVIS/.venv/bin/python",
+        "-m",
+        "py_compile",
+        "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/runtime.py",
+        "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/service.py",
+        "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/voice_ui.py",
+        "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/main.py",
+        "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/assistant_core.py"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    "compile_targets": [
+      "jarvis/runtime.py",
+      "jarvis/service.py",
+      "jarvis/voice_ui.py",
+      "jarvis/main.py",
+      "jarvis/assistant_core.py"
+    ],
+    "tests": {
+      "ok": true,
+      "returncode": null,
+      "stdout": "",
+      "stderr": "",
+      "mode": "skipped",
+      "reason": "pytest is not available on this machine."
+    },
+    "git_status_excerpt": [],
+    "recommendations": [
+      "Sandbox lane is healthy enough for patch generation or a reviewed promotion step."
+    ],
+    "report_path": "/Users/chris/Desktop/CODE/JARVIS/data/system/sandbox_reports/c921689a-92d7-4143-8704-52601b086815.json"
+  },
+  {
+    "run_id": "c6395017-827a-472f-bdc8-9422b62977a3",
+    "job_id": "d2d39c35-4d6c-402e-a4c7-bf75cf1042d8",
+    "job_title": "Repair runtime compile regressions",
+    "generated_at": "2026-05-15T18:41:36.188199+00:00",
+    "mode": "sandbox-worktree",
+    "mutation_route": {
+      "route": "sandbox/worktree-only",
+      "summary": "JARVIS may build and validate the change aggressively, but only inside isolated staging lanes before any live promotion.",
+      "reason": "This mutation can be explored boldly, but only in an isolated worktree or sandbox before live promotion.",
+      "execution_allowed": false,
+      "requires_sandbox": true,
+      "requires_approval": false,
+      "blocked": false
+    },
+    "worktree_path": "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions",
+    "head_sha": "1fdf0553895cda6503f3fd97fc3cdb3e878fc30d",
+    "compile": {
+      "ok": true,
+      "command": [
+        "/Users/chris/Desktop/CODE/JARVIS/.venv/bin/python",
+        "-m",
+        "py_compile",
+        "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/runtime.py",
+        "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/service.py",
+        "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/voice_ui.py",
+        "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/main.py",
+        "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/assistant_core.py"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    "compile_targets": [
+      "jarvis/runtime.py",
+      "jarvis/service.py",
+      "jarvis/voice_ui.py",
+      "jarvis/main.py",
+      "jarvis/assistant_core.py"
+    ],
+    "tests": {
+      "ok": true,
+      "returncode": null,
+      "stdout": "",
+      "stderr": "",
+      "mode": "skipped",
+      "reason": "pytest is not available on this machine."
+    },
+    "git_status_excerpt": [],
+    "recommendations": [
+      "Sandbox lane is healthy enough for patch generation or a reviewed promotion step."
+    ],
+    "report_path": "/Users/chris/Desktop/CODE/JARVIS/data/system/sandbox_reports/c6395017-827a-472f-bdc8-9422b62977a3.json"
+  },
+  {
+    "run_id": "a6e0c84a-f1f1-49d2-a11c-5e1f9a8347ce",
+    "actor": "Chris",
+    "generated_at": "2026-05-15T18:50:43.793206+00:00",
+    "settings": {
+      "enabled": true,
+      "allow_safe_autonomy": true,
+      "allow_configured_model_sync": true,
+      "allow_heavy_model_downloads": false,
+      "allow_tool_installs": false,
+      "allow_code_changes": false,
+      "max_auto_actions_per_run": 1
+    },
+    "queued_job_count": 3,
+    "executed_job_count": 0,
+    "executed_jobs": [],
+    "repo_health": {
+      "generated_at": "2026-05-15T18:50:43.785163+00:00",
+      "compile_ok": true,
+      "compile_stdout": "",
+      "compile_stderr": "",
+      "git_available": true,
+      "branch": "codex/material3-checkpoint",
+      "dirty": true,
+      "diff_count": 96,
+      "git_status_excerpt": [
+        "M .env.example",
+        " M artifacts/qa/jarvis-approval-queue-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-report.json",
+        " M artifacts/qa/jarvis-e2e-suite-summary.md",
+        " M artifacts/qa/jarvis-full-system-report.json",
+        " M artifacts/qa/jarvis-identity-admin-report.json",
+        " M artifacts/qa/jarvis-memory-governance-report.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M artifacts/qa/jarvis-provider-layer-report.json",
+        " M artifacts/qa/jarvis-workbench-report.json",
+        " M artifacts/qa/screenshots/provider-settings-modal.png",
+        " M artifacts/qa/screenshots/workbench-model-forge-generated.png",
+        " M artifacts/qa/screenshots/workbench-vision-modal.png",
+        " M data/agents/background_state.json",
+        " M data/agents/life_agents.json",
+        " M data/agents/tick_log.jsonl",
+        " M data/approvals/pending.json",
+        " M data/catalyst/implementation_plans.json",
+        " M data/catalyst/pipeline_state.json",
+        " M data/catalyst/signals.json"
+      ],
+      "tracked_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py",
+        "ops/install_launchd_services.sh",
+        "ops/launchd/com.jarvis.runtime.plist.template",
+        "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+      ],
+      "compiled_python_files": [
+        "jarvis/runtime.py",
+        "jarvis/service.py",
+        "jarvis/voice_ui.py",
+        "jarvis/main.py",
+        "jarvis/assistant_core.py",
+        "jarvis/self_improvement.py"
+      ]
+    },
+    "tool_inventory": [
+      {
+        "name": "git",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "ollama",
+        "available": true,
+        "required": true,
+        "installable": false
+      },
+      {
+        "name": "uv",
+        "available": false,
+        "required": false,
+        "installable": false
+      },
+      {
+        "name": "pytest",
+        "available": false,
+        "required": false,
+        "installable": false
+      }
+    ]
+  }
+]

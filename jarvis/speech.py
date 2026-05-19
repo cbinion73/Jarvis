@@ -4,7 +4,9 @@ import os
 import shutil
 import subprocess
 import tempfile
+import threading
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import BinaryIO
 from urllib import error, request
@@ -20,10 +22,15 @@ class AudioPayload:
     provider: str
 
 
+ELEVENLABS_TTS_TIMEOUT_SECONDS = float(os.getenv("JARVIS_ELEVENLABS_TTS_TIMEOUT_SECONDS", "3.5"))
+ELEVENLABS_STREAMING_LATENCY = int(os.getenv("JARVIS_ELEVENLABS_STREAMING_LATENCY", "3"))
+ELEVENLABS_OUTPUT_FORMAT = os.getenv("JARVIS_ELEVENLABS_OUTPUT_FORMAT", "mp3_22050_32").strip() or "mp3_22050_32"
+
+
 def resolve_tts_providers(config: AppConfig, preferred_provider: str | None = None) -> list[str]:
     provider = (preferred_provider or config.tts_provider).strip().lower()
     if provider == "auto":
-        base = ["piper", "localai", "elevenlabs", "system"]
+        base = ["kokoro", "piper", "localai", "elevenlabs", "system"]
     else:
         base = [provider]
     return _dedupe(base + list(config.tts_fallbacks))
@@ -31,7 +38,7 @@ def resolve_tts_providers(config: AppConfig, preferred_provider: str | None = No
 
 def resolve_stt_providers(config: AppConfig) -> list[str]:
     if config.stt_provider == "auto":
-        base = ["localai", "openai"]
+        base = ["mlx-whisper", "localai", "openai"]
     else:
         base = [config.stt_provider]
     return _dedupe(base + list(config.stt_fallbacks))
@@ -46,6 +53,8 @@ def synthesize_speech(config: AppConfig, text: str, voice_settings: dict | None 
 
     for provider in resolve_tts_providers(config, preferred_provider=selected_provider):
         try:
+            if provider == "kokoro":
+                return _synthesize_with_kokoro(config, text)
             if provider == "piper":
                 override_model = Path(selected_piper_model) if selected_piper_model else None
                 return _synthesize_with_piper(
@@ -57,10 +66,15 @@ def synthesize_speech(config: AppConfig, text: str, voice_settings: dict | None 
             if provider == "localai":
                 return _synthesize_with_localai(config, text)
             if provider == "elevenlabs":
-                return _synthesize_with_elevenlabs(
-                    config,
-                    text,
-                    requested_voice=selected_elevenlabs_voice or None,
+                return _run_with_timeout(
+                    "elevenlabs",
+                    partial(
+                        _synthesize_with_elevenlabs,
+                        config,
+                        text,
+                        requested_voice=selected_elevenlabs_voice or None,
+                    ),
+                    timeout_seconds=ELEVENLABS_TTS_TIMEOUT_SECONDS,
                 )
             if provider == "system":
                 return _synthesize_with_system(config, text)
@@ -80,6 +94,8 @@ def transcribe_speech(
     for provider in resolve_stt_providers(config):
         try:
             audio_file.seek(0)
+            if provider == "mlx-whisper":
+                return _transcribe_with_mlx_whisper(config, audio_file, prompt=prompt)
             if provider == "localai":
                 return _transcribe_with_localai(config, audio_file, prompt=prompt)
             if provider == "openai":
@@ -101,9 +117,11 @@ def voice_stack_status(config: AppConfig, voice_settings: dict | None = None) ->
         "selected_tts_provider": selected_provider or config.tts_provider,
         "tts_fallbacks": list(config.tts_fallbacks),
         "tts_order": resolve_tts_providers(config, preferred_provider=selected_provider),
+        "effective_tts_order": resolve_tts_providers(config, preferred_provider=selected_provider),
         "stt_provider": config.stt_provider,
         "stt_fallbacks": list(config.stt_fallbacks),
         "stt_order": resolve_stt_providers(config),
+        "effective_stt_order": resolve_stt_providers(config),
         "piper_binary": config.piper_binary,
         "piper_binary_ready": piper_binary_ready,
         "piper_ready": bool(
@@ -115,6 +133,8 @@ def voice_stack_status(config: AppConfig, voice_settings: dict | None = None) ->
         "localai_base_url": config.localai_base_url,
         "elevenlabs_ready": bool(os.getenv("ELEVENLABS_API_KEY", "").strip() or config.elevenlabs_api_key.strip()),
         "openai_ready": bool(config.openai_api_key.strip()),
+        "kokoro_available": _check_kokoro_available(),
+        "mlx_whisper_available": _check_mlx_whisper_available(),
     }
 
 
@@ -124,16 +144,25 @@ def _synthesize_with_elevenlabs(
     requested_voice: str | None = None,
 ) -> AudioPayload:
     from elevenlabs.client import ElevenLabs
+    from elevenlabs.core.request_options import RequestOptions
 
     api_key = os.getenv("ELEVENLABS_API_KEY", "").strip() or config.elevenlabs_api_key.strip()
     if not api_key:
         raise RuntimeError("ELEVENLABS_API_KEY is missing.")
-    voice = ElevenLabs(api_key=api_key)
+    voice = ElevenLabs(
+        api_key=api_key,
+        timeout=max(1.0, ELEVENLABS_TTS_TIMEOUT_SECONDS),
+    )
     voice_id = _resolve_elevenlabs_voice_id(voice, requested_voice or config.elevenlabs_voice)
     audio = voice.text_to_speech.convert(
         voice_id=voice_id,
         text=text,
-        output_format="mp3_44100_128",
+        optimize_streaming_latency=ELEVENLABS_STREAMING_LATENCY,
+        output_format=ELEVENLABS_OUTPUT_FORMAT,
+        request_options=RequestOptions(
+            timeout_in_seconds=max(1, int(ELEVENLABS_TTS_TIMEOUT_SECONDS)),
+            max_retries=0,
+        ),
     )
     return AudioPayload(
         data=b"".join(audio),
@@ -336,6 +365,132 @@ def _transcribe_with_localai(
     raise RuntimeError("LocalAI transcription response did not contain text.")
 
 
+def _transcribe_with_mlx_whisper(
+    config: AppConfig,
+    audio_file: BinaryIO,
+    prompt: str = "",
+) -> str:
+    """
+    Transcribe audio using mlx-whisper on Apple Silicon Neural Engine.
+    Significantly faster than cloud Whisper on M-series Macs.
+    """
+    try:
+        import mlx_whisper
+    except ImportError:
+        raise RuntimeError(
+            "mlx-whisper not installed. Run: pip install mlx-whisper"
+        )
+
+    import tempfile
+    from pathlib import Path
+
+    # Write audio to temp file
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+        tmp.write(audio_file.read())
+        tmp_path = tmp.name
+
+    try:
+        model = getattr(config, "mlx_whisper_model", None) or \
+                os.getenv("JARVIS_MLX_WHISPER_MODEL", "mlx-community/whisper-large-v3-turbo")
+        result = mlx_whisper.transcribe(
+            tmp_path,
+            path_or_hf_repo=model,
+            initial_prompt=prompt or None,
+            verbose=False,
+        )
+        return (result.get("text") or "").strip()
+    finally:
+        try:
+            Path(tmp_path).unlink()
+        except OSError:
+            pass
+
+
+def _synthesize_with_kokoro(
+    config: AppConfig,
+    text: str,
+) -> AudioPayload:
+    """
+    Synthesize speech using Kokoro-82M on-device.
+    Produces high-quality neural TTS audio.
+    Voice: configurable via JARVIS_KOKORO_VOICE (default: 'af_heart' — warm American female)
+    """
+    try:
+        from kokoro import KPipeline
+        import soundfile as sf
+        import numpy as np
+        import io
+    except ImportError:
+        raise RuntimeError(
+            "Kokoro not installed. Run: pip install kokoro soundfile"
+        )
+
+    voice = getattr(config, "kokoro_voice", None) or \
+            os.getenv("JARVIS_KOKORO_VOICE", "af_heart")
+    speed = float(os.getenv("JARVIS_KOKORO_SPEED", "1.0"))
+
+    # KPipeline is stateful — cache it as a module-level singleton
+    pipeline = _get_kokoro_pipeline()
+
+    try:
+        chunks = []
+        for _, _, audio in pipeline(text, voice=voice, speed=speed):
+            if audio is not None:
+                chunks.append(audio)
+
+        if not chunks:
+            raise RuntimeError("Kokoro produced no audio chunks")
+
+        audio_data = np.concatenate(chunks)
+        sample_rate = 24000  # Kokoro output sample rate
+
+        buf = io.BytesIO()
+        sf.write(buf, audio_data, sample_rate, format="WAV", subtype="PCM_16")
+        buf.seek(0)
+
+        return AudioPayload(
+            data=buf.read(),
+            content_type="audio/wav",
+            extension=".wav",
+            provider="kokoro",
+        )
+    except Exception as e:
+        raise RuntimeError(f"Kokoro synthesis failed: {e}")
+
+
+# Module-level Kokoro pipeline cache
+_kokoro_pipeline = None
+_kokoro_pipeline_lock = threading.Lock()
+
+
+def _get_kokoro_pipeline():
+    """Return cached KPipeline instance (thread-safe, lazy init)."""
+    global _kokoro_pipeline
+    if _kokoro_pipeline is None:
+        with _kokoro_pipeline_lock:
+            if _kokoro_pipeline is None:
+                from kokoro import KPipeline
+                lang_code = os.getenv("JARVIS_KOKORO_LANG", "a")  # 'a' = American English
+                _kokoro_pipeline = KPipeline(lang_code=lang_code)
+    return _kokoro_pipeline
+
+
+def _check_kokoro_available() -> bool:
+    try:
+        import kokoro  # noqa
+        return True
+    except ImportError:
+        return False
+
+
+def _check_mlx_whisper_available() -> bool:
+    try:
+        import mlx_whisper  # noqa
+        return True
+    except ImportError:
+        return False
+
+
 def _localai_headers(config: AppConfig) -> dict[str, str]:
     headers = {}
     if config.localai_api_key:
@@ -388,3 +543,21 @@ def _localai_healthcheck(base_url: str) -> bool:
             return 200 <= response.status < 300
     except (error.URLError, TimeoutError, ValueError):
         return False
+
+
+def _run_with_timeout(provider: str, operation, *, timeout_seconds: float) -> AudioPayload:
+    import concurrent.futures
+
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    future = executor.submit(operation)
+    try:
+        return future.result(timeout=max(0.1, timeout_seconds))
+    except concurrent.futures.TimeoutError as exc:
+        future.cancel()
+        executor.shutdown(wait=False, cancel_futures=True)
+        raise RuntimeError(
+            f"{provider} timed out after {timeout_seconds:.1f}s"
+        ) from exc
+    finally:
+        if future.done():
+            executor.shutdown(wait=True, cancel_futures=False)

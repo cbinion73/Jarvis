@@ -89,8 +89,8 @@ async function run() {
 
   try {
     const seed = Date.now();
-    const approvedSummary = `QA learning approval ${seed}`;
-    const rejectedSummary = `QA learning rejection ${seed}`;
+    const approvedSummary = `Governance approval ${seed}`;
+    const rejectedSummary = `Governance rejection ${seed}`;
     let approvedProposalId = "";
     let approvedFactId = "";
     let approvedEntryId = "";

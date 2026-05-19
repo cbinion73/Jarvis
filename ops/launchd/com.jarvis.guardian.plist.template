@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.jarvis.guardian</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/ABSOLUTE/PATH/TO/JARVIS/.venv/bin/python</string>
+      <string>/ABSOLUTE/PATH/TO/JARVIS/ops/jarvis_guardian.py</string>
+      <string>--interval-seconds</string>
+      <string>45</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/ABSOLUTE/PATH/TO/JARVIS</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>PATH</key>
+      <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+      <key>JARVIS_RUNTIME_HEALTH_URL</key>
+      <string>http://127.0.0.1:8787/health</string>
+      <key>JARVIS_RUNTIME_LABEL</key>
+      <string>com.jarvis.runtime</string>
+      <key>JARVIS_AUTONOMY_LABEL</key>
+      <string>com.jarvis.assistant-autonomy</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <dict>
+      <key>SuccessfulExit</key>
+      <false/>
+    </dict>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>StandardOutPath</key>
+    <string>/ABSOLUTE/PATH/TO/JARVIS/data/logs/jarvis-guardian.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/ABSOLUTE/PATH/TO/JARVIS/data/logs/jarvis-guardian.stderr.log</string>
+  </dict>
+</plist>

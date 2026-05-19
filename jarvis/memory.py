@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .config import AppConfig
+from .data_hygiene import filter_records
 from .identity import IdentityRegistry
 from .models import MemoryEntry, MemoryProfileFact, MemoryProposal, UserProfile
 
@@ -58,7 +59,8 @@ class MemoryStore:
     def _entries(self) -> list[dict]:
         payload = self._load_json(self.entries_path, [])
         records = payload if isinstance(payload, list) else []
-        return [self._coerce_entry_record(item) for item in records if isinstance(item, dict)]
+        cleaned = [self._coerce_entry_record(item) for item in records if isinstance(item, dict)]
+        return filter_records(cleaned)
 
     def _save_entries(self, records: list[dict]) -> None:
         self._save_json(self.entries_path, records)
@@ -89,7 +91,8 @@ class MemoryStore:
     def _proposals(self) -> list[dict]:
         payload = self._load_json(self.proposals_path, [])
         records = payload if isinstance(payload, list) else []
-        return [self._coerce_proposal_record(item) for item in records if isinstance(item, dict)]
+        cleaned = [self._coerce_proposal_record(item) for item in records if isinstance(item, dict)]
+        return filter_records(cleaned)
 
     def _save_proposals(self, records: list[dict]) -> None:
         self._save_json(self.proposals_path, records)
@@ -119,7 +122,8 @@ class MemoryStore:
     def list_profile_facts(self) -> list[dict]:
         payload = self._load_json(self.facts_path, [])
         records = payload if isinstance(payload, list) else []
-        return [self._coerce_fact_record(item) for item in records if isinstance(item, dict)]
+        cleaned = [self._coerce_fact_record(item) for item in records if isinstance(item, dict)]
+        return filter_records(cleaned)
 
     def migrate_records(self) -> None:
         entries = self._entries()

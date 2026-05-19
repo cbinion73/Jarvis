@@ -1,0 +1,2689 @@
+{
+  "generated_at": "2026-05-15T18:40:43.364783+00:00",
+  "candidates": [
+    {
+      "candidate_id": "approval-backlog-explicit-gate",
+      "rule_id": "rule-approval-backlog-explicit-gate",
+      "title": "Approval-heavy work should stay staged and explicit",
+      "summary": "A non-trivial approval backlog is forming, so the team should keep packaging decisions clearly instead of letting them spill into ambiguous interruptions.",
+      "kind": "approval-backlog",
+      "status": "promoted",
+      "domains": [
+        "approvals"
+      ],
+      "actors": [
+        "Chris",
+        "Rebekah"
+      ],
+      "agent_ids": [
+        "ambient-router",
+        "memory-curator"
+      ],
+      "evidence": {
+        "pending_count": 13,
+        "approved_count": 1,
+        "rejected_count": 2,
+        "highest_actor": "Chris",
+        "sample_size": 16
+      },
+      "policy_effects": {
+        "queue_bias": 1,
+        "require_explicit_approval": true
+      },
+      "promotion_reason": "A sustained approval queue is a direct signal that staging and explicit gates matter more than ad hoc interruption.",
+      "created_at": "2026-05-15T18:40:43.363168+00:00"
+    },
+    {
+      "candidate_id": "family-approval-domain-gate",
+      "rule_id": "rule-family-approval-domain-gate",
+      "title": "Family approvals should be packaged with domain-specific clarity",
+      "summary": "Family work is repeatedly landing in the approval queue, so the team should stage it with cleaner context and a stronger domain handoff.",
+      "kind": "domain-approval-posture",
+      "status": "promoted",
+      "domains": [
+        "family",
+        "approvals"
+      ],
+      "actors": [
+        "Chris",
+        "Rebekah"
+      ],
+      "agent_ids": [
+        "family-logistics",
+        "ambient-router"
+      ],
+      "evidence": {
+        "sample_size": 4,
+        "pending_count": 3,
+        "approved_count": 1,
+        "examples": [
+          "Draft a parent message about tonight's troop meeting",
+          "Move the grocery pickup and draft a parent text",
+          "Approve parent message to Troop parents about Indoor backup update"
+        ]
+      },
+      "policy_effects": {
+        "queue_bias": 1,
+        "require_explicit_approval": true
+      },
+      "promotion_reason": "Repeated family approval pressure suggests this lane needs clearer packaging before it reaches the human decision gate.",
+      "created_at": "2026-05-15T18:40:43.363181+00:00"
+    },
+    {
+      "candidate_id": "growth-approval-domain-gate",
+      "rule_id": "rule-growth-approval-domain-gate",
+      "title": "Growth approvals should be packaged with domain-specific clarity",
+      "summary": "Growth work is repeatedly landing in the approval queue, so the team should stage it with cleaner context and a stronger domain handoff.",
+      "kind": "domain-approval-posture",
+      "status": "promoted",
+      "domains": [
+        "growth",
+        "approvals"
+      ],
+      "actors": [
+        "Chris"
+      ],
+      "agent_ids": [
+        "catalyst-personal",
+        "executive-watch"
+      ],
+      "evidence": {
+        "sample_size": 4,
+        "pending_count": 4,
+        "approved_count": 0,
+        "examples": [
+          "what is on my calendar",
+          "what is on my calendar",
+          "There are tables in the document.  I want to make sure you can read them ok when I paste them in.\n\nDAILY FLOW OVERVIEW\n\nEstimated Time: 30\u201345 minutes\nGoal: Encounter Jesus. Internalize truth. Live transformed.\nMethod: Stillness \u2192 Story the Scripture \u2192 S.T.E.P.S. Journal \u2192 ACTS Prayer\n \n1. Start in Stillness (1\u20132 min)\nSettle your soul. Release distractions. Open the door to divine encounter.\n\nChoose a morning prayer to start.\n \n2. Read the Word \u2014 Story the Scripture\nYou\u2019re not just reading\u2014you\u2019re stepping into the story.\n\nHOW TO STORY THE SCRIPTURE\n\n1.\tRead the passage out loud\u2014twice\no\tFirst, for familiarity.\no\tSecond, for depth.\n2.\tUse these 7 storying prompts to enter the narrative:\n1.\tWho are the characters in the story?\n\uf0a7\tWhat roles do they play? What condition are they in?\n2.\tWho is God in this story?\n\uf0a7\tWhat does He say or do? What is He revealing about Himself?\n3.\tWho am I in this story?\n\uf0a7\tWhich character do I relate to today\u2014and why?\n4.\tWhat do the characters see, feel, hear, smell, fear, or long for?\n\uf0a7\tVisualize the scene. Engage your senses.\n5.\tWhere is the tension? The turning point? The hope?\n\uf0a7\tEvery story has a heartbeat. Where does God shift the scene?\n6.\tHow would I respond in the story?\n\uf0a7\tWould I hesitate or obey? Hide or come forward? Doubt or trust?\n7.\tRetell the story \u2014 my story.\n\uf0a7\tRetell the story of me.  This is my story, told in my own words.\n \n3. Reflect & Journal with S.T.E.P.S.\nUse these prompts to record your encounter:\nStep\tMeaning\tWhat to Write\nS\tScripture\tWrite out a key verse or phrase from the passage\nT\tTruths About God\tWhat does this passage/story reveal about God\u2019s nature?\nE\tExhortation/Example\tWhat command, warning, or example do I see?\nP\tPersonal Application\tWhat is God personally saying to me today?\nS\tSpirit-Led Prayer\tWrite a simple, honest prayer in response to your encounter with God\n \n4. Pray with ACTS\nUse the Daily Theme to focus your prayer, but move through ACTS:\nLetter\tFocus\tWhat to Pray\nA\tAdoration\tPraise God for who He is in today\u2019s story\nC\tConfession\tName any sin, distraction, or resistance you sensed\nT\tThanksgiving\tThank Him for His grace, Word, and presence\nS\tSupplication\tAsk for strength, wisdom, or breakthrough\u2014based on the day\u2019s theme and what you just experienced\n\nEnd your time with expectancy:\n\u201cLord, help me live today like this story is true.\u201d\n\u2003\n1 \u2013 Still My Heart\t2 \u2013 Fan the Flame\n\u201cJesus, I\u2019m here. In this moment, I set down the rush, the noise, and the weight. I lay my thoughts at Your feet. You are the Alpha and Omega. Speak, and I will listen. Teach me to love You again\u2014deeper, truer, fuller. This time belongs to You.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cOpen my eyes to Your Word. Awaken my soul to Your presence. Let the words of Scripture become life and light. Come, Holy Spirit\u2014guide me now.\u201d\t\u201cToday, Lord, I don\u2019t want stale religion. I want fresh fire. Rekindle my first love. Fan the flame of faith that the world has tried to smother. I want truth, not just routine. Presence, not just productivity. This is Your time\u2014stoke the fire in my soul.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cSpeak clearly, Lord. I am ready to be transformed by Your Word.\u201d\n3 \u2013 Lead Me In Your Truth\t4 \u2013 Come and Speak\n\u201cFather, lead me in Your truth and teach me. For You are the God of my salvation, and I wait for You all the day long. Let me not read for knowledge alone, but for intimacy. Show me Your ways. Let the whispers of Scripture quiet the shouts of the world. I am listening.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cHoly Spirit, bring insight. Jesus, bring transformation. Father, bring me closer.\u201d\t\u201cJesus, I quiet myself before You now.\nSpeak, Lord\u2014Your servant is listening.\nI don\u2019t want to miss Your voice.\nMore than answers, I want intimacy.\nMore than clarity, I want communion.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cHoly Spirit, breathe life into these pages.\nLet the Scripture speak louder than the noise.\nMay this time not just inform me\u2014but transform me.\u201d\n5 \u2013 Awaken the Watchman\t6 \u2013 Break Me Open\n\u201cAwaken me, Lord\u2014not just from sleep but from slumber.\nLet me rise as a watchman on the wall.\nSharpen my eyes. Steady my hands.\nI stand at attention for what You will say.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cGive me ears to hear Your whisper,\ncourage to obey Your leading,\nand the discipline to walk in Your ways.\u201d\t\u201cLord, I come to You not polished, not perfect, but open.\nBreak open the hard places.\nTill the soil of my soul.\nIf You must wound, let it be to heal.\nIf You must prune, let it be to bear fruit.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cSpeak into my pain, my pride, and my pretending.\nLet this time with You be real, rich, and refining.\u201d\n7 \u2013 Walk With Me Today\t8 \u2013 Your Will Be Done\n\u201cGood morning, Lord.\nAs the sun rises, so does my need for You.\nWalk with me through every thought, every decision, every breath.\nBe my Guide, my Counselor, my Joy.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cLet Your Word be a lamp for this day.\nLet Your presence interrupt my rush.\nI don\u2019t want to go through this day without You.\u201d\t\u201cNot my will, but Yours be done today.\nIn every conversation, every moment of silence, every surprise\u2014be Lord.\nI lay down my agenda and pick up Your cross.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cShow me what matters.\nTeach me to yield with joy.\nLet Your Kingdom come\u2014in me and through me.\u201d"
+        ]
+      },
+      "policy_effects": {
+        "queue_bias": 1,
+        "require_explicit_approval": true
+      },
+      "promotion_reason": "Repeated growth approval pressure suggests this lane needs clearer packaging before it reaches the human decision gate.",
+      "created_at": "2026-05-15T18:40:43.363184+00:00",
+      "promoted_at": "2026-05-15T15:45:41.057774+00:00",
+      "promoted_by": "assistant-autonomy"
+    },
+    {
+      "candidate_id": "approvals-explicit-gate",
+      "rule_id": "rule-approvals-explicit-gate",
+      "title": "External or sensitive moves should stay behind an explicit approval gate",
+      "summary": "Rejected approvals are evidence that the team should continue staging, not assuming, external or sensitive commitments.",
+      "kind": "approval-posture",
+      "status": "promoted",
+      "domains": [
+        "approvals"
+      ],
+      "actors": [
+        "Chris"
+      ],
+      "agent_ids": [
+        "ambient-router",
+        "memory-curator"
+      ],
+      "evidence": {
+        "rejected_count": 2,
+        "approved_count": 1,
+        "sample_size": 3
+      },
+      "policy_effects": {
+        "require_explicit_approval": true,
+        "queue_bias": 1
+      },
+      "promotion_reason": "Human rejection is a direct correction and should harden the approval gate.",
+      "created_at": "2026-05-15T18:40:43.363187+00:00",
+      "promoted_at": "2026-05-12T05:06:23.899817+00:00",
+      "promoted_by": "assistant-autonomy"
+    },
+    {
+      "candidate_id": "quiet-hours-queue-default",
+      "rule_id": "rule-quiet-hours-queue-default",
+      "title": "Quiet hours should default to queueing and non-interruption",
+      "summary": "Tick history shows that the overnight team naturally collapses toward minimal routing activity, which should remain the default posture.",
+      "kind": "quiet-hours-posture",
+      "status": "promoted",
+      "domains": [
+        "approvals",
+        "family",
+        "workshop",
+        "content",
+        "growth",
+        "memory"
+      ],
+      "actors": [
+        "Chris",
+        "Rebekah"
+      ],
+      "agent_ids": [
+        "ambient-router",
+        "memory-curator"
+      ],
+      "evidence": {
+        "quiet_hour_wakes": 15,
+        "safety_awakes": 0,
+        "sample_size": 80
+      },
+      "policy_effects": {
+        "interrupt_threshold_delta": 1,
+        "cooldown_delta_minutes": 20,
+        "queue_bias": 1
+      },
+      "promotion_reason": "Stable quiet-hour tick patterns are evidence that the system serves the household best by staying calm unless something truly matters.",
+      "created_at": "2026-05-15T18:40:43.363249+00:00"
+    },
+    {
+      "candidate_id": "shared-email-successful-intervention",
+      "rule_id": "rule-shared-email-successful-intervention",
+      "title": "Shared-Email successful interventions should become team practice",
+      "summary": "Shared-Email has repeated successful interventions, so the team should reuse the winning pattern instead of re-deriving it each time.",
+      "kind": "successful-intervention",
+      "status": "candidate",
+      "domains": [
+        "shared-email"
+      ],
+      "actors": [
+        "Chris"
+      ],
+      "agent_ids": [
+        "ambient-router"
+      ],
+      "evidence": {
+        "sample_size": 2,
+        "top_action": "stage-email-draft",
+        "actions": {
+          "stage-email-draft": 2
+        },
+        "examples": [
+          "Drafted reply for 'Checking in' in arena gmail.shared.drafts and queued principal review in read-only mailbox mode.",
+          "Drafted reply for 'Checking in' in arena gmail.shared.drafts, wrote it to Gmail drafts, and queued principal review."
+        ]
+      },
+      "policy_effects": {
+        "queue_bias": 0,
+        "cooldown_delta_minutes": -10
+      },
+      "promotion_reason": "Repeated successful shared-email interventions suggest there is now a stable reusable operating pattern.",
+      "created_at": "2026-05-15T18:40:43.363258+00:00"
+    },
+    {
+      "candidate_id": "correction-brief-responses",
+      "rule_id": "rule-correction-brief-responses",
+      "title": "Responses should stay brief and high-signal by default.",
+      "summary": "Responses should stay brief and high-signal by default.",
+      "kind": "response-style",
+      "status": "promoted",
+      "domains": [
+        "content",
+        "growth",
+        "family",
+        "approvals",
+        "memory"
+      ],
+      "actors": [
+        "Chris"
+      ],
+      "agent_ids": [
+        "catalyst-personal",
+        "executive-watch"
+      ],
+      "evidence": {
+        "sample_size": 16,
+        "examples": [
+          "give me a fast continuity check and keep it brief.",
+          "what should i focus on this morning? keep it brief.",
+          "what should i focus on this morning? keep it brief."
+        ]
+      },
+      "policy_effects": {
+        "queue_bias": 0,
+        "response_brief": true
+      },
+      "promotion_reason": "Recurring user correction language is a direct instruction and should shape doctrine.",
+      "created_at": "2026-05-15T18:40:43.363763+00:00"
+    },
+    {
+      "candidate_id": "correction-explicit-team-learning",
+      "rule_id": "rule-correction-explicit-team-learning",
+      "title": "Agents should share lessons and improve as a coordinated team, not as isolated workers.",
+      "summary": "Agents should share lessons and improve as a coordinated team, not as isolated workers.",
+      "kind": "team-learning",
+      "status": "promoted",
+      "domains": [
+        "content",
+        "growth",
+        "family",
+        "approvals",
+        "memory"
+      ],
+      "actors": [
+        "Chris"
+      ],
+      "agent_ids": [
+        "catalyst-personal",
+        "executive-watch"
+      ],
+      "evidence": {
+        "sample_size": 2,
+        "examples": [
+          "play database management all that is what team has done in the past",
+          "play database management all that is what team has done in the past"
+        ]
+      },
+      "policy_effects": {
+        "queue_bias": 0
+      },
+      "promotion_reason": "Recurring user correction language is a direct instruction and should shape doctrine.",
+      "created_at": "2026-05-15T18:40:43.363765+00:00",
+      "promoted_at": "2026-05-15T15:45:41.062577+00:00",
+      "promoted_by": "assistant-autonomy"
+    },
+    {
+      "candidate_id": "handoff-ambient-router-to-home-ops",
+      "rule_id": "rule-handoff-ambient-router-to-home-ops",
+      "title": "ambient-router should degrade gracefully when home-ops is blocked",
+      "summary": "Cross-agent handoff quality should stay honest when home-ops cannot complete its side of the work.",
+      "kind": "handoff-quality",
+      "status": "promoted",
+      "domains": [
+        "safety"
+      ],
+      "actors": [
+        "Chris",
+        "Rebekah"
+      ],
+      "agent_ids": [
+        "watchtower",
+        "home-ops",
+        "storm"
+      ],
+      "evidence": {
+        "source_awake_count": 80,
+        "blocked_count": 80,
+        "sample_size": 80
+      },
+      "policy_effects": {
+        "queue_bias": 1
+      },
+      "promotion_reason": "Repeated blocked handoffs should teach the team to degrade honestly instead of implying a downstream capability is available.",
+      "created_at": "2026-05-15T18:40:43.363905+00:00"
+    },
+    {
+      "candidate_id": "handoff-ambient-router-to-watchtower",
+      "rule_id": "rule-handoff-ambient-router-to-watchtower",
+      "title": "ambient-router should degrade gracefully when watchtower is blocked",
+      "summary": "Cross-agent handoff quality should stay honest when watchtower cannot complete its side of the work.",
+      "kind": "handoff-quality",
+      "status": "promoted",
+      "domains": [
+        "safety"
+      ],
+      "actors": [
+        "Chris",
+        "Rebekah"
+      ],
+      "agent_ids": [
+        "watchtower",
+        "home-ops",
+        "storm"
+      ],
+      "evidence": {
+        "source_awake_count": 80,
+        "blocked_count": 80,
+        "sample_size": 80
+      },
+      "policy_effects": {
+        "queue_bias": 1
+      },
+      "promotion_reason": "Repeated blocked handoffs should teach the team to degrade honestly instead of implying a downstream capability is available.",
+      "created_at": "2026-05-15T18:40:43.363908+00:00"
+    },
+    {
+      "candidate_id": "handoff-family-logistics-to-home-ops",
+      "rule_id": "rule-handoff-family-logistics-to-home-ops",
+      "title": "family-logistics should degrade gracefully when home-ops is blocked",
+      "summary": "Cross-agent handoff quality should stay honest when home-ops cannot complete its side of the work.",
+      "kind": "handoff-quality",
+      "status": "promoted",
+      "domains": [
+        "safety"
+      ],
+      "actors": [
+        "Chris",
+        "Rebekah"
+      ],
+      "agent_ids": [
+        "watchtower",
+        "home-ops",
+        "storm"
+      ],
+      "evidence": {
+        "source_awake_count": 65,
+        "blocked_count": 80,
+        "sample_size": 80
+      },
+      "policy_effects": {
+        "queue_bias": 1
+      },
+      "promotion_reason": "Repeated blocked handoffs should teach the team to degrade honestly instead of implying a downstream capability is available.",
+      "created_at": "2026-05-15T18:40:43.363911+00:00",
+      "promoted_at": "2026-05-15T15:45:41.064693+00:00",
+      "promoted_by": "assistant-autonomy"
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "rule-approval-backlog-explicit-gate",
+      "source_candidate_id": "approval-backlog-explicit-gate",
+      "title": "Approval-heavy work should stay staged and explicit",
+      "summary": "A non-trivial approval backlog is forming, so the team should keep packaging decisions clearly instead of letting them spill into ambiguous interruptions.",
+      "kind": "approval-backlog",
+      "status": "active",
+      "domains": [
+        "approvals"
+      ],
+      "agent_ids": [
+        "ambient-router",
+        "memory-curator"
+      ],
+      "actors": [
+        "Chris",
+        "Rebekah"
+      ],
+      "policy_effects": {
+        "queue_bias": 1,
+        "require_explicit_approval": true
+      },
+      "evidence": {
+        "pending_count": 9,
+        "approved_count": 1,
+        "rejected_count": 0,
+        "highest_actor": "Chris",
+        "sample_size": 10
+      },
+      "promotion_basis": "A sustained approval queue is a direct signal that staging and explicit gates matter more than ad hoc interruption.",
+      "promoted_at": "2026-05-12T02:42:51.695584+00:00",
+      "promoted_by": "verification"
+    },
+    {
+      "rule_id": "rule-quiet-hours-queue-default",
+      "source_candidate_id": "quiet-hours-queue-default",
+      "title": "Quiet hours should default to queueing and non-interruption",
+      "summary": "Tick history shows that the overnight team naturally collapses toward minimal routing activity, which should remain the default posture.",
+      "kind": "quiet-hours-posture",
+      "status": "active",
+      "domains": [
+        "approvals",
+        "family",
+        "workshop",
+        "content",
+        "growth",
+        "memory"
+      ],
+      "agent_ids": [
+        "ambient-router",
+        "memory-curator"
+      ],
+      "actors": [
+        "Chris",
+        "Rebekah"
+      ],
+      "policy_effects": {
+        "interrupt_threshold_delta": 1,
+        "cooldown_delta_minutes": 20,
+        "queue_bias": 1
+      },
+      "evidence": {
+        "quiet_hour_wakes": 80,
+        "safety_awakes": 0,
+        "sample_size": 80
+      },
+      "promotion_basis": "Stable quiet-hour tick patterns are evidence that the system serves the household best by staying calm unless something truly matters.",
+      "promoted_at": "2026-05-12T02:42:51.695991+00:00",
+      "promoted_by": "verification"
+    },
+    {
+      "rule_id": "rule-family-approval-domain-gate",
+      "source_candidate_id": "family-approval-domain-gate",
+      "title": "Family approvals should be packaged with domain-specific clarity",
+      "summary": "Family work is repeatedly landing in the approval queue, so the team should stage it with cleaner context and a stronger domain handoff.",
+      "kind": "domain-approval-posture",
+      "status": "active",
+      "domains": [
+        "family",
+        "approvals"
+      ],
+      "agent_ids": [
+        "family-logistics",
+        "ambient-router"
+      ],
+      "actors": [
+        "Chris",
+        "Rebekah"
+      ],
+      "policy_effects": {
+        "queue_bias": 1,
+        "require_explicit_approval": true
+      },
+      "evidence": {
+        "sample_size": 4,
+        "pending_count": 3,
+        "approved_count": 1,
+        "examples": [
+          "Draft a parent message about tonight's troop meeting",
+          "Move the grocery pickup and draft a parent text",
+          "Approve parent message to Troop parents about Indoor backup update"
+        ]
+      },
+      "promotion_basis": "Repeated family approval pressure suggests this lane needs clearer packaging before it reaches the human decision gate.",
+      "promoted_at": "2026-05-12T03:01:58.680255+00:00",
+      "promoted_by": "system"
+    },
+    {
+      "rule_id": "rule-correction-brief-responses",
+      "source_candidate_id": "correction-brief-responses",
+      "title": "Responses should stay brief and high-signal by default.",
+      "summary": "Responses should stay brief and high-signal by default.",
+      "kind": "response-style",
+      "status": "active",
+      "domains": [
+        "content",
+        "growth",
+        "family",
+        "approvals",
+        "memory"
+      ],
+      "agent_ids": [
+        "catalyst-personal",
+        "executive-watch"
+      ],
+      "actors": [
+        "Chris"
+      ],
+      "policy_effects": {
+        "queue_bias": 0,
+        "response_brief": true
+      },
+      "evidence": {
+        "sample_size": 14,
+        "examples": [
+          "what should i focus on this morning? keep it brief.",
+          "what should i focus on this morning? keep it brief.",
+          "what do i need to focus on this morning? keep it brief."
+        ]
+      },
+      "promotion_basis": "Recurring user correction language is a direct instruction and should shape doctrine.",
+      "promoted_at": "2026-05-12T03:01:58.681443+00:00",
+      "promoted_by": "system"
+    },
+    {
+      "rule_id": "rule-handoff-ambient-router-to-home-ops",
+      "source_candidate_id": "handoff-ambient-router-to-home-ops",
+      "title": "ambient-router should degrade gracefully when home-ops is blocked",
+      "summary": "Cross-agent handoff quality should stay honest when home-ops cannot complete its side of the work.",
+      "kind": "handoff-quality",
+      "status": "active",
+      "domains": [
+        "safety"
+      ],
+      "agent_ids": [
+        "watchtower",
+        "home-ops",
+        "storm"
+      ],
+      "actors": [
+        "Chris",
+        "Rebekah"
+      ],
+      "policy_effects": {
+        "queue_bias": 1
+      },
+      "evidence": {
+        "source_awake_count": 80,
+        "blocked_count": 80,
+        "sample_size": 80
+      },
+      "promotion_basis": "Repeated blocked handoffs should teach the team to degrade honestly instead of implying a downstream capability is available.",
+      "promoted_at": "2026-05-12T03:01:58.682991+00:00",
+      "promoted_by": "system"
+    },
+    {
+      "rule_id": "rule-handoff-ambient-router-to-watchtower",
+      "source_candidate_id": "handoff-ambient-router-to-watchtower",
+      "title": "ambient-router should degrade gracefully when watchtower is blocked",
+      "summary": "Cross-agent handoff quality should stay honest when watchtower cannot complete its side of the work.",
+      "kind": "handoff-quality",
+      "status": "active",
+      "domains": [
+        "safety"
+      ],
+      "agent_ids": [
+        "watchtower",
+        "home-ops",
+        "storm"
+      ],
+      "actors": [
+        "Chris",
+        "Rebekah"
+      ],
+      "policy_effects": {
+        "queue_bias": 1
+      },
+      "evidence": {
+        "source_awake_count": 80,
+        "blocked_count": 80,
+        "sample_size": 80
+      },
+      "promotion_basis": "Repeated blocked handoffs should teach the team to degrade honestly instead of implying a downstream capability is available.",
+      "promoted_at": "2026-05-12T03:01:58.684297+00:00",
+      "promoted_by": "system"
+    },
+    {
+      "rule_id": "rule-approvals-explicit-gate",
+      "source_candidate_id": "approvals-explicit-gate",
+      "title": "External or sensitive moves should stay behind an explicit approval gate",
+      "summary": "Rejected approvals are evidence that the team should continue staging, not assuming, external or sensitive commitments.",
+      "kind": "approval-posture",
+      "status": "active",
+      "domains": [
+        "approvals"
+      ],
+      "agent_ids": [
+        "ambient-router",
+        "memory-curator"
+      ],
+      "actors": [
+        "Chris"
+      ],
+      "policy_effects": {
+        "require_explicit_approval": true,
+        "queue_bias": 1
+      },
+      "evidence": {
+        "rejected_count": 2,
+        "approved_count": 1,
+        "sample_size": 3
+      },
+      "promotion_basis": "Human rejection is a direct correction and should harden the approval gate.",
+      "promoted_at": "2026-05-12T05:06:23.899817+00:00",
+      "promoted_by": "assistant-autonomy"
+    },
+    {
+      "rule_id": "rule-growth-earlier-follow-up",
+      "source_candidate_id": "growth-earlier-follow-up",
+      "title": "Growth should not be allowed to go stale",
+      "summary": "Growth is generating stale or late outcomes, so the team should tighten follow-up timing.",
+      "kind": "staleness-guard",
+      "status": "active",
+      "domains": [
+        "growth"
+      ],
+      "agent_ids": [
+        "catalyst-personal",
+        "executive-watch"
+      ],
+      "actors": [
+        "Chris"
+      ],
+      "policy_effects": {
+        "interrupt_threshold_delta": -1,
+        "cooldown_delta_minutes": -15
+      },
+      "evidence": {
+        "sample_size": 4,
+        "acted": 0,
+        "ignored": 0,
+        "expired": 0,
+        "right_time": 0,
+        "too_early": 0,
+        "too_late": 3,
+        "friction": 0,
+        "tick_support": 0
+      },
+      "promotion_basis": "Late outcomes suggest this lane needs earlier follow-up and less delay.",
+      "promoted_at": "2026-05-15T13:28:12.869805+00:00",
+      "promoted_by": "assistant-autonomy"
+    },
+    {
+      "rule_id": "rule-growth-approval-domain-gate",
+      "source_candidate_id": "growth-approval-domain-gate",
+      "title": "Growth approvals should be packaged with domain-specific clarity",
+      "summary": "Growth work is repeatedly landing in the approval queue, so the team should stage it with cleaner context and a stronger domain handoff.",
+      "kind": "domain-approval-posture",
+      "status": "active",
+      "domains": [
+        "growth",
+        "approvals"
+      ],
+      "agent_ids": [
+        "catalyst-personal",
+        "executive-watch"
+      ],
+      "actors": [
+        "Chris"
+      ],
+      "policy_effects": {
+        "queue_bias": 1,
+        "require_explicit_approval": true
+      },
+      "evidence": {
+        "sample_size": 4,
+        "pending_count": 4,
+        "approved_count": 0,
+        "examples": [
+          "what is on my calendar",
+          "what is on my calendar",
+          "There are tables in the document.  I want to make sure you can read them ok when I paste them in.\n\nDAILY FLOW OVERVIEW\n\nEstimated Time: 30\u201345 minutes\nGoal: Encounter Jesus. Internalize truth. Live transformed.\nMethod: Stillness \u2192 Story the Scripture \u2192 S.T.E.P.S. Journal \u2192 ACTS Prayer\n \n1. Start in Stillness (1\u20132 min)\nSettle your soul. Release distractions. Open the door to divine encounter.\n\nChoose a morning prayer to start.\n \n2. Read the Word \u2014 Story the Scripture\nYou\u2019re not just reading\u2014you\u2019re stepping into the story.\n\nHOW TO STORY THE SCRIPTURE\n\n1.\tRead the passage out loud\u2014twice\no\tFirst, for familiarity.\no\tSecond, for depth.\n2.\tUse these 7 storying prompts to enter the narrative:\n1.\tWho are the characters in the story?\n\uf0a7\tWhat roles do they play? What condition are they in?\n2.\tWho is God in this story?\n\uf0a7\tWhat does He say or do? What is He revealing about Himself?\n3.\tWho am I in this story?\n\uf0a7\tWhich character do I relate to today\u2014and why?\n4.\tWhat do the characters see, feel, hear, smell, fear, or long for?\n\uf0a7\tVisualize the scene. Engage your senses.\n5.\tWhere is the tension? The turning point? The hope?\n\uf0a7\tEvery story has a heartbeat. Where does God shift the scene?\n6.\tHow would I respond in the story?\n\uf0a7\tWould I hesitate or obey? Hide or come forward? Doubt or trust?\n7.\tRetell the story \u2014 my story.\n\uf0a7\tRetell the story of me.  This is my story, told in my own words.\n \n3. Reflect & Journal with S.T.E.P.S.\nUse these prompts to record your encounter:\nStep\tMeaning\tWhat to Write\nS\tScripture\tWrite out a key verse or phrase from the passage\nT\tTruths About God\tWhat does this passage/story reveal about God\u2019s nature?\nE\tExhortation/Example\tWhat command, warning, or example do I see?\nP\tPersonal Application\tWhat is God personally saying to me today?\nS\tSpirit-Led Prayer\tWrite a simple, honest prayer in response to your encounter with God\n \n4. Pray with ACTS\nUse the Daily Theme to focus your prayer, but move through ACTS:\nLetter\tFocus\tWhat to Pray\nA\tAdoration\tPraise God for who He is in today\u2019s story\nC\tConfession\tName any sin, distraction, or resistance you sensed\nT\tThanksgiving\tThank Him for His grace, Word, and presence\nS\tSupplication\tAsk for strength, wisdom, or breakthrough\u2014based on the day\u2019s theme and what you just experienced\n\nEnd your time with expectancy:\n\u201cLord, help me live today like this story is true.\u201d\n\u2003\n1 \u2013 Still My Heart\t2 \u2013 Fan the Flame\n\u201cJesus, I\u2019m here. In this moment, I set down the rush, the noise, and the weight. I lay my thoughts at Your feet. You are the Alpha and Omega. Speak, and I will listen. Teach me to love You again\u2014deeper, truer, fuller. This time belongs to You.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cOpen my eyes to Your Word. Awaken my soul to Your presence. Let the words of Scripture become life and light. Come, Holy Spirit\u2014guide me now.\u201d\t\u201cToday, Lord, I don\u2019t want stale religion. I want fresh fire. Rekindle my first love. Fan the flame of faith that the world has tried to smother. I want truth, not just routine. Presence, not just productivity. This is Your time\u2014stoke the fire in my soul.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cSpeak clearly, Lord. I am ready to be transformed by Your Word.\u201d\n3 \u2013 Lead Me In Your Truth\t4 \u2013 Come and Speak\n\u201cFather, lead me in Your truth and teach me. For You are the God of my salvation, and I wait for You all the day long. Let me not read for knowledge alone, but for intimacy. Show me Your ways. Let the whispers of Scripture quiet the shouts of the world. I am listening.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cHoly Spirit, bring insight. Jesus, bring transformation. Father, bring me closer.\u201d\t\u201cJesus, I quiet myself before You now.\nSpeak, Lord\u2014Your servant is listening.\nI don\u2019t want to miss Your voice.\nMore than answers, I want intimacy.\nMore than clarity, I want communion.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cHoly Spirit, breathe life into these pages.\nLet the Scripture speak louder than the noise.\nMay this time not just inform me\u2014but transform me.\u201d\n5 \u2013 Awaken the Watchman\t6 \u2013 Break Me Open\n\u201cAwaken me, Lord\u2014not just from sleep but from slumber.\nLet me rise as a watchman on the wall.\nSharpen my eyes. Steady my hands.\nI stand at attention for what You will say.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cGive me ears to hear Your whisper,\ncourage to obey Your leading,\nand the discipline to walk in Your ways.\u201d\t\u201cLord, I come to You not polished, not perfect, but open.\nBreak open the hard places.\nTill the soil of my soul.\nIf You must wound, let it be to heal.\nIf You must prune, let it be to bear fruit.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cSpeak into my pain, my pride, and my pretending.\nLet this time with You be real, rich, and refining.\u201d\n7 \u2013 Walk With Me Today\t8 \u2013 Your Will Be Done\n\u201cGood morning, Lord.\nAs the sun rises, so does my need for You.\nWalk with me through every thought, every decision, every breath.\nBe my Guide, my Counselor, my Joy.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cLet Your Word be a lamp for this day.\nLet Your presence interrupt my rush.\nI don\u2019t want to go through this day without You.\u201d\t\u201cNot my will, but Yours be done today.\nIn every conversation, every moment of silence, every surprise\u2014be Lord.\nI lay down my agenda and pick up Your cross.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cShow me what matters.\nTeach me to yield with joy.\nLet Your Kingdom come\u2014in me and through me.\u201d"
+        ]
+      },
+      "promotion_basis": "Repeated growth approval pressure suggests this lane needs clearer packaging before it reaches the human decision gate.",
+      "promoted_at": "2026-05-15T15:45:41.057774+00:00",
+      "promoted_by": "assistant-autonomy"
+    },
+    {
+      "rule_id": "rule-correction-explicit-team-learning",
+      "source_candidate_id": "correction-explicit-team-learning",
+      "title": "Agents should share lessons and improve as a coordinated team, not as isolated workers.",
+      "summary": "Agents should share lessons and improve as a coordinated team, not as isolated workers.",
+      "kind": "team-learning",
+      "status": "active",
+      "domains": [
+        "content",
+        "growth",
+        "family",
+        "approvals",
+        "memory"
+      ],
+      "agent_ids": [
+        "catalyst-personal",
+        "executive-watch"
+      ],
+      "actors": [
+        "Chris"
+      ],
+      "policy_effects": {
+        "queue_bias": 0
+      },
+      "evidence": {
+        "sample_size": 2,
+        "examples": [
+          "play database management all that is what team has done in the past",
+          "play database management all that is what team has done in the past"
+        ]
+      },
+      "promotion_basis": "Recurring user correction language is a direct instruction and should shape doctrine.",
+      "promoted_at": "2026-05-15T15:45:41.062577+00:00",
+      "promoted_by": "assistant-autonomy"
+    },
+    {
+      "rule_id": "rule-handoff-family-logistics-to-home-ops",
+      "source_candidate_id": "handoff-family-logistics-to-home-ops",
+      "title": "family-logistics should degrade gracefully when home-ops is blocked",
+      "summary": "Cross-agent handoff quality should stay honest when home-ops cannot complete its side of the work.",
+      "kind": "handoff-quality",
+      "status": "active",
+      "domains": [
+        "safety"
+      ],
+      "agent_ids": [
+        "watchtower",
+        "home-ops",
+        "storm"
+      ],
+      "actors": [
+        "Chris",
+        "Rebekah"
+      ],
+      "policy_effects": {
+        "queue_bias": 1
+      },
+      "evidence": {
+        "source_awake_count": 46,
+        "blocked_count": 80,
+        "sample_size": 80
+      },
+      "promotion_basis": "Repeated blocked handoffs should teach the team to degrade honestly instead of implying a downstream capability is available.",
+      "promoted_at": "2026-05-15T15:45:41.064693+00:00",
+      "promoted_by": "assistant-autonomy"
+    }
+  ],
+  "history": [
+    {
+      "timestamp": "2026-05-14T22:14:52.744529+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-14T22:14:52.743922+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-14T22:25:27.837857+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-14T22:25:27.837356+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-14T22:36:02.780893+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-14T22:36:02.780410+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-14T22:46:37.989285+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-14T22:46:37.988783+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-14T22:57:16.848293+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-14T22:57:16.847773+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-14T23:07:50.438250+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-14T23:07:50.437671+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-14T23:18:24.852383+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-14T23:18:24.851827+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-14T23:29:00.073402+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-14T23:29:00.072884+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-14T23:39:36.038558+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-14T23:39:36.038056+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-14T23:50:12.555685+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-14T23:50:12.555124+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T00:01:16.321915+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T00:01:16.321363+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T00:11:52.635541+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T00:11:52.634986+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T00:22:27.843433+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T00:22:27.842935+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T00:33:01.036653+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T00:33:01.036069+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T00:43:35.585340+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T00:43:35.584838+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T00:54:13.815746+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T00:54:13.815262+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T01:04:49.907343+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T01:04:49.906787+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T01:15:25.798574+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T01:15:25.798064+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T01:26:01.787661+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T01:26:01.787144+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T01:36:36.989826+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T01:36:36.989326+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T01:47:12.403184+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T01:47:12.402636+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T01:57:45.981964+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T01:57:45.981377+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T02:08:20.258868+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T02:08:20.258082+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T02:20:04.317306+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T02:20:04.316185+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T02:31:10.632038+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T02:31:10.631096+00:00",
+        "sources": {
+          "outcomes": 1,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T02:41:48.370134+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T02:41:48.369540+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T02:52:24.019002+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T02:52:24.018239+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T03:03:08.443406+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T03:03:08.442052+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T03:13:43.795157+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T03:13:43.794537+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T03:24:18.986329+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T03:24:18.985192+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T03:34:55.095810+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T03:34:55.095054+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T03:45:30.301267+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T03:45:30.300559+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T03:56:07.275773+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T03:56:07.274972+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T04:06:49.252590+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T04:06:49.251462+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T04:17:22.480993+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T04:17:22.480458+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T04:27:57.661326+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T04:27:57.660778+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T04:38:33.136953+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T04:38:33.136305+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T04:49:07.237011+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T04:49:07.236529+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T04:59:39.889143+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T04:59:39.888626+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T05:10:13.256301+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T05:10:13.255802+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T05:20:45.955625+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T05:20:45.955117+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T05:31:20.262850+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T05:31:20.262341+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T05:41:53.880892+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T05:41:53.880389+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T05:52:27.768476+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T05:52:27.767984+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T06:03:02.406987+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T06:03:02.406499+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T06:13:35.419071+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T06:13:35.418580+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T06:24:08.259598+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T06:24:08.259048+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T06:34:42.220312+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T06:34:42.219799+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T06:45:17.295345+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T06:45:17.294784+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T06:55:49.685724+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T06:55:49.685219+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T07:06:23.674154+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T07:06:23.673643+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T07:16:57.841015+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T07:16:57.840466+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T07:27:31.390919+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T07:27:31.390394+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T07:38:06.479977+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T07:38:06.479480+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T07:48:40.309500+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T07:48:40.309008+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T07:59:13.892899+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T07:59:13.892390+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T08:09:47.652590+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T08:09:47.652085+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T08:20:22.027289+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T08:20:22.026786+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T08:30:57.104231+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T08:30:57.103736+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T08:41:31.551950+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T08:41:31.551451+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T08:52:06.383121+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T08:52:06.382642+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T09:02:40.742012+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T09:02:40.741513+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T09:13:15.127882+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T09:13:15.127355+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T09:23:49.799828+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T09:23:49.799314+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T09:34:23.678833+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T09:34:23.678330+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T09:44:58.011263+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T09:44:58.010735+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T09:55:31.845077+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T09:55:31.844575+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T10:06:07.258959+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T10:06:07.258458+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T10:16:41.471999+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T10:16:41.471501+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T10:27:16.697421+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T10:27:16.696925+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T10:37:50.398807+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T10:37:50.398309+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T10:48:25.442338+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T10:48:25.441843+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T10:58:58.816258+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T10:58:58.815755+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T11:09:52.926897+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T11:09:52.926411+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T11:20:27.253366+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T11:20:27.252875+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T11:31:01.227231+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T11:31:01.226738+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T11:41:36.423260+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T11:41:36.422752+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T11:52:10.781512+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T11:52:10.780960+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T12:02:45.946674+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T12:02:45.946136+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T12:13:21.022595+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T12:13:21.022097+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T12:23:54.649437+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T12:23:54.648955+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T12:34:29.649077+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T12:34:29.648521+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T12:45:24.227255+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T12:45:24.226750+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T12:56:15.009129+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T12:56:15.008621+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T13:06:49.650530+00:00",
+      "event": "synthesized",
+      "candidate_count": 1,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T13:06:49.649996+00:00",
+        "sources": {
+          "outcomes": 2,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-05-15T13:17:32.850238+00:00",
+      "event": "synthesized",
+      "candidate_count": 2,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T13:17:32.848919+00:00",
+        "sources": {
+          "outcomes": 3,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 2
+      }
+    },
+    {
+      "timestamp": "2026-05-15T13:28:12.866932+00:00",
+      "event": "synthesized",
+      "candidate_count": 2,
+      "rule_count": 7,
+      "meta": {
+        "generated_at": "2026-05-15T13:28:12.865584+00:00",
+        "sources": {
+          "outcomes": 4,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 2
+      }
+    },
+    {
+      "timestamp": "2026-05-15T13:28:12.869805+00:00",
+      "event": "promoted",
+      "candidate_id": "growth-earlier-follow-up",
+      "rule_id": "rule-growth-earlier-follow-up",
+      "promoted_by": "assistant-autonomy",
+      "basis": "Late outcomes suggest this lane needs earlier follow-up and less delay."
+    },
+    {
+      "timestamp": "2026-05-15T13:38:53.974549+00:00",
+      "event": "synthesized",
+      "candidate_count": 2,
+      "rule_count": 8,
+      "meta": {
+        "generated_at": "2026-05-15T13:38:53.972604+00:00",
+        "sources": {
+          "outcomes": 5,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 2
+      }
+    },
+    {
+      "timestamp": "2026-05-15T13:49:37.653130+00:00",
+      "event": "synthesized",
+      "candidate_count": 2,
+      "rule_count": 8,
+      "meta": {
+        "generated_at": "2026-05-15T13:49:37.652329+00:00",
+        "sources": {
+          "outcomes": 5,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 2
+      }
+    },
+    {
+      "timestamp": "2026-05-15T14:00:52.951978+00:00",
+      "event": "synthesized",
+      "candidate_count": 2,
+      "rule_count": 8,
+      "meta": {
+        "generated_at": "2026-05-15T14:00:52.949039+00:00",
+        "sources": {
+          "outcomes": 5,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 1
+        },
+        "candidate_count": 2
+      }
+    },
+    {
+      "timestamp": "2026-05-15T14:12:49.229626+00:00",
+      "event": "synthesized",
+      "candidate_count": 2,
+      "rule_count": 8,
+      "meta": {
+        "generated_at": "2026-05-15T14:12:49.229058+00:00",
+        "sources": {
+          "outcomes": 5,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 2
+        },
+        "candidate_count": 2
+      }
+    },
+    {
+      "timestamp": "2026-05-15T14:24:44.334165+00:00",
+      "event": "synthesized",
+      "candidate_count": 2,
+      "rule_count": 8,
+      "meta": {
+        "generated_at": "2026-05-15T14:24:44.333642+00:00",
+        "sources": {
+          "outcomes": 5,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 2
+        },
+        "candidate_count": 2
+      }
+    },
+    {
+      "timestamp": "2026-05-15T14:36:40.603959+00:00",
+      "event": "synthesized",
+      "candidate_count": 2,
+      "rule_count": 8,
+      "meta": {
+        "generated_at": "2026-05-15T14:36:40.603418+00:00",
+        "sources": {
+          "outcomes": 5,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 2
+        },
+        "candidate_count": 2
+      }
+    },
+    {
+      "timestamp": "2026-05-15T14:48:37.706083+00:00",
+      "event": "synthesized",
+      "candidate_count": 2,
+      "rule_count": 8,
+      "meta": {
+        "generated_at": "2026-05-15T14:48:37.705498+00:00",
+        "sources": {
+          "outcomes": 5,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 2
+        },
+        "candidate_count": 2
+      }
+    },
+    {
+      "timestamp": "2026-05-15T15:00:43.288105+00:00",
+      "event": "synthesized",
+      "candidate_count": 2,
+      "rule_count": 8,
+      "meta": {
+        "generated_at": "2026-05-15T15:00:43.287561+00:00",
+        "sources": {
+          "outcomes": 5,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 2
+        },
+        "candidate_count": 2
+      }
+    },
+    {
+      "timestamp": "2026-05-15T15:12:38.433156+00:00",
+      "event": "synthesized",
+      "candidate_count": 2,
+      "rule_count": 8,
+      "meta": {
+        "generated_at": "2026-05-15T15:12:38.432611+00:00",
+        "sources": {
+          "outcomes": 5,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 2
+        },
+        "candidate_count": 2
+      }
+    },
+    {
+      "timestamp": "2026-05-15T15:24:34.552478+00:00",
+      "event": "synthesized",
+      "candidate_count": 2,
+      "rule_count": 8,
+      "meta": {
+        "generated_at": "2026-05-15T15:24:34.551948+00:00",
+        "sources": {
+          "outcomes": 5,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 2
+        },
+        "candidate_count": 2
+      }
+    },
+    {
+      "timestamp": "2026-05-15T15:36:33.779120+00:00",
+      "event": "synthesized",
+      "candidate_count": 2,
+      "rule_count": 8,
+      "meta": {
+        "generated_at": "2026-05-15T15:36:33.778505+00:00",
+        "sources": {
+          "outcomes": 5,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 2
+        },
+        "candidate_count": 2
+      }
+    },
+    {
+      "timestamp": "2026-05-15T15:45:41.053990+00:00",
+      "event": "synthesized",
+      "candidate_count": 12,
+      "rule_count": 8,
+      "meta": {
+        "generated_at": "2026-05-15T15:45:41.053027+00:00",
+        "sources": {
+          "outcomes": 6,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 3,
+          "plans": 131,
+          "responses": 125
+        },
+        "candidate_count": 12
+      }
+    },
+    {
+      "timestamp": "2026-05-15T15:45:41.057774+00:00",
+      "event": "promoted",
+      "candidate_id": "growth-approval-domain-gate",
+      "rule_id": "rule-growth-approval-domain-gate",
+      "promoted_by": "assistant-autonomy",
+      "basis": "Repeated growth approval pressure suggests this lane needs clearer packaging before it reaches the human decision gate."
+    },
+    {
+      "timestamp": "2026-05-15T15:45:41.062577+00:00",
+      "event": "promoted",
+      "candidate_id": "correction-explicit-team-learning",
+      "rule_id": "rule-correction-explicit-team-learning",
+      "promoted_by": "assistant-autonomy",
+      "basis": "Recurring user correction language is a direct instruction and should shape doctrine."
+    },
+    {
+      "timestamp": "2026-05-15T15:45:41.064693+00:00",
+      "event": "promoted",
+      "candidate_id": "handoff-family-logistics-to-home-ops",
+      "rule_id": "rule-handoff-family-logistics-to-home-ops",
+      "promoted_by": "assistant-autonomy",
+      "basis": "Repeated blocked handoffs should teach the team to degrade honestly instead of implying a downstream capability is available."
+    },
+    {
+      "timestamp": "2026-05-15T15:49:35.821390+00:00",
+      "event": "synthesized",
+      "candidate_count": 12,
+      "rule_count": 11,
+      "meta": {
+        "generated_at": "2026-05-15T15:49:35.820088+00:00",
+        "sources": {
+          "outcomes": 6,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 3,
+          "plans": 131,
+          "responses": 125
+        },
+        "candidate_count": 12
+      }
+    },
+    {
+      "timestamp": "2026-05-15T16:01:34.392609+00:00",
+      "event": "synthesized",
+      "candidate_count": 11,
+      "rule_count": 11,
+      "meta": {
+        "generated_at": "2026-05-15T16:01:34.391769+00:00",
+        "sources": {
+          "outcomes": 0,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 3,
+          "plans": 137,
+          "responses": 130
+        },
+        "candidate_count": 11
+      }
+    },
+    {
+      "timestamp": "2026-05-15T16:05:14.787481+00:00",
+      "event": "synthesized",
+      "candidate_count": 11,
+      "rule_count": 11,
+      "meta": {
+        "generated_at": "2026-05-15T16:05:14.786586+00:00",
+        "sources": {
+          "outcomes": 0,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 3,
+          "plans": 137,
+          "responses": 130
+        },
+        "candidate_count": 11
+      }
+    },
+    {
+      "timestamp": "2026-05-15T16:14:53.664755+00:00",
+      "event": "synthesized",
+      "candidate_count": 11,
+      "rule_count": 11,
+      "meta": {
+        "generated_at": "2026-05-15T16:14:53.661550+00:00",
+        "sources": {
+          "outcomes": 0,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 3,
+          "plans": 137,
+          "responses": 130
+        },
+        "candidate_count": 11
+      }
+    },
+    {
+      "timestamp": "2026-05-15T16:17:50.171715+00:00",
+      "event": "synthesized",
+      "candidate_count": 11,
+      "rule_count": 11,
+      "meta": {
+        "generated_at": "2026-05-15T16:17:50.169389+00:00",
+        "sources": {
+          "outcomes": 0,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 3,
+          "plans": 137,
+          "responses": 130
+        },
+        "candidate_count": 11
+      }
+    },
+    {
+      "timestamp": "2026-05-15T16:29:44.697852+00:00",
+      "event": "synthesized",
+      "candidate_count": 11,
+      "rule_count": 11,
+      "meta": {
+        "generated_at": "2026-05-15T16:29:44.695821+00:00",
+        "sources": {
+          "outcomes": 0,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 3,
+          "plans": 137,
+          "responses": 130
+        },
+        "candidate_count": 11
+      }
+    },
+    {
+      "timestamp": "2026-05-15T16:41:38.459744+00:00",
+      "event": "synthesized",
+      "candidate_count": 11,
+      "rule_count": 11,
+      "meta": {
+        "generated_at": "2026-05-15T16:41:38.458982+00:00",
+        "sources": {
+          "outcomes": 0,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 3,
+          "plans": 137,
+          "responses": 130
+        },
+        "candidate_count": 11
+      }
+    },
+    {
+      "timestamp": "2026-05-15T16:53:35.684300+00:00",
+      "event": "synthesized",
+      "candidate_count": 11,
+      "rule_count": 11,
+      "meta": {
+        "generated_at": "2026-05-15T16:53:35.683565+00:00",
+        "sources": {
+          "outcomes": 0,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 3,
+          "plans": 137,
+          "responses": 130
+        },
+        "candidate_count": 11
+      }
+    },
+    {
+      "timestamp": "2026-05-15T17:05:30.937327+00:00",
+      "event": "synthesized",
+      "candidate_count": 11,
+      "rule_count": 11,
+      "meta": {
+        "generated_at": "2026-05-15T17:05:30.936611+00:00",
+        "sources": {
+          "outcomes": 0,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 3,
+          "plans": 137,
+          "responses": 130
+        },
+        "candidate_count": 11
+      }
+    },
+    {
+      "timestamp": "2026-05-15T17:17:28.919064+00:00",
+      "event": "synthesized",
+      "candidate_count": 11,
+      "rule_count": 11,
+      "meta": {
+        "generated_at": "2026-05-15T17:17:28.918397+00:00",
+        "sources": {
+          "outcomes": 0,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 3,
+          "plans": 137,
+          "responses": 130
+        },
+        "candidate_count": 11
+      }
+    },
+    {
+      "timestamp": "2026-05-15T17:29:10.728854+00:00",
+      "event": "synthesized",
+      "candidate_count": 11,
+      "rule_count": 11,
+      "meta": {
+        "generated_at": "2026-05-15T17:29:10.728183+00:00",
+        "sources": {
+          "outcomes": 0,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 3,
+          "plans": 137,
+          "responses": 130
+        },
+        "candidate_count": 11
+      }
+    },
+    {
+      "timestamp": "2026-05-15T17:41:05.020559+00:00",
+      "event": "synthesized",
+      "candidate_count": 11,
+      "rule_count": 11,
+      "meta": {
+        "generated_at": "2026-05-15T17:41:05.019920+00:00",
+        "sources": {
+          "outcomes": 0,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 3,
+          "plans": 137,
+          "responses": 130
+        },
+        "candidate_count": 11
+      }
+    },
+    {
+      "timestamp": "2026-05-15T17:53:00.501366+00:00",
+      "event": "synthesized",
+      "candidate_count": 11,
+      "rule_count": 11,
+      "meta": {
+        "generated_at": "2026-05-15T17:53:00.500671+00:00",
+        "sources": {
+          "outcomes": 0,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 3,
+          "plans": 137,
+          "responses": 130
+        },
+        "candidate_count": 11
+      }
+    },
+    {
+      "timestamp": "2026-05-15T18:04:54.954560+00:00",
+      "event": "synthesized",
+      "candidate_count": 11,
+      "rule_count": 11,
+      "meta": {
+        "generated_at": "2026-05-15T18:04:54.953922+00:00",
+        "sources": {
+          "outcomes": 0,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 3,
+          "plans": 137,
+          "responses": 130
+        },
+        "candidate_count": 11
+      }
+    },
+    {
+      "timestamp": "2026-05-15T18:16:41.554289+00:00",
+      "event": "synthesized",
+      "candidate_count": 11,
+      "rule_count": 11,
+      "meta": {
+        "generated_at": "2026-05-15T18:16:41.553627+00:00",
+        "sources": {
+          "outcomes": 0,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 3,
+          "plans": 137,
+          "responses": 130
+        },
+        "candidate_count": 11
+      }
+    },
+    {
+      "timestamp": "2026-05-15T18:28:40.552358+00:00",
+      "event": "synthesized",
+      "candidate_count": 11,
+      "rule_count": 11,
+      "meta": {
+        "generated_at": "2026-05-15T18:28:40.551698+00:00",
+        "sources": {
+          "outcomes": 0,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 3,
+          "plans": 137,
+          "responses": 130
+        },
+        "candidate_count": 11
+      }
+    },
+    {
+      "timestamp": "2026-05-15T18:40:43.364783+00:00",
+      "event": "synthesized",
+      "candidate_count": 11,
+      "rule_count": 11,
+      "meta": {
+        "generated_at": "2026-05-15T18:40:43.363912+00:00",
+        "sources": {
+          "outcomes": 0,
+          "approvals": 16,
+          "ticks": 80,
+          "assistant_actions": 3,
+          "plans": 137,
+          "responses": 130
+        },
+        "candidate_count": 11
+      }
+    }
+  ],
+  "last_synthesis": {
+    "generated_at": "2026-05-15T18:40:43.363912+00:00",
+    "sources": {
+      "outcomes": 0,
+      "approvals": 16,
+      "ticks": 80,
+      "assistant_actions": 3,
+      "plans": 137,
+      "responses": 130
+    },
+    "candidate_count": 11
+  }
+}

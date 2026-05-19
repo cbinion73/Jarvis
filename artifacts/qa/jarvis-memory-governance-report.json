@@ -1,45 +1,66 @@
 {
-  "started_at": "2026-05-10T20:30:05.960Z",
+  "started_at": "2026-05-15T15:57:14.347Z",
   "base_url": "http://127.0.0.1:8787",
   "checks": [
     {
       "name": "Sensitive memory creates a pending proposal",
-      "status": "passed",
-      "details": "Proposal 4d45d9fd-c7eb-4d9c-ba53-103735b5d2f2",
+      "status": "failed",
+      "details": "TypeError: fetch failed",
       "kind": "automated"
     },
     {
       "name": "Approved learning proposal becomes entry and profile fact",
-      "status": "passed",
-      "details": "Entry ed5ba62d-40d3-404a-aa18-9ea660b4b7c5, fact a1ddd6855a73dc3d055593b0",
+      "status": "failed",
+      "details": "TypeError: fetch failed",
       "kind": "automated"
     },
     {
       "name": "Retiring and reactivating a profile fact updates visibility",
-      "status": "passed",
-      "details": "Fact a1ddd6855a73dc3d055593b0 retired and restored",
+      "status": "failed",
+      "details": "TypeError: fetch failed",
       "kind": "automated"
     },
     {
       "name": "Rejected learning proposal stays out of stored memory",
-      "status": "passed",
-      "details": "Proposal ad171aac-4e24-4cac-a43a-9eeb2bb4998a rejected cleanly",
+      "status": "failed",
+      "details": "TypeError: fetch failed",
       "kind": "automated"
     },
     {
       "name": "Memory curation API remains healthy after governance mutations",
-      "status": "passed",
-      "details": "promoted_count=3",
+      "status": "failed",
+      "details": "TypeError: fetch failed",
       "kind": "automated"
     }
   ],
-  "failures": [],
+  "failures": [
+    {
+      "name": "Sensitive memory creates a pending proposal",
+      "error": "TypeError: fetch failed"
+    },
+    {
+      "name": "Approved learning proposal becomes entry and profile fact",
+      "error": "TypeError: fetch failed"
+    },
+    {
+      "name": "Retiring and reactivating a profile fact updates visibility",
+      "error": "TypeError: fetch failed"
+    },
+    {
+      "name": "Rejected learning proposal stays out of stored memory",
+      "error": "TypeError: fetch failed"
+    },
+    {
+      "name": "Memory curation API remains healthy after governance mutations",
+      "error": "TypeError: fetch failed"
+    }
+  ],
   "warnings": [],
   "summary": {
-    "passed": 5,
-    "failed": 0,
+    "passed": 0,
+    "failed": 5,
     "warned": 0,
     "skipped": 0
   },
-  "finished_at": "2026-05-10T20:30:19.537Z"
+  "finished_at": "2026-05-15T15:57:14.416Z"
 }

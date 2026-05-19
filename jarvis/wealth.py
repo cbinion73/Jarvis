@@ -3,8 +3,9 @@ from __future__ import annotations
 import json
 import re
 import uuid
+from copy import deepcopy
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -62,10 +63,14 @@ def _extract_inline_sentence(text: str, anchor: str) -> str:
 class WealthLeverageStore:
     root: Path
     path: Path = field(init=False)
+    finance_state_path: Path = field(init=False)
+    finance_review_path: Path = field(init=False)
 
     def __post_init__(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
         self.path = self.root / "wealth_outcomes.json"
+        self.finance_state_path = self.root / "finance_state.json"
+        self.finance_review_path = self.root / "finance_reviews.json"
 
     def load(self) -> list[dict[str, Any]]:
         if not self.path.exists():
@@ -88,6 +93,54 @@ class WealthLeverageStore:
     def recent(self, limit: int = 12) -> list[dict[str, Any]]:
         records = self.load()
         return list(reversed(records[-limit:]))
+
+    def _load_json(self, path: Path, *, default: Any) -> Any:
+        if not path.exists():
+            return deepcopy(default)
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return deepcopy(default)
+        return payload
+
+    def _save_json(self, path: Path, payload: Any) -> None:
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    def finance_state(self) -> dict[str, Any]:
+        payload = self._load_json(self.finance_state_path, default={})
+        return payload if isinstance(payload, dict) else {}
+
+    def save_finance_state(self, payload: dict[str, Any]) -> dict[str, Any]:
+        self._save_json(self.finance_state_path, payload)
+        return payload
+
+    def update_finance_state(self, patch: dict[str, Any]) -> dict[str, Any]:
+        current = self.finance_state()
+
+        def _merge(base: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
+            merged = dict(base)
+            for key, value in incoming.items():
+                if isinstance(value, dict) and isinstance(base.get(key), dict):
+                    merged[key] = _merge(dict(base.get(key) or {}), value)
+                else:
+                    merged[key] = value
+            return merged
+
+        updated = _merge(current, patch)
+        self.save_finance_state(updated)
+        return updated
+
+    def recent_finance_reviews(self, limit: int = 12) -> list[dict[str, Any]]:
+        payload = self._load_json(self.finance_review_path, default=[])
+        records = payload if isinstance(payload, list) else []
+        return list(reversed(records[-limit:]))
+
+    def append_finance_review(self, record: dict[str, Any]) -> dict[str, Any]:
+        payload = self._load_json(self.finance_review_path, default=[])
+        records = payload if isinstance(payload, list) else []
+        records.append(record)
+        self._save_json(self.finance_review_path, records)
+        return record
 
 
 class WealthLeverageSupport:
@@ -132,6 +185,125 @@ class WealthLeverageSupport:
             "rejected_ideas": rejected[:12],
             "roi_lessons": roi_lessons[:12],
         }
+
+    def default_finance_state(self) -> dict[str, Any]:
+        return {
+            "updated_at": _now_iso(),
+            "family_finance": {
+                "cash": {
+                    "available": None,
+                    "reserve_target": None,
+                    "monthly_revenue": None,
+                    "monthly_burn": None,
+                    "obligations_due_30d": None,
+                },
+                "goals": {
+                    "reserve_target_months": None,
+                    "savings_buffer_target": None,
+                    "current_savings_buffer": None,
+                },
+                "thresholds": {
+                    "low_cash_runway_months": 3.0,
+                    "unusual_spend_amount": 1000.0,
+                    "goal_progress_min_ratio": 0.25,
+                },
+                "spend_events": [],
+                "notes": [
+                    "Family finance is currently a local planning model until live financial connectors are wired.",
+                ],
+            },
+            "wealth": {
+                "capital": {
+                    "wealth_account_available": None,
+                    "wealth_account_reserved": None,
+                    "wealth_account_notes": [],
+                    "transfer_policy_note": "Passive-income capital stays ring-fenced in a separate account and does not count as household operating cash.",
+                },
+                "market_intelligence": {
+                    "watchlist": [],
+                    "theses": [],
+                    "catalysts": [],
+                    "notes": [
+                        "Market intelligence is currently a local planning model until live market connectors are wired.",
+                    ],
+                },
+                "notes": [
+                    "Wealth experiments and passive-income capital are kept separate from family operating finances.",
+                ],
+            },
+        }
+
+    def finance_state(self) -> dict[str, Any]:
+        saved = self.store.finance_state()
+        defaults = self.default_finance_state()
+
+        def _merge(base: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
+            merged = dict(base)
+            for key, value in incoming.items():
+                if isinstance(value, dict) and isinstance(base.get(key), dict):
+                    merged[key] = _merge(dict(base.get(key) or {}), value)
+                else:
+                    merged[key] = value
+            return merged
+
+        saved = saved if isinstance(saved, dict) else {}
+        legacy_family_patch: dict[str, Any] = {}
+        if any(key in saved for key in ("cash", "goals", "thresholds", "spend_events", "notes")):
+            legacy_family_patch = {
+                "family_finance": {
+                    "cash": dict(saved.get("cash") or {}),
+                    "goals": dict(saved.get("goals") or {}),
+                    "thresholds": dict(saved.get("thresholds") or {}),
+                    "spend_events": list(saved.get("spend_events", [])),
+                    "notes": list(saved.get("notes", [])),
+                }
+            }
+        legacy_wealth_patch: dict[str, Any] = {}
+        if "market_intelligence" in saved or "wealth" in saved:
+            legacy_wealth_patch = {
+                "wealth": {
+                    "market_intelligence": dict(saved.get("market_intelligence") or {}),
+                }
+            }
+        merged = _merge(defaults, legacy_family_patch)
+        merged = _merge(merged, legacy_wealth_patch)
+        merged = _merge(merged, saved)
+        if not saved:
+            self.store.save_finance_state(merged)
+        return merged
+
+    def update_finance_state(self, patch: dict[str, Any]) -> dict[str, Any]:
+        current = self.finance_state()
+
+        def _merge(base: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
+            merged = dict(base)
+            for key, value in incoming.items():
+                if isinstance(value, dict) and isinstance(base.get(key), dict):
+                    merged[key] = _merge(dict(base.get(key) or {}), value)
+                else:
+                    merged[key] = value
+            return merged
+
+        updated = _merge(current, patch)
+        updated["updated_at"] = _now_iso()
+        self.store.save_finance_state(updated)
+        return updated
+
+    def recent_finance_reviews(self, limit: int = 12) -> list[dict[str, Any]]:
+        return self.store.recent_finance_reviews(limit=limit)
+
+    def complete_finance_review(self, actor: str, payload: dict[str, Any]) -> dict[str, Any]:
+        review = {
+            "review_id": str(uuid.uuid4()),
+            "actor": actor,
+            "completed_at": _now_iso(),
+            "summary": str(payload.get("summary", "")).strip(),
+            "score": payload.get("score"),
+            "band": str(payload.get("band", "")).strip(),
+            "note": str(payload.get("note", "")).strip(),
+        }
+        self.store.append_finance_review(review)
+        return review
 
     def _structure_outcome(self, workflow_result: dict[str, Any]) -> dict[str, Any]:
         prompt = (

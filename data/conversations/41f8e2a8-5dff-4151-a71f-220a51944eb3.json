@@ -1,0 +1,48 @@
+{
+  "conversation_id": "41f8e2a8-5dff-4151-a71f-220a51944eb3",
+  "actor": "Chris",
+  "room": "office",
+  "source": "shell",
+  "title": "I want JARVIS to remember my preferences from normal conversation and re",
+  "status": "active",
+  "summary": "",
+  "memory_signals": [
+    {
+      "summary": "Chris wants jarvis to remember my preferences from normal conversation and respond more like chatgpt",
+      "status": "stored",
+      "occurrences": 1,
+      "memory_type": "project"
+    }
+  ],
+  "created_at": "2026-05-12T03:33:14.806350+00:00",
+  "updated_at": "2026-05-12T03:33:32.152169+00:00",
+  "last_activity_at": "2026-05-12T03:33:18.825330+00:00",
+  "turn_count": 2,
+  "latest_user_text": "I want JARVIS to remember my preferences from normal conversation and respond more like ChatGPT.",
+  "latest_assistant_text": "Certainly, Sir. I can retain preferences from ordinary conversation when memory is available, and I will use them to adapt tone, structure, and depth over time.\n\nAs for sounding \u201cmore like ChatGPT,\u201d I can soften the stewardly cadence and be a touch more conversational, but I should still remain JARVIS: concise, orderly, and competent. We are not, after all, auditioning for a chatbot pageant.",
+  "turns": [
+    {
+      "turn_id": "3027d66e-1483-434e-9be1-c8c65fc779f5",
+      "role": "user",
+      "text": "I want JARVIS to remember my preferences from normal conversation and respond more like ChatGPT.",
+      "actor": "Chris",
+      "room": "office",
+      "source": "shell",
+      "created_at": "2026-05-12T03:33:14.807728+00:00",
+      "metadata": {}
+    },
+    {
+      "turn_id": "7d710d62-8e06-4523-bc0a-f19612c30e75",
+      "role": "assistant",
+      "text": "Certainly, Sir. I can retain preferences from ordinary conversation when memory is available, and I will use them to adapt tone, structure, and depth over time.\n\nAs for sounding \u201cmore like ChatGPT,\u201d I can soften the stewardly cadence and be a touch more conversational, but I should still remain JARVIS: concise, orderly, and competent. We are not, after all, auditioning for a chatbot pageant.",
+      "actor": "Chris",
+      "room": "office",
+      "source": "shell",
+      "created_at": "2026-05-12T03:33:18.825330+00:00",
+      "metadata": {
+        "provider": "openai",
+        "model": "gpt-5.4-mini-2026-03-17"
+      }
+    }
+  ]
+}

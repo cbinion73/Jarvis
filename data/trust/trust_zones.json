@@ -1,0 +1,54 @@
+[
+  {
+    "zone_id": "shared-email.stage",
+    "name": "Shared Email Draft Stage",
+    "zone_type": "draft_stage",
+    "resource_scope": {
+      "systems": [
+        "gmail"
+      ],
+      "data_classes": [
+        "shared_email",
+        "relationship_memory"
+      ],
+      "account_ids": [
+        "gmail_primary"
+      ],
+      "connector_ids": []
+    },
+    "allowed_actions": [
+      "observe",
+      "classify",
+      "draft",
+      "stage",
+      "alert",
+      "store_memory"
+    ],
+    "approval_mode": "stage_and_alert",
+    "audit_mode": "standard",
+    "promotion_rules": {
+      "eligible_next_stages": [
+        "stage_alert"
+      ],
+      "minimum_success_rate": 0.95,
+      "minimum_review_count": 25,
+      "required_signals": [
+        "review_approved_rate",
+        "low_edit_distance"
+      ]
+    },
+    "demotion_rules": {
+      "triggers": [
+        "hidden_action",
+        "error_rate_breach",
+        "manual_override"
+      ],
+      "fallback_stage": "draft"
+    },
+    "status": "active",
+    "description": "Shared email draft-and-alert flow for household communication.",
+    "reporting_cadence": "event_driven",
+    "created_at": "2026-05-15T13:54:15.243208+00:00",
+    "updated_at": "2026-05-15T13:54:15.243208+00:00"
+  }
+]

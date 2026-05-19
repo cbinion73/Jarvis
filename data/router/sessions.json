@@ -1,0 +1,224 @@
+{
+  "bc157ecd-aa5c-46ed-a97c-5a765fe9af0e": {
+    "request_id": "bc157ecd-aa5c-46ed-a97c-5a765fe9af0e",
+    "timestamp": "2026-05-12T14:57:10.383822+00:00",
+    "source_system": "jarvis",
+    "target_system": "chronicle",
+    "intent_family": "faith.formation",
+    "intent_subtype": "",
+    "capability": "spiritual_timeline",
+    "mode": "launch",
+    "actor": {
+      "actor_id": "Chris",
+      "role": "primary_user"
+    },
+    "context": {
+      "range": "90d",
+      "prompt": "Continue my formation thread in Chronicle."
+    },
+    "permissions": {},
+    "return_contract": {},
+    "status": "accepted",
+    "stub": true,
+    "deep_link": "chronicle://formation/timeline?range=90d",
+    "accepted_at": "2026-05-12T14:57:10.383887+00:00",
+    "dispatch": {
+      "attempted": true,
+      "target_url": "http://127.0.0.1:5174/api/chronicle/handoff",
+      "ok": false,
+      "detail": "HTTP Error 404: Not Found"
+    }
+  },
+  "6bcb74ef-9e6b-43bb-ae6b-b801670bbdd2": {
+    "request_id": "6bcb74ef-9e6b-43bb-ae6b-b801670bbdd2",
+    "timestamp": "2026-05-12T15:32:09.607913+00:00",
+    "source_system": "jarvis",
+    "target_system": "chronicle",
+    "intent_family": "faith.formation",
+    "intent_subtype": "",
+    "capability": "spiritual_timeline",
+    "mode": "launch",
+    "actor": {
+      "actor_id": "Chris",
+      "role": "primary_user"
+    },
+    "context": {
+      "range": "90d",
+      "theme": "stewardship under pressure",
+      "prompt": "Chris reflected on a day that felt full, yet noticed grace meeting him in restraint. Instead of reacting to every urgency with control, he sensed a quieter kind of stewardship\u2014one marked by trust, patience, and not needing to answer everything at once.",
+      "passage": ""
+    },
+    "permissions": {},
+    "return_contract": {},
+    "status": "accepted",
+    "stub": true,
+    "deep_link": "chronicle://formation/timeline?range=90d",
+    "accepted_at": "2026-05-12T15:32:09.607949+00:00",
+    "dispatch": {
+      "attempted": true,
+      "target_url": "http://127.0.0.1:5174/api/chronicle/handoff",
+      "ok": false,
+      "detail": "HTTP Error 404: Not Found"
+    }
+  },
+  "df05f311-12fd-4c30-8570-932bbec770d8": {
+    "request_id": "df05f311-12fd-4c30-8570-932bbec770d8",
+    "timestamp": "2026-05-12T15:32:35.530836+00:00",
+    "source_system": "jarvis",
+    "target_system": "chronicle",
+    "intent_family": "faith.formation",
+    "intent_subtype": "",
+    "capability": "spiritual_timeline",
+    "mode": "launch",
+    "actor": {
+      "actor_id": "Chris",
+      "role": "primary_user"
+    },
+    "context": {
+      "range": "90d",
+      "theme": "stewardship under pressure",
+      "prompt": "Chris reflected on a day that felt full, yet noticed grace meeting him in restraint. Instead of reacting to every urgency with control, he sensed a quieter kind of stewardship\u2014one marked by trust, patience, and not needing to answer everything at once.",
+      "passage": ""
+    },
+    "permissions": {},
+    "return_contract": {},
+    "status": "accepted",
+    "stub": true,
+    "deep_link": "chronicle://formation/timeline?range=90d",
+    "accepted_at": "2026-05-12T15:32:35.530865+00:00",
+    "dispatch": {
+      "attempted": true,
+      "target_url": "http://127.0.0.1:5174/api/chronicle/handoff",
+      "ok": false,
+      "detail": "HTTP Error 404: Not Found"
+    }
+  },
+  "26d05a6e-fe93-469b-89f7-fa949a02de50": {
+    "request_id": "26d05a6e-fe93-469b-89f7-fa949a02de50",
+    "timestamp": "2026-05-12T15:33:13.331813+00:00",
+    "source_system": "jarvis",
+    "target_system": "chronicle",
+    "intent_family": "faith.formation",
+    "intent_subtype": "",
+    "capability": "spiritual_timeline",
+    "mode": "launch",
+    "actor": {
+      "actor_id": "Chris",
+      "role": "primary_user"
+    },
+    "context": {
+      "range": "90d",
+      "theme": "stewardship under pressure",
+      "prompt": "Chris reflected on a day that felt full, yet noticed grace meeting him in restraint. Instead of reacting to every urgency with control, he sensed a quieter kind of stewardship\u2014one marked by trust, patience, and not needing to answer everything at once.",
+      "passage": ""
+    },
+    "permissions": {},
+    "return_contract": {},
+    "status": "accepted",
+    "stub": true,
+    "deep_link": "chronicle://formation/timeline?range=90d",
+    "accepted_at": "2026-05-12T15:33:13.331867+00:00",
+    "dispatch": {
+      "attempted": true,
+      "target_url": "http://127.0.0.1:5174/api/chronicle/handoff",
+      "ok": false,
+      "detail": "HTTP Error 404: Not Found"
+    }
+  },
+  "0480bb98-0b74-4afa-8b8a-bbb0d95e85d7": {
+    "request_id": "0480bb98-0b74-4afa-8b8a-bbb0d95e85d7",
+    "timestamp": "2026-05-12T15:41:07.217454+00:00",
+    "source_system": "jarvis",
+    "target_system": "chronicle",
+    "intent_family": "faith.formation",
+    "intent_subtype": "",
+    "capability": "spiritual_timeline",
+    "mode": "launch",
+    "actor": {
+      "actor_id": "Chris",
+      "role": "primary_user"
+    },
+    "context": {
+      "range": "90d",
+      "theme": "stewardship under pressure",
+      "prompt": "Chris reflected on a day that felt full, yet noticed grace meeting him in restraint. Instead of reacting to every urgency with control, he sensed a quieter kind of stewardship\u2014one marked by trust, patience, and not needing to answer everything at once.",
+      "passage": ""
+    },
+    "permissions": {},
+    "return_contract": {},
+    "status": "accepted",
+    "stub": true,
+    "deep_link": "chronicle://formation/timeline?range=90d",
+    "accepted_at": "2026-05-12T15:41:07.217486+00:00",
+    "dispatch": {
+      "attempted": true,
+      "target_url": "http://127.0.0.1:5174/api/chronicle/handoff",
+      "ok": false,
+      "detail": "HTTP Error 404: Not Found"
+    }
+  },
+  "0cfb0faf-475c-40a6-99ec-1c00f77df481": {
+    "request_id": "0cfb0faf-475c-40a6-99ec-1c00f77df481",
+    "timestamp": "2026-05-12T17:18:04.795904+00:00",
+    "source_system": "jarvis",
+    "target_system": "chronicle",
+    "intent_family": "faith.formation",
+    "intent_subtype": "",
+    "capability": "spiritual_timeline",
+    "mode": "launch",
+    "actor": {
+      "actor_id": "Chris",
+      "role": "primary_user"
+    },
+    "context": {
+      "range": "90d",
+      "theme": "stewardship under pressure",
+      "prompt": "Chris reflected on a day that felt full, yet noticed grace meeting him in restraint. Instead of reacting to every urgency with control, he sensed a quieter kind of stewardship\u2014one marked by trust, patience, and not needing to answer everything at once.",
+      "passage": ""
+    },
+    "permissions": {},
+    "return_contract": {},
+    "status": "accepted",
+    "stub": true,
+    "deep_link": "chronicle://formation/timeline?range=90d",
+    "accepted_at": "2026-05-12T17:18:04.795990+00:00",
+    "dispatch": {
+      "attempted": true,
+      "target_url": "http://127.0.0.1:5174/api/chronicle/handoff",
+      "ok": false,
+      "detail": "HTTP Error 404: Not Found"
+    }
+  },
+  "303e9e6a-45c6-4e8d-b103-7a660a1ff286": {
+    "request_id": "303e9e6a-45c6-4e8d-b103-7a660a1ff286",
+    "timestamp": "2026-05-15T13:32:27.282099+00:00",
+    "source_system": "jarvis",
+    "target_system": "chronicle",
+    "intent_family": "faith.formation",
+    "intent_subtype": "",
+    "capability": "spiritual_timeline",
+    "mode": "launch",
+    "actor": {
+      "actor_id": "Chris",
+      "role": "primary_user"
+    },
+    "context": {
+      "range": "90d",
+      "theme": "stewardship under pressure",
+      "prompt": "Chris reflected on a day that felt full, yet noticed grace meeting him in restraint. Instead of reacting to every urgency with control, he sensed a quieter kind of stewardship\u2014one marked by trust, patience, and not needing to answer everything at once.",
+      "passage": ""
+    },
+    "permissions": {},
+    "return_contract": {},
+    "status": "accepted",
+    "stub": true,
+    "deep_link": "chronicle://formation/timeline?range=90d",
+    "accepted_at": "2026-05-15T13:32:27.282127+00:00",
+    "dispatch": {
+      "attempted": true,
+      "target_url": "http://127.0.0.1:5174/api/chronicle/handoff",
+      "ok": false,
+      "detail": "HTTP Error 404: Not Found"
+    }
+  }
+}
