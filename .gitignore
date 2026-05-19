@@ -9,3 +9,7 @@ config/google_client_secret.json
 config/openviking/
 data/google/
 data/openviking/
+
+# Large binary voice models — store outside repo or use Git LFS
+*.onnx
+assets/piper/voices/
