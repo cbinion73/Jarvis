@@ -2474,6 +2474,75 @@ body::after {{
 .project-value {{ font-family:var(--font-mono); font-size:12px; font-weight:600; color:var(--navy); text-align:right; }}
 .project-value-lbl {{ font-size:9px; color:var(--text-3); letter-spacing:0.06em; text-transform:uppercase; }}
 
+/* ═══════════════════════════════════════════════════════════════════
+   FORGE — OBJECT-TO-MANUFACTURING WORKSPACE
+═══════════════════════════════════════════════════════════════════ */
+.forge-workspace {{ display:flex; flex-direction:column; gap:16px; height:100%; }}
+.forge-header {{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }}
+.forge-header select {{ flex:1; min-width:200px; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface-hi); font-size:13px; color:var(--text-1); cursor:pointer; }}
+.forge-main {{ display:grid; grid-template-columns:1fr 1fr; gap:16px; flex:1; min-height:0; }}
+@media(max-width:900px){{ .forge-main{{ grid-template-columns:1fr; }} }}
+.forge-left,.forge-right {{ display:flex; flex-direction:column; gap:12px; }}
+.forge-viewer-container {{ position:relative; background:#111827; border-radius:12px; overflow:hidden; min-height:320px; flex:1; border:1px solid rgba(255,255,255,0.08); }}
+#forge-3d-canvas {{ width:100%; height:100%; display:block; }}
+.forge-viewer-overlay {{ position:absolute; top:8px; right:10px; font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.55); line-height:1.7; text-align:right; pointer-events:none; }}
+.forge-viewer-controls {{ position:absolute; bottom:10px; left:10px; display:flex; gap:6px; flex-wrap:wrap; }}
+.forge-viewer-btn {{ padding:4px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.45); color:rgba(255,255,255,0.8); font-size:11px; cursor:pointer; transition:background 0.15s; }}
+.forge-viewer-btn:hover {{ background:rgba(255,255,255,0.1); }}
+.forge-upload-zone {{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; border:2px dashed rgba(255,255,255,0.15); border-radius:12px; cursor:pointer; color:rgba(255,255,255,0.4); font-size:13px; gap:10px; text-align:center; padding:24px; transition:border-color 0.2s,background 0.2s; }}
+.forge-upload-zone:hover,.forge-upload-zone.drag-over {{ border-color:var(--hue); background:rgba(245,158,11,0.06); color:rgba(255,255,255,0.7); }}
+.forge-upload-zone svg {{ opacity:0.4; }}
+.forge-upload-btns {{ display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; justify-content:center; }}
+.forge-capture-panel,.forge-measurements-panel {{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; }}
+.forge-panel-title {{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-2); margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; }}
+.forge-capture-grid {{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:6px; }}
+.forge-view-chip {{ display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 4px; border-radius:7px; border:1px solid var(--border); background:var(--surface-hi); font-size:9px; font-family:var(--font-mono); text-transform:uppercase; letter-spacing:0.05em; color:var(--text-3); transition:border-color 0.15s; }}
+.forge-view-chip.view-captured {{ border-color:var(--success); color:var(--success); background:rgba(16,185,129,0.07); }}
+.forge-view-chip.view-missing {{ border-color:var(--crimson); color:var(--crimson); background:rgba(196,30,58,0.06); }}
+.forge-view-chip.view-optional {{ border-color:var(--border); color:var(--text-3); }}
+.forge-confidence-row {{ display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; font-size:10px; font-family:var(--font-mono); }}
+.forge-conf-chip {{ padding:3px 9px; border-radius:99px; font-size:9px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; }}
+.confidence-low {{ background:rgba(245,158,11,0.12); color:#F59E0B; border:1px solid rgba(245,158,11,0.3); }}
+.confidence-medium {{ background:rgba(234,179,8,0.12); color:#CA8A04; border:1px solid rgba(234,179,8,0.3); }}
+.confidence-high {{ background:rgba(16,185,129,0.12); color:var(--success); border:1px solid rgba(16,185,129,0.3); }}
+.confidence-not_ready {{ background:rgba(148,163,184,0.12); color:var(--text-3); border:1px solid var(--border); }}
+.forge-meas-list {{ display:flex; flex-direction:column; gap:5px; margin-top:6px; max-height:140px; overflow-y:auto; }}
+.forge-meas-row {{ display:flex; align-items:center; gap:8px; font-size:12px; }}
+.forge-meas-label {{ flex:1; color:var(--text-2); font-weight:500; }}
+.forge-meas-value {{ font-family:var(--font-mono); font-size:11px; color:var(--text-1); font-weight:600; }}
+.forge-meas-confirmed {{ font-size:9px; padding:2px 6px; border-radius:99px; font-family:var(--font-mono); font-weight:700; }}
+.meas-confirmed {{ background:rgba(16,185,129,0.12); color:var(--success); border:1px solid rgba(16,185,129,0.25); }}
+.meas-assumed {{ background:rgba(245,158,11,0.1); color:#F59E0B; border:1px solid rgba(245,158,11,0.2); }}
+.forge-chat-panel {{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; flex:1; min-height:280px; }}
+#forge-chat-messages {{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin-bottom:10px; max-height:220px; padding-right:4px; }}
+.forge-msg-user {{ align-self:flex-end; background:var(--hue); color:#fff; padding:8px 12px; border-radius:10px 10px 2px 10px; font-size:13px; max-width:85%; }}
+.forge-msg-jarvis {{ align-self:flex-start; background:var(--surface-hi); color:var(--text-1); padding:8px 12px; border-radius:10px 10px 10px 2px; font-size:13px; max-width:90%; border:1px solid var(--border); }}
+.forge-chat-input {{ display:flex; gap:8px; }}
+.forge-chat-input input {{ flex:1; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface-hi); font-size:13px; color:var(--text-1); outline:none; }}
+.forge-chat-input input:focus {{ border-color:var(--hue); }}
+.forge-readiness-panel {{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; }}
+.forge-readiness-list {{ display:flex; flex-direction:column; gap:6px; margin:8px 0; }}
+.readiness-row {{ display:flex; align-items:center; gap:8px; font-size:12px; }}
+.readiness-ok {{ color:var(--success); font-weight:600; }}
+.readiness-warn {{ color:#F59E0B; font-weight:600; }}
+.readiness-fail {{ color:var(--crimson); font-weight:600; }}
+.forge-action-bar {{ display:flex; gap:8px; flex-wrap:wrap; padding-top:4px; }}
+.forge-action-btn {{ padding:9px 18px; border-radius:8px; border:1px solid var(--border); background:var(--surface-hi); font-size:12px; font-weight:600; color:var(--text-1); cursor:pointer; transition:all 0.15s; letter-spacing:0.02em; }}
+.forge-action-btn:hover {{ border-color:var(--hue); color:var(--hue); }}
+.forge-action-btn.primary {{ background:var(--hue); color:#fff; border-color:var(--hue); }}
+.forge-action-btn.primary:hover {{ opacity:0.88; }}
+.forge-printer-chip {{ padding:5px 12px; border-radius:99px; font-size:10px; font-family:var(--font-mono); font-weight:700; text-transform:uppercase; letter-spacing:0.06em; border:1px solid var(--border); color:var(--text-3); margin-left:auto; }}
+.forge-printer-chip.online {{ border-color:var(--success); color:var(--success); background:rgba(16,185,129,0.08); }}
+.forge-modal-overlay {{ position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:900; display:flex; align-items:center; justify-content:center; }}
+.forge-modal {{ background:var(--surface-hi); border:1px solid var(--border); border-radius:16px; padding:24px; min-width:340px; max-width:540px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.2); }}
+.forge-modal-title {{ font-size:15px; font-weight:700; margin-bottom:16px; color:var(--text-1); }}
+.forge-timeline-list {{ display:flex; flex-direction:column; gap:6px; max-height:400px; overflow-y:auto; }}
+.forge-tl-row {{ display:flex; gap:10px; font-size:11px; padding:6px 0; border-bottom:1px solid var(--border); }}
+.forge-tl-ts {{ font-family:var(--font-mono); color:var(--text-3); white-space:nowrap; min-width:140px; }}
+.forge-tl-event {{ color:var(--hue); font-weight:600; min-width:120px; }}
+.forge-tl-detail {{ color:var(--text-2); flex:1; }}
+.forge-camera-preview {{ width:100%; border-radius:10px; margin-bottom:12px; max-height:220px; object-fit:cover; }}
+
   </style>
 </head>
 <body>
@@ -2838,70 +2907,196 @@ body::after {{
   </div>
 
   <!-- ── FORGE ──────────────────────────────────────────────── -->
+  <!-- ── FORGE ─────────────────────────────────────────────────── -->
+  <!-- Three.js CDN (loaded lazily when Forge view is first activated) -->
+  <script id="forge-three-placeholder" data-loaded="false"></script>
+
   <div id="view-forge" class="view">
     <div class="view-header">
-      <div class="view-title">3D FORGE<div class="view-title-line"></div></div>
-      <div class="view-subtitle">Print Queue · Material Inventory · Completions</div>
+      <div class="view-title">FORGE WORKSPACE<div class="view-title-line"></div></div>
+      <div class="view-subtitle">Object Capture · 3D Modeling · Print Gate · Manufacturing</div>
     </div>
 
-    <div class="card-grid">
+    <div class="forge-workspace">
 
-      <!-- Active Print -->
-      <div class="card card-tactical" style="grid-column: 1/-1;">
-        <div class="card-inner">
-          <div class="card-header">
-            <span class="card-title">Active Print Job</span>
-            <span class="pill pill-hue" id="forge-status">IDLE</span>
-          </div>
-          <div id="forge-active">
-            <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
-              <div style="flex:1;min-width:180px;">
-                <div class="list-row-name" id="forge-job-name">No active job</div>
-                <div class="list-row-sub" id="forge-job-detail">Queue is empty · Printer ready</div>
-              </div>
-              <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-3);text-align:right;">
-                <div>LAYER <span id="forge-layer" style="color:var(--hue);">—</span> / <span id="forge-total">—</span></div>
-                <div>ETA <span id="forge-eta">—</span></div>
+      <!-- Header: project selector + new button -->
+      <div class="forge-header">
+        <select id="forge-project-select" onchange="forgeLoadProject(this.value)">
+          <option value="">— Select a project —</option>
+        </select>
+        <button class="forge-action-btn" onclick="forgeNewProject()">+ New Project</button>
+        <span class="pill pill-hue" id="forge-project-status" style="display:none;">IDEA</span>
+      </div>
+
+      <!-- Two-column main -->
+      <div class="forge-main">
+
+        <!-- LEFT: viewer + capture + measurements -->
+        <div class="forge-left">
+
+          <!-- 3D Viewer -->
+          <div class="forge-viewer-container" id="forge-viewer-container">
+            <canvas id="forge-3d-canvas"></canvas>
+            <div class="forge-viewer-overlay" id="forge-bbox-overlay" style="display:none;">
+              <div id="forge-bbox-text" style="font-size:10px;"></div>
+            </div>
+            <div class="forge-viewer-controls" id="forge-viewer-controls" style="display:none;">
+              <button class="forge-viewer-btn" onclick="forgeCameraReset()">Reset</button>
+              <button class="forge-viewer-btn" onclick="forgeCameraTop()">Top</button>
+              <button class="forge-viewer-btn" onclick="forgeCameraFront()">Front</button>
+              <button class="forge-viewer-btn" onclick="forgeCameraLayFlat()">Lay Flat</button>
+              <button class="forge-viewer-btn" onclick="forgeScreenshot()">Screenshot</button>
+              <button class="forge-viewer-btn" onclick="forgeDownloadSTL()" id="forge-dl-stl-btn" style="display:none;">Download STL</button>
+            </div>
+            <!-- Upload zone (shown when no model loaded) -->
+            <div class="forge-upload-zone" id="forge-upload-zone"
+                 onclick="document.getElementById('forge-file-input').click()"
+                 ondragover="event.preventDefault();this.classList.add('drag-over')"
+                 ondragleave="this.classList.remove('drag-over')"
+                 ondrop="forgeHandleDrop(event)">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              <div style="font-size:13px;font-weight:500;">Drop STL / OBJ / GLB / 3MF here<br>or click to upload</div>
+              <div class="forge-upload-btns">
+                <button class="forge-action-btn" style="font-size:11px;padding:5px 12px;"
+                  onclick="event.stopPropagation();document.getElementById('forge-photo-input').click()">Upload Photos</button>
+                <button class="forge-action-btn" style="font-size:11px;padding:5px 12px;"
+                  onclick="event.stopPropagation();forgeCameraCapture()">Camera</button>
               </div>
             </div>
-            <div class="progress-bar"><div class="progress-fill" id="forge-progress" style="width:0%"></div></div>
+            <input type="file" id="forge-file-input" style="display:none" accept=".stl,.obj,.glb,.3mf"
+                   onchange="forgeUploadFile(this.files[0])">
+            <input type="file" id="forge-photo-input" style="display:none" accept="image/*" multiple
+                   onchange="forgeUploadPhotos(this.files)">
           </div>
-        </div>
+
+          <!-- Capture panel -->
+          <div class="forge-capture-panel" id="forge-capture-panel">
+            <div class="forge-panel-title">
+              Capture Status
+              <button class="forge-action-btn" style="font-size:10px;padding:3px 8px;"
+                onclick="forgeCameraCapture()">+ Frame</button>
+            </div>
+            <div class="forge-capture-grid" id="forge-capture-grid">
+              <!-- filled by forgeRenderCapture() -->
+              <div class="forge-view-chip view-missing">Front</div>
+              <div class="forge-view-chip view-missing">Back</div>
+              <div class="forge-view-chip view-missing">Left</div>
+              <div class="forge-view-chip view-missing">Right</div>
+              <div class="forge-view-chip view-missing">Top</div>
+              <div class="forge-view-chip view-optional">Bottom</div>
+              <div class="forge-view-chip view-optional">Scale</div>
+              <div class="forge-view-chip view-optional">Detail</div>
+            </div>
+            <div class="forge-confidence-row" id="forge-confidence-row">
+              <span class="forge-conf-chip confidence-not_ready">Geometry: —</span>
+              <span class="forge-conf-chip confidence-not_ready">Scale: —</span>
+              <span class="forge-conf-chip confidence-not_ready">Print: —</span>
+            </div>
+          </div>
+
+          <!-- Measurements panel -->
+          <div class="forge-measurements-panel">
+            <div class="forge-panel-title">
+              Measurements
+              <button class="forge-action-btn" style="font-size:10px;padding:3px 8px;"
+                onclick="forgeAddMeasurement()">+ Add</button>
+            </div>
+            <div class="forge-meas-list" id="forge-meas-list">
+              <div style="color:var(--text-3);font-size:11px;font-family:var(--font-mono);">No measurements yet.</div>
+            </div>
+          </div>
+
+        </div><!-- .forge-left -->
+
+        <!-- RIGHT: chat + readiness -->
+        <div class="forge-right">
+
+          <!-- Chat panel -->
+          <div class="forge-chat-panel">
+            <div class="forge-panel-title" style="margin-bottom:6px;">
+              JARVIS Forge · Chat
+            </div>
+            <div id="forge-chat-messages">
+              <div class="forge-msg-jarvis">Select a project to begin. I can help you capture, model, inspect, and gate any object for printing.</div>
+            </div>
+            <div class="forge-chat-input">
+              <input type="text" id="forge-chat-input" placeholder="Ask Forge anything..."
+                     onkeydown="if(event.key==='Enter')forgeSendChat()">
+              <button class="forge-action-btn primary" onclick="forgeSendChat()">Send</button>
+            </div>
+          </div>
+
+          <!-- Print readiness panel -->
+          <div class="forge-readiness-panel">
+            <div class="forge-panel-title">
+              Print Readiness
+              <button class="forge-action-btn" style="font-size:10px;padding:3px 8px;"
+                onclick="forgeInspectActive()">Inspect</button>
+            </div>
+            <div class="forge-readiness-list" id="forge-readiness-list">
+              <div style="color:var(--text-3);font-size:11px;font-family:var(--font-mono);">No inspection yet. Upload a model and click Inspect.</div>
+            </div>
+            <div id="forge-readiness-verdict" style="margin-top:8px;font-size:12px;font-weight:600;color:var(--text-3);font-family:var(--font-mono);">VERDICT: —</div>
+          </div>
+
+          <!-- Printer status chip -->
+          <div id="forge-printer-status-row" style="display:none;margin-top:2px;">
+            <span class="forge-printer-chip" id="forge-printer-chip">K2 Pro — checking...</span>
+          </div>
+
+        </div><!-- .forge-right -->
+
+      </div><!-- .forge-main -->
+
+      <!-- Action bar -->
+      <div class="forge-action-bar">
+        <button class="forge-action-btn" onclick="forgeStageSlice()">Stage Slice</button>
+        <button class="forge-action-btn primary" onclick="forgeApprove()">Approve &amp; Send</button>
+        <button class="forge-action-btn" onclick="forgeShowTimeline()">View Timeline</button>
+        <button class="forge-action-btn" onclick="forgeArchive()">Archive</button>
+        <span class="forge-printer-chip" id="forge-printer-chip-bar" style="display:none;margin-left:auto;">K2 Pro —</span>
       </div>
 
-      <!-- Queue -->
-      <div class="card">
-        <div class="card-inner">
-          <div class="card-header"><span class="card-title">Print Queue</span></div>
-          <div id="forge-queue">
-            <div class="list-row"><span class="dot dot-standby"></span><div><div class="list-row-name">—</div><div class="list-row-sub">No jobs queued</div></div></div>
-          </div>
-        </div>
-      </div>
+    </div><!-- .forge-workspace -->
+  </div><!-- #view-forge -->
 
-      <!-- Materials -->
-      <div class="card">
-        <div class="card-inner">
-          <div class="card-header"><span class="card-title">Material Inventory</span></div>
-          <div id="forge-materials">
-            <div class="list-row"><div class="list-row-name">PLA White</div><div class="list-row-meta">2.4 kg</div></div>
-            <div class="list-row"><div class="list-row-name">PETG Black</div><div class="list-row-meta">1.1 kg</div></div>
-            <div class="list-row"><div class="list-row-name">TPU Flex</div><div class="list-row-meta">0.6 kg</div></div>
-            <div class="list-row"><div class="list-row-name">ABS Grey</div><div class="list-row-meta">0.3 kg</div></div>
-          </div>
-        </div>
+  <!-- Camera capture modal -->
+  <div id="forge-camera-modal" class="forge-modal-overlay hidden">
+    <div class="forge-modal">
+      <div class="forge-modal-title">Capture Frame</div>
+      <video id="forge-camera-video" class="forge-camera-preview" autoplay muted playsinline></video>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px;color:var(--text-2);font-weight:500;">View type:</label>
+        <select id="forge-camera-view-type" style="margin-left:8px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);font-size:12px;">
+          <option value="front">Front</option>
+          <option value="back">Back</option>
+          <option value="left">Left</option>
+          <option value="right">Right</option>
+          <option value="top">Top</option>
+          <option value="bottom">Bottom</option>
+          <option value="scale_reference">Scale Reference</option>
+          <option value="detail">Detail</option>
+        </select>
       </div>
-
-      <!-- Completions -->
-      <div class="card">
-        <div class="card-inner">
-          <div class="card-header"><span class="card-title">Recent Completions</span></div>
-          <div id="forge-completions">
-            <div class="list-row"><span class="dot dot-success"></span><div><div class="list-row-name">—</div><div class="list-row-sub">No recent completions</div></div></div>
-          </div>
-        </div>
+      <div style="display:flex;gap:8px;">
+        <button class="forge-action-btn primary" onclick="forgeCaptureSnapshot()">Capture</button>
+        <button class="forge-action-btn" onclick="forgeCloseCameraModal()">Cancel</button>
       </div>
+    </div>
+  </div>
 
+  <!-- Timeline modal -->
+  <div id="forge-timeline-modal" class="forge-modal-overlay hidden">
+    <div class="forge-modal" style="max-width:660px;">
+      <div class="forge-modal-title">Project Timeline</div>
+      <div class="forge-timeline-list" id="forge-timeline-list"></div>
+      <div style="margin-top:16px;text-align:right;">
+        <button class="forge-action-btn" onclick="document.getElementById('forge-timeline-modal').classList.add('hidden')">Close</button>
+      </div>
     </div>
   </div>
 
@@ -3712,6 +3907,7 @@ function loadViewData(name) {{
 
   switch (name) {{
     case 'overview':     loadApprovals(); loadBriefing(); loadHomeDashboard(); loadOverviewAgents(); loadOverviewCatalyst(); loadOverviewChronicle(); loadOverviewPublishing(); loadOverviewReminders(); loadJarvisTasks(); break;
+    case 'forge':        forgeInit(); break;
     case 'agents':
       loadLiveAgents();
       // Auto-refresh every 30s while on this view
@@ -5504,6 +5700,666 @@ async function searchChronicle(query) {{
     const data = await res.json();
     renderChronicle(data);
   }} catch(e) {{ /* silent */ }}
+}}
+
+/* ═══════════════════════════════════════════════════════════════
+   FORGE — OBJECT-TO-MANUFACTURING WORKSPACE
+═══════════════════════════════════════════════════════════════ */
+
+// ── State ─────────────────────────────────────────────────────
+let _forgeCurrentProjectId = null;
+let _forgeCurrentModelFile = null;
+let _forgeThreeLoaded = false;
+let _forgeScene = null;
+let _forgeCamera = null;
+let _forgeRenderer = null;
+let _forgeControls = null;
+let _forgeMesh = null;
+let _forgeCameraStream = null;
+
+// ── Init ──────────────────────────────────────────────────────
+async function forgeInit() {{
+  await forgeEnsureThree();
+  await forgeLoadProjectList();
+}}
+
+async function forgeEnsureThree() {{
+  if (_forgeThreeLoaded) return;
+  const scripts = [
+    'https://cdn.jsdelivr.net/npm/three@0.164/build/three.min.js',
+    'https://cdn.jsdelivr.net/npm/three@0.164/examples/js/controls/OrbitControls.js',
+    'https://cdn.jsdelivr.net/npm/three@0.164/examples/js/loaders/STLLoader.js',
+    'https://cdn.jsdelivr.net/npm/three@0.164/examples/js/loaders/OBJLoader.js',
+    'https://cdn.jsdelivr.net/npm/three@0.164/examples/js/loaders/GLTFLoader.js',
+  ];
+  for (const src of scripts) {{
+    await new Promise((res, rej) => {{
+      if (document.querySelector('script[src="' + src + '"]')) {{ res(); return; }}
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = res;
+      s.onerror = rej;
+      document.head.appendChild(s);
+    }});
+  }}
+  _forgeThreeLoaded = true;
+  forgeInitViewer();
+}}
+
+function forgeInitViewer() {{
+  const canvas = document.getElementById('forge-3d-canvas');
+  const container = document.getElementById('forge-viewer-container');
+  if (!canvas || !window.THREE) return;
+  _forgeScene = new THREE.Scene();
+  _forgeScene.background = new THREE.Color(0x111827);
+  const w = container.clientWidth || 480;
+  const h = container.clientHeight || 320;
+  _forgeCamera = new THREE.PerspectiveCamera(45, w / h, 0.1, 10000);
+  _forgeCamera.position.set(150, 120, 200);
+  _forgeRenderer = new THREE.WebGLRenderer({{ canvas, antialias: true }});
+  _forgeRenderer.setPixelRatio(window.devicePixelRatio);
+  _forgeRenderer.setSize(w, h);
+  // Lights
+  const ambient = new THREE.AmbientLight(0xffffff, 0.55);
+  _forgeScene.add(ambient);
+  const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+  dir.position.set(300, 500, 200);
+  _forgeScene.add(dir);
+  const dir2 = new THREE.DirectionalLight(0xffffff, 0.35);
+  dir2.position.set(-200, -100, -300);
+  _forgeScene.add(dir2);
+  // Grid + axes
+  const grid = new THREE.GridHelper(400, 20, 0x2d3748, 0x2d3748);
+  _forgeScene.add(grid);
+  const axes = new THREE.AxesHelper(60);
+  _forgeScene.add(axes);
+  // OrbitControls
+  if (THREE.OrbitControls) {{
+    _forgeControls = new THREE.OrbitControls(_forgeCamera, _forgeRenderer.domElement);
+    _forgeControls.enableDamping = true;
+    _forgeControls.dampingFactor = 0.08;
+  }}
+  // Animate
+  function animate() {{
+    requestAnimationFrame(animate);
+    if (_forgeControls) _forgeControls.update();
+    _forgeRenderer.render(_forgeScene, _forgeCamera);
+  }}
+  animate();
+  // Resize observer
+  new ResizeObserver(() => {{
+    const ww = container.clientWidth || 480;
+    const hh = container.clientHeight || 320;
+    _forgeCamera.aspect = ww / hh;
+    _forgeCamera.updateProjectionMatrix();
+    _forgeRenderer.setSize(ww, hh);
+  }}).observe(container);
+}}
+
+// ── Project list ──────────────────────────────────────────────
+async function forgeLoadProjectList() {{
+  try {{
+    const res = await fetch('/api/forge/projects');
+    if (!res.ok) return;
+    const data = await res.json();
+    const sel = document.getElementById('forge-project-select');
+    if (!sel) return;
+    const cur = _forgeCurrentProjectId;
+    sel.innerHTML = '<option value="">— Select a project —</option>';
+    (data.projects || []).forEach(p => {{
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.title + ' [' + (p.status || 'idea') + ']';
+      if (p.id === cur) opt.selected = true;
+      sel.appendChild(opt);
+    }});
+  }} catch(e) {{ console.warn('forgeLoadProjectList', e); }}
+}}
+
+async function forgeLoadProject(projectId) {{
+  if (!projectId) {{
+    _forgeCurrentProjectId = null;
+    return;
+  }}
+  _forgeCurrentProjectId = projectId;
+  try {{
+    const res = await fetch('/api/forge/projects/' + encodeURIComponent(projectId));
+    if (!res.ok) return;
+    const project = await res.json();
+    forgeRenderProject(project);
+  }} catch(e) {{ console.warn('forgeLoadProject', e); }}
+}}
+
+function forgeRenderProject(project) {{
+  // Status badge
+  const badge = document.getElementById('forge-project-status');
+  if (badge) {{
+    badge.textContent = (project.status || 'idea').replace(/_/g,' ').toUpperCase();
+    badge.style.display = 'inline-flex';
+  }}
+  // Measurements
+  forgeRenderMeasurements(project.measurements || []);
+  // Capture
+  forgeRenderCapture(project.capture_sessions || []);
+  // Most recent model
+  const models = project.generated_models || [];
+  if (models.length > 0) {{
+    const latest = models[models.length - 1];
+    _forgeCurrentModelFile = latest.filename;
+    forgeLoadModel(project.id, latest.filename);
+    if (latest.print_readiness && latest.print_readiness.ok) {{
+      forgeRenderReadiness(latest.print_readiness);
+    }}
+    // Show bbox
+    if (latest.bounding_box_mm) {{
+      forgeShowBbox(latest.bounding_box_mm);
+    }}
+  }} else {{
+    // Show upload zone
+    const zone = document.getElementById('forge-upload-zone');
+    if (zone) zone.style.display = 'flex';
+    const ctrls = document.getElementById('forge-viewer-controls');
+    if (ctrls) ctrls.style.display = 'none';
+  }}
+}}
+
+function forgeRenderMeasurements(measurements) {{
+  const list = document.getElementById('forge-meas-list');
+  if (!list) return;
+  if (!measurements.length) {{
+    list.innerHTML = '<div style="color:var(--text-3);font-size:11px;font-family:var(--font-mono);">No measurements yet.</div>';
+    return;
+  }}
+  list.innerHTML = measurements.map(m => {{
+    const cls = m.confirmed ? 'meas-confirmed' : 'meas-assumed';
+    const lbl = m.confirmed ? 'confirmed' : 'assumed';
+    return '<div class="forge-meas-row">'
+      + '<span class="forge-meas-label">' + escHtml(m.label) + '</span>'
+      + '<span class="forge-meas-value">' + m.value + m.unit + '</span>'
+      + '<span class="forge-meas-confirmed ' + cls + '">' + lbl + '</span>'
+      + '</div>';
+  }}).join('');
+}}
+
+function forgeRenderCapture(sessions) {{
+  const grid = document.getElementById('forge-capture-grid');
+  const confRow = document.getElementById('forge-confidence-row');
+  if (!grid) return;
+  const allViews = ['front','back','left','right','top','bottom','scale_reference','detail'];
+  const required = new Set(['front','back','left','right','top']);
+  let captured = new Set();
+  let confidence = {{geometry:'—',scale:'—',print_readiness:'—'}};
+  if (sessions.length > 0) {{
+    const latest = sessions[sessions.length - 1];
+    (latest.frames || []).forEach(f => captured.add(f.view_type));
+    if (latest.confidence) confidence = latest.confidence;
+  }}
+  grid.innerHTML = allViews.map(v => {{
+    const isRequired = required.has(v);
+    let cls = 'view-optional';
+    let icon = '–';
+    if (captured.has(v)) {{ cls = 'view-captured'; icon = '✓'; }}
+    else if (isRequired) {{ cls = 'view-missing'; icon = '✗'; }}
+    const label = v.replace('_reference','').replace('_',' ');
+    return '<div class="forge-view-chip ' + cls + '">' + icon + '<span>' + escHtml(label) + '</span></div>';
+  }}).join('');
+  if (confRow) {{
+    confRow.innerHTML = [
+      ['Geometry', confidence.geometry || '—'],
+      ['Scale', confidence.scale || '—'],
+      ['Print', confidence.print_readiness || '—'],
+    ].map(([lbl, val]) => {{
+      const key = (val || 'not_ready').replace(/\\s+/g,'_').toLowerCase();
+      return '<span class="forge-conf-chip confidence-' + escHtml(key) + '">' + escHtml(lbl) + ': ' + escHtml(String(val)) + '</span>';
+    }}).join('');
+  }}
+}}
+
+function forgeRenderReadiness(inspection) {{
+  const list = document.getElementById('forge-readiness-list');
+  const verdict = document.getElementById('forge-readiness-verdict');
+  if (!list) return;
+  const rows = [];
+  if (inspection.is_watertight !== undefined) {{
+    const cls = inspection.is_watertight ? 'readiness-ok' : 'readiness-fail';
+    const icon = inspection.is_watertight ? '✓' : '✗';
+    rows.push('<div class="readiness-row"><span class="' + cls + '">' + icon + '</span><span>Manifold / watertight</span></div>');
+  }}
+  if (inspection.oversized_for_k2_pro !== undefined) {{
+    const cls = inspection.oversized_for_k2_pro ? 'readiness-fail' : 'readiness-ok';
+    const icon = inspection.oversized_for_k2_pro ? '✗' : '✓';
+    rows.push('<div class="readiness-row"><span class="' + cls + '">' + icon + '</span><span>Fits K2 Pro bed (300×300×600 mm)</span></div>');
+  }}
+  (inspection.warnings || []).forEach(w => {{
+    rows.push('<div class="readiness-row"><span class="readiness-warn">⚠</span><span>' + escHtml(w) + '</span></div>');
+  }});
+  if (inspection.was_repaired) {{
+    rows.push('<div class="readiness-row"><span class="readiness-warn">✎</span><span>Mesh was auto-repaired. ' + escHtml(inspection.repair_notes || '') + '</span></div>');
+  }}
+  list.innerHTML = rows.join('') || '<div style="color:var(--text-3);font-size:11px;">No issues detected.</div>';
+  if (verdict) {{
+    const ok = inspection.printable;
+    verdict.textContent = 'VERDICT: ' + (ok ? 'PRINTABLE' : 'NOT PRINTABLE');
+    verdict.style.color = ok ? 'var(--success)' : 'var(--crimson)';
+  }}
+}}
+
+function forgeShowBbox(bbox) {{
+  const overlay = document.getElementById('forge-bbox-overlay');
+  const txt = document.getElementById('forge-bbox-text');
+  if (!overlay || !txt) return;
+  txt.textContent = 'W ' + (bbox.x||0).toFixed(1) + ' × D ' + (bbox.y||0).toFixed(1) + ' × H ' + (bbox.z||0).toFixed(1) + ' mm';
+  overlay.style.display = 'block';
+}}
+
+// ── 3D model loading ──────────────────────────────────────────
+async function forgeLoadModel(projectId, filename) {{
+  if (!_forgeScene || !window.THREE) return;
+  const url = '/api/forge/projects/' + encodeURIComponent(projectId) + '/file/' + encodeURIComponent(filename);
+  const ext = filename.split('.').pop().toLowerCase();
+  // Hide upload zone, show controls
+  const zone = document.getElementById('forge-upload-zone');
+  if (zone) zone.style.display = 'none';
+  const ctrls = document.getElementById('forge-viewer-controls');
+  if (ctrls) ctrls.style.display = 'flex';
+  // Remove old mesh
+  if (_forgeMesh) {{ _forgeScene.remove(_forgeMesh); _forgeMesh = null; }}
+  try {{
+    if (ext === 'stl' && THREE.STLLoader) {{
+      const loader = new THREE.STLLoader();
+      loader.load(url, geom => {{
+        geom.computeVertexNormals();
+        const mat = new THREE.MeshPhongMaterial({{ color: 0xF59E0B, specular: 0x222222, shininess: 40 }});
+        _forgeMesh = new THREE.Mesh(geom, mat);
+        _forgeMesh.castShadow = true;
+        _forgeScene.add(_forgeMesh);
+        forgeFitCamera(_forgeMesh);
+        forgeUpdateBboxFromMesh(_forgeMesh);
+      }}, undefined, e => console.warn('STL load error', e));
+    }} else if ((ext === 'glb' || ext === 'gltf') && THREE.GLTFLoader) {{
+      const loader = new THREE.GLTFLoader();
+      loader.load(url, gltf => {{
+        _forgeMesh = gltf.scene;
+        _forgeScene.add(_forgeMesh);
+        forgeFitCamera(_forgeMesh);
+        forgeUpdateBboxFromMesh(_forgeMesh);
+      }}, undefined, e => console.warn('GLTF load error', e));
+    }} else if (ext === 'obj' && THREE.OBJLoader) {{
+      const loader = new THREE.OBJLoader();
+      loader.load(url, obj => {{
+        _forgeMesh = obj;
+        _forgeScene.add(_forgeMesh);
+        forgeFitCamera(_forgeMesh);
+        forgeUpdateBboxFromMesh(_forgeMesh);
+      }}, undefined, e => console.warn('OBJ load error', e));
+    }}
+  }} catch(e) {{ console.warn('forgeLoadModel error', e); }}
+}}
+
+function forgeFitCamera(object) {{
+  if (!_forgeCamera || !_forgeControls) return;
+  const box = new THREE.Box3().setFromObject(object);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  const fov = _forgeCamera.fov * (Math.PI / 180);
+  let dist = Math.abs(maxDim / Math.sin(fov / 2)) * 0.75;
+  _forgeCamera.position.set(center.x + dist * 0.7, center.y + dist * 0.5, center.z + dist * 0.9);
+  _forgeCamera.lookAt(center);
+  if (_forgeControls.target) _forgeControls.target.copy(center);
+  _forgeControls.update();
+}}
+
+function forgeUpdateBboxFromMesh(object) {{
+  if (!object) return;
+  const box = new THREE.Box3().setFromObject(object);
+  const size = box.getSize(new THREE.Vector3());
+  forgeShowBbox({{ x: size.x, y: size.y, z: size.z }});
+}}
+
+// ── Camera presets ────────────────────────────────────────────
+function forgeCameraReset() {{
+  if (!_forgeMesh) return;
+  forgeFitCamera(_forgeMesh);
+}}
+function forgeCameraTop() {{
+  if (!_forgeCamera || !_forgeMesh) return;
+  const box = new THREE.Box3().setFromObject(_forgeMesh);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const dist = Math.max(size.x, size.z) * 1.2;
+  _forgeCamera.position.set(center.x, center.y + dist, center.z + 0.001);
+  _forgeCamera.lookAt(center);
+  if (_forgeControls) {{ _forgeControls.target.copy(center); _forgeControls.update(); }}
+}}
+function forgeCameraFront() {{
+  if (!_forgeCamera || !_forgeMesh) return;
+  const box = new THREE.Box3().setFromObject(_forgeMesh);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const dist = Math.max(size.x, size.y) * 1.5;
+  _forgeCamera.position.set(center.x, center.y, center.z + dist);
+  _forgeCamera.lookAt(center);
+  if (_forgeControls) {{ _forgeControls.target.copy(center); _forgeControls.update(); }}
+}}
+function forgeCameraLayFlat() {{
+  if (!_forgeCamera || !_forgeMesh) return;
+  const box = new THREE.Box3().setFromObject(_forgeMesh);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const dist = Math.max(size.x, size.y, size.z) * 1.5;
+  _forgeCamera.position.set(center.x + dist, center.y + dist * 0.3, center.z + dist);
+  _forgeCamera.lookAt(center);
+  if (_forgeControls) {{ _forgeControls.target.copy(center); _forgeControls.update(); }}
+}}
+
+function forgeScreenshot() {{
+  if (!_forgeRenderer) return;
+  _forgeRenderer.render(_forgeScene, _forgeCamera);
+  const data = _forgeRenderer.domElement.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = data;
+  a.download = 'forge-screenshot.png';
+  a.click();
+}}
+
+function forgeDownloadSTL() {{
+  if (!_forgeCurrentProjectId || !_forgeCurrentModelFile) return;
+  const url = '/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId)
+    + '/file/' + encodeURIComponent(_forgeCurrentModelFile);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = _forgeCurrentModelFile;
+  a.click();
+}}
+
+// ── File upload ───────────────────────────────────────────────
+function forgeHandleDrop(event) {{
+  event.preventDefault();
+  const zone = document.getElementById('forge-upload-zone');
+  if (zone) zone.classList.remove('drag-over');
+  const file = event.dataTransfer.files[0];
+  if (file) forgeUploadFile(file);
+}}
+
+async function forgeUploadFile(file) {{
+  if (!_forgeCurrentProjectId) {{
+    showToast('Select or create a project first.', 'warn');
+    return;
+  }}
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  try {{
+    showToast('Uploading ' + file.name + '...', 'info');
+    const res = await fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId) + '/upload', {{
+      method: 'POST', body: fd,
+    }});
+    if (!res.ok) {{ showToast('Upload failed: ' + res.status, 'error'); return; }}
+    const data = await res.json();
+    showToast('Uploaded: ' + data.filename, 'info');
+    if (data.file_type === '3d_model') {{
+      _forgeCurrentModelFile = data.filename;
+      forgeLoadModel(_forgeCurrentProjectId, data.filename);
+      const dlBtn = document.getElementById('forge-dl-stl-btn');
+      if (dlBtn) dlBtn.style.display = 'inline-block';
+    }}
+    forgeLoadProject(_forgeCurrentProjectId);
+    forgeLoadProjectList();
+  }} catch(e) {{ showToast('Upload error: ' + e, 'error'); }}
+}}
+
+async function forgeUploadPhotos(files) {{
+  if (!_forgeCurrentProjectId) {{ showToast('Select or create a project first.', 'warn'); return; }}
+  for (const file of Array.from(files)) {{
+    const fd = new FormData();
+    fd.append('file', file);
+    try {{
+      await fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId) + '/upload', {{
+        method: 'POST', body: fd,
+      }});
+    }} catch(e) {{ /* silent */ }}
+  }}
+  showToast('Photos uploaded.', 'info');
+  forgeLoadProject(_forgeCurrentProjectId);
+}}
+
+// ── Chat ──────────────────────────────────────────────────────
+async function forgeSendChat() {{
+  if (!_forgeCurrentProjectId) {{ showToast('Select a project first.', 'warn'); return; }}
+  const input = document.getElementById('forge-chat-input');
+  if (!input) return;
+  const message = input.value.trim();
+  if (!message) return;
+  input.value = '';
+  forgeAppendMsg(message, 'user');
+  try {{
+    const res = await fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId) + '/chat', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ message }}),
+    }});
+    if (!res.ok) {{ forgeAppendMsg('Error: ' + res.status, 'jarvis'); return; }}
+    const data = await res.json();
+    forgeAppendMsg(data.reply || '(no reply)', 'jarvis');
+  }} catch(e) {{ forgeAppendMsg('Network error: ' + e, 'jarvis'); }}
+}}
+
+function forgeAppendMsg(text, role) {{
+  const container = document.getElementById('forge-chat-messages');
+  if (!container) return;
+  const div = document.createElement('div');
+  div.className = role === 'user' ? 'forge-msg-user' : 'forge-msg-jarvis';
+  div.textContent = text;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}}
+
+// ── Measurements ──────────────────────────────────────────────
+async function forgeAddMeasurement() {{
+  if (!_forgeCurrentProjectId) {{ showToast('Select a project first.', 'warn'); return; }}
+  const label = prompt('Measurement label (e.g. hole_diameter, overall_width):');
+  if (!label) return;
+  const valStr = prompt('Value (number):');
+  if (!valStr) return;
+  const value = parseFloat(valStr);
+  if (isNaN(value)) {{ showToast('Invalid number.', 'warn'); return; }}
+  const unit = prompt('Unit (mm / cm / in):', 'mm') || 'mm';
+  const confirmedStr = prompt('Confirmed by you? (yes/no):', 'yes');
+  const confirmed = (confirmedStr || 'yes').trim().toLowerCase() === 'yes';
+  try {{
+    const res = await fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId) + '/measurements', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ label, value, unit, confirmed }}),
+    }});
+    if (!res.ok) {{ showToast('Measurement error: ' + res.status, 'error'); return; }}
+    showToast('Measurement added.', 'info');
+    forgeLoadProject(_forgeCurrentProjectId);
+  }} catch(e) {{ showToast('Error: ' + e, 'error'); }}
+}}
+
+// ── Inspection ────────────────────────────────────────────────
+async function forgeInspectActive() {{
+  if (!_forgeCurrentProjectId || !_forgeCurrentModelFile) {{
+    showToast('No model loaded. Upload a 3D file first.', 'warn');
+    return;
+  }}
+  showToast('Inspecting model...', 'info');
+  try {{
+    const res = await fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId) + '/inspect', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ model_filename: _forgeCurrentModelFile }}),
+    }});
+    if (!res.ok) {{ showToast('Inspect error: ' + res.status, 'error'); return; }}
+    const data = await res.json();
+    forgeRenderReadiness(data);
+    if (data.bounding_box_mm) forgeShowBbox(data.bounding_box_mm);
+    showToast(data.printable ? 'Model is printable.' : 'Model has issues — see readiness panel.', data.printable ? 'info' : 'warn');
+    forgeLoadProjectList();
+  }} catch(e) {{ showToast('Error: ' + e, 'error'); }}
+}}
+
+// ── Slice ─────────────────────────────────────────────────────
+async function forgeStageSlice() {{
+  if (!_forgeCurrentProjectId) {{ showToast('Select a project first.', 'warn'); return; }}
+  // Find model_id from project
+  try {{
+    const pRes = await fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId));
+    if (!pRes.ok) return;
+    const project = await pRes.json();
+    const models = project.generated_models || [];
+    if (!models.length) {{ showToast('No model to slice. Upload a 3D file first.', 'warn'); return; }}
+    const model_id = models[models.length - 1].model_id;
+    const material = prompt('Material (PLA, PETG, ABS...):', 'PLA') || 'PLA';
+    const res = await fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId) + '/slice', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ model_id, material }}),
+    }});
+    if (!res.ok) {{ showToast('Slice error: ' + res.status, 'error'); return; }}
+    showToast('Slice report staged. Ready for approval.', 'info');
+    forgeLoadProject(_forgeCurrentProjectId);
+    forgeLoadProjectList();
+  }} catch(e) {{ showToast('Error: ' + e, 'error'); }}
+}}
+
+// ── Approve ───────────────────────────────────────────────────
+async function forgeApprove() {{
+  if (!_forgeCurrentProjectId) {{ showToast('Select a project first.', 'warn'); return; }}
+  const notes = prompt('Approval notes (optional):') || '';
+  try {{
+    const res = await fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId) + '/approve', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ notes }}),
+    }});
+    if (!res.ok) {{ showToast('Approve error: ' + res.status, 'error'); return; }}
+    const data = await res.json();
+    showToast('Approved. Status: ' + (data.new_status || '').replace(/_/g,' '), 'info');
+    forgeLoadProject(_forgeCurrentProjectId);
+    forgeLoadProjectList();
+  }} catch(e) {{ showToast('Error: ' + e, 'error'); }}
+}}
+
+// ── Archive ───────────────────────────────────────────────────
+async function forgeArchive() {{
+  if (!_forgeCurrentProjectId) {{ showToast('Select a project first.', 'warn'); return; }}
+  if (!confirm('Archive this project?')) return;
+  try {{
+    const res = await fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId), {{
+      method: 'DELETE',
+    }});
+    if (!res.ok) {{ showToast('Archive error: ' + res.status, 'error'); return; }}
+    showToast('Project archived.', 'info');
+    _forgeCurrentProjectId = null;
+    forgeLoadProjectList();
+  }} catch(e) {{ showToast('Error: ' + e, 'error'); }}
+}}
+
+// ── Timeline ──────────────────────────────────────────────────
+async function forgeShowTimeline() {{
+  if (!_forgeCurrentProjectId) {{ showToast('Select a project first.', 'warn'); return; }}
+  try {{
+    const res = await fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId) + '/timeline');
+    if (!res.ok) return;
+    const data = await res.json();
+    const list = document.getElementById('forge-timeline-list');
+    if (!list) return;
+    list.innerHTML = (data.events || []).map(ev => {{
+      const ts = (ev.ts || '').replace('T',' ').replace(/\\.\\d+Z$/,'').replace('Z','');
+      return '<div class="forge-tl-row">'
+        + '<span class="forge-tl-ts">' + escHtml(ts) + '</span>'
+        + '<span class="forge-tl-event">' + escHtml(ev.event || '') + '</span>'
+        + '<span class="forge-tl-detail">' + escHtml(ev.detail || '') + '</span>'
+        + '</div>';
+    }}).join('') || '<div style="color:var(--text-3);font-size:11px;font-family:var(--font-mono);">No events yet.</div>';
+    const modal = document.getElementById('forge-timeline-modal');
+    if (modal) modal.classList.remove('hidden');
+  }} catch(e) {{ showToast('Error: ' + e, 'error'); }}
+}}
+
+// ── New project ───────────────────────────────────────────────
+async function forgeNewProject() {{
+  const title = prompt('Project title:');
+  if (!title || !title.trim()) return;
+  const description = prompt('Description (optional):') || '';
+  try {{
+    const res = await fetch('/api/forge/projects', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ title: title.trim(), description }}),
+    }});
+    if (!res.ok) {{ showToast('Create error: ' + res.status, 'error'); return; }}
+    const project = await res.json();
+    showToast('Project created: ' + project.title, 'info');
+    await forgeLoadProjectList();
+    const sel = document.getElementById('forge-project-select');
+    if (sel) {{ sel.value = project.id; }}
+    _forgeCurrentProjectId = project.id;
+    forgeRenderProject(project);
+  }} catch(e) {{ showToast('Error: ' + e, 'error'); }}
+}}
+
+// ── Camera capture ────────────────────────────────────────────
+async function forgeCameraCapture() {{
+  if (!_forgeCurrentProjectId) {{ showToast('Select a project first.', 'warn'); return; }}
+  const modal = document.getElementById('forge-camera-modal');
+  const video = document.getElementById('forge-camera-video');
+  if (!modal || !video) return;
+  try {{
+    _forgeCameraStream = await navigator.mediaDevices.getUserMedia({{ video: true }});
+    video.srcObject = _forgeCameraStream;
+    modal.classList.remove('hidden');
+  }} catch(e) {{
+    showToast('Camera not available: ' + e.message, 'warn');
+  }}
+}}
+
+async function forgeCaptureSnapshot() {{
+  const video = document.getElementById('forge-camera-video');
+  const viewType = document.getElementById('forge-camera-view-type');
+  if (!video || !_forgeCurrentProjectId) return;
+  // Draw to canvas and get blob
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  canvas.toBlob(async blob => {{
+    const filename = 'capture_' + (viewType ? viewType.value : 'view') + '_' + Date.now() + '.jpg';
+    const file = new File([blob], filename, {{ type: 'image/jpeg' }});
+    // Upload
+    const fd = new FormData();
+    fd.append('file', file);
+    try {{
+      const upRes = await fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId) + '/upload', {{
+        method: 'POST', body: fd,
+      }});
+      if (!upRes.ok) {{ showToast('Upload error: ' + upRes.status, 'error'); return; }}
+      // Register frame
+      const vt = viewType ? viewType.value : 'front';
+      await fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId) + '/capture-frame', {{
+        method: 'POST',
+        headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify({{ filename, view_type: vt }}),
+      }});
+      showToast('Frame captured: ' + vt, 'info');
+      forgeLoadProject(_forgeCurrentProjectId);
+    }} catch(e) {{ showToast('Capture error: ' + e, 'error'); }}
+  }}, 'image/jpeg', 0.90);
+  forgeCloseCameraModal();
+}}
+
+function forgeCloseCameraModal() {{
+  const modal = document.getElementById('forge-camera-modal');
+  if (modal) modal.classList.add('hidden');
+  if (_forgeCameraStream) {{
+    _forgeCameraStream.getTracks().forEach(t => t.stop());
+    _forgeCameraStream = null;
+  }}
+  const video = document.getElementById('forge-camera-video');
+  if (video) video.srcObject = null;
 }}
 
 /* ═══════════════════════════════════════════════════════════════

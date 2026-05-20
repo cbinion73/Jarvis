@@ -1,0 +1,6 @@
+[submodule "vendor/stable-fast-3d"]
+	path = vendor/stable-fast-3d
+	url = https://github.com/Stability-AI/stable-fast-3d.git
+[submodule "vendor/trellis-mac"]
+	path = vendor/trellis-mac
+	url = https://github.com/shivampkumar/trellis-mac.git

@@ -13,3 +13,12 @@ data/openviking/
 # Large binary voice models — store outside repo or use Git LFS
 *.onnx
 assets/piper/voices/
+
+# Vendor ML repos — large weights and compiled binaries excluded
+vendor/stable-fast-3d/.venv/
+vendor/trellis-mac/.venv/
+vendor/trellis-mac/deps/
+vendor/trellis-mac/TRELLIS.2/
+vendor/**/*.so
+vendor/**/*.dylib
+vendor/**/__pycache__/
