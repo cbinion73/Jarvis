@@ -1,0 +1,408 @@
+[
+  {
+    "item_id": "passive-income-a076de736a06dd2b",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "label": "Build the first passive-income shortlist",
+    "title": "Build the first passive-income shortlist",
+    "summary": "No passive-income theses are staged yet. The first autonomous move is to build and rank an explicit shortlist.",
+    "candidate_type": "validation-gap",
+    "status": "discovered",
+    "truth_state": "planned",
+    "owner_agent": "Fisk",
+    "owner_agent_id": "fisk",
+    "domain": "finance",
+    "confidence": "high",
+    "next_action": "create-shortlist",
+    "created_at": "2026-05-18T01:31:30.158457+00:00",
+    "updated_at": "2026-05-18T01:47:08.032454+00:00",
+    "last_reviewed_at": "2026-05-18T01:31:46.326300+00:00",
+    "work_id": "passive-income-a076de736a06dd2b",
+    "report_type": "fisk-opportunity-report",
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "approval_required": true,
+    "recommended_action": "create-shortlist",
+    "observed": [
+      "No passive-income theses are currently staged in the lane."
+    ],
+    "inferred": [
+      "The highest-leverage move is to create a disciplined shortlist instead of chasing vague ideas."
+    ],
+    "prepared": [
+      "Prepared a framework-gap report."
+    ],
+    "recommended": [
+      "Build and rank the first shortlist."
+    ],
+    "requires_approval": [
+      "Any move beyond research and ranking."
+    ],
+    "not_done": [
+      "Did not validate an offer.",
+      "Did not choose a channel."
+    ],
+    "evidence": [
+      {
+        "source": "finance-state",
+        "detail": "Passive-income lane has goals but no staged theses yet.",
+        "kind": "gap"
+      }
+    ],
+    "guardrail_reviews": [],
+    "metadata": {
+      "review_note": "api smoke"
+    },
+    "opportunity_report": {
+      "opportunity": "Build the first passive-income shortlist",
+      "category": "validation-gap",
+      "source": "finance-state",
+      "summary": "No passive-income theses are staged yet. The first autonomous move is to build and rank an explicit shortlist.",
+      "market_reality": "There is interest in passive income, but not enough specific opportunity evidence is staged yet.",
+      "who_pays": "Unknown",
+      "why_they_pay": "Unknown",
+      "current_alternatives": [
+        "Unstructured idea capture"
+      ],
+      "where_money_flows": "Unknown",
+      "who_controls_distribution": "Unknown",
+      "leverage_point": "The first leverage is disciplined screening, not more idea generation.",
+      "advantage": "A clear framework can prevent fantasy and wasted effort.",
+      "reusable_asset": "Current frameworks and past notes",
+      "ownable_channel": "Unknown",
+      "compounding_vector": "Shortlist discipline improves future decisions.",
+      "economic_model": {
+        "possible_revenue": "Unknown",
+        "startup_cost": "Low",
+        "operating_effort": "Low",
+        "time_to_first_dollar": "Unknown",
+        "time_to_meaningful_revenue": "Unknown",
+        "scalability": "Framework-level"
+      },
+      "risk": {
+        "main_downside": "Staying abstract too long.",
+        "hidden_labor": "No hidden labor yet because the offer does not exist.",
+        "capital_risk": "Low",
+        "reputation_risk": "Low",
+        "family_time_cost": "Low"
+      },
+      "confidence_level": "high",
+      "score": {
+        "market_demand": "unknown",
+        "revenue_potential": "unknown",
+        "effort_required": "low",
+        "capital_required": "low",
+        "distribution_advantage": "unknown",
+        "skill_fit": "medium",
+        "family_fit": "high",
+        "reputation_fit": "high",
+        "values_fit": "high",
+        "durability": "high",
+        "automation_potential": "high",
+        "downside_risk": "low"
+      },
+      "fisk_recommendation": "Research",
+      "next_action": "create-shortlist",
+      "approval_needed": true,
+      "agents_to_route_to": [
+        "Nebula",
+        "Pepper",
+        "Watcher",
+        "Legal/Compliance Watcher"
+      ]
+    },
+    "item_status": "planned",
+    "action_status": "planned",
+    "verification_status": "planned",
+    "approval_status": "pending"
+  },
+  {
+    "item_id": "market-intelligence-9f02b201a60146dc",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "label": "Build the first market watchlist",
+    "title": "Build the first market watchlist",
+    "summary": "No market-intelligence watchlist or thesis objects are staged yet. The first move is to create a bounded watchlist and thesis discipline.",
+    "candidate_type": "watchlist-candidate",
+    "status": "approved",
+    "truth_state": "approved",
+    "item_status": "approved",
+    "action_status": "approved",
+    "verification_status": "planned",
+    "owner_agent": "Fisk",
+    "owner_agent_id": "fisk",
+    "domain": "finance",
+    "confidence": "high",
+    "next_action": "advance",
+    "created_at": "2026-05-18T01:47:08.037810+00:00",
+    "updated_at": "2026-05-18T03:37:07.864626+00:00",
+    "last_reviewed_at": "2026-05-18T03:37:07.864629+00:00",
+    "work_id": "market-intelligence-9f02b201a60146dc",
+    "report_type": "fisk-market-report",
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "approval_required": true,
+    "approval_status": "approved",
+    "recommended_action": "advance",
+    "blocked_reason": "",
+    "observed": [
+      "No watchlist, thesis, or catalyst objects are currently staged."
+    ],
+    "inferred": [
+      "The right next move is bounded market structure, not random ticker fascination."
+    ],
+    "prepared": [
+      "Prepared a framework-gap market report."
+    ],
+    "recommended": [
+      "Create the first watchlist and thesis template before doing more forecasting."
+    ],
+    "requires_approval": [
+      "Any later position initiation."
+    ],
+    "not_done": [
+      "Did not create a trade.",
+      "Did not assume live market data exists."
+    ],
+    "evidence": [
+      {
+        "source": "finance-state",
+        "detail": "No market-intelligence records are currently staged.",
+        "kind": "gap"
+      }
+    ],
+    "guardrail_reviews": [
+      {
+        "reviewer": "Nebula",
+        "status": "staged_for_approval",
+        "note": "Nebula says weak downside bound",
+        "timestamp": "2026-05-18T01:47:08.041818+00:00"
+      },
+      {
+        "reviewer": "Legal/Compliance Watcher",
+        "status": "staged_for_approval",
+        "note": "Compliance review needed",
+        "timestamp": "2026-05-18T01:47:42.009370+00:00"
+      },
+      {
+        "reviewer": "Chris",
+        "status": "approved",
+        "note": "Approved for the next bounded step.",
+        "timestamp": "2026-05-18T03:37:07.864636+00:00"
+      }
+    ],
+    "metadata": {
+      "review_note": "Approved for the next bounded step."
+    },
+    "market_report": {
+      "ticker_or_asset": "No watchlist yet",
+      "sector": "",
+      "time_horizon": "N/A",
+      "current_price_context": "",
+      "thesis": "The market-intelligence lane needs a first watchlist before it can stage disciplined theses.",
+      "why_this_asset_matters": "A disciplined watchlist is the first filter against hype and undirected market attention.",
+      "market_belief": "",
+      "what_fisk_may_be_missing": "",
+      "fundamentals": {
+        "revenue_trend": "",
+        "earnings_trend": "",
+        "margins": "",
+        "debt": "",
+        "cash_flow": "",
+        "competitive_position": ""
+      },
+      "valuation": {
+        "current_valuation": "",
+        "historical_comparison": "",
+        "peer_comparison": "",
+        "valuation_risk": ""
+      },
+      "catalysts": {
+        "near_term": [],
+        "medium_term": [],
+        "long_term": []
+      },
+      "risks": {
+        "business_risk": "",
+        "market_risk": "",
+        "valuation_risk": "",
+        "regulatory_risk": "",
+        "execution_risk": ""
+      },
+      "prediction": {
+        "base_case": "",
+        "bull_case": "",
+        "bear_case": "",
+        "confidence": "",
+        "what_would_change_the_view": ""
+      },
+      "recommendation": "Research",
+      "action_status": "No action taken",
+      "approval_required": true
+    },
+    "queue_entries": [
+      {
+        "queue_id": "queue:market-intelligence-9f02b201a60146dc",
+        "item_id": "market-intelligence-9f02b201a60146dc",
+        "actor": "Chris",
+        "lane_id": "market-intelligence",
+        "status": "closed",
+        "queue_type": "review",
+        "title": "Build the first market watchlist",
+        "summary": "No market-intelligence watchlist or thesis objects are staged yet. The first move is to create a bounded watchlist and thesis discipline.",
+        "recommended_action": "advance",
+        "required_reviewers": [
+          {
+            "agent_id": "nebula",
+            "label": "Nebula",
+            "role": "assumption-attack"
+          },
+          {
+            "agent_id": "pepper",
+            "label": "Pepper",
+            "role": "family-reputation-fit"
+          },
+          {
+            "agent_id": "watcher",
+            "label": "Watcher",
+            "role": "memory-pattern-fit"
+          },
+          {
+            "agent_id": "legal-compliance-watcher",
+            "label": "Legal/Compliance Watcher",
+            "role": "tax-regulatory-professional-risk"
+          }
+        ],
+        "approval_status": "approved",
+        "route_options": [
+          "Nebula",
+          "Pepper",
+          "Watcher",
+          "Legal/Compliance Watcher",
+          "deeper-research"
+        ],
+        "created_at": "2026-05-18T03:36:46.815715+00:00",
+        "updated_at": "2026-05-18T03:37:07.868569+00:00"
+      }
+    ],
+    "artifacts": [
+      {
+        "artifact_id": "market-intelligence-9f02b201a60146dc:guardrail-review",
+        "item_id": "market-intelligence-9f02b201a60146dc",
+        "actor": "Chris",
+        "lane_id": "market-intelligence",
+        "artifact_type": "guardrail-review",
+        "title": "Chris review",
+        "summary": "Approved for the next bounded step.",
+        "blocked_reason": "",
+        "created_at": "2026-05-18T03:37:07.864727+00:00",
+        "updated_at": "2026-05-18T03:37:07.864727+00:00",
+        "payload": {
+          "reviewer": "Chris",
+          "status": "approved"
+        }
+      },
+      {
+        "artifact_id": "market-intelligence-9f02b201a60146dc:report",
+        "item_id": "market-intelligence-9f02b201a60146dc",
+        "actor": "Chris",
+        "lane_id": "market-intelligence",
+        "artifact_type": "report",
+        "title": "Build the first market watchlist",
+        "summary": "No market-intelligence watchlist or thesis objects are staged yet. The first move is to create a bounded watchlist and thesis discipline.",
+        "blocked_reason": "",
+        "created_at": "2026-05-18T03:36:46.813848+00:00",
+        "updated_at": "2026-05-18T03:36:46.813848+00:00",
+        "payload": {
+          "report_type": "fisk-market-report",
+          "market_report": {
+            "ticker_or_asset": "No watchlist yet",
+            "sector": "",
+            "time_horizon": "N/A",
+            "current_price_context": "",
+            "thesis": "The market-intelligence lane needs a first watchlist before it can stage disciplined theses.",
+            "why_this_asset_matters": "A disciplined watchlist is the first filter against hype and undirected market attention.",
+            "market_belief": "",
+            "what_fisk_may_be_missing": "",
+            "fundamentals": {
+              "revenue_trend": "",
+              "earnings_trend": "",
+              "margins": "",
+              "debt": "",
+              "cash_flow": "",
+              "competitive_position": ""
+            },
+            "valuation": {
+              "current_valuation": "",
+              "historical_comparison": "",
+              "peer_comparison": "",
+              "valuation_risk": ""
+            },
+            "catalysts": {
+              "near_term": [],
+              "medium_term": [],
+              "long_term": []
+            },
+            "risks": {
+              "business_risk": "",
+              "market_risk": "",
+              "valuation_risk": "",
+              "regulatory_risk": "",
+              "execution_risk": ""
+            },
+            "prediction": {
+              "base_case": "",
+              "bull_case": "",
+              "bear_case": "",
+              "confidence": "",
+              "what_would_change_the_view": ""
+            },
+            "recommendation": "Research",
+            "action_status": "No action taken",
+            "approval_required": true
+          }
+        }
+      }
+    ]
+  }
+]

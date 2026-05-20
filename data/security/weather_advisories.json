@@ -4106,5 +4106,1639 @@
       "Rain timing is worth surfacing before trips or outings."
     ],
     "timestamp": "2026-05-13T11:00:29.203189+00:00"
+  },
+  {
+    "advisory_id": "a533f3b1-4f04-4edc-855b-b01bfeef3f38",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Slight Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T21:58:18.670154+00:00"
+  },
+  {
+    "advisory_id": "e4c06afe-7379-450f-9759-aa150e93dc18",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Slight Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T21:58:50.940354+00:00"
+  },
+  {
+    "advisory_id": "8ea91ff1-a4e3-4823-89f6-7de3f1a2905b",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Slight Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T22:08:15.542444+00:00"
+  },
+  {
+    "advisory_id": "f5325cce-7c32-403d-b273-b48a741cbd5f",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Slight Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T22:08:50.885646+00:00"
+  },
+  {
+    "advisory_id": "b8d303cc-e2ba-4338-ba68-460bdbe67d93",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Slight Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T22:18:15.509962+00:00"
+  },
+  {
+    "advisory_id": "cbe01adf-53dc-4507-8f31-11d6d283a175",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Slight Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T22:18:50.881722+00:00"
+  },
+  {
+    "advisory_id": "a4433953-385b-4cce-97c4-7f4d0e96a24b",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Slight Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T22:28:22.815137+00:00"
+  },
+  {
+    "advisory_id": "22b4bd93-3f59-4ea2-bda5-154af2667479",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Slight Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T22:28:50.939223+00:00"
+  },
+  {
+    "advisory_id": "479a84b1-ae8d-4f91-ad32-289841bd183f",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Slight Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T22:38:20.259149+00:00"
+  },
+  {
+    "advisory_id": "c92991de-3dad-46a5-9a86-3e31c99c3b66",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Slight Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T22:38:50.930230+00:00"
+  },
+  {
+    "advisory_id": "4dadf124-2b8c-4659-8c92-34075605bca9",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T22:48:15.525446+00:00"
+  },
+  {
+    "advisory_id": "0c94ca2a-7937-4a9f-9de3-4f59ef634ab2",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T22:48:50.953842+00:00"
+  },
+  {
+    "advisory_id": "2ca1abfd-fdef-4c9f-8cde-dd70f7b3aa20",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T22:58:15.776842+00:00"
+  },
+  {
+    "advisory_id": "440b28d5-e277-4678-b257-6617c6d9c307",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T22:58:50.977918+00:00"
+  },
+  {
+    "advisory_id": "3ceb1fd2-5f6e-49a5-a11d-3b10ecca2cd6",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T23:08:15.612413+00:00"
+  },
+  {
+    "advisory_id": "5b9ea0af-1f1f-4b1b-8cb6-34f1d5b953be",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T23:08:50.919327+00:00"
+  },
+  {
+    "advisory_id": "6a0d2772-ea2b-456c-b846-23535810f4ef",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T23:18:15.651149+00:00"
+  },
+  {
+    "advisory_id": "21a6ada4-9d85-4485-aadd-4c72317dc019",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T23:18:50.927123+00:00"
+  },
+  {
+    "advisory_id": "cb0a1467-4a89-4169-b6b5-cb6eec5a036a",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T23:28:15.513900+00:00"
+  },
+  {
+    "advisory_id": "0a33b2f7-1eb4-4d62-8be2-133215dfad76",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T23:28:50.974374+00:00"
+  },
+  {
+    "advisory_id": "b86b980b-24fb-4623-8517-36eb2671a623",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T23:38:15.758006+00:00"
+  },
+  {
+    "advisory_id": "929c7854-19d2-4593-8b5b-a35671484b7f",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T23:38:50.944856+00:00"
+  },
+  {
+    "advisory_id": "267df0ef-957f-4bae-9266-f4f9ef7ad2f3",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T23:48:15.676986+00:00"
+  },
+  {
+    "advisory_id": "ba01875f-f2f2-4f8c-9b81-d69915cfe737",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T23:49:15.134238+00:00"
+  },
+  {
+    "advisory_id": "0f20fc4b-252c-47b9-a617-63ec278e4bb9",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T23:58:15.738713+00:00"
+  },
+  {
+    "advisory_id": "b29a357c-799b-46f8-88e1-9c39052826b6",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-19T23:59:15.246354+00:00"
+  },
+  {
+    "advisory_id": "0e9b7917-80ba-4176-a5fe-25182d3a03d2",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-20T00:08:15.550760+00:00"
+  },
+  {
+    "advisory_id": "af4c8fcf-55e7-4aaa-80c1-590e14ae0312",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-20T00:09:22.635912+00:00"
+  },
+  {
+    "advisory_id": "ecec3a08-2f86-4ece-b454-c765146bfcdd",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-20T00:18:15.526802+00:00"
+  },
+  {
+    "advisory_id": "8be68414-f3f6-4ab3-9668-169244e443c5",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-20T00:19:15.195511+00:00"
+  },
+  {
+    "advisory_id": "58e43341-d723-45c2-9dfd-6cdd623fe6f4",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-20T00:28:15.688713+00:00"
+  },
+  {
+    "advisory_id": "aa4f34fc-ffff-488d-974b-3b637d27a38d",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness."
+    ],
+    "timestamp": "2026-05-20T00:29:15.498686+00:00"
+  },
+  {
+    "advisory_id": "16ea3ced-724b-4dce-901d-08b72103a331",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T00:38:16.092675+00:00"
+  },
+  {
+    "advisory_id": "932f46fc-76e6-4bfd-af9d-fd77038670d4",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T00:39:15.177933+00:00"
+  },
+  {
+    "advisory_id": "4361158a-33b3-4c30-b7d4-093ea3671596",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T00:49:15.433968+00:00"
+  },
+  {
+    "advisory_id": "6e7ebaea-9255-4b37-8d48-66ff279c2581",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T00:58:15.527821+00:00"
+  },
+  {
+    "advisory_id": "600ae865-7c12-42bd-936f-c44cec65250f",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T00:59:15.547038+00:00"
+  },
+  {
+    "advisory_id": "9d5739d3-4f15-418c-a931-f7af2dced114",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T01:09:15.386345+00:00"
+  },
+  {
+    "advisory_id": "469b67a0-2548-4c08-a804-2870041fcf54",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T01:18:15.535177+00:00"
+  },
+  {
+    "advisory_id": "7e7a6181-088b-4ecb-a7f7-d2117875cd38",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T01:19:15.379922+00:00"
+  },
+  {
+    "advisory_id": "0ad59e86-f3b4-4c36-8537-0c0daf7760e7",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T01:28:15.651880+00:00"
+  },
+  {
+    "advisory_id": "4918acf8-5253-407c-9deb-b556d5ed0f42",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T01:29:15.137435+00:00"
+  },
+  {
+    "advisory_id": "e2c50fd0-bc09-40c6-977b-ad71c69576fd",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T01:38:15.756172+00:00"
+  },
+  {
+    "advisory_id": "477bf35d-e89d-4111-b531-e3fb25b68d7a",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T01:39:15.439098+00:00"
+  },
+  {
+    "advisory_id": "4eea33ad-f0ca-4c4c-8f6e-1fa16b391909",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T01:48:15.591836+00:00"
+  },
+  {
+    "advisory_id": "fcc66cec-4c72-439c-92a9-2d08744c390f",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T01:49:15.186042+00:00"
+  },
+  {
+    "advisory_id": "655d3f40-c4ed-41a1-b116-b9cd12678880",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T01:58:15.565981+00:00"
+  },
+  {
+    "advisory_id": "5aea94db-35dc-4295-b318-65e2133b943c",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T01:59:22.628550+00:00"
+  },
+  {
+    "advisory_id": "72e211bc-ead6-4da2-8886-d82f0865ef53",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T02:08:18.760123+00:00"
+  },
+  {
+    "advisory_id": "95706590-ef3b-4af6-b402-c2789cc01cff",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T02:08:50.917234+00:00"
+  },
+  {
+    "advisory_id": "5edc87f2-8733-4599-8403-f04c03b95f82",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T02:09:38.466827+00:00"
+  },
+  {
+    "advisory_id": "3f6b8aae-98ce-4323-b035-e2fa968eab2f",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T02:09:46.444513+00:00"
+  },
+  {
+    "advisory_id": "e7a14d6a-cdcd-40f0-8077-bbb3c39f651f",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T02:09:47.840392+00:00"
+  },
+  {
+    "advisory_id": "fcdde5cd-9f87-4691-b064-f1815a7e5328",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T02:18:15.659839+00:00"
+  },
+  {
+    "advisory_id": "d3b09bd4-934c-4cb1-bcf0-0380f748622e",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T02:19:39.540077+00:00"
+  },
+  {
+    "advisory_id": "a76464b8-dbfc-4b2d-8c5e-cac2bc7f72b4",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T02:28:15.651312+00:00"
+  },
+  {
+    "advisory_id": "058bd8bf-c9e2-4b41-be60-de5457d6d98a",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "High near-term rain probability could affect departures and outdoor plans."
+    ],
+    "timestamp": "2026-05-20T02:29:37.095333+00:00"
+  },
+  {
+    "advisory_id": "9a18639f-a642-4c77-9094-b6f4e2e629ef",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T02:39:36.505619+00:00"
+  },
+  {
+    "advisory_id": "a46eafb8-4a93-45a9-a1bd-dc6cffa42a21",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T02:48:15.668196+00:00"
+  },
+  {
+    "advisory_id": "2da84fde-a4c1-4fcd-a4ae-2c191a7c2fe8",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T02:49:36.515583+00:00"
+  },
+  {
+    "advisory_id": "4604ba97-8a60-4208-a510-93cefd2718f3",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T02:58:15.754949+00:00"
+  },
+  {
+    "advisory_id": "4d438502-d5e4-4c00-b251-7dffa99a1d73",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T02:59:36.680900+00:00"
+  },
+  {
+    "advisory_id": "700bbf3f-872a-46cf-81c9-d9979935bc07",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T03:08:15.593747+00:00"
+  },
+  {
+    "advisory_id": "3898eeca-3066-4480-9f33-efea65b178f4",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T03:09:36.051299+00:00"
+  },
+  {
+    "advisory_id": "0f528e74-0fc7-41bb-b831-34e759fb8f83",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T03:18:15.604582+00:00"
+  },
+  {
+    "advisory_id": "00d8c155-97df-4f07-a492-8ab45db138f1",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T03:20:15.607455+00:00"
+  },
+  {
+    "advisory_id": "7afaa0f8-7fc3-4a97-a7f5-45096ac71a8b",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T03:28:15.719275+00:00"
+  },
+  {
+    "advisory_id": "2f5c9788-8722-447f-a8b1-91471cbeb640",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Showers And Thunderstorms Likely",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T03:30:15.589004+00:00"
+  },
+  {
+    "advisory_id": "947b37da-d674-4952-ad6c-5212ab809a7e",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T03:38:15.918326+00:00"
+  },
+  {
+    "advisory_id": "2925e2ac-29a4-48a4-9e22-09e914d5d4f1",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T03:40:15.522814+00:00"
+  },
+  {
+    "advisory_id": "62af4dba-5570-4ab3-9119-0a7f4b42b22a",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T03:48:15.581802+00:00"
+  },
+  {
+    "advisory_id": "9ccc79c1-cf31-4f65-a331-9346c57fce2b",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T03:50:15.567025+00:00"
+  },
+  {
+    "advisory_id": "4a84f8e7-2b32-4dbf-a1ef-45c1182e7032",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T03:58:15.580302+00:00"
+  },
+  {
+    "advisory_id": "6cf26b87-af31-4369-9983-9225132cd123",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:00:16.723107+00:00"
+  },
+  {
+    "advisory_id": "ee2317e9-5f07-4b3b-a7ef-4e0be65033ba",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:07:19.533708+00:00"
+  },
+  {
+    "advisory_id": "74fe7222-c06f-44de-9389-25296e9011ae",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:07:28.215941+00:00"
+  },
+  {
+    "advisory_id": "424a5e51-cfcb-4ec6-9407-0fa94a7005ca",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:07:29.610781+00:00"
+  },
+  {
+    "advisory_id": "bf88b685-487d-4d01-b5a8-868176761fa4",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:07:32.551144+00:00"
+  },
+  {
+    "advisory_id": "9e6ba72e-1507-409e-8b5e-5bc44331ad33",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:08:15.218957+00:00"
+  },
+  {
+    "advisory_id": "d5bbe45b-3f46-4524-bf4b-9b28d96aaefb",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:08:33.228409+00:00"
+  },
+  {
+    "advisory_id": "47bee870-cde3-409d-bf10-fb94f66a9f65",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:08:40.541510+00:00"
+  },
+  {
+    "advisory_id": "04e90408-66cf-4b8e-b216-0c74aa1556a6",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:08:41.996204+00:00"
+  },
+  {
+    "advisory_id": "4aca94d5-a202-4cec-819f-5571f7b0f727",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:13:17.029783+00:00"
+  },
+  {
+    "advisory_id": "7ea50437-80b9-4619-9594-50c9befdd96a",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:13:24.627926+00:00"
+  },
+  {
+    "advisory_id": "f89e5cea-6af0-4464-860b-e0ed709a2207",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:13:26.092852+00:00"
+  },
+  {
+    "advisory_id": "640dc4ce-b101-4c24-8b4c-c9f71c15daa4",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:14:13.102245+00:00"
+  },
+  {
+    "advisory_id": "9e3a2f8a-7cb8-408d-b880-06e2065e5668",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:14:20.425231+00:00"
+  },
+  {
+    "advisory_id": "70dbb3db-73c5-40b4-aab2-919cb5bed0ea",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:14:21.893043+00:00"
+  },
+  {
+    "advisory_id": "e07cf206-f49f-49ea-8af0-e9354d5ffdb5",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:14:38.843111+00:00"
+  },
+  {
+    "advisory_id": "28ba1988-759f-427b-bac3-d380a9ff67ee",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:14:46.607974+00:00"
+  },
+  {
+    "advisory_id": "5edca1be-4b2f-4cd8-870e-c72390a0125c",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:14:48.073888+00:00"
+  },
+  {
+    "advisory_id": "289eb373-7c84-4c9a-a620-72ce0c9c9ca6",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:16:42.407620+00:00"
+  },
+  {
+    "advisory_id": "72fc189c-aeb4-4bdb-bbb9-f81873e4c2fb",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:16:50.176360+00:00"
+  },
+  {
+    "advisory_id": "578f0a07-8c3c-409a-8fb1-bbc03ce2369a",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:16:57.738710+00:00"
+  },
+  {
+    "advisory_id": "6f4b71c0-31cf-45ba-b4fe-25ec70925f64",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:18:15.454117+00:00"
+  },
+  {
+    "advisory_id": "32eab1c4-360a-42cf-bfd9-db44e252fb8c",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:19:25.821649+00:00"
+  },
+  {
+    "advisory_id": "c283f2d4-2e2b-415a-835d-3df2702d1f46",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:19:33.402808+00:00"
+  },
+  {
+    "advisory_id": "3f09ce1f-2310-4baf-9d52-ccce4c5ca2c9",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:19:34.862586+00:00"
+  },
+  {
+    "advisory_id": "5ac81e03-fa4b-4537-b7b7-0626a5b34aa4",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:20:02.951106+00:00"
+  },
+  {
+    "advisory_id": "bc8cc239-3080-4f7e-a9b7-9a036486f9e0",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:20:15.132040+00:00"
+  },
+  {
+    "advisory_id": "56a30b2e-0e39-4957-8f0a-1ddf61e1cde0",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:28:15.559382+00:00"
+  },
+  {
+    "advisory_id": "3300319b-9125-452f-8cb9-0fea381e0198",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:28:41.513949+00:00"
+  },
+  {
+    "advisory_id": "9ecd6e4e-408a-44b0-ae44-2af023c03c32",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:28:50.916277+00:00"
+  },
+  {
+    "advisory_id": "b4132ae4-104b-4c2a-9e9f-ceda9d1d1562",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:28:52.272146+00:00"
+  },
+  {
+    "advisory_id": "bdc0d7e1-61bb-4563-84f9-9839383a631c",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:28:54.992843+00:00"
+  },
+  {
+    "advisory_id": "58ed41a4-abdc-4f51-b61a-7f22563185a7",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:29:08.169236+00:00"
+  },
+  {
+    "advisory_id": "047470c0-dcc3-473b-b1c4-e3600a75c12b",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:29:13.977765+00:00"
+  },
+  {
+    "advisory_id": "2016b129-5a54-45af-8d38-4b9fb8121bdc",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:30:53.399124+00:00"
+  },
+  {
+    "advisory_id": "ab0fc702-7065-4c94-a0d7-7a9cd7210e70",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:31:01.071407+00:00"
+  },
+  {
+    "advisory_id": "023d106c-5ad2-4af3-9d22-601b40f61a9c",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:31:02.417789+00:00"
+  },
+  {
+    "advisory_id": "10824e21-fbc3-48ab-9eb8-802a92ef9bd8",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:38:15.692126+00:00"
+  },
+  {
+    "advisory_id": "d601cf48-b1d2-41bc-8cab-9fe9895b4bf6",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:40:51.996168+00:00"
+  },
+  {
+    "advisory_id": "a77df3a1-0dc0-4d89-a69d-5a4ebff0f148",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:48:23.029413+00:00"
+  },
+  {
+    "advisory_id": "dbb8870e-ac70-4ccd-8888-238b4f0d6dc6",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:50:52.478967+00:00"
+  },
+  {
+    "advisory_id": "c1e5de37-1ccf-4a46-b9d0-ef2a0f1d6d97",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T04:58:15.611832+00:00"
+  },
+  {
+    "advisory_id": "d5971e4b-c37a-467c-94c5-e4963b8f0972",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T05:00:52.633789+00:00"
+  },
+  {
+    "advisory_id": "8080a323-d6c5-472e-842c-2af88fba50f4",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T05:05:50.282777+00:00"
+  },
+  {
+    "advisory_id": "6d5beb51-c638-4ae5-87c4-b188f5dd123f",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T05:05:56.515625+00:00"
+  },
+  {
+    "advisory_id": "d62ac78e-e648-404a-b9a9-acbc0625028b",
+    "actor": "Storm",
+    "context": "Automatic family weather warning",
+    "current_weather": "Chance Showers And Thunderstorms",
+    "risk_level": "warning",
+    "safe_timing": "Adjust departures and outdoor timing around Storm guidance.",
+    "recommendation": "Severe or rapidly changing weather needs family awareness.",
+    "follow_ups": [
+      "Severe or rapidly changing weather needs family awareness.",
+      "Rain timing is worth surfacing before trips or outings."
+    ],
+    "timestamp": "2026-05-20T05:05:57.533322+00:00"
   }
 ]

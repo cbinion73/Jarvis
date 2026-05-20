@@ -1,0 +1,506 @@
+[
+  {
+    "artifact_id": "market-intelligence-9f02b201a60146dc:report",
+    "item_id": "market-intelligence-9f02b201a60146dc",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "artifact_type": "report",
+    "title": "Build the first market watchlist",
+    "summary": "No market-intelligence watchlist or thesis objects are staged yet. The first move is to create a bounded watchlist and thesis discipline.",
+    "blocked_reason": "",
+    "created_at": "2026-05-18T03:36:46.813848+00:00",
+    "updated_at": "2026-05-19T21:26:20.404094+00:00",
+    "payload": {
+      "report_type": "fisk-market-report",
+      "market_report": {
+        "ticker_or_asset": "No watchlist yet",
+        "sector": "",
+        "time_horizon": "N/A",
+        "current_price_context": "",
+        "thesis": "The market-intelligence lane needs a first watchlist before it can stage disciplined theses.",
+        "why_this_asset_matters": "A disciplined watchlist is the first filter against hype and undirected market attention.",
+        "market_belief": "",
+        "what_fisk_may_be_missing": "",
+        "fundamentals": {
+          "revenue_trend": "",
+          "earnings_trend": "",
+          "margins": "",
+          "debt": "",
+          "cash_flow": "",
+          "competitive_position": ""
+        },
+        "valuation": {
+          "current_valuation": "",
+          "historical_comparison": "",
+          "peer_comparison": "",
+          "valuation_risk": ""
+        },
+        "catalysts": {
+          "near_term": [],
+          "medium_term": [],
+          "long_term": []
+        },
+        "risks": {
+          "business_risk": "",
+          "market_risk": "",
+          "valuation_risk": "",
+          "regulatory_risk": "",
+          "execution_risk": ""
+        },
+        "prediction": {
+          "base_case": "",
+          "bull_case": "",
+          "bear_case": "",
+          "confidence": "",
+          "what_would_change_the_view": ""
+        },
+        "recommendation": "Research",
+        "action_status": "No action taken",
+        "approval_required": true
+      }
+    }
+  },
+  {
+    "artifact_id": "8208a660-28a9-430e-b630-89fb40dfa877:summary-brief",
+    "item_id": "market-intelligence:lane",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "artifact_type": "summary-brief",
+    "title": "Market Intelligence summary",
+    "summary": "Reviewed 0 source signal(s) and staged 1 reviewable item(s) for Market Intelligence.",
+    "blocked_reason": "",
+    "created_at": "2026-05-18T03:36:46.816845+00:00",
+    "updated_at": "2026-05-18T03:36:46.816845+00:00",
+    "payload": {
+      "run_id": "8208a660-28a9-430e-b630-89fb40dfa877",
+      "staged_titles": [
+        "Build the first market watchlist"
+      ]
+    }
+  },
+  {
+    "artifact_id": "market-intelligence-9f02b201a60146dc:guardrail-review",
+    "item_id": "market-intelligence-9f02b201a60146dc",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "artifact_type": "guardrail-review",
+    "title": "Chris review",
+    "summary": "Approved for the next bounded step.",
+    "blocked_reason": "",
+    "created_at": "2026-05-18T03:37:07.864727+00:00",
+    "updated_at": "2026-05-18T03:37:07.864727+00:00",
+    "payload": {
+      "reviewer": "Chris",
+      "status": "approved"
+    }
+  },
+  {
+    "artifact_id": "0a410816-7749-4304-8c4e-fbf9ab01d309:blocked-action",
+    "item_id": "market-intelligence:lane",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "artifact_type": "blocked-action",
+    "title": "Market Intelligence blocked",
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T03:37:09.941267+00:00",
+    "updated_at": "2026-05-18T03:37:09.941267+00:00",
+    "payload": {
+      "run_id": "0a410816-7749-4304-8c4e-fbf9ab01d309",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "passive-income-a076de736a06dd2b:report",
+    "item_id": "passive-income-a076de736a06dd2b",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "artifact_type": "report",
+    "title": "Build the first passive-income shortlist",
+    "summary": "No passive-income theses are staged yet. The first autonomous move is to build and rank an explicit shortlist.",
+    "blocked_reason": "",
+    "created_at": "2026-05-18T18:11:11.493948+00:00",
+    "updated_at": "2026-05-19T21:26:20.402975+00:00",
+    "payload": {
+      "report_type": "fisk-opportunity-report",
+      "opportunity_report": {
+        "opportunity": "Build the first passive-income shortlist",
+        "category": "validation-gap",
+        "source": "finance-state",
+        "summary": "No passive-income theses are staged yet. The first autonomous move is to build and rank an explicit shortlist.",
+        "market_reality": "There is interest in passive income, but not enough specific opportunity evidence is staged yet.",
+        "who_pays": "Unknown",
+        "why_they_pay": "Unknown",
+        "current_alternatives": [
+          "Unstructured idea capture"
+        ],
+        "where_money_flows": "Unknown",
+        "who_controls_distribution": "Unknown",
+        "leverage_point": "The first leverage is disciplined screening, not more idea generation.",
+        "advantage": "A clear framework can prevent fantasy and wasted effort.",
+        "reusable_asset": "Current frameworks and past notes",
+        "ownable_channel": "Unknown",
+        "compounding_vector": "Shortlist discipline improves future decisions.",
+        "economic_model": {
+          "possible_revenue": "Unknown",
+          "startup_cost": "Low",
+          "operating_effort": "Low",
+          "time_to_first_dollar": "Unknown",
+          "time_to_meaningful_revenue": "Unknown",
+          "scalability": "Framework-level"
+        },
+        "risk": {
+          "main_downside": "Staying abstract too long.",
+          "hidden_labor": "No hidden labor yet because the offer does not exist.",
+          "capital_risk": "Low",
+          "reputation_risk": "Low",
+          "family_time_cost": "Low"
+        },
+        "confidence_level": "high",
+        "score": {
+          "market_demand": "unknown",
+          "revenue_potential": "unknown",
+          "effort_required": "low",
+          "capital_required": "low",
+          "distribution_advantage": "unknown",
+          "skill_fit": "medium",
+          "family_fit": "high",
+          "reputation_fit": "high",
+          "values_fit": "high",
+          "durability": "high",
+          "automation_potential": "high",
+          "downside_risk": "low"
+        },
+        "fisk_recommendation": "Research",
+        "next_action": "create-shortlist",
+        "approval_needed": true,
+        "agents_to_route_to": [
+          "Nebula",
+          "Pepper",
+          "Watcher",
+          "Legal/Compliance Watcher"
+        ]
+      }
+    }
+  },
+  {
+    "artifact_id": "15c9fd06-9519-47bb-a9fa-c33661be8feb:blocked-action",
+    "item_id": "passive-income:lane",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "artifact_type": "blocked-action",
+    "title": "Passive Income blocked",
+    "summary": "Passive Income did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:03:47.134424+00:00",
+    "updated_at": "2026-05-18T18:03:47.134424+00:00",
+    "payload": {
+      "run_id": "15c9fd06-9519-47bb-a9fa-c33661be8feb",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "01ba5467-6611-49e8-9125-caf8fac820fb:blocked-action",
+    "item_id": "market-intelligence:lane",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "artifact_type": "blocked-action",
+    "title": "Market Intelligence blocked",
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:03:47.143820+00:00",
+    "updated_at": "2026-05-18T18:03:47.143820+00:00",
+    "payload": {
+      "run_id": "01ba5467-6611-49e8-9125-caf8fac820fb",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "e729d410-5fc2-4878-9f8b-8919ab37bd92:blocked-action",
+    "item_id": "passive-income:lane",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "artifact_type": "blocked-action",
+    "title": "Passive Income blocked",
+    "summary": "Passive Income did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:06:50.220517+00:00",
+    "updated_at": "2026-05-18T18:06:50.220517+00:00",
+    "payload": {
+      "run_id": "e729d410-5fc2-4878-9f8b-8919ab37bd92",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "a2d4a2e1-0e6e-48cd-8566-251f599c0a49:blocked-action",
+    "item_id": "market-intelligence:lane",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "artifact_type": "blocked-action",
+    "title": "Market Intelligence blocked",
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:06:50.224611+00:00",
+    "updated_at": "2026-05-18T18:06:50.224611+00:00",
+    "payload": {
+      "run_id": "a2d4a2e1-0e6e-48cd-8566-251f599c0a49",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "768b55cd-522e-4277-93bf-22baec83d534:blocked-action",
+    "item_id": "passive-income:lane",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "artifact_type": "blocked-action",
+    "title": "Passive Income blocked",
+    "summary": "Passive Income did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:08:57.659299+00:00",
+    "updated_at": "2026-05-18T18:08:57.659299+00:00",
+    "payload": {
+      "run_id": "768b55cd-522e-4277-93bf-22baec83d534",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "40b9db2c-1f5e-4653-8b23-29ab3a91ceb7:blocked-action",
+    "item_id": "market-intelligence:lane",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "artifact_type": "blocked-action",
+    "title": "Market Intelligence blocked",
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:08:57.663073+00:00",
+    "updated_at": "2026-05-18T18:08:57.663073+00:00",
+    "payload": {
+      "run_id": "40b9db2c-1f5e-4653-8b23-29ab3a91ceb7",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "1b95aa65-7711-4a28-98dd-22bc876c8f98:blocked-action",
+    "item_id": "passive-income:lane",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "artifact_type": "blocked-action",
+    "title": "Passive Income blocked",
+    "summary": "Passive Income did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:12:02.905676+00:00",
+    "updated_at": "2026-05-18T18:12:02.905676+00:00",
+    "payload": {
+      "run_id": "1b95aa65-7711-4a28-98dd-22bc876c8f98",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "b07305aa-f5fa-4ec9-acae-592e2e5939ed:blocked-action",
+    "item_id": "market-intelligence:lane",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "artifact_type": "blocked-action",
+    "title": "Market Intelligence blocked",
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:12:02.908899+00:00",
+    "updated_at": "2026-05-18T18:12:02.908899+00:00",
+    "payload": {
+      "run_id": "b07305aa-f5fa-4ec9-acae-592e2e5939ed",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "456ca28f-f0aa-4780-b874-da4feba5b839:blocked-action",
+    "item_id": "passive-income:lane",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "artifact_type": "blocked-action",
+    "title": "Passive Income blocked",
+    "summary": "Passive Income did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:12:54.869007+00:00",
+    "updated_at": "2026-05-18T18:12:54.869007+00:00",
+    "payload": {
+      "run_id": "456ca28f-f0aa-4780-b874-da4feba5b839",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "09f37385-52a8-4aeb-9c24-db22fb090520:blocked-action",
+    "item_id": "market-intelligence:lane",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "artifact_type": "blocked-action",
+    "title": "Market Intelligence blocked",
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:12:54.874109+00:00",
+    "updated_at": "2026-05-18T18:12:54.874109+00:00",
+    "payload": {
+      "run_id": "09f37385-52a8-4aeb-9c24-db22fb090520",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "75749a63-0c5e-4709-9e6f-1725439f0b9e:blocked-action",
+    "item_id": "passive-income:lane",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "artifact_type": "blocked-action",
+    "title": "Passive Income blocked",
+    "summary": "Passive Income did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:17:18.599677+00:00",
+    "updated_at": "2026-05-18T18:17:18.599677+00:00",
+    "payload": {
+      "run_id": "75749a63-0c5e-4709-9e6f-1725439f0b9e",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "dcba0485-7b46-44f8-bdc8-982443450050:blocked-action",
+    "item_id": "market-intelligence:lane",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "artifact_type": "blocked-action",
+    "title": "Market Intelligence blocked",
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:17:18.605951+00:00",
+    "updated_at": "2026-05-18T18:17:18.605951+00:00",
+    "payload": {
+      "run_id": "dcba0485-7b46-44f8-bdc8-982443450050",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "3916f22c-dfed-40a2-a12a-db9f25134501:blocked-action",
+    "item_id": "passive-income:lane",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "artifact_type": "blocked-action",
+    "title": "Passive Income blocked",
+    "summary": "Passive Income did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:19:52.253709+00:00",
+    "updated_at": "2026-05-18T18:19:52.253709+00:00",
+    "payload": {
+      "run_id": "3916f22c-dfed-40a2-a12a-db9f25134501",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "b0ed88d2-2baf-4518-819d-0af2ce7aceef:blocked-action",
+    "item_id": "market-intelligence:lane",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "artifact_type": "blocked-action",
+    "title": "Market Intelligence blocked",
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:19:52.258875+00:00",
+    "updated_at": "2026-05-18T18:19:52.258875+00:00",
+    "payload": {
+      "run_id": "b0ed88d2-2baf-4518-819d-0af2ce7aceef",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "960d2e03-fbec-4aeb-8665-3d2cb5afd4e5:blocked-action",
+    "item_id": "passive-income:lane",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "artifact_type": "blocked-action",
+    "title": "Passive Income blocked",
+    "summary": "Passive Income did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:20:55.076832+00:00",
+    "updated_at": "2026-05-18T18:20:55.076832+00:00",
+    "payload": {
+      "run_id": "960d2e03-fbec-4aeb-8665-3d2cb5afd4e5",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "d49c81ea-2711-4ebe-8f27-87211a79bf48:blocked-action",
+    "item_id": "market-intelligence:lane",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "artifact_type": "blocked-action",
+    "title": "Market Intelligence blocked",
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:20:55.082043+00:00",
+    "updated_at": "2026-05-18T18:20:55.082043+00:00",
+    "payload": {
+      "run_id": "d49c81ea-2711-4ebe-8f27-87211a79bf48",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "2e99f56c-ba72-4ed0-a489-47bec1be8289:blocked-action",
+    "item_id": "passive-income:lane",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "artifact_type": "blocked-action",
+    "title": "Passive Income blocked",
+    "summary": "Passive Income did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:22:58.349916+00:00",
+    "updated_at": "2026-05-18T18:22:58.349916+00:00",
+    "payload": {
+      "run_id": "2e99f56c-ba72-4ed0-a489-47bec1be8289",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "43931225-15a4-4e3c-a173-053f80d50838:blocked-action",
+    "item_id": "market-intelligence:lane",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "artifact_type": "blocked-action",
+    "title": "Market Intelligence blocked",
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:22:58.362296+00:00",
+    "updated_at": "2026-05-18T18:22:58.362296+00:00",
+    "payload": {
+      "run_id": "43931225-15a4-4e3c-a173-053f80d50838",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "d1b707a4-a6e9-4d72-a2c7-186da04edbfb:blocked-action",
+    "item_id": "passive-income:lane",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "artifact_type": "blocked-action",
+    "title": "Passive Income blocked",
+    "summary": "Passive Income did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:23:53.736800+00:00",
+    "updated_at": "2026-05-18T18:23:53.736800+00:00",
+    "payload": {
+      "run_id": "d1b707a4-a6e9-4d72-a2c7-186da04edbfb",
+      "blocked_reason": "cadence-not-due"
+    }
+  },
+  {
+    "artifact_id": "6d353edf-25eb-44d1-9a0a-755651672894:blocked-action",
+    "item_id": "market-intelligence:lane",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "artifact_type": "blocked-action",
+    "title": "Market Intelligence blocked",
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "blocked_reason": "cadence-not-due",
+    "created_at": "2026-05-18T18:23:53.751136+00:00",
+    "updated_at": "2026-05-18T18:23:53.751136+00:00",
+    "payload": {
+      "run_id": "6d353edf-25eb-44d1-9a0a-755651672894",
+      "blocked_reason": "cadence-not-due"
+    }
+  }
+]

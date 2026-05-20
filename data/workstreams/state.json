@@ -1,0 +1,248 @@
+{
+  "updated_at": "2026-05-18T17:57:35.107957+00:00",
+  "mission": "Run bounded autonomous workstreams with truthful execution records, explicit review gates, and reusable lane contracts.",
+  "lanes": [
+    {
+      "lane_id": "passive-income",
+      "label": "Passive Income",
+      "domain": "finance",
+      "owner_agent": "Fisk",
+      "owner_agent_id": "fisk",
+      "status": "active",
+      "proof_of_concept": true,
+      "summary": "Research, rank, and stage passive-income opportunities without pretending external execution already happened.",
+      "objective": "Build a reusable autonomous workstream lane for revenue ideas, experiments, and reviewable next actions.",
+      "cadence": "weekly + on demand",
+      "cadence_minutes": 10080,
+      "autonomy_mode": "staged",
+      "review_level": "human-review-required",
+      "report_type": "fisk-opportunity-report",
+      "required_reviewers": [
+        {
+          "agent_id": "nebula",
+          "label": "Nebula",
+          "role": "assumption-attack"
+        },
+        {
+          "agent_id": "pepper",
+          "label": "Pepper",
+          "role": "family-reputation-fit"
+        },
+        {
+          "agent_id": "watcher",
+          "label": "Watcher",
+          "role": "memory-pattern-fit"
+        },
+        {
+          "agent_id": "legal-compliance-watcher",
+          "label": "Legal/Compliance Watcher",
+          "role": "tax-regulatory-professional-risk"
+        }
+      ],
+      "allowed_actions": [
+        "research",
+        "summarize",
+        "rank",
+        "stage-review",
+        "propose-experiment"
+      ],
+      "forbidden_actions": [
+        "spend-money",
+        "open-accounts",
+        "post-publicly",
+        "contact-third-parties",
+        "execute-transactions"
+      ],
+      "state_model": [
+        "discovered",
+        "screened",
+        "rejected",
+        "watching",
+        "researching",
+        "validated",
+        "experiment_planned",
+        "staged_for_approval",
+        "in_progress",
+        "paused",
+        "scaled",
+        "closed"
+      ],
+      "item_types": [
+        "opportunity",
+        "experiment",
+        "market-map",
+        "validation-gap"
+      ],
+      "source_connectors": [
+        "wealth-summary",
+        "finance-state",
+        "pipeline-state",
+        "life-agent-finance-steward"
+      ],
+      "scoring_categories": [
+        "market_demand",
+        "revenue_potential",
+        "effort_required",
+        "capital_required",
+        "distribution_advantage",
+        "skill_fit",
+        "family_fit",
+        "reputation_fit",
+        "values_fit",
+        "durability",
+        "automation_potential",
+        "downside_risk"
+      ]
+    },
+    {
+      "lane_id": "workshop-offers",
+      "label": "Workshop Offers",
+      "domain": "workshop",
+      "owner_agent": "Workshop Watch",
+      "status": "template",
+      "proof_of_concept": false,
+      "summary": "Future lane for monetizable workshop services, products, and fabrication opportunities.",
+      "objective": "Provide a reusable template for offer discovery in hands-on build domains.",
+      "cadence": "future",
+      "autonomy_mode": "staged",
+      "review_level": "human-review-required",
+      "allowed_actions": [
+        "research",
+        "summarize",
+        "stage-review"
+      ],
+      "forbidden_actions": [
+        "spend-money",
+        "contact-third-parties",
+        "public-listing"
+      ],
+      "source_connectors": [
+        "workshop-state",
+        "vendor-prep",
+        "concept-studio"
+      ]
+    },
+    {
+      "lane_id": "writing-ip",
+      "label": "Writing And IP",
+      "domain": "executive",
+      "owner_agent": "Catalyst Personal",
+      "status": "template",
+      "proof_of_concept": false,
+      "summary": "Future lane for books, frameworks, and durable intellectual property workstreams.",
+      "objective": "Reuse the framework for compounding content and intellectual-property lanes.",
+      "cadence": "future",
+      "autonomy_mode": "staged",
+      "review_level": "human-review-required",
+      "allowed_actions": [
+        "research",
+        "summarize",
+        "stage-review"
+      ],
+      "forbidden_actions": [
+        "public-posting",
+        "external-send",
+        "contract-signing"
+      ],
+      "source_connectors": [
+        "content-ops",
+        "catalyst-projects",
+        "ghostwritr"
+      ]
+    },
+    {
+      "lane_id": "market-intelligence",
+      "label": "Market Intelligence",
+      "domain": "finance",
+      "owner_agent": "Fisk",
+      "owner_agent_id": "fisk",
+      "status": "active",
+      "proof_of_concept": false,
+      "summary": "Track watchlists, theses, catalysts, and staged investment recommendations without pretending to trade.",
+      "objective": "Give Chris disciplined market awareness, probabilistic theses, and bounded approval-ready recommendations.",
+      "cadence": "daily + on demand",
+      "cadence_minutes": 1440,
+      "autonomy_mode": "staged",
+      "review_level": "human-review-required",
+      "report_type": "fisk-market-report",
+      "required_reviewers": [
+        {
+          "agent_id": "nebula",
+          "label": "Nebula",
+          "role": "assumption-attack"
+        },
+        {
+          "agent_id": "pepper",
+          "label": "Pepper",
+          "role": "family-reputation-fit"
+        },
+        {
+          "agent_id": "watcher",
+          "label": "Watcher",
+          "role": "memory-pattern-fit"
+        },
+        {
+          "agent_id": "legal-compliance-watcher",
+          "label": "Legal/Compliance Watcher",
+          "role": "tax-regulatory-professional-risk"
+        }
+      ],
+      "allowed_actions": [
+        "screen",
+        "summarize",
+        "build-thesis",
+        "track-catalysts",
+        "stage-review",
+        "update-watchlist"
+      ],
+      "forbidden_actions": [
+        "move-money",
+        "execute-trades",
+        "open-accounts",
+        "use-margin",
+        "trade-options",
+        "buy-crypto"
+      ],
+      "state_model": [
+        "screened",
+        "watchlist",
+        "researching",
+        "thesis_built",
+        "buy_candidate",
+        "hold",
+        "trim_candidate",
+        "exit_candidate",
+        "rejected",
+        "staged_for_approval",
+        "executed_under_rule"
+      ],
+      "item_types": [
+        "watchlist-candidate",
+        "thesis",
+        "catalyst-alert",
+        "buy-candidate",
+        "hold",
+        "trim-candidate",
+        "exit-candidate"
+      ],
+      "source_connectors": [
+        "finance-state",
+        "wealth-summary",
+        "manual-market-watchlists"
+      ],
+      "scoring_categories": [
+        "thesis_clarity",
+        "valuation_discipline",
+        "catalyst_quality",
+        "downside_risk",
+        "time_horizon_fit",
+        "portfolio_fit"
+      ]
+    }
+  ],
+  "notes": [
+    "Treat passive income as the first proof-of-concept lane, not the whole framework.",
+    "Every lane must distinguish planned, researched, staged, approved, and executed states.",
+    "Background work can research and stage, but it must not imply external execution without evidence."
+  ]
+}

@@ -1,0 +1,43 @@
+[
+  {
+    "agent_id": "task-workshop-111c9ca5",
+    "label": "Mission Planner",
+    "class_type": "task-agent",
+    "origin": "mission-synthesis",
+    "mission_id": "mission-f63fd51ed3",
+    "template_id": "planner",
+    "domain": "workshop",
+    "trust_zone": "family-bmad.personal-local",
+    "autonomy_level": "bounded-autonomy",
+    "promotion_status": "ephemeral",
+    "purpose": "Support Help me design a unique 3d printed sculpture from a photo and build t... with planner work.",
+    "mission_roles": [
+      "support",
+      "specialist"
+    ],
+    "allowed_tools": [
+      "planning",
+      "calendar",
+      "route-weather",
+      "briefings"
+    ],
+    "approval_triggers": [
+      "external commitments",
+      "payments",
+      "protected communications"
+    ],
+    "success_metrics": [
+      "Clean plan",
+      "Good sequencing",
+      "Fewer dropped steps"
+    ],
+    "status": "active",
+    "usage_count": 1,
+    "success_count": 0,
+    "last_used_at": "2026-05-18T13:23:17.053060+00:00",
+    "memory_boundary": "mission:mission-f63fd51ed3",
+    "created_at": "2026-05-18T13:23:17.053060+00:00",
+    "updated_at": "2026-05-18T13:23:17.053060+00:00",
+    "promoted_at": ""
+  }
+]

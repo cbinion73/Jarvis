@@ -1,0 +1,42 @@
+{
+  "conversation_id": "3ab9713c-6a01-47b1-8a26-08676f59ad59",
+  "actor": "Chris",
+  "room": "office",
+  "source": "glass",
+  "title": "tell me about the day",
+  "status": "active",
+  "summary": "",
+  "memory_signals": [],
+  "created_at": "2026-05-19T21:26:17.870383+00:00",
+  "updated_at": "2026-05-19T21:26:20.348521+00:00",
+  "last_activity_at": "2026-05-19T21:26:20.348521+00:00",
+  "turn_count": 2,
+  "latest_user_text": "tell me about the day",
+  "latest_assistant_text": "Today looks steady and useful, not flashy. The shape of it is probably best described as a day for clear thinking, clean execution, and avoiding unnecessary drama.\n\nI\u2019m not seeing live calendar or weather context here, so I can\u2019t claim specifics about your actual schedule. But if you want the most likely winning posture: handle the hardest thinking early, keep meetings tight, leave margin for interruptions, and don\u2019t let small noise steal the day.\n\nNet: good day for progress if you keep it simple.",
+  "turns": [
+    {
+      "turn_id": "4a35e4a5-08c8-4dc9-a022-59c035a29243",
+      "role": "user",
+      "text": "tell me about the day",
+      "actor": "Chris",
+      "room": "office",
+      "source": "glass",
+      "created_at": "2026-05-19T21:26:17.879034+00:00",
+      "metadata": {}
+    },
+    {
+      "turn_id": "65ed9e92-b6de-43e2-b1fd-c6619d6b4237",
+      "role": "assistant",
+      "text": "Today looks steady and useful, not flashy. The shape of it is probably best described as a day for clear thinking, clean execution, and avoiding unnecessary drama.\n\nI\u2019m not seeing live calendar or weather context here, so I can\u2019t claim specifics about your actual schedule. But if you want the most likely winning posture: handle the hardest thinking early, keep meetings tight, leave margin for interruptions, and don\u2019t let small noise steal the day.\n\nNet: good day for progress if you keep it simple.",
+      "actor": "Chris",
+      "room": "office",
+      "source": "glass",
+      "created_at": "2026-05-19T21:26:20.348521+00:00",
+      "metadata": {
+        "provider": "openai",
+        "model": "gpt-5.4-mini-2026-03-17",
+        "catalyst_capture": {}
+      }
+    }
+  ]
+}
