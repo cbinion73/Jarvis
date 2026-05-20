@@ -1,0 +1,43 @@
+{
+  "package_id": "9ea5021a-c0f1-495c-8f50-9bef576af468",
+  "part_name": "QA Camera Mount 1779128797605",
+  "actor": "Chris",
+  "summary": "This is a simple L-bracket style camera mount with a 90 by 40 by 6 mm base and a 35 mm riser. I\u2019m keeping the geometry parameter-driven and leaving the fastener zones unobstructed so you can test print and verify access before refining details.",
+  "parameters": [
+    "part_name = \"QA Camera Mount 1779128797605\"",
+    "base_len = 90;",
+    "base_wid = 40;",
+    "base_thk = 6;",
+    "riser_h = 35;",
+    "riser_thk = 6;",
+    "fastener_clearance = 8;",
+    "edge_margin = 10;",
+    "hole_d = 5.2;",
+    "hole_spacing = 60;",
+    "hole_y = base_wid / 2;",
+    "hole_x1 = (base_len - hole_spacing) / 2;",
+    "hole_x2 = hole_x1 + hole_spacing;",
+    "riser_offset = base_len - riser_thk;",
+    "printable_fit_check = true;"
+  ],
+  "fit_checks": [
+    "Base envelope: 90 x 40 x 6 mm.",
+    "Riser envelope: 35 mm tall at the"
+  ],
+  "family": "mount",
+  "artifact_dir": "data/workshop/model_forge/9ea5021a-c0f1-495c-8f50-9bef576af468",
+  "script_path": "data/workshop/model_forge/9ea5021a-c0f1-495c-8f50-9bef576af468/model.scad",
+  "cadquery_script_path": "data/workshop/model_forge/9ea5021a-c0f1-495c-8f50-9bef576af468/model_cadquery.py",
+  "model_path": "data/workshop/model_forge/9ea5021a-c0f1-495c-8f50-9bef576af468/qa-camera-mount-1779128797605.stl",
+  "step_path": "data/workshop/model_forge/9ea5021a-c0f1-495c-8f50-9bef576af468/qa-camera-mount-1779128797605.step",
+  "mesh_3mf_path": "data/workshop/model_forge/9ea5021a-c0f1-495c-8f50-9bef576af468/qa-camera-mount-1779128797605.3mf",
+  "slicer_pack_dir": "data/workshop/model_forge/9ea5021a-c0f1-495c-8f50-9bef576af468/slicer_pack",
+  "printer_id": "creality-k2-pro-combo",
+  "profile_name": "fit-check-fast",
+  "material": "PETG-CF",
+  "creative_profile": "",
+  "export_status": "cadquery-mount",
+  "export_detail": "Exported CadQuery mount assets as STL, STEP, and 3MF, then assembled a slicer pack for creality-k2-pro-combo using the fit-check-fast profile.",
+  "export_engine": "cadquery",
+  "timestamp": "2026-05-18T18:27:23.691414+00:00"
+}

@@ -10,6 +10,9 @@ config/openviking/
 data/google/
 data/openviking/
 
+# OAuth tokens and credentials — never commit
+data/microsoft_graph/
+
 # Large binary voice models — store outside repo or use Git LFS
 *.onnx
 assets/piper/voices/

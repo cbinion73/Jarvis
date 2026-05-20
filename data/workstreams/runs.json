@@ -1,0 +1,1466 @@
+[
+  {
+    "run_id": "81501590-4b7b-4ec2-828c-d7966c6e313e",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "lane_label": "Passive Income",
+    "status": "completed",
+    "truth_state": "staged",
+    "source": "manual-smoke",
+    "started_at": "2026-05-18T01:31:30.158436+00:00",
+    "completed_at": "2026-05-18T01:31:30.158570+00:00",
+    "items_staged": 1,
+    "staged_titles": [
+      "Build the first passive-income shortlist"
+    ],
+    "evidence_counts": {
+      "wealth_runs": 0,
+      "opportunity_theses": 0,
+      "experiments_in_flight": 0,
+      "pipeline_opportunities": 0
+    },
+    "summary": "Reviewed 0 source signal(s) and staged 1 reviewable item(s) for Passive Income.",
+    "run_status": "executed",
+    "action_status": "staged",
+    "verification_status": "planned"
+  },
+  {
+    "run_id": "4729d9cc-d073-4c2c-86ae-10aab78200fd",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "lane_label": "Passive Income",
+    "status": "completed",
+    "truth_state": "staged",
+    "source": "api-smoke",
+    "started_at": "2026-05-18T01:31:43.998056+00:00",
+    "completed_at": "2026-05-18T01:31:43.998303+00:00",
+    "items_staged": 1,
+    "staged_titles": [
+      "Build the first passive-income shortlist"
+    ],
+    "evidence_counts": {
+      "wealth_runs": 0,
+      "opportunity_theses": 0,
+      "experiments_in_flight": 0,
+      "pipeline_opportunities": 0
+    },
+    "summary": "Reviewed 0 source signal(s) and staged 1 reviewable item(s) for Passive Income.",
+    "run_status": "executed",
+    "action_status": "staged",
+    "verification_status": "planned"
+  },
+  {
+    "run_id": "0479f800-0192-46e7-9abf-25cd2d8b7b9b",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "lane_label": "Passive Income",
+    "report_type": "",
+    "status": "completed",
+    "truth_state": "staged",
+    "source": "manual-test",
+    "started_at": "2026-05-18T01:46:25.592872+00:00",
+    "completed_at": "2026-05-18T01:46:25.593328+00:00",
+    "items_staged": 1,
+    "staged_titles": [
+      "Build the first passive-income shortlist"
+    ],
+    "evidence_counts": {
+      "wealth_runs": 0,
+      "opportunity_theses": 0,
+      "experiments_in_flight": 0,
+      "pipeline_opportunities": 0
+    },
+    "required_reviewers": [],
+    "summary": "Reviewed 0 source signal(s) and staged 1 reviewable item(s) for Passive Income.",
+    "observed": [
+      "Lane passive-income executed in bounded research mode."
+    ],
+    "inferred": [
+      "1 item(s) were strong enough to keep under review."
+    ],
+    "prepared": [
+      "Prepared 1 structured report(s)."
+    ],
+    "recommended": [
+      "Route staged outputs through Nebula, Pepper, Watcher, Legal/Compliance Watcher."
+    ],
+    "requires_approval": [
+      "Any external action or financial commitment still requires Chris's approval."
+    ],
+    "not_done": [
+      "No money was moved.",
+      "No trades were executed.",
+      "No external accounts were opened.",
+      "No third parties were contacted."
+    ],
+    "run_status": "executed",
+    "action_status": "staged",
+    "verification_status": "planned"
+  },
+  {
+    "run_id": "cc9535a7-9b62-4f43-b36a-c4cd91d4063d",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "lane_label": "Passive Income",
+    "report_type": "fisk-opportunity-report",
+    "status": "completed",
+    "truth_state": "staged",
+    "source": "manual-test",
+    "started_at": "2026-05-18T01:47:08.032318+00:00",
+    "completed_at": "2026-05-18T01:47:08.032967+00:00",
+    "items_staged": 1,
+    "staged_titles": [
+      "Build the first passive-income shortlist"
+    ],
+    "evidence_counts": {
+      "wealth_runs": 0,
+      "opportunity_theses": 0,
+      "experiments_in_flight": 0,
+      "pipeline_opportunities": 0
+    },
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Reviewed 0 source signal(s) and staged 1 reviewable item(s) for Passive Income.",
+    "observed": [
+      "Lane passive-income executed in bounded research mode."
+    ],
+    "inferred": [
+      "1 item(s) were strong enough to keep under review."
+    ],
+    "prepared": [
+      "Prepared 1 structured report(s)."
+    ],
+    "recommended": [
+      "Route staged outputs through Nebula, Pepper, Watcher, Legal/Compliance Watcher."
+    ],
+    "requires_approval": [
+      "Any external action or financial commitment still requires Chris's approval."
+    ],
+    "not_done": [
+      "No money was moved.",
+      "No trades were executed.",
+      "No external accounts were opened.",
+      "No third parties were contacted."
+    ],
+    "run_status": "executed",
+    "action_status": "staged",
+    "verification_status": "planned"
+  },
+  {
+    "run_id": "3548976b-3e50-4b76-aca0-deed7890aaad",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "lane_label": "Market Intelligence",
+    "report_type": "fisk-market-report",
+    "status": "completed",
+    "truth_state": "staged",
+    "source": "manual-test",
+    "started_at": "2026-05-18T01:47:08.037749+00:00",
+    "completed_at": "2026-05-18T01:47:08.038199+00:00",
+    "items_staged": 1,
+    "staged_titles": [
+      "Build the first market watchlist"
+    ],
+    "evidence_counts": {
+      "watchlist_items": 0,
+      "theses": 0,
+      "catalysts": 0
+    },
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Reviewed 0 source signal(s) and staged 1 reviewable item(s) for Market Intelligence.",
+    "observed": [
+      "Lane market-intelligence executed in bounded research mode."
+    ],
+    "inferred": [
+      "1 item(s) were strong enough to keep under review."
+    ],
+    "prepared": [
+      "Prepared 1 structured report(s)."
+    ],
+    "recommended": [
+      "Route staged outputs through Nebula, Pepper, Watcher, Legal/Compliance Watcher."
+    ],
+    "requires_approval": [
+      "Any external action or financial commitment still requires Chris's approval."
+    ],
+    "not_done": [
+      "No money was moved.",
+      "No trades were executed.",
+      "No external accounts were opened.",
+      "No third parties were contacted."
+    ],
+    "run_status": "executed",
+    "action_status": "staged",
+    "verification_status": "planned"
+  },
+  {
+    "run_id": "fe7452b3-7b25-4bfe-ac31-e31f56ff8409",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "lane_label": "Market Intelligence",
+    "report_type": "fisk-market-report",
+    "status": "completed",
+    "truth_state": "staged",
+    "source": "api-test",
+    "started_at": "2026-05-18T01:47:38.455052+00:00",
+    "completed_at": "2026-05-18T01:47:38.455585+00:00",
+    "items_staged": 1,
+    "staged_titles": [
+      "Build the first market watchlist"
+    ],
+    "evidence_counts": {
+      "watchlist_items": 0,
+      "theses": 0,
+      "catalysts": 0
+    },
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Reviewed 0 source signal(s) and staged 1 reviewable item(s) for Market Intelligence.",
+    "observed": [
+      "Lane market-intelligence executed in bounded research mode."
+    ],
+    "inferred": [
+      "1 item(s) were strong enough to keep under review."
+    ],
+    "prepared": [
+      "Prepared 1 structured report(s)."
+    ],
+    "recommended": [
+      "Route staged outputs through Nebula, Pepper, Watcher, Legal/Compliance Watcher."
+    ],
+    "requires_approval": [
+      "Any external action or financial commitment still requires Chris's approval."
+    ],
+    "not_done": [
+      "No money was moved.",
+      "No trades were executed.",
+      "No external accounts were opened.",
+      "No third parties were contacted."
+    ],
+    "run_status": "executed",
+    "action_status": "staged",
+    "verification_status": "planned"
+  },
+  {
+    "run_id": "8208a660-28a9-430e-b630-89fb40dfa877",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "lane_label": "Market Intelligence",
+    "report_type": "fisk-market-report",
+    "status": "completed",
+    "run_status": "executed",
+    "truth_state": "staged",
+    "action_status": "staged",
+    "verification_status": "planned",
+    "blocked_reason": "",
+    "source": "manual",
+    "started_at": "2026-05-18T03:36:46.812346+00:00",
+    "completed_at": "2026-05-18T03:36:46.816194+00:00",
+    "items_staged": 1,
+    "staged_titles": [
+      "Build the first market watchlist"
+    ],
+    "evidence_counts": {
+      "watchlist_items": 0,
+      "theses": 0,
+      "catalysts": 0
+    },
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Reviewed 0 source signal(s) and staged 1 reviewable item(s) for Market Intelligence.",
+    "observed": [
+      "Lane market-intelligence executed in bounded research mode."
+    ],
+    "inferred": [
+      "1 item(s) were strong enough to keep under review."
+    ],
+    "prepared": [
+      "Prepared 1 structured report(s)."
+    ],
+    "recommended": [
+      "Route staged outputs through Nebula, Pepper, Watcher, Legal/Compliance Watcher."
+    ],
+    "requires_approval": [
+      "Any external action or financial commitment still requires Chris's approval."
+    ],
+    "not_done": [
+      "No money was moved.",
+      "No trades were executed.",
+      "No external accounts were opened.",
+      "No third parties were contacted."
+    ]
+  },
+  {
+    "run_id": "0a410816-7749-4304-8c4e-fbf9ab01d309",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "lane_label": "Market Intelligence",
+    "report_type": "fisk-market-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T03:37:09.940832+00:00",
+    "completed_at": "2026-05-18T03:37:09.940832+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "observed": [
+      "Lane market-intelligence did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "15c9fd06-9519-47bb-a9fa-c33661be8feb",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "lane_label": "Passive Income",
+    "report_type": "fisk-opportunity-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:03:47.131774+00:00",
+    "completed_at": "2026-05-18T18:03:47.131774+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Passive Income did not run because cadence not due.",
+    "observed": [
+      "Lane passive-income did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "01ba5467-6611-49e8-9125-caf8fac820fb",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "lane_label": "Market Intelligence",
+    "report_type": "fisk-market-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:03:47.143025+00:00",
+    "completed_at": "2026-05-18T18:03:47.143025+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "observed": [
+      "Lane market-intelligence did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "e729d410-5fc2-4878-9f8b-8919ab37bd92",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "lane_label": "Passive Income",
+    "report_type": "fisk-opportunity-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:06:50.219324+00:00",
+    "completed_at": "2026-05-18T18:06:50.219324+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Passive Income did not run because cadence not due.",
+    "observed": [
+      "Lane passive-income did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "a2d4a2e1-0e6e-48cd-8566-251f599c0a49",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "lane_label": "Market Intelligence",
+    "report_type": "fisk-market-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:06:50.224146+00:00",
+    "completed_at": "2026-05-18T18:06:50.224146+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "observed": [
+      "Lane market-intelligence did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "768b55cd-522e-4277-93bf-22baec83d534",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "lane_label": "Passive Income",
+    "report_type": "fisk-opportunity-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:08:57.658745+00:00",
+    "completed_at": "2026-05-18T18:08:57.658745+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Passive Income did not run because cadence not due.",
+    "observed": [
+      "Lane passive-income did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "40b9db2c-1f5e-4653-8b23-29ab3a91ceb7",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "lane_label": "Market Intelligence",
+    "report_type": "fisk-market-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:08:57.662446+00:00",
+    "completed_at": "2026-05-18T18:08:57.662446+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "observed": [
+      "Lane market-intelligence did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "1b95aa65-7711-4a28-98dd-22bc876c8f98",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "lane_label": "Passive Income",
+    "report_type": "fisk-opportunity-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:12:02.905104+00:00",
+    "completed_at": "2026-05-18T18:12:02.905104+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Passive Income did not run because cadence not due.",
+    "observed": [
+      "Lane passive-income did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "b07305aa-f5fa-4ec9-acae-592e2e5939ed",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "lane_label": "Market Intelligence",
+    "report_type": "fisk-market-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:12:02.908429+00:00",
+    "completed_at": "2026-05-18T18:12:02.908429+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "observed": [
+      "Lane market-intelligence did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "456ca28f-f0aa-4780-b874-da4feba5b839",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "lane_label": "Passive Income",
+    "report_type": "fisk-opportunity-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:12:54.868301+00:00",
+    "completed_at": "2026-05-18T18:12:54.868301+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Passive Income did not run because cadence not due.",
+    "observed": [
+      "Lane passive-income did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "09f37385-52a8-4aeb-9c24-db22fb090520",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "lane_label": "Market Intelligence",
+    "report_type": "fisk-market-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:12:54.872090+00:00",
+    "completed_at": "2026-05-18T18:12:54.872090+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "observed": [
+      "Lane market-intelligence did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "75749a63-0c5e-4709-9e6f-1725439f0b9e",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "lane_label": "Passive Income",
+    "report_type": "fisk-opportunity-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:17:18.598583+00:00",
+    "completed_at": "2026-05-18T18:17:18.598583+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Passive Income did not run because cadence not due.",
+    "observed": [
+      "Lane passive-income did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "dcba0485-7b46-44f8-bdc8-982443450050",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "lane_label": "Market Intelligence",
+    "report_type": "fisk-market-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:17:18.604563+00:00",
+    "completed_at": "2026-05-18T18:17:18.604563+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "observed": [
+      "Lane market-intelligence did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "3916f22c-dfed-40a2-a12a-db9f25134501",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "lane_label": "Passive Income",
+    "report_type": "fisk-opportunity-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:19:52.252952+00:00",
+    "completed_at": "2026-05-18T18:19:52.252952+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Passive Income did not run because cadence not due.",
+    "observed": [
+      "Lane passive-income did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "b0ed88d2-2baf-4518-819d-0af2ce7aceef",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "lane_label": "Market Intelligence",
+    "report_type": "fisk-market-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:19:52.258204+00:00",
+    "completed_at": "2026-05-18T18:19:52.258204+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "observed": [
+      "Lane market-intelligence did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "960d2e03-fbec-4aeb-8665-3d2cb5afd4e5",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "lane_label": "Passive Income",
+    "report_type": "fisk-opportunity-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:20:55.074642+00:00",
+    "completed_at": "2026-05-18T18:20:55.074642+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Passive Income did not run because cadence not due.",
+    "observed": [
+      "Lane passive-income did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "d49c81ea-2711-4ebe-8f27-87211a79bf48",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "lane_label": "Market Intelligence",
+    "report_type": "fisk-market-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:20:55.081039+00:00",
+    "completed_at": "2026-05-18T18:20:55.081039+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "observed": [
+      "Lane market-intelligence did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "2e99f56c-ba72-4ed0-a489-47bec1be8289",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "lane_label": "Passive Income",
+    "report_type": "fisk-opportunity-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:22:58.349040+00:00",
+    "completed_at": "2026-05-18T18:22:58.349040+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Passive Income did not run because cadence not due.",
+    "observed": [
+      "Lane passive-income did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "43931225-15a4-4e3c-a173-053f80d50838",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "lane_label": "Market Intelligence",
+    "report_type": "fisk-market-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:22:58.359964+00:00",
+    "completed_at": "2026-05-18T18:22:58.359964+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "observed": [
+      "Lane market-intelligence did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "d1b707a4-a6e9-4d72-a2c7-186da04edbfb",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "lane_label": "Passive Income",
+    "report_type": "fisk-opportunity-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:23:53.733673+00:00",
+    "completed_at": "2026-05-18T18:23:53.733673+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Passive Income did not run because cadence not due.",
+    "observed": [
+      "Lane passive-income did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  },
+  {
+    "run_id": "6d353edf-25eb-44d1-9a0a-755651672894",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "lane_label": "Market Intelligence",
+    "report_type": "fisk-market-report",
+    "status": "skipped",
+    "run_status": "blocked",
+    "truth_state": "blocked",
+    "action_status": "blocked",
+    "verification_status": "planned",
+    "blocked_reason": "cadence-not-due",
+    "source": "background",
+    "started_at": "2026-05-18T18:23:53.749249+00:00",
+    "completed_at": "2026-05-18T18:23:53.749249+00:00",
+    "items_staged": 0,
+    "staged_titles": [],
+    "evidence_counts": {},
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "summary": "Market Intelligence did not run because cadence not due.",
+    "observed": [
+      "Lane market-intelligence did not run."
+    ],
+    "inferred": [],
+    "prepared": [],
+    "recommended": [],
+    "requires_approval": [],
+    "not_done": [
+      "No external or financial action occurred."
+    ]
+  }
+]

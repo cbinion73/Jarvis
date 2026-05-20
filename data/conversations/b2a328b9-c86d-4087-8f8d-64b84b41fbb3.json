@@ -1,0 +1,32 @@
+{
+  "conversation_id": "b2a328b9-c86d-4087-8f8d-64b84b41fbb3",
+  "actor": "Chris",
+  "room": "office",
+  "source": "shell",
+  "title": "New conversation",
+  "status": "active",
+  "summary": "",
+  "memory_signals": [],
+  "created_at": "2026-05-19T03:08:06.728052+00:00",
+  "updated_at": "2026-05-19T03:08:07.889905+00:00",
+  "last_activity_at": "2026-05-19T03:08:07.889905+00:00",
+  "turn_count": 1,
+  "latest_user_text": "",
+  "latest_assistant_text": "Ready, Sir. I\u2019m here and in work mode. Tell me what you want to sort out, and I\u2019ll keep it clean and practical.",
+  "turns": [
+    {
+      "turn_id": "bdf02ad7-8c06-4276-9ca4-30686b61d4c0",
+      "role": "assistant",
+      "text": "Ready, Sir. I\u2019m here and in work mode. Tell me what you want to sort out, and I\u2019ll keep it clean and practical.",
+      "actor": "Chris",
+      "room": "office",
+      "source": "shell",
+      "created_at": "2026-05-19T03:08:07.889905+00:00",
+      "metadata": {
+        "provider": "openai",
+        "model": "gpt-5.4-mini-2026-03-17",
+        "catalyst_capture": {}
+      }
+    }
+  ]
+}

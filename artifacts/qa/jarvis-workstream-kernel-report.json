@@ -1,0 +1,76 @@
+{
+  "started_at": "2026-05-18T18:27:41.486Z",
+  "base_url": "http://127.0.0.1:8787",
+  "checks": [
+    {
+      "name": "Generic workstreams endpoint exposes hardened kernel fields",
+      "status": "failed",
+      "details": "TypeError: fetch failed",
+      "kind": "automated"
+    },
+    {
+      "name": "Manual market-intelligence run stages kernel-native queue and artifacts",
+      "status": "failed",
+      "details": "TypeError: fetch failed",
+      "kind": "automated"
+    },
+    {
+      "name": "Background run records cadence skip truthfully",
+      "status": "failed",
+      "details": "TypeError: fetch failed",
+      "kind": "automated"
+    },
+    {
+      "name": "Approve action closes queue entry and updates approval status",
+      "status": "failed",
+      "details": "Error: No market workstream item was available for approval\n    at assert (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-workstream-kernel.e2e.cjs:47:25)\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-workstream-kernel.e2e.cjs:136:7\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-workstream-kernel.e2e.cjs:84:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-workstream-kernel.e2e.cjs:135:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
+      "kind": "automated"
+    },
+    {
+      "name": "Open loops surface workstream summaries without treating approved queue items as waiting",
+      "status": "failed",
+      "details": "TypeError: fetch failed",
+      "kind": "automated"
+    },
+    {
+      "name": "Compatibility autonomous-workstream endpoints remain intact",
+      "status": "failed",
+      "details": "TypeError: fetch failed",
+      "kind": "automated"
+    }
+  ],
+  "failures": [
+    {
+      "name": "Generic workstreams endpoint exposes hardened kernel fields",
+      "error": "TypeError: fetch failed"
+    },
+    {
+      "name": "Manual market-intelligence run stages kernel-native queue and artifacts",
+      "error": "TypeError: fetch failed"
+    },
+    {
+      "name": "Background run records cadence skip truthfully",
+      "error": "TypeError: fetch failed"
+    },
+    {
+      "name": "Approve action closes queue entry and updates approval status",
+      "error": "Error: No market workstream item was available for approval\n    at assert (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-workstream-kernel.e2e.cjs:47:25)\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-workstream-kernel.e2e.cjs:136:7\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-workstream-kernel.e2e.cjs:84:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-workstream-kernel.e2e.cjs:135:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)"
+    },
+    {
+      "name": "Open loops surface workstream summaries without treating approved queue items as waiting",
+      "error": "TypeError: fetch failed"
+    },
+    {
+      "name": "Compatibility autonomous-workstream endpoints remain intact",
+      "error": "TypeError: fetch failed"
+    }
+  ],
+  "warnings": [],
+  "summary": {
+    "passed": 0,
+    "failed": 6,
+    "warned": 0,
+    "skipped": 0
+  },
+  "finished_at": "2026-05-18T18:27:41.518Z"
+}

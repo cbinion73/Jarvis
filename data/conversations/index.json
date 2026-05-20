@@ -1,5 +1,37 @@
 [
   {
+    "conversation_id": "89c20490-7706-4cc7-a80f-35ebe28d8f13",
+    "actor": "Chris",
+    "room": "office",
+    "source": "glass",
+    "title": "remind me tomorrow to request a flag to be flown over the US Capitol",
+    "status": "active",
+    "summary": "",
+    "memory_signals": [],
+    "created_at": "2026-05-19T21:41:09.293556+00:00",
+    "updated_at": "2026-05-19T21:41:11.276239+00:00",
+    "last_activity_at": "2026-05-19T21:41:11.276239+00:00",
+    "turn_count": 2,
+    "latest_user_text": "remind me tomorrow to request a flag to be flown over the US Capitol",
+    "latest_assistant_text": "I can prepare that reminder, but I can\u2019t actually schedule it from here without a calendar/reminder tool connected.\n\nWhat I\u2019ve got from you is: tomorrow, remind Chris to request a flag to be flown over the U.S. Capitol."
+  },
+  {
+    "conversation_id": "3ab9713c-6a01-47b1-8a26-08676f59ad59",
+    "actor": "Chris",
+    "room": "office",
+    "source": "glass",
+    "title": "tell me about the day",
+    "status": "active",
+    "summary": "",
+    "memory_signals": [],
+    "created_at": "2026-05-19T21:26:17.870383+00:00",
+    "updated_at": "2026-05-19T21:26:20.348521+00:00",
+    "last_activity_at": "2026-05-19T21:26:20.348521+00:00",
+    "turn_count": 2,
+    "latest_user_text": "tell me about the day",
+    "latest_assistant_text": "Today looks steady and useful, not flashy. The shape of it is probably best described as a day for clear thinking, clean execution, and avoiding unnecessary drama.\n\nI\u2019m not seeing live calendar or weather context here, so I can\u2019t claim specifics about your actual schedule. But if you want the most likely winning posture: handle the hardest thinking early, keep meetings tight, leave margin for interruptions, and don\u2019t let small noise steal the day.\n\nNet: good day for progress if you keep it simple."
+  },
+  {
     "conversation_id": "cb0e1a02-528b-4722-a061-a0cc10f02c54",
     "actor": "Chris",
     "room": "bedroom",

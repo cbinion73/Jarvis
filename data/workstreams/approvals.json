@@ -1,0 +1,68 @@
+[
+  {
+    "approval_id": "approval:passive-income-a076de736a06dd2b",
+    "item_id": "passive-income-a076de736a06dd2b",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "status": "pending",
+    "title": "Approval needed \u00b7 Build the first passive-income shortlist",
+    "summary": "Any move beyond research and ranking.",
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "created_at": "2026-05-18T18:11:11.495121+00:00",
+    "updated_at": "2026-05-19T21:26:20.403653+00:00"
+  },
+  {
+    "approval_id": "approval:market-intelligence-9f02b201a60146dc",
+    "item_id": "market-intelligence-9f02b201a60146dc",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "status": "pending",
+    "title": "Approval needed \u00b7 Build the first market watchlist",
+    "summary": "Any later position initiation.",
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "created_at": "2026-05-18T18:11:11.497587+00:00",
+    "updated_at": "2026-05-19T21:26:20.404652+00:00"
+  }
+]

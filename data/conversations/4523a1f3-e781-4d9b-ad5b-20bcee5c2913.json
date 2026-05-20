@@ -1,0 +1,32 @@
+{
+  "conversation_id": "4523a1f3-e781-4d9b-ad5b-20bcee5c2913",
+  "actor": "Chris",
+  "room": "office",
+  "source": "shell",
+  "title": "New conversation",
+  "status": "active",
+  "summary": "",
+  "memory_signals": [],
+  "created_at": "2026-05-19T16:33:57.545825+00:00",
+  "updated_at": "2026-05-19T16:33:58.961856+00:00",
+  "last_activity_at": "2026-05-19T16:33:58.961856+00:00",
+  "turn_count": 1,
+  "latest_user_text": "",
+  "latest_assistant_text": "Standing by, Sir. I\u2019m ready to observe, suggest, prepare, or help you think through whatever\u2019s next.",
+  "turns": [
+    {
+      "turn_id": "06f2c2a7-52ab-406d-8519-7c8d16df0a58",
+      "role": "assistant",
+      "text": "Standing by, Sir. I\u2019m ready to observe, suggest, prepare, or help you think through whatever\u2019s next.",
+      "actor": "Chris",
+      "room": "office",
+      "source": "shell",
+      "created_at": "2026-05-19T16:33:58.961856+00:00",
+      "metadata": {
+        "provider": "openai",
+        "model": "gpt-5.4-mini-2026-03-17",
+        "catalyst_capture": {}
+      }
+    }
+  ]
+}

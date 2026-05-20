@@ -1,0 +1,48 @@
+{
+  "conversation_id": "014d0881-c3d4-48af-a6b8-2e394bb2dc82",
+  "actor": "Chris",
+  "room": "office",
+  "source": "glass",
+  "title": "Hello JARVIS, what is today?",
+  "status": "active",
+  "summary": "",
+  "memory_signals": [
+    {
+      "summary": "Hello JARVIS, what is today?",
+      "status": "observed",
+      "occurrences": 1
+    }
+  ],
+  "created_at": "2026-05-19T03:32:24.884051+00:00",
+  "updated_at": "2026-05-19T03:32:32.639052+00:00",
+  "last_activity_at": "2026-05-19T03:32:32.636380+00:00",
+  "turn_count": 2,
+  "latest_user_text": "Hello JARVIS, what is today?",
+  "latest_assistant_text": "Today is Monday, May 18, 2026, here in UTC-04:00. If you want,",
+  "turns": [
+    {
+      "turn_id": "20ac41a4-e693-412b-9185-3ba25d07bca6",
+      "role": "user",
+      "text": "Hello JARVIS, what is today?",
+      "actor": "Chris",
+      "room": "office",
+      "source": "glass",
+      "created_at": "2026-05-19T03:32:24.886524+00:00",
+      "metadata": {}
+    },
+    {
+      "turn_id": "44084464-60d5-4b09-a936-1398dd7ff027",
+      "role": "assistant",
+      "text": "Today is Monday, May 18, 2026, here in UTC-04:00. If you want,",
+      "actor": "Chris",
+      "room": "office",
+      "source": "glass",
+      "created_at": "2026-05-19T03:32:32.636380+00:00",
+      "metadata": {
+        "provider": "openai",
+        "model": "gpt-5.4-mini-2026-03-17",
+        "catalyst_capture": {}
+      }
+    }
+  ]
+}

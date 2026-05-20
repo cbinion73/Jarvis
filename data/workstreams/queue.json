@@ -1,0 +1,88 @@
+[
+  {
+    "queue_id": "queue:market-intelligence-9f02b201a60146dc",
+    "item_id": "market-intelligence-9f02b201a60146dc",
+    "actor": "Chris",
+    "lane_id": "market-intelligence",
+    "status": "closed",
+    "queue_type": "review",
+    "title": "Build the first market watchlist",
+    "summary": "No market-intelligence watchlist or thesis objects are staged yet. The first move is to create a bounded watchlist and thesis discipline.",
+    "recommended_action": "advance",
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "approval_status": "pending",
+    "route_options": [
+      "Nebula",
+      "Pepper",
+      "Watcher",
+      "Legal/Compliance Watcher",
+      "deeper-research"
+    ],
+    "created_at": "2026-05-18T18:11:11.498486+00:00",
+    "updated_at": "2026-05-19T21:26:20.404804+00:00"
+  },
+  {
+    "queue_id": "queue:passive-income-a076de736a06dd2b",
+    "item_id": "passive-income-a076de736a06dd2b",
+    "actor": "Chris",
+    "lane_id": "passive-income",
+    "status": "pending",
+    "queue_type": "review",
+    "title": "Build the first passive-income shortlist",
+    "summary": "No passive-income theses are staged yet. The first autonomous move is to build and rank an explicit shortlist.",
+    "recommended_action": "create-shortlist",
+    "required_reviewers": [
+      {
+        "agent_id": "nebula",
+        "label": "Nebula",
+        "role": "assumption-attack"
+      },
+      {
+        "agent_id": "pepper",
+        "label": "Pepper",
+        "role": "family-reputation-fit"
+      },
+      {
+        "agent_id": "watcher",
+        "label": "Watcher",
+        "role": "memory-pattern-fit"
+      },
+      {
+        "agent_id": "legal-compliance-watcher",
+        "label": "Legal/Compliance Watcher",
+        "role": "tax-regulatory-professional-risk"
+      }
+    ],
+    "approval_status": "pending",
+    "route_options": [
+      "Nebula",
+      "Pepper",
+      "Watcher",
+      "Legal/Compliance Watcher",
+      "deeper-research"
+    ],
+    "created_at": "2026-05-18T17:57:35.102307+00:00",
+    "updated_at": "2026-05-19T21:26:20.403918+00:00"
+  }
+]

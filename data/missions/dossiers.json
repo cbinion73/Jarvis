@@ -1,0 +1,315 @@
+[
+  {
+    "mission_id": "mission-eda4da4ae0",
+    "actor": "Chris",
+    "room": "office",
+    "request": "Keep the family ahead of tomorrow morning weather, school timing, and the outbound parent email draft.",
+    "title": "Keep the family ahead of tomorrow morning weather, school timing, and...",
+    "brief": "Translate live weather into practical guidance, route timing, and family-safe next actions. Request: Keep the family ahead of tomorrow morning weather, school timing, and the outbound parent email draft.",
+    "status": "active",
+    "primary_domain": "weather",
+    "trust_zone": "family-bmad.family-ops",
+    "autonomy_posture": "bounded-autonomy",
+    "owner_agent": "jarvis-orchestrator",
+    "selected_agents": [
+      "ambient-router",
+      "storm",
+      "watchtower",
+      "family-logistics"
+    ],
+    "subtasks": [
+      {
+        "subtask_id": "sub-ecf42a43",
+        "title": "Frame the mission",
+        "description": "Clarify the household objective, constraints, and likely family impact.",
+        "status": "completed",
+        "owner_agent": "jarvis-orchestrator",
+        "domain": "weather",
+        "trust_zone": "family-bmad.family-ops",
+        "action_type": "mission-framing",
+        "resolution": "auto-execute",
+        "dependencies": [],
+        "notes": []
+      },
+      {
+        "subtask_id": "sub-0800f097",
+        "title": "Collect live evidence",
+        "description": "Pull live signals from the selected domain agents before recommending or acting.",
+        "status": "active",
+        "owner_agent": "ambient-router",
+        "domain": "weather",
+        "trust_zone": "family-bmad.family-ops",
+        "action_type": "collect-evidence",
+        "resolution": "auto-execute",
+        "dependencies": [],
+        "notes": []
+      },
+      {
+        "subtask_id": "sub-45293d1a",
+        "title": "Stage the next move",
+        "description": "Surface the completed work, blocked work, approvals, and the next clean step.",
+        "status": "active",
+        "owner_agent": "jarvis-orchestrator",
+        "domain": "weather",
+        "trust_zone": "family-bmad.family-ops",
+        "action_type": "stage-next-move",
+        "resolution": "auto-execute",
+        "dependencies": [],
+        "notes": []
+      }
+    ],
+    "action_decisions": [
+      {
+        "action_type": "briefing-generation",
+        "trust_zone": "family-bmad.family-ops",
+        "resolution": "auto-execute",
+        "rationale": "This action fits the low-risk bounded autonomy lane.",
+        "approval_required": false,
+        "approval_request_id": ""
+      },
+      {
+        "action_type": "route-weather-check",
+        "trust_zone": "family-bmad.family-ops",
+        "resolution": "auto-execute",
+        "rationale": "This action fits the low-risk bounded autonomy lane.",
+        "approval_required": false,
+        "approval_request_id": ""
+      },
+      {
+        "action_type": "family-alert",
+        "trust_zone": "family-bmad.family-ops",
+        "resolution": "auto-execute",
+        "rationale": "This action fits the low-risk bounded autonomy lane.",
+        "approval_required": false,
+        "approval_request_id": ""
+      }
+    ],
+    "evidence": [
+      {
+        "evidence_id": "36943412-2bc5-4664-8dfc-1be5ba73dbb9",
+        "source_agent": "jarvis-orchestrator",
+        "source_system": "mission-engine",
+        "kind": "mission-brief",
+        "title": "Mission brief created",
+        "summary": "Translate live weather into practical guidance, route timing, and family-safe next actions. Request: Keep the family ahead of tomorrow morning weather, school timing, and the outbound parent email draft.",
+        "detail": "Primary domain: weather. Trust zone: family-bmad.family-ops.",
+        "timestamp": "2026-05-18T13:22:46.325456+00:00",
+        "refs": []
+      },
+      {
+        "evidence_id": "284a9e14-b440-4556-8d1f-cc1ceb3faeeb",
+        "source_agent": "storm",
+        "source_system": "storm-weather",
+        "kind": "live-domain-signal",
+        "title": "Storm live weather posture",
+        "summary": "Sunny",
+        "detail": "Temperature 73F \u00b7 alerts 0 \u00b7 visual unknown",
+        "timestamp": "2026-05-18T13:22:46.326857+00:00",
+        "refs": [
+          "/api/storm-weather"
+        ]
+      }
+    ],
+    "approvals": [],
+    "outputs": [],
+    "follow_ups": [
+      "Capture the result and keep the next clean move visible.",
+      "Re-check live weather before the relevant departure or event window."
+    ],
+    "memory_snapshot": {
+      "active_mode": {
+        "mode": "dawn-protocol",
+        "status": "manual",
+        "reason": "Manual mode update from JARVIS shell."
+      },
+      "location": "Kentucky Home",
+      "open_loops": {
+        "total": 2,
+        "staged": 0,
+        "waiting_on_you": 1,
+        "needs_revisit": 0,
+        "hidden_deferred": 0,
+        "by_domain": {
+          "approvals": 1,
+          "growth": 1
+        }
+      },
+      "calendar_headlines": [
+        {
+          "summary": "Rebekah/Chris: Anniversary",
+          "start": "2026-05-20",
+          "source": "Cozi Family Calendar"
+        },
+        {
+          "summary": "Caleb: Backrooms movie :D",
+          "start": "2026-05-29",
+          "source": "Cozi Family Calendar"
+        },
+        {
+          "summary": "All: Brace",
+          "start": "2026-05-29T09:00:00",
+          "source": "Cozi Family Calendar"
+        },
+        {
+          "summary": "All: Campout",
+          "start": "2026-05-29T18:00:00",
+          "source": "Cozi Family Calendar"
+        }
+      ],
+      "house_note": "The house is calm, watchful, and trying not to bother anyone before coffee."
+    },
+    "family_impact": [
+      "Weather timing could affect departures, events, or outdoor plans.",
+      "This mission touches shared family flow and should stay visible in Mission Control."
+    ],
+    "created_at": "2026-05-18T13:22:46.325456+00:00",
+    "updated_at": "2026-05-18T13:22:47.583450+00:00"
+  },
+  {
+    "mission_id": "mission-f63fd51ed3",
+    "actor": "Chris",
+    "room": "office",
+    "request": "Help me design a unique 3d printed sculpture from a photo and build the best next fabrication plan.",
+    "title": "Help me design a unique 3d printed sculpture from a photo and build t...",
+    "brief": "Turn creative or workshop intent into an actionable, reviewable build path. Request: Help me design a unique 3d printed sculpture from a photo and build the best next fabrication plan.",
+    "status": "active",
+    "primary_domain": "workshop",
+    "trust_zone": "family-bmad.personal-local",
+    "autonomy_posture": "bounded-autonomy",
+    "owner_agent": "jarvis-orchestrator",
+    "selected_agents": [
+      "ambient-router",
+      "workshop-watch",
+      "system-steward",
+      "task-workshop-111c9ca5"
+    ],
+    "subtasks": [
+      {
+        "subtask_id": "sub-2760abbe",
+        "title": "Frame the mission",
+        "description": "Clarify the household objective, constraints, and likely family impact.",
+        "status": "completed",
+        "owner_agent": "jarvis-orchestrator",
+        "domain": "workshop",
+        "trust_zone": "family-bmad.personal-local",
+        "action_type": "mission-framing",
+        "resolution": "auto-execute",
+        "dependencies": [],
+        "notes": []
+      },
+      {
+        "subtask_id": "sub-5820c457",
+        "title": "Collect live evidence",
+        "description": "Pull live signals from the selected domain agents before recommending or acting.",
+        "status": "active",
+        "owner_agent": "ambient-router",
+        "domain": "workshop",
+        "trust_zone": "family-bmad.personal-local",
+        "action_type": "collect-evidence",
+        "resolution": "auto-execute",
+        "dependencies": [],
+        "notes": []
+      },
+      {
+        "subtask_id": "sub-b3aede7d",
+        "title": "Stage the next move",
+        "description": "Surface the completed work, blocked work, approvals, and the next clean step.",
+        "status": "active",
+        "owner_agent": "jarvis-orchestrator",
+        "domain": "workshop",
+        "trust_zone": "family-bmad.personal-local",
+        "action_type": "stage-next-move",
+        "resolution": "auto-execute",
+        "dependencies": [],
+        "notes": []
+      }
+    ],
+    "action_decisions": [
+      {
+        "action_type": "briefing-generation",
+        "trust_zone": "family-bmad.personal-local",
+        "resolution": "auto-execute",
+        "rationale": "This action fits the low-risk bounded autonomy lane.",
+        "approval_required": false,
+        "approval_request_id": ""
+      }
+    ],
+    "evidence": [
+      {
+        "evidence_id": "794f320c-2fdb-402d-87c1-2b6badb61937",
+        "source_agent": "jarvis-orchestrator",
+        "source_system": "mission-engine",
+        "kind": "mission-brief",
+        "title": "Mission brief created",
+        "summary": "Turn creative or workshop intent into an actionable, reviewable build path. Request: Help me design a unique 3d printed sculpture from a photo and build the best next fabrication plan.",
+        "detail": "Primary domain: workshop. Trust zone: family-bmad.personal-local.",
+        "timestamp": "2026-05-18T13:23:17.052970+00:00",
+        "refs": []
+      },
+      {
+        "evidence_id": "9a8eb856-b3e2-4120-a7d0-fda0eda2a142",
+        "source_agent": "workshop-watch",
+        "source_system": "workshop",
+        "kind": "context-signal",
+        "title": "Forge and workshop posture",
+        "summary": "1 CAD package(s) and 0 concept session(s) are available for handoff.",
+        "detail": "Workshop, Forge, and Vision can contribute build evidence and concept state into this mission.",
+        "timestamp": "2026-05-18T13:23:17.054696+00:00",
+        "refs": [
+          "/api/vision-state"
+        ]
+      }
+    ],
+    "approvals": [],
+    "outputs": [],
+    "follow_ups": [
+      "Capture the result and keep the next clean move visible.",
+      "Break the mission into a sequenced execution path once evidence is gathered."
+    ],
+    "memory_snapshot": {
+      "active_mode": {
+        "mode": "dawn-protocol",
+        "status": "manual",
+        "reason": "Manual mode update from JARVIS shell."
+      },
+      "location": "Kentucky Home",
+      "open_loops": {
+        "total": 2,
+        "staged": 0,
+        "waiting_on_you": 1,
+        "needs_revisit": 0,
+        "hidden_deferred": 0,
+        "by_domain": {
+          "approvals": 1,
+          "growth": 1
+        }
+      },
+      "calendar_headlines": [
+        {
+          "summary": "Rebekah/Chris: Anniversary",
+          "start": "2026-05-20",
+          "source": "Cozi Family Calendar"
+        },
+        {
+          "summary": "Caleb: Backrooms movie :D",
+          "start": "2026-05-29",
+          "source": "Cozi Family Calendar"
+        },
+        {
+          "summary": "All: Brace",
+          "start": "2026-05-29T09:00:00",
+          "source": "Cozi Family Calendar"
+        },
+        {
+          "summary": "All: Campout",
+          "start": "2026-05-29T18:00:00",
+          "source": "Cozi Family Calendar"
+        }
+      ],
+      "house_note": "The house is calm, watchful, and trying not to bother anyone before coffee."
+    },
+    "family_impact": [],
+    "created_at": "2026-05-18T13:23:17.052970+00:00",
+    "updated_at": "2026-05-18T13:23:17.056064+00:00"
+  }
+]
