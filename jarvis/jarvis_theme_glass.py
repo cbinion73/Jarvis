@@ -4937,7 +4937,6 @@ function mdToHtml(md) {{
 }}
 
 async function openDossier(dossierId) {{
-  const did = dossierId;  // alias used throughout modal HTML
   const existing = document.getElementById('dossier-modal-overlay');
   if (existing) existing.remove();
 
@@ -5013,12 +5012,12 @@ async function openDossier(dossierId) {{
     '<div class="dossier-chat-panel">' +
       '<div class="dossier-chat-label">💬 Ask or Refine This Idea</div>' +
       '<div class="dossier-chat-row">' +
-        '<textarea class="dossier-chat-input" id="dossier-chat-input-' + did + '" ' +
+        '<textarea class="dossier-chat-input" id="dossier-chat-input-' + dossierId + '" ' +
           'placeholder="Ask a question or request a change... e.g. &quot;What&apos;s the biggest risk?&quot; or &quot;Reframe this for B2B healthcare.&quot;" ' +
-          'rows="2" onkeydown="if(event.key===\\'Enter\\'&&!event.shiftKey){{event.preventDefault();dossierChat(\\'' + did + '\\')}}"></textarea>' +
-        '<button class="dossier-chat-send" id="dossier-chat-btn-' + did + '" onclick="dossierChat(\\'' + did + '\\')">Ask →</button>' +
+          'rows="2" onkeydown="if(event.key===\\'Enter\\'&&!event.shiftKey){{event.preventDefault();dossierChat(\\'' + dossierId + '\\')}}"></textarea>' +
+        '<button class="dossier-chat-send" id="dossier-chat-btn-' + dossierId + '" onclick="dossierChat(\\'' + dossierId + '\\')">Ask →</button>' +
       '</div>' +
-      '<div class="dossier-chat-response" id="dossier-chat-resp-' + did + '"></div>' +
+      '<div class="dossier-chat-response" id="dossier-chat-resp-' + dossierId + '"></div>' +
     '</div>' +
   '</div>';
   document.body.appendChild(overlay);
