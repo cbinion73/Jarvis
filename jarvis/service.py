@@ -4236,108 +4236,6 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         return _json({"queued": True, "item_id": item.item_id, "agent_id": agent_id})
 
     # ------------------------------------------------------------------
-    # Legacy catch-all (keep LAST among POST routes)
-    # ------------------------------------------------------------------
-
-    @app.post("/api/{legacy_path:path}")
-    async def api_legacy_post(
-        legacy_path: str,
-        payload: dict[str, Any],
-        background_tasks: BackgroundTasks,
-    ) -> JSONResponse:
-        path = f"/api/{legacy_path}"
-        actor = str(payload.get("actor", "Chris"))
-        room = str(payload.get("room", "office"))
-        request_text = str(payload.get("request", ""))
-        try:
-            if path in {
-                "/api/plan",
-                "/api/respond",
-                "/api/mode-brief",
-                "/api/family-plan",
-                "/api/departure-plan",
-                "/api/rebekah-center",
-                "/api/troop-plan",
-                "/api/grocery-support",
-                "/api/meal-plan",
-                "/api/vehicle-plan",
-                "/api/weather-contingency",
-            }:
-                result = _mode_brief_payload(actor, room, request_text, path, payload)
-                if path in {"/api/respond", "/api/family-plan", "/api/rebekah-center", "/api/troop-plan", "/api/grocery-support", "/api/meal-plan", "/api/vehicle-plan", "/api/weather-contingency", "/api/departure-plan"}:
-                    background_tasks.add_task(_broadcast_dashboard, "workflow.updated")
-                return _json(result)
-
-            if path in {"/api/message-draft", "/api/parent-message", "/api/voice-note"}:
-                background_tasks.add_task(_broadcast_dashboard, "communications.updated")
-                return _json(_communications_payload(actor, payload, path))
-
-            if path in {
-                "/api/room-scene",
-                "/api/climate-control",
-                "/api/access-control",
-                "/api/garage-check",
-                "/api/energy-window",
-                "/api/mic-ingress",
-                "/api/presence-update",
-                "/api/phone-presence",
-                "/api/camera-event",
-                "/api/package-rule",
-                "/api/object-recognition",
-                "/api/environmental-anomaly",
-                "/api/privacy-update",
-            }:
-                background_tasks.add_task(_broadcast_dashboard, "home.updated")
-                return _json(_home_ops_payload(actor, payload, path))
-
-            if path in {"/api/memory-remember", "/api/memory-forget", "/api/memory-approve"}:
-                background_tasks.add_task(_broadcast_dashboard, "memory.updated")
-                return _json(_memory_payload(actor, payload, path))
-
-            if path.startswith("/api/catalyst-"):
-                background_tasks.add_task(_broadcast_dashboard, "catalyst.updated")
-                return _json(_catalyst_payload(actor, payload, path))
-
-            if path in {"/api/security-event", "/api/safety-alert", "/api/weather-alert", "/api/child-arrival", "/api/unlock-policy"}:
-                background_tasks.add_task(_broadcast_dashboard, "security.updated")
-                return _json(_security_payload(actor, payload, path))
-
-            if path in {"/api/devotional-pause", "/api/family-devotional", "/api/chronicle-capture"}:
-                background_tasks.add_task(_broadcast_dashboard, "formation.updated")
-                return _json(_formation_payload(actor, payload, path))
-
-            if path in {
-                "/api/tutor",
-                "/api/device-boundary",
-            }:
-                background_tasks.add_task(_broadcast_dashboard, "tutoring.updated")
-                return _json(_tutoring_payload(actor, payload, path, request_text))
-
-            if path in {
-                "/api/workshop-plan",
-                "/api/concept-studio/chat",
-                "/api/material-recommendation",
-                "/api/cad-package",
-                "/api/print-prep",
-                "/api/safety-check",
-                "/api/inspect-part",
-                "/api/vendor-prep",
-            }:
-                background_tasks.add_task(_broadcast_dashboard, "workshop.updated")
-                return _json(_workshop_payload(actor, payload, path, request_text))
-
-            if path == "/api/executive-task":
-                return _json(_executive_payload(actor, payload, path))
-        except KeyError as exc:
-            raise HTTPException(status_code=400, detail=f"Missing required field: {exc.args[0]}") from exc
-        except PermissionError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-        raise HTTPException(status_code=404, detail="Not found")
-
-    # ------------------------------------------------------------------
     # Being Known — memory facts & drift endpoints (Epic 5)
     # ------------------------------------------------------------------
 
@@ -6274,6 +6172,109 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         })
 
     # ── End Forge ──────────────────────────────────────────────────────────────
+
+    # ------------------------------------------------------------------
+    # Legacy catch-all (MUST be last — any specific POST route defined
+    # above takes priority because it's registered first in FastAPI)
+    # ------------------------------------------------------------------
+
+    @app.post("/api/{legacy_path:path}")
+    async def api_legacy_post(
+        legacy_path: str,
+        payload: dict[str, Any],
+        background_tasks: BackgroundTasks,
+    ) -> JSONResponse:
+        path = f"/api/{legacy_path}"
+        actor = str(payload.get("actor", "Chris"))
+        room = str(payload.get("room", "office"))
+        request_text = str(payload.get("request", ""))
+        try:
+            if path in {
+                "/api/plan",
+                "/api/respond",
+                "/api/mode-brief",
+                "/api/family-plan",
+                "/api/departure-plan",
+                "/api/rebekah-center",
+                "/api/troop-plan",
+                "/api/grocery-support",
+                "/api/meal-plan",
+                "/api/vehicle-plan",
+                "/api/weather-contingency",
+            }:
+                result = _mode_brief_payload(actor, room, request_text, path, payload)
+                if path in {"/api/respond", "/api/family-plan", "/api/rebekah-center", "/api/troop-plan", "/api/grocery-support", "/api/meal-plan", "/api/vehicle-plan", "/api/weather-contingency", "/api/departure-plan"}:
+                    background_tasks.add_task(_broadcast_dashboard, "workflow.updated")
+                return _json(result)
+
+            if path in {"/api/message-draft", "/api/parent-message", "/api/voice-note"}:
+                background_tasks.add_task(_broadcast_dashboard, "communications.updated")
+                return _json(_communications_payload(actor, payload, path))
+
+            if path in {
+                "/api/room-scene",
+                "/api/climate-control",
+                "/api/access-control",
+                "/api/garage-check",
+                "/api/energy-window",
+                "/api/mic-ingress",
+                "/api/presence-update",
+                "/api/phone-presence",
+                "/api/camera-event",
+                "/api/package-rule",
+                "/api/object-recognition",
+                "/api/environmental-anomaly",
+                "/api/privacy-update",
+            }:
+                background_tasks.add_task(_broadcast_dashboard, "home.updated")
+                return _json(_home_ops_payload(actor, payload, path))
+
+            if path in {"/api/memory-remember", "/api/memory-forget", "/api/memory-approve"}:
+                background_tasks.add_task(_broadcast_dashboard, "memory.updated")
+                return _json(_memory_payload(actor, payload, path))
+
+            if path.startswith("/api/catalyst-"):
+                background_tasks.add_task(_broadcast_dashboard, "catalyst.updated")
+                return _json(_catalyst_payload(actor, payload, path))
+
+            if path in {"/api/security-event", "/api/safety-alert", "/api/weather-alert", "/api/child-arrival", "/api/unlock-policy"}:
+                background_tasks.add_task(_broadcast_dashboard, "security.updated")
+                return _json(_security_payload(actor, payload, path))
+
+            if path in {"/api/devotional-pause", "/api/family-devotional", "/api/chronicle-capture"}:
+                background_tasks.add_task(_broadcast_dashboard, "formation.updated")
+                return _json(_formation_payload(actor, payload, path))
+
+            if path in {
+                "/api/tutor",
+                "/api/device-boundary",
+            }:
+                background_tasks.add_task(_broadcast_dashboard, "tutoring.updated")
+                return _json(_tutoring_payload(actor, payload, path, request_text))
+
+            if path in {
+                "/api/workshop-plan",
+                "/api/concept-studio/chat",
+                "/api/material-recommendation",
+                "/api/cad-package",
+                "/api/print-prep",
+                "/api/safety-check",
+                "/api/inspect-part",
+                "/api/vendor-prep",
+            }:
+                background_tasks.add_task(_broadcast_dashboard, "workshop.updated")
+                return _json(_workshop_payload(actor, payload, path, request_text))
+
+            if path == "/api/executive-task":
+                return _json(_executive_payload(actor, payload, path))
+        except KeyError as exc:
+            raise HTTPException(status_code=400, detail=f"Missing required field: {exc.args[0]}") from exc
+        except PermissionError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        raise HTTPException(status_code=404, detail="Not found")
 
     return app
 
