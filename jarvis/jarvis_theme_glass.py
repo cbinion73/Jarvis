@@ -4616,6 +4616,7 @@ function mdToHtml(md) {{
 }}
 
 async function openDossier(dossierId) {{
+  const did = dossierId;  // alias used throughout modal HTML
   const existing = document.getElementById('dossier-modal-overlay');
   if (existing) existing.remove();
 
