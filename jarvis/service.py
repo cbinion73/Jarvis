@@ -2995,6 +2995,68 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         ok = snooze_reminder(reminder_id, new_due)
         return _json({"ok": ok})
 
+    # ── Tasks ─────────────────────────────────────────────────────
+    from .tasks import (
+        add_task, list_tasks, get_task, update_task,
+        complete_task, delete_task, pending_tasks,
+    )
+
+    @app.get("/api/tasks")
+    async def api_tasks_list(
+        include_done: bool = False,
+        actor: str | None = None,
+        domain: str | None = None,
+        priority: str | None = None,
+    ) -> JSONResponse:
+        items = list_tasks(
+            include_done=include_done,
+            actor=actor or None,
+            domain=domain or None,
+            priority=priority or None,
+        )
+        return _json({"tasks": items, "total": len(items)})
+
+    @app.post("/api/tasks")
+    async def api_tasks_add(payload: dict[str, Any]) -> JSONResponse:
+        title = (payload.get("title") or "").strip()
+        if not title:
+            return JSONResponse({"error": "title required"}, status_code=400)
+        t = add_task(
+            title=title,
+            body=payload.get("body", ""),
+            priority=payload.get("priority", "normal"),
+            due=payload.get("due"),
+            actor=payload.get("actor", "chris"),
+            domain=payload.get("domain", "personal"),
+            source=payload.get("source", "manual"),
+            tags=payload.get("tags"),
+        )
+        return _json({"task": t})
+
+    @app.get("/api/tasks/{task_id}")
+    async def api_tasks_get(task_id: str) -> JSONResponse:
+        t = get_task(task_id)
+        if t is None:
+            raise HTTPException(status_code=404, detail="Task not found")
+        return _json({"task": t})
+
+    @app.patch("/api/tasks/{task_id}")
+    async def api_tasks_update(task_id: str, payload: dict[str, Any]) -> JSONResponse:
+        ok = update_task(task_id, **payload)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Task not found")
+        return _json({"ok": True, "task": get_task(task_id)})
+
+    @app.post("/api/tasks/{task_id}/complete")
+    async def api_tasks_complete(task_id: str) -> JSONResponse:
+        ok = complete_task(task_id)
+        return _json({"ok": ok})
+
+    @app.delete("/api/tasks/{task_id}")
+    async def api_tasks_delete(task_id: str) -> JSONResponse:
+        ok = delete_task(task_id)
+        return _json({"ok": ok})
+
     @app.post("/api/approvals/{request_id}")
     async def api_update_approval(request_id: str, payload: dict[str, Any]) -> JSONResponse:
         updated = runtime.update_approval(request_id, str(payload.get("status", "pending")))

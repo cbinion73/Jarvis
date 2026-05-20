@@ -703,6 +703,48 @@ body::after {{
 .pill-crimson {{ background: rgba(196,30,58,0.08); color: var(--crimson); border: 1px solid rgba(196,30,58,0.2); }}
 .pill-success {{ background: rgba(16,185,129,0.1); color: var(--success); border: 1px solid rgba(16,185,129,0.25); }}
 
+/* ── Task domain chips ── */
+.task-domain-chip {{
+  display: inline-block; padding: 1px 7px; border-radius: 20px;
+  font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+  line-height: 18px;
+}}
+.tdc-personal  {{ background: rgba(59,130,246,0.12);  color: #3B82F6; border: 1px solid rgba(59,130,246,0.25); }}
+.tdc-work      {{ background: rgba(139,92,246,0.12);  color: #8B5CF6; border: 1px solid rgba(139,92,246,0.25); }}
+.tdc-family    {{ background: rgba(34,197,94,0.12);   color: #16A34A; border: 1px solid rgba(34,197,94,0.25); }}
+.tdc-home      {{ background: rgba(249,115,22,0.12);  color: #EA580C; border: 1px solid rgba(249,115,22,0.25); }}
+.tdc-faith     {{ background: rgba(201,168,76,0.12);  color: #B45309; border: 1px solid rgba(201,168,76,0.3); }}
+.tdc-health    {{ background: rgba(239,68,68,0.1);    color: #DC2626; border: 1px solid rgba(239,68,68,0.25); }}
+.tdc-finance   {{ background: rgba(20,184,166,0.12);  color: #0F766E; border: 1px solid rgba(20,184,166,0.25); }}
+.tdc-workshop  {{ background: rgba(148,163,184,0.15); color: #64748B; border: 1px solid rgba(148,163,184,0.3); }}
+/* ── Task priority dot override ── */
+.task-pri-high   {{ color: #DC2626; }}
+.task-pri-normal {{ color: #94A3B8; }}
+.task-pri-low    {{ color: #CBD5E1; }}
+/* ── Tasks panel misc ── */
+.tasks-filter-bar {{ display:flex; gap:4px; margin-bottom:8px; flex-wrap:wrap; }}
+.tasks-filter-pill {{
+  padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 500; cursor: pointer;
+  background: rgba(255,255,255,0.3); border: 1px solid rgba(255,255,255,0.45);
+  color: var(--text-2); transition: background 0.2s, color 0.2s;
+}}
+.tasks-filter-pill.active {{
+  background: var(--hue-dim); color: var(--hue); border-color: rgba(var(--hue-rgb),0.3);
+}}
+.tasks-add-bar {{ display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }}
+.tasks-add-bar input, .tasks-add-bar select {{
+  background: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.5);
+  border-radius: 6px; padding: 5px 8px; font-size: 11px; color: var(--text-1); outline: none;
+}}
+.tasks-add-bar input[type="text"] {{ flex: 1; min-width: 120px; }}
+.tasks-add-bar input[type="date"] {{ width: 128px; }}
+.tasks-add-bar select {{ min-width: 90px; }}
+.tasks-group-label {{
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--text-3); margin: 8px 0 4px; padding-bottom: 2px;
+  border-bottom: 1px solid var(--border);
+}}
+
 /* ═══════════════════════════════════════════════════════════════════
    BUTTONS
 ═══════════════════════════════════════════════════════════════════ */
@@ -2609,6 +2651,49 @@ body::after {{
         </div>
       </div>
 
+      <!-- Tasks -->
+      <div class="card card-tactical" style="grid-column: 1 / -1;">
+        <div class="card-inner">
+          <div class="card-header">
+            <span class="card-title">Tasks</span>
+            <span class="pill pill-hue" id="tasks-count">—</span>
+          </div>
+          <!-- Add-task bar -->
+          <div class="tasks-add-bar">
+            <input id="task-title-input" type="text" placeholder="New task…" onkeydown="if(event.key==='Enter')addJarvisTask()">
+            <select id="task-domain-select">
+              <option value="personal">Personal</option>
+              <option value="work">Work</option>
+              <option value="family">Family</option>
+              <option value="home">Home</option>
+              <option value="health">Health</option>
+              <option value="faith">Faith</option>
+              <option value="finance">Finance</option>
+              <option value="workshop">Workshop</option>
+            </select>
+            <select id="task-priority-select">
+              <option value="normal">Normal</option>
+              <option value="high">High</option>
+              <option value="low">Low</option>
+            </select>
+            <input id="task-due-input" type="date">
+            <button onclick="addJarvisTask()" style="background:var(--hue);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;white-space:nowrap;">+ Add</button>
+          </div>
+          <!-- Filter pills -->
+          <div class="tasks-filter-bar" id="tasks-filter-bar">
+            <span class="tasks-filter-pill active" data-filter="all"    onclick="setTaskFilter('all')">All</span>
+            <span class="tasks-filter-pill"         data-filter="today"  onclick="setTaskFilter('today')">Today</span>
+            <span class="tasks-filter-pill"         data-filter="week"   onclick="setTaskFilter('week')">This Week</span>
+            <span class="tasks-filter-pill"         data-filter="domain" onclick="setTaskFilter('domain')">By Domain</span>
+          </div>
+          <!-- Task list -->
+          <div id="overview-tasks">
+            <div class="list-row"><div class="skel" style="height:10px;width:75%;margin-bottom:5px;"></div></div>
+            <div class="list-row"><div class="skel" style="height:10px;width:60%;"></div></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Active Agents -->
       <div class="card card-tactical">
         <div class="card-inner">
@@ -3576,10 +3661,14 @@ function init() {{
   loadOverviewChronicle();
   loadOverviewPublishing();
   loadOverviewReminders();
+  loadJarvisTasks();
 
   // Clock — update every minute
   updateNavClock();
   setInterval(updateNavClock, 30000);
+
+  // Tasks — refresh every 60 seconds
+  setInterval(loadJarvisTasks, 60000);
 
   // Weather widget — load once, refresh every 10 min
   loadWeatherWidget();
@@ -3622,7 +3711,7 @@ function loadViewData(name) {{
   if (_agentsRefreshTimer) {{ clearInterval(_agentsRefreshTimer); _agentsRefreshTimer = null; }}
 
   switch (name) {{
-    case 'overview':     loadApprovals(); loadBriefing(); loadHomeDashboard(); loadOverviewAgents(); loadOverviewCatalyst(); loadOverviewChronicle(); loadOverviewPublishing(); loadOverviewReminders(); break;
+    case 'overview':     loadApprovals(); loadBriefing(); loadHomeDashboard(); loadOverviewAgents(); loadOverviewCatalyst(); loadOverviewChronicle(); loadOverviewPublishing(); loadOverviewReminders(); loadJarvisTasks(); break;
     case 'agents':
       loadLiveAgents();
       // Auto-refresh every 30s while on this view
@@ -4610,6 +4699,151 @@ async function deleteReminder(id) {{
   try {{
     await fetch('/api/reminders/' + id, {{method: 'DELETE'}});
     loadOverviewReminders();
+  }} catch(e) {{}}
+}}
+
+/* ═══════════════════════════════════════════════════════════════
+   JARVIS TASKS
+═══════════════════════════════════════════════════════════════ */
+let _tasksFilter = 'all';
+let _tasksData   = [];
+
+const _TASK_DOMAIN_CLASS = {{
+  personal: 'tdc-personal', work: 'tdc-work', family: 'tdc-family',
+  home: 'tdc-home', faith: 'tdc-faith', health: 'tdc-health',
+  finance: 'tdc-finance', workshop: 'tdc-workshop',
+}};
+
+function setTaskFilter(f) {{
+  _tasksFilter = f;
+  document.querySelectorAll('.tasks-filter-pill').forEach(p => {{
+    p.classList.toggle('active', p.dataset.filter === f);
+  }});
+  renderJarvisTasks();
+}}
+
+async function loadJarvisTasks() {{
+  try {{
+    const res = await fetch('/api/tasks');
+    if (!res.ok) {{ console.warn('loadJarvisTasks', res.status); return; }}
+    const d = await res.json();
+    _tasksData = d.tasks || [];
+    const countEl = document.getElementById('tasks-count');
+    if (countEl) countEl.textContent = _tasksData.length || '0';
+    renderJarvisTasks();
+  }} catch(e) {{ console.error('loadJarvisTasks failed', e); }}
+}}
+
+function renderJarvisTasks() {{
+  const el = document.getElementById('overview-tasks');
+  if (!el) return;
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const weekEnd = new Date(today); weekEnd.setDate(weekEnd.getDate() + 7);
+
+  let tasks = _tasksData.slice();
+
+  if (_tasksFilter === 'today') {{
+    tasks = tasks.filter(t => {{
+      if (!t.due) return false;
+      const d = new Date(t.due + 'T00:00:00');
+      return d <= today || (d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate());
+    }});
+  }} else if (_tasksFilter === 'week') {{
+    tasks = tasks.filter(t => {{
+      if (!t.due) return false;
+      const d = new Date(t.due + 'T00:00:00');
+      return d >= today && d <= weekEnd;
+    }});
+  }}
+
+  if (tasks.length === 0) {{
+    el.innerHTML = '<div class="list-row-sub" style="color:var(--text-3);font-style:italic;padding:4px 0;">No tasks.</div>';
+    return;
+  }}
+
+  if (_tasksFilter === 'domain') {{
+    // Group by domain
+    const groups = {{}};
+    tasks.forEach(t => {{
+      const dom = t.domain || 'personal';
+      if (!groups[dom]) groups[dom] = [];
+      groups[dom].push(t);
+    }});
+    el.innerHTML = Object.keys(groups).sort().map(dom => {{
+      const label = dom.charAt(0).toUpperCase() + dom.slice(1);
+      const rows = groups[dom].map(t => _renderTaskRow(t)).join('');
+      return `<div class="tasks-group-label">${{escHtml(label)}}</div>${{rows}}`;
+    }}).join('');
+  }} else {{
+    el.innerHTML = tasks.map(t => _renderTaskRow(t)).join('');
+  }}
+}}
+
+function _renderTaskRow(t) {{
+  const priClass  = t.priority === 'high' ? 'task-pri-high' : t.priority === 'low' ? 'task-pri-low' : 'task-pri-normal';
+  const domClass  = _TASK_DOMAIN_CLASS[t.domain] || 'tdc-personal';
+  const domLabel  = (t.domain || 'personal').charAt(0).toUpperCase() + (t.domain || 'personal').slice(1);
+  const dueStr    = t.due ? (() => {{
+    try {{
+      const d = new Date(t.due + 'T00:00:00');
+      return d.toLocaleDateString([], {{month:'short', day:'numeric'}});
+    }} catch(e) {{ return t.due; }}
+  }})() : '';
+  const actorStr  = (t.actor && t.actor !== 'chris') ? ` <span class="task-domain-chip" style="background:rgba(148,163,184,0.1);color:var(--text-3);border-color:var(--border);">${{escHtml(t.actor)}}</span>` : '';
+  return `<div class="list-row" style="align-items:center;gap:6px;padding:4px 0;">
+    <span class="${{priClass}}" style="font-size:10px;flex-shrink:0;cursor:pointer;" title="Priority: ${{escHtml(t.priority)}}">&#9679;</span>
+    <div style="flex:1;min-width:0;">
+      <span style="font-size:12px;color:var(--text-1);">${{escHtml(t.title)}}</span>
+      ${{dueStr ? `<span style="font-size:9px;color:var(--text-3);margin-left:6px;">${{escHtml(dueStr)}}</span>` : ''}}
+      ${{actorStr}}
+    </div>
+    <span class="task-domain-chip ${{domClass}}">${{escHtml(domLabel)}}</span>
+    <span style="font-size:11px;color:var(--success);cursor:pointer;padding:0 4px;" onclick="completeJarvisTask('${{escHtml(t.id)}}')" title="Complete">&#10003;</span>
+    <span style="font-size:10px;color:var(--text-3);cursor:pointer;padding:0 4px;" onclick="deleteJarvisTask('${{escHtml(t.id)}}')" title="Delete">&#10005;</span>
+  </div>`;
+}}
+
+async function addJarvisTask() {{
+  const titleEl    = document.getElementById('task-title-input');
+  const domainEl   = document.getElementById('task-domain-select');
+  const priorityEl = document.getElementById('task-priority-select');
+  const dueEl      = document.getElementById('task-due-input');
+  if (!titleEl) return;
+  const title = titleEl.value.trim();
+  if (!title) return;
+  try {{
+    const res = await fetch('/api/tasks', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{
+        title,
+        domain:   domainEl   ? domainEl.value   : 'personal',
+        priority: priorityEl ? priorityEl.value : 'normal',
+        due:      dueEl && dueEl.value ? dueEl.value : null,
+        source:   'manual',
+      }})
+    }});
+    if (res.ok) {{
+      titleEl.value = '';
+      if (dueEl) dueEl.value = '';
+      loadJarvisTasks();
+    }}
+  }} catch(e) {{ console.error('addJarvisTask failed', e); }}
+}}
+
+async function completeJarvisTask(id) {{
+  try {{
+    await fetch('/api/tasks/' + id + '/complete', {{method: 'POST'}});
+    loadJarvisTasks();
+  }} catch(e) {{}}
+}}
+
+async function deleteJarvisTask(id) {{
+  try {{
+    await fetch('/api/tasks/' + id, {{method: 'DELETE'}});
+    loadJarvisTasks();
   }} catch(e) {{}}
 }}
 
