@@ -5620,10 +5620,12 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_forge_list_projects(
         include_archived: bool = Query(default=False),
     ) -> JSONResponse:
-        """List all Forge projects."""
+        """List all Forge projects, filtering out any whose data directory is missing."""
         store = _forge_store_or_503()
         projects = await asyncio.to_thread(store.list_projects, include_archived)
-        return _json({"projects": projects, "total": len(projects)})
+        # Filter to only projects that have a real on-disk directory
+        valid = [p for p in projects if await asyncio.to_thread(store.get_project, p["id"]) is not None]
+        return _json({"projects": valid, "total": len(valid)})
 
     @app.post("/api/forge/projects")
     async def api_forge_create_project(request: Request) -> JSONResponse:
