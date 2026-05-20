@@ -5826,7 +5826,8 @@ async function sendCommand(text) {{
 
 async function handleApproval(id, action) {{
   try {{
-    const res = await fetch('/api/approvals/' + id + '/' + action, {{ method: 'POST' }});
+    const endpoint = action === 'deny' ? 'reject' : action;
+    const res = await fetch('/api/approvals/' + id + '/' + endpoint, {{ method: 'POST' }});
     if (!res.ok) {{ showToast('Action failed', 'error'); return; }}
     showToast(action === 'approve' ? 'Approved ✓' : 'Denied', action === 'approve' ? 'success' : 'error');
     loadApprovals();
