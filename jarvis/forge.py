@@ -395,9 +395,10 @@ class ForgeSupport:
         openai_client: JarvisOpenAIClient — used for chat responses.
     """
 
-    def __init__(self, store: ForgeStore, openai_client: Any = None) -> None:
+    def __init__(self, store: ForgeStore, openai_client: Any = None, workshop_support: Any = None) -> None:
         self.store = store
         self.openai_client = openai_client
+        self.workshop_support = workshop_support  # WorkshopSupport instance for CAD generation
 
     # ── Model inspection ─────────────────────────────────────────────────────
 
@@ -881,3 +882,449 @@ Voice guidance:
                 "error": str(exc),
                 "method": "shap_e",
             }
+
+    # ── Parametric generation from description ────────────────────────────────
+
+    def generate_from_description(
+        self,
+        project_id: str,
+        description: str,
+        part_name: str = "",
+        dimensions: str = "",
+        constraints: str = "",
+        family_hint: str = "",
+    ) -> dict:
+        """
+        Generate a parametric CAD model from a text description via cad_package_advanced().
+
+        Copies the resulting STL/3MF into the forge project's models/ directory,
+        registers it as a generated model, and advances status to model_ready.
+        """
+        if self.workshop_support is None:
+            return {"ok": False, "error": "Workshop support not available — cannot generate CAD model."}
+
+        project = self.store.get_project(project_id)
+        if project is None:
+            return {"ok": False, "error": "Project not found."}
+
+        if not part_name:
+            part_name = project.get("title", "Untitled Part")
+        if not dimensions:
+            dimensions = description
+        if not constraints:
+            constraints = "3D printable on FDM printer, optimize for K2 Pro"
+
+        try:
+            package = self.workshop_support.cad_package_advanced(
+                "chris",
+                part_name,
+                dimensions,
+                constraints,
+                family_hint,
+                "creality-k2-pro",
+                "functional-prototype",
+                "practical",
+            )
+        except Exception as exc:
+            return {"ok": False, "error": f"CAD generation failed: {exc}"}
+
+        import shutil as _shutil
+
+        model_path = package.get("model_path", "")
+        mesh_3mf_path = package.get("mesh_3mf_path", "")
+
+        models_dir = self.store.models_dir(project_id)
+        model_id = str(uuid.uuid4())
+
+        copied_filename = None
+        copied_format = None
+        file_size = 0
+
+        # Prefer 3MF → STL → SCAD stub
+        for src_str, fmt in [(mesh_3mf_path, "3mf"), (model_path, "stl")]:
+            if src_str:
+                src = Path(src_str)
+                if src.exists() and src.stat().st_size > 0:
+                    dest_name = f"cad_{model_id[:8]}{src.suffix}"
+                    dest = models_dir / dest_name
+                    _shutil.copy2(str(src), str(dest))
+                    copied_filename = dest_name
+                    copied_format = fmt
+                    file_size = dest.stat().st_size
+                    break
+
+        if not copied_filename:
+            scad_path = package.get("script_path", "")
+            if scad_path:
+                src = Path(scad_path)
+                if src.exists():
+                    dest_name = f"cad_{model_id[:8]}.scad"
+                    dest = models_dir / dest_name
+                    _shutil.copy2(str(src), str(dest))
+                    copied_filename = dest_name
+                    copied_format = "scad"
+                    file_size = dest.stat().st_size
+
+        model_dict: dict[str, Any] = {
+            "model_id": model_id,
+            "version": 1,
+            "title": f"Parametric: {part_name[:40]}",
+            "method": "cad_parametric",
+            "filename": copied_filename or "",
+            "format": copied_format or "unknown",
+            "file_size_bytes": file_size,
+            "bounding_box_mm": {},
+            "is_manifold": None,
+            "was_repaired": False,
+            "repair_notes": "",
+            "print_readiness": {},
+            "package_id": package.get("package_id", ""),
+            "part_name": part_name,
+            "summary": package.get("summary", ""),
+            "parameters": package.get("parameters", []),
+            "export_status": package.get("export_status", ""),
+            "export_engine": package.get("export_engine", ""),
+            "created_at": _now(),
+            "notes": description[:200],
+        }
+
+        self.store.add_generated_model(project_id, model_dict)
+        self.store.set_status(project_id, "model_ready")
+        self.store.log_event(
+            project_id,
+            "cad_generated",
+            f"part={part_name!r} engine={package.get('export_engine', '?')!r} file={copied_filename!r}",
+        )
+
+        return {
+            "ok": True,
+            **model_dict,
+            "package": {
+                k: v for k, v in package.items()
+                if k not in ("parameters",)  # skip large lists already in model_dict
+            },
+        }
+
+    # ── Sketch / drawing vision pipeline ─────────────────────────────────────
+
+    def analyze_sketch(
+        self,
+        project_id: str,
+        image_path: str,
+        auto_generate: bool = True,
+    ) -> dict:
+        """
+        Analyze a hand-drawn sketch or uploaded drawing using OpenAI vision.
+
+        Extracts dimensions, shape type, features, and design intent.
+        Automatically logs measurements and assumptions to the project.
+        If auto_generate=True and confidence is sufficient, calls generate_from_description().
+        """
+        if self.openai_client is None:
+            return {"ok": False, "error": "OpenAI client not configured."}
+
+        img_path = Path(image_path)
+        if not img_path.exists():
+            return {"ok": False, "error": f"Image not found: {image_path}"}
+
+        import base64 as _base64
+        import mimetypes as _mimetypes
+
+        mime_type, _ = _mimetypes.guess_type(str(img_path))
+        if not mime_type:
+            mime_type = "image/jpeg"
+
+        with open(img_path, "rb") as f:
+            img_bytes = f.read()
+        img_b64 = _base64.b64encode(img_bytes).decode("utf-8")
+        data_url = f"data:{mime_type};base64,{img_b64}"
+
+        vision_prompt = (
+            "You are a mechanical engineering vision AI. Analyze this sketch or drawing "
+            "and extract structured design information.\n\n"
+            "Return ONLY valid JSON with this exact structure:\n"
+            "{\n"
+            '  "shape_type": "bracket|enclosure|spacer|mount|custom",\n'
+            '  "object_description": "short plain-english description",\n'
+            '  "dimensions": {\n'
+            '    "length_mm": null or number,\n'
+            '    "width_mm": null or number,\n'
+            '    "height_mm": null or number,\n'
+            '    "thickness_mm": null or number\n'
+            "  },\n"
+            '  "features": ["hole", "slot", "chamfer", "fillet"],\n'
+            '  "mounting_points": "description or null",\n'
+            '  "material_hint": "PLA|ABS|PETG|resin|unknown",\n'
+            '  "design_intent": "one sentence purpose of this part",\n'
+            '  "assumptions": ["list", "of", "assumptions"],\n'
+            '  "confidence": "high|medium|low",\n'
+            '  "constraints": "any visible notes or constraints from the drawing",\n'
+            '  "ready_to_generate": true or false\n'
+            "}\n\n"
+            "If dimensions have units other than mm, convert to mm. "
+            "Set ready_to_generate=true only if you can determine enough to generate a basic parametric model."
+        )
+
+        try:
+            raw_response = self.openai_client.analyze_image(
+                vision_prompt,
+                data_url,
+                max_output_tokens=600,
+            )
+        except Exception as exc:
+            return {"ok": False, "error": f"Vision analysis failed: {exc}"}
+
+        # Parse structured JSON from response
+        extraction: dict[str, Any] = {}
+        try:
+            cleaned = raw_response.strip()
+            if cleaned.startswith("```"):
+                lines = cleaned.split("\n")
+                start = 1
+                end = len(lines) - 1 if lines[-1].strip().startswith("```") else len(lines)
+                cleaned = "\n".join(lines[start:end])
+            extraction = json.loads(cleaned)
+        except Exception:
+            extraction = {
+                "raw_response": raw_response,
+                "parse_error": True,
+                "ready_to_generate": False,
+                "confidence": "low",
+                "assumptions": ["Could not parse structured response from vision model."],
+                "object_description": "Unknown — see raw_response",
+            }
+
+        # Log to project: assumptions + measurements
+        project = self.store.get_project(project_id)
+        if project:
+            assumptions = extraction.get("assumptions", [])
+            if assumptions:
+                existing = project.get("assumptions", [])
+                existing.extend(assumptions)
+                self.store.update_project(project_id, assumptions=existing[:20])
+
+            dims = extraction.get("dimensions", {}) or {}
+            for key, label in [
+                ("length_mm", "length"),
+                ("width_mm", "width"),
+                ("height_mm", "height"),
+                ("thickness_mm", "thickness"),
+            ]:
+                val = dims.get(key)
+                if val is not None:
+                    try:
+                        self.store.add_measurement(
+                            project_id,
+                            label=label,
+                            value=float(val),
+                            unit="mm",
+                            confirmed=False,
+                            source="sketch_vision",
+                            notes=f"Vision extraction (confidence: {extraction.get('confidence', '?')})",
+                        )
+                    except Exception:
+                        pass
+
+            self.store.log_event(
+                project_id,
+                "sketch_analyzed",
+                f"confidence={extraction.get('confidence')!r} ready={extraction.get('ready_to_generate')}",
+            )
+
+        result: dict[str, Any] = {"ok": True, "extraction": extraction}
+
+        # Auto-generate model if confident and workshop_support is wired
+        if auto_generate and extraction.get("ready_to_generate") and self.workshop_support:
+            dims = extraction.get("dimensions", {}) or {}
+            dim_parts = []
+            for key in ["length_mm", "width_mm", "height_mm", "thickness_mm"]:
+                val = dims.get(key)
+                if val:
+                    label = key.replace("_mm", "").replace("_", " ")
+                    dim_parts.append(f"{label}: {val}mm")
+            dimensions_str = "\n".join(dim_parts) if dim_parts else extraction.get("object_description", "")
+            constraints_str = extraction.get("constraints", "") or "3D printable on FDM printer"
+
+            gen_result = self.generate_from_description(
+                project_id=project_id,
+                description=extraction.get("design_intent", extraction.get("object_description", "")),
+                part_name=(extraction.get("object_description", "Sketch Part") or "Sketch Part")[:60],
+                dimensions=dimensions_str,
+                constraints=constraints_str,
+                family_hint=extraction.get("shape_type", ""),
+            )
+            result["generation"] = gen_result
+
+        return result
+
+    # ── Forge Design Council (multi-agent roundtable) ─────────────────────────
+
+    def run_design_council(
+        self,
+        project_id: str,
+        brief: str,
+        auto_inspect: bool = True,
+    ) -> dict:
+        """
+        Run the Forge Design Council — a multi-agent roundtable.
+
+        Agents: Tony (foreman), Forge (geometry), AntMan (scale), Rocket (materials).
+        Each contributes their expert perspective. A synthesis prompt builds a unified
+        design spec. Then cad_package_advanced() generates the geometry. Trimesh
+        inspection runs automatically. Status advances to approval_required on success.
+        """
+        if self.openai_client is None:
+            return {"ok": False, "error": "OpenAI client not configured."}
+
+        project = self.store.get_project(project_id)
+        if project is None:
+            return {"ok": False, "error": "Project not found."}
+
+        self.store.log_event(project_id, "design_council_started", f"brief={brief[:80]!r}")
+        self.store.set_status(project_id, "modeling")
+
+        AGENTS = [
+            {
+                "name": "Tony",
+                "title": "Workshop Foreman",
+                "persona": (
+                    "You are Tony Stark's maker energy — bold, direct, practical. "
+                    "Focus on build feasibility, machine selection, and whether this is "
+                    "worth making at all. Be opinionated."
+                ),
+            },
+            {
+                "name": "Forge",
+                "title": "Geometry Builder",
+                "persona": (
+                    "You are Forge — master of shapes, dimensions, and manufacturing constraints. "
+                    "Focus on geometry specifics: wall thickness, overhangs, supports, and "
+                    "optimal print orientation."
+                ),
+            },
+            {
+                "name": "AntMan",
+                "title": "Scale & Measurement",
+                "persona": (
+                    "You are Ant-Man — scale is everything. Focus on exact dimensions, "
+                    "tolerances, fit checks, and whether the part fits the K2 Pro build volume (350×350×350mm)."
+                ),
+            },
+            {
+                "name": "Rocket",
+                "title": "Materials Scout",
+                "persona": (
+                    "You are Rocket Raccoon — resourceful, knows materials cold. "
+                    "Focus on material selection, filament recommendations, "
+                    "and whether the design needs rethinking for the chosen material."
+                ),
+            },
+        ]
+
+        agent_base_system = (
+            "You are a design council agent for JARVIS Forge — Chris's maker workspace. "
+            "Review the design brief and give your expert perspective in 2-3 sentences: "
+            "1) your recommendation, 2) the key risk or constraint, 3) your required next step. "
+            "Be specific and direct. No filler."
+        )
+
+        roundtable: list[dict] = []
+        for agent in AGENTS:
+            system = agent_base_system + "\n\nYour persona: " + agent["persona"]
+            user_msg = f"Design brief: {brief}\n\nAs {agent['name']} ({agent['title']}), give your council input."
+            try:
+                response = self.openai_client.prompt_text(system, user_msg, max_output_tokens=200)
+            except Exception as exc:
+                response = f"[{agent['name']} unavailable: {exc}]"
+            roundtable.append({
+                "agent": agent["name"],
+                "title": agent["title"],
+                "response": response,
+            })
+
+        # Synthesize roundtable into a unified spec
+        roundtable_text = "\n\n".join(
+            f"{r['agent']} ({r['title']}): {r['response']}"
+            for r in roundtable
+        )
+
+        synthesis_system = (
+            "You are the JARVIS Forge synthesis AI. Given a design council roundtable, "
+            "synthesize a unified parametric design specification.\n\n"
+            "Return ONLY valid JSON with this structure:\n"
+            "{\n"
+            '  "part_name": "descriptive part name",\n'
+            '  "shape_family": "bracket|enclosure|spacer|mount|custom",\n'
+            '  "material": "PLA|PETG|ABS",\n'
+            '  "dimensions": "clear dimension spec, one per line, values in mm",\n'
+            '  "constraints": "manufacturing constraints and requirements",\n'
+            '  "design_notes": "key design decisions from the council",\n'
+            '  "machine": "k2_pro|halot_one",\n'
+            '  "confidence": "high|medium|low"\n'
+            "}"
+        )
+        synthesis_user = (
+            f"Design Brief: {brief}\n\nCouncil Roundtable:\n{roundtable_text}\n\n"
+            "Synthesize a unified parametric design spec."
+        )
+
+        spec: dict[str, Any] = {}
+        try:
+            raw_spec = self.openai_client.prompt_text(synthesis_system, synthesis_user, max_output_tokens=500)
+            cleaned = raw_spec.strip()
+            if cleaned.startswith("```"):
+                lines = cleaned.split("\n")
+                start = 1
+                end = len(lines) - 1 if lines[-1].strip().startswith("```") else len(lines)
+                cleaned = "\n".join(lines[start:end])
+            spec = json.loads(cleaned)
+        except Exception as exc:
+            spec = {
+                "part_name": project.get("title", "Council Part"),
+                "shape_family": "custom",
+                "material": "PLA",
+                "dimensions": brief,
+                "constraints": "3D printable on FDM printer",
+                "design_notes": f"Synthesis parsing failed: {exc}",
+                "confidence": "low",
+            }
+
+        # Generate the model
+        gen_result: dict[str, Any] = {"ok": False, "error": "Workshop support not available."}
+        if self.workshop_support:
+            gen_result = self.generate_from_description(
+                project_id=project_id,
+                description=brief,
+                part_name=spec.get("part_name") or project.get("title", "Council Part"),
+                dimensions=spec.get("dimensions", ""),
+                constraints=spec.get("constraints", "3D printable on FDM printer"),
+                family_hint=spec.get("shape_family", ""),
+            )
+
+        # Auto-inspect if we got a printable file
+        inspection: dict[str, Any] = {}
+        if auto_inspect and gen_result.get("ok") and gen_result.get("filename"):
+            fname = gen_result["filename"]
+            if fname.endswith((".stl", ".3mf")):
+                inspection = self.inspect_model(project_id, fname)
+
+        # Gate at approval_required
+        if gen_result.get("ok"):
+            self.store.set_status(project_id, "approval_required")
+
+        self.store.log_event(
+            project_id,
+            "design_council_complete",
+            f"agents={len(roundtable)} gen_ok={gen_result.get('ok')} "
+            f"inspect_printable={inspection.get('printable')}",
+        )
+
+        return {
+            "ok": gen_result.get("ok", False),
+            "brief": brief,
+            "roundtable": roundtable,
+            "spec": spec,
+            "generation": gen_result,
+            "inspection": inspection,
+            "status": "approval_required" if gen_result.get("ok") else "modeling",
+        }

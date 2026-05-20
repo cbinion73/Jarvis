@@ -5559,6 +5559,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 _forge_support_instance[0] = ForgeSupport(
                     store,
                     openai_client=runtime.openai_client,
+                    workshop_support=runtime.workshop_support,
                 )
             except Exception:
                 return None
@@ -5847,7 +5848,11 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
     @app.post("/api/forge/projects/{project_id}/chat")
     async def api_forge_chat(project_id: str, request: Request) -> JSONResponse:
-        """Chat with JARVIS Forge about this project. Body: {message}"""
+        """Chat with JARVIS Forge about this project. Body: {message}
+
+        Auto-detects design-intent messages (part descriptions with dimensions)
+        and triggers cad_package_advanced() generation automatically.
+        """
         store = _forge_store_or_503()
         support = _forge_support_or_503()
         project = await asyncio.to_thread(store.get_project, project_id)
@@ -5859,11 +5864,136 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         if not message:
             raise HTTPException(status_code=400, detail="message is required")
 
+        # Design-intent detection: generate a model if the message looks like a part spec
+        import re as _re
+        _DESIGN_INTENT_RE = _re.compile(
+            r"""(?ix)
+            (
+              \b(build|make|design|generate|create|model)\b .{0,60}
+              \b(bracket|mount|enclosure|spacer|part|holder|clip|hook|stand|shelf|box|cover|plate|brace)\b
+            |
+              \b\d+\s*(?:mm|cm|in|inch|inches)\b .{0,60}
+              \b\d+\s*(?:mm|cm|in|inch|inches)\b
+            |
+              \b(wall\s*thickness|hole\s*diameter|outer\s*diameter|inner\s*diameter|flange|rib|infill)\b
+            )
+            """,
+            _re.IGNORECASE | _re.VERBOSE,
+        )
+
+        generated_model: dict | None = None
+        if _DESIGN_INTENT_RE.search(message) and support.workshop_support is not None:
+            try:
+                generated_model = await asyncio.to_thread(
+                    support.generate_from_description,
+                    project_id,
+                    message,
+                )
+            except Exception:
+                generated_model = None
+
         reply = await asyncio.to_thread(support.forge_chat_response, project_id, message)
         await asyncio.to_thread(
             store.log_event, project_id, "chat", f"user_msg={message[:80]!r}"
         )
-        return _json({"reply": reply, "project_id": project_id})
+
+        response: dict = {"reply": reply, "project_id": project_id}
+        if generated_model and generated_model.get("ok"):
+            response["generated_model"] = {
+                "model_id": generated_model.get("model_id"),
+                "filename": generated_model.get("filename"),
+                "format": generated_model.get("format"),
+                "export_engine": generated_model.get("export_engine"),
+                "export_status": generated_model.get("export_status"),
+                "summary": generated_model.get("summary", ""),
+            }
+        return _json(response)
+
+    @app.post("/api/forge/projects/{project_id}/generate")
+    async def api_forge_generate(project_id: str, request: Request) -> JSONResponse:
+        """Generate a parametric CAD model from a text description.
+        Body: {description, part_name?, dimensions?, constraints?, family_hint?}
+        """
+        store = _forge_store_or_503()
+        support = _forge_support_or_503()
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+
+        body = await request.json()
+        description = str(body.get("description", "")).strip()
+        if not description:
+            raise HTTPException(status_code=400, detail="description is required")
+
+        result = await asyncio.to_thread(
+            support.generate_from_description,
+            project_id,
+            description,
+            str(body.get("part_name", "")).strip(),
+            str(body.get("dimensions", "")).strip(),
+            str(body.get("constraints", "")).strip(),
+            str(body.get("family_hint", "")).strip(),
+        )
+        if not result.get("ok"):
+            raise HTTPException(status_code=500, detail=result.get("error", "Generation failed"))
+        return _json(result)
+
+    @app.post("/api/forge/projects/{project_id}/analyze-sketch")
+    async def api_forge_analyze_sketch(project_id: str, request: Request) -> JSONResponse:
+        """Analyze a sketch/drawing image with vision AI to extract dimensions and design intent.
+        Body: {image_filename, auto_generate?}
+        The image_filename must already be in the project's uploads/ directory.
+        """
+        store = _forge_store_or_503()
+        support = _forge_support_or_503()
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+
+        body = await request.json()
+        image_filename = str(body.get("image_filename", "")).strip()
+        if not image_filename:
+            raise HTTPException(status_code=400, detail="image_filename is required")
+
+        auto_generate = bool(body.get("auto_generate", True))
+
+        uploads_dir = await asyncio.to_thread(store.uploads_dir, project_id)
+        image_path = uploads_dir / image_filename
+        if not image_path.exists():
+            raise HTTPException(status_code=404, detail=f"Image not found in uploads: {image_filename}")
+
+        result = await asyncio.to_thread(
+            support.analyze_sketch,
+            project_id,
+            str(image_path),
+            auto_generate,
+        )
+        return _json(result)
+
+    @app.post("/api/forge/projects/{project_id}/design-council")
+    async def api_forge_design_council(project_id: str, request: Request) -> JSONResponse:
+        """Run the Forge Design Council — multi-agent roundtable that generates a model.
+        Body: {brief, auto_inspect?}
+        """
+        store = _forge_store_or_503()
+        support = _forge_support_or_503()
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+
+        body = await request.json()
+        brief = str(body.get("brief", "")).strip()
+        if not brief:
+            raise HTTPException(status_code=400, detail="brief is required")
+        auto_inspect = bool(body.get("auto_inspect", True))
+
+        result = await asyncio.to_thread(
+            support.run_design_council,
+            project_id,
+            brief,
+            auto_inspect,
+        )
+        return _json(result)
 
     @app.post("/api/forge/projects/{project_id}/inspect")
     async def api_forge_inspect(project_id: str, request: Request) -> JSONResponse:
