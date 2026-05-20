@@ -861,11 +861,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         packet: str = Query(default=""),
         theme: str = Query(default=""),
     ) -> str:
-        # Resolve theme: query param → cookie → glass (new default)
-        resolved = theme or request.cookies.get("jarvis-theme", "glass")
-        if resolved == "nexus" and _NEXUS_THEME_AVAILABLE:
+        # Glass is the default. Only an explicit ?theme=nexus query param overrides it.
+        if theme == "nexus" and _NEXUS_THEME_AVAILABLE:
             return _render_nexus_shell(runtime, initial_packet=packet)
-        if resolved == "glass" and _GLASS_THEME_AVAILABLE:
+        if _GLASS_THEME_AVAILABLE:
             return _render_glass_shell(runtime, initial_packet=packet)
         return render_voice_shell(runtime, initial_packet=packet)
 
