@@ -5534,7 +5534,483 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         summary = await asyncio.to_thread(db.get_value_summary, project_id or None)
         return _json(summary)
 
+    # ── Forge — Object-to-Manufacturing Workspace ─────────────────────────────
+    # Lazy-initialised singletons (module-level would run before runtime exists)
+
+    _forge_store_instance: list = [None]  # mutable container for lazy init
+    _forge_support_instance: list = [None]
+
+    def _get_forge_store():
+        if _forge_store_instance[0] is None:
+            try:
+                from .forge import ForgeStore
+                _forge_store_instance[0] = ForgeStore()
+            except Exception:
+                return None
+        return _forge_store_instance[0]
+
+    def _get_forge_support():
+        if _forge_support_instance[0] is None:
+            try:
+                from .forge import ForgeSupport
+                store = _get_forge_store()
+                if store is None:
+                    return None
+                _forge_support_instance[0] = ForgeSupport(
+                    store,
+                    openai_client=runtime.openai_client,
+                )
+            except Exception:
+                return None
+        return _forge_support_instance[0]
+
+    def _forge_store_or_503():
+        s = _get_forge_store()
+        if s is None:
+            raise HTTPException(status_code=503, detail="Forge store not initialised")
+        return s
+
+    def _forge_support_or_503():
+        s = _get_forge_support()
+        if s is None:
+            raise HTTPException(status_code=503, detail="Forge support not initialised")
+        return s
+
+    @app.get("/api/forge/projects")
+    async def api_forge_list_projects(
+        include_archived: bool = Query(default=False),
+    ) -> JSONResponse:
+        """List all Forge projects."""
+        store = _forge_store_or_503()
+        projects = await asyncio.to_thread(store.list_projects, include_archived)
+        return _json({"projects": projects, "total": len(projects)})
+
+    @app.post("/api/forge/projects")
+    async def api_forge_create_project(request: Request) -> JSONResponse:
+        """Create a new Forge project. Body: {title, description?, intake_type?}"""
+        store = _forge_store_or_503()
+        body = await request.json()
+        title = str(body.get("title", "")).strip()
+        if not title:
+            raise HTTPException(status_code=400, detail="title is required")
+        description = str(body.get("description", "")).strip()
+        intake_type = str(body.get("intake_type", "file_upload")).strip()
+        project = await asyncio.to_thread(
+            store.create_project, title, description, intake_type
+        )
+        return _json(project)
+
+    @app.get("/api/forge/projects/{project_id}")
+    async def api_forge_get_project(project_id: str) -> JSONResponse:
+        """Get full project state."""
+        store = _forge_store_or_503()
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+        return _json(project)
+
+    @app.patch("/api/forge/projects/{project_id}")
+    async def api_forge_update_project(project_id: str, request: Request) -> JSONResponse:
+        """Update project fields. Body: {title?, notes?, status?}"""
+        store = _forge_store_or_503()
+        body = await request.json()
+        allowed = ("title", "notes", "status", "description", "assumptions")
+        kwargs = {k: v for k, v in body.items() if k in allowed}
+        if "status" in kwargs:
+            from .forge import VALID_STATUSES
+            if kwargs["status"] not in VALID_STATUSES:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid status. Valid: {VALID_STATUSES}",
+                )
+        project = await asyncio.to_thread(store.update_project, project_id, **kwargs)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+        return _json(project)
+
+    @app.delete("/api/forge/projects/{project_id}")
+    async def api_forge_archive_project(project_id: str) -> JSONResponse:
+        """Archive a project (soft delete)."""
+        store = _forge_store_or_503()
+        ok = await asyncio.to_thread(store.set_status, project_id, "archived", "user archived")
+        if not ok:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+        return _json({"ok": True, "status": "archived"})
+
+    @app.post("/api/forge/projects/{project_id}/upload")
+    async def api_forge_upload_file(
+        project_id: str,
+        file: UploadFile = File(...),
+    ) -> JSONResponse:
+        """Upload a 3D file or photo to the project. Saves to uploads dir."""
+        store = _forge_store_or_503()
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+
+        _3d_exts = {".stl", ".obj", ".glb", ".3mf"}
+        _photo_exts = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".tiff", ".bmp"}
+
+        original_name = file.filename or "upload"
+        # Sanitise filename
+        safe_name = re.sub(r"[^A-Za-z0-9._-]+", "-", original_name).strip("-._") or "upload"
+        safe_name = safe_name[:120]
+        suffix = Path(safe_name).suffix.lower()
+
+        uploads_dir = await asyncio.to_thread(store.uploads_dir, project_id)
+        dest = uploads_dir / safe_name
+
+        content = await file.read()
+        dest.write_bytes(content)
+        file_size = len(content)
+
+        if suffix in _3d_exts:
+            file_type = "3d_model"
+            new_status = "model_ready"
+        elif suffix in _photo_exts:
+            file_type = "photo"
+            new_status = "capture_in_progress"
+        else:
+            file_type = "other"
+            new_status = project.get("status", "idea")
+
+        await asyncio.to_thread(
+            store.add_source_file, project_id, safe_name, file_type, file_size
+        )
+
+        current_status = project.get("status", "idea")
+        # Only advance status, never regress
+        status_order = [
+            "idea", "reference_uploaded", "capture_in_progress", "needs_more_views",
+            "needs_measurements", "modeling", "model_ready",
+        ]
+        try:
+            current_idx = status_order.index(current_status)
+        except ValueError:
+            current_idx = 0
+        try:
+            new_idx = status_order.index(new_status)
+        except ValueError:
+            new_idx = 0
+        if new_idx > current_idx:
+            await asyncio.to_thread(store.set_status, project_id, new_status)
+
+        return _json({
+            "ok": True,
+            "filename": safe_name,
+            "file_type": file_type,
+            "size_bytes": file_size,
+            "project_id": project_id,
+        })
+
+    @app.get("/api/forge/projects/{project_id}/file/{filename:path}")
+    async def api_forge_serve_file(project_id: str, filename: str) -> FileResponse:
+        """Serve an uploaded or generated file (for 3D viewer / image display)."""
+        store = _forge_store_or_503()
+        uploads_dir = await asyncio.to_thread(store.uploads_dir, project_id)
+        models_dir = await asyncio.to_thread(store.models_dir, project_id)
+
+        for search_dir in (uploads_dir, models_dir):
+            candidate = (search_dir / filename).resolve()
+            # Guard against path traversal
+            try:
+                candidate.relative_to(search_dir.resolve())
+            except ValueError:
+                continue
+            if candidate.exists():
+                media_type, _ = mimetypes.guess_type(str(candidate))
+                return FileResponse(str(candidate), media_type=media_type or "application/octet-stream")
+
+        raise HTTPException(status_code=404, detail=f"File not found: {filename}")
+
+    @app.post("/api/forge/projects/{project_id}/capture-frame")
+    async def api_forge_capture_frame(project_id: str, request: Request) -> JSONResponse:
+        """Register a captured photo frame. Body: {filename, view_type}"""
+        store = _forge_store_or_503()
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+
+        body = await request.json()
+        filename = str(body.get("filename", "")).strip()
+        view_type = str(body.get("view_type", "")).strip().lower()
+        if not filename:
+            raise HTTPException(status_code=400, detail="filename is required")
+        valid_views = {"front", "back", "left", "right", "top", "bottom", "scale_reference", "detail"}
+        if view_type not in valid_views:
+            raise HTTPException(
+                status_code=400,
+                detail=f"view_type must be one of: {sorted(valid_views)}",
+            )
+
+        sessions = project.get("capture_sessions", [])
+        now = _forge_now()
+
+        if not sessions:
+            # Create first session
+            session = {
+                "session_id": str(__import__("uuid").uuid4()),
+                "mode": "photo_single",
+                "status": "incomplete",
+                "frames": [],
+                "requirements": [],
+                "confidence": {"geometry": "low", "scale": "low", "print_readiness": "not_ready"},
+                "created_at": now,
+                "updated_at": now,
+            }
+            sessions.append(session)
+        else:
+            session = sessions[-1]
+
+        frame = {
+            "filename": filename,
+            "view_type": view_type,
+            "captured_at": now,
+            "notes": str(body.get("notes", "")),
+        }
+        session["frames"].append(frame)
+        session["updated_at"] = now
+
+        # Recalculate completeness
+        support = _get_forge_support()
+        if support:
+            completeness = support.capture_completeness(session)
+            session["confidence"] = {
+                "geometry": completeness["geometry_confidence"],
+                "scale": completeness["scale_confidence"],
+                "print_readiness": completeness["print_readiness"],
+            }
+            missing = completeness.get("missing_views", [])
+            session["status"] = "complete" if not missing else "needs_more_views"
+
+        await asyncio.to_thread(
+            store.update_project, project_id, capture_sessions=sessions
+        )
+        await asyncio.to_thread(
+            store.log_event, project_id, "capture_frame_added",
+            f"view_type={view_type!r} filename={filename!r}"
+        )
+        return _json({"ok": True, "frame": frame, "session": session})
+
+    @app.get("/api/forge/projects/{project_id}/capture-status")
+    async def api_forge_capture_status(project_id: str) -> JSONResponse:
+        """Return completeness + confidence for the latest capture session."""
+        store = _forge_store_or_503()
+        support = _forge_support_or_503()
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+
+        sessions = project.get("capture_sessions", [])
+        if not sessions:
+            return _json({
+                "has_session": False,
+                "message": "No capture sessions yet.",
+            })
+
+        latest_session = sessions[-1]
+        completeness = await asyncio.to_thread(support.capture_completeness, latest_session)
+        return _json({
+            "has_session": True,
+            "session_id": latest_session.get("session_id"),
+            "completeness": completeness,
+            "session": latest_session,
+        })
+
+    @app.post("/api/forge/projects/{project_id}/measurements")
+    async def api_forge_add_measurement(project_id: str, request: Request) -> JSONResponse:
+        """Add a measurement. Body: {label, value, unit, confirmed?, notes?}"""
+        store = _forge_store_or_503()
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+
+        body = await request.json()
+        label = str(body.get("label", "")).strip()
+        if not label:
+            raise HTTPException(status_code=400, detail="label is required")
+        try:
+            value = float(body["value"])
+        except (KeyError, ValueError, TypeError):
+            raise HTTPException(status_code=400, detail="value must be a number")
+        unit = str(body.get("unit", "mm")).strip().lower()
+        if unit not in ("mm", "cm", "in"):
+            raise HTTPException(status_code=400, detail="unit must be mm, cm, or in")
+        confirmed = bool(body.get("confirmed", False))
+        notes = str(body.get("notes", "")).strip()
+
+        measurement = await asyncio.to_thread(
+            store.add_measurement,
+            project_id, label, value, unit, confirmed, "manual", notes,
+        )
+        return _json(measurement)
+
+    @app.post("/api/forge/projects/{project_id}/chat")
+    async def api_forge_chat(project_id: str, request: Request) -> JSONResponse:
+        """Chat with JARVIS Forge about this project. Body: {message}"""
+        store = _forge_store_or_503()
+        support = _forge_support_or_503()
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+
+        body = await request.json()
+        message = str(body.get("message", "")).strip()
+        if not message:
+            raise HTTPException(status_code=400, detail="message is required")
+
+        reply = await asyncio.to_thread(support.forge_chat_response, project_id, message)
+        await asyncio.to_thread(
+            store.log_event, project_id, "chat", f"user_msg={message[:80]!r}"
+        )
+        return _json({"reply": reply, "project_id": project_id})
+
+    @app.post("/api/forge/projects/{project_id}/inspect")
+    async def api_forge_inspect(project_id: str, request: Request) -> JSONResponse:
+        """Inspect a model file. Body: {model_filename}"""
+        store = _forge_store_or_503()
+        support = _forge_support_or_503()
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+
+        body = await request.json()
+        model_filename = str(body.get("model_filename", "")).strip()
+        if not model_filename:
+            raise HTTPException(status_code=400, detail="model_filename is required")
+
+        result = await asyncio.to_thread(support.inspect_model, project_id, model_filename)
+        return _json(result)
+
+    @app.post("/api/forge/projects/{project_id}/slice")
+    async def api_forge_slice(project_id: str, request: Request) -> JSONResponse:
+        """Stage a slice report. Body: {model_id, printer_id?, material?}"""
+        store = _forge_store_or_503()
+        support = _forge_support_or_503()
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+
+        body = await request.json()
+        model_id = str(body.get("model_id", "")).strip()
+        if not model_id:
+            raise HTTPException(status_code=400, detail="model_id is required")
+        printer_id = str(body.get("printer_id", "creality-k2-pro-combo")).strip()
+        material = str(body.get("material", "PLA")).strip()
+
+        report = await asyncio.to_thread(
+            support.prepare_slice_report, project_id, model_id, printer_id, material
+        )
+        return _json(report)
+
+    @app.post("/api/forge/projects/{project_id}/approve")
+    async def api_forge_approve(project_id: str, request: Request) -> JSONResponse:
+        """Record approval. Advances status to sent_to_printer if slice is staged."""
+        store = _forge_store_or_503()
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+
+        body: dict = {}
+        try:
+            body = await request.json()
+        except Exception:
+            pass
+        approved_by = str(body.get("approved_by", "chris")).strip() or "chris"
+        notes = str(body.get("notes", "")).strip()
+
+        ok = await asyncio.to_thread(store.add_approval, project_id, approved_by, notes)
+        if not ok:
+            raise HTTPException(status_code=500, detail="Failed to record approval")
+
+        # Advance status if a slice is present
+        has_slice = bool(project.get("slices"))
+        new_status = "sent_to_printer" if has_slice else "approval_required"
+        await asyncio.to_thread(store.set_status, project_id, new_status)
+
+        return _json({
+            "ok": True,
+            "approved_by": approved_by,
+            "new_status": new_status,
+        })
+
+    @app.get("/api/forge/projects/{project_id}/timeline")
+    async def api_forge_timeline(project_id: str) -> JSONResponse:
+        """Return the full event log for a project."""
+        store = _forge_store_or_503()
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+        events = await asyncio.to_thread(store.read_timeline, project_id)
+        return _json({"events": events, "total": len(events)})
+
+    @app.get("/api/forge/printer-status")
+    async def api_forge_printer_status(host: str = Query(...)) -> JSONResponse:
+        """Query Moonraker printer status. Query param: host"""
+        support = _forge_support_or_503()
+        port_param = 7125
+        result = await asyncio.to_thread(support.moonraker_status, host, port_param)
+        return _json(result)
+
+    @app.post("/api/forge/reconstruct")
+    async def api_forge_reconstruct(
+        request: Request,
+        background_tasks: BackgroundTasks,
+    ) -> JSONResponse:
+        """Trigger Shap-E reconstruction (async). Body: {project_id, image_filename?, prompt?}"""
+        support = _forge_support_or_503()
+        body = await request.json()
+        project_id = str(body.get("project_id", "")).strip()
+        if not project_id:
+            raise HTTPException(status_code=400, detail="project_id is required")
+
+        store = _forge_store_or_503()
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+
+        image_filename = str(body.get("image_filename", "")).strip()
+        prompt = str(body.get("prompt", "")).strip()
+
+        image_path = ""
+        if image_filename:
+            uploads_dir = await asyncio.to_thread(store.uploads_dir, project_id)
+            candidate = uploads_dir / image_filename
+            if candidate.exists():
+                image_path = str(candidate)
+
+        # Run Shap-E in background (it can be slow)
+        async def _run_reconstruct():
+            try:
+                await asyncio.to_thread(
+                    support.reconstruct_shape_e, project_id, image_path, prompt
+                )
+            except Exception as _exc:
+                await asyncio.to_thread(
+                    store.log_event, project_id, "reconstruct_error", str(_exc)
+                )
+
+        background_tasks.add_task(_run_reconstruct)
+        await asyncio.to_thread(
+            store.set_status, project_id, "modeling",
+            "Shap-E reconstruction started"
+        )
+        return _json({
+            "ok": True,
+            "status": "modeling",
+            "message": "Shap-E reconstruction started in background.",
+            "project_id": project_id,
+        })
+
+    # ── End Forge ──────────────────────────────────────────────────────────────
+
     return app
+
+
+# ── Module-level helper used inside Forge route handlers ──────────────────────
+def _forge_now() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat()
 
 
 def serve(runtime: JarvisRuntime, host: str, port: int) -> None:
