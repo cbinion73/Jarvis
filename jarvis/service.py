@@ -3078,38 +3078,51 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.post("/api/approvals/{request_id}/approve")
     async def api_approvals_approve(request_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
         """Approve a pending request. Optionally supply approved_by in the body."""
+        approved_by = str((payload or {}).get("approved_by", "chris"))
+        # Try ApprovalQueue first (agent-submitted requests)
         queue = get_approval_queue()
-        if queue is None:
-            raise HTTPException(status_code=503, detail="Approval system not initialised")
-        approved_by = str(payload.get("approved_by", "chris"))
-        item = queue.approve(request_id, approved_by=approved_by)
-        if item is None:
-            raise HTTPException(status_code=404, detail="Pending approval request not found")
-        from dataclasses import asdict as _asdict
-        return _json({"status": "approved", "request": _asdict(item)})
+        if queue is not None:
+            from dataclasses import asdict as _asdict
+            item = queue.approve(request_id, approved_by=approved_by)
+            if item is not None:
+                return _json({"status": "approved", "request": _asdict(item)})
+        # Fall back to ApprovalStore (runtime-submitted requests shown in the UI list)
+        updated = runtime.approval_store.update_status(request_id, "approved")
+        if updated is not None:
+            return _json({"status": "approved", "request": updated})
+        raise HTTPException(status_code=404, detail="Pending approval request not found")
 
     @app.post("/api/approvals/{request_id}/reject")
     async def api_approvals_reject(request_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
         """Reject a pending request. Supply reason in body: {"reason": str}."""
+        reason = str((payload or {}).get("reason", ""))
+        rejected_by = str((payload or {}).get("rejected_by", "chris"))
+        # Try ApprovalQueue first (agent-submitted requests)
         queue = get_approval_queue()
-        if queue is None:
-            raise HTTPException(status_code=503, detail="Approval system not initialised")
-        reason = str(payload.get("reason", ""))
-        rejected_by = str(payload.get("rejected_by", "chris"))
-        ok = queue.reject(request_id, reason=reason, rejected_by=rejected_by)
-        if not ok:
-            raise HTTPException(status_code=404, detail="Pending approval request not found")
-        return _json({"status": "rejected", "request_id": request_id, "reason": reason})
+        if queue is not None:
+            ok = queue.reject(request_id, reason=reason, rejected_by=rejected_by)
+            if ok:
+                return _json({"status": "rejected", "request_id": request_id, "reason": reason})
+        # Fall back to ApprovalStore (runtime-submitted requests shown in the UI list)
+        updated = runtime.approval_store.update_status(request_id, "rejected")
+        if updated is not None:
+            return _json({"status": "rejected", "request_id": request_id, "reason": reason})
+        raise HTTPException(status_code=404, detail="Pending approval request not found")
 
     @app.post("/api/approvals/{request_id}/cancel")
     async def api_approvals_cancel(request_id: str) -> JSONResponse:
         """Cancel a pending request."""
+        # Try ApprovalQueue first
         queue = get_approval_queue()
-        if queue is None:
-            raise HTTPException(status_code=503, detail="Approval system not initialised")
-        ok = queue.cancel(request_id)
-        if not ok:
-            raise HTTPException(status_code=404, detail="Pending approval request not found")
+        if queue is not None:
+            ok = queue.cancel(request_id)
+            if ok:
+                return _json({"status": "cancelled", "request_id": request_id})
+        # Fall back to ApprovalStore
+        updated = runtime.approval_store.update_status(request_id, "cancelled")
+        if updated is not None:
+            return _json({"status": "cancelled", "request_id": request_id})
+        raise HTTPException(status_code=404, detail="Pending approval request not found")
         return _json({"status": "cancelled", "request_id": request_id})
 
     @app.get("/api/approvals/history")
