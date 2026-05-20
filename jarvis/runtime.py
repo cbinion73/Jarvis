@@ -14214,6 +14214,17 @@ class JarvisRuntime:
                 output_text=reminder_result.output_text,
             )
             return reminder_result
+        # ── Task creation intercept ───────────────────────────────────────────
+        task_result = self._try_handle_task_creation(request)
+        if task_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=task_result.provider,
+                model=task_result.model,
+                active_nodes=["task-engine"],
+                output_text=task_result.output_text,
+            )
+            return task_result
         # ─────────────────────────────────────────────────────────────────────
         result = run_response_graph(self, plan)
         self.audit_log.log_response(
@@ -14285,6 +14296,120 @@ class JarvisRuntime:
         return OpenAIResult(
             provider="reminder-engine",
             model="reminder-engine",
+            output_text=confirmation,
+        )
+
+    # ── Task helper ───────────────────────────────────────────────────────────
+
+    _TASK_CREATE_RE = re.compile(
+        r"\b(add\s+(?:a\s+)?task|add\s+(?:to\s+)?(?:my\s+)?to[\s\-]?do(?:\s+list)?|"
+        r"to[\s\-]?do\s*:|task\s*:|make\s+a\s+note\s+to|put\s+(?:this\s+)?on\s+(?:my\s+)?list|"
+        r"add\s+(?:this\s+)?to\s+(?:my\s+)?list|create\s+(?:a\s+)?task|new\s+task)\b",
+        re.IGNORECASE,
+    )
+    _TASK_DOMAIN_RE = re.compile(
+        r"\b(personal|family|work|health|faith|finance|home|workshop)\b",
+        re.IGNORECASE,
+    )
+    _TASK_PRIORITY_RE = re.compile(
+        r"\b(urgent|high\s+priority|high|important|low\s+priority|low)\b",
+        re.IGNORECASE,
+    )
+
+    def _try_handle_task_creation(self, request: str) -> "OpenAIResult | None":
+        """Detect task-creation intents and create the task directly.
+
+        Returns an OpenAIResult if handled, None to fall through to the LLM.
+        """
+        import datetime as _dt
+        from .tasks import add_task as _add_task
+
+        if not self._TASK_CREATE_RE.search(request):
+            return None
+
+        # Extract domain
+        domain = "personal"
+        domain_m = self._TASK_DOMAIN_RE.search(request)
+        if domain_m:
+            domain = domain_m.group(1).lower()
+
+        # Extract priority
+        priority = "normal"
+        pri_m = self._TASK_PRIORITY_RE.search(request)
+        if pri_m:
+            word = pri_m.group(1).lower()
+            if word in ("urgent", "high priority", "important", "high"):
+                priority = "high"
+            elif word in ("low priority", "low"):
+                priority = "low"
+
+        # Extract due date
+        due_iso: str | None = None
+        today = _dt.date.today()
+        if self._TOMORROW_RE.search(request):
+            due_iso = (today + _dt.timedelta(days=1)).isoformat()
+
+        # Strip common lead-ins to get the task title
+        title = request.strip()
+        title = re.sub(
+            r"(?i)^(?:hey\s+jarvis[,\s]*)?(?:please\s+)?(?:add\s+(?:a\s+)?task|"
+            r"add\s+(?:to\s+)?(?:my\s+)?to[\s\-]?do(?:\s+list)?|to[\s\-]?do\s*:|task\s*:|"
+            r"make\s+a\s+note\s+to|put\s+(?:this\s+)?on\s+(?:my\s+)?list|"
+            r"add\s+(?:this\s+)?to\s+(?:my\s+)?list|create\s+(?:a\s+)?task|new\s+task)[,:\s]*"
+            r"(?:for\s+)?(?:tomorrow|today)?[,:\s]*(?:to\s+)?",
+            "",
+            title,
+        ).strip()
+        if not title:
+            title = request.strip()
+
+        # Remove domain/priority/time words from the title if they were added as context
+        if domain_m:
+            title = re.sub(
+                r"\s*\b(?:for\s+)?(?:personal|family|work|health|faith|finance|home|workshop)\b\s*",
+                " ",
+                title,
+                flags=re.IGNORECASE,
+            ).strip()
+        if pri_m:
+            title = re.sub(
+                r"\s*\b(?:urgent|high\s+priority|high|important|low\s+priority|low)\b\s*",
+                " ",
+                title,
+                flags=re.IGNORECASE,
+            ).strip()
+        title = title.strip(" ,")
+        if not title:
+            title = request.strip()
+
+        task = _add_task(
+            title,
+            priority=priority,
+            due=due_iso,
+            domain=domain,
+            source="voice",
+        )
+
+        if due_iso:
+            from datetime import date as _date
+            try:
+                d = _date.fromisoformat(due_iso)
+                friendly = d.strftime("%A, %B %-d")
+            except Exception:
+                friendly = due_iso
+            confirmation = (
+                f"Task added: \"{task['title']}\" — due {friendly}, "
+                f"{domain} domain, {priority} priority."
+            )
+        else:
+            confirmation = (
+                f"Task added: \"{task['title']}\" — "
+                f"{domain} domain, {priority} priority."
+            )
+
+        return OpenAIResult(
+            provider="task-engine",
+            model="task-engine",
             output_text=confirmation,
         )
 
