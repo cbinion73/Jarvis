@@ -4441,7 +4441,7 @@ async function loadIdeaInbox() {{
 function renderIdeaChip(idea) {{
   const chips = {{captured:'💡',queued:'⏳',researching:'🔬',done:'✅',passed:'✕'}};
   const icon = chips[idea.status] || '💡';
-  return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;background:var(--surface-hi);border:1px solid var(--border);font-size:10px;color:var(--text-2);cursor:pointer;" onclick="switchView(\'huddle\')" title="' + escHtml(idea.text) + '">' +
+  return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;background:var(--surface-hi);border:1px solid var(--border);font-size:10px;color:var(--text-2);cursor:pointer;" onclick="switchView(\\'huddle\\')" title="' + escHtml(idea.text) + '">' +
     icon + ' ' + escHtml((idea.text||'').slice(0,28)) + (idea.text.length > 28 ? '…' : '') + '</span>';
 }}
 
@@ -4461,25 +4461,25 @@ function renderIdeaRow(idea) {{
   const actions = [];
 
   if (idea.status === 'captured') {{
-    actions.push('<button class="idea-act-btn primary" onclick="ideaResearchNow(\'' + idea.id + '\')">Research Now ⚡</button>');
-    actions.push('<button class="idea-act-btn" onclick="ideaQueue(\'' + idea.id + '\')">Queue</button>');
-    actions.push('<button class="idea-act-btn danger" onclick="ideaPass(\'' + idea.id + '\')">Pass</button>');
+    actions.push('<button class="idea-act-btn primary" onclick="ideaResearchNow(\\'' + idea.id + '\\')">Research Now ⚡</button>');
+    actions.push('<button class="idea-act-btn" onclick="ideaQueue(\\'' + idea.id + '\\')">Queue</button>');
+    actions.push('<button class="idea-act-btn danger" onclick="ideaPass(\\'' + idea.id + '\\')">Pass</button>');
   }} else if (idea.status === 'queued') {{
-    actions.push('<button class="idea-act-btn primary" onclick="ideaResearchNow(\'' + idea.id + '\')">Research Now ⚡</button>');
-    actions.push('<button class="idea-act-btn danger" onclick="ideaPass(\'' + idea.id + '\')">Pass</button>');
+    actions.push('<button class="idea-act-btn primary" onclick="ideaResearchNow(\\'' + idea.id + '\\')">Research Now ⚡</button>');
+    actions.push('<button class="idea-act-btn danger" onclick="ideaPass(\\'' + idea.id + '\\')">Pass</button>');
   }} else if (idea.status === 'researching') {{
     actions.push('<button class="idea-act-btn" style="cursor:default;opacity:0.6;" disabled>Researching...</button>');
   }} else if (idea.status === 'done') {{
     if (idea.dossier_id) {{
-      actions.push('<button class="idea-act-btn primary" onclick="openDossier(\'' + idea.dossier_id + '\')">📄 Open Dossier</button>');
+      actions.push('<button class="idea-act-btn primary" onclick="openDossier(\\'' + idea.dossier_id + '\\')">📄 Open Dossier</button>');
     }}
   }} else if (idea.status === 'passed') {{
-    actions.push('<button class="idea-act-btn" onclick="ideaResearchNow(\'' + idea.id + '\')">Reconsider</button>');
-    actions.push('<button class="idea-act-btn danger" onclick="ideaDelete(\'' + idea.id + '\')">Delete</button>');
+    actions.push('<button class="idea-act-btn" onclick="ideaResearchNow(\\'' + idea.id + '\\')">Reconsider</button>');
+    actions.push('<button class="idea-act-btn danger" onclick="ideaDelete(\\'' + idea.id + '\\')">Delete</button>');
   }}
 
   const dossierLink = (idea.status === 'done' && idea.dossier_id)
-    ? '<div><span class="idea-dossier-link" onclick="openDossier(\'' + idea.dossier_id + '\')">→ Dossier ready — click to review</span></div>'
+    ? '<div><span class="idea-dossier-link" onclick="openDossier(\\'' + idea.dossier_id + '\\')">→ Dossier ready — click to review</span></div>'
     : '';
 
   const age = idea.created_at ? ' · ' + timeAgo(idea.created_at) : '';
@@ -6628,7 +6628,7 @@ async function forgeArchive() {{
 function forgeQuickDescribe() {{
   if (!_forgeCurrentProjectId) {{ showToast('Select a project first.', 'warn'); return; }}
   const hint = prompt(
-    'Describe the part you want to build (include rough dimensions and purpose):\n\n' +
+    'Describe the part you want to build (include rough dimensions and purpose):\\n\\n' +
     'Example: "Wall bracket 80x40mm with two 5mm mounting holes, 3mm thick, for holding a 2kg shelf"'
   );
   if (!hint) return;
