@@ -6162,17 +6162,23 @@ async function forgeLoadProjectList() {{
     const res = await fetch('/api/forge/projects');
     if (!res.ok) return;
     const data = await res.json();
+    const projects = data.projects || [];
     const sel = document.getElementById('forge-project-select');
     if (!sel) return;
     const cur = _forgeCurrentProjectId;
     sel.innerHTML = '<option value="">— Select a project —</option>';
-    (data.projects || []).forEach(p => {{
+    projects.forEach(p => {{
       const opt = document.createElement('option');
       opt.value = p.id;
       opt.textContent = p.title + ' [' + (p.status || 'idea') + ']';
       if (p.id === cur) opt.selected = true;
       sel.appendChild(opt);
     }});
+    // Auto-select the first project if nothing is currently selected
+    if (!cur && projects.length > 0) {{
+      sel.value = projects[0].id;
+      await forgeLoadProject(projects[0].id);
+    }}
   }} catch(e) {{ console.warn('forgeLoadProjectList', e); }}
 }}
 
@@ -6184,7 +6190,14 @@ async function forgeLoadProject(projectId) {{
   _forgeCurrentProjectId = projectId;
   try {{
     const res = await fetch('/api/forge/projects/' + encodeURIComponent(projectId));
-    if (!res.ok) return;
+    if (!res.ok) {{
+      // Project missing on disk — clear selection and refresh list
+      _forgeCurrentProjectId = null;
+      const sel = document.getElementById('forge-project-select');
+      if (sel) sel.value = '';
+      await forgeLoadProjectList();
+      return;
+    }}
     const project = await res.json();
     forgeRenderProject(project);
   }} catch(e) {{ console.warn('forgeLoadProject', e); }}
@@ -6471,16 +6484,25 @@ async function forgeUploadFile(file) {{
 
 async function forgeUploadPhotos(files) {{
   if (!_forgeCurrentProjectId) {{ showToast('Select or create a project first.', 'warn'); return; }}
-  for (const file of Array.from(files)) {{
+  const arr = Array.from(files);
+  if (!arr.length) return;
+  showToast('Uploading ' + arr.length + ' photo' + (arr.length > 1 ? 's' : '') + '...', 'info');
+  let ok = 0, fail = 0;
+  for (const file of arr) {{
     const fd = new FormData();
     fd.append('file', file);
     try {{
-      await fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId) + '/upload', {{
+      const res = await fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId) + '/upload', {{
         method: 'POST', body: fd,
       }});
-    }} catch(e) {{ /* silent */ }}
+      if (res.ok) ok++; else fail++;
+    }} catch(e) {{ fail++; }}
   }}
-  showToast('Photos uploaded.', 'info');
+  if (fail === 0) {{
+    showToast(ok + ' photo' + (ok > 1 ? 's' : '') + ' uploaded ✓', 'success');
+  }} else {{
+    showToast(ok + ' uploaded, ' + fail + ' failed', fail === arr.length ? 'error' : 'warn');
+  }}
   forgeLoadProject(_forgeCurrentProjectId);
 }}
 
