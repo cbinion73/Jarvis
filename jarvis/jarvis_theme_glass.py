@@ -2534,6 +2534,7 @@ body::after {{
 .forge-printer-chip {{ padding:5px 12px; border-radius:99px; font-size:10px; font-family:var(--font-mono); font-weight:700; text-transform:uppercase; letter-spacing:0.06em; border:1px solid var(--border); color:var(--text-3); margin-left:auto; }}
 .forge-printer-chip.online {{ border-color:var(--success); color:var(--success); background:rgba(16,185,129,0.08); }}
 .forge-modal-overlay {{ position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:900; display:flex; align-items:center; justify-content:center; }}
+.forge-modal-overlay.hidden {{ display:none !important; }}
 .forge-modal {{ background:var(--surface-hi); border:1px solid var(--border); border-radius:16px; padding:24px; min-width:340px; max-width:540px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.2); }}
 .forge-modal-title {{ font-size:15px; font-weight:700; margin-bottom:16px; color:var(--text-1); }}
 .forge-timeline-list {{ display:flex; flex-direction:column; gap:6px; max-height:400px; overflow-y:auto; }}
@@ -3019,14 +3020,25 @@ body::after {{
           <div class="forge-chat-panel">
             <div class="forge-panel-title" style="margin-bottom:6px;">
               JARVIS Forge · Chat
+              <button class="forge-action-btn" style="font-size:10px;padding:3px 8px;margin-left:auto;"
+                onclick="forgeQuickDescribe()">Describe Part</button>
             </div>
             <div id="forge-chat-messages">
-              <div class="forge-msg-jarvis">Select a project to begin. I can help you capture, model, inspect, and gate any object for printing.</div>
+              <div class="forge-msg-jarvis">Select a project to begin. Describe a part to generate it, upload a sketch to analyze it, or use Design Council for a full agent roundtable.</div>
             </div>
             <div class="forge-chat-input">
-              <input type="text" id="forge-chat-input" placeholder="Ask Forge anything..."
+              <input type="text" id="forge-chat-input" placeholder="Describe a part or ask Forge anything..."
                      onkeydown="if(event.key==='Enter')forgeSendChat()">
               <button class="forge-action-btn primary" onclick="forgeSendChat()">Send</button>
+            </div>
+            <!-- Sketch upload row -->
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+              <span style="font-size:10px;color:var(--text-3);font-weight:600;letter-spacing:0.05em;">SKETCH</span>
+              <input type="file" id="forge-sketch-input" accept="image/*"
+                     style="display:none;" onchange="forgeHandleSketchUpload(this)">
+              <button class="forge-action-btn" style="font-size:10px;padding:3px 10px;"
+                onclick="document.getElementById('forge-sketch-input').click()">Upload Drawing</button>
+              <span id="forge-sketch-status" style="font-size:10px;color:var(--text-3);font-family:var(--font-mono);"></span>
             </div>
           </div>
 
@@ -3054,11 +3066,35 @@ body::after {{
 
       <!-- Action bar -->
       <div class="forge-action-bar">
+        <button class="forge-action-btn" style="background:linear-gradient(135deg,#7c3aed22,#06b6d422);border-color:#7c3aed66;color:var(--hue);"
+          onclick="forgeRunDesignCouncil()">⚡ Design Council</button>
         <button class="forge-action-btn" onclick="forgeStageSlice()">Stage Slice</button>
         <button class="forge-action-btn primary" onclick="forgeApprove()">Approve &amp; Send</button>
         <button class="forge-action-btn" onclick="forgeShowTimeline()">View Timeline</button>
         <button class="forge-action-btn" onclick="forgeArchive()">Archive</button>
         <span class="forge-printer-chip" id="forge-printer-chip-bar" style="display:none;margin-left:auto;">K2 Pro —</span>
+      </div>
+
+      <!-- Design Council modal -->
+      <div id="forge-council-modal" class="forge-modal-overlay hidden">
+        <div class="forge-modal" style="max-width:680px;">
+          <div class="forge-modal-title">⚡ Forge Design Council</div>
+          <div style="font-size:11px;color:var(--text-3);margin-bottom:12px;">
+            Tony · Forge · AntMan · Rocket — four agents review your brief, debate the design, then generate a model.
+          </div>
+          <div id="forge-council-status" style="display:none;font-size:12px;color:var(--hue);margin-bottom:10px;font-family:var(--font-mono);">
+            Council in session...
+          </div>
+          <div id="forge-council-roundtable" style="display:none;margin-bottom:14px;"></div>
+          <div id="forge-council-spec" style="display:none;margin-bottom:14px;background:var(--surface-hi);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11px;font-family:var(--font-mono);color:var(--text-2);white-space:pre-wrap;max-height:160px;overflow-y:auto;"></div>
+          <div id="forge-council-result" style="display:none;margin-bottom:14px;font-size:12px;color:var(--text-2);"></div>
+          <textarea id="forge-council-brief" placeholder="Describe what you want to build in plain English. Include purpose, rough dimensions, materials, and any special requirements."
+            style="width:100%;height:80px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-hi);font-size:12px;color:var(--text-1);font-family:var(--font-mono);resize:vertical;outline:none;box-sizing:border-box;"></textarea>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button class="forge-action-btn primary" onclick="forgeSubmitDesignCouncil()" id="forge-council-submit-btn">Convene Council</button>
+            <button class="forge-action-btn" onclick="document.getElementById('forge-council-modal').classList.add('hidden');_forgeCouncilRunning=false;">Close</button>
+          </div>
+        </div>
       </div>
 
     </div><!-- .forge-workspace -->
@@ -5725,12 +5761,14 @@ async function forgeInit() {{
 
 async function forgeEnsureThree() {{
   if (_forgeThreeLoaded) return;
+  // r128 is the last release with legacy examples/js/ paths (OrbitControls, loaders as globals)
+  const CDN = 'https://cdn.jsdelivr.net/npm/three@0.128.0';
   const scripts = [
-    'https://cdn.jsdelivr.net/npm/three@0.164/build/three.min.js',
-    'https://cdn.jsdelivr.net/npm/three@0.164/examples/js/controls/OrbitControls.js',
-    'https://cdn.jsdelivr.net/npm/three@0.164/examples/js/loaders/STLLoader.js',
-    'https://cdn.jsdelivr.net/npm/three@0.164/examples/js/loaders/OBJLoader.js',
-    'https://cdn.jsdelivr.net/npm/three@0.164/examples/js/loaders/GLTFLoader.js',
+    CDN + '/build/three.min.js',
+    CDN + '/examples/js/controls/OrbitControls.js',
+    CDN + '/examples/js/loaders/STLLoader.js',
+    CDN + '/examples/js/loaders/OBJLoader.js',
+    CDN + '/examples/js/loaders/GLTFLoader.js',
   ];
   for (const src of scripts) {{
     await new Promise((res, rej) => {{
@@ -5738,7 +5776,7 @@ async function forgeEnsureThree() {{
       const s = document.createElement('script');
       s.src = src;
       s.onload = res;
-      s.onerror = rej;
+      s.onerror = (e) => {{ console.error('Three.js CDN load failed:', src, e); rej(e); }};
       document.head.appendChild(s);
     }});
   }}
@@ -6142,6 +6180,12 @@ async function forgeSendChat() {{
     if (!res.ok) {{ forgeAppendMsg('Error: ' + res.status, 'jarvis'); return; }}
     const data = await res.json();
     forgeAppendMsg(data.reply || '(no reply)', 'jarvis');
+    // Auto-load generated model if chat triggered CAD generation
+    if (data.generated_model && data.generated_model.filename) {{
+      forgeAppendMsg('✓ Model generated: ' + data.generated_model.filename +
+        ' (engine: ' + (data.generated_model.export_engine || '?') + ')', 'jarvis');
+      forgeHandleChatGeneration(data.generated_model);
+    }}
   }} catch(e) {{ forgeAppendMsg('Network error: ' + e, 'jarvis'); }}
 }}
 
@@ -6256,6 +6300,220 @@ async function forgeArchive() {{
     _forgeCurrentProjectId = null;
     forgeLoadProjectList();
   }} catch(e) {{ showToast('Error: ' + e, 'error'); }}
+}}
+
+// ── Describe Part quick-action ────────────────────────────────
+function forgeQuickDescribe() {{
+  if (!_forgeCurrentProjectId) {{ showToast('Select a project first.', 'warn'); return; }}
+  const hint = prompt(
+    'Describe the part you want to build (include rough dimensions and purpose):\n\n' +
+    'Example: "Wall bracket 80x40mm with two 5mm mounting holes, 3mm thick, for holding a 2kg shelf"'
+  );
+  if (!hint) return;
+  const input = document.getElementById('forge-chat-input');
+  if (input) {{ input.value = hint; }}
+  forgeSendChat();
+}}
+
+// ── Sketch upload & analyze ───────────────────────────────────
+async function forgeHandleSketchUpload(fileInput) {{
+  if (!_forgeCurrentProjectId) {{ showToast('Select a project first.', 'warn'); return; }}
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  const statusEl = document.getElementById('forge-sketch-status');
+  if (statusEl) statusEl.textContent = 'Uploading...';
+
+  // Upload to project uploads/
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('project_id', _forgeCurrentProjectId);
+  let uploadedFilename = '';
+  try {{
+    const upRes = await fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId) + '/upload', {{
+      method: 'POST', body: fd,
+    }});
+    if (!upRes.ok) {{
+      if (statusEl) statusEl.textContent = 'Upload failed.';
+      showToast('Sketch upload failed: ' + upRes.status, 'error');
+      fileInput.value = '';
+      return;
+    }}
+    const upData = await upRes.json();
+    uploadedFilename = upData.filename || file.name;
+  }} catch(e) {{
+    if (statusEl) statusEl.textContent = 'Upload error.';
+    showToast('Upload error: ' + e, 'error');
+    fileInput.value = '';
+    return;
+  }}
+
+  if (statusEl) statusEl.textContent = 'Analyzing with vision AI...';
+  forgeAppendMsg('Sketch uploaded: ' + uploadedFilename + ' — running vision analysis...', 'user');
+
+  try {{
+    const res = await fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId) + '/analyze-sketch', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ image_filename: uploadedFilename, auto_generate: true }}),
+    }});
+    if (!res.ok) {{
+      const err = await res.json().catch(() => ({{}}));
+      forgeAppendMsg('Vision analysis failed: ' + (err.detail || res.status), 'jarvis');
+      if (statusEl) statusEl.textContent = 'Analysis failed.';
+    }} else {{
+      const data = await res.json();
+      const ex = data.extraction || {{}};
+      let summary = 'Sketch analyzed.';
+      if (ex.object_description) summary = ex.object_description;
+      if (ex.confidence) summary += ' (confidence: ' + ex.confidence + ')';
+      if (ex.assumptions && ex.assumptions.length) {{
+        summary += '\\n\\nAssumptions: ' + ex.assumptions.join('; ');
+      }}
+      if (data.generation && data.generation.ok) {{
+        summary += '\\n\\n✓ Model generated: ' + (data.generation.filename || '');
+        forgeLoadProject(_forgeCurrentProjectId);
+        forgeLoadProjectList();
+      }} else if (data.generation && !data.generation.ok) {{
+        summary += '\\n\\nModel generation: ' + (data.generation.error || 'not attempted');
+      }} else if (!ex.ready_to_generate) {{
+        summary += '\\n\\nNot enough info to generate automatically — add measurements and try again.';
+      }}
+      forgeAppendMsg(summary, 'jarvis');
+      if (statusEl) statusEl.textContent = '✓ Done';
+    }}
+  }} catch(e) {{
+    forgeAppendMsg('Analysis error: ' + e, 'jarvis');
+    if (statusEl) statusEl.textContent = 'Error.';
+  }}
+  fileInput.value = '';
+}}
+
+// ── Design Council ────────────────────────────────────────────
+let _forgeCouncilRunning = false;
+
+function forgeRunDesignCouncil() {{
+  if (!_forgeCurrentProjectId) {{ showToast('Select a project first.', 'warn'); return; }}
+  const modal = document.getElementById('forge-council-modal');
+  if (modal) {{
+    // Reset state
+    const statusEl = document.getElementById('forge-council-status');
+    const rtEl = document.getElementById('forge-council-roundtable');
+    const specEl = document.getElementById('forge-council-spec');
+    const resEl = document.getElementById('forge-council-result');
+    const btn = document.getElementById('forge-council-submit-btn');
+    if (statusEl) {{ statusEl.style.display = 'none'; statusEl.textContent = 'Council in session...'; }}
+    if (rtEl) {{ rtEl.style.display = 'none'; rtEl.innerHTML = ''; }}
+    if (specEl) {{ specEl.style.display = 'none'; specEl.textContent = ''; }}
+    if (resEl) {{ resEl.style.display = 'none'; resEl.textContent = ''; }}
+    if (btn) btn.disabled = false;
+    modal.classList.remove('hidden');
+  }}
+}}
+
+async function forgeSubmitDesignCouncil() {{
+  if (_forgeCouncilRunning) return;
+  if (!_forgeCurrentProjectId) {{ showToast('Select a project first.', 'warn'); return; }}
+  const briefEl = document.getElementById('forge-council-brief');
+  const brief = (briefEl && briefEl.value.trim()) ? briefEl.value.trim() : '';
+  if (!brief) {{ showToast('Enter a design brief first.', 'warn'); return; }}
+
+  _forgeCouncilRunning = true;
+  const btn = document.getElementById('forge-council-submit-btn');
+  if (btn) btn.disabled = true;
+  const statusEl = document.getElementById('forge-council-status');
+  if (statusEl) {{ statusEl.style.display = 'block'; statusEl.textContent = 'Council in session — 4 agents deliberating...'; }}
+
+  try {{
+    const res = await fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId) + '/design-council', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ brief, auto_inspect: true }}),
+    }});
+    if (!res.ok) {{
+      const err = await res.json().catch(() => ({{}}));
+      if (statusEl) statusEl.textContent = 'Council failed: ' + (err.detail || res.status);
+      _forgeCouncilRunning = false;
+      if (btn) btn.disabled = false;
+      return;
+    }}
+    const data = await res.json();
+
+    // Render roundtable
+    const rtEl = document.getElementById('forge-council-roundtable');
+    if (rtEl && data.roundtable) {{
+      rtEl.innerHTML = data.roundtable.map(r =>
+        '<div style="margin-bottom:10px;">' +
+        '<div style="font-size:10px;font-weight:700;color:var(--hue);letter-spacing:0.05em;margin-bottom:3px;">' +
+        r.agent.toUpperCase() + ' · ' + r.title + '</div>' +
+        '<div style="font-size:11px;color:var(--text-2);line-height:1.5;">' + r.response + '</div>' +
+        '</div>'
+      ).join('');
+      rtEl.style.display = 'block';
+    }}
+
+    // Render spec
+    const specEl = document.getElementById('forge-council-spec');
+    if (specEl && data.spec) {{
+      const spec = data.spec;
+      const specLines = [];
+      if (spec.part_name) specLines.push('Part: ' + spec.part_name);
+      if (spec.shape_family) specLines.push('Shape: ' + spec.shape_family);
+      if (spec.material) specLines.push('Material: ' + spec.material);
+      if (spec.machine) specLines.push('Machine: ' + spec.machine);
+      if (spec.dimensions) specLines.push('Dimensions:\\n  ' + spec.dimensions.replace(/\\n/g, '\\n  '));
+      if (spec.constraints) specLines.push('Constraints: ' + spec.constraints);
+      if (spec.design_notes) specLines.push('Notes: ' + spec.design_notes);
+      specEl.textContent = specLines.join('\\n');
+      specEl.style.display = 'block';
+    }}
+
+    // Result summary
+    const resEl = document.getElementById('forge-council-result');
+    if (resEl) {{
+      if (data.ok && data.generation && data.generation.filename) {{
+        const insp = data.inspection || {{}};
+        const printable = insp.printable;
+        resEl.innerHTML =
+          '<span style="color:#10b981;font-weight:600;">✓ Model generated: ' + data.generation.filename + '</span><br>' +
+          '<span style="font-size:10px;color:var(--text-3);">Engine: ' + (data.generation.export_engine || '?') +
+          ' · Status: ' + (data.generation.export_status || '?') + '</span>' +
+          (printable != null ? '<br><span style="font-size:10px;color:' + (printable ? '#10b981' : '#f59e0b') +
+            ';">Print readiness: ' + (printable ? '✓ Printable' : '⚠ Review required') + '</span>' : '');
+      }} else {{
+        resEl.innerHTML = '<span style="color:#f59e0b;">Model generation: ' +
+          (data.generation && data.generation.error ? data.generation.error : 'not available') + '</span>';
+      }}
+      resEl.style.display = 'block';
+    }}
+
+    if (statusEl) statusEl.textContent = data.ok ? '✓ Council complete — model ready for review.' : 'Council complete.';
+    if (data.ok) {{
+      forgeLoadProject(_forgeCurrentProjectId);
+      forgeLoadProjectList();
+    }}
+  }} catch(e) {{
+    if (statusEl) statusEl.textContent = 'Error: ' + e;
+  }}
+  _forgeCouncilRunning = false;
+  if (btn) btn.disabled = false;
+}}
+
+// Auto-load model generated from chat
+async function forgeHandleChatGeneration(genModel) {{
+  if (!genModel || !genModel.filename) return;
+  const ext = genModel.filename.split('.').pop().toLowerCase();
+  if (['stl', '3mf', 'obj', 'glb'].includes(ext)) {{
+    _forgeCurrentModelFile = genModel.filename;
+    try {{
+      forgeLoadModel(_forgeCurrentProjectId, genModel.filename);
+      showToast('Model generated and loaded: ' + genModel.filename, 'info');
+    }} catch(e) {{ /* viewer errors are non-fatal */ }}
+  }} else {{
+    showToast('Model generated (' + ext.toUpperCase() + '): ' + genModel.filename, 'info');
+  }}
+  forgeLoadProject(_forgeCurrentProjectId);
+  forgeLoadProjectList();
 }}
 
 // ── Timeline ──────────────────────────────────────────────────
