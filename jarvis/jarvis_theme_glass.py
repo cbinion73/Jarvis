@@ -1240,6 +1240,52 @@ body::after {{
 }}
 .party-bar-btn:hover {{ background: rgba(var(--accent-rgb, 139,92,246), 0.25); }}
 
+/* Idea Inbox */
+.idea-filter-pill {{
+  padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border);
+  background: var(--surface-hi); font-size: 10px; font-weight: 600;
+  color: var(--text-3); cursor: pointer; letter-spacing: 0.04em;
+  transition: all 0.15s;
+}}
+.idea-filter-pill:hover {{ border-color: var(--hue); color: var(--hue); }}
+.idea-filter-pill.active {{ background: var(--hue); color: #fff; border-color: var(--hue); }}
+.idea-row {{
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 14px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface-hi);
+  transition: border-color 0.15s;
+}}
+.idea-row:hover {{ border-color: rgba(var(--hue-rgb,245,158,11),0.4); }}
+.idea-row-text {{ flex: 1; font-size: 13px; color: var(--text-1); line-height: 1.45; }}
+.idea-row-notes {{ font-size: 10px; color: var(--text-3); margin-top: 3px; font-style: italic; }}
+.idea-status-chip {{
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 10px; font-size: 9px; font-weight: 700;
+  letter-spacing: 0.05em; white-space: nowrap; flex-shrink: 0;
+}}
+.idea-chip-captured {{ background: rgba(100,116,139,0.15); color: #94a3b8; }}
+.idea-chip-queued {{ background: rgba(245,158,11,0.15); color: #f59e0b; }}
+.idea-chip-researching {{ background: rgba(99,102,241,0.2); color: #818cf8; }}
+.idea-chip-done {{ background: rgba(16,185,129,0.15); color: #10b981; }}
+.idea-chip-passed {{ background: rgba(100,116,139,0.1); color: #64748b; }}
+.idea-row-actions {{ display: flex; gap: 5px; flex-shrink: 0; }}
+.idea-act-btn {{
+  padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border);
+  background: transparent; font-size: 10px; font-weight: 600;
+  color: var(--text-2); cursor: pointer; transition: all 0.12s;
+}}
+.idea-act-btn:hover {{ border-color: var(--hue); color: var(--hue); }}
+.idea-act-btn.primary {{ background: var(--hue); color: #fff; border-color: var(--hue); }}
+.idea-act-btn.primary:hover {{ opacity: 0.85; }}
+.idea-act-btn.danger {{ color: #ef4444; border-color: rgba(239,68,68,0.3); }}
+.idea-act-btn.danger:hover {{ background: rgba(239,68,68,0.1); border-color: #ef4444; }}
+.idea-dossier-link {{
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; color: var(--hue); font-weight: 600; cursor: pointer;
+  margin-top: 4px; text-decoration: none;
+}}
+.idea-dossier-link:hover {{ text-decoration: underline; }}
+
 /* Dossier Grid */
 .dossier-grid {{
   display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -2904,6 +2950,28 @@ body::after {{
         </div>
       </div>
 
+      <!-- Idea Inbox quick-capture -->
+      <div class="card" style="grid-column:1/-1;">
+        <div class="card-inner">
+          <div class="card-header">
+            <span class="card-icon">💡</span>
+            <span class="card-title">IDEA INBOX</span>
+            <span class="card-badge" id="idea-inbox-badge">—</span>
+            <button class="btn-ghost" style="margin-left:auto;font-size:10px;" onclick="switchView('huddle')">View All →</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <input type="text" id="idea-inbox-input"
+              placeholder="Dump an idea — JARVIS will research it and bring back a full dossier..."
+              style="flex:1;padding:9px 13px;border:1px solid var(--border);border-radius:8px;background:var(--surface-hi);font-size:13px;color:var(--text-1);outline:none;"
+              onkeydown="if(event.key==='Enter')overviewAddIdea()"
+              onfocus="this.style.borderColor='var(--hue)'"
+              onblur="this.style.borderColor='var(--border)'">
+            <button class="btn-primary" onclick="overviewAddIdea()" style="white-space:nowrap;">+ Add Idea</button>
+          </div>
+          <div id="idea-inbox-recent" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;min-height:20px;"></div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -3418,6 +3486,41 @@ body::after {{
       <button class="party-bar-btn" onclick="startPartyMode()">⚡ Wake the Agents</button>
     </div>
 
+    <!-- ── Idea Inbox ──────────────────────────────────────────── -->
+    <div class="huddle-section" id="idea-inbox-section">
+      <div class="huddle-section-label" style="display:flex;align-items:center;gap:12px;">
+        💡 IDEA INBOX
+        <span id="idea-inbox-counts" style="font-size:10px;font-weight:400;color:var(--text-3);font-family:var(--font-mono);"></span>
+        <button class="party-bar-btn" style="margin-left:auto;" onclick="showIdeaAddModal()">+ New Idea</button>
+      </div>
+
+      <!-- Quick-capture bar -->
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <input type="text" id="huddle-idea-input"
+          placeholder="Describe an idea — JARVIS will research it and return a full dossier..."
+          style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface-hi);font-size:13px;color:var(--text-1);outline:none;"
+          onkeydown="if(event.key==='Enter')huddleAddIdea()"
+          onfocus="this.style.borderColor='var(--hue)'"
+          onblur="this.style.borderColor='var(--border)'">
+        <button class="btn-primary" onclick="huddleAddIdea()">Capture</button>
+      </div>
+
+      <!-- Status filter pills -->
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;" id="idea-filter-pills">
+        <button class="idea-filter-pill active" data-status="" onclick="setIdeaFilter(this,'')">All</button>
+        <button class="idea-filter-pill" data-status="captured" onclick="setIdeaFilter(this,'captured')">Captured</button>
+        <button class="idea-filter-pill" data-status="queued" onclick="setIdeaFilter(this,'queued')">Queued</button>
+        <button class="idea-filter-pill" data-status="researching" onclick="setIdeaFilter(this,'researching')">Researching</button>
+        <button class="idea-filter-pill" data-status="done" onclick="setIdeaFilter(this,'done')">Done ✓</button>
+        <button class="idea-filter-pill" data-status="passed" onclick="setIdeaFilter(this,'passed')">Passed</button>
+      </div>
+
+      <!-- Idea list -->
+      <div id="idea-inbox-list" style="display:flex;flex-direction:column;gap:8px;">
+        <div style="color:var(--text-3);font-size:12px;padding:12px 0;">Loading ideas...</div>
+      </div>
+    </div>
+
     <!-- Overnight Dossiers -->
     <div class="huddle-section" id="dossier-section">
       <div class="huddle-section-label">🗂 OVERNIGHT DOSSIERS — Ready for Review</div>
@@ -3893,6 +3996,7 @@ function init() {{
   loadOverviewPublishing();
   loadOverviewReminders();
   loadJarvisTasks();
+  loadIdeaInbox();
 
   // Clock — update every minute
   updateNavClock();
@@ -3942,14 +4046,14 @@ function loadViewData(name) {{
   if (_agentsRefreshTimer) {{ clearInterval(_agentsRefreshTimer); _agentsRefreshTimer = null; }}
 
   switch (name) {{
-    case 'overview':     loadApprovals(); loadBriefing(); loadHomeDashboard(); loadOverviewAgents(); loadOverviewCatalyst(); loadOverviewChronicle(); loadOverviewPublishing(); loadOverviewReminders(); loadJarvisTasks(); break;
+    case 'overview':     loadApprovals(); loadBriefing(); loadHomeDashboard(); loadOverviewAgents(); loadOverviewCatalyst(); loadOverviewChronicle(); loadOverviewPublishing(); loadOverviewReminders(); loadJarvisTasks(); loadIdeaInbox(); break;
     case 'forge':        forgeInit(); break;
     case 'agents':
       loadLiveAgents();
       // Auto-refresh every 30s while on this view
       _agentsRefreshTimer = setInterval(loadLiveAgents, 30000);
       break;
-    case 'huddle':       loadHuddle(); loadPassiveIncomePipeline(); loadDossiers(); loadPartyStatus(); break;
+    case 'huddle':       loadHuddle(); loadPassiveIncomePipeline(); loadDossiers(); loadPartyStatus(); loadIdeaInbox(); break;
     case 'publishing':   loadPublishing(); loadHomeProjects(); break;
     case 'intelligence': loadStatus(); break;
     case 'chronicle':    loadChronicle(); break;
@@ -4275,6 +4379,223 @@ function toggleRoster() {{
 /* ═══════════════════════════════════════════════════════════════
    HUDDLE VIEW
 ═══════════════════════════════════════════════════════════════ */
+
+// ═══════════════════════════════════════════════════════════════
+// IDEA INBOX
+// ═══════════════════════════════════════════════════════════════
+
+let _ideaFilter = '';
+
+function setIdeaFilter(btn, status) {{
+  _ideaFilter = status;
+  document.querySelectorAll('.idea-filter-pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  loadIdeaInbox();
+}}
+
+async function loadIdeaInbox() {{
+  const listEl = document.getElementById('idea-inbox-list');
+  const badgeEl = document.getElementById('idea-inbox-badge');
+  const overviewBadge = document.getElementById('idea-inbox-badge');
+  const countsEl = document.getElementById('idea-inbox-counts');
+  if (listEl) listEl.innerHTML = '<div style="color:var(--text-3);font-size:11px;">Loading...</div>';
+
+  try {{
+    const url = '/api/ideas' + (_ideaFilter ? '?status=' + encodeURIComponent(_ideaFilter) : '');
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const ideas = data.ideas || [];
+    const s = (data.stats && data.stats.by_status) || {{}};
+
+    // Update badges
+    const pending = (s.captured || 0) + (s.queued || 0) + (s.researching || 0);
+    if (badgeEl) badgeEl.textContent = pending || ideas.length;
+    if (countsEl) countsEl.textContent =
+      [
+        s.captured ? s.captured + ' captured' : '',
+        s.queued ? s.queued + ' queued' : '',
+        s.researching ? s.researching + ' researching' : '',
+        s.done ? s.done + ' done' : '',
+        s.passed ? s.passed + ' passed' : '',
+      ].filter(Boolean).join(' · ');
+
+    // Update overview widget too
+    const overviewRecent = document.getElementById('idea-inbox-recent');
+    if (overviewRecent) {{
+      const recent = (data.ideas || []).filter(i => ['captured','queued','researching'].includes(i.status)).slice(0,5);
+      overviewRecent.innerHTML = recent.map(i => renderIdeaChip(i)).join('');
+    }}
+
+    if (!listEl) return;
+    if (!ideas.length) {{
+      listEl.innerHTML = '<div style="color:var(--text-3);font-size:12px;padding:16px 0;text-align:center;">No ideas yet. Capture your first one above.</div>';
+      return;
+    }}
+    listEl.innerHTML = ideas.map(renderIdeaRow).join('');
+  }} catch(e) {{
+    if (listEl) listEl.innerHTML = '<div style="color:#ef4444;font-size:11px;">Error: ' + e + '</div>';
+  }}
+}}
+
+function renderIdeaChip(idea) {{
+  const chips = {{captured:'💡',queued:'⏳',researching:'🔬',done:'✅',passed:'✕'}};
+  const icon = chips[idea.status] || '💡';
+  return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;background:var(--surface-hi);border:1px solid var(--border);font-size:10px;color:var(--text-2);cursor:pointer;" onclick="switchView(\'huddle\')" title="' + escHtml(idea.text) + '">' +
+    icon + ' ' + escHtml((idea.text||'').slice(0,28)) + (idea.text.length > 28 ? '…' : '') + '</span>';
+}}
+
+function ideaStatusChip(status) {{
+  const map = {{
+    captured: ['captured','idea-chip-captured'],
+    queued: ['queued','idea-chip-queued'],
+    researching: ['🔬 researching','idea-chip-researching'],
+    done: ['✓ dossier ready','idea-chip-done'],
+    passed: ['passed','idea-chip-passed'],
+  }};
+  const [label, cls] = map[status] || [status, 'idea-chip-captured'];
+  return '<span class="idea-status-chip ' + cls + '">' + label + '</span>';
+}}
+
+function renderIdeaRow(idea) {{
+  const actions = [];
+
+  if (idea.status === 'captured') {{
+    actions.push('<button class="idea-act-btn primary" onclick="ideaResearchNow(\'' + idea.id + '\')">Research Now ⚡</button>');
+    actions.push('<button class="idea-act-btn" onclick="ideaQueue(\'' + idea.id + '\')">Queue</button>');
+    actions.push('<button class="idea-act-btn danger" onclick="ideaPass(\'' + idea.id + '\')">Pass</button>');
+  }} else if (idea.status === 'queued') {{
+    actions.push('<button class="idea-act-btn primary" onclick="ideaResearchNow(\'' + idea.id + '\')">Research Now ⚡</button>');
+    actions.push('<button class="idea-act-btn danger" onclick="ideaPass(\'' + idea.id + '\')">Pass</button>');
+  }} else if (idea.status === 'researching') {{
+    actions.push('<button class="idea-act-btn" style="cursor:default;opacity:0.6;" disabled>Researching...</button>');
+  }} else if (idea.status === 'done') {{
+    if (idea.dossier_id) {{
+      actions.push('<button class="idea-act-btn primary" onclick="openDossier(\'' + idea.dossier_id + '\')">📄 Open Dossier</button>');
+    }}
+  }} else if (idea.status === 'passed') {{
+    actions.push('<button class="idea-act-btn" onclick="ideaResearchNow(\'' + idea.id + '\')">Reconsider</button>');
+    actions.push('<button class="idea-act-btn danger" onclick="ideaDelete(\'' + idea.id + '\')">Delete</button>');
+  }}
+
+  const dossierLink = (idea.status === 'done' && idea.dossier_id)
+    ? '<div><span class="idea-dossier-link" onclick="openDossier(\'' + idea.dossier_id + '\')">→ Dossier ready — click to review</span></div>'
+    : '';
+
+  const age = idea.created_at ? ' · ' + timeAgo(idea.created_at) : '';
+
+  return '<div class="idea-row" id="idea-row-' + idea.id + '">' +
+    '<div style="flex:1;min-width:0;">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
+        ideaStatusChip(idea.status) +
+        '<span style="font-size:9px;color:var(--text-3);font-family:var(--font-mono);">' + escHtml(idea.domain||'') + age + '</span>' +
+      '</div>' +
+      '<div class="idea-row-text">' + escHtml(idea.text) + '</div>' +
+      (idea.notes ? '<div class="idea-row-notes">' + escHtml(idea.notes) + '</div>' : '') +
+      dossierLink +
+    '</div>' +
+    '<div class="idea-row-actions">' + actions.join('') + '</div>' +
+  '</div>';
+}}
+
+function timeAgo(isoStr) {{
+  if (!isoStr) return '';
+  const diff = Date.now() - new Date(isoStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 2) return 'just now';
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h / 24) + 'd ago';
+}}
+
+async function huddleAddIdea() {{
+  const inp = document.getElementById('huddle-idea-input');
+  if (!inp) return;
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  inp.placeholder = 'Saving...';
+  try {{
+    const res = await fetch('/api/ideas', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ text }}),
+    }});
+    if (!res.ok) {{ showToast('Error saving idea: ' + res.status, 'error'); return; }}
+    showToast('Idea captured. Click "Research Now" to build a dossier.', 'info');
+    inp.placeholder = 'Describe an idea — JARVIS will research it and return a full dossier...';
+    loadIdeaInbox();
+  }} catch(e) {{
+    showToast('Error: ' + e, 'error');
+    inp.placeholder = 'Describe an idea...';
+  }}
+}}
+
+async function overviewAddIdea() {{
+  const inp = document.getElementById('idea-inbox-input');
+  if (!inp) return;
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  try {{
+    const res = await fetch('/api/ideas', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ text }}),
+    }});
+    if (!res.ok) {{ showToast('Error saving idea: ' + res.status, 'error'); return; }}
+    showToast('Idea captured! Go to Huddle to research it.', 'info');
+    loadIdeaInbox();
+  }} catch(e) {{
+    showToast('Error: ' + e, 'error');
+  }}
+}}
+
+async function ideaResearchNow(ideaId) {{
+  const rowEl = document.getElementById('idea-row-' + ideaId);
+  if (rowEl) rowEl.style.opacity = '0.5';
+  showToast('Starting research — this runs in the background. Check Huddle for the dossier.', 'info');
+  try {{
+    const res = await fetch('/api/ideas/' + encodeURIComponent(ideaId) + '/research-now', {{
+      method: 'POST',
+    }});
+    if (!res.ok) {{
+      const err = await res.json().catch(() => ({{}}));
+      showToast('Research error: ' + (err.detail || res.status), 'error');
+    }} else {{
+      const data = await res.json();
+      showToast(data.message || 'Research started.', 'info');
+    }}
+    if (rowEl) rowEl.style.opacity = '1';
+    loadIdeaInbox();
+    // Poll for dossier after 30s
+    setTimeout(() => {{ loadDossiers(); loadIdeaInbox(); }}, 30000);
+  }} catch(e) {{
+    showToast('Error: ' + e, 'error');
+    if (rowEl) rowEl.style.opacity = '1';
+  }}
+}}
+
+async function ideaQueue(ideaId) {{
+  await fetch('/api/ideas/' + encodeURIComponent(ideaId) + '/queue', {{ method: 'POST' }});
+  loadIdeaInbox();
+}}
+
+async function ideaPass(ideaId) {{
+  await fetch('/api/ideas/' + encodeURIComponent(ideaId) + '/pass', {{ method: 'POST' }});
+  loadIdeaInbox();
+}}
+
+async function ideaDelete(ideaId) {{
+  if (!confirm('Delete this idea permanently?')) return;
+  await fetch('/api/ideas/' + encodeURIComponent(ideaId), {{ method: 'DELETE' }});
+  loadIdeaInbox();
+}}
+
+// ═══════════════════════════════════════════════════════════════
+// HUDDLE
+// ═══════════════════════════════════════════════════════════════
 
 async function loadHuddle() {{
   const grid = document.getElementById('huddle-reports-grid');

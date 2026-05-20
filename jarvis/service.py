@@ -4063,6 +4063,135 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             return _json({"rejected": False, "error": str(exc)})
 
     # ------------------------------------------------------------------
+    # Idea Inbox endpoints
+    # ------------------------------------------------------------------
+
+    @app.get("/api/ideas")
+    async def api_ideas_list(status: str = Query(default="")) -> JSONResponse:
+        """List all ideas. Optional ?status= filter."""
+        from .ideas import list_ideas, stats
+        ideas = await asyncio.to_thread(list_ideas, status or None)
+        summary = await asyncio.to_thread(stats)
+        return _json({"ideas": ideas, "stats": summary})
+
+    @app.post("/api/ideas")
+    async def api_ideas_add(request: Request) -> JSONResponse:
+        """Capture a new idea. Body: {text, notes?, domain?, tags?}"""
+        from .ideas import add_idea
+        body = await request.json()
+        text = str(body.get("text", "")).strip()
+        if not text:
+            raise HTTPException(status_code=400, detail="text is required")
+        idea = await asyncio.to_thread(
+            add_idea,
+            text,
+            "user",
+            str(body.get("notes", "")),
+            str(body.get("domain", "passive-income")),
+            list(body.get("tags", [])),
+        )
+        return _json({"idea": idea}, status_code=201)
+
+    @app.post("/api/ideas/{idea_id}/queue")
+    async def api_ideas_queue(idea_id: str) -> JSONResponse:
+        """Mark an idea as queued for background research."""
+        from .ideas import queue_idea
+        updated = await asyncio.to_thread(queue_idea, idea_id)
+        if updated is None:
+            raise HTTPException(status_code=404, detail="Idea not found")
+        return _json({"idea": updated})
+
+    @app.post("/api/ideas/{idea_id}/pass")
+    async def api_ideas_pass(idea_id: str) -> JSONResponse:
+        """Dismiss an idea (pass on it)."""
+        from .ideas import pass_idea
+        updated = await asyncio.to_thread(pass_idea, idea_id)
+        if updated is None:
+            raise HTTPException(status_code=404, detail="Idea not found")
+        return _json({"idea": updated})
+
+    @app.delete("/api/ideas/{idea_id}")
+    async def api_ideas_delete(idea_id: str) -> JSONResponse:
+        """Hard-delete an idea."""
+        from .ideas import delete_idea
+        ok = await asyncio.to_thread(delete_idea, idea_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Idea not found")
+        return _json({"deleted": True})
+
+    @app.post("/api/ideas/{idea_id}/research-now")
+    async def api_ideas_research_now(
+        idea_id: str,
+        background_tasks: BackgroundTasks,
+    ) -> JSONResponse:
+        """
+        Immediately trigger dossier research for an idea (don't wait for party mode).
+        Creates a WorkItem under catalyst-personal, fires DossierBuilder in the background.
+        Returns immediately with the work_id — poll /api/dossiers for the result.
+        """
+        from .ideas import get_idea, mark_researching, mark_done, queue_idea
+        idea = await asyncio.to_thread(get_idea, idea_id)
+        if idea is None:
+            raise HTTPException(status_code=404, detail="Idea not found")
+
+        if idea.get("status") == "researching":
+            return _json({"queued": False, "message": "Already researching", "idea": idea})
+
+        # Ensure it's at least queued
+        if idea.get("status") == "captured":
+            await asyncio.to_thread(queue_idea, idea_id)
+
+        gw = _get_gateway()
+        if gw is None:
+            raise HTTPException(status_code=503, detail="LLM gateway not available")
+
+        # Create WorkItem under catalyst-personal
+        try:
+            from .agent_work import get_work_store
+            pi_store = get_work_store("catalyst-personal")
+            work_item = await asyncio.to_thread(
+                pi_store.dream_idea,
+                idea["text"][:80],
+                idea["text"],
+                idea.get("domain", "passive-income"),
+                idea.get("tags", []),
+            )
+            work_id = work_item.work_id
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to create work item: {exc}")
+
+        # Mark idea as researching
+        await asyncio.to_thread(mark_researching, idea_id, work_id)
+
+        # Fire DossierBuilder in background
+        async def _build_dossier() -> None:
+            import asyncio as _asyncio
+            try:
+                from .dossier import build_dossier_for_work_item, get_dossier_store
+                from .ideas import mark_done as _mark_done
+                dossier = await _asyncio.to_thread(
+                    build_dossier_for_work_item, work_item, gw, ""
+                )
+                dossier_store = get_dossier_store()
+                await _asyncio.to_thread(dossier_store.save, dossier)
+                await _asyncio.to_thread(
+                    _mark_done, idea_id, dossier.dossier_id, work_id
+                )
+            except Exception as exc:
+                import logging as _logging
+                _logging.getLogger(__name__).warning(
+                    "Idea research failed for %s: %s", idea_id, exc
+                )
+
+        background_tasks.add_task(_build_dossier)
+
+        return _json({
+            "queued": True,
+            "work_id": work_id,
+            "message": "Research started — check /api/dossiers for results.",
+        })
+
+    # ------------------------------------------------------------------
     # Scheduler POST routes — must be BEFORE the catch-all
     # ------------------------------------------------------------------
 
