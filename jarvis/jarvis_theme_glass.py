@@ -270,7 +270,14 @@ body::after {{
   font-size: 64px;
   position: relative;
   overflow: hidden;
-  min-height: 160px;
+  min-height: 220px;
+}}
+.news-featured-image img {{
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }}
 .news-card {{
   background: var(--surface);
@@ -283,6 +290,24 @@ body::after {{
   cursor: pointer;
   transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
   text-decoration: none;
+  overflow: hidden;
+}}
+.news-card.news-card-has-thumb {{
+  padding-top: 0;
+}}
+.news-thumb {{
+  width: calc(100% + 32px);
+  margin: 0 -16px 12px -16px;
+  height: 150px;
+  overflow: hidden;
+  border-radius: 12px 12px 0 0;
+  flex-shrink: 0;
+}}
+.news-thumb img {{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }}
 .news-card:hover {{
   border-color: var(--hue);
@@ -5165,7 +5190,7 @@ function launchCopy(btn, encodedText) {{
 const _SOURCE_META = {{
   'BBC':         {{ color: '#BB1919', bg: '#fef2f2', icon: 'B' }},
   'NYT':         {{ color: '#111111', bg: '#f4f4f4', icon: 'N' }},
-  'REUTERS':     {{ color: '#FF8000', bg: '#fff7ed', icon: 'R' }},
+  'AP':          {{ color: '#CC0000', bg: '#fff0f0', icon: 'A' }},
   'ALJAZEERA':   {{ color: '#009FE3', bg: '#eff9ff', icon: 'A' }},
   'CNBC':        {{ color: '#003087', bg: '#eff3ff', icon: 'C' }},
   'MARKETWATCH': {{ color: '#0072CE', bg: '#eff8ff', icon: 'M' }},
@@ -5186,7 +5211,11 @@ let _newsFilter = 'all';
 async function loadNews(force) {{
   try {{
     if (!force && _newsCache) {{ renderNewsView(_newsCache); return; }}
-    const res = await fetch('/api/news');
+    const grid = document.getElementById('news-grid');
+    if (grid && force) {{
+      grid.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:40px 0;text-align:center;grid-column:1/-1;">⏳ Fetching latest headlines + images…</div>';
+    }}
+    const res = await fetch(force ? '/api/news?force=1' : '/api/news');
     if (!res.ok) {{ console.warn('loadNews', res.status); return; }}
     const data = await res.json();
     _newsCache = data;
@@ -5245,20 +5274,27 @@ function renderNewsView(data) {{
   const rest = articles.slice(1);
   const fm = _sourceMeta(featured.source);
 
+  const featuredImgPanel = featured.image_url
+    ? `<div class="news-featured-image">
+         <img src="${{esc(featured.image_url)}}" alt="" loading="lazy"
+              onerror="this.parentNode.style.background='linear-gradient(135deg,${{fm.color}}22,${{fm.color}}44)';this.remove();">
+       </div>`
+    : `<div class="news-featured-image" style="background:linear-gradient(135deg,${{fm.color}}22,${{fm.color}}44);">
+         <span style="font-size:72px;opacity:.3;user-select:none;">${{fm.icon}}</span>
+         <div style="position:absolute;bottom:16px;right:16px;font-size:28px;font-weight:900;color:${{fm.color}};opacity:.5;font-family:serif;">${{esc(featured.source)}}</div>
+       </div>`;
+
   html += `<div class="news-featured" onclick="window.open(${{JSON.stringify(featured.link || '#')}}, '_blank')" style="cursor:pointer;">
     <div class="news-featured-body">
       ${{makeSourceBadge(featured.source, featured._cat)}}
       <div class="news-headline" style="margin-top:12px;">${{esc(featured.title)}}</div>
-      <div class="news-summary" style="margin-top:8px;">${{esc((featured.summary || '').slice(0,200))}}</div>
+      <div class="news-summary" style="margin-top:8px;">${{esc((featured.summary || '').slice(0,220))}}</div>
       <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;">
         <span style="font-size:10px;color:var(--text-3);">${{featured._cat === 'finance' ? '📈 Finance' : '🌍 World'}}</span>
         ${{featured.link ? `<a class="news-read-link" href="${{esc(featured.link)}}" target="_blank" onclick="event.stopPropagation()">Read full story →</a>` : ''}}
       </div>
     </div>
-    <div class="news-featured-image" style="background:linear-gradient(135deg,${{fm.color}}22,${{fm.color}}44);">
-      <span style="font-size:72px;opacity:.3;user-select:none;">${{fm.icon}}</span>
-      <div style="position:absolute;bottom:16px;right:16px;font-size:28px;font-weight:900;color:${{fm.color}};opacity:.5;font-family:serif;">${{esc(featured.source)}}</div>
-    </div>
+    ${{featuredImgPanel}}
   </div>`;
 
   // Section: remaining world articles
@@ -5267,8 +5303,11 @@ function renderNewsView(data) {{
     if (worldRest.length > 0) {{
       html += `<div class="news-section-label" style="grid-column:1/-1;">🌍 World News</div>`;
       html += worldRest.map(a => {{
-        const m = _sourceMeta(a.source);
-        return `<a class="news-card" href="${{esc(a.link || '#')}}" target="_blank">
+        const thumb = a.image_url
+          ? `<div class="news-thumb"><img src="${{esc(a.image_url)}}" alt="" loading="lazy" onerror="this.parentNode.remove()"></div>`
+          : '';
+        return `<a class="${{a.image_url ? 'news-card news-card-has-thumb' : 'news-card'}}" href="${{esc(a.link || '#')}}" target="_blank">
+          ${{thumb}}
           ${{makeSourceBadge(a.source, a._cat)}}
           <div class="news-headline">${{esc(a.title)}}</div>
           ${{a.summary ? `<div class="news-summary">${{esc(a.summary.slice(0,150))}}</div>` : ''}}
@@ -5284,8 +5323,11 @@ function renderNewsView(data) {{
     if (financeRest.length > 0) {{
       html += `<div class="news-section-label" style="grid-column:1/-1;">📈 Finance & Markets</div>`;
       html += financeRest.map(a => {{
-        const m = _sourceMeta(a.source);
-        return `<a class="news-card" href="${{esc(a.link || '#')}}" target="_blank">
+        const thumb = a.image_url
+          ? `<div class="news-thumb"><img src="${{esc(a.image_url)}}" alt="" loading="lazy" onerror="this.parentNode.remove()"></div>`
+          : '';
+        return `<a class="${{a.image_url ? 'news-card news-card-has-thumb' : 'news-card'}}" href="${{esc(a.link || '#')}}" target="_blank">
+          ${{thumb}}
           ${{makeSourceBadge(a.source, a._cat)}}
           <div class="news-headline">${{esc(a.title)}}</div>
           ${{a.summary ? `<div class="news-summary">${{esc(a.summary.slice(0,150))}}</div>` : ''}}
