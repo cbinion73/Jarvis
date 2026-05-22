@@ -180,7 +180,6 @@ class CouncilMember:
                 task_type="critical",
                 agent_id=self.agent_id,
                 force_model="gpt-4o",
-                max_tokens=2000,
                 temperature=0.2,
             )
         except Exception as exc:

@@ -370,7 +370,6 @@ Generate 5-7 pharmacist/prescriber questions. Respond ONLY with a JSON array of 
             task_type="clinical",
             agent_id="sherlock-holmes",
             force_model="gpt-4o",
-            max_tokens=800,
             temperature=0.2,
         )
         if response.error:

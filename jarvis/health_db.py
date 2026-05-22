@@ -195,7 +195,7 @@ async def _get_db():
 
 
 def _now() -> str:
-    return datetime.utcnow().isoformat()
+    return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
 
 # ---------------------------------------------------------------------------
@@ -210,8 +210,8 @@ async def upsert_daily_metrics(metrics: dict) -> None:
             INSERT INTO daily_metrics
               (date, source, steps, resting_hr, hrv, sleep_hours, sleep_deep,
                sleep_rem, active_cal, exercise_min, stand_hours, blood_oxygen,
-               weight, raw_json)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+               weight, raw_json, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(date, source) DO UPDATE SET
               steps        = excluded.steps,
               resting_hr   = excluded.resting_hr,
@@ -234,6 +234,7 @@ async def upsert_daily_metrics(metrics: dict) -> None:
             metrics.get("exercise_minutes"), metrics.get("stand_hours"),
             metrics.get("blood_oxygen"), metrics.get("weight"),
             json.dumps(metrics),
+            _now(),
         ))
         await db.commit()
 
@@ -566,8 +567,8 @@ async def get_glucose_stats(hours: int = 24) -> dict:
 async def log_sync(source: str, status: str, detail: str = "") -> None:
     async with _get_db() as db:
         await db.execute(
-            "INSERT INTO sync_log (source, status, detail) VALUES (?,?,?)",
-            (source, status, detail),
+            "INSERT INTO sync_log (source, status, detail, created_at) VALUES (?,?,?,?)",
+            (source, status, detail, _now()),
         )
         await db.commit()
 
