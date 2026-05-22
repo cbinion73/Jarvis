@@ -2673,6 +2673,69 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         background_tasks.add_task(_broadcast_dashboard, "mode.updated")
         return _json(result)
 
+    # ── Adaptive Layout Engine ─────────────────────────────────────────────
+
+    @app.get("/api/layout/state")
+    async def api_layout_state() -> JSONResponse:
+        """Current mode, card layout, alerts, and learned weights."""
+        import asyncio as _asyncio
+        try:
+            from .layout_engine import get_state_payload
+            payload = await _asyncio.to_thread(get_state_payload, runtime)
+            return _json(payload)
+        except Exception as exc:
+            logger.warning("layout/state failed: %s", exc)
+            return _json({
+                "mode": "morning_brief",
+                "auto_mode": "morning_brief",
+                "manual_override": False,
+                "override_expires_at": None,
+                "alerts": [],
+                "card_weights": {},
+                "layout": {
+                    "hero": ["briefing", "calendar"],
+                    "priority": ["approvals", "health", "tasks", "reminders"],
+                    "ambient": ["email", "agents", "catalyst", "chronicle",
+                                "publishing", "forge", "vision", "idea_inbox"],
+                },
+                "modes": {
+                    "morning_brief": {"label": "Morning Brief", "icon": "🌅"},
+                    "lunch_brief":   {"label": "Lunch Brief",   "icon": "☀️"},
+                    "daily_recap":   {"label": "Daily Recap",   "icon": "🌙"},
+                },
+            })
+
+    @app.post("/api/layout/mode")
+    async def api_layout_set_mode(
+        payload: dict[str, Any],
+        background_tasks: BackgroundTasks,
+    ) -> JSONResponse:
+        """Set layout mode manually. body: {mode: str, manual?: bool}"""
+        import asyncio as _asyncio
+        from .layout_engine import set_mode as _set_mode
+        mode   = str(payload.get("mode", "")).strip()
+        manual = bool(payload.get("manual", True))
+        try:
+            result = await _asyncio.to_thread(_set_mode, mode, manual=manual)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        background_tasks.add_task(_broadcast_dashboard, "layout.mode_changed")
+        return _json(result)
+
+    @app.post("/api/layout/interact")
+    async def api_layout_interact(payload: dict[str, Any]) -> JSONResponse:
+        """Log a card interaction for the learning system. Fire-and-forget."""
+        import asyncio as _asyncio
+        from .layout_engine import log_interaction as _log_interaction, get_current_mode
+        card_id = str(payload.get("card_id", "")).strip()
+        action  = str(payload.get("action",  "click")).strip()
+        mode    = str(payload.get("mode",    "")).strip() or get_current_mode()
+        if card_id:
+            await _asyncio.to_thread(_log_interaction, card_id, mode, action)
+        return _json({"ok": True})
+
+    # ── Design Review ──────────────────────────────────────────────────────
+
     @app.post("/api/design-review-state")
     async def api_save_design_review_state(
         payload: dict[str, Any],
@@ -7769,6 +7832,418 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         return _json(result)
 
     # ── End Forge ──────────────────────────────────────────────────────────────
+
+    # ==========================================================================
+    # PHASE 6 — Risk Equations (Evidence-based clinical calculators)
+    # ==========================================================================
+
+    @app.get("/api/health/risk/profile")
+    async def api_risk_profile() -> JSONResponse:
+        """Full composite risk profile: ASCVD, CKD trajectory, HRV, bariatric modifier."""
+        try:
+            from .risk_equations import run_full_risk_profile
+        except ImportError:
+            from risk_equations import run_full_risk_profile
+        return _json(await asyncio.to_thread(run_full_risk_profile))
+
+    @app.post("/api/health/risk/ascvd")
+    async def api_risk_ascvd(request: Request) -> JSONResponse:
+        """Calculate 10-year ASCVD risk. Body: {age, sex, race, total_cholesterol, hdl, systolic_bp, bp_treated, diabetes, smoker}"""
+        try:
+            from .risk_equations import calculate_ascvd_10yr, ASCVDInput
+        except ImportError:
+            from risk_equations import calculate_ascvd_10yr, ASCVDInput
+        import dataclasses
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        inputs = ASCVDInput(
+            age=int(body.get("age", 52)),
+            sex=body.get("sex", "male"),
+            race=body.get("race", "white"),
+            total_cholesterol_mgdl=float(body.get("total_cholesterol", 217)),
+            hdl_cholesterol_mgdl=float(body.get("hdl", 39)),
+            systolic_bp_mmhg=float(body.get("systolic_bp", 140)),
+            bp_treated=bool(body.get("bp_treated", True)),
+            diabetes=bool(body.get("diabetes", True)),
+            smoker=bool(body.get("smoker", False)),
+        )
+        result = await asyncio.to_thread(calculate_ascvd_10yr, inputs)
+        return _json(dataclasses.asdict(result))
+
+    @app.get("/api/health/risk/egfr")
+    async def api_risk_egfr() -> JSONResponse:
+        """Calculate eGFR using CKD-EPI 2021 from stored creatinine."""
+        try:
+            from .risk_equations import calculate_egfr_ckd_epi_2021, eGFRInput
+        except ImportError:
+            from risk_equations import calculate_egfr_ckd_epi_2021, eGFRInput
+        import dataclasses
+        # Chris's known creatinine May 2026
+        inputs = eGFRInput(serum_creatinine_mgdl=1.03, age=52, sex="male")
+        result = await asyncio.to_thread(calculate_egfr_ckd_epi_2021, inputs)
+        return _json(dataclasses.asdict(result))
+
+    @app.get("/api/health/risk/ckd-trajectory")
+    async def api_risk_ckd_trajectory() -> JSONResponse:
+        """Project Chris's eGFR decline trajectory over 5 years."""
+        try:
+            from .risk_equations import calculate_ckd_trajectory, CKDTrajectoryInput
+        except ImportError:
+            from risk_equations import calculate_ckd_trajectory, CKDTrajectoryInput
+        import dataclasses
+        inputs = CKDTrajectoryInput(
+            current_egfr=87.0, age=52, diabetes=True, hypertension=True,
+            a1c_pct=7.3, systolic_bp_mmhg=140.0, on_ace_arb=True, on_sglt2i=False,
+        )
+        result = await asyncio.to_thread(calculate_ckd_trajectory, inputs)
+        return _json(dataclasses.asdict(result))
+
+    @app.get("/api/health/risk/hrv")
+    async def api_risk_hrv() -> JSONResponse:
+        """Stratify cardiovascular mortality risk from current HRV."""
+        try:
+            from .risk_equations import calculate_hrv_risk, HRVRiskInput
+        except ImportError:
+            from risk_equations import calculate_hrv_risk, HRVRiskInput
+        import dataclasses
+        inputs = HRVRiskInput(sdnn_ms=45.0, age=52)
+        result = await asyncio.to_thread(calculate_hrv_risk, inputs)
+        return _json(dataclasses.asdict(result))
+
+    # ==========================================================================
+    # PHASE 6 — Digital Twin
+    # ==========================================================================
+
+    @app.get("/api/health/twin/state")
+    async def api_twin_state() -> JSONResponse:
+        """Return the full digital twin state (calibrated trajectories, predictions)."""
+        try:
+            from .digital_twin import get_twin_state
+        except ImportError:
+            from digital_twin import get_twin_state
+        return _json(await asyncio.to_thread(get_twin_state))
+
+    @app.get("/api/health/twin/project")
+    async def api_twin_project(months: int = 12) -> JSONResponse:
+        """Project all metrics forward N months. Returns list of TwinProjection objects."""
+        import dataclasses
+        try:
+            from .digital_twin import run_twin_projection
+        except ImportError:
+            from digital_twin import run_twin_projection
+        projections = await asyncio.to_thread(run_twin_projection, months)
+        out = [dataclasses.asdict(p) if dataclasses.is_dataclass(p) else p for p in projections]
+        return _json({"projections": out, "timeframe_months": months})
+
+    @app.post("/api/health/twin/simulate")
+    async def api_twin_simulate(request: Request) -> JSONResponse:
+        """Simulate interventions and return before/after projections. Body: {interventions: [str], timeframe_months?: int}"""
+        import dataclasses
+        try:
+            from .digital_twin import simulate_interventions
+        except ImportError:
+            from digital_twin import simulate_interventions
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        interventions = body.get("interventions", [])
+        months = int(body.get("timeframe_months", 12))
+        result = await asyncio.to_thread(simulate_interventions, interventions, months)
+        def _normalize(obj):
+            if dataclasses.is_dataclass(obj):
+                return dataclasses.asdict(obj)
+            if isinstance(obj, list):
+                return [_normalize(i) for i in obj]
+            if isinstance(obj, dict):
+                return {k: _normalize(v) for k, v in obj.items()}
+            return obj
+        return _json(_normalize(result))
+
+    @app.get("/api/health/twin/ldl-showdown")
+    async def api_twin_ldl_showdown() -> JSONResponse:
+        """Run the 4-strategy LDL showdown: status quo, ezetimibe, ezetimibe+bempedoic, PCSK9i."""
+        try:
+            from .digital_twin import run_ldl_showdown
+        except ImportError:
+            from digital_twin import run_ldl_showdown
+        return _json(await asyncio.to_thread(run_ldl_showdown))
+
+    @app.get("/api/health/twin/calibrate")
+    async def api_twin_calibrate() -> JSONResponse:
+        """Re-calibrate the digital twin from latest data. Returns calibration summary."""
+        try:
+            from .twin_calibrator import run_calibration
+        except ImportError:
+            from twin_calibrator import run_calibration
+        return _json(await asyncio.to_thread(run_calibration))
+
+    @app.get("/api/health/twin/predictions")
+    async def api_twin_predictions() -> JSONResponse:
+        """Return all predictions and their accuracy scores."""
+        try:
+            from .digital_twin import score_predictions
+        except ImportError:
+            from digital_twin import score_predictions
+        return _json({"predictions": await asyncio.to_thread(score_predictions)})
+
+    @app.post("/api/health/twin/predict")
+    async def api_twin_predict(request: Request) -> JSONResponse:
+        """Record a new prediction checkpoint. Body: {metric: str, months: int, interventions?: [str]}"""
+        import dataclasses
+        try:
+            from .digital_twin import run_twin_projection, record_prediction
+        except ImportError:
+            from digital_twin import run_twin_projection, record_prediction
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        metric = body.get("metric", "")
+        months = int(body.get("months", 6))
+        interventions = body.get("interventions", [])
+        projections = await asyncio.to_thread(run_twin_projection, months)
+        target = next((p for p in projections if (dataclasses.asdict(p) if dataclasses.is_dataclass(p) else p).get("metric") == metric), None)
+        if not target:
+            return JSONResponse({"error": f"Metric '{metric}' not found"}, status_code=404)
+        pred_id = await asyncio.to_thread(record_prediction, target, interventions)
+        return _json({"prediction_id": pred_id, "metric": metric, "months": months})
+
+    # ==========================================================================
+    # Health POST routes — registered BEFORE the legacy catch-all so they
+    # win route matching (Starlette matches in registration order).
+    # ==========================================================================
+
+    # Phase 4 — Symptom Triage
+    @app.post("/api/health/symptom/triage")
+    async def _pre_api_symptom_triage(request: Request) -> JSONResponse:
+        """Full symptom triage: Oracle gate + specialist routing + structured report."""
+        try:
+            from .symptom_triage import run_triage
+        except ImportError:
+            from symptom_triage import run_triage
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        result = await run_triage(
+            symptoms=str(body.get("symptoms", "")),
+            duration=str(body.get("duration", "")),
+            severity=body.get("severity"),
+            associated_symptoms=str(body.get("associated_symptoms", "")),
+            context=str(body.get("context", "")),
+        )
+        return _json(result)
+
+    # Phase 4 — Quarterly Review
+    @app.post("/api/health/quarterly/review")
+    async def _pre_api_quarterly_review(request: Request) -> JSONResponse:
+        """Run full 90-day quarterly review (LLM-intensive). May take 30-60s."""
+        try:
+            from .quarterly_review import run_quarterly_review
+        except ImportError:
+            from quarterly_review import run_quarterly_review
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        result = await run_quarterly_review(
+            review_period_days=int(body.get("review_period_days", 90)),
+            major_life_context=str(body.get("major_life_context", "")),
+            additional_context=str(body.get("additional_context", "")),
+        )
+        return _json(result)
+
+    # Phase 4 — Quarterly Objectives (POST)
+    @app.post("/api/health/quarterly/objectives")
+    async def _pre_api_quarterly_objectives_set(request: Request) -> JSONResponse:
+        """Set new 90-day objectives. Body: {objectives: [...]}"""
+        try:
+            from .quarterly_review import set_objectives
+        except ImportError:
+            from quarterly_review import set_objectives
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        objectives = body.get("objectives", [])
+        if not isinstance(objectives, list):
+            return JSONResponse({"error": "objectives must be a list"}, status_code=400)
+        result = await set_objectives(objectives)
+        status_code = 201 if result.get("ok") else 400
+        return JSONResponse(result, status_code=status_code)
+
+    # Phase 5A — Data Import Pipeline (POST routes)
+    @app.post("/api/health/import/labs")
+    async def _pre_api_import_labs(request: Request) -> JSONResponse:
+        """Import labs from a CSV file path. Body: {filepath: string}"""
+        try:
+            from .health_importer import import_labs_csv
+        except ImportError:
+            from health_importer import import_labs_csv
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        filepath = body.get("filepath", "")
+        if not filepath:
+            return JSONResponse({"error": "filepath required"}, status_code=400)
+        return _json(await asyncio.to_thread(import_labs_csv, filepath))
+
+    @app.post("/api/health/import/vitals")
+    async def _pre_api_import_vitals(request: Request) -> JSONResponse:
+        """Import vitals from a CSV file path. Body: {filepath: string}"""
+        try:
+            from .health_importer import import_vitals_csv
+        except ImportError:
+            from health_importer import import_vitals_csv
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        filepath = body.get("filepath", "")
+        if not filepath:
+            return JSONResponse({"error": "filepath required"}, status_code=400)
+        return _json(await asyncio.to_thread(import_vitals_csv, filepath))
+
+    @app.post("/api/health/import/cgm")
+    async def _pre_api_import_cgm(request: Request) -> JSONResponse:
+        """Import CGM data from Dexcom CSV export. Body: {filepath: string, source?: string}"""
+        try:
+            from .health_importer import import_cgm_csv
+        except ImportError:
+            from health_importer import import_cgm_csv
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        filepath = body.get("filepath", "")
+        source = body.get("source", "dexcom")
+        if not filepath:
+            return JSONResponse({"error": "filepath required"}, status_code=400)
+        return _json(await asyncio.to_thread(import_cgm_csv, filepath, source))
+
+    @app.post("/api/health/import/garmin")
+    async def _pre_api_import_garmin(request: Request) -> JSONResponse:
+        """Import Garmin Connect daily CSV export. Body: {filepath: string}"""
+        try:
+            from .health_importer import import_garmin_csv
+        except ImportError:
+            from health_importer import import_garmin_csv
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        filepath = body.get("filepath", "")
+        if not filepath:
+            return JSONResponse({"error": "filepath required"}, status_code=400)
+        return _json(await asyncio.to_thread(import_garmin_csv, filepath))
+
+    @app.post("/api/health/import/apple-health")
+    async def _pre_api_import_apple_health(request: Request) -> JSONResponse:
+        """Import Apple Health export.xml. Body: {filepath: string}"""
+        try:
+            from .health_importer import import_apple_health_xml
+        except ImportError:
+            from health_importer import import_apple_health_xml
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        filepath = body.get("filepath", "")
+        if not filepath:
+            return JSONResponse({"error": "filepath required"}, status_code=400)
+        return _json(await asyncio.to_thread(import_apple_health_xml, filepath))
+
+    # Phase 5D — Scenario Modeling Engine (POST routes)
+    @app.post("/api/health/scenario/run")
+    async def _pre_api_scenario_run(request: Request) -> JSONResponse:
+        """Run a custom what-if scenario. Body: {scenario_name, changes: [{change_type, description, parameters}], timeframe_months?, notes?}"""
+        import dataclasses
+        try:
+            from .scenario_engine import ScenarioInput, ScenarioChange, run_scenario_llm, save_scenario
+        except ImportError:
+            from scenario_engine import ScenarioInput, ScenarioChange, run_scenario_llm, save_scenario
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        changes = [ScenarioChange(**c) for c in body.get("changes", [])]
+        scenario = ScenarioInput(
+            scenario_name=body.get("scenario_name", "Custom scenario"),
+            changes=changes,
+            timeframe_months=body.get("timeframe_months", 12),
+            notes=body.get("notes", ""),
+        )
+        result = await run_scenario_llm(scenario)
+        await asyncio.to_thread(save_scenario, result)
+        out = dataclasses.asdict(result) if dataclasses.is_dataclass(result) else (result if isinstance(result, dict) else result.__dict__)
+        return _json(out)
+
+    @app.post("/api/health/scenario/quick")
+    async def _pre_api_scenario_quick(request: Request) -> JSONResponse:
+        """Run a pre-built quick scenario. Body: {change_type: string, timeframe_months?: int}"""
+        import dataclasses
+        try:
+            from .scenario_engine import run_quick_scenario, save_scenario
+        except ImportError:
+            from scenario_engine import run_quick_scenario, save_scenario
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        change_type = body.get("change_type", "")
+        if not change_type:
+            return JSONResponse({"error": "change_type required"}, status_code=400)
+        timeframe_months = body.get("timeframe_months", 12)
+        result = await run_quick_scenario(change_type, timeframe_months=timeframe_months)
+        await asyncio.to_thread(save_scenario, result)
+        out = dataclasses.asdict(result) if dataclasses.is_dataclass(result) else (result if isinstance(result, dict) else result.__dict__)
+        return _json(out)
+
+    @app.post("/api/health/scenario/compare")
+    async def _pre_api_scenario_compare(request: Request) -> JSONResponse:
+        """Compare multiple scenarios side by side. Body: {scenarios: [{scenario_name, changes, timeframe_months}]}"""
+        import dataclasses
+        try:
+            from .scenario_engine import ScenarioInput, ScenarioChange, compare_scenarios
+        except ImportError:
+            from scenario_engine import ScenarioInput, ScenarioChange, compare_scenarios
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        scenarios = []
+        for s in body.get("scenarios", []):
+            changes = [ScenarioChange(**c) for c in s.get("changes", [])]
+            scenarios.append(ScenarioInput(
+                scenario_name=s.get("scenario_name", "Scenario"),
+                changes=changes,
+                timeframe_months=s.get("timeframe_months", 12),
+            ))
+        result = await compare_scenarios(scenarios)
+        # compare_scenarios returns a plain dict, but normalize any nested dataclasses
+        def _normalize(obj):
+            if dataclasses.is_dataclass(obj):
+                return dataclasses.asdict(obj)
+            if isinstance(obj, list):
+                return [_normalize(i) for i in obj]
+            if isinstance(obj, dict):
+                return {k: _normalize(v) for k, v in obj.items()}
+            return obj
+        return _json(_normalize(result))
+
+    # Phase 5 — Council Refresh (POST) — ensure it also wins over catch-all
+    @app.post("/api/health/council/refresh")
+    async def _pre_api_health_council_refresh(request: Request) -> JSONResponse:
+        """Re-run the full 19-agent Longevity Council and return fresh results."""
+        try:
+            from .longevity_council import run_council
+        except ImportError:
+            from longevity_council import run_council
+        return _json(await run_council())
 
     # ------------------------------------------------------------------
     # Legacy catch-all (MUST be last — any specific POST route defined
