@@ -2903,20 +2903,123 @@ body::after {{
 }}
 .btn-ghost:hover {{ background: var(--surface-hi); color: var(--navy); }}
 
-/* ── Health Chat Console ── */
-.hchat-doc-btn {{
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 5px 12px;
-  font-size: 11px;
-  color: var(--text-2);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all .15s;
+/* ── Health Chat Console ──────────────────────────────── */
+.hchat-wrap {{
+  display: flex;
+  flex-direction: column;
+  min-height: 460px;
 }}
-.hchat-doc-btn:hover {{ background: var(--surface-hi); color: var(--text-1); }}
-.hchat-doc-btn.active {{ background: var(--hue); color: #fff; border-color: var(--hue); font-weight: 600; }}
+/* ── Doctor selector bar ── */
+.hchat-selector-bar {{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}}
+.hchat-selector-label {{
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  white-space: nowrap;
+}}
+.hchat-active-pill {{
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--hue-dim);
+  border: 1px solid var(--hue);
+  border-radius: 20px;
+  padding: 5px 12px 5px 9px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--hue);
+  transition: background .15s;
+  user-select: none;
+}}
+.hchat-active-pill:hover {{ background: color-mix(in srgb, var(--hue) 20%, transparent); }}
+.hchat-active-pill-icon {{ font-size: 15px; line-height: 1; }}
+.hchat-active-pill-name {{ white-space: nowrap; }}
+.hchat-active-pill-arrow {{
+  font-size: 9px;
+  opacity: .7;
+  transition: transform .2s;
+  margin-left: 2px;
+}}
+.hchat-active-pill.open .hchat-active-pill-arrow {{ transform: rotate(180deg); }}
+.hchat-active-pill-subtitle {{
+  font-size: 9px;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  white-space: nowrap;
+}}
+/* ── Dropdown panel ── */
+.hchat-dropdown {{
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 14px;
+  z-index: 9999;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.35);
+  padding: 10px;
+  width: 380px;
+  max-width: calc(100vw - 28px);
+  max-height: 380px;
+  overflow-y: auto;
+}}
+.hchat-dropdown.open {{ display: block; }}
+.hchat-dropdown::-webkit-scrollbar {{ width: 4px; }}
+.hchat-dropdown::-webkit-scrollbar-thumb {{ background: var(--border); border-radius: 2px; }}
+.hchat-dropdown-label {{
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 2px 4px 8px;
+}}
+.hchat-dropdown-grid {{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}}
+.hchat-doc-btn {{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  width: 100%;
+}}
+.hchat-doc-btn:hover {{ background: var(--surface-hi); border-color: var(--border); }}
+.hchat-doc-btn.active {{ background: var(--hue-dim); border-color: var(--hue); }}
+.hchat-doc-icon {{ font-size: 17px; flex-shrink: 0; line-height: 1; }}
+.hchat-doc-info {{ display: flex; flex-direction: column; gap: 1px; overflow: hidden; }}
+.hchat-doc-name {{
+  font-size: 11px; font-weight: 600; color: var(--text-1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}}
+.hchat-doc-btn.active .hchat-doc-name {{ color: var(--hue); }}
+.hchat-doc-domain {{
+  font-size: 9px; color: var(--text-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .04em;
+}}
 .hchat-msg-user {{
   align-self: flex-end;
   background: var(--hue);
@@ -2962,6 +3065,20 @@ body::after {{
 .hchat-msg-body li {{ margin-bottom: 3px; }}
 .hchat-msg-body strong {{ font-weight: 700; color: var(--text-1); }}
 .hchat-msg-body em {{ font-style: italic; }}
+
+/* ── Health metric sparklines ───────────────────────────── */
+.hm-sparkline {{
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  line-height: 0;
+}}
+.hm-sparkline svg {{
+  display: block;
+  width: 100%;
+  height: 42px;
+}}
+
 .hchat-thinking {{
   align-self: flex-start;
   padding: 10px 14px;
@@ -4445,6 +4562,7 @@ body::after {{
             <span style="font-size:14px;color:var(--amber);margin-left:auto;">↑</span>
           </div>
           <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Target &lt;7.0 · Apr 2026</div>
+          <div id="spark-a1c" class="hm-sparkline"></div>
         </div>
         <!-- LDL -->
         <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
@@ -4455,6 +4573,7 @@ body::after {{
             <span style="font-size:14px;color:var(--red,#ef4444);margin-left:auto;">↑</span>
           </div>
           <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Target &lt;100 · Apr 2026</div>
+          <div id="spark-ldl" class="hm-sparkline"></div>
         </div>
         <!-- BP (live) -->
         <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
@@ -4465,6 +4584,7 @@ body::after {{
             <span id="hm-bp-arrow" style="font-size:14px;margin-left:auto;">→</span>
           </div>
           <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Target &lt;130/80</div>
+          <div id="spark-bp" class="hm-sparkline"></div>
         </div>
         <!-- eGFR -->
         <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
@@ -4475,6 +4595,7 @@ body::after {{
             <span style="font-size:14px;color:var(--amber);margin-left:auto;">↓</span>
           </div>
           <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Stage 2 CKD · Apr 2026</div>
+          <div id="spark-egfr" class="hm-sparkline"></div>
         </div>
         <!-- HRV (live) -->
         <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
@@ -4485,6 +4606,7 @@ body::after {{
             <span style="font-size:14px;color:var(--text-3);margin-left:auto;">→</span>
           </div>
           <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Apple Watch · 7-day avg</div>
+          <div id="spark-hrv" class="hm-sparkline"></div>
         </div>
         <!-- Steps (live) -->
         <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
@@ -4494,6 +4616,7 @@ body::after {{
             <span style="font-size:10px;color:var(--text-3);">today</span>
           </div>
           <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Target 8,000 · Apple Watch</div>
+          <div id="spark-steps" class="hm-sparkline"></div>
         </div>
         <!-- Sleep (live) -->
         <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
@@ -4503,6 +4626,7 @@ body::after {{
             <span style="font-size:10px;color:var(--text-3);">hrs</span>
           </div>
           <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Target 8.0 · Apple Watch</div>
+          <div id="spark-sleep" class="hm-sparkline"></div>
         </div>
         <!-- Weight (live) -->
         <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
@@ -4513,6 +4637,7 @@ body::after {{
             <span style="font-size:14px;color:var(--green);margin-left:auto;">↓</span>
           </div>
           <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Goal: &lt;200 · Scale</div>
+          <div id="spark-weight" class="hm-sparkline"></div>
         </div>
       </div>
 
@@ -4780,31 +4905,49 @@ body::after {{
           Ask Your Medical Team
           <span style="color:var(--text-3);font-weight:400;font-size:9px;">Helen Cho · Longevity Council · Direct consultation</span>
         </div>
-        <div class="card" style="border:1px solid var(--hue);border-radius:12px;overflow:hidden;">
-          <!-- Doctor selector -->
-          <div id="hchat-doctor-bar" style="display:flex;gap:6px;padding:10px 16px;background:var(--surface-2);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;">
-            <div style="font-size:9px;color:var(--text-3);white-space:nowrap;align-self:center;margin-right:4px;">CONSULT WITH →</div>
-            <button class="hchat-doc-btn active" data-doctor="helen-cho" onclick="hchatSelectDoctor(this,'helen-cho')" style="flex-shrink:0;">
-              🧬 Helen Cho
-            </button>
-          </div>
-          <!-- Chat messages -->
-          <div id="hchat-messages" style="height:320px;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;">
-            <div style="text-align:center;color:var(--text-3);font-size:11px;padding:40px 20px;">
-              <div style="font-size:24px;margin-bottom:8px;">🧬</div>
-              <div style="font-weight:600;color:var(--text-2);margin-bottom:4px;">Helen Cho · Medical Intelligence</div>
-              <div>Ask me anything about your health, medications, labs, or longevity strategy.</div>
+        <div class="card" style="border:1px solid var(--hue);border-radius:12px;overflow:hidden;padding:0;">
+          <div class="hchat-wrap">
+
+            <!-- ── Doctor selector bar ── -->
+            <div class="hchat-selector-bar">
+              <span class="hchat-selector-label">CONSULT WITH</span>
+              <!-- Active doctor pill / dropdown trigger -->
+              <div class="hchat-active-pill" id="hchat-active-pill" onclick="hchatToggleDropdown(event)">
+                <span class="hchat-active-pill-icon" id="hchat-active-icon">🧬</span>
+                <span class="hchat-active-pill-name" id="hchat-active-name">Helen Cho</span>
+                <span class="hchat-active-pill-arrow">▾</span>
+              </div>
+              <span class="hchat-active-pill-subtitle" id="hchat-active-title">Chief Medical Intelligence Officer</span>
+
+              <!-- Floating dropdown -->
+              <div class="hchat-dropdown" id="hchat-dropdown">
+                <div class="hchat-dropdown-label">Your Medical Team</div>
+                <div class="hchat-dropdown-grid" id="hchat-dropdown-grid">
+                  <!-- Injected by JS -->
+                </div>
+              </div>
             </div>
-          </div>
-          <!-- Input bar -->
-          <div style="display:flex;gap:10px;padding:12px 16px;background:var(--surface-2);border-top:1px solid var(--border);">
-            <input id="hchat-input" type="text" placeholder="Ask Helen, Dr. House, Morpheus… or any council member"
-              style="flex:1;background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text-1);outline:none;font-family:var(--font-sans);"
-              onkeydown="if(event.key==='Enter'&&!event.shiftKey){{event.preventDefault();hchatSend();}}" />
-            <button onclick="hchatSend()" id="hchat-send-btn"
-              style="background:var(--hue);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:opacity .2s;">
-              Send ↑
-            </button>
+
+            <!-- ── Messages ── -->
+            <div id="hchat-messages" style="flex:1;min-height:320px;max-height:420px;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;">
+              <div style="text-align:center;color:var(--text-3);font-size:11px;padding:30px 20px;">
+                <div style="font-size:24px;margin-bottom:8px;">🧬</div>
+                <div style="font-weight:600;color:var(--text-2);margin-bottom:4px;">Helen Cho · Medical Intelligence</div>
+                <div>Ask me anything about your health, medications, labs, or longevity strategy.</div>
+              </div>
+            </div>
+
+            <!-- ── Input bar ── -->
+            <div style="display:flex;gap:10px;padding:10px 14px;background:var(--surface-2);border-top:1px solid var(--border);">
+              <input id="hchat-input" type="text" placeholder="Ask Helen Cho…"
+                style="flex:1;background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--text-1);outline:none;font-family:var(--font-sans);"
+                onkeydown="if(event.key==='Enter'&&!event.shiftKey){{event.preventDefault();hchatSend();}}" />
+              <button onclick="hchatSend()" id="hchat-send-btn"
+                style="background:var(--hue);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:opacity .2s;">
+                Send ↑
+              </button>
+            </div>
+
           </div>
         </div>
       </div>
@@ -5111,6 +5254,11 @@ function init() {{
   if (INITIAL_PACKET && typeof INITIAL_PACKET === 'object') {{
     try {{ handlePacket(INITIAL_PACKET); }} catch(e) {{ _showDbg('handlePacket', e); }}
   }}
+
+  // Close dropdowns on outside click
+  document.addEventListener('click', () => {{
+    hchatCloseDropdown();
+  }});
 }}
 
 /* ═══════════════════════════════════════════════════════════════
@@ -7722,7 +7870,13 @@ function updateOverviewHomeCards(d) {{
   setEl('calEventCount', todayCount !== '—' ? todayCount + ' today' : '—');
   const upcoming = cal.upcoming_3_days;
   const next = upcoming && upcoming.length > 0 ? upcoming[0] : null;
-  setEl('overviewNextEvent', next ? escHtml(next.title) : 'No upcoming events');
+  if (next) {{
+    const nextDate = next.start_time ? new Date(next.start_time).toLocaleDateString([], {{weekday:'short',month:'short',day:'numeric'}}) : '';
+    const nextEl = document.getElementById('overviewNextEvent');
+    if (nextEl) nextEl.innerHTML = '<b>' + escHtml(next.title) + '</b>' + (nextDate ? '<br><span style="opacity:0.7;font-size:11px;">' + escHtml(nextDate) + '</span>' : '');
+  }} else {{
+    setEl('overviewNextEvent', 'No upcoming events');
+  }}
   if (d.projects) {{
     setEl('overviewActiveProjects', d.projects.active != null ? d.projects.active : '—');
   }}
@@ -8237,15 +8391,69 @@ function renderBriefing(data) {{
   if (!data) return;
   const dateStr = data.date || new Date().toLocaleDateString([], {{weekday:'short', month:'short', day:'numeric'}});
   if (dateEl) dateEl.textContent = dateStr;
+  if (!textEl) return;
+
+  // Structured sections (new format)
+  if (data.sections && data.sections.length) {{
+    textEl.innerHTML = data.sections.map(renderBriefSection).join('');
+    return;
+  }}
+  // Fallback: legacy plain-text briefing
   const raw = data.briefing || data.content || data.text || '';
   const text = typeof raw === 'string' ? raw : (raw[0] || '');
-  if (textEl) {{
-    if (text) {{
-      textEl.innerHTML = briefingToHtml(text);
-    }} else {{
-      textEl.innerHTML = '<span style="color:var(--text-3);font-style:italic;">No briefing available yet.</span>';
-    }}
+  textEl.innerHTML = text ? briefingToHtml(text) : '<span style="color:var(--text-3);font-style:italic;">No briefing available.</span>';
+}}
+
+function renderBriefSection(s) {{
+  const icon  = s.icon  ? escHtml(s.icon)  + ' ' : '';
+  const title = s.title ? escHtml(s.title) : '';
+  const hdr   = `<div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--blue);text-transform:uppercase;margin:12px 0 5px;opacity:.9;">${{icon}}${{title}}</div>`;
+
+  // Calendar — event list
+  if (s.id === 'calendar' && s.items && s.items.length) {{
+    const rows = s.items.map(ev => {{
+      const dayEl  = ev.day  ? `<span style="color:var(--text-3);font-size:10px;min-width:72px;flex-shrink:0;">${{escHtml(ev.day)}}</span>` : '';
+      const timeEl = ev.time ? `<span style="color:var(--text-3);font-size:10px;margin-left:4px;">${{escHtml(ev.time)}}</span>` : '';
+      const calEl  = ev.calendar ? `<span style="opacity:.4;font-size:10px;margin-left:auto;white-space:nowrap;">${{escHtml(ev.calendar)}}</span>` : '';
+      return `<div style="display:flex;align-items:baseline;gap:2px;margin-bottom:5px;font-size:12px;color:var(--text-2);">${{dayEl}}<span style="flex:1;">${{escHtml(ev.title)}}</span>${{timeEl}}${{calEl}}</div>`;
+    }}).join('');
+    return hdr + rows;
   }}
+
+  // Tasks — stat pills
+  if (s.id === 'tasks' && s.stats) {{
+    const parts = [];
+    if (s.stats.overdue)   parts.push(`<span style="color:var(--red);font-weight:600;">${{s.stats.overdue}} overdue</span>`);
+    if (s.stats.due_today) parts.push(`<span style="color:var(--amber);font-weight:600;">${{s.stats.due_today}} due today</span>`);
+    if (s.stats.due_week)  parts.push(`<span style="color:var(--text-2);">${{s.stats.due_week}} this week</span>`);
+    const dot = `<span style="color:var(--border);margin:0 5px;">·</span>`;
+    return hdr + `<div style="font-size:12px;line-height:1.8;">${{parts.join(dot)}}</div>`;
+  }}
+
+  // Email
+  if (s.id === 'email' && s.stats) {{
+    return hdr + `<div style="font-size:12px;color:var(--text-2);display:flex;align-items:center;gap:8px;">
+      <b style="color:var(--text-1);">${{s.stats.total}}</b>&nbsp;unread
+      <span style="color:var(--text-3);">Gmail ${{s.stats.gmail}} · Outlook ${{s.stats.outlook}}</span>
+      <button class="btn-ghost" style="font-size:10px;padding:2px 8px;" onclick="switchView('email')">Open →</button>
+    </div>`;
+  }}
+
+  // Approvals
+  if (s.id === 'approvals' && s.count) {{
+    return hdr + `<div style="font-size:12px;display:flex;align-items:center;gap:8px;">
+      <span style="color:var(--amber);font-weight:600;">${{s.count}} item${{s.count !== 1 ? 's' : ''}} waiting</span>
+      <button class="btn-ghost" style="font-size:10px;padding:2px 8px;" onclick="switchView('approvals')">Review →</button>
+    </div>`;
+  }}
+
+  // Situation / Health — prose
+  if (s.text) {{
+    const clean = escHtml(s.text).replace(/\\*\\*([^*]+)\\*\\*/g,'<b>$1</b>').replace(/\\*([^*]+)\\*/g,'<i>$1</i>');
+    return hdr + `<div style="font-size:12px;color:var(--text-2);line-height:1.7;">${{clean}}</div>`;
+  }}
+
+  return '';
 }}
 
 function renderPublishing(data) {{
@@ -9859,7 +10067,7 @@ function _voiceStartWake() {{
   try {{ r.start(); }} catch(e) {{ _vWakeOn = false; }}
 }}
 
-function _voiceActivate(fromWake) {{
+function _voiceActivate(fromWake, isSecondChance) {{
   if (_vListening) return;
   if (_vsr) {{ try {{ _vsr.stop(); }} catch(e) {{}} }}
   _vWakeOn    = false;
@@ -9867,7 +10075,7 @@ function _voiceActivate(fromWake) {{
 
   const btn = document.getElementById('cmd-mic');
   if (btn) {{ btn.style.color = '#ef4444'; btn.style.borderColor = '#ef4444'; btn.style.boxShadow = '0 0 0 3px rgba(239,68,68,0.25)'; }}
-  if (fromWake) showToast('Hey JARVIS — listening…', 'info');
+  if (fromWake && !isSecondChance) showToast('Hey JARVIS — listening…', 'info');
 
   const SR  = window.SpeechRecognition || window.webkitSpeechRecognition;
   const r   = new SR();
@@ -9889,9 +10097,19 @@ function _voiceActivate(fromWake) {{
   r.onend = () => {{
     _vListening = false;
     if (btn) {{ btn.style.color = ''; btn.style.borderColor = ''; btn.style.boxShadow = ''; }}
-    const inp = document.getElementById('cmd-input');
-    if (inp && inp.value.trim()) setTimeout(sendCmd, 150);
-    setTimeout(_voiceStartWake, 400);
+    const inp   = document.getElementById('cmd-input');
+    const spoke = inp && inp.value.trim();
+    if (spoke) {{
+      // User said something — send it
+      setTimeout(sendCmd, 150);
+      setTimeout(_voiceStartWake, 400);
+    }} else if (fromWake && !isSecondChance) {{
+      // Wake word fired but nothing was said — greet & give one more chance
+      _voiceGreetAndListen();
+    }} else {{
+      // Second silence or manual mic — go idle quietly
+      setTimeout(_voiceStartWake, 400);
+    }}
   }};
 
   r.onerror = () => {{
@@ -9901,6 +10119,35 @@ function _voiceActivate(fromWake) {{
   }};
 
   try {{ r.start(); }} catch(e) {{ _vListening = false; setTimeout(_voiceStartWake, 600); }}
+}}
+
+/* Pick a time-aware greeting and speak it, then re-listen once */
+async function _voiceGreetAndListen() {{
+  const h = new Date().getHours();
+  let greetings;
+  if (h < 12) {{
+    greetings = [
+      "Good morning. What can I do for you?",
+      "Morning. Ready when you are.",
+      "Good morning, sir. Go ahead.",
+    ];
+  }} else if (h < 17) {{
+    greetings = [
+      "Good afternoon. How can I help?",
+      "At your service. What do you need?",
+      "Standing by. Go ahead.",
+    ];
+  }} else {{
+    greetings = [
+      "Good evening. How can I assist?",
+      "Evening. What's on your mind?",
+      "At your service. Go ahead.",
+    ];
+  }}
+  const line = greetings[Math.floor(Math.random() * greetings.length)];
+  await voiceSpeak(line);
+  // Give a short pause after audio ends, then open mic for second chance
+  setTimeout(() => _voiceActivate(true, true), 400);
 }}
 
 function toggleMic() {{
@@ -9923,19 +10170,42 @@ function voiceToggleTts() {{
   showToast(_vTtsOn ? 'JARVIS will speak responses' : 'Spoken responses muted', 'info');
 }}
 
-function voiceSpeak(text) {{
-  if (!_vTtsOn || !('speechSynthesis' in window) || !text) return;
-  speechSynthesis.cancel();
-  const clean = text.replace(/[*_`#~]/g, '').replace(/\\n+/g, ' ').trim().slice(0, 600);
+let _vAudio = null;
+async function voiceSpeak(text) {{
+  if (!_vTtsOn || !text) return;
+  const clean = text.replace(/[*_`#~]/g, '').replace(/\\n+/g, ' ').trim().slice(0, 800);
   if (!clean) return;
-  const utt   = new SpeechSynthesisUtterance(clean);
-  utt.rate    = 1.05;
-  utt.pitch   = 1.0;
-  utt.volume  = 1.0;
-  const voices = speechSynthesis.getVoices();
-  const pick   = voices.find(v => /Samantha|Alex|Google US English|en-US/i.test(v.name));
-  if (pick) utt.voice = pick;
-  speechSynthesis.speak(utt);
+  // Stop any currently playing audio
+  if (_vAudio) {{ try {{ _vAudio.pause(); _vAudio = null; }} catch(_) {{}} }}
+  // Returns a Promise that resolves when audio FINISHES (callers can await full playback)
+  return new Promise(async (resolve) => {{
+    try {{
+      const res = await fetch('/api/tts', {{
+        method: 'POST',
+        headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify({{text: clean}})
+      }});
+      if (!res.ok) throw new Error('tts ' + res.status);
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      _vAudio = new Audio(url);
+      _vAudio.onended = () => {{ URL.revokeObjectURL(url); _vAudio = null; resolve(); }};
+      _vAudio.onerror = () => {{ _vAudio = null; resolve(); }};
+      await _vAudio.play();
+    }} catch(e) {{
+      console.warn('ElevenLabs TTS failed, falling back:', e);
+      if ('speechSynthesis' in window) {{
+        speechSynthesis.cancel();
+        const utt = new SpeechSynthesisUtterance(clean);
+        utt.rate = 1.0; utt.pitch = 1.0; utt.volume = 1.0;
+        utt.onend = () => resolve();
+        utt.onerror = () => resolve();
+        speechSynthesis.speak(utt);
+      }} else {{
+        resolve();
+      }}
+    }}
+  }});
 }}
 
 /* ═══════════════════════════════════════════════════════════════
@@ -10969,34 +11239,67 @@ async function hchatInit() {{
 }}
 
 function _hchatRenderDoctorBar() {{
-  const bar = document.getElementById('hchat-doctor-bar');
-  if (!bar || !_hchatDoctors.length) return;
-  const label = '<div style="font-size:9px;color:var(--text-3);white-space:nowrap;align-self:center;margin-right:4px;">CONSULT WITH →</div>';
-  const btns = _hchatDoctors.map(d => {{
+  const grid = document.getElementById('hchat-dropdown-grid');
+  if (!grid || !_hchatDoctors.length) return;
+  grid.innerHTML = _hchatDoctors.map(d => {{
     const active = d.agent_id === _hchatDoctor ? ' active' : '';
-    return `<button class="hchat-doc-btn${{active}}" data-doctor="${{d.agent_id}}" onclick="hchatSelectDoctor(this,'${{d.agent_id}}')" style="flex-shrink:0;" title="${{d.title}}">${{d.icon||'⚕️'}} ${{d.name}}</button>`;
+    const domain = (d.title || '').split('·')[0].trim() || d.specialty || '';
+    return `<button class="hchat-doc-btn${{active}}" data-doctor="${{d.agent_id}}"
+      onclick="hchatSelectDoctor('${{d.agent_id}}')" title="${{escHtml(d.title||'')}}">
+      <span class="hchat-doc-icon">${{d.icon||'⚕️'}}</span>
+      <span class="hchat-doc-info">
+        <span class="hchat-doc-name">${{escHtml(d.name)}}</span>
+        <span class="hchat-doc-domain">${{escHtml(domain.slice(0,22))}}</span>
+      </span>
+    </button>`;
   }}).join('');
-  bar.innerHTML = label + btns;
 }}
 
-function hchatSelectDoctor(btn, doctorId) {{
+function hchatToggleDropdown(e) {{
+  e.stopPropagation();
+  const pill = document.getElementById('hchat-active-pill');
+  const dd   = document.getElementById('hchat-dropdown');
+  if (!pill || !dd) return;
+  const isOpen = dd.classList.contains('open');
+  dd.classList.toggle('open', !isOpen);
+  pill.classList.toggle('open', !isOpen);
+}}
+
+function hchatCloseDropdown() {{
+  const pill = document.getElementById('hchat-active-pill');
+  const dd   = document.getElementById('hchat-dropdown');
+  if (pill) pill.classList.remove('open');
+  if (dd) dd.classList.remove('open');
+}}
+
+function hchatSelectDoctor(doctorId) {{
   _hchatDoctor = doctorId;
-  document.querySelectorAll('.hchat-doc-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  // Update placeholder
+  hchatCloseDropdown();
+  // Highlight active button
+  document.querySelectorAll('#hchat-dropdown-grid .hchat-doc-btn').forEach(b => {{
+    b.classList.toggle('active', b.dataset.doctor === doctorId);
+  }});
+  // Update pill
   const doc = _hchatDoctors.find(d => d.agent_id === doctorId);
-  const name = doc ? doc.name : 'your doctor';
+  const name  = doc ? doc.name  : 'Helen Cho';
+  const icon  = doc ? (doc.icon || '⚕️') : '🧬';
+  const title = doc ? doc.title : 'Chief Medical Intelligence Officer';
+  const nameEl  = document.getElementById('hchat-active-name');
+  const iconEl  = document.getElementById('hchat-active-icon');
+  const titleEl = document.getElementById('hchat-active-title');
+  if (nameEl)  nameEl.textContent  = name;
+  if (iconEl)  iconEl.textContent  = icon;
+  if (titleEl) titleEl.textContent = title;
+  // Update placeholder
   const inp = document.getElementById('hchat-input');
   if (inp) inp.placeholder = `Ask ${{name}}…`;
-  // Show doctor intro in chat
+  // Show doctor intro in chat if history is empty
   const msgs = document.getElementById('hchat-messages');
   if (msgs && _hchatHistory.length === 0) {{
-    const icon = doc ? (doc.icon || '⚕️') : '⚕️';
-    const title = doc ? doc.title : '';
     msgs.innerHTML = `<div style="text-align:center;color:var(--text-3);font-size:11px;padding:32px 20px;">
       <div style="font-size:24px;margin-bottom:8px;">${{icon}}</div>
-      <div style="font-weight:600;color:var(--text-2);margin-bottom:4px;">${{name}}</div>
-      <div style="font-size:10px;margin-bottom:8px;">${{title}}</div>
+      <div style="font-weight:600;color:var(--text-2);margin-bottom:4px;">${{escHtml(name)}}</div>
+      <div style="font-size:10px;margin-bottom:8px;">${{escHtml(title)}}</div>
       <div>Ask me anything about your health, labs, medications, or longevity.</div>
     </div>`;
   }}
@@ -11133,17 +11436,65 @@ function _buildHealthSparkline(points, color) {{
   </svg>`;
 }}
 
-function _renderHealthSparklines() {{
+async function _renderHealthSparklines() {{
+  // ── Static lab results (known values by date) ──
   const LAB_SPARKS = {{
     'spark-a1c':   {{ points: [{{y:10.2,x:"'21"}},{{y:7.1,x:"mid"}},{{y:6.3,x:"'23"}},{{y:5.9,x:"'24"}},{{y:7.3,x:"'26"}}], color: '#d29922' }},
     'spark-ldl':   {{ points: [{{y:99,x:"'21"}},{{y:138,x:"'24"}},{{y:146,x:"'25"}},{{y:156,x:"'26"}}], color: '#ef4444' }},
     'spark-egfr':  {{ points: [{{y:98,x:"'20"}},{{y:91,x:"'22"}},{{y:87,x:"'26"}}], color: '#d29922' }},
     'spark-kplus': {{ points: [{{y:5.4,x:"'25"}},{{y:4.5,x:"'26"}}], color: '#22c55e' }},
   }};
-  Object.entries(LAB_SPARKS).forEach(([id, d]) => {{
+  Object.entries(LAB_SPARKS).forEach(([id, cfg]) => {{
     const el = document.getElementById(id);
-    if (el) el.innerHTML = _buildHealthSparkline(d.points, d.color);
+    if (el) el.innerHTML = _buildHealthSparkline(cfg.points, cfg.color);
   }});
+
+  // ── Live metrics from DB history (last 30 days) ──
+  try {{
+    const res = await fetch('/api/health/history?days=30').catch(() => null);
+    if (!res || !res.ok) return;
+    const {{history}} = await res.json();
+    if (!history || !history.length) return;
+
+    // Sort ascending by date
+    const rows = [...history].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+    // Helper: extract daily series for a column
+    const series = (col) => rows
+      .map((r, i) => ({{y: parseFloat(r[col]), x: r.date ? r.date.slice(5) : String(i)}}))
+      .filter(p => !isNaN(p.y) && p.y > 0);
+
+    const LIVE_SPARKS = {{
+      'spark-hrv':    {{ s: series('hrv'),         color: '#3b82f6' }},
+      'spark-steps':  {{ s: series('steps'),        color: '#3b82f6' }},
+      'spark-sleep':  {{ s: series('sleep_hours'),  color: '#3b82f6' }},
+      'spark-weight': {{ s: series('weight'),       color: '#22c55e' }},
+    }};
+
+    Object.entries(LIVE_SPARKS).forEach(([id, cfg]) => {{
+      if (cfg.s.length < 2) return;
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = _buildHealthSparkline(cfg.s, cfg.color);
+    }});
+
+    // BP sparkline — use systolic from bp_readings via /api/health/bp
+    try {{
+      const bpRes = await fetch('/api/health/bp').catch(() => null);
+      if (bpRes && bpRes.ok) {{
+        const bpData = await bpRes.json();
+        const bpRows = (bpData.readings || []).slice(-20);
+        if (bpRows.length >= 2) {{
+          const bpPts = bpRows.map((r, i) => ({{
+            y: r.systolic || 0,
+            x: r.reading_date ? r.reading_date.slice(5, 10) : String(i),
+          }})).filter(p => p.y > 0);
+          const el = document.getElementById('spark-bp');
+          if (el && bpPts.length >= 2)
+            el.innerHTML = _buildHealthSparkline(bpPts, '#22c55e');
+        }}
+      }}
+    }} catch(e) {{}}
+  }} catch(e) {{}}
 }}
 
 // ─── Health Digital Twin ────────────────────────────────────────────────────
