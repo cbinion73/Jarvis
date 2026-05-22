@@ -4361,6 +4361,56 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         return _json({"ok": ok, "message": "Consent revoked" if ok else "Nothing to revoke"})
 
     # ------------------------------------------------------------------
+    # Daily Stewardship Engine
+    # ------------------------------------------------------------------
+
+    @app.post("/api/health/stewardship/morning")
+    async def api_stewardship_morning(request: Request) -> JSONResponse:
+        """Run morning stewardship check-in. Returns day card with day type + Three Moves."""
+        from .daily_stewardship import run_morning_checkin
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        context = str(body.get("context", "")).strip()
+        day_card = await run_morning_checkin(context=context)
+        return _json(day_card)
+
+    @app.get("/api/health/stewardship/today")
+    async def api_stewardship_today() -> JSONResponse:
+        """Return cached day card for today. 404 if no check-in has been run yet."""
+        from .daily_stewardship import get_cached_day_card
+        card = get_cached_day_card()
+        if card is None:
+            return JSONResponse(
+                {"error": "No day card for today. Run POST /api/health/stewardship/morning first."},
+                status_code=404,
+            )
+        return _json(card)
+
+    @app.post("/api/health/stewardship/evening")
+    async def api_stewardship_evening(request: Request) -> JSONResponse:
+        """Run evening review. Body: {wins, struggles, energy (1-10)}."""
+        from .daily_stewardship import run_evening_review
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        review = await run_evening_review(
+            wins=str(body.get("wins", "")).strip(),
+            struggles=str(body.get("struggles", "")).strip(),
+            energy=int(body["energy"]) if body.get("energy") is not None else None,
+        )
+        return _json(review)
+
+    @app.get("/api/health/stewardship/history")
+    async def api_stewardship_history(days: int = 7) -> JSONResponse:
+        """Return last N days of morning check-ins from the decision log."""
+        from .daily_stewardship import get_stewardship_history
+        history = await get_stewardship_history(days=days)
+        return _json({"days": days, "count": len(history), "history": history})
+
+    # ------------------------------------------------------------------
     # LLM Gateway — must be registered BEFORE the legacy catch-all below
     # ------------------------------------------------------------------
 
