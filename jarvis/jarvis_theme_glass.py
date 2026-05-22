@@ -2902,6 +2902,77 @@ body::after {{
   font-family: var(--font-sans);
 }}
 .btn-ghost:hover {{ background: var(--surface-hi); color: var(--navy); }}
+
+/* ── Health Chat Console ── */
+.hchat-doc-btn {{
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 11px;
+  color: var(--text-2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s;
+}}
+.hchat-doc-btn:hover {{ background: var(--surface-hi); color: var(--text-1); }}
+.hchat-doc-btn.active {{ background: var(--hue); color: #fff; border-color: var(--hue); font-weight: 600; }}
+.hchat-msg-user {{
+  align-self: flex-end;
+  background: var(--hue);
+  color: #fff;
+  border-radius: 12px 12px 2px 12px;
+  padding: 10px 14px;
+  font-size: 12px;
+  max-width: 75%;
+  line-height: 1.5;
+}}
+.hchat-msg-doctor {{
+  align-self: flex-start;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 2px 12px 12px 12px;
+  padding: 12px 14px;
+  font-size: 12px;
+  max-width: 85%;
+  line-height: 1.6;
+}}
+.hchat-msg-doctor-name {{
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--hue);
+  margin-bottom: 6px;
+}}
+.hchat-msg-body h3,
+.hchat-msg-body h4 {{
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-1);
+  margin: 10px 0 4px;
+}}
+.hchat-msg-body h3 {{ font-size: 13px; }}
+.hchat-msg-body p {{ margin: 0 0 6px; }}
+.hchat-msg-body ul,
+.hchat-msg-body ol {{
+  margin: 4px 0 8px 16px;
+  padding: 0;
+}}
+.hchat-msg-body li {{ margin-bottom: 3px; }}
+.hchat-msg-body strong {{ font-weight: 700; color: var(--text-1); }}
+.hchat-msg-body em {{ font-style: italic; }}
+.hchat-thinking {{
+  align-self: flex-start;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 2px 12px 12px 12px;
+  font-size: 11px;
+  color: var(--text-3);
+  font-style: italic;
+}}
+
 .btn-primary {{
   padding: 6px 14px;
   border-radius: 8px;
@@ -4363,6 +4434,88 @@ body::after {{
         </div>
       </div>
 
+      <!-- ── KEY METRICS STRIP ──────────────────────────────────────────────── -->
+      <div id="health-metrics-strip" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+        <!-- A1c -->
+        <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px;">A1c</div>
+          <div style="display:flex;align-items:baseline;gap:6px;">
+            <span id="hm-a1c" style="font-size:28px;font-weight:700;font-family:var(--font-mono);color:var(--amber);">7.3</span>
+            <span style="font-size:10px;color:var(--text-3);">%</span>
+            <span style="font-size:14px;color:var(--amber);margin-left:auto;">↑</span>
+          </div>
+          <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Target &lt;7.0 · Apr 2026</div>
+        </div>
+        <!-- LDL -->
+        <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px;">LDL</div>
+          <div style="display:flex;align-items:baseline;gap:6px;">
+            <span id="hm-ldl" style="font-size:28px;font-weight:700;font-family:var(--font-mono);color:var(--red,#ef4444);">156</span>
+            <span style="font-size:10px;color:var(--text-3);">mg/dL</span>
+            <span style="font-size:14px;color:var(--red,#ef4444);margin-left:auto;">↑</span>
+          </div>
+          <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Target &lt;100 · Apr 2026</div>
+        </div>
+        <!-- BP (live) -->
+        <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px;">Blood Pressure</div>
+          <div style="display:flex;align-items:baseline;gap:6px;">
+            <span id="hm-bp" style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:var(--green);">—/—</span>
+            <span style="font-size:10px;color:var(--text-3);">mmHg</span>
+            <span id="hm-bp-arrow" style="font-size:14px;margin-left:auto;">→</span>
+          </div>
+          <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Target &lt;130/80</div>
+        </div>
+        <!-- eGFR -->
+        <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px;">eGFR</div>
+          <div style="display:flex;align-items:baseline;gap:6px;">
+            <span id="hm-egfr" style="font-size:28px;font-weight:700;font-family:var(--font-mono);color:var(--amber);">87</span>
+            <span style="font-size:10px;color:var(--text-3);">mL/min</span>
+            <span style="font-size:14px;color:var(--amber);margin-left:auto;">↓</span>
+          </div>
+          <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Stage 2 CKD · Apr 2026</div>
+        </div>
+        <!-- HRV (live) -->
+        <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px;">HRV</div>
+          <div style="display:flex;align-items:baseline;gap:6px;">
+            <span id="hm-hrv" style="font-size:28px;font-weight:700;font-family:var(--font-mono);color:var(--blue);">—</span>
+            <span style="font-size:10px;color:var(--text-3);">ms</span>
+            <span style="font-size:14px;color:var(--text-3);margin-left:auto;">→</span>
+          </div>
+          <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Apple Watch · 7-day avg</div>
+        </div>
+        <!-- Steps (live) -->
+        <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px;">Steps</div>
+          <div style="display:flex;align-items:baseline;gap:6px;">
+            <span id="hm-steps" style="font-size:28px;font-weight:700;font-family:var(--font-mono);color:var(--blue);">—</span>
+            <span style="font-size:10px;color:var(--text-3);">today</span>
+          </div>
+          <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Target 8,000 · Apple Watch</div>
+        </div>
+        <!-- Sleep (live) -->
+        <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px;">Sleep</div>
+          <div style="display:flex;align-items:baseline;gap:6px;">
+            <span id="hm-sleep" style="font-size:28px;font-weight:700;font-family:var(--font-mono);color:var(--blue);">—</span>
+            <span style="font-size:10px;color:var(--text-3);">hrs</span>
+          </div>
+          <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Target 8.0 · Apple Watch</div>
+        </div>
+        <!-- Weight (live) -->
+        <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px;">Weight</div>
+          <div style="display:flex;align-items:baseline;gap:6px;">
+            <span id="hm-weight" style="font-size:28px;font-weight:700;font-family:var(--font-mono);color:var(--blue);">—</span>
+            <span style="font-size:10px;color:var(--text-3);">lbs</span>
+            <span style="font-size:14px;color:var(--green);margin-left:auto;">↓</span>
+          </div>
+          <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Goal: &lt;200 · Scale</div>
+        </div>
+      </div>
+
       <!-- ── PRIORITY ACTION BOARD ─────────────────────────────────────────── -->
       <div>
         <div class="section-label" style="margin-bottom:8px;">Priority Actions <span id="helen-action-count" style="color:var(--text-3);font-weight:400;"></span></div>
@@ -4471,12 +4624,81 @@ body::after {{
 
       </div><!-- end 3-col grid -->
 
+      <!-- ── LAB SPARKLINES ─────────────────────────────────────────────────── -->
+      <div style="margin-bottom:4px;">
+        <div class="section-label" style="margin-bottom:8px;">Lab Trends <span style="color:var(--text-3);font-weight:400;font-size:9px;">sparkline — full history</span></div>
+        <div class="card">
+          <div class="card-inner" style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;padding:16px 0;">
+            <!-- A1c sparkline -->
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-2);margin-bottom:2px;">A1c</div>
+              <div style="font-size:9px;color:var(--text-3);margin-bottom:6px;">Target &lt;7.0%</div>
+              <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:8px;">
+                <span style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:var(--amber);">7.3</span>
+                <span style="font-size:10px;color:var(--text-3);">%</span>
+              </div>
+              <div id="spark-a1c"></div>
+            </div>
+            <!-- LDL sparkline -->
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-2);margin-bottom:2px;">LDL</div>
+              <div style="font-size:9px;color:var(--text-3);margin-bottom:6px;">Target &lt;100 mg/dL</div>
+              <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:8px;">
+                <span style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:var(--red,#ef4444);">156</span>
+                <span style="font-size:10px;color:var(--text-3);">mg/dL</span>
+              </div>
+              <div id="spark-ldl"></div>
+            </div>
+            <!-- eGFR sparkline -->
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-2);margin-bottom:2px;">eGFR</div>
+              <div style="font-size:9px;color:var(--text-3);margin-bottom:6px;">Stage 2 CKD watch</div>
+              <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:8px;">
+                <span style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:var(--amber);">87</span>
+                <span style="font-size:10px;color:var(--text-3);">mL/min</span>
+              </div>
+              <div id="spark-egfr"></div>
+            </div>
+            <!-- K+ sparkline -->
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-2);margin-bottom:2px;">K⁺</div>
+              <div style="font-size:9px;color:var(--text-3);margin-bottom:6px;">Monitor: ARB + spiro risk</div>
+              <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:8px;">
+                <span style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:var(--green);">4.5</span>
+                <span style="font-size:10px;color:var(--text-3);">mEq/L</span>
+              </div>
+              <div id="spark-kplus"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ── KEY TRENDS ──────────────────────────────────────────────────── -->
       <div style="margin-bottom:16px;">
         <div class="section-label" style="margin-bottom:8px;">Key Lab Trends <span style="color:var(--text-3);font-weight:400;font-size:9px;">↑↘↔ trajectory over all recorded history</span></div>
         <div class="card">
           <div class="card-inner" id="helen-key-trends" style="padding:8px 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0 20px;">
             <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── LONGEVITY PROJECTION ──────────────────────────────────────────── -->
+      <div style="margin-bottom:16px;">
+        <div class="section-label" style="margin-bottom:8px;">Longevity Projection <span style="color:var(--text-3);font-weight:400;font-size:9px;">actuarial + risk-adjusted</span></div>
+        <div class="card">
+          <div class="card-inner" id="health-longevity-content" style="padding:12px 0;">
+            <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── DIGITAL TWIN ───────────────────────────────────────────────────── -->
+      <div style="margin-bottom:4px;">
+        <div class="section-label" style="margin-bottom:8px;">Digital Twin — 12-Month Projections <span style="color:var(--text-3);font-weight:400;font-size:9px;">model-based forecast</span></div>
+        <div class="card">
+          <div class="card-inner" id="health-twin-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;padding:12px 0;">
+            <div style="font-size:11px;color:var(--text-3);">Loading projections…</div>
           </div>
         </div>
       </div>
@@ -4552,6 +4774,41 @@ body::after {{
         </div>
       </div>
 
+      <!-- ── HEALTH CHAT CONSOLE ───────────────────────────────────────────── -->
+      <div style="margin-bottom:4px;">
+        <div class="section-label" style="margin-bottom:8px;">
+          Ask Your Medical Team
+          <span style="color:var(--text-3);font-weight:400;font-size:9px;">Helen Cho · Longevity Council · Direct consultation</span>
+        </div>
+        <div class="card" style="border:1px solid var(--hue);border-radius:12px;overflow:hidden;">
+          <!-- Doctor selector -->
+          <div id="hchat-doctor-bar" style="display:flex;gap:6px;padding:10px 16px;background:var(--surface-2);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;">
+            <div style="font-size:9px;color:var(--text-3);white-space:nowrap;align-self:center;margin-right:4px;">CONSULT WITH →</div>
+            <button class="hchat-doc-btn active" data-doctor="helen-cho" onclick="hchatSelectDoctor(this,'helen-cho')" style="flex-shrink:0;">
+              🧬 Helen Cho
+            </button>
+          </div>
+          <!-- Chat messages -->
+          <div id="hchat-messages" style="height:320px;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;">
+            <div style="text-align:center;color:var(--text-3);font-size:11px;padding:40px 20px;">
+              <div style="font-size:24px;margin-bottom:8px;">🧬</div>
+              <div style="font-weight:600;color:var(--text-2);margin-bottom:4px;">Helen Cho · Medical Intelligence</div>
+              <div>Ask me anything about your health, medications, labs, or longevity strategy.</div>
+            </div>
+          </div>
+          <!-- Input bar -->
+          <div style="display:flex;gap:10px;padding:12px 16px;background:var(--surface-2);border-top:1px solid var(--border);">
+            <input id="hchat-input" type="text" placeholder="Ask Helen, Dr. House, Morpheus… or any council member"
+              style="flex:1;background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text-1);outline:none;font-family:var(--font-sans);"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){{event.preventDefault();hchatSend();}}" />
+            <button onclick="hchatSend()" id="hchat-send-btn"
+              style="background:var(--hue);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:opacity .2s;">
+              Send ↑
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Hidden: medical records dump (populated by mychartViewRecords) -->
       <div id="health-medical-records-section" style="display:none;">
         <div class="section-label" style="margin-bottom:8px;">Full Medical Records</div>
@@ -4603,11 +4860,12 @@ body::after {{
   </div>
   <div class="cmd-row">
     <input class="cmd-input" id="cmd-input" type="text" placeholder="Ask JARVIS to build, fix, or explain anything…" onkeydown="cmdKey(event)" onpaste="handleSmartPaste(event)">
-    <button class="cmd-mic" id="cmd-mic" onclick="toggleMic()" title="Voice input">
+    <button class="cmd-mic" id="cmd-mic" onclick="toggleMic()" title="Click to speak · Say 'Hey JARVIS' to activate hands-free">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0014 0"/><path d="M12 21v-4"/>
       </svg>
     </button>
+    <button class="cmd-mic" id="cmd-tts" onclick="voiceToggleTts()" title="Toggle spoken responses" style="font-size:14px;">🔊</button>
     <button class="cmd-send" onclick="sendCmd()">SEND</button>
   </div>
 </div>
@@ -4821,6 +5079,8 @@ function init() {{
   loadOverviewReminders();
   loadJarvisTasks();
   loadIdeaInbox();
+  // Voice system — wake word + TTS
+  setTimeout(voiceInit, 1000); // slight delay so browser permissions settle
   loadOverviewHealth();
   loadLayoutState();
   setInterval(checkAutoMode, 5 * 60 * 1000);
@@ -7837,6 +8097,8 @@ async function sendCommand(text) {{
           bodyWrap.appendChild(meta);
           /* Save assistant turn in history */
           _agentMessages.push({{ role: 'assistant', content: accText }});
+          /* Speak response if voice is active */
+          voiceSpeak(accText);
         }}
 
         /* ── Error ── */
@@ -9554,33 +9816,126 @@ function sendCmd() {{
   setInterval(_checkRestart, 5000);
 }})();
 
-function toggleMic() {{
-  micActive = !micActive;
+/* ═══════════════════════════════════════════════════════════════
+   VOICE SYSTEM — Wake Word · Auto-Send · TTS
+   Say "Hey JARVIS" or click the mic to speak.
+   JARVIS reads responses back when TTS is on (🔊).
+═══════════════════════════════════════════════════════════════ */
+let _vsr        = null;    // wake-word recognizer instance
+let _vcsr       = null;    // command recognizer instance
+let _vListening = false;   // currently capturing a command
+let _vWakeOn    = false;   // wake-word loop is running
+let _vTtsOn     = true;    // speak responses
+
+function voiceInit() {{
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const btn = document.getElementById('cmd-mic');
-  if (!btn) return;
-  if (micActive) {{
-    btn.style.color = 'var(--crimson)';
-    btn.style.borderColor = 'var(--crimson)';
-    showToast('Microphone active', 'info');
+  if (!SR) {{ if (btn) btn.title = 'Voice not supported in this browser'; return; }}
+  _voiceStartWake();
+}}
+
+function _voiceStartWake() {{
+  if (_vWakeOn || _vListening) return;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+  _vWakeOn = true;
+  const r = new SR();
+  r.continuous    = true;
+  r.interimResults = true;
+  r.lang          = 'en-US';
+  _vsr = r;
+
+  r.onresult = (e) => {{
+    for (let i = e.resultIndex; i < e.results.length; i++) {{
+      const t = e.results[i][0].transcript.toLowerCase().trim();
+      if ((t.includes('hey jarvis') || t.includes('jarvis')) && !_vListening) {{
+        _voiceActivate(true);
+        return;
+      }}
+    }}
+  }};
+  r.onend   = () => {{ _vWakeOn = false; if (!_vListening) setTimeout(_voiceStartWake, 800); }};
+  r.onerror = () => {{ _vWakeOn = false; setTimeout(_voiceStartWake, 2000); }};
+  try {{ r.start(); }} catch(e) {{ _vWakeOn = false; }}
+}}
+
+function _voiceActivate(fromWake) {{
+  if (_vListening) return;
+  if (_vsr) {{ try {{ _vsr.stop(); }} catch(e) {{}} }}
+  _vWakeOn    = false;
+  _vListening = true;
+
+  const btn = document.getElementById('cmd-mic');
+  if (btn) {{ btn.style.color = '#ef4444'; btn.style.borderColor = '#ef4444'; btn.style.boxShadow = '0 0 0 3px rgba(239,68,68,0.25)'; }}
+  if (fromWake) showToast('Hey JARVIS — listening…', 'info');
+
+  const SR  = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const r   = new SR();
+  r.continuous    = false;
+  r.interimResults = true;
+  r.lang          = 'en-US';
+  _vcsr = r;
+
+  r.onresult = (e) => {{
+    let interim = '', final = '';
+    for (let i = 0; i < e.results.length; i++) {{
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }}
+    const inp = document.getElementById('cmd-input');
+    if (inp) inp.value = final || interim;
+  }};
+
+  r.onend = () => {{
+    _vListening = false;
+    if (btn) {{ btn.style.color = ''; btn.style.borderColor = ''; btn.style.boxShadow = ''; }}
+    const inp = document.getElementById('cmd-input');
+    if (inp && inp.value.trim()) setTimeout(sendCmd, 150);
+    setTimeout(_voiceStartWake, 400);
+  }};
+
+  r.onerror = () => {{
+    _vListening = false;
+    if (btn) {{ btn.style.color = ''; btn.style.borderColor = ''; btn.style.boxShadow = ''; }}
+    setTimeout(_voiceStartWake, 600);
+  }};
+
+  try {{ r.start(); }} catch(e) {{ _vListening = false; setTimeout(_voiceStartWake, 600); }}
+}}
+
+function toggleMic() {{
+  if (_vListening) {{
+    if (_vcsr) {{ try {{ _vcsr.stop(); }} catch(e) {{}} }}
   }} else {{
-    btn.style.color = '';
-    btn.style.borderColor = '';
+    _voiceActivate(false);
   }}
-  // Web Speech API hook (browser permitting)
-  if (micActive && 'webkitSpeechRecognition' in window) {{
-    const recog = new webkitSpeechRecognition();
-    recog.continuous = false;
-    recog.interimResults = false;
-    recog.onresult = e => {{
-      const t = e.results[0][0].transcript;
-      setCmd(t);
-      micActive = false;
-      btn.style.color = '';
-      btn.style.borderColor = '';
-    }};
-    recog.onerror = () => {{ micActive = false; btn.style.color=''; btn.style.borderColor=''; }};
-    recog.start();
+}}
+
+function voiceToggleTts() {{
+  _vTtsOn = !_vTtsOn;
+  const btn = document.getElementById('cmd-tts');
+  if (btn) {{
+    btn.textContent = _vTtsOn ? '🔊' : '🔇';
+    btn.title = _vTtsOn ? 'TTS on — click to mute' : 'TTS off — click to unmute';
+    btn.style.opacity = _vTtsOn ? '1' : '0.4';
   }}
+  if (!_vTtsOn) speechSynthesis.cancel();
+  showToast(_vTtsOn ? 'JARVIS will speak responses' : 'Spoken responses muted', 'info');
+}}
+
+function voiceSpeak(text) {{
+  if (!_vTtsOn || !('speechSynthesis' in window) || !text) return;
+  speechSynthesis.cancel();
+  const clean = text.replace(/[*_`#~]/g, '').replace(/\\n+/g, ' ').trim().slice(0, 600);
+  if (!clean) return;
+  const utt   = new SpeechSynthesisUtterance(clean);
+  utt.rate    = 1.05;
+  utt.pitch   = 1.0;
+  utt.volume  = 1.0;
+  const voices = speechSynthesis.getVoices();
+  const pick   = voices.find(v => /Samantha|Alex|Google US English|en-US/i.test(v.name));
+  if (pick) utt.voice = pick;
+  speechSynthesis.speak(utt);
 }}
 
 /* ═══════════════════════════════════════════════════════════════
@@ -9724,6 +10079,7 @@ async function loadHealth() {{
   if (sumRes && sumRes.ok) {{
     const d = await sumRes.json();
     _renderHealthDashboard(d);
+    _renderHealthMetricStrip(d, null);
   }}
   if (ecgRes && ecgRes.ok) {{
     const e = await ecgRes.json();
@@ -9732,7 +10088,14 @@ async function loadHealth() {{
   if (bpRes && bpRes.ok) {{
     const b = await bpRes.json();
     _renderBpPanel(b);
+    // Also update metric strip BP
+    if (sumRes && sumRes.ok) {{
+      try {{ const d2 = await (sumRes.clone ? Promise.resolve(null) : fetch('/api/health/summary').then(r => r.json())); }} catch(e) {{}}
+    }}
+    _renderHealthMetricStrip({{metrics: {{}}}}, b);
   }}
+  // Render sparklines (static lab data)
+  _renderHealthSparklines();
   if (omronRes && omronRes.ok) {{
     const o = await omronRes.json();
     _renderOmronStatus(o);
@@ -9754,6 +10117,12 @@ async function loadHealth() {{
   }}
   // Load next appointment date
   _loadNextApptDate();
+  // Load longevity projection
+  loadLongevityInHealth();
+  // Load digital twin
+  loadHealthTwin();
+  // Init health chat (load doctor roster)
+  hchatInit();
 }}
 
 async function helenRefresh() {{
@@ -10470,13 +10839,373 @@ async function mychartViewRecords() {{
   el.innerHTML = html || '<div style="font-size:11px;color:var(--text-3);">No records found.</div>';
 }}
 
+async function loadLongevityInHealth() {{
+  const el = document.getElementById('health-longevity-content');
+  if (!el) return;
+  try {{
+    const [estRes, trajRes] = await Promise.all([
+      fetch('/api/health/longevity/estimate').catch(() => null),
+      fetch('/api/health/longevity/trajectory').catch(() => null),
+    ]);
+    if (!estRes || !estRes.ok) {{ el.innerHTML = '<div style="color:var(--text-3);">Unavailable</div>'; return; }}
+    const est  = await estRes.json();
+    const trajRaw = trajRes && trajRes.ok ? await trajRes.json() : [];
+    // Trajectory is a plain array [{{date:"YYYY-MM", estimated_age:N, ...}}]
+    const history = Array.isArray(trajRaw) ? trajRaw.map(p => {{
+      const parts = (p.date||'2021-01').split('-');
+      return {{year: parseFloat(parts[0]) + (parseFloat(parts[1]||1)-1)/12, life_expectancy: p.estimated_age, label: p.label}};
+    }}) : (trajRaw.history || []);
+    const ci = est.confidence_interval || {{}};
+    const optimized = est.optimized_life_expectancy || 80.5;
+    const remaining = est.years_remaining || 24;
+    const le = est.estimated_life_expectancy || est.life_expectancy || 76;
+    const trend = history.length >= 2
+      ? (history[history.length-1].life_expectancy - history[history.length-2].life_expectancy)
+      : 0;
+    const trendArrow = trend > 0.2 ? '↑' : trend < -0.2 ? '↓' : '→';
+    const trendColor = trend > 0.2 ? 'var(--green)' : trend < -0.2 ? 'var(--red)' : 'var(--amber)';
+
+    // Risk & positive factor rows
+    const risks = (est.risk_adjustments || []).filter(r => r.years < 0)
+      .map(r => `<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;">
+        <span style="color:var(--text-2);">${{r.factor}}</span>
+        <span style="color:var(--red);font-family:var(--font-mono);">${{r.years}}yr</span></div>`).join('');
+    const gains = (est.risk_adjustments || []).filter(r => r.years > 0)
+      .map(r => `<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;">
+        <span style="color:var(--text-2);">${{r.factor}}</span>
+        <span style="color:var(--green);font-family:var(--font-mono);">+${{r.years}}yr</span></div>`).join('');
+
+    // Build SVG graph
+    const svgHtml = _buildLongevitySvg(history, le, optimized);
+
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start;">
+        <div style="min-width:160px;">
+          <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;">Life Expectancy</div>
+          <div style="font-size:52px;font-weight:700;font-family:var(--font-mono);color:var(--amber);line-height:1;">
+            ${{le}}<span style="font-size:18px;color:var(--text-3);">yr</span>
+            <span style="font-size:20px;" style="color:${{trendColor}};">${{trendArrow}}</span>
+          </div>
+          <div style="font-size:10px;color:var(--text-3);margin-bottom:12px;">${{remaining}} years remaining · CI ${{ci.low||72}}–${{ci.high||80}}</div>
+          <div style="font-size:9px;color:var(--text-3);margin-bottom:2px;">RISKS</div>
+          ${{risks || '<div style="font-size:10px;color:var(--text-3);">None recorded</div>'}}
+          <div style="font-size:9px;color:var(--text-3);margin:8px 0 2px;">GAINS</div>
+          ${{gains || '<div style="font-size:10px;color:var(--text-3);">None recorded</div>'}}
+          <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:9px;color:var(--text-3);">
+            Optimized ceiling: <span style="color:var(--blue);font-family:var(--font-mono);">${{optimized}} yr</span>
+          </div>
+        </div>
+        <div>${{svgHtml}}</div>
+      </div>`;
+  }} catch(e) {{
+    if (el) el.innerHTML = '<div style="color:var(--text-3);">Unavailable</div>';
+  }}
+}}
+
+function _buildLongevitySvg(history, currentLE, optimized) {{
+  if (!history || history.length < 2) return '<div style="color:var(--text-3);font-size:11px;">Not enough history for graph</div>';
+  const W = 480, H = 180, padL = 30, padR = 10, padT = 12, padB = 28;
+  const iW = W - padL - padR, iH = H - padT - padB;
+  const years = history.map(p => p.year || 2021);
+  const vals  = history.map(p => p.life_expectancy || currentLE);
+  const minYear = Math.min(...years), maxYear = 2031;
+  const minVal  = Math.min(...vals, currentLE, optimized) - 2;
+  const maxVal  = Math.max(...vals, currentLE, optimized, 80.5) + 2;
+  const xS = y => padL + ((y - minYear) / (maxYear - minYear)) * iW;
+  const yS = v => padT + (1 - (v - minVal) / (maxVal - minVal)) * iH;
+  // Historical path
+  const histPts = history.map(p => `${{xS(p.year)}},${{yS(p.life_expectancy)}}`).join(' ');
+  const dots    = history.map(p => `<circle cx="${{xS(p.year)}}" cy="${{yS(p.life_expectancy)}}" r="3" fill="#4caf50"/>`).join('');
+  // Current projection 2026→2031 (flat at currentLE)
+  const nowX = xS(2026.4), endX = xS(2031);
+  const nowY = yS(currentLE), optY = yS(optimized);
+  // Grid lines
+  const gridLines = [70, 75, 80].map(v => {{
+    const gy = yS(v);
+    return `<line x1="${{padL}}" y1="${{gy}}" x2="${{W-padR}}" y2="${{gy}}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+            <text x="${{padL-4}}" y="${{gy+3}}" font-size="7" fill="rgba(255,255,255,0.3)" text-anchor="end">${{v}}</text>`;
+  }}).join('');
+  // Year labels
+  const yearLabels = [2021,2023,2025,2027,2029,2031].filter(y => y <= maxYear && y >= minYear).map(y =>
+    `<text x="${{xS(y)}}" y="${{H-6}}" font-size="7" fill="rgba(255,255,255,0.3)" text-anchor="middle">${{y}}</text>`
+  ).join('');
+  // Actuarial reference
+  const actY = yS(80.5);
+  return `<svg width="${{W}}" height="${{H}}" viewBox="0 0 ${{W}} ${{H}}" style="width:100%;height:auto;">
+    ${{gridLines}}
+    <line x1="${{padL}}" y1="${{actY}}" x2="${{W-padR}}" y2="${{actY}}" stroke="rgba(100,149,237,0.3)" stroke-width="1" stroke-dasharray="4,3"/>
+    <text x="${{W-padR}}" y="${{actY-3}}" font-size="7" fill="rgba(100,149,237,0.5)" text-anchor="end">Actuarial 80.5</text>
+    <line x1="${{xS(2026.4)}}" y1="${{padT}}" x2="${{xS(2026.4)}}" y2="${{H-padB}}" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="2,2"/>
+    <text x="${{xS(2026.4)+3}}" y="${{padT+9}}" font-size="7" fill="rgba(255,255,255,0.3)">TODAY</text>
+    <polyline points="${{histPts}}" fill="none" stroke="#4caf50" stroke-width="2"/>
+    ${{dots}}
+    <line x1="${{nowX}}" y1="${{nowY}}" x2="${{endX}}" y2="${{nowY}}" stroke="#ffb300" stroke-width="1.5" stroke-dasharray="5,3"/>
+    <line x1="${{nowX}}" y1="${{nowY}}" x2="${{endX}}" y2="${{optY}}" stroke="#64a0e8" stroke-width="1.5" stroke-dasharray="5,3"/>
+    ${{yearLabels}}
+    <circle cx="${{nowX}}" cy="${{nowY}}" r="4" fill="#ffb300"/>
+    <g transform="translate(${{padL+4}},${{padT+4}})">
+      <line x1="0" y1="0" x2="14" y2="0" stroke="#4caf50" stroke-width="2"/><text x="17" y="3" font-size="7" fill="rgba(255,255,255,0.5)">Historical</text>
+      <line x1="0" y1="10" x2="14" y2="10" stroke="#ffb300" stroke-width="1.5" stroke-dasharray="4,2"/><text x="17" y="13" font-size="7" fill="rgba(255,255,255,0.5)">Current path</text>
+      <line x1="0" y1="20" x2="14" y2="20" stroke="#64a0e8" stroke-width="1.5" stroke-dasharray="4,2"/><text x="17" y="23" font-size="7" fill="rgba(255,255,255,0.5)">Optimized</text>
+    </g>
+  </svg>`;
+}}
+
+// ─── Health Chat Console ────────────────────────────────────────────────────
+let _hchatDoctor = 'helen-cho';
+let _hchatHistory = [];
+let _hchatDoctors = [];
+
+async function hchatInit() {{
+  // Load available doctors
+  try {{
+    const res = await fetch('/api/health/chat/doctors').catch(() => null);
+    if (res && res.ok) {{
+      const d = await res.json();
+      _hchatDoctors = d.doctors || [];
+      _hchatRenderDoctorBar();
+    }}
+  }} catch(e) {{}}
+}}
+
+function _hchatRenderDoctorBar() {{
+  const bar = document.getElementById('hchat-doctor-bar');
+  if (!bar || !_hchatDoctors.length) return;
+  const label = '<div style="font-size:9px;color:var(--text-3);white-space:nowrap;align-self:center;margin-right:4px;">CONSULT WITH →</div>';
+  const btns = _hchatDoctors.map(d => {{
+    const active = d.agent_id === _hchatDoctor ? ' active' : '';
+    return `<button class="hchat-doc-btn${{active}}" data-doctor="${{d.agent_id}}" onclick="hchatSelectDoctor(this,'${{d.agent_id}}')" style="flex-shrink:0;" title="${{d.title}}">${{d.icon||'⚕️'}} ${{d.name}}</button>`;
+  }}).join('');
+  bar.innerHTML = label + btns;
+}}
+
+function hchatSelectDoctor(btn, doctorId) {{
+  _hchatDoctor = doctorId;
+  document.querySelectorAll('.hchat-doc-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // Update placeholder
+  const doc = _hchatDoctors.find(d => d.agent_id === doctorId);
+  const name = doc ? doc.name : 'your doctor';
+  const inp = document.getElementById('hchat-input');
+  if (inp) inp.placeholder = `Ask ${{name}}…`;
+  // Show doctor intro in chat
+  const msgs = document.getElementById('hchat-messages');
+  if (msgs && _hchatHistory.length === 0) {{
+    const icon = doc ? (doc.icon || '⚕️') : '⚕️';
+    const title = doc ? doc.title : '';
+    msgs.innerHTML = `<div style="text-align:center;color:var(--text-3);font-size:11px;padding:32px 20px;">
+      <div style="font-size:24px;margin-bottom:8px;">${{icon}}</div>
+      <div style="font-weight:600;color:var(--text-2);margin-bottom:4px;">${{name}}</div>
+      <div style="font-size:10px;margin-bottom:8px;">${{title}}</div>
+      <div>Ask me anything about your health, labs, medications, or longevity.</div>
+    </div>`;
+  }}
+}}
+
+async function hchatSend() {{
+  const input = document.getElementById('hchat-input');
+  const btn   = document.getElementById('hchat-send-btn');
+  const msgs  = document.getElementById('hchat-messages');
+  if (!input || !msgs) return;
+  const message = input.value.trim();
+  if (!message) return;
+
+  // Disable input
+  input.disabled = true;
+  if (btn) {{ btn.disabled = true; btn.style.opacity = '.5'; }}
+  input.value = '';
+
+  // Append user message
+  msgs.innerHTML += `<div class="hchat-msg-user">${{escHtml(message)}}</div>`;
+
+  // Thinking indicator
+  const thinkId = 'hchat-think-' + Date.now();
+  const doc = _hchatDoctors.find(d => d.agent_id === _hchatDoctor);
+  const docName = doc ? doc.name : 'Helen Cho';
+  msgs.innerHTML += `<div class="hchat-thinking" id="${{thinkId}}">${{escHtml(docName)}} is thinking…</div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+
+  try {{
+    const res = await fetch('/api/health/chat', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        doctor: _hchatDoctor,
+        message,
+        history: _hchatHistory.slice(-10), // last 10 turns
+      }}),
+    }});
+
+    const data = res.ok ? await res.json() : {{ error: 'Server error ' + res.status }};
+
+    // Remove thinking indicator
+    const thinkEl = document.getElementById(thinkId);
+    if (thinkEl) thinkEl.remove();
+
+    if (data.error) {{
+      msgs.innerHTML += `<div class="hchat-msg-doctor"><div class="hchat-msg-doctor-name">⚠ System</div><div style="color:var(--red,#ef4444);">${{escHtml(data.error)}}</div></div>`;
+    }} else {{
+      const reply = data.reply || '';
+      const icon = doc ? (doc.icon || '⚕️') : '🧬';
+      msgs.innerHTML += `<div class="hchat-msg-doctor">
+        <div class="hchat-msg-doctor-name">${{icon}} ${{escHtml(data.doctor_name || docName)}}</div>
+        <div class="hchat-msg-body">${{mdToHtml(reply)}}</div>
+      </div>`;
+      // Update history
+      _hchatHistory.push({{ role: 'user', content: message }});
+      _hchatHistory.push({{ role: 'assistant', content: reply }});
+    }}
+  }} catch(e) {{
+    const thinkEl = document.getElementById(thinkId);
+    if (thinkEl) thinkEl.remove();
+    msgs.innerHTML += `<div class="hchat-msg-doctor"><div class="hchat-msg-doctor-name">⚠ Error</div><div style="color:var(--red,#ef4444);">Connection failed — check service status.</div></div>`;
+  }}
+
+  msgs.scrollTop = msgs.scrollHeight;
+  input.disabled = false;
+  if (btn) {{ btn.disabled = false; btn.style.opacity = '1'; }}
+  input.focus();
+}}
+
+// ─── Health Metric Strip ────────────────────────────────────────────────────
+function _renderHealthMetricStrip(summary, bp) {{
+  // Live data from API
+  const m = summary.metrics || {{}};
+  const r = summary.readiness || {{}};
+  if (m.hrv) {{
+    const el = document.getElementById('hm-hrv');
+    if (el) el.textContent = Math.round(m.hrv);
+  }}
+  if (m.steps) {{
+    const el = document.getElementById('hm-steps');
+    if (el) el.textContent = Number(m.steps).toLocaleString();
+  }}
+  if (m.sleep_hours) {{
+    const el = document.getElementById('hm-sleep');
+    if (el) el.textContent = m.sleep_hours.toFixed(1);
+  }}
+  if (m.weight) {{
+    const el = document.getElementById('hm-weight');
+    if (el) el.textContent = Math.round(m.weight * 2.205); // kg → lbs
+  }}
+  // BP from bp readings
+  if (bp && bp.latest) {{
+    const bpEl = document.getElementById('hm-bp');
+    const arrEl = document.getElementById('hm-bp-arrow');
+    if (bpEl) {{
+      bpEl.textContent = bp.latest.systolic + '/' + bp.latest.diastolic;
+      const sys = bp.latest.systolic;
+      const col = sys < 120 ? 'var(--green)' : sys < 130 ? 'var(--blue)' : sys < 140 ? 'var(--amber)' : 'var(--red,#ef4444)';
+      bpEl.style.color = col;
+      if (arrEl) {{ arrEl.textContent = sys < 130 ? '↓' : sys < 140 ? '→' : '↑'; arrEl.style.color = col; }}
+    }}
+  }}
+}}
+
+// ─── Health Sparklines ──────────────────────────────────────────────────────
+function _buildHealthSparkline(points, color) {{
+  if (!points || points.length < 2) return '<div style="height:50px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-3);">Not enough data</div>';
+  const vals = points.map(p => p.y);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const range = max - min || 1;
+  const W = 200, H = 50, PAD = 6;
+  const coords = points.map((p, i) => [
+    PAD + (i / (points.length - 1)) * (W - PAD * 2),
+    H - PAD - ((p.y - min) / range) * (H - PAD * 2)
+  ]);
+  const path = coords.map((c, i) => (i === 0 ? `M${{c[0]}},${{c[1]}}` : `L${{c[0]}},${{c[1]}}`)).join(' ');
+  const area = `${{path}} L${{coords[coords.length-1][0]}},${{H}} L${{coords[0][0]}},${{H}} Z`;
+  const labels = points.map((p, i) => `<text x="${{coords[i][0]}}" y="${{H+9}}" text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.35)">${{p.x}}</text>`).join('');
+  const last = coords[coords.length-1];
+  const gid = 'sg' + color.replace('#','').replace('var(--','').replace(')','');
+  return `<svg viewBox="0 0 ${{W}} ${{H+12}}" style="width:100%;height:60px;overflow:visible;">
+    <defs>
+      <linearGradient id="${{gid}}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${{color}}" stop-opacity=".2"/>
+        <stop offset="100%" stop-color="${{color}}" stop-opacity=".02"/>
+      </linearGradient>
+    </defs>
+    <path d="${{area}}" fill="url(#${{gid}})"/>
+    <path d="${{path}}" fill="none" stroke="${{color}}" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="${{last[0]}}" cy="${{last[1]}}" r="3.5" fill="${{color}}"/>
+    ${{labels}}
+  </svg>`;
+}}
+
+function _renderHealthSparklines() {{
+  const LAB_SPARKS = {{
+    'spark-a1c':   {{ points: [{{y:10.2,x:"'21"}},{{y:7.1,x:"mid"}},{{y:6.3,x:"'23"}},{{y:5.9,x:"'24"}},{{y:7.3,x:"'26"}}], color: '#d29922' }},
+    'spark-ldl':   {{ points: [{{y:99,x:"'21"}},{{y:138,x:"'24"}},{{y:146,x:"'25"}},{{y:156,x:"'26"}}], color: '#ef4444' }},
+    'spark-egfr':  {{ points: [{{y:98,x:"'20"}},{{y:91,x:"'22"}},{{y:87,x:"'26"}}], color: '#d29922' }},
+    'spark-kplus': {{ points: [{{y:5.4,x:"'25"}},{{y:4.5,x:"'26"}}], color: '#22c55e' }},
+  }};
+  Object.entries(LAB_SPARKS).forEach(([id, d]) => {{
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = _buildHealthSparkline(d.points, d.color);
+  }});
+}}
+
+// ─── Health Digital Twin ────────────────────────────────────────────────────
+async function loadHealthTwin() {{
+  const grid = document.getElementById('health-twin-grid');
+  if (!grid) return;
+  try {{
+    const res = await fetch('/api/health/twin/project?months=12').catch(() => null);
+    if (!res || !res.ok) {{
+      grid.innerHTML = _healthTwinFallback();
+      return;
+    }}
+    const data = await res.json();
+    const projs = data.projections || [];
+    if (!projs.length) {{ grid.innerHTML = _healthTwinFallback(); return; }}
+    grid.innerHTML = projs.map(p => {{
+      const dir = p.direction || 'stable';
+      const col = dir === 'improving' ? 'var(--green)' : dir === 'worsening' ? 'var(--red,#ef4444)' : 'var(--amber)';
+      const arrow = dir === 'improving' ? '↑' : dir === 'worsening' ? '↓' : '→';
+      return `<div style="background:var(--surface-2);border-radius:8px;padding:12px;border:1px solid var(--border);">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px;">${{p.metric || '—'}}</div>
+        <div style="font-size:10px;color:var(--text-3);margin-bottom:4px;">Now: <b style="color:var(--text-1);">${{p.current_value || '—'}}</b></div>
+        <div style="font-size:18px;font-weight:700;font-family:var(--font-mono);color:${{col}};">${{p.projected_value || '—'}} ${{arrow}}</div>
+        <div style="font-size:9px;color:var(--text-3);margin-top:4px;">${{p.confidence_interval ? 'CI: ' + p.confidence_interval : '12-mo forecast'}}</div>
+      </div>`;
+    }}).join('');
+  }} catch(e) {{
+    grid.innerHTML = _healthTwinFallback();
+  }}
+}}
+
+function _healthTwinFallback() {{
+  const FALLBACK = [
+    {{ metric:'A1c', now:'7.3%', proj:'7.1%', dir:'improving', note:'If GLP-1 + diet maintained' }},
+    {{ metric:'LDL', now:'156', proj:'145', dir:'worsening', note:'Needs ezetimibe escalation' }},
+    {{ metric:'SBP', now:'118', proj:'115', dir:'improving', note:'Olmesartan + current regimen' }},
+    {{ metric:'HRV', now:'45ms', proj:'53ms', dir:'improving', note:'If CPAP initiated' }},
+    {{ metric:'Weight', now:'247lb', proj:'229lb', dir:'improving', note:'GLP-1 + bariatric trajectory' }},
+    {{ metric:'eGFR', now:'87', proj:'82', dir:'worsening', note:'CKD progression — monitor K+' }},
+  ];
+  return FALLBACK.map(p => {{
+    const col = p.dir === 'improving' ? 'var(--green)' : p.dir === 'worsening' ? 'var(--red,#ef4444)' : 'var(--amber)';
+    const arrow = p.dir === 'improving' ? '↑' : p.dir === 'worsening' ? '↓' : '→';
+    return `<div style="background:var(--surface-2);border-radius:8px;padding:12px;border:1px solid var(--border);">
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px;">${{p.metric}}</div>
+      <div style="font-size:10px;color:var(--text-3);margin-bottom:4px;">Now: <b style="color:var(--text-1);">${{p.now}}</b></div>
+      <div style="font-size:18px;font-weight:700;font-family:var(--font-mono);color:${{col}};">${{p.proj}} ${{arrow}}</div>
+      <div style="font-size:9px;color:var(--text-3);margin-top:4px;">${{p.note}}</div>
+    </div>`;
+  }}).join('');
+}}
+
 async function loadOverviewHealth() {{
   const el    = document.getElementById('overview-health-content');
   const badge = document.getElementById('overview-health-badge');
   if (!el) return;
   try {{
-    const res = await fetch('/api/health/summary');
-    if (!res.ok) return;
+    const [res, lonRes] = await Promise.all([
+      fetch('/api/health/summary').catch(() => null),
+      fetch('/api/health/longevity/estimate').catch(() => null),
+    ]);
+    if (!res || !res.ok) return;
     const d = await res.json();
     const r = d.readiness || {{}};
     if (badge) badge.textContent = r.score != null ? r.grade : '—';
@@ -10491,6 +11220,15 @@ async function loadOverviewHealth() {{
     if (m.hrv)           lines.push(`<div>HRV: <b>${{m.hrv}}ms</b></div>`);
     if (m.resting_hr)    lines.push(`<div>HR: <b>${{m.resting_hr}}bpm</b></div>`);
     if (m.steps)         lines.push(`<div>Steps: <b>${{Number(m.steps).toLocaleString()}}</b></div>`);
+    // Longevity line
+    if (lonRes && lonRes.ok) {{
+      const lon = await lonRes.json();
+      const le = lon.estimated_life_expectancy || lon.life_expectancy;
+      if (le) {{
+        const rem = lon.years_remaining || (le - 52);
+        lines.push(`<div style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border);">LE: <b style="color:var(--blue);">${{le}} yr</b> <span style="color:var(--text-3);font-size:10px;">(${{rem}} remaining)</span></div>`);
+      }}
+    }}
     el.innerHTML = lines.join('') || '<div style="color:var(--text-3);">No data</div>';
     if (d.anomalies && d.anomalies.length) {{
       el.innerHTML += `<div style="color:var(--amber);font-size:10px;margin-top:4px;">! ${{d.anomalies.length}} alert(s)</div>`;
