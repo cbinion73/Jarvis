@@ -1233,32 +1233,33 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         await _broadcast_dashboard("assistant-background.updated", include_dashboard=False)
         return _json(result)
 
-    @app.get("/api/briefing")
-    async def api_briefing(actor: str = "Chris") -> JSONResponse:
+    @app.get("/api/news")
+    async def api_news() -> JSONResponse:
+        """Return live structured news articles for the News view."""
         from .rss_briefing import fetch_briefing_context
-
-        # Fetch live RSS context in a background thread (non-blocking, 8s max)
+        from datetime import datetime as _dt
+        import asyncio as _asyncio
         rss: dict = {}
         try:
-            rss = await asyncio.wait_for(
-                asyncio.to_thread(fetch_briefing_context),
-                timeout=8.0,
+            rss = await _asyncio.wait_for(
+                _asyncio.to_thread(fetch_briefing_context),
+                timeout=10.0,
             )
         except Exception:
-            pass  # fall back to LLM-only brief
+            pass
+        return _json({
+            "world": rss.get("world", []),
+            "finance": rss.get("finance", []),
+            "total": rss.get("total_articles", 0),
+            "sources": rss.get("sources_hit", []),
+            "fetched_at": _dt.utcnow().isoformat(),
+            "error": rss.get("fetch_error", ""),
+        })
 
+    @app.get("/api/briefing")
+    async def api_briefing(actor: str = "Chris") -> JSONResponse:
         # Build base briefing (morning_brief returns a plain string)
         briefing: str = runtime.morning_brief(actor)
-
-        # Prepend live news context when RSS data is available
-        if rss.get("total_articles", 0) > 0:
-            parts: list[str] = ["## Live News Context"]
-            if rss.get("world_text"):
-                parts.append(rss["world_text"])
-            if rss.get("finance_text"):
-                parts.append(rss["finance_text"])
-            news_prefix = "\n\n".join(parts)
-            briefing = news_prefix + "\n\n---\n\n" + briefing
 
         # Append health summary if data is available
         try:
@@ -1273,9 +1274,6 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             {
                 "actor": actor,
                 "briefing": briefing,
-                "rss_articles": rss.get("total_articles", 0),
-                "rss_sources": rss.get("sources_hit", []),
-                "live_news": rss.get("total_articles", 0) > 0,
             }
         )
 

@@ -80,6 +80,7 @@ def render_glass_shell(runtime, initial_packet: str = "") -> str:
 [data-domain="agents"]        {{ --hue: #14B8A6; --hue-dim: rgba(20,184,166,0.12); --hue-glow: rgba(20,184,166,0.35); --hue-tint: rgba(20,184,166,0.03); --hue-rgb: 20,184,166; }}
 [data-domain="intelligence"]  {{ --hue: #10B981; --hue-dim: rgba(16,185,129,0.12); --hue-glow: rgba(16,185,129,0.35); --hue-tint: rgba(16,185,129,0.03); --hue-rgb: 16,185,129; }}
 [data-domain="briefing"]      {{ --hue: #7C3AED; --hue-dim: rgba(124,58,237,0.12); --hue-glow: rgba(124,58,237,0.35); --hue-tint: rgba(124,58,237,0.04); --hue-rgb: 124,58,237; }}
+[data-domain="news"]          {{ --hue: #0369A1; --hue-dim: rgba(3,105,161,0.12); --hue-glow: rgba(3,105,161,0.35); --hue-tint: rgba(3,105,161,0.04); --hue-rgb: 3,105,161; }}
 [data-domain="family"]        {{ --hue: #F43F5E; --hue-dim: rgba(244,63,94,0.12);  --hue-glow: rgba(244,63,94,0.35);  --hue-tint: rgba(244,63,94,0.03);  --hue-rgb: 244,63,94; }}
 [data-domain="chat"]          {{ --hue: #00B4FF; --hue-dim: rgba(0,180,255,0.12);  --hue-glow: rgba(0,180,255,0.35);  --hue-tint: rgba(0,180,255,0.03);  --hue-rgb: 0,180,255; }}
 
@@ -235,6 +236,152 @@ body::after {{
     0 24px 48px rgba(0,0,0,0.05),
     inset 0 1px 0 rgba(255,255,255,1),
     inset 1px 0 0 rgba(255,255,255,0.70);
+}}
+
+/* ── News view ─────────────────────────────── */
+.news-grid {{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  padding: 0;
+}}
+.news-featured {{
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  min-height: 180px;
+}}
+.news-featured-body {{
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}}
+.news-featured-image {{
+  background: var(--surface-hi);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 64px;
+  position: relative;
+  overflow: hidden;
+  min-height: 160px;
+}}
+.news-card {{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  text-decoration: none;
+}}
+.news-card:hover {{
+  border-color: var(--hue);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}}
+.news-source-badge {{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 20px;
+  width: fit-content;
+}}
+.news-source-icon {{
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 900;
+  color: #fff;
+  flex-shrink: 0;
+}}
+.news-headline {{
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
+  line-height: 1.4;
+}}
+.news-featured .news-headline {{
+  font-size: 20px;
+  line-height: 1.3;
+}}
+.news-summary {{
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.5;
+  flex: 1;
+}}
+.news-read-link {{
+  font-size: 11px;
+  color: var(--hue);
+  font-weight: 600;
+  text-decoration: none;
+  align-self: flex-end;
+  margin-top: auto;
+}}
+.news-filter-bar {{
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+}}
+.news-filter-btn {{
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface-hi);
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: .04em;
+}}
+.news-filter-btn.active {{
+  background: var(--hue);
+  border-color: var(--hue);
+  color: #fff;
+}}
+.news-filter-btn:hover:not(.active) {{
+  border-color: var(--hue);
+  color: var(--text-1);
+}}
+.news-refresh-info {{
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}}
+.news-section-label {{
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin: 20px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
 }}
 
 /* ── Tactical card with L-bracket corner accents ── */
@@ -2790,6 +2937,10 @@ body::after {{
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
       HEALTH
     </button>
+    <button class="nav-tab" data-view="news" onclick="switchView('news')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="12" rx="1.5"/><path d="M4 6h8M4 9h5"/></svg>
+      News
+    </button>
   </div>
 
   <div class="nav-right">
@@ -4399,6 +4550,30 @@ body::after {{
     </div>
   </div><!-- end view-health -->
 
+  <!-- ── NEWS ──────────────────────────────────────────────── -->
+  <div id="view-news" class="view" style="display:none;">
+    <div class="view-header">
+      <div class="view-title">NEWS<div class="view-title-line"></div></div>
+      <div class="view-subtitle">Live headlines from BBC · Reuters · NYT · Al Jazeera · CNBC · MarketWatch</div>
+    </div>
+    <div style="padding:0 4px;">
+      <div class="news-filter-bar">
+        <button class="news-filter-btn active" id="news-filter-all" onclick="filterNews('all')">All</button>
+        <button class="news-filter-btn" id="news-filter-world" onclick="filterNews('world')">🌍 World</button>
+        <button class="news-filter-btn" id="news-filter-finance" onclick="filterNews('finance')">📈 Finance</button>
+        <div class="news-refresh-info">
+          <span id="news-last-fetched">—</span>
+          <button class="btn-ghost" style="font-size:10px;padding:3px 8px;" onclick="loadNews(true)">↺ Refresh</button>
+        </div>
+      </div>
+      <div id="news-content">
+        <div class="news-grid" id="news-grid">
+          <div style="color:var(--text-3);font-size:13px;padding:40px 0;text-align:center;grid-column:1/-1;">Loading headlines…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -4699,6 +4874,7 @@ function loadViewData(name) {{
     case 'calendar':     loadHomeCalendar(); break;
     case 'health':       loadHealth(); break;
     case 'workshop':     loadHomeTasks(); break;
+    case 'news':         loadNews(false); break;
   }}
 }}
 
@@ -4980,6 +5156,146 @@ function launchCopy(btn, encodedText) {{
     btn.style.color = '#000';
     setTimeout(() => {{ btn.textContent = orig; btn.style.background = ''; btn.style.color = ''; }}, 1500);
   }}).catch(() => showToast('Copy failed', 'error'));
+}}
+
+/* ═══════════════════════════════════════════════════════════════
+   NEWS
+═══════════════════════════════════════════════════════════════ */
+
+const _SOURCE_META = {{
+  'BBC':         {{ color: '#BB1919', bg: '#fef2f2', icon: 'B' }},
+  'NYT':         {{ color: '#111111', bg: '#f4f4f4', icon: 'N' }},
+  'REUTERS':     {{ color: '#FF8000', bg: '#fff7ed', icon: 'R' }},
+  'ALJAZEERA':   {{ color: '#009FE3', bg: '#eff9ff', icon: 'A' }},
+  'CNBC':        {{ color: '#003087', bg: '#eff3ff', icon: 'C' }},
+  'MARKETWATCH': {{ color: '#0072CE', bg: '#eff8ff', icon: 'M' }},
+  'BLOOMBERG':   {{ color: '#444444', bg: '#f5f5f5', icon: 'B' }},
+}};
+
+function _sourceMeta(name) {{
+  const key = (name || '').toUpperCase().replace(/[^A-Z]/g,'').slice(0,10);
+  for (const [k, v] of Object.entries(_SOURCE_META)) {{
+    if (key.startsWith(k.slice(0,4))) return v;
+  }}
+  return {{ color: '#6B7280', bg: '#f3f4f6', icon: (name||'?')[0].toUpperCase() }};
+}}
+
+let _newsCache = null;
+let _newsFilter = 'all';
+
+async function loadNews(force) {{
+  try {{
+    if (!force && _newsCache) {{ renderNewsView(_newsCache); return; }}
+    const res = await fetch('/api/news');
+    if (!res.ok) {{ console.warn('loadNews', res.status); return; }}
+    const data = await res.json();
+    _newsCache = data;
+    renderNewsView(data);
+  }} catch(e) {{ console.error('loadNews failed', e); }}
+}}
+
+function filterNews(cat) {{
+  _newsFilter = cat;
+  document.querySelectorAll('.news-filter-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('news-filter-' + cat);
+  if (btn) btn.classList.add('active');
+  if (_newsCache) renderNewsView(_newsCache);
+}}
+
+function renderNewsView(data) {{
+  const grid = document.getElementById('news-grid');
+  const fetchedEl = document.getElementById('news-last-fetched');
+  if (!grid) return;
+
+  // Update fetched timestamp
+  if (fetchedEl && data.fetched_at) {{
+    const ago = Math.round((Date.now() - new Date(data.fetched_at + 'Z').getTime()) / 60000);
+    fetchedEl.textContent = ago <= 1 ? 'Just now' : ago + ' min ago';
+  }}
+
+  // Merge and filter articles
+  let world = (data.world || []).map(a => ({{...a, _cat:'world'}}));
+  let finance = (data.finance || []).map(a => ({{...a, _cat:'finance'}}));
+  let articles = _newsFilter === 'world' ? world
+               : _newsFilter === 'finance' ? finance
+               : [...world, ...finance];
+
+  if (articles.length === 0) {{
+    grid.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:40px 0;text-align:center;grid-column:1/-1;">' +
+      (data.error ? 'Could not load news: ' + escHtml(data.error) : 'No headlines available.') + '</div>';
+    return;
+  }}
+
+  const esc = s => escHtml(s || '');
+
+  function makeSourceBadge(source, cat) {{
+    const m = _sourceMeta(source);
+    const catIcon = cat === 'finance' ? '📈 ' : '🌍 ';
+    return `<span class="news-source-badge" style="background:${{m.bg}};color:${{m.color}};">
+      <span class="news-source-icon" style="background:${{m.color}};">${{m.icon}}</span>
+      ${{esc(source)}}
+      <span style="opacity:.5;font-weight:400;margin-left:2px;">${{catIcon}}</span>
+    </span>`;
+  }}
+
+  let html = '';
+
+  // Featured story (first article) — only when showing All or a single category
+  const featured = articles[0];
+  const rest = articles.slice(1);
+  const fm = _sourceMeta(featured.source);
+
+  html += `<div class="news-featured" onclick="window.open(${{JSON.stringify(featured.link || '#')}}, '_blank')" style="cursor:pointer;">
+    <div class="news-featured-body">
+      ${{makeSourceBadge(featured.source, featured._cat)}}
+      <div class="news-headline" style="margin-top:12px;">${{esc(featured.title)}}</div>
+      <div class="news-summary" style="margin-top:8px;">${{esc((featured.summary || '').slice(0,200))}}</div>
+      <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:10px;color:var(--text-3);">${{featured._cat === 'finance' ? '📈 Finance' : '🌍 World'}}</span>
+        ${{featured.link ? `<a class="news-read-link" href="${{esc(featured.link)}}" target="_blank" onclick="event.stopPropagation()">Read full story →</a>` : ''}}
+      </div>
+    </div>
+    <div class="news-featured-image" style="background:linear-gradient(135deg,${{fm.color}}22,${{fm.color}}44);">
+      <span style="font-size:72px;opacity:.3;user-select:none;">${{fm.icon}}</span>
+      <div style="position:absolute;bottom:16px;right:16px;font-size:28px;font-weight:900;color:${{fm.color}};opacity:.5;font-family:serif;">${{esc(featured.source)}}</div>
+    </div>
+  </div>`;
+
+  // Section: remaining world articles
+  if (_newsFilter !== 'finance') {{
+    const worldRest = rest.filter(a => a._cat === 'world');
+    if (worldRest.length > 0) {{
+      html += `<div class="news-section-label" style="grid-column:1/-1;">🌍 World News</div>`;
+      html += worldRest.map(a => {{
+        const m = _sourceMeta(a.source);
+        return `<a class="news-card" href="${{esc(a.link || '#')}}" target="_blank">
+          ${{makeSourceBadge(a.source, a._cat)}}
+          <div class="news-headline">${{esc(a.title)}}</div>
+          ${{a.summary ? `<div class="news-summary">${{esc(a.summary.slice(0,150))}}</div>` : ''}}
+          ${{a.link ? `<span class="news-read-link">Read →</span>` : ''}}
+        </a>`;
+      }}).join('');
+    }}
+  }}
+
+  // Section: remaining finance articles
+  if (_newsFilter !== 'world') {{
+    const financeRest = rest.filter(a => a._cat === 'finance');
+    if (financeRest.length > 0) {{
+      html += `<div class="news-section-label" style="grid-column:1/-1;">📈 Finance & Markets</div>`;
+      html += financeRest.map(a => {{
+        const m = _sourceMeta(a.source);
+        return `<a class="news-card" href="${{esc(a.link || '#')}}" target="_blank">
+          ${{makeSourceBadge(a.source, a._cat)}}
+          <div class="news-headline">${{esc(a.title)}}</div>
+          ${{a.summary ? `<div class="news-summary">${{esc(a.summary.slice(0,150))}}</div>` : ''}}
+          ${{a.link ? `<span class="news-read-link">Read →</span>` : ''}}
+        </a>`;
+      }}).join('');
+    }}
+  }}
+
+  grid.innerHTML = html;
 }}
 
 async function loadBriefing() {{
@@ -6831,7 +7147,7 @@ async function sendCommand(text) {{
       if (done) break;
       buf += decoder.decode(value, {{ stream: true }});
 
-      const lines = buf.split('\n');
+      const lines = buf.split('\\n');
       buf = lines.pop();   /* keep incomplete line in buf */
 
       for (const line of lines) {{
@@ -6993,30 +7309,57 @@ function renderStatus(data) {{
   }}).join('');
 }}
 
+function briefingToHtml(text) {{
+  // Parse briefing — skip [SOURCE] news lines (now in dedicated News view)
+  const lines = text.split('\\n');
+  let html = '';
+  let i = 0;
+  let skippedNewsCount = 0;
+  const esc = s => escHtml(s.replace(/&#0*39;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"'));
+  while (i < lines.length) {{
+    const line = lines[i].trim();
+    if (!line || line === '---') {{ i++; continue; }}
+    // ## Section heading — skip news section headers
+    if (line.startsWith('## ')) {{
+      const heading = line.slice(3).toLowerCase();
+      if (heading.includes('news') || heading.includes('live')) {{ i++; continue; }}
+      html += `<div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--text-3);text-transform:uppercase;margin:10px 0 6px;">${{esc(line.slice(3))}}</div>`;
+      i++; continue;
+    }}
+    // [SOURCE] Title — skip, these are news items now in News view
+    const srcMatch = line.match(/^\\[([^\\]]+)\\]\\s*(.+)$/);
+    if (srcMatch) {{
+      skippedNewsCount++;
+      if (i + 1 < lines.length && lines[i+1].trim().startsWith('Brief:')) i++;
+      i++; continue;
+    }}
+    if (line.startsWith('Brief:')) {{ i++; continue; }}
+    html += `<div style="font-size:12px;color:var(--text-2);margin-bottom:5px;line-height:1.5;">${{esc(line)}}</div>`;
+    i++;
+  }}
+  if (skippedNewsCount > 0) {{
+    html += `<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:11px;color:var(--text-3);">📰 ${{skippedNewsCount}} headlines available</span>
+      <button class="btn-ghost" style="font-size:10px;padding:3px 8px;" onclick="switchView('news')">View News →</button>
+    </div>`;
+  }}
+  return html || '<span style="color:var(--text-3);font-style:italic;">No briefing available yet.</span>';
+}}
+
 function renderBriefing(data) {{
   const textEl = document.getElementById('brief-text');
   const dateEl = document.getElementById('brief-date');
   if (!data) return;
-  // Support both {{date: ...}} and auto-compute today
   const dateStr = data.date || new Date().toLocaleDateString([], {{weekday:'short', month:'short', day:'numeric'}});
   if (dateEl) dateEl.textContent = dateStr;
-  // API returns `briefing` field (not `content`)
   const raw = data.briefing || data.content || data.text || '';
   const text = typeof raw === 'string' ? raw : (raw[0] || '');
-  if (textEl && text) {{
-    if (text.length > 420) {{
-      textEl.dataset.full = text;
-      textEl.dataset.short = text.slice(0, 420);
-      textEl.dataset.expanded = '0';
-      textEl.textContent = text.slice(0, 420) + '…';
-      textEl.style.cursor = 'pointer';
-      textEl.title = 'Click to read full briefing';
-      textEl.onclick = () => toggleExpand(textEl);
+  if (textEl) {{
+    if (text) {{
+      textEl.innerHTML = briefingToHtml(text);
     }} else {{
-      textEl.textContent = text;
+      textEl.innerHTML = '<span style="color:var(--text-3);font-style:italic;">No briefing available yet.</span>';
     }}
-  }} else if (textEl && !text) {{
-    textEl.innerHTML = '<span style="color:var(--text-3);font-style:italic;">No briefing available yet.</span>';
   }}
 }}
 
@@ -8498,7 +8841,7 @@ function handleSmartPaste(e) {{
 
     // Python/JS traceback
     if (/Traceback .most recent call last.|Error:|ReferenceError:|TypeError:|SyntaxError:|AttributeError:|ValueError:|KeyError:|ImportError:|ModuleNotFoundError:/.test(text)) {{
-      input.value = 'Diagnose this error and fix it:\n\n' + text;
+      input.value = 'Diagnose this error and fix it:\\n\\n' + text;
       return;
     }}
 
@@ -8509,7 +8852,7 @@ function handleSmartPaste(e) {{
     }}
 
     // Absolute file path
-    if (/^[/][^ \t\n\r]+[.](py|ts|tsx|js|json|md|yaml|yml|toml|txt|sh|env)$/.test(text)) {{
+    if (/^[/][^ \\t\\n\\r]+[.](py|ts|tsx|js|json|md|yaml|yml|toml|txt|sh|env)$/.test(text)) {{
       input.value = 'Read this file and summarize what it does: ' + text;
       return;
     }}
@@ -8719,7 +9062,9 @@ function fmtLocalTime(utcStr, {{dateOnly=false, short=false}}={{}}) {{
     let s = String(utcStr).trim();
     // "2026-05-20 02:35:33 -0400"  →  "2026-05-20T02:35:33-04:00"
     s = s.replace(/^(\d{{4}}-\d{{2}}-\d{{2}}) (\d{{2}}:\d{{2}}:\d{{2}}) ([+-]\d{{2}}):?(\d{{2}})$/, '$1T$2$3:$4');
-    // "2026-05-20T19:03:28" (no tz) → treat as UTC
+    // "2026-05-20 19:03:28" (space, no tz) → treat as UTC
+    if (/^\d{{4}}-\d{{2}}-\d{{2}} \d{{2}}:\d{{2}}:\d{{2}}$/.test(s)) s = s.replace(' ', 'T') + 'Z';
+    // "2026-05-20T19:03:28" (T, no tz) → treat as UTC
     if (/^\d{{4}}-\d{{2}}-\d{{2}}T\d{{2}}:\d{{2}}:\d{{2}}$/.test(s)) s += 'Z';
     const d = new Date(s);
     if (isNaN(d)) return utcStr;
