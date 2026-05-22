@@ -1266,26 +1266,33 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         return _json(result)
 
     @app.get("/api/news")
-    async def api_news() -> JSONResponse:
-        """Return live structured news articles for the News view."""
+    async def api_news(force: int = 0) -> JSONResponse:
+        """
+        Return structured news articles with OG hero images for the News view.
+        ?force=1  — bypass 30-minute server cache and re-fetch everything.
+        Cold start: ~15-20 s (RSS + parallel OG enrichment).
+        Warm (cached): < 1 ms.
+        """
         from .rss_briefing import fetch_briefing_context
         from datetime import datetime as _dt
         import asyncio as _asyncio
         rss: dict = {}
         try:
             rss = await _asyncio.wait_for(
-                _asyncio.to_thread(fetch_briefing_context),
-                timeout=10.0,
+                _asyncio.to_thread(fetch_briefing_context, bool(force)),
+                timeout=30.0,
             )
         except Exception:
             pass
         return _json({
-            "world": rss.get("world", []),
-            "finance": rss.get("finance", []),
-            "total": rss.get("total_articles", 0),
-            "sources": rss.get("sources_hit", []),
+            "world":      rss.get("world", []),
+            "finance":    rss.get("finance", []),
+            "total":      rss.get("total_articles", 0),
+            "sources":    rss.get("sources_hit", []),
             "fetched_at": _dt.utcnow().isoformat(),
-            "error": rss.get("fetch_error", ""),
+            "cached":     rss.get("cached", False),
+            "enriched":   rss.get("enriched", False),
+            "error":      rss.get("fetch_error", ""),
         })
 
     @app.get("/api/briefing")
@@ -8006,6 +8013,203 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         except ImportError:
             from quarterly_review import generate_doctor_packet
         return _json(await generate_doctor_packet())
+
+    # -------------------------------------------------------------------------
+    # PHASE 5B — Baseline Completeness Score
+    # -------------------------------------------------------------------------
+
+    @app.get("/api/health/completeness")
+    async def api_health_completeness() -> JSONResponse:
+        """Return the 100-point Baseline Completeness Score across 8 domains."""
+        try:
+            from .health_completeness import run_completeness_check
+        except ImportError:
+            from health_completeness import run_completeness_check
+        return _json(await asyncio.to_thread(run_completeness_check))
+
+    # -------------------------------------------------------------------------
+    # PHASE 5A — Data Import Pipeline
+    # -------------------------------------------------------------------------
+
+    @app.post("/api/health/import/labs")
+    async def api_import_labs(request: Request) -> JSONResponse:
+        """Import labs from a CSV file path. Body: {filepath: string}"""
+        try:
+            from .health_importer import import_labs_csv
+        except ImportError:
+            from health_importer import import_labs_csv
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        filepath = body.get("filepath", "")
+        if not filepath:
+            return JSONResponse({"error": "filepath required"}, status_code=400)
+        return _json(await asyncio.to_thread(import_labs_csv, filepath))
+
+    @app.post("/api/health/import/vitals")
+    async def api_import_vitals(request: Request) -> JSONResponse:
+        """Import vitals from a CSV file path. Body: {filepath: string}"""
+        try:
+            from .health_importer import import_vitals_csv
+        except ImportError:
+            from health_importer import import_vitals_csv
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        filepath = body.get("filepath", "")
+        if not filepath:
+            return JSONResponse({"error": "filepath required"}, status_code=400)
+        return _json(await asyncio.to_thread(import_vitals_csv, filepath))
+
+    @app.post("/api/health/import/cgm")
+    async def api_import_cgm(request: Request) -> JSONResponse:
+        """Import CGM data from Dexcom CSV export. Body: {filepath: string, source?: string}"""
+        try:
+            from .health_importer import import_cgm_csv
+        except ImportError:
+            from health_importer import import_cgm_csv
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        filepath = body.get("filepath", "")
+        source = body.get("source", "dexcom")
+        if not filepath:
+            return JSONResponse({"error": "filepath required"}, status_code=400)
+        return _json(await asyncio.to_thread(import_cgm_csv, filepath, source))
+
+    @app.post("/api/health/import/garmin")
+    async def api_import_garmin(request: Request) -> JSONResponse:
+        """Import Garmin Connect daily CSV export. Body: {filepath: string}"""
+        try:
+            from .health_importer import import_garmin_csv
+        except ImportError:
+            from health_importer import import_garmin_csv
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        filepath = body.get("filepath", "")
+        if not filepath:
+            return JSONResponse({"error": "filepath required"}, status_code=400)
+        return _json(await asyncio.to_thread(import_garmin_csv, filepath))
+
+    @app.post("/api/health/import/apple-health")
+    async def api_import_apple_health(request: Request) -> JSONResponse:
+        """Import Apple Health export.xml. Body: {filepath: string}"""
+        try:
+            from .health_importer import import_apple_health_xml
+        except ImportError:
+            from health_importer import import_apple_health_xml
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        filepath = body.get("filepath", "")
+        if not filepath:
+            return JSONResponse({"error": "filepath required"}, status_code=400)
+        return _json(await asyncio.to_thread(import_apple_health_xml, filepath))
+
+    @app.get("/api/health/import/history")
+    async def api_import_history() -> JSONResponse:
+        """Return the last 50 data import events."""
+        try:
+            from .health_importer import get_import_history
+        except ImportError:
+            from health_importer import get_import_history
+        return _json({"history": await asyncio.to_thread(get_import_history)})
+
+    # -------------------------------------------------------------------------
+    # PHASE 5D — Scenario Modeling Engine
+    # -------------------------------------------------------------------------
+
+    @app.post("/api/health/scenario/run")
+    async def api_scenario_run(request: Request) -> JSONResponse:
+        """Run a custom what-if scenario. Body: {scenario_name, changes: [{change_type, description, parameters}], timeframe_months?, notes?}"""
+        try:
+            from .scenario_engine import ScenarioInput, ScenarioChange, run_scenario_llm, save_scenario
+        except ImportError:
+            from scenario_engine import ScenarioInput, ScenarioChange, run_scenario_llm, save_scenario
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        changes = [ScenarioChange(**c) for c in body.get("changes", [])]
+        scenario = ScenarioInput(
+            scenario_name=body.get("scenario_name", "Custom scenario"),
+            changes=changes,
+            timeframe_months=body.get("timeframe_months", 12),
+            notes=body.get("notes", ""),
+        )
+        result = await run_scenario_llm(scenario)
+        await asyncio.to_thread(save_scenario, result)
+        return _json(result.__dict__ if hasattr(result, "__dict__") else result)
+
+    @app.post("/api/health/scenario/quick")
+    async def api_scenario_quick(request: Request) -> JSONResponse:
+        """Run a pre-built quick scenario. Body: {change_type: string, timeframe_months?: int}"""
+        try:
+            from .scenario_engine import run_quick_scenario, save_scenario
+        except ImportError:
+            from scenario_engine import run_quick_scenario, save_scenario
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        change_type = body.get("change_type", "")
+        if not change_type:
+            return JSONResponse({"error": "change_type required"}, status_code=400)
+        timeframe_months = body.get("timeframe_months", 12)
+        result = await run_quick_scenario(change_type, timeframe_months=timeframe_months)
+        await asyncio.to_thread(save_scenario, result)
+        return _json(result.__dict__ if hasattr(result, "__dict__") else result)
+
+    @app.post("/api/health/scenario/compare")
+    async def api_scenario_compare(request: Request) -> JSONResponse:
+        """Compare multiple scenarios side by side. Body: {scenarios: [{scenario_name, changes, timeframe_months}]}"""
+        try:
+            from .scenario_engine import ScenarioInput, ScenarioChange, compare_scenarios
+        except ImportError:
+            from scenario_engine import ScenarioInput, ScenarioChange, compare_scenarios
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        scenarios = []
+        for s in body.get("scenarios", []):
+            changes = [ScenarioChange(**c) for c in s.get("changes", [])]
+            scenarios.append(ScenarioInput(
+                scenario_name=s.get("scenario_name", "Scenario"),
+                changes=changes,
+                timeframe_months=s.get("timeframe_months", 12),
+            ))
+        return _json(await compare_scenarios(scenarios))
+
+    @app.get("/api/health/scenario/history")
+    async def api_scenario_history() -> JSONResponse:
+        """Return all previously run scenarios."""
+        try:
+            from .scenario_engine import get_saved_scenarios
+        except ImportError:
+            from scenario_engine import get_saved_scenarios
+        return _json({"scenarios": await asyncio.to_thread(get_saved_scenarios)})
+
+    # -------------------------------------------------------------------------
+    # PHASE 5C — Health Dashboard UI
+    # -------------------------------------------------------------------------
+
+    @app.get("/health-dashboard")
+    @app.get("/health-dashboard/")
+    async def health_dashboard() -> "HTMLResponse":
+        """Serve the JARVIS Health Dashboard UI."""
+        from fastapi.responses import HTMLResponse
+        try:
+            from .health_dashboard import get_dashboard_html
+        except ImportError:
+            from health_dashboard import get_dashboard_html
+        return HTMLResponse(content=get_dashboard_html())
 
     return app
 
