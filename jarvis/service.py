@@ -4157,9 +4157,11 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         error: str | None = None,
         state: str | None = None,
     ) -> RedirectResponse:
+        import logging as _dex_log
+        _log = _dex_log.getLogger("jarvis.dexcom")
         from .dexcom_sync import exchange_code
         if error:
-            log.error("Dexcom OAuth error: %s", error)
+            _log.error("Dexcom OAuth error: %s", error)
             return RedirectResponse(f"/?dexcom=error&detail={error}")
         if not code:
             return RedirectResponse("/?dexcom=missing_code")
@@ -4169,8 +4171,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             await exchange_code(code, redirect_uri)
             return RedirectResponse("/?dexcom=connected")
         except Exception as exc:
-            log.error("Dexcom callback exchange failed: %s", exc)
-            # Return JSON error instead of 500 so we can see what went wrong
+            _log.error("Dexcom callback exchange failed: %s", exc)
             return JSONResponse(
                 {"error": "Token exchange failed", "detail": str(exc)},
                 status_code=400,
