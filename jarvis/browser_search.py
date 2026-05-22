@@ -4,11 +4,14 @@ from __future__ import annotations
 JARVIS Browser Search — hybrid free web search.
 ================================================
 Search strategy (in priority order):
-  1. Brave Search API   — real-time independent index, free 2k/month
+  1. Tavily Search API  — AI-optimized, pre-cleaned content, free 1k/month
+                          Requires: TAVILY_API_KEY in .env
+                          Sign up:  https://tavily.com  (free, no CC)
+  2. Brave Search API   — real-time independent index, free 2k/month
                           Requires: BRAVE_SEARCH_API_KEY in .env
                           Sign up:  https://brave.com/search/api/
-  2. Wikipedia API      — encyclopedic fallback, always free, never blocked
-  3. Curated fetch      — Playwright for specific authoritative research URLs
+  3. Wikipedia API      — encyclopedic fallback, always free, never blocked
+  4. Curated fetch      — Playwright for specific authoritative research URLs
 
 Fetch strategy (for full article text):
   1. Plain HTTP         — fast, works for most articles
@@ -239,7 +242,85 @@ def _fetch_curated_context(keywords: list[str], num_pages: int = 2) -> list[Sear
 
 
 # ---------------------------------------------------------------------------
-# Brave Search API (primary — free tier: 2,000 queries/month, no CC needed)
+# Tavily Search API (tier 1 — AI-optimized, pre-cleaned, free 1k/month)
+# Built for LLM agents: returns relevant content, not raw HTML.
+# Sign up: https://tavily.com — free plan, no credit card
+# Set TAVILY_API_KEY in .env
+# ---------------------------------------------------------------------------
+
+def _search_tavily(query: str, num_results: int, deep: bool = False) -> list[SearchResult]:
+    """
+    Tavily Search — AI-optimized results with pre-extracted content.
+    Returns cleaned article text in the snippet, not just a description.
+    Use deep=True for research tasks (fetches full page content per result).
+    Returns empty list if key not configured or request fails.
+    """
+    api_key = os.getenv("TAVILY_API_KEY", "")
+    if not api_key:
+        return []
+
+    payload = json.dumps({
+        "api_key":              api_key,
+        "query":                query,
+        "search_depth":         "advanced" if deep else "basic",
+        "include_answer":       False,
+        "include_raw_content":  False,
+        "max_results":          min(num_results, 10),
+        "include_domains":      [],
+        "exclude_domains":      [],
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        "https://api.tavily.com/search",
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "Accept":        "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+
+        results: list[SearchResult] = []
+        for item in data.get("results", [])[:num_results]:
+            title   = item.get("title", "")
+            url_    = item.get("url", "")
+            # Tavily returns `content` — pre-extracted relevant text, not raw HTML
+            snippet = item.get("content", "") or item.get("snippet", "")
+            if title and url_:
+                results.append(SearchResult(
+                    title=title,
+                    url=url_,
+                    snippet=snippet[:600],
+                ))
+        logger.info("Tavily search '%s' → %d results", query[:50], len(results))
+        return results
+
+    except urllib.error.HTTPError as exc:
+        logger.warning("Tavily search HTTP %s: %s", exc.code, exc.reason)
+        return []
+    except Exception as exc:
+        logger.warning("Tavily search failed: %s", exc)
+        return []
+
+
+def research(query: str, num_results: int = 5) -> list[SearchResult]:
+    """
+    Deep research search using Tavily advanced mode.
+    Returns full extracted content per result — ideal for agent research tasks.
+    Falls back to standard search() if Tavily unavailable.
+    """
+    if os.getenv("TAVILY_API_KEY"):
+        results = _search_tavily(query, num_results, deep=True)
+        if results:
+            return results
+    return search(query, num_results=num_results)
+
+
+# ---------------------------------------------------------------------------
+# Brave Search API (tier 2 — real-time index, free 2,000/month, no CC needed)
 # Sign up: https://brave.com/search/api/
 # Set BRAVE_SEARCH_API_KEY in .env
 # ---------------------------------------------------------------------------
@@ -386,15 +467,15 @@ def search(
     Search the web. Returns up to num_results SearchResult objects.
 
     Strategy (in order):
-      1. Brave Search API — real-time, independent index, free 2k/month
-         (requires BRAVE_SEARCH_API_KEY in .env — https://brave.com/search/api/)
-      2. Wikipedia API — encyclopedic fallback, always free, never blocked
-      3. Curated domain fetch — Playwright for authoritative research URLs
+      1. Tavily  — AI-optimized, pre-cleaned content, free 1k/month (TAVILY_API_KEY)
+      2. Brave   — real-time independent index, free 2k/month (BRAVE_SEARCH_API_KEY)
+      3. Wikipedia — encyclopedic fallback, always free, no key needed
+      4. Curated   — Playwright fetches of authoritative research URLs
 
     Args:
         query:         Search query string
         num_results:   Max results to return (default 5)
-        engine:        "auto", "brave", "wikipedia", "curated"
+        engine:        "auto", "tavily", "brave", "wikipedia", "curated"
         fetch_content: If True, fetches the first result's full article text
         timeout_ms:    Browser timeout for fetch fallback
 
@@ -403,18 +484,28 @@ def search(
     """
     t0 = time.monotonic()
     results: list[SearchResult] = []
+    backend_used = "wikipedia"
 
     try:
-        # 1. Brave Search: real-time results with live web index
-        if engine in ("auto", "brave") and os.getenv("BRAVE_SEARCH_API_KEY"):
-            results = _search_brave(query, num_results)
+        # 1. Tavily: AI-optimized content, best for agent research tasks
+        if engine in ("auto", "tavily") and os.getenv("TAVILY_API_KEY"):
+            results = _search_tavily(query, num_results)
+            if results:
+                backend_used = "tavily"
 
-        # 2. Wikipedia: encyclopedic fallback for factual queries
+        # 2. Brave: real-time live web results
+        if len(results) < 2 and engine in ("auto", "brave") and os.getenv("BRAVE_SEARCH_API_KEY"):
+            brave = _search_brave(query, num_results - len(results))
+            results.extend(brave)
+            if brave:
+                backend_used = "brave" if backend_used == "wikipedia" else backend_used
+
+        # 3. Wikipedia: encyclopedic fallback
         if len(results) < 2 and engine in ("auto", "wikipedia"):
             wiki = _search_wikipedia(query, min(num_results - len(results), 4))
             results.extend(wiki)
 
-        # 3. Curated domain fetch for research-heavy queries
+        # 4. Curated domain fetch
         if len(results) < 2 and engine in ("auto", "curated"):
             keywords = query.lower().split()[:5]
             curated = _fetch_curated_context(
@@ -426,16 +517,29 @@ def search(
         logger.warning("search('%s') exception: %s", query[:60], exc)
 
     elapsed = time.monotonic() - t0
-    backend = "brave" if results and os.getenv("BRAVE_SEARCH_API_KEY") else "wikipedia"
     logger.info(
         "search('%s') → %d results via %s in %.1fs",
-        query[:60], len(results), backend, elapsed,
+        query[:60], len(results), backend_used, elapsed,
     )
 
     if fetch_content and results:
         results[0].snippet = fetch_page_text(results[0].url)[:800] or results[0].snippet
 
     return results
+
+
+def _results_to_text(query: str, results: list[SearchResult], snippet_len: int = 300) -> str:
+    """Format a list of SearchResult objects into an LLM-ready string."""
+    if not results:
+        return f"No web results found for: {query}"
+    lines = [f"Web search results for: {query}\n"]
+    for i, r in enumerate(results, 1):
+        lines.append(f"{i}. {r.title}")
+        lines.append(f"   {r.url}")
+        if r.snippet:
+            lines.append(f"   {r.snippet[:snippet_len]}")
+        lines.append("")
+    return "\n".join(lines)
 
 
 def search_to_text(
@@ -445,16 +549,20 @@ def search_to_text(
 ) -> str:
     """Returns search results as a formatted string ready for an LLM prompt."""
     results = search(query, num_results=num_results, fetch_content=fetch_top_page)
-    if not results:
-        return f"No web results found for: {query}"
-    lines = [f"Web search results for: {query}\n"]
-    for i, r in enumerate(results, 1):
-        lines.append(f"{i}. {r.title}")
-        lines.append(f"   {r.url}")
-        if r.snippet:
-            lines.append(f"   {r.snippet[:300]}")
-        lines.append("")
-    return "\n".join(lines)
+    return _results_to_text(query, results)
+
+
+def research_to_text(
+    query: str,
+    num_results: int = 5,
+) -> str:
+    """
+    Deep research search — returns AI-optimized full content per result.
+    Uses Tavily advanced mode when available; falls back to standard search.
+    Ideal for agent research tasks where content quality matters most.
+    """
+    results = research(query, num_results=num_results)
+    return _results_to_text(query, results, snippet_len=600)
 
 
 # ---------------------------------------------------------------------------
