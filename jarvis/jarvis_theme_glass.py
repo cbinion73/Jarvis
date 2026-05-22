@@ -783,6 +783,211 @@ body::after {{
   margin-top: 4px;
 }}
 
+/* ── Adaptive Overview Layout ───────────────────────────────────── */
+.overview-mode-bar {{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}}
+.mode-pill {{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  background: rgba(255,255,255,0.25);
+  border: 1px solid rgba(255,255,255,0.4);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}}
+.mode-pill:hover {{
+  background: rgba(255,255,255,0.42);
+  color: var(--text-1);
+}}
+.mode-pill.active {{
+  background: var(--hue-dim);
+  border-color: var(--hue);
+  color: var(--hue);
+  box-shadow: 0 0 0 3px rgba(var(--hue-rgb, 99,102,241), .15);
+}}
+.mode-pill.manual-override {{
+  border-color: rgba(201,168,76,.6);
+  box-shadow: 0 0 0 2px rgba(201,168,76,.15);
+}}
+.mode-auto-chip {{
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  color: var(--success);
+  background: rgba(16,185,129,.1);
+  border: 1px solid rgba(16,185,129,.25);
+  border-radius: 10px;
+  padding: 2px 8px;
+}}
+.mode-auto-chip.override {{
+  color: #a07a10;
+  background: rgba(201,168,76,.1);
+  border-color: rgba(201,168,76,.3);
+}}
+.mode-clock {{
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-3);
+  letter-spacing: .04em;
+}}
+.overview-alert-banner {{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  font-weight: 500;
+  transform: translateY(-10px);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  border: 1px solid transparent;
+  pointer-events: none;
+}}
+.overview-alert-banner.visible {{
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}}
+.overview-alert-banner.level-amber {{
+  background: rgba(201,168,76,.1);
+  border-color: rgba(201,168,76,.4);
+  color: #7d5f0a;
+}}
+.overview-alert-banner.level-red {{
+  background: rgba(196,30,58,.08);
+  border-color: rgba(196,30,58,.35);
+  color: #9b1c1c;
+}}
+.overview-alert-banner.level-blue {{
+  background: rgba(59,130,246,.08);
+  border-color: rgba(59,130,246,.35);
+  color: #1d4ed8;
+}}
+.alert-banner-msg {{ flex: 1; }}
+.alert-banner-action {{
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-mono);
+  transition: background .15s;
+}}
+.alert-banner-action:hover {{ background: rgba(255,255,255,.2); }}
+.alert-banner-dismiss {{
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font-size: 15px;
+  opacity: .55;
+  padding: 0 4px;
+  line-height: 1;
+}}
+.overview-hero-zone {{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+  min-height: 200px;
+}}
+@media(max-width: 768px) {{
+  .overview-hero-zone {{ grid-template-columns: 1fr; }}
+}}
+.overview-priority-strip {{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}}
+@media(max-width: 768px) {{
+  .overview-priority-strip {{ grid-template-columns: repeat(2, 1fr); }}
+}}
+@media(max-width: 480px) {{
+  .overview-priority-strip {{ grid-template-columns: 1fr; }}
+}}
+.overview-ambient-row {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}}
+.ambient-tile {{
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.22);
+  border: 1px solid rgba(255,255,255,.38);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  font-family: var(--font-mono);
+  transition: background .2s, color .2s;
+  white-space: nowrap;
+}}
+.ambient-tile:hover {{
+  background: rgba(255,255,255,.42);
+  color: var(--text-1);
+}}
+.ambient-badge {{
+  font-size: 10px;
+  background: var(--hue-dim);
+  color: var(--hue);
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-weight: 700;
+}}
+.layout-card {{
+  transition: opacity .3s ease, transform .3s ease,
+              box-shadow .45s ease, background-color .45s ease,
+              border-color .45s ease;
+}}
+.layout-card.entering {{
+  opacity: 0;
+  transform: translateY(8px);
+}}
+@keyframes pulse-amber-ring {{
+  0%,100% {{ box-shadow: 0 0 0 0 rgba(201,168,76,0); }}
+  50%      {{ box-shadow: 0 0 0 5px rgba(201,168,76,.35); }}
+}}
+@keyframes pulse-red-ring {{
+  0%,100% {{ box-shadow: 0 0 0 0 rgba(196,30,58,0); }}
+  50%      {{ box-shadow: 0 0 0 5px rgba(196,30,58,.35); }}
+}}
+@keyframes pulse-blue-ring {{
+  0%,100% {{ box-shadow: 0 0 0 0 rgba(59,130,246,0); }}
+  50%      {{ box-shadow: 0 0 0 5px rgba(59,130,246,.3); }}
+}}
+.layout-card.alert-pulse-amber {{ animation: pulse-amber-ring 2.5s ease-in-out infinite; }}
+.layout-card.alert-pulse-red   {{ animation: pulse-red-ring   2s   ease-in-out infinite; }}
+.layout-card.alert-pulse-blue  {{ animation: pulse-blue-ring  2s   ease-in-out infinite; }}
+
 /* ═══════════════════════════════════════════════════════════════════
    CARD GRID
 ═══════════════════════════════════════════════════════════════════ */
@@ -3016,17 +3221,40 @@ body::after {{
     </div>
   </div>
 
-  <!-- ── OVERVIEW ──────────────────────────────────────────── -->
+  <!-- ── OVERVIEW ──────────────────────────────────────────────── -->
   <div id="view-overview" class="view">
     <div class="view-header">
       <div class="view-title">
         OVERVIEW
         <div class="view-title-line"></div>
       </div>
-      <div class="view-subtitle">Tactical Command Dashboard · S.H.I.E.L.D. Priority View</div>
+      <div class="view-subtitle" id="overview-subtitle">Tactical Command Dashboard · S.H.I.E.L.D. Priority View</div>
     </div>
 
-    <!-- Stats strip -->
+    <!-- Mode Bar -->
+    <div class="overview-mode-bar" id="overview-mode-bar">
+      <button class="mode-pill" data-mode="morning_brief" onclick="setLayoutMode('morning_brief')">
+        🌅 Morning Brief
+      </button>
+      <button class="mode-pill" data-mode="lunch_brief" onclick="setLayoutMode('lunch_brief')">
+        ☀️ Lunch Brief
+      </button>
+      <button class="mode-pill" data-mode="daily_recap" onclick="setLayoutMode('daily_recap')">
+        🌙 Daily Recap
+      </button>
+      <span class="mode-auto-chip" id="mode-auto-chip">AUTO</span>
+      <span class="mode-clock" id="mode-clock">—</span>
+    </div>
+
+    <!-- Alert Banner (hidden by default) -->
+    <div class="overview-alert-banner" id="overview-alert-banner" style="display:none;">
+      <span id="alert-banner-icon">⚠️</span>
+      <span class="alert-banner-msg" id="alert-banner-msg"></span>
+      <button class="alert-banner-action" id="alert-banner-action-btn" onclick="alertBannerNavigate()">View →</button>
+      <button class="alert-banner-dismiss" onclick="dismissAlertBanner()">✕</button>
+    </div>
+
+    <!-- Stats Strip -->
     <div class="stats-strip">
       <div class="card stat-tile accent">
         <div class="stat-label">Active Agents</div>
@@ -3050,262 +3278,21 @@ body::after {{
       </div>
     </div>
 
-    <div class="card-grid">
-
-      <!-- Needs You -->
-      <div class="card card-needs-you">
-        <div class="card-inner">
-          <div class="card-header">
-            <span class="card-title">Needs You</span>
-            <span class="dot dot-gold"></span>
-          </div>
-          <div id="approvals-list">
-            <div class="list-row">
-              <div style="flex:1">
-                <div class="skel" style="height:12px;width:70%;margin-bottom:6px;"></div>
-                <div class="skel" style="height:10px;width:40%;"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Reminders -->
-      <div class="card card-tactical">
-        <div class="card-inner">
-          <div class="card-header">
-            <span class="card-title">Reminders</span>
-            <span class="pill pill-hue" id="reminders-count">—</span>
-          </div>
-          <div id="overview-reminders">
-            <div class="list-row"><div class="skel" style="height:10px;width:70%;"></div></div>
-            <div class="list-row"><div class="skel" style="height:10px;width:55%;"></div></div>
-          </div>
-          <div style="margin-top:10px;display:flex;gap:6px;">
-            <input id="reminder-input" type="text" placeholder="Add reminder…" style="flex:1;background:rgba(255,255,255,0.4);border:1px solid rgba(255,255,255,0.5);border-radius:6px;padding:5px 8px;font-size:12px;color:var(--text-1);outline:none;" onkeydown="if(event.key==='Enter')addReminder()">
-            <button onclick="addReminder()" style="background:var(--hue);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;">+</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tasks -->
-      <div class="card card-tactical" style="grid-column: 1 / -1;">
-        <div class="card-inner">
-          <div class="card-header">
-            <span class="card-title">Tasks</span>
-            <span class="pill pill-hue" id="tasks-count">—</span>
-          </div>
-          <!-- Add-task bar -->
-          <div class="tasks-add-bar">
-            <input id="task-title-input" type="text" placeholder="New task…" onkeydown="if(event.key==='Enter')addJarvisTask()">
-            <select id="task-domain-select">
-              <option value="personal">Personal</option>
-              <option value="work">Work</option>
-              <option value="family">Family</option>
-              <option value="home">Home</option>
-              <option value="health">Health</option>
-              <option value="faith">Faith</option>
-              <option value="finance">Finance</option>
-              <option value="workshop">Workshop</option>
-            </select>
-            <select id="task-priority-select">
-              <option value="normal">Normal</option>
-              <option value="high">High</option>
-              <option value="low">Low</option>
-            </select>
-            <input id="task-due-input" type="date">
-            <button onclick="addJarvisTask()" style="background:var(--hue);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;white-space:nowrap;">+ Add</button>
-          </div>
-          <!-- Filter pills -->
-          <div class="tasks-filter-bar" id="tasks-filter-bar">
-            <span class="tasks-filter-pill active" data-filter="all"    onclick="setTaskFilter('all')">All</span>
-            <span class="tasks-filter-pill"         data-filter="today"  onclick="setTaskFilter('today')">Today</span>
-            <span class="tasks-filter-pill"         data-filter="week"   onclick="setTaskFilter('week')">This Week</span>
-            <span class="tasks-filter-pill"         data-filter="domain" onclick="setTaskFilter('domain')">By Domain</span>
-          </div>
-          <!-- Task list -->
-          <div id="overview-tasks">
-            <div class="list-row"><div class="skel" style="height:10px;width:75%;margin-bottom:5px;"></div></div>
-            <div class="list-row"><div class="skel" style="height:10px;width:60%;"></div></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Active Agents -->
-      <div class="card card-tactical">
-        <div class="card-inner">
-          <div class="card-header">
-            <span class="card-title">Active Agents</span>
-            <span class="pill pill-hue" id="active-agents-count">—</span>
-          </div>
-          <div id="active-agents-list">
-            <div class="list-row"><div class="skel" style="height:10px;width:60%;"></div></div>
-            <div class="list-row"><div class="skel" style="height:10px;width:55%;"></div></div>
-            <div class="list-row"><div class="skel" style="height:10px;width:65%;"></div></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 3D Forge quick -->
-      <div class="card card-tactical">
-        <div class="card-inner">
-          <div class="card-header">
-            <span class="card-title">3D Forge</span>
-            <span class="pill pill-navy">Print Queue</span>
-          </div>
-          <div id="overview-forge">
-            <div class="list-row">
-              <span class="dot dot-standby"></span>
-              <div>
-                <div class="list-row-name">No active print</div>
-                <div class="list-row-sub">Queue empty</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Vision quick -->
-      <div class="card card-tactical">
-        <div class="card-inner">
-          <div class="card-header">
-            <span class="card-title">Vision System</span>
-            <span class="pill pill-success">LIVE</span>
-          </div>
-          <div id="overview-vision">
-            <div class="list-row">
-              <span class="dot dot-success"></span>
-              <div>
-                <div class="list-row-name">4 Cameras</div>
-                <div class="list-row-sub">No events in last 5m</div>
-              </div>
-              <div class="list-row-meta">SECURE</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Catalyst quick -->
-      <div class="card card-tactical">
-        <div class="card-inner">
-          <div class="card-header">
-            <span class="card-title">Catalyst</span>
-            <span class="pill pill-hue" id="catalyst-flows">—</span>
-          </div>
-          <div id="overview-catalyst">
-            <div class="list-row">
-              <div class="skel" style="height:10px;width:75%;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Chronicle quick -->
-      <div class="card card-tactical">
-        <div class="card-inner">
-          <div class="card-header">
-            <span class="card-title">Chronicle</span>
-            <span class="pill pill-navy" id="chronicle-count">—</span>
-          </div>
-          <div id="overview-chronicle">
-            <div class="skel" style="height:10px;width:80%;margin-bottom:6px;"></div>
-            <div class="skel" style="height:10px;width:60%;"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Publishing quick -->
-      <div class="card card-tactical">
-        <div class="card-inner">
-          <div class="card-header">
-            <span class="card-title">Publishing</span>
-            <span class="pill pill-gold">Stan Lee</span>
-          </div>
-          <div id="overview-publishing">
-            <div class="skel" style="height:10px;width:65%;margin-bottom:6px;"></div>
-            <div class="skel" style="height:10px;width:50%;"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Email quick-card -->
-      <div class="card card-tactical" onclick="switchView('email')" style="cursor:pointer;">
-        <div class="card-hdr">
-          <span class="card-icon">✉</span>
-          <span class="card-title">EMAIL</span>
-          <span class="card-badge" id="emailUnreadBadge">—</span>
-        </div>
-        <div class="card-body">
-          <div class="card-row"><span class="lbl">GMAIL</span><span class="val mono" id="overviewGmailUnread">—</span></div>
-          <div class="card-row"><span class="lbl">OUTLOOK</span><span class="val mono" id="overviewOutlookUnread">—</span></div>
-          <div class="card-cta">Open inbox →</div>
-        </div>
-      </div>
-
-      <!-- Calendar quick-card -->
-      <div class="card card-tactical" onclick="switchView('calendar')" style="cursor:pointer;">
-        <div class="card-hdr">
-          <span class="card-icon">📅</span>
-          <span class="card-title">CALENDAR</span>
-          <span class="card-badge" id="calEventCount">—</span>
-        </div>
-        <div class="card-body">
-          <div class="card-row"><span class="lbl">TODAY</span><span class="val mono" id="overviewTodayEvents">—</span></div>
-          <div id="overviewNextEvent" class="next-event-preview">—</div>
-          <div class="card-cta">View agenda →</div>
-        </div>
-      </div>
-
-      <!-- Health Card -->
-      <div class="card card-tactical" onclick="switchView('health')" style="cursor:pointer;">
-        <div class="card-hdr">
-          <span class="card-icon">♥</span>
-          <span class="card-title">HEALTH</span>
-          <span class="card-badge" id="overview-health-badge">—</span>
-        </div>
-        <div class="card-inner" id="overview-health-content" style="font-size:11px;color:var(--text-3);">
-          Loading…
-        </div>
-      </div>
-
-      <!-- Briefing quick -->
-      <div class="card">
-        <div class="card-inner">
-          <div class="card-header">
-            <span class="card-title">Morning Brief</span>
-            <span class="mono" style="font-size:10px;color:var(--text-3);" id="brief-date">—</span>
-          </div>
-          <div id="brief-text" style="font-size:13px;color:var(--text-2);line-height:1.6;">
-            <div class="skel" style="height:10px;width:100%;margin-bottom:5px;"></div>
-            <div class="skel" style="height:10px;width:90%;margin-bottom:5px;"></div>
-            <div class="skel" style="height:10px;width:75%;"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Idea Inbox quick-capture -->
-      <div class="card" style="grid-column:1/-1;">
-        <div class="card-inner">
-          <div class="card-header">
-            <span class="card-icon">💡</span>
-            <span class="card-title">IDEA INBOX</span>
-            <span class="card-badge" id="idea-inbox-badge">—</span>
-            <button class="btn-ghost" style="margin-left:auto;font-size:10px;" onclick="switchView('huddle')">View All →</button>
-          </div>
-          <div style="display:flex;gap:8px;margin-top:8px;">
-            <input type="text" id="idea-inbox-input"
-              placeholder="Dump an idea — JARVIS will research it and bring back a full dossier..."
-              style="flex:1;padding:9px 13px;border:1px solid var(--border);border-radius:8px;background:var(--surface-hi);font-size:13px;color:var(--text-1);outline:none;"
-              onkeydown="if(event.key==='Enter')overviewAddIdea()"
-              onfocus="this.style.borderColor='var(--hue)'"
-              onblur="this.style.borderColor='var(--border)'">
-            <button class="btn-primary" onclick="overviewAddIdea()" style="white-space:nowrap;">+ Add Idea</button>
-          </div>
-          <div id="idea-inbox-recent" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;min-height:20px;"></div>
-        </div>
-      </div>
-
+    <!-- Hero Zone (cockpit: two equal cards side-by-side) -->
+    <div class="overview-hero-zone" id="overview-hero-zone">
+      <!-- populated by applyLayout() -->
     </div>
+
+    <!-- Priority Strip (3-column) -->
+    <div class="overview-priority-strip" id="overview-priority-strip">
+      <!-- populated by applyLayout() -->
+    </div>
+
+    <!-- Ambient Row (compact tiles) -->
+    <div class="overview-ambient-row" id="overview-ambient-row">
+      <!-- populated by applyLayout() -->
+    </div>
+
   </div>
 
   <!-- ── FORGE ──────────────────────────────────────────────── -->
@@ -4835,6 +4822,19 @@ function init() {{
   loadJarvisTasks();
   loadIdeaInbox();
   loadOverviewHealth();
+  loadLayoutState();
+  setInterval(checkAutoMode, 5 * 60 * 1000);
+  updateModeBarClock();
+  setInterval(updateModeBarClock, 60 * 1000);
+  // Alert refresh every 90s when on overview
+  setInterval(() => {{
+    if (currentView === 'overview') {{
+      fetch('/api/layout/state')
+        .then(r => r.ok ? r.json() : null)
+        .then(s => {{ if (s && s.alerts) applyAlertBanner(s.alerts); }})
+        .catch(() => {{}});
+    }}
+  }}, 90000);
 
   // Clock — update every minute
   updateNavClock();
@@ -4884,7 +4884,7 @@ function loadViewData(name) {{
   if (_agentsRefreshTimer) {{ clearInterval(_agentsRefreshTimer); _agentsRefreshTimer = null; }}
 
   switch (name) {{
-    case 'overview':     loadApprovals(); loadBriefing(); loadHomeDashboard(); loadOverviewAgents(); loadOverviewCatalyst(); loadOverviewChronicle(); loadOverviewPublishing(); loadOverviewReminders(); loadJarvisTasks(); loadIdeaInbox(); loadOverviewHealth(); break;
+    case 'overview':     loadLayoutState(); break;
     case 'forge':        forgeInit(); break;
     case 'agents':
       loadLiveAgents();
@@ -5181,6 +5181,587 @@ function launchCopy(btn, encodedText) {{
     btn.style.color = '#000';
     setTimeout(() => {{ btn.textContent = orig; btn.style.background = ''; btn.style.color = ''; }}, 1500);
   }}).catch(() => showToast('Copy failed', 'error'));
+}}
+
+/* ═══════════════════════════════════════════════════════════════
+   ADAPTIVE LAYOUT ENGINE
+═══════════════════════════════════════════════════════════════ */
+
+// ---------------------------------------------------------------------------
+// Card Registry — one entry per card with three render templates
+// ---------------------------------------------------------------------------
+const CARD_REGISTRY = {{
+
+  briefing: {{
+    id: 'briefing', title: 'Morning Brief', icon: '📋',
+    load: () => loadBriefing(),
+    heroRender: () => `
+      <div class="card layout-card" id="lc-briefing" data-card="briefing"
+           style="min-height:200px;" onclick="cardInteract('briefing','click')">
+        <div class="card-inner">
+          <div class="card-header">
+            <span class="card-title">Morning Brief</span>
+            <span class="mono" style="font-size:10px;color:var(--text-3);" id="brief-date">—</span>
+          </div>
+          <div id="brief-text" style="font-size:13px;color:var(--text-2);line-height:1.65;max-height:320px;overflow:auto;">
+            <div class="skel" style="height:10px;width:100%;margin-bottom:6px;"></div>
+            <div class="skel" style="height:10px;width:88%;margin-bottom:6px;"></div>
+            <div class="skel" style="height:10px;width:72%;"></div>
+          </div>
+        </div>
+      </div>`,
+    priorityRender: () => `
+      <div class="card card-tactical layout-card" id="lc-briefing" data-card="briefing"
+           onclick="cardInteract('briefing','click')">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">Brief</span>
+            <span class="mono" style="font-size:10px;color:var(--text-3);" id="brief-date">—</span>
+          </div>
+          <div id="brief-text" style="font-size:12px;color:var(--text-2);line-height:1.5;max-height:160px;overflow:hidden;"></div>
+        </div>
+      </div>`,
+    ambientRender: () => `<div class="ambient-tile" onclick="cardInteract('briefing','click')" data-card="briefing">📋 Brief</div>`,
+  }},
+
+  calendar: {{
+    id: 'calendar', title: 'Calendar', icon: '📅',
+    load: () => loadHomeDashboard(),
+    heroRender: () => `
+      <div class="card layout-card" id="lc-calendar" data-card="calendar"
+           style="min-height:200px;cursor:pointer;"
+           onclick="cardInteract('calendar','navigate');switchView('calendar')">
+        <div class="card-hdr"><span class="card-icon">📅</span><span class="card-title">CALENDAR</span><span class="card-badge" id="calEventCount">—</span></div>
+        <div class="card-body" style="padding:14px 18px;">
+          <div class="card-row"><span class="lbl">TODAY</span><span class="val mono" id="overviewTodayEvents">—</span></div>
+          <div id="overviewNextEvent" class="next-event-preview" style="margin-top:10px;font-size:13px;color:var(--text-2);">—</div>
+          <div class="card-cta" style="margin-top:14px;">View full agenda →</div>
+        </div>
+      </div>`,
+    priorityRender: () => `
+      <div class="card card-tactical layout-card" id="lc-calendar" data-card="calendar"
+           style="cursor:pointer;"
+           onclick="cardInteract('calendar','navigate');switchView('calendar')">
+        <div class="card-hdr"><span class="card-icon">📅</span><span class="card-title">CALENDAR</span><span class="card-badge" id="calEventCount">—</span></div>
+        <div class="card-body">
+          <div class="card-row"><span class="lbl">TODAY</span><span class="val mono" id="overviewTodayEvents">—</span></div>
+          <div id="overviewNextEvent" class="next-event-preview">—</div>
+          <div class="card-cta">View agenda →</div>
+        </div>
+      </div>`,
+    ambientRender: () => `
+      <div class="ambient-tile" onclick="cardInteract('calendar','navigate');switchView('calendar')" data-card="calendar">
+        📅 Calendar <span class="ambient-badge" id="calEventCount">—</span>
+      </div>`,
+  }},
+
+  approvals: {{
+    id: 'approvals', title: 'Needs You', icon: '⚡',
+    load: () => loadApprovals(),
+    heroRender: () => `
+      <div class="card card-needs-you layout-card" id="lc-approvals" data-card="approvals"
+           style="min-height:200px;" onclick="cardInteract('approvals','click')">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">Needs You</span><span class="dot dot-gold"></span></div>
+          <div id="approvals-list">
+            <div class="list-row"><div style="flex:1"><div class="skel" style="height:12px;width:70%;margin-bottom:6px;"></div><div class="skel" style="height:10px;width:40%;"></div></div></div>
+          </div>
+        </div>
+      </div>`,
+    priorityRender: () => `
+      <div class="card card-tactical layout-card" id="lc-approvals" data-card="approvals"
+           onclick="cardInteract('approvals','click')">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">Needs You</span><span class="dot dot-gold"></span></div>
+          <div id="approvals-list"><div class="list-row"><div class="skel" style="height:10px;width:70%;"></div></div></div>
+        </div>
+      </div>`,
+    ambientRender: () => `<div class="ambient-tile" onclick="cardInteract('approvals','click')" data-card="approvals">⚡ Approvals <span class="ambient-badge" id="stat-approvals-amb">—</span></div>`,
+  }},
+
+  health: {{
+    id: 'health', title: 'Health', icon: '♥',
+    load: () => loadOverviewHealth(),
+    heroRender: () => `
+      <div class="card layout-card" id="lc-health" data-card="health"
+           style="min-height:200px;cursor:pointer;"
+           onclick="cardInteract('health','navigate');switchView('health')">
+        <div class="card-hdr"><span class="card-icon">♥</span><span class="card-title">HEALTH</span><span class="card-badge" id="overview-health-badge">—</span></div>
+        <div class="card-inner" id="overview-health-content" style="font-size:12px;color:var(--text-3);padding:14px 18px;">Loading…</div>
+      </div>`,
+    priorityRender: () => `
+      <div class="card card-tactical layout-card" id="lc-health" data-card="health"
+           style="cursor:pointer;"
+           onclick="cardInteract('health','navigate');switchView('health')">
+        <div class="card-hdr"><span class="card-icon">♥</span><span class="card-title">HEALTH</span><span class="card-badge" id="overview-health-badge">—</span></div>
+        <div class="card-inner" id="overview-health-content" style="font-size:11px;color:var(--text-3);">Loading…</div>
+      </div>`,
+    ambientRender: () => `
+      <div class="ambient-tile" onclick="cardInteract('health','navigate');switchView('health')" data-card="health">
+        ♥ Health <span class="ambient-badge" id="overview-health-badge">—</span>
+      </div>`,
+  }},
+
+  tasks: {{
+    id: 'tasks', title: 'Tasks', icon: '✓',
+    load: () => loadJarvisTasks(),
+    heroRender: () => `
+      <div class="card layout-card" id="lc-tasks" data-card="tasks"
+           style="min-height:200px;grid-column:1/-1;" onclick="cardInteract('tasks','click')">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">Tasks</span><span class="pill pill-hue" id="tasks-count">—</span></div>
+          <div class="tasks-add-bar">
+            <input id="task-title-input" type="text" placeholder="New task…"
+                   onkeydown="if(event.key==='Enter')addJarvisTask()">
+            <select id="task-domain-select">
+              <option value="personal">Personal</option><option value="work">Work</option>
+              <option value="family">Family</option><option value="home">Home</option>
+              <option value="health">Health</option><option value="faith">Faith</option>
+              <option value="finance">Finance</option><option value="workshop">Workshop</option>
+            </select>
+            <select id="task-priority-select">
+              <option value="normal">Normal</option><option value="high">High</option><option value="low">Low</option>
+            </select>
+            <input id="task-due-input" type="date">
+            <button onclick="addJarvisTask()" style="background:var(--hue);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;white-space:nowrap;">+ Add</button>
+          </div>
+          <div class="tasks-filter-bar" id="tasks-filter-bar">
+            <span class="tasks-filter-pill active" data-filter="all" onclick="setTaskFilter('all')">All</span>
+            <span class="tasks-filter-pill" data-filter="today" onclick="setTaskFilter('today')">Today</span>
+            <span class="tasks-filter-pill" data-filter="week" onclick="setTaskFilter('week')">This Week</span>
+            <span class="tasks-filter-pill" data-filter="domain" onclick="setTaskFilter('domain')">By Domain</span>
+          </div>
+          <div id="overview-tasks">
+            <div class="list-row"><div class="skel" style="height:10px;width:75%;margin-bottom:5px;"></div></div>
+          </div>
+        </div>
+      </div>`,
+    priorityRender: () => `
+      <div class="card card-tactical layout-card" id="lc-tasks" data-card="tasks"
+           onclick="cardInteract('tasks','click')">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">Tasks</span><span class="pill pill-hue" id="tasks-count">—</span></div>
+          <div id="overview-tasks"><div class="skel" style="height:10px;width:75%;"></div></div>
+        </div>
+      </div>`,
+    ambientRender: () => `<div class="ambient-tile" onclick="cardInteract('tasks','click')" data-card="tasks">✓ Tasks <span class="ambient-badge" id="tasks-count">—</span></div>`,
+  }},
+
+  reminders: {{
+    id: 'reminders', title: 'Reminders', icon: '🔔',
+    load: () => loadOverviewReminders(),
+    heroRender: () => `
+      <div class="card layout-card" id="lc-reminders" data-card="reminders"
+           style="min-height:200px;" onclick="cardInteract('reminders','click')">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">Reminders</span><span class="pill pill-hue" id="reminders-count">—</span></div>
+          <div id="overview-reminders"><div class="list-row"><div class="skel" style="height:10px;width:70%;"></div></div></div>
+          <div style="margin-top:10px;display:flex;gap:6px;">
+            <input id="reminder-input" type="text" placeholder="Add reminder…"
+                   style="flex:1;background:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.5);border-radius:6px;padding:5px 8px;font-size:12px;color:var(--text-1);outline:none;"
+                   onkeydown="if(event.key==='Enter')addReminder()">
+            <button onclick="addReminder()" style="background:var(--hue);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;">+</button>
+          </div>
+        </div>
+      </div>`,
+    priorityRender: () => `
+      <div class="card card-tactical layout-card" id="lc-reminders" data-card="reminders"
+           onclick="cardInteract('reminders','click')">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">Reminders</span><span class="pill pill-hue" id="reminders-count">—</span></div>
+          <div id="overview-reminders"><div class="list-row"><div class="skel" style="height:10px;width:70%;"></div></div></div>
+        </div>
+      </div>`,
+    ambientRender: () => `<div class="ambient-tile" onclick="cardInteract('reminders','click')" data-card="reminders">🔔 Reminders <span class="ambient-badge" id="reminders-count">—</span></div>`,
+  }},
+
+  email: {{
+    id: 'email', title: 'Email', icon: '✉',
+    load: () => loadHomeDashboard(),
+    heroRender: () => `
+      <div class="card layout-card" id="lc-email" data-card="email"
+           style="min-height:200px;cursor:pointer;"
+           onclick="cardInteract('email','navigate');switchView('email')">
+        <div class="card-hdr"><span class="card-icon">✉</span><span class="card-title">EMAIL</span><span class="card-badge" id="emailUnreadBadge">—</span></div>
+        <div class="card-body" style="padding:14px 18px;">
+          <div class="card-row"><span class="lbl">GMAIL</span><span class="val mono" id="overviewGmailUnread">—</span></div>
+          <div class="card-row"><span class="lbl">OUTLOOK</span><span class="val mono" id="overviewOutlookUnread">—</span></div>
+          <div class="card-cta" style="margin-top:14px;">Open inbox →</div>
+        </div>
+      </div>`,
+    priorityRender: () => `
+      <div class="card card-tactical layout-card" id="lc-email" data-card="email"
+           style="cursor:pointer;"
+           onclick="cardInteract('email','navigate');switchView('email')">
+        <div class="card-hdr"><span class="card-icon">✉</span><span class="card-title">EMAIL</span><span class="card-badge" id="emailUnreadBadge">—</span></div>
+        <div class="card-body">
+          <div class="card-row"><span class="lbl">GMAIL</span><span class="val mono" id="overviewGmailUnread">—</span></div>
+          <div class="card-row"><span class="lbl">OUTLOOK</span><span class="val mono" id="overviewOutlookUnread">—</span></div>
+          <div class="card-cta">Open inbox →</div>
+        </div>
+      </div>`,
+    ambientRender: () => `<div class="ambient-tile" onclick="cardInteract('email','navigate');switchView('email')" data-card="email">✉ Email <span class="ambient-badge" id="emailUnreadBadge">—</span></div>`,
+  }},
+
+  agents: {{
+    id: 'agents', title: 'Agents', icon: '🤖',
+    load: () => loadOverviewAgents(),
+    heroRender: () => `
+      <div class="card layout-card" id="lc-agents" data-card="agents"
+           style="min-height:200px;" onclick="cardInteract('agents','click')">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">Active Agents</span><span class="pill pill-hue" id="active-agents-count">—</span></div>
+          <div id="active-agents-list">
+            <div class="list-row"><div class="skel" style="height:10px;width:60%;"></div></div>
+          </div>
+        </div>
+      </div>`,
+    priorityRender: () => `
+      <div class="card card-tactical layout-card" id="lc-agents" data-card="agents"
+           onclick="cardInteract('agents','click')">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">Active Agents</span><span class="pill pill-hue" id="active-agents-count">—</span></div>
+          <div id="active-agents-list"><div class="list-row"><div class="skel" style="height:10px;width:60%;"></div></div></div>
+        </div>
+      </div>`,
+    ambientRender: () => `<div class="ambient-tile" onclick="cardInteract('agents','click')" data-card="agents">🤖 Agents <span class="ambient-badge" id="active-agents-count">—</span></div>`,
+  }},
+
+  catalyst: {{
+    id: 'catalyst', title: 'Catalyst', icon: '⚗️',
+    load: () => loadOverviewCatalyst(),
+    heroRender: () => `
+      <div class="card layout-card" id="lc-catalyst" data-card="catalyst"
+           style="min-height:200px;" onclick="cardInteract('catalyst','click')">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">Catalyst</span><span class="pill pill-hue" id="catalyst-flows">—</span></div>
+          <div id="overview-catalyst"><div class="list-row"><div class="skel" style="height:10px;width:75%;"></div></div></div>
+        </div>
+      </div>`,
+    priorityRender: () => `
+      <div class="card card-tactical layout-card" id="lc-catalyst" data-card="catalyst"
+           onclick="cardInteract('catalyst','click')">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">Catalyst</span><span class="pill pill-hue" id="catalyst-flows">—</span></div>
+          <div id="overview-catalyst"><div class="skel" style="height:10px;width:75%;"></div></div>
+        </div>
+      </div>`,
+    ambientRender: () => `<div class="ambient-tile" onclick="cardInteract('catalyst','click')" data-card="catalyst">⚗️ Catalyst <span class="ambient-badge" id="catalyst-flows">—</span></div>`,
+  }},
+
+  chronicle: {{
+    id: 'chronicle', title: 'Chronicle', icon: '📖',
+    load: () => loadOverviewChronicle(),
+    heroRender: () => `
+      <div class="card layout-card" id="lc-chronicle" data-card="chronicle"
+           style="min-height:200px;" onclick="cardInteract('chronicle','expand')">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">Chronicle</span><span class="pill pill-navy" id="chronicle-count">—</span></div>
+          <div id="overview-chronicle"><div class="skel" style="height:10px;width:80%;margin-bottom:6px;"></div></div>
+        </div>
+      </div>`,
+    priorityRender: () => `
+      <div class="card card-tactical layout-card" id="lc-chronicle" data-card="chronicle"
+           onclick="cardInteract('chronicle','expand')">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">Chronicle</span><span class="pill pill-navy" id="chronicle-count">—</span></div>
+          <div id="overview-chronicle"><div class="skel" style="height:10px;width:80%;"></div></div>
+        </div>
+      </div>`,
+    ambientRender: () => `<div class="ambient-tile" onclick="cardInteract('chronicle','expand')" data-card="chronicle">📖 Chronicle <span class="ambient-badge" id="chronicle-count">—</span></div>`,
+  }},
+
+  publishing: {{
+    id: 'publishing', title: 'Publishing', icon: '📚',
+    load: () => loadOverviewPublishing(),
+    heroRender: () => `
+      <div class="card layout-card" id="lc-publishing" data-card="publishing"
+           style="min-height:200px;" onclick="cardInteract('publishing','click')">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">Publishing</span><span class="pill pill-gold">Stan Lee</span></div>
+          <div id="overview-publishing"><div class="skel" style="height:10px;width:65%;margin-bottom:6px;"></div></div>
+        </div>
+      </div>`,
+    priorityRender: () => `
+      <div class="card card-tactical layout-card" id="lc-publishing" data-card="publishing"
+           onclick="cardInteract('publishing','click')">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">Publishing</span><span class="pill pill-gold">Stan Lee</span></div>
+          <div id="overview-publishing"><div class="skel" style="height:10px;width:65%;"></div></div>
+        </div>
+      </div>`,
+    ambientRender: () => `<div class="ambient-tile" onclick="cardInteract('publishing','click')" data-card="publishing">📚 Publishing</div>`,
+  }},
+
+  forge: {{
+    id: 'forge', title: '3D Forge', icon: '🔧',
+    load: () => {{}},  // no live loader — static until print job active
+    heroRender: () => `
+      <div class="card layout-card" id="lc-forge" data-card="forge"
+           style="min-height:200px;cursor:pointer;"
+           onclick="cardInteract('forge','navigate');switchView('forge')">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">3D Forge</span><span class="pill pill-navy">Print Queue</span></div>
+          <div id="overview-forge">
+            <div class="list-row"><span class="dot dot-standby"></span><div><div class="list-row-name">No active print</div><div class="list-row-sub">Queue empty</div></div></div>
+          </div>
+        </div>
+      </div>`,
+    priorityRender: () => `
+      <div class="card card-tactical layout-card" id="lc-forge" data-card="forge"
+           style="cursor:pointer;" onclick="cardInteract('forge','navigate');switchView('forge')">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">3D Forge</span><span class="pill pill-navy">Print Queue</span></div>
+          <div id="overview-forge"><div class="list-row"><span class="dot dot-standby"></span><div class="list-row-name">No active print</div></div></div>
+        </div>
+      </div>`,
+    ambientRender: () => `<div class="ambient-tile" onclick="cardInteract('forge','navigate');switchView('forge')" data-card="forge">🔧 Forge</div>`,
+  }},
+
+  vision: {{
+    id: 'vision', title: 'Vision System', icon: '👁',
+    load: () => {{}},
+    heroRender: () => `
+      <div class="card layout-card" id="lc-vision" data-card="vision" style="min-height:200px;">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">Vision System</span><span class="pill pill-success">LIVE</span></div>
+          <div id="overview-vision">
+            <div class="list-row"><span class="dot dot-success"></span><div><div class="list-row-name">4 Cameras</div><div class="list-row-sub">No events in last 5m</div></div><div class="list-row-meta">SECURE</div></div>
+          </div>
+        </div>
+      </div>`,
+    priorityRender: () => `
+      <div class="card card-tactical layout-card" id="lc-vision" data-card="vision">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">Vision System</span><span class="pill pill-success">LIVE</span></div>
+          <div id="overview-vision"><div class="list-row"><span class="dot dot-success"></span><div class="list-row-name">4 Cameras — SECURE</div></div></div>
+        </div>
+      </div>`,
+    ambientRender: () => `<div class="ambient-tile" data-card="vision">👁 Vision</div>`,
+  }},
+
+  idea_inbox: {{
+    id: 'idea_inbox', title: 'Idea Inbox', icon: '💡',
+    load: () => loadIdeaInbox(),
+    heroRender: () => `
+      <div class="card layout-card" id="lc-idea-inbox" data-card="idea_inbox"
+           style="min-height:200px;grid-column:1/-1;" onclick="cardInteract('idea_inbox','click')">
+        <div class="card-inner">
+          <div class="card-header">
+            <span class="card-icon">💡</span>
+            <span class="card-title">IDEA INBOX</span>
+            <span class="card-badge" id="idea-inbox-badge">—</span>
+            <button class="btn-ghost" style="margin-left:auto;font-size:10px;" onclick="event.stopPropagation();switchView('huddle')">View All →</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <input type="text" id="idea-inbox-input"
+              placeholder="Dump an idea — JARVIS will research it and bring back a full dossier..."
+              style="flex:1;padding:9px 13px;border:1px solid var(--border);border-radius:8px;background:var(--surface-hi);font-size:13px;color:var(--text-1);outline:none;"
+              onkeydown="if(event.key==='Enter')overviewAddIdea()"
+              onfocus="this.style.borderColor='var(--hue)'"
+              onblur="this.style.borderColor='var(--border)'">
+            <button class="btn-primary" onclick="overviewAddIdea()" style="white-space:nowrap;">+ Add Idea</button>
+          </div>
+          <div id="idea-inbox-recent" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;min-height:20px;"></div>
+        </div>
+      </div>`,
+    priorityRender: () => `
+      <div class="card card-tactical layout-card" id="lc-idea-inbox" data-card="idea_inbox"
+           onclick="cardInteract('idea_inbox','click')">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-icon">💡</span><span class="card-title">IDEAS</span><span class="card-badge" id="idea-inbox-badge">—</span></div>
+          <div id="idea-inbox-recent" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;"></div>
+        </div>
+      </div>`,
+    ambientRender: () => `<div class="ambient-tile" onclick="cardInteract('idea_inbox','click')" data-card="idea_inbox">💡 Ideas <span class="ambient-badge" id="idea-inbox-badge">—</span></div>`,
+  }},
+
+}};
+
+// ---------------------------------------------------------------------------
+// Layout state
+// ---------------------------------------------------------------------------
+let _layoutState    = null;
+let _activeAlert    = null;
+let _alertDismissTimer = null;
+
+// ---------------------------------------------------------------------------
+// Core functions
+// ---------------------------------------------------------------------------
+
+async function loadLayoutState() {{
+  try {{
+    const res = await fetch('/api/layout/state');
+    if (!res.ok) return;
+    _layoutState = await res.json();
+    applyModeBar(_layoutState);
+    applyAlertBanner(_layoutState.alerts || []);
+    applyLayout(_layoutState.layout || {{}}, _layoutState.alerts || [], true);
+    _fireLayoutLoaders(_layoutState.layout || {{}});
+  }} catch(e) {{ console.error('loadLayoutState failed', e); }}
+}}
+
+function applyModeBar(state) {{
+  const mode = state.mode || 'morning_brief';
+  document.querySelectorAll('.mode-pill').forEach(pill => {{
+    const isActive = pill.dataset.mode === mode;
+    pill.classList.toggle('active', isActive);
+    pill.classList.toggle('manual-override', isActive && state.manual_override);
+  }});
+  const chip = document.getElementById('mode-auto-chip');
+  if (chip) {{
+    chip.textContent = state.manual_override ? 'MANUAL' : 'AUTO';
+    chip.classList.toggle('override', !!state.manual_override);
+    if (state.manual_override && state.override_expires_at) {{
+      const exp = new Date(state.override_expires_at);
+      chip.title = 'Auto-resumes at ' + exp.toLocaleTimeString([], {{hour:'2-digit',minute:'2-digit'}});
+    }} else {{
+      chip.title = '';
+    }}
+  }}
+  const sub = document.getElementById('overview-subtitle');
+  if (sub) {{
+    const modeInfo = (state.modes || {{}})[mode] || {{}};
+    const icon  = modeInfo.icon  || '';
+    const label = modeInfo.label || mode;
+    sub.textContent = icon + ' ' + label + (state.manual_override ? ' · Manual Override' : ' · Auto Mode');
+  }}
+}}
+
+function applyLayout(layout, alerts, animate) {{
+  const alertedMap = {{}};
+  (alerts || []).forEach(a => {{ alertedMap[a.card] = a.level; }});
+
+  function renderZone(containerId, cards, renderFn) {{
+    const zone = document.getElementById(containerId);
+    if (!zone) return;
+    zone.innerHTML = '';
+    (cards || []).forEach(cardId => {{
+      const reg = CARD_REGISTRY[cardId];
+      if (!reg) return;
+      const tmp = document.createElement('div');
+      tmp.innerHTML = renderFn(reg).trim();
+      const el = tmp.firstElementChild;
+      if (!el) return;
+      if (animate) el.classList.add('entering');
+      if (alertedMap[cardId]) el.classList.add('alert-pulse-' + alertedMap[cardId]);
+      zone.appendChild(el);
+      if (animate) requestAnimationFrame(() => el.classList.remove('entering'));
+    }});
+  }}
+
+  renderZone('overview-hero-zone',      layout.hero     || [], r => r.heroRender());
+  renderZone('overview-priority-strip', layout.priority || [], r => r.priorityRender());
+  renderZone('overview-ambient-row',    layout.ambient  || [], r => r.ambientRender());
+}}
+
+function _fireLayoutLoaders(layout) {{
+  const allCards = [
+    ...(layout.hero     || []),
+    ...(layout.priority || []),
+    ...(layout.ambient  || []),
+  ];
+  // Deduplicate
+  const seen = new Set();
+  allCards.forEach(cardId => {{
+    if (seen.has(cardId)) return;
+    seen.add(cardId);
+    const reg = CARD_REGISTRY[cardId];
+    if (reg && typeof reg.load === 'function') {{
+      try {{ reg.load(); }} catch(e) {{ console.warn('Layout loader failed for', cardId, e); }}
+    }}
+  }});
+  // Always load stats (needed for stat strip)
+  if (typeof loadApprovals === 'function') loadApprovals();
+}}
+
+function cardInteract(cardId, action) {{
+  const mode = _layoutState ? _layoutState.mode : 'morning_brief';
+  fetch('/api/layout/interact', {{
+    method: 'POST',
+    headers: {{'Content-Type': 'application/json'}},
+    body: JSON.stringify({{card_id: cardId, action, mode}}),
+  }}).catch(() => {{}});
+  if (_activeAlert && _activeAlert.card === cardId) dismissAlertBanner();
+}}
+
+async function setLayoutMode(mode) {{
+  try {{
+    await fetch('/api/layout/mode', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{mode, manual: true}}),
+    }});
+    await loadLayoutState();
+  }} catch(e) {{ console.error('setLayoutMode failed', e); }}
+}}
+
+async function checkAutoMode() {{
+  if (!_layoutState || _layoutState.manual_override) return;
+  try {{
+    const res = await fetch('/api/layout/state');
+    if (!res.ok) return;
+    const newState = await res.json();
+    if (newState.mode !== (_layoutState || {{}}).mode) {{
+      _layoutState = newState;
+      applyModeBar(newState);
+      applyAlertBanner(newState.alerts || []);
+      applyLayout(newState.layout || {{}}, newState.alerts || [], true);
+      _fireLayoutLoaders(newState.layout || {{}});
+      const modeInfo = (newState.modes || {{}})[newState.mode] || {{}};
+      showToast((modeInfo.icon || '') + ' Switched to ' + (modeInfo.label || newState.mode), 'info');
+    }}
+  }} catch(e) {{}}
+}}
+
+function applyAlertBanner(alerts) {{
+  const banner = document.getElementById('overview-alert-banner');
+  if (!banner) return;
+  if (!alerts || alerts.length === 0) {{
+    _dismissAlertBannerEl(banner);
+    return;
+  }}
+  const priority = {{red: 3, amber: 2, blue: 1}};
+  const top = [...alerts].sort((a,b) => (priority[b.level]||0) - (priority[a.level]||0))[0];
+  _activeAlert = top;
+  banner.style.display = 'flex';
+  requestAnimationFrame(() => {{
+    banner.className = 'overview-alert-banner level-' + top.level + ' visible';
+  }});
+  const iconEl = document.getElementById('alert-banner-icon');
+  const msgEl  = document.getElementById('alert-banner-msg');
+  const btnEl  = document.getElementById('alert-banner-action-btn');
+  if (iconEl) iconEl.textContent = top.level === 'red' ? '🚨' : top.level === 'blue' ? '🔔' : '⚠️';
+  if (msgEl)  msgEl.textContent  = top.message || '';
+  if (btnEl)  btnEl.dataset.card = top.card || '';
+  if (_alertDismissTimer) clearTimeout(_alertDismissTimer);
+  _alertDismissTimer = setTimeout(dismissAlertBanner, 30000);
+}}
+
+function dismissAlertBanner() {{
+  _activeAlert = null;
+  if (_alertDismissTimer) {{ clearTimeout(_alertDismissTimer); _alertDismissTimer = null; }}
+  const banner = document.getElementById('overview-alert-banner');
+  if (banner) _dismissAlertBannerEl(banner);
+}}
+
+function _dismissAlertBannerEl(banner) {{
+  banner.classList.remove('visible');
+  setTimeout(() => {{ if (banner) banner.style.display = 'none'; }}, 320);
+}}
+
+function alertBannerNavigate() {{
+  const btn  = document.getElementById('alert-banner-action-btn');
+  const card = btn ? btn.dataset.card : '';
+  if (card) cardInteract(card, 'navigate');
+  const viewMap = {{calendar:'calendar', health:'health', email:'email', agents:'agents'}};
+  const target = viewMap[card];
+  if (target) switchView(target);
+  dismissAlertBanner();
+}}
+
+function updateModeBarClock() {{
+  const el = document.getElementById('mode-clock');
+  if (el) el.textContent = new Date().toLocaleTimeString([], {{hour:'2-digit', minute:'2-digit'}});
 }}
 
 /* ═══════════════════════════════════════════════════════════════
@@ -9028,6 +9609,7 @@ function handlePacket(pkt) {{
     case 'status_update':     renderStatus(pkt.data);      break;
     case 'briefing_update':   renderBriefing(pkt.data);    break;
     case 'toast':             showToast(pkt.message, pkt.level || 'info'); break;
+    case 'layout.mode_changed': if (currentView === 'overview') loadLayoutState(); break;
     case 'agent_status': {{
       const agent = AGENTS.find(a => a.id === pkt.agent_id);
       if (agent) {{ agent.status = pkt.status; renderAgents(currentFilter); updateActiveCounts(); }}
