@@ -871,6 +871,33 @@ body::after {{
 .approval-item:last-child {{ border-bottom: none; padding-bottom: 0; }}
 .approval-item:first-child {{ padding-top: 0; }}
 
+.launch-tab {{
+  padding: 8px 14px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+  background: none; border: none; border-bottom: 2px solid transparent;
+  color: var(--text-3); cursor: pointer; white-space: nowrap; transition: color 0.15s;
+}}
+.launch-tab:hover {{ color: var(--text-1); }}
+.launch-tab.active {{ color: var(--hue); border-bottom-color: var(--hue); }}
+.launch-post-card {{
+  background: var(--surface-hi); border-radius: 8px; padding: 12px 14px;
+  margin-bottom: 8px; font-size: 12px; line-height: 1.6; color: var(--text-1);
+  display: flex; gap: 10px; align-items: flex-start;
+}}
+.launch-post-body {{ flex: 1; white-space: pre-wrap; }}
+.launch-copy-btn {{
+  flex-shrink: 0; padding: 3px 10px; font-size: 10px; background: var(--glass-1);
+  border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+  color: var(--text-2); transition: background 0.15s;
+}}
+.launch-copy-btn:hover {{ background: var(--hue); color: #fff; border-color: var(--hue); }}
+.launch-book-row {{
+  display: flex; align-items: center; gap: 10px; padding: 10px 0;
+  border-bottom: 1px solid var(--border); font-size: 12px;
+}}
+.launch-book-row:last-child {{ border-bottom: none; }}
+.launch-book-title {{ flex: 1; font-weight: 600; color: var(--text-1); }}
+.launch-book-stage {{ font-size: 10px; color: var(--text-3); font-family: var(--font-mono); }}
+
 .approval-title {{
   font-size: 13px;
   font-weight: 600;
@@ -2018,6 +2045,112 @@ body::after {{
 }}
 
 /* ═══════════════════════════════════════════════════════════════════
+   AGENT TOOL BLOCKS
+═══════════════════════════════════════════════════════════════════ */
+.tool-block {{
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  margin: 6px 0;
+  overflow: hidden;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12px;
+}}
+.tool-header {{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+  user-select: none;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}}
+.tool-header:hover {{ background: rgba(255,255,255,0.06); }}
+.tool-icon {{ font-size: 13px; }}
+.tool-name {{ color: rgba(255,255,255,0.85); font-weight: 600; }}
+.tool-status {{
+  margin-left: auto;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-weight: 500;
+}}
+.tool-status.running {{ background: rgba(99,179,237,0.2); color: #63b3ed; }}
+.tool-status.done    {{ background: rgba(72,187,120,0.2); color: #48bb78; }}
+.tool-status.error   {{ background: rgba(252,129,129,0.2); color: #fc8181; }}
+.tool-status.skipped {{ background: rgba(160,160,160,0.2); color: #a0aec0; }}
+.tool-input-line {{
+  padding: 5px 12px;
+  color: rgba(255,255,255,0.5);
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}}
+.tool-output-area {{
+  padding: 8px 12px;
+  color: rgba(255,255,255,0.75);
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 300px;
+  overflow-y: auto;
+  display: none;
+}}
+.tool-output-area.expanded {{ display: block; }}
+.tool-chevron {{ font-size: 10px; color: rgba(255,255,255,0.4); transition: transform 0.2s; }}
+.tool-chevron.open {{ transform: rotate(90deg); }}
+
+/* Approval card */
+.approval-card {{
+  background: rgba(246,173,85,0.08);
+  border: 1px solid rgba(246,173,85,0.3);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 6px 0;
+}}
+.approval-title {{ color: #f6ad55; font-weight: 600; font-size: 13px; margin-bottom: 6px; }}
+.approval-detail {{
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  background: rgba(0,0,0,0.2);
+  padding: 6px 9px;
+  border-radius: 6px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin-bottom: 10px;
+  max-height: 150px;
+  overflow-y: auto;
+}}
+.approval-btns {{ display: flex; gap: 8px; }}
+.approval-btn {{
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}}
+.approval-btn:hover {{ opacity: 0.8; }}
+.approval-btn.approve {{ background: #48bb78; color: #fff; }}
+.approval-btn.decline {{ background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); }}
+.approval-resolved {{ color: rgba(255,255,255,0.4); font-size: 12px; font-style: italic; padding: 4px 0; }}
+
+/* Streaming text cursor */
+.streaming-cursor {{
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: rgba(255,255,255,0.7);
+  margin-left: 1px;
+  animation: blink 0.8s step-end infinite;
+  vertical-align: text-bottom;
+}}
+@keyframes blink {{ 50% {{ opacity: 0; }} }}
+
+/* ═══════════════════════════════════════════════════════════════════
    COMMAND BAR
 ═══════════════════════════════════════════════════════════════════ */
 .command-bar {{
@@ -2653,6 +2786,10 @@ body::after {{
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="13" rx="1.5"/><path d="M5 1v3M11 1v3M1 7h14"/></svg>
       Calendar
     </button>
+    <button class="nav-tab" data-view="health" onclick="switchView('health')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+      HEALTH
+    </button>
   </div>
 
   <div class="nav-right">
@@ -2689,8 +2826,16 @@ body::after {{
     <div id="chat-area" class="chat-area">
       <!-- messages appear here -->
       <div class="chat-empty" id="chat-empty">
-        <div class="chat-empty-icon">💬</div>
-        <div class="chat-empty-text">Type a command below to start</div>
+        <div class="chat-empty-icon">🤖</div>
+        <div class="chat-empty-text">JARVIS Agent — build, troubleshoot, run code</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:20px;">
+          <button class="glass-btn" style="font-size:12px;padding:8px 14px;" onclick="setCmd('What is the current state of the JARVIS codebase?');sendCmd();">🔍 Codebase status</button>
+          <button class="glass-btn" style="font-size:12px;padding:8px 14px;" onclick="setCmd('Run the JARVIS test suite and fix any failures');sendCmd();">🧪 Run tests</button>
+          <button class="glass-btn" style="font-size:12px;padding:8px 14px;" onclick="setCmd('Show me recent git changes and summarize what was built');sendCmd();">📋 Recent changes</button>
+          <button class="glass-btn" style="font-size:12px;padding:8px 14px;" onclick="setCmd('Check which services are running and their health');sendCmd();">🌡 Service health</button>
+          <button class="glass-btn" style="font-size:12px;padding:8px 14px;" onclick="setCmd('Search the JARVIS codebase for TODO and FIXME comments');sendCmd();">📌 Find TODOs</button>
+        </div>
+        <div style="margin-top:16px;font-size:11px;color:rgba(255,255,255,0.25);">slash commands: /clear /memory /context /tools /restart /undo</div>
       </div>
     </div>
   </div>
@@ -2935,6 +3080,18 @@ body::after {{
         </div>
       </div>
 
+      <!-- Health Card -->
+      <div class="card card-tactical" onclick="switchView('health')" style="cursor:pointer;">
+        <div class="card-hdr">
+          <span class="card-icon">♥</span>
+          <span class="card-title">HEALTH</span>
+          <span class="card-badge" id="overview-health-badge">—</span>
+        </div>
+        <div class="card-inner" id="overview-health-content" style="font-size:11px;color:var(--text-3);">
+          Loading…
+        </div>
+      </div>
+
       <!-- Briefing quick -->
       <div class="card">
         <div class="card-inner">
@@ -3040,6 +3197,8 @@ body::after {{
                    onchange="forgeUploadFile(this.files[0])">
             <input type="file" id="forge-photo-input" style="display:none" accept="image/*" multiple
                    onchange="forgeUploadPhotos(this.files)">
+            <input type="file" id="forge-view-capture-input" style="display:none" accept="image/*" multiple
+                   onchange="forgeHandleViewCaptureFiles(this.files, this._pendingViewType)">
           </div>
 
           <!-- Capture panel -->
@@ -3065,6 +3224,9 @@ body::after {{
               <span class="forge-conf-chip confidence-not_ready">Scale: —</span>
               <span class="forge-conf-chip confidence-not_ready">Print: —</span>
             </div>
+            <button id="forge-build-3d-btn" class="forge-action-btn primary"
+              style="display:none;margin-top:8px;width:100%;font-size:12px;"
+              onclick="forgeTriggerReconstruct()">🧊 Build 3D Model</button>
           </div>
 
           <!-- Measurements panel -->
@@ -3076,6 +3238,170 @@ body::after {{
             </div>
             <div class="forge-meas-list" id="forge-meas-list">
               <div style="color:var(--text-3);font-size:11px;font-family:var(--font-mono);">No measurements yet.</div>
+            </div>
+          </div>
+
+          <!-- WoW Model Bridge panel -->
+          <div class="forge-measurements-panel" id="forge-wow-panel" style="margin-top:8px;">
+            <div class="forge-panel-title" style="cursor:pointer;" onclick="forgeWowToggle()">
+              <span>⚔️ WoW Models</span>
+              <span id="forge-wow-count" style="font-size:10px;color:var(--text-3);font-family:var(--font-mono);margin-left:6px;"></span>
+              <button class="forge-action-btn" style="font-size:10px;padding:3px 8px;margin-left:auto;"
+                onclick="event.stopPropagation();forgeWowRefresh()">Refresh</button>
+            </div>
+            <div id="forge-wow-body" style="display:none;margin-top:6px;">
+              <div id="forge-wow-status-row" style="font-size:10px;font-family:var(--font-mono);color:var(--text-3);margin-bottom:8px;line-height:1.6;"></div>
+              <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+                <input type="text" id="forge-wow-search" placeholder="Search models..."
+                  style="flex:1;min-width:100px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;"
+                  oninput="forgeWowSearch(this.value)">
+                <button class="forge-action-btn" style="font-size:10px;padding:3px 8px;"
+                  onclick="forgeWowOpenSetup()">⚙ Setup</button>
+              </div>
+              <div id="forge-wow-model-list" style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;">
+                <div style="color:var(--text-3);font-size:11px;font-family:var(--font-mono);">Click Refresh to scan export folder.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- WoW Setup modal -->
+          <div id="forge-wow-setup-modal" class="forge-modal-overlay hidden">
+            <div class="forge-modal" style="max-width:480px;">
+              <div class="forge-modal-title">⚔️ WoW Model Bridge Setup</div>
+              <div style="font-size:11px;color:var(--text-3);margin-bottom:14px;line-height:1.7;">
+                <b>Step 1</b> — Download <a href="https://github.com/Kruithne/wow.export/releases/latest"
+                  target="_blank" style="color:var(--hue);">wow.export</a> (free, macOS ARM64 native)<br>
+                <b>Step 2</b> — Open it, connect to your WoW install, search your character/model<br>
+                <b>Step 3</b> — Export as GLB — files land in your export folder<br>
+                <b>Step 4</b> — Hit Refresh in Forge and click Import next to the model
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+                <label style="font-size:11px;color:var(--text-2);font-weight:600;">Export Folder (where wow.export saves files)</label>
+                <input type="text" id="forge-wow-cfg-folder"
+                  style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;font-family:var(--font-mono);outline:none;width:100%;box-sizing:border-box;">
+                <label style="font-size:11px;color:var(--text-2);font-weight:600;">WoW Install Path</label>
+                <input type="text" id="forge-wow-cfg-wow"
+                  style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;font-family:var(--font-mono);outline:none;width:100%;box-sizing:border-box;">
+                <label style="font-size:11px;color:var(--text-2);font-weight:600;">Blender Path (optional — for M2→GLB conversion)</label>
+                <input type="text" id="forge-wow-cfg-blender"
+                  style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;font-family:var(--font-mono);outline:none;width:100%;box-sizing:border-box;">
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button class="forge-action-btn primary" onclick="forgeWowSaveConfig()">Save</button>
+                <button class="forge-action-btn" onclick="document.getElementById('forge-wow-setup-modal').classList.add('hidden')">Cancel</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Forge Convert panel -->
+          <div class="forge-measurements-panel" id="forge-convert-panel" style="margin-top:8px;">
+            <div class="forge-panel-title" style="cursor:pointer;" onclick="forgeConvertToggle()">
+              <span>🔧 Convert Tools</span>
+              <button class="forge-action-btn" style="font-size:10px;padding:3px 8px;margin-left:auto;"
+                onclick="event.stopPropagation();forgeConvertToggle()">▾</button>
+            </div>
+            <div id="forge-convert-body" style="display:none;margin-top:8px;">
+
+              <!-- Format Converter -->
+              <div style="margin-bottom:12px;">
+                <div style="font-size:10px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Format Converter</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px;">
+                  <select id="forge-conv-src-file"
+                    style="flex:1;min-width:120px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;">
+                    <option value="">— pick project file —</option>
+                  </select>
+                  <select id="forge-conv-fmt"
+                    style="width:68px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;">
+                    <option value="glb">GLB</option>
+                    <option value="obj">OBJ</option>
+                    <option value="stl">STL</option>
+                    <option value="ply">PLY</option>
+                  </select>
+                  <button class="forge-action-btn" style="font-size:10px;padding:3px 10px;"
+                    onclick="forgeConvertFormat()">Convert</button>
+                </div>
+                <div style="font-size:10px;color:var(--text-3);margin-bottom:4px;">or upload a file to convert:</div>
+                <input type="file" id="forge-conv-upload-input" accept=".stl,.obj,.glb,.ply"
+                  style="display:none;" onchange="forgeConvertFormatFromUpload(this)">
+                <button class="forge-action-btn" style="font-size:10px;padding:3px 10px;width:100%;"
+                  onclick="document.getElementById('forge-conv-upload-input').click()">Upload &amp; Convert</button>
+              </div>
+
+              <!-- WoW-specific tools -->
+              <div style="margin-bottom:12px;padding-top:10px;border-top:1px solid var(--border);">
+                <div style="font-size:10px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">WoW Tools</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <a href="https://github.com/Kruithne/wow.export/releases/latest" target="_blank"
+                    class="forge-action-btn" style="font-size:10px;padding:3px 10px;text-decoration:none;">
+                    ⬇ Download wow.export
+                  </a>
+                  <button class="forge-action-btn" style="font-size:10px;padding:3px 10px;"
+                    onclick="forgeConvertCheckBlender()">Check Blender Setup</button>
+                </div>
+                <div id="forge-conv-blender-result"
+                  style="font-size:10px;font-family:var(--font-mono);color:var(--text-3);margin-top:6px;line-height:1.6;display:none;"></div>
+              </div>
+
+              <!-- Mesh Repair -->
+              <div style="margin-bottom:12px;padding-top:10px;border-top:1px solid var(--border);">
+                <div style="font-size:10px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Mesh Repair</div>
+                <select id="forge-repair-src-file"
+                  style="width:100%;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;margin-bottom:6px;">
+                  <option value="">— pick project file —</option>
+                </select>
+                <div style="display:flex;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
+                  <label style="font-size:10px;color:var(--text-2);display:flex;align-items:center;gap:4px;cursor:pointer;">
+                    <input type="checkbox" id="forge-repair-normals" checked> Fix Normals</label>
+                  <label style="font-size:10px;color:var(--text-2);display:flex;align-items:center;gap:4px;cursor:pointer;">
+                    <input type="checkbox" id="forge-repair-holes" checked> Fill Holes</label>
+                  <label style="font-size:10px;color:var(--text-2);display:flex;align-items:center;gap:4px;cursor:pointer;">
+                    <input type="checkbox" id="forge-repair-winding" checked> Fix Winding</label>
+                </div>
+                <button class="forge-action-btn primary" style="font-size:10px;padding:4px 14px;"
+                  onclick="forgeConvertRepair()">Repair Mesh</button>
+                <div id="forge-conv-repair-result"
+                  style="font-size:10px;font-family:var(--font-mono);color:var(--text-3);margin-top:6px;line-height:1.6;display:none;"></div>
+              </div>
+
+              <!-- Scale & Unit Tools -->
+              <div style="padding-top:10px;border-top:1px solid var(--border);">
+                <div style="font-size:10px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Scale &amp; Units</div>
+                <select id="forge-scale-src-file"
+                  style="width:100%;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;margin-bottom:6px;">
+                  <option value="">— pick project file —</option>
+                </select>
+                <select id="forge-scale-op"
+                  style="width:100%;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;margin-bottom:6px;"
+                  onchange="forgeConvertScaleOpChange(this.value)">
+                  <option value="rescale">Rescale to target size</option>
+                  <option value="normalize_bbox">Normalize bounding box (unit cube)</option>
+                  <option value="center_origin">Center on origin</option>
+                </select>
+                <div id="forge-scale-rescale-opts" style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:center;">
+                  <input type="number" id="forge-scale-target-size" value="100" min="0.001" step="0.1"
+                    style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;">
+                  <select id="forge-scale-target-unit"
+                    style="width:60px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;">
+                    <option value="mm">mm</option>
+                    <option value="cm">cm</option>
+                    <option value="in">in</option>
+                    <option value="m">m</option>
+                  </select>
+                  <span style="font-size:10px;color:var(--text-3);">src:</span>
+                  <select id="forge-scale-current-unit"
+                    style="width:60px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;">
+                    <option value="mm">mm</option>
+                    <option value="cm">cm</option>
+                    <option value="in">in</option>
+                    <option value="m">m</option>
+                  </select>
+                </div>
+                <button class="forge-action-btn primary" style="font-size:10px;padding:4px 14px;"
+                  onclick="forgeConvertScale()">Apply Scale</button>
+                <div id="forge-conv-scale-result"
+                  style="font-size:10px;font-family:var(--font-mono);color:var(--text-3);margin-top:6px;line-height:1.6;display:none;"></div>
+              </div>
+
             </div>
           </div>
 
@@ -3403,6 +3729,55 @@ body::after {{
         </div>
       </div>
     </div>
+
+    <!-- Book Launch Campaign Panel -->
+    <div class="section-label" style="margin-top:24px;">
+      Book Launch
+      <button class="card-badge" style="margin-left:auto;cursor:pointer;padding:3px 10px;font-size:10px;"
+        onclick="loadLaunchPanel()">↺ Scan</button>
+    </div>
+    <div class="card card-tactical" style="margin-bottom:20px;">
+      <div class="card-hdr">
+        <span class="card-title">LAUNCH ASSETS</span>
+        <span class="card-badge" id="launch-books-badge">—</span>
+      </div>
+      <div class="card-inner" style="padding-top:8px;">
+        <div id="publishing-launch-books">
+          <div class="loading-state" style="text-align:left;padding:12px 0;font-size:12px;color:var(--text-3);">
+            Connect Ghostwritr and click Scan to see your books here.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Asset Viewer (shown when a book is expanded) -->
+    <div id="publishing-launch-assets" style="display:none;margin-bottom:20px;">
+      <div class="card">
+        <div class="card-hdr" style="align-items:center;gap:12px;">
+          <span class="card-title" id="launch-asset-title">Launch Assets</span>
+          <div style="margin-left:auto;display:flex;gap:8px;">
+            <button class="btn btn-sm" style="font-size:10px;" onclick="regenerateLaunchAssets()">↺ Regenerate</button>
+            <button class="btn btn-sm" style="font-size:10px;" onclick="document.getElementById('publishing-launch-assets').style.display='none'">✕ Close</button>
+          </div>
+        </div>
+        <!-- Tab strip -->
+        <div style="display:flex;gap:2px;padding:0 16px;border-bottom:1px solid var(--border);overflow-x:auto;">
+          <button class="launch-tab active" data-tab="dispatch"   onclick="switchLaunchTab(this,'dispatch')">📣 Dispatch</button>
+          <button class="launch-tab"         data-tab="bureau"    onclick="switchLaunchTab(this,'bureau')">📰 Bureau</button>
+          <button class="launch-tab"         data-tab="marquee"   onclick="switchLaunchTab(this,'marquee')">🏷️ Marquee</button>
+          <button class="launch-tab"         data-tab="studio"    onclick="switchLaunchTab(this,'studio')">🎙️ Studio</button>
+          <button class="launch-tab"         data-tab="podium"    onclick="switchLaunchTab(this,'podium')">🎓 Podium</button>
+          <button class="launch-tab"         data-tab="lectern"   onclick="switchLaunchTab(this,'lectern')">🎤 Lectern</button>
+          <button class="launch-tab"         data-tab="twitter"   onclick="switchLaunchTab(this,'twitter')">𝕏 Quick Social</button>
+          <button class="launch-tab"         data-tab="amazon"    onclick="switchLaunchTab(this,'amazon')">Quick Amazon</button>
+          <button class="launch-tab"         data-tab="extended"  onclick="switchLaunchTab(this,'extended')">Extended</button>
+        </div>
+        <div id="launch-asset-content" class="card-inner" style="padding-top:16px;min-height:120px;">
+          <!-- populated by viewLaunchAssets() -->
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- ── WORKSHOP ───────────────────────────────────────────── -->
@@ -3495,7 +3870,7 @@ body::after {{
       </div>
 
       <!-- Quick-capture bar -->
-      <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
         <input type="text" id="huddle-idea-input"
           placeholder="Describe an idea — JARVIS will research it and return a full dossier..."
           style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface-hi);font-size:13px;color:var(--text-1);outline:none;"
@@ -3503,6 +3878,27 @@ body::after {{
           onfocus="this.style.borderColor='var(--hue)'"
           onblur="this.style.borderColor='var(--border)'">
         <button class="btn-primary" onclick="huddleAddIdea()">Capture</button>
+      </div>
+
+      <!-- Bulk import row -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+        <input type="file" id="huddle-bulk-import-input" accept=".docx,.txt,.md,.json,.csv"
+          style="display:none;" onchange="huddleBulkImport(this)">
+        <button class="party-bar-btn" style="font-size:11px;padding:4px 12px;"
+          onclick="document.getElementById('huddle-bulk-import-input').click()">
+          📄 Import from File
+        </button>
+        <select id="huddle-bulk-domain"
+          style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;">
+          <option value="passive-income">Passive Income</option>
+          <option value="publishing">Publishing / Books</option>
+          <option value="software">Software</option>
+          <option value="creative">Creative</option>
+          <option value="personal">Personal</option>
+          <option value="general">General</option>
+        </select>
+        <span style="font-size:10px;color:var(--text-3);">.docx · .txt · .md · .json</span>
+        <div id="huddle-bulk-status" style="font-size:11px;color:var(--text-3);display:none;margin-left:4px;"></div>
       </div>
 
       <!-- Status filter pills -->
@@ -3672,6 +4068,10 @@ body::after {{
           <span class="pill pill-success">CONNECTED</span>
           <span class="bridge-url mono" style="font-size:10px;color:var(--text-3);">ghostwritr.local</span>
         </div>
+        <div style="font-size:10px;color:var(--text-3);margin-top:4px;padding-left:18px;">
+          MCP: <span id="mcp-status" style="color:var(--amber);">checking…</span>
+          <span style="margin-left:8px;cursor:pointer;" onclick="checkMcpStatus()" title="Refresh MCP">↺</span>
+        </div>
         <div class="bridge-row">
           <span class="dot dot-success"></span>
           <span class="bridge-name">Chronicle</span>
@@ -3762,6 +4162,243 @@ body::after {{
     </div>
   </div>
 
+  <!-- ═══════════════════════════════════════════════════════ HEALTH VIEW ═══ -->
+  <div id="view-health" class="view" style="display:none;">
+    <div class="view-header">
+      <div class="view-title">HEALTH INTELLIGENCE</div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-size:11px;color:var(--text-3);" id="health-last-sync">—</div>
+        <button class="btn btn-hue btn-sm" onclick="helenRefresh()" id="helen-refresh-btn" style="font-size:10px;">↻ Refresh Analysis</button>
+      </div>
+    </div>
+    <div class="view-body" style="padding:20px;display:flex;flex-direction:column;gap:16px;">
+
+      <!-- ── HELEN CHO ASSESSMENT HEADER ─────────────────────────────────── -->
+      <div class="card card-tactical" id="helen-assessment-card" style="border-left:3px solid var(--hue);">
+        <div class="card-inner" style="padding:16px;">
+          <!-- Top row: score + headline -->
+          <div style="display:flex;align-items:flex-start;gap:20px;margin-bottom:12px;">
+            <!-- Score circle -->
+            <div style="text-align:center;flex-shrink:0;">
+              <div id="helen-score" style="font-size:52px;font-weight:800;color:var(--amber);font-family:var(--font-mono);line-height:1;">—</div>
+              <div id="helen-grade" style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-2);margin-top:2px;">Analysing…</div>
+              <div id="helen-risk-badge" style="margin-top:6px;display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:var(--surface-2);color:var(--text-3);">—</div>
+            </div>
+            <!-- Headline + narrative -->
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--hue);margin-bottom:4px;">Helen Cho · Medical Intelligence</div>
+              <div id="helen-headline" style="font-size:14px;font-weight:600;color:var(--text-1);margin-bottom:8px;line-height:1.4;">Loading health analysis…</div>
+              <div id="helen-narrative" style="font-size:11px;color:var(--text-2);line-height:1.7;max-height:120px;overflow:hidden;position:relative;">
+                <div id="helen-narrative-text"></div>
+                <div id="helen-narrative-fade" style="position:absolute;bottom:0;left:0;right:0;height:30px;background:linear-gradient(transparent,var(--surface-1));display:none;"></div>
+              </div>
+              <button id="helen-expand-btn" onclick="helenToggleNarrative()" style="display:none;font-size:10px;color:var(--hue);background:none;border:none;cursor:pointer;padding:4px 0;margin-top:2px;">Show more ▾</button>
+            </div>
+          </div>
+          <!-- Positive findings strip -->
+          <div id="helen-positives" style="display:none;padding:8px 10px;background:rgba(16,185,129,0.08);border-radius:6px;border:1px solid rgba(16,185,129,0.2);font-size:10px;color:var(--green);margin-top:4px;"></div>
+        </div>
+      </div>
+
+      <!-- ── PRIORITY ACTION BOARD ─────────────────────────────────────────── -->
+      <div>
+        <div class="section-label" style="margin-bottom:8px;">Priority Actions <span id="helen-action-count" style="color:var(--text-3);font-weight:400;"></span></div>
+        <div id="helen-actions" style="display:flex;flex-direction:column;gap:6px;">
+          <div style="font-size:11px;color:var(--text-3);padding:8px 0;">Generating action plan…</div>
+        </div>
+      </div>
+
+      <!-- ── DATA GRID (3 columns) ─────────────────────────────────────────── -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+
+        <!-- Column 1: Conditions + Goals + Medications -->
+        <div>
+          <div class="section-label" style="margin-bottom:8px;">Conditions</div>
+          <div class="card" style="margin-bottom:12px;">
+            <div class="card-inner" id="helen-conditions" style="padding:8px 0;">
+              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+            </div>
+          </div>
+
+          <div class="section-label" style="margin-bottom:8px;">Treatment Goals</div>
+          <div class="card" style="margin-bottom:12px;">
+            <div class="card-inner" id="helen-goals" style="padding:8px 0;">
+              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+            </div>
+          </div>
+
+          <div class="section-label" style="margin-bottom:8px;">Cardiovascular Risk</div>
+          <div class="card" style="margin-bottom:12px;">
+            <div class="card-inner" id="helen-cv-risk" style="padding:8px 0;">
+              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+            </div>
+          </div>
+
+          <div class="section-label" style="margin-bottom:8px;">5-Year Trajectory</div>
+          <div class="card">
+            <div class="card-inner" id="helen-trajectory" style="padding:8px 0;">
+              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 2: Vitals + ECG + BP -->
+        <div>
+          <div class="section-label" style="margin-bottom:8px;">Today's Vitals <span class="card-badge" id="health-apple-badge">—</span></div>
+          <div class="card" style="margin-bottom:12px;">
+            <div class="card-inner" id="health-metrics-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 0;">
+              <div style="font-size:11px;color:var(--text-3);">No data yet</div>
+            </div>
+          </div>
+
+          <div class="section-label" style="margin-bottom:8px;">Blood Pressure <span class="card-badge" id="health-omron-badge">Omron</span></div>
+          <div class="card" style="margin-bottom:12px;">
+            <div class="card-inner" style="padding:10px 0;">
+              <div style="display:flex;align-items:baseline;gap:6px;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:8px;">
+                <span style="font-size:28px;font-weight:700;font-family:var(--font-mono);" id="health-bp-value">—/—</span>
+                <span style="font-size:10px;color:var(--text-3);">mmHg</span>
+                <span style="font-size:12px;color:var(--text-2);" id="health-bp-pulse"></span>
+                <span style="font-size:9px;color:var(--text-3);margin-left:auto;" id="health-bp-date"></span>
+              </div>
+              <div id="health-bp-history" style="font-size:10px;color:var(--text-3);">No readings yet</div>
+              <div id="health-omron-connect-section" style="margin-top:8px;">
+                <button class="btn-ghost" onclick="omronConnect()" id="health-omron-btn" style="font-size:10px;">Connect Omron</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-label" style="margin-bottom:8px;">ECG <span class="card-badge" id="health-ecg-badge">KardiaMobile</span></div>
+          <div class="card">
+            <div class="card-inner" id="health-ecg-list" style="padding:8px 0;">
+              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 3: Labs + Medication Insights -->
+        <div>
+          <div class="section-label" style="margin-bottom:8px;">Lab Alerts</div>
+          <div class="card" style="margin-bottom:12px;">
+            <div class="card-inner" id="helen-lab-alerts" style="padding:8px 0;">
+              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+            </div>
+          </div>
+
+          <div class="section-label" style="margin-bottom:8px;">Medication Insights</div>
+          <div class="card" style="margin-bottom:12px;">
+            <div class="card-inner" id="helen-med-insights" style="padding:8px 0;">
+              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+            </div>
+          </div>
+
+          <div class="section-label" style="margin-bottom:8px;">Diabetes Risk Profile</div>
+          <div class="card" style="margin-bottom:12px;">
+            <div class="card-inner" id="helen-diabetes-risk" style="padding:8px 0;">
+              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+            </div>
+          </div>
+
+          <div class="section-label" style="margin-bottom:8px;">Post-Bariatric Status</div>
+          <div class="card">
+            <div class="card-inner" id="helen-post-bariatric" style="padding:8px 0;">
+              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end 3-col grid -->
+
+      <!-- ── KEY TRENDS ──────────────────────────────────────────────────── -->
+      <div style="margin-bottom:16px;">
+        <div class="section-label" style="margin-bottom:8px;">Key Lab Trends <span style="color:var(--text-3);font-weight:400;font-size:9px;">↑↘↔ trajectory over all recorded history</span></div>
+        <div class="card">
+          <div class="card-inner" id="helen-key-trends" style="padding:8px 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0 20px;">
+            <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── DOCTOR APPOINTMENT PREP ───────────────────────────────────────── -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+          <div class="section-label" style="margin-bottom:8px;">Questions for Dr. Wenk <span id="helen-appt-date" style="color:var(--text-3);font-size:9px;font-weight:400;"></span></div>
+          <div class="card">
+            <div class="card-inner" id="helen-doctor-questions" style="padding:8px 0;">
+              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="section-label" style="margin-bottom:8px;">Missing Data / Gaps</div>
+          <div class="card" style="margin-bottom:12px;">
+            <div class="card-inner" id="helen-missing-data" style="padding:8px 0;">
+              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+            </div>
+          </div>
+          <!-- Readiness -->
+          <div class="section-label" style="margin-bottom:8px;">Today's Readiness</div>
+          <div class="card">
+            <div class="card-inner" style="padding:12px 0;text-align:center;">
+              <div id="health-readiness-score" style="font-size:40px;font-weight:700;color:var(--amber);font-family:var(--font-mono);">—</div>
+              <div id="health-readiness-grade" style="font-size:11px;color:var(--text-2);margin-bottom:6px;">—</div>
+              <div id="health-readiness-message" style="font-size:10px;color:var(--text-3);padding:0 8px;"></div>
+              <div id="health-readiness-factors" style="padding:8px 0 0;text-align:left;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── DATA CONNECTIONS (compact) ───────────────────────────────────── -->
+      <div>
+        <div class="section-label" style="margin-bottom:8px;">Data Connections</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+          <!-- Apple Health -->
+          <div class="card">
+            <div class="card-inner" style="padding:10px 0;">
+              <div style="font-size:10px;font-weight:600;color:var(--text-2);margin-bottom:6px;">Apple Health Auto Export</div>
+              <div style="font-family:var(--font-mono);font-size:9px;background:var(--surface-2);padding:4px 8px;border-radius:4px;color:var(--amber);word-break:break-all;margin-bottom:6px;">http://192.168.5.47:8787/api/health/ingest</div>
+              <div style="font-size:9px;color:var(--text-3);">REST API export · POST · JSON · Daily 7 AM</div>
+              <button class="btn-ghost" style="font-size:9px;margin-top:6px;" onclick="healthTestIngest()">Test Ingest</button>
+            </div>
+          </div>
+          <!-- MyChart -->
+          <div class="card">
+            <div class="card-inner" style="padding:10px 0;">
+              <div style="font-size:10px;font-weight:600;color:var(--text-2);margin-bottom:6px;">MyChart Sync <span id="mychart-sync-badge" style="font-size:9px;color:var(--text-3);"></span></div>
+              <div id="mychart-sync-status" style="font-size:9px;color:var(--text-3);margin-bottom:6px;"></div>
+              <div id="mychart-progress-wrap" style="display:none;margin-bottom:6px;">
+                <div style="background:var(--surface-2);border-radius:4px;height:4px;overflow:hidden;">
+                  <div id="mychart-progress-bar" style="height:100%;background:var(--hue);width:0%;transition:width 0.4s;"></div>
+                </div>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <button class="btn-ghost" style="font-size:9px;" onclick="mychartStartSync()" id="mychart-sync-btn">⟳ Sync</button>
+                <button class="btn-ghost" style="font-size:9px;" onclick="mychartViewRecords()">Records</button>
+              </div>
+            </div>
+          </div>
+          <!-- Omron -->
+          <div class="card">
+            <div class="card-inner" style="padding:10px 0;">
+              <div style="font-size:10px;font-weight:600;color:var(--text-2);margin-bottom:6px;">Omron Connect <span style="font-size:9px;font-weight:400;color:var(--text-3);">Blood Pressure</span></div>
+              <div id="helen-omron-status-text" style="font-size:9px;color:var(--text-3);margin-bottom:6px;">Not configured</div>
+              <div style="font-size:9px;color:var(--text-3);margin-bottom:6px;">Add OMRON_CLIENT_ID + OMRON_CLIENT_SECRET to .env</div>
+              <button class="btn-ghost" style="font-size:9px;" onclick="omronConnect()">Connect</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hidden: medical records dump (populated by mychartViewRecords) -->
+      <div id="health-medical-records-section" style="display:none;">
+        <div class="section-label" style="margin-bottom:8px;">Full Medical Records</div>
+        <div class="card"><div class="card-inner" id="health-medical-records" style="padding:8px 0;"></div></div>
+      </div>
+      <div id="health-alerts" style="display:none;"></div>
+
+    </div>
+  </div><!-- end view-health -->
+
 </main>
 
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -3778,7 +4415,7 @@ body::after {{
     <button class="cmd-chip" onclick="setCmd('Chronicle search:')">🔍 Memory</button>
   </div>
   <div class="cmd-row">
-    <input class="cmd-input" id="cmd-input" type="text" placeholder="Command JARVIS…" onkeydown="cmdKey(event)">
+    <input class="cmd-input" id="cmd-input" type="text" placeholder="Ask JARVIS to build, fix, or explain anything…" onkeydown="cmdKey(event)" onpaste="handleSmartPaste(event)">
     <button class="cmd-mic" id="cmd-mic" onclick="toggleMic()" title="Voice input">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0014 0"/><path d="M12 21v-4"/>
@@ -3997,6 +4634,7 @@ function init() {{
   loadOverviewReminders();
   loadJarvisTasks();
   loadIdeaInbox();
+  loadOverviewHealth();
 
   // Clock — update every minute
   updateNavClock();
@@ -4046,7 +4684,7 @@ function loadViewData(name) {{
   if (_agentsRefreshTimer) {{ clearInterval(_agentsRefreshTimer); _agentsRefreshTimer = null; }}
 
   switch (name) {{
-    case 'overview':     loadApprovals(); loadBriefing(); loadHomeDashboard(); loadOverviewAgents(); loadOverviewCatalyst(); loadOverviewChronicle(); loadOverviewPublishing(); loadOverviewReminders(); loadJarvisTasks(); loadIdeaInbox(); break;
+    case 'overview':     loadApprovals(); loadBriefing(); loadHomeDashboard(); loadOverviewAgents(); loadOverviewCatalyst(); loadOverviewChronicle(); loadOverviewPublishing(); loadOverviewReminders(); loadJarvisTasks(); loadIdeaInbox(); loadOverviewHealth(); break;
     case 'forge':        forgeInit(); break;
     case 'agents':
       loadLiveAgents();
@@ -4059,6 +4697,7 @@ function loadViewData(name) {{
     case 'chronicle':    loadChronicle(); break;
     case 'email':        loadHomeEmail(); break;
     case 'calendar':     loadHomeCalendar(); break;
+    case 'health':       loadHealth(); break;
     case 'workshop':     loadHomeTasks(); break;
   }}
 }}
@@ -4066,6 +4705,18 @@ function loadViewData(name) {{
 /* ═══════════════════════════════════════════════════════════════
    API CALLS
 ═══════════════════════════════════════════════════════════════ */
+async function checkMcpStatus() {{
+  const el = document.getElementById('mcp-status');
+  try {{
+    const res = await fetch('http://127.0.0.1:8788/', {{ signal: AbortSignal.timeout(2000) }});
+    if (el) {{ el.textContent = 'connected ✓'; el.style.color = 'var(--green)'; }}
+  }} catch {{
+    if (el) {{ el.textContent = 'offline'; el.style.color = 'var(--red)'; }}
+  }}
+}}
+// Check MCP status on load
+setTimeout(checkMcpStatus, 3000);
+
 async function loadStatus() {{
   try {{
     const res = await fetch('/api/status');
@@ -4091,6 +4742,244 @@ async function loadPublishing() {{
     const data = await res.json();
     renderPublishing(data);
   }} catch(e) {{ console.error('loadPublishing failed', e); }}
+  loadLaunchPanel();
+}}
+
+// ── Book Launch Panel ──────────────────────────────────────────
+
+let _launchCurrentSlug = '';
+let _launchCurrentAssets = null;
+
+async function loadLaunchPanel() {{
+  const listEl  = document.getElementById('publishing-launch-books');
+  const badgeEl = document.getElementById('launch-books-badge');
+  if (listEl) listEl.innerHTML = '<div class="loading-state" style="padding:12px 0;font-size:12px;color:var(--text-3);">Scanning…</div>';
+  try {{
+    const res = await fetch('/api/publishing/launch-scan');
+    const data = await res.json();
+    if (!data.bridge_available) {{
+      if (listEl) listEl.innerHTML = '<div style="font-size:12px;color:var(--text-3);padding:8px 0;">Ghostwritr not connected — start Ghostwritr to see your books.</div>';
+      if (badgeEl) badgeEl.textContent = '—';
+      return;
+    }}
+    const books = data.books || [];
+    if (badgeEl) badgeEl.textContent = books.length + ' book' + (books.length !== 1 ? 's' : '');
+    if (!books.length) {{
+      if (listEl) listEl.innerHTML = '<div style="font-size:12px;color:var(--text-3);padding:8px 0;">No books found in Ghostwritr.</div>';
+      return;
+    }}
+    if (listEl) listEl.innerHTML = books.map(b => {{
+      const hasPill = b.has_assets
+        ? '<span class="pill pill-green" style="font-size:9px;">Ready</span>'
+        : (b.trigger ? '<span class="pill pill-gold" style="font-size:9px;">Generate</span>'
+                     : '<span class="pill" style="font-size:9px;">—</span>');
+      const genBtn = !b.has_assets
+        ? `<button class="btn btn-hue btn-sm" style="font-size:10px;" onclick="generateLaunchAssets('${{escHtml(b.slug)}}', this)">Generate</button>`
+        : '';
+      const viewBtn = b.has_assets
+        ? `<button class="btn btn-sm" style="font-size:10px;" onclick="viewLaunchAssets('${{escHtml(b.slug)}}')">View</button>`
+        : '';
+      const regenBtn = b.has_assets
+        ? `<button class="btn btn-sm" style="font-size:10px;" onclick="generateLaunchAssets('${{escHtml(b.slug)}}', this, true)">↺</button>`
+        : '';
+      return `<div class="launch-book-row">
+        <div>
+          <div class="launch-book-title">${{escHtml(b.title || b.slug)}}</div>
+          <div class="launch-book-stage">${{escHtml(b.book_status || '')}} · ${{escHtml(b.current_stage || '—')}}</div>
+        </div>
+        ${{hasPill}}
+        <div style="margin-left:auto;display:flex;gap:6px;">${{genBtn}}${{viewBtn}}${{regenBtn}}</div>
+      </div>`;
+    }}).join('');
+  }} catch(e) {{
+    if (listEl) listEl.innerHTML = '<div style="font-size:12px;color:var(--text-3);">Scan failed: ' + escHtml(String(e)) + '</div>';
+  }}
+}}
+
+async function generateLaunchAssets(slug, btn, force) {{
+  if (btn) {{ btn.disabled = true; btn.textContent = '⏳'; }}
+  showToast('Generating launch assets for ' + slug + '… this takes a few minutes.', 'info');
+  try {{
+    const res = await fetch('/api/publishing/launch/' + encodeURIComponent(slug) + '/generate', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ force: !!force, trigger: 'pre_launch' }}),
+    }});
+    if (res.ok) {{
+      showToast('Generation started — refresh in a few minutes.', 'success');
+      setTimeout(() => loadLaunchPanel(), 3000);
+    }} else {{
+      showToast('Failed to start generation', 'error');
+      if (btn) {{ btn.disabled = false; btn.textContent = force ? '↺' : 'Generate'; }}
+    }}
+  }} catch(e) {{
+    showToast('Error: ' + e, 'error');
+    if (btn) {{ btn.disabled = false; btn.textContent = force ? '↺' : 'Generate'; }}
+  }}
+}}
+
+async function viewLaunchAssets(slug) {{
+  _launchCurrentSlug = slug;
+  const panel = document.getElementById('publishing-launch-assets');
+  const titleEl = document.getElementById('launch-asset-title');
+  const contentEl = document.getElementById('launch-asset-content');
+  if (panel) panel.style.display = '';
+  if (contentEl) contentEl.innerHTML = '<div style="font-size:12px;color:var(--text-3);">Loading…</div>';
+  try {{
+    const res = await fetch('/api/publishing/launch/' + encodeURIComponent(slug));
+    const data = await res.json();
+    _launchCurrentAssets = data;
+    if (titleEl) titleEl.textContent = (data.title || slug) + ' — Launch Assets';
+    switchLaunchTab(document.querySelector('.launch-tab[data-tab="dispatch"]'), 'dispatch');
+    panel.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
+  }} catch(e) {{
+    if (contentEl) contentEl.innerHTML = '<div style="color:var(--red);">Failed to load: ' + escHtml(String(e)) + '</div>';
+  }}
+}}
+
+async function regenerateLaunchAssets() {{
+  if (!_launchCurrentSlug) return;
+  await fetch('/api/publishing/launch/' + encodeURIComponent(_launchCurrentSlug), {{ method: 'DELETE' }});
+  await generateLaunchAssets(_launchCurrentSlug, null, true);
+}}
+
+function switchLaunchTab(btnEl, tab) {{
+  document.querySelectorAll('.launch-tab').forEach(b => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+  const contentEl = document.getElementById('launch-asset-content');
+  if (!contentEl || !_launchCurrentAssets) return;
+  const a = _launchCurrentAssets.assets || {{}};
+  let html = '';
+
+  // Ghostwritr post-production agent tabs
+  const agentLabels = {{
+    dispatch: ['📣 Dispatch — Social Campaign', 'SOCIAL_CAMPAIGN'],
+    bureau:   ['📰 Bureau — Press Kit',         'PRESS_KIT'],
+    marquee:  ['🏷️ Marquee — Retail Listing',   'LAUNCH_LISTING'],
+    studio:   ['🎙️ Studio — Audio Prep',         'AUDIO_PREP'],
+    podium:   ['🎓 Podium — Course Design',      'COURSE_DESIGN'],
+    lectern:  ['🎤 Lectern — Speaking Kit',      'SPEAKING_KIT'],
+  }};
+  if (tab in agentLabels) {{
+    const [label, stageKey] = agentLabels[tab];
+    const content = (a && a[tab]) ? a[tab] : null;
+    if (!content) {{
+      contentEl.innerHTML = `<div style="padding:20px;text-align:center;">
+        <div style="font-size:13px;color:var(--text-3);margin-bottom:12px;">${{label}} — not yet generated</div>
+        <div style="font-size:11px;color:var(--text-3);">Complete the <strong>${{stageKey}}</strong> stage in Ghostwritr to generate this asset.<br>It will appear here automatically when committed.</div>
+      </div>`;
+    }} else {{
+      const encoded = encodeURIComponent(content);
+      contentEl.innerHTML = `<div style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:11px;color:var(--text-3);">${{label}}</span>
+        <button class="btn btn-sm launch-copy-btn" onclick="launchCopy(this,'${{encoded}}')" style="font-size:10px;">Copy All</button>
+      </div>
+      <pre style="white-space:pre-wrap;font-size:11px;line-height:1.6;color:var(--text-1);background:var(--surface-2);padding:16px;border-radius:6px;overflow-x:auto;">${{escHtml(content)}}</pre>`;
+    }}
+    return;
+  }}
+
+  if (tab === 'twitter') {{
+    // Quick Social — combines twitter, linkedin, emails quick drafts
+    const posts = a.twitter || [];
+    const li = a.linkedin || [];
+    const em = a.emails || [];
+    if (!posts.length && !li.length && !em.length) {{
+      contentEl.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--text-3);">No quick social drafts yet. Click Generate to create draft assets, or complete the Dispatch stage in Ghostwritr for the full campaign.</div>';
+      return;
+    }}
+    let html = '';
+    if (posts.length) {{
+      html += '<div style="font-size:11px;color:var(--text-3);margin-bottom:8px;font-weight:600;">𝕏 TWITTER / X</div>';
+      html += posts.map(p => `<div class="launch-post-card"><div class="post-type-label">${{escHtml(p.type||'')}}</div><div>${{escHtml(p.text||'')}}</div><button class="launch-copy-btn" onclick="launchCopy(this,'${{encodeURIComponent(p.text||'')}}')" style="margin-top:6px;font-size:10px;">Copy</button></div>`).join('');
+    }}
+    if (li.length) {{
+      html += '<div style="font-size:11px;color:var(--text-3);margin:16px 0 8px;font-weight:600;">LINKEDIN</div>';
+      html += li.map(p => `<div class="launch-post-card"><div class="post-type-label">${{escHtml(p.type||'')}}</div><div>${{escHtml(p.text||'')}}</div><button class="launch-copy-btn" onclick="launchCopy(this,'${{encodeURIComponent(p.text||'')}}')" style="margin-top:6px;font-size:10px;">Copy</button></div>`).join('');
+    }}
+    if (em.length) {{
+      html += '<div style="font-size:11px;color:var(--text-3);margin:16px 0 8px;font-weight:600;">EMAILS</div>';
+      html += em.map(e => `<div class="launch-post-card"><div class="post-type-label">${{escHtml(e.type||'')}}</div>${{(e.subjects||[]).map(s=>`<div style="font-size:10px;color:var(--text-2);">Subject: ${{escHtml(s)}}</div>`).join('')}}<div style="margin-top:6px;">${{escHtml(e.body||'')}}</div></div>`).join('');
+    }}
+    contentEl.innerHTML = html;
+    return;
+
+  }} else if (tab === 'linkedin') {{
+    const posts = a.linkedin || [];
+    if (!posts.length) {{ html = '<div style="color:var(--text-3);font-size:12px;">No posts yet.</div>'; }}
+    else html = posts.map(p => `
+      <div class="launch-post-card">
+        <div class="launch-post-body"><span style="font-size:9px;font-weight:700;color:var(--hue);text-transform:uppercase;letter-spacing:0.06em;">${{escHtml(p.type||'POST')}}</span><br>${{escHtml(p.text||'')}}</div>
+        <button class="launch-copy-btn" onclick="launchCopy(this,'${{encodeURIComponent(p.text||'')}}')">Copy</button>
+      </div>`).join('');
+
+  }} else if (tab === 'press') {{
+    const text = a.press_release || '';
+    html = `<div class="launch-post-card" style="flex-direction:column;gap:8px;">
+      <div style="display:flex;justify-content:flex-end;"><button class="launch-copy-btn" onclick="launchCopy(this,'${{encodeURIComponent(text)}}')">Copy All</button></div>
+      <div class="launch-post-body">${{escHtml(text) || '<span style="color:var(--text-3);">Not yet generated.</span>'}}</div>
+    </div>`;
+
+  }} else if (tab === 'emails') {{
+    const emails = a.emails || [];
+    if (!emails.length) {{ html = '<div style="color:var(--text-3);font-size:12px;">No emails yet.</div>'; }}
+    else html = emails.map(e => `
+      <div class="launch-post-card" style="flex-direction:column;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9px;font-weight:700;color:var(--hue);text-transform:uppercase;">${{escHtml(e.type||'')}}</span>
+          <button class="launch-copy-btn" style="margin-left:auto;" onclick="launchCopy(this,'${{encodeURIComponent(e.body||'')}}')">Copy Body</button>
+        </div>
+        ${{(e.subjects||[]).map(s => `<div style="font-size:11px;color:var(--text-2);"><strong>Subject:</strong> ${{escHtml(s)}}</div>`).join('')}}
+        <div class="launch-post-body" style="margin-top:6px;">${{escHtml(e.body||'')}}</div>
+        ${{e.cta ? `<div style="font-size:11px;color:var(--hue);">CTA: ${{escHtml(e.cta)}}</div>` : ''}}
+      </div>`).join('');
+
+  }} else if (tab === 'amazon') {{
+    const am = a.amazon_copy || {{}};
+    const desc   = am.description || '';
+    const subs   = am.subtitles   || [];
+    const kws    = am.keywords    || [];
+    html = `
+      <div class="launch-post-card" style="flex-direction:column;gap:8px;">
+        <div style="display:flex;align-items:center;"><span style="font-size:10px;font-weight:700;color:var(--hue);">DESCRIPTION</span><button class="launch-copy-btn" style="margin-left:auto;" onclick="launchCopy(this,'${{encodeURIComponent(desc)}}')">Copy</button></div>
+        <div class="launch-post-body">${{escHtml(desc) || '<span style="color:var(--text-3);">Not generated.</span>'}}</div>
+      </div>
+      <div class="launch-post-card" style="flex-direction:column;gap:6px;">
+        <span style="font-size:10px;font-weight:700;color:var(--hue);">SUBTITLE OPTIONS</span>
+        ${{subs.map((s,i) => `<div style="font-size:12px;display:flex;align-items:center;gap:8px;">${{i+1}}. ${{escHtml(s)}}<button class="launch-copy-btn" onclick="launchCopy(this,'${{encodeURIComponent(s)}}')">Copy</button></div>`).join('')}}
+      </div>
+      <div class="launch-post-card" style="flex-direction:column;gap:6px;">
+        <span style="font-size:10px;font-weight:700;color:var(--hue);">KDP KEYWORDS</span>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">${{kws.map(k => `<span style="background:var(--glass-2);padding:3px 8px;border-radius:12px;font-size:11px;">${{escHtml(k)}}</span>`).join('')}}</div>
+        <button class="launch-copy-btn" style="align-self:flex-start;" onclick="launchCopy(this,'${{encodeURIComponent(kws.join(', '))}}')">Copy All</button>
+      </div>`;
+
+  }} else if (tab === 'extended') {{
+    const rows = [
+      ['Goodreads Update',      a.goodreads           || ''],
+      ['Podcast Pitch',         a.podcast_pitch        || ''],
+      ['Podcast Talking Points',(a.podcast_talking_points||[]).join('\\n• ')],
+      ['Newsletter Blurb',      a.newsletter_blurb     || ''],
+      ['ARC Review Request',    a.review_request       || ''],
+    ];
+    html = rows.map(([label, text]) => `
+      <div class="launch-post-card" style="flex-direction:column;gap:6px;">
+        <div style="display:flex;align-items:center;"><span style="font-size:10px;font-weight:700;color:var(--hue);">${{escHtml(label)}}</span><button class="launch-copy-btn" style="margin-left:auto;" onclick="launchCopy(this,'${{encodeURIComponent(text)}}')">Copy</button></div>
+        <div class="launch-post-body">${{escHtml(text) || '<span style="color:var(--text-3);">Not generated.</span>'}}</div>
+      </div>`).join('');
+  }}
+  contentEl.innerHTML = html;
+}}
+
+function launchCopy(btn, encodedText) {{
+  const text = decodeURIComponent(encodedText);
+  navigator.clipboard.writeText(text).then(() => {{
+    const orig = btn.textContent;
+    btn.textContent = '✓';
+    btn.style.background = 'var(--green, #4ade80)';
+    btn.style.color = '#000';
+    setTimeout(() => {{ btn.textContent = orig; btn.style.background = ''; btn.style.color = ''; }}, 1500);
+  }}).catch(() => showToast('Copy failed', 'error'));
 }}
 
 async function loadBriefing() {{
@@ -4507,6 +5396,43 @@ function timeAgo(isoStr) {{
   const h = Math.floor(m / 60);
   if (h < 24) return h + 'h ago';
   return Math.floor(h / 24) + 'd ago';
+}}
+
+function showIdeaAddModal() {{
+  // The inline quick-capture bar is already visible — just focus it
+  const inp = document.getElementById('huddle-idea-input');
+  if (inp) {{ inp.focus(); inp.scrollIntoView({{ behavior: 'smooth', block: 'center' }}); }}
+}}
+
+async function huddleBulkImport(input) {{
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('huddle-bulk-status');
+  const domain = document.getElementById('huddle-bulk-domain')?.value || 'general';
+  if (statusEl) {{ statusEl.style.display = 'inline'; statusEl.textContent = 'Importing…'; }}
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('domain', domain);
+  fd.append('source', 'import');
+  try {{
+    const res = await fetch('/api/ideas/bulk-import', {{ method: 'POST', body: fd }});
+    const data = await res.json();
+    if (res.ok) {{
+      const msg = `✓ ${{data.imported}} idea${{data.imported !== 1 ? 's' : ''}} imported` +
+        (data.skipped ? ` (${{data.skipped}} skipped)` : '');
+      if (statusEl) {{ statusEl.textContent = msg; statusEl.style.color = 'var(--green, #4ade80)'; }}
+      showToast(msg, 'success');
+      loadIdeaInbox();
+    }} else {{
+      const err = data.detail || 'Import failed';
+      if (statusEl) {{ statusEl.textContent = '✗ ' + err; statusEl.style.color = 'var(--red, #f87171)'; }}
+      showToast('Import failed: ' + err, 'error');
+    }}
+  }} catch(e) {{
+    if (statusEl) {{ statusEl.textContent = '✗ Network error'; }}
+    showToast('Network error: ' + e, 'error');
+  }}
+  input.value = '';
 }}
 
 async function huddleAddIdea() {{
@@ -5747,80 +6673,256 @@ function fmtDuration(start, end) {{
   }} catch(_) {{ return ''; }}
 }}
 
+/* ═══════════════════════════════════════════════════════════════════
+   AGENT CONVERSATION STATE (multi-turn)
+═══════════════════════════════════════════════════════════════════ */
+let _agentMessages   = [];   // full message history for multi-turn
+let _agentConvId     = '';   // stable conversation id for session save
+let _agentStreaming  = false; // guard against concurrent sends
+
+function _agentConversationId() {{
+  if (!_agentConvId) _agentConvId = 'agent-' + Date.now().toString(36);
+  return _agentConvId;
+}}
+
+/* ── Helper: escape HTML ── */
+function _esc(s) {{ return escHtml ? escHtml(s) : s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }}
+
+/* ── Helper: append a basic message row ── */
+function _appendMsg(chatArea, role, content, meta) {{
+  const row = document.createElement('div');
+  row.className = 'msg-row ' + role;
+  const avatarText = role === 'user' ? 'CB' : 'J';
+  row.innerHTML = `
+    <div class="msg-avatar">${{avatarText}}</div>
+    <div>
+      <div class="msg-bubble">${{_esc(content)}}</div>
+      ${{meta ? `<div class="msg-meta">${{_esc(meta)}}</div>` : ''}}
+    </div>`;
+  chatArea.appendChild(row);
+  chatArea.scrollTop = chatArea.scrollHeight;
+  return row;
+}}
+
+/* ── Build a tool block element ── */
+function _makeToolBlock(toolName, toolInput) {{
+  const icons = {{ bash:'⚡', file_ops:'📄', web:'🌐', jarvis_api:'🔗', git:'🔀', memory:'🧠' }};
+  const icon = icons[toolName] || '🔧';
+  const inputStr = typeof toolInput === 'object' ? JSON.stringify(toolInput, null, 2) : String(toolInput);
+
+  const block = document.createElement('div');
+  block.className = 'tool-block';
+  block.innerHTML = `
+    <div class="tool-header" onclick="this.parentElement.querySelector('.tool-output-area').classList.toggle('expanded'); this.querySelector('.tool-chevron').classList.toggle('open');">
+      <span class="tool-icon">${{icon}}</span>
+      <span class="tool-name">${{_esc(toolName)}}</span>
+      <span class="tool-status running">running…</span>
+      <span class="tool-chevron">▶</span>
+    </div>
+    <div class="tool-input-line">${{_esc(inputStr.length > 200 ? inputStr.slice(0,200)+'…' : inputStr)}}</div>
+    <div class="tool-output-area expanded"></div>`;
+  return block;
+}}
+
+/* ── Build an approval card ── */
+function _makeApprovalCard(approvalId, toolName, toolInput) {{
+  const inputStr = typeof toolInput === 'object' ? JSON.stringify(toolInput, null, 2) : String(toolInput);
+  const card = document.createElement('div');
+  card.className = 'approval-card';
+  card.dataset.approvalId = approvalId;
+  card.innerHTML = `
+    <div class="approval-title">⚠️ Approval needed — <strong>${{_esc(toolName)}}</strong></div>
+    <div class="approval-detail">${{_esc(inputStr)}}</div>
+    <div class="approval-btns">
+      <button class="approval-btn approve" onclick="resolveApproval('${{approvalId}}', true, this.closest('.approval-card'))">✓ Approve</button>
+      <button class="approval-btn decline" onclick="resolveApproval('${{approvalId}}', false, this.closest('.approval-card'))">✗ Decline</button>
+    </div>`;
+  return card;
+}}
+
+/* ── Resolve an approval ── */
+async function resolveApproval(approvalId, approved, cardEl) {{
+  try {{
+    await fetch('/api/agent/approve', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{ approval_id: approvalId, approved }})
+    }});
+    if (cardEl) {{
+      cardEl.querySelector('.approval-btns').style.display = 'none';
+      const msg = document.createElement('div');
+      msg.className = 'approval-resolved';
+      msg.textContent = approved ? '✓ Approved — running…' : '✗ Declined — skipped';
+      cardEl.appendChild(msg);
+    }}
+  }} catch(e) {{
+    console.warn('resolveApproval failed:', e);
+  }}
+}}
+
+/* ══════════════════════════════════════════════════════════════════
+   MAIN: sendCommand  — now uses the agentic streaming endpoint
+══════════════════════════════════════════════════════════════════ */
 async function sendCommand(text) {{
-  if (!text.trim()) return;
+  if (!text || !text.trim()) return;
+  if (_agentStreaming) {{ showToast('Agent is still working…', 'warning'); return; }}
 
-  /* ── Switch to chat view and reveal it ── */
   switchView('chat');
-
   const chatArea = document.getElementById('chat-area');
   const emptyEl  = document.getElementById('chat-empty');
   if (emptyEl) emptyEl.style.display = 'none';
 
-  /* ── Helper: append a message row ── */
-  function appendMsg(role, content, meta) {{
-    const row = document.createElement('div');
-    row.className = 'msg-row ' + role;
-
-    const avatarText = role === 'user' ? 'CB' : 'J';
-    const bubble = role === 'jarvis'
-      ? `<div class="msg-bubble">${{escHtml(content)}}</div>`
-      : `<div class="msg-bubble">${{escHtml(content)}}</div>`;
-
-    row.innerHTML = `
-      <div class="msg-avatar">${{avatarText}}</div>
-      <div>
-        ${{bubble}}
-        ${{meta ? `<div class="msg-meta">${{escHtml(meta)}}</div>` : ''}}
-      </div>`;
-    chatArea.appendChild(row);
-    chatArea.scrollTop = chatArea.scrollHeight;
-    return row;
-  }}
-
   /* ── Append user message ── */
   const now = new Date().toLocaleTimeString([], {{hour:'2-digit', minute:'2-digit'}});
-  appendMsg('user', text, now);
+  _appendMsg(chatArea, 'user', text, now);
+  _agentMessages.push({{ role: 'user', content: text }});
 
-  /* ── Typing indicator ── */
-  const typingRow = document.createElement('div');
-  typingRow.className = 'msg-row jarvis msg-typing';
-  typingRow.innerHTML = `
-    <div class="msg-avatar">J</div>
-    <div><div class="msg-bubble">
-      <span class="typing-dot"></span>
-      <span class="typing-dot"></span>
-      <span class="typing-dot"></span>
-    </div></div>`;
-  chatArea.appendChild(typingRow);
+  /* ── Build the JARVIS response container ── */
+  const jarvisRow = document.createElement('div');
+  jarvisRow.className = 'msg-row jarvis';
+  const avatar = document.createElement('div');
+  avatar.className = 'msg-avatar';
+  avatar.textContent = 'J';
+  const bodyWrap = document.createElement('div');
+  bodyWrap.style.minWidth = '0';
+  bodyWrap.style.flex = '1';
+
+  /* Streaming text bubble */
+  const textBubble = document.createElement('div');
+  textBubble.className = 'msg-bubble';
+  const cursor = document.createElement('span');
+  cursor.className = 'streaming-cursor';
+  textBubble.appendChild(cursor);
+
+  bodyWrap.appendChild(textBubble);
+  jarvisRow.appendChild(avatar);
+  jarvisRow.appendChild(bodyWrap);
+  chatArea.appendChild(jarvisRow);
   chatArea.scrollTop = chatArea.scrollHeight;
 
+  _agentStreaming = true;
+  let accText = '';
+  let activeToolBlocks = {{}};  /* tool_use_id → {{block, outputArea}} */
+
   try {{
-    const res = await fetch('/api/respond', {{
+    const res = await fetch('/api/agent/stream', {{
       method: 'POST',
       headers: {{ 'Content-Type': 'application/json' }},
-      body: JSON.stringify({{ request: text, actor: 'Chris', source: 'glass' }})
+      body: JSON.stringify({{
+        message: text,
+        conversation_id: _agentConversationId(),
+        messages: _agentMessages.slice(0, -1)   /* prior turns only; server appends current */
+      }})
     }});
 
-    chatArea.removeChild(typingRow);
-
     if (!res.ok) {{
-      appendMsg('jarvis', 'Command failed — JARVIS returned ' + res.status, null);
+      cursor.remove();
+      textBubble.textContent = 'Agent endpoint error: ' + res.status;
+      _agentStreaming = false;
       return;
     }}
 
-    const data = await res.json();
-    const reply = data.output_text || data.reply || data.status || '…';
-    const metaParts = [];
-    if (data.provider) metaParts.push(data.provider);
-    if (data.model)    metaParts.push(data.model);
-    const replyMeta = metaParts.length ? metaParts.join(' · ') + ' · ' + new Date().toLocaleTimeString([], {{hour:'2-digit', minute:'2-digit'}}) : new Date().toLocaleTimeString([], {{hour:'2-digit', minute:'2-digit'}});
-    appendMsg('jarvis', reply, replyMeta);
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
 
-    if (data.refresh) loadViewData(currentView);
+    while (true) {{
+      const {{ done, value }} = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, {{ stream: true }});
+
+      const lines = buf.split('\n');
+      buf = lines.pop();   /* keep incomplete line in buf */
+
+      for (const line of lines) {{
+        if (!line.startsWith('data: ')) continue;
+        let evt;
+        try {{ evt = JSON.parse(line.slice(6)); }} catch(_) {{ continue; }}
+
+        const type = evt.type;
+
+        /* ── Text streaming ── */
+        if (type === 'text_delta') {{
+          accText += evt.delta || '';
+          /* Update bubble — keep cursor at end */
+          textBubble.textContent = accText;
+          textBubble.appendChild(cursor);
+          chatArea.scrollTop = chatArea.scrollHeight;
+        }}
+
+        /* ── Tool call started ── */
+        else if (type === 'tool_call') {{
+          const block = _makeToolBlock(evt.tool, evt.input);
+          const outputArea = block.querySelector('.tool-output-area');
+          bodyWrap.appendChild(block);
+          activeToolBlocks[evt.tool_use_id] = {{ block, outputArea }};
+          chatArea.scrollTop = chatArea.scrollHeight;
+        }}
+
+        /* ── Tool result received ── */
+        else if (type === 'tool_result') {{
+          const entry = activeToolBlocks[evt.tool_use_id];
+          if (entry) {{
+            const statusEl = entry.block.querySelector('.tool-status');
+            statusEl.textContent = evt.error ? 'error' : 'done';
+            statusEl.className   = 'tool-status ' + (evt.error ? 'error' : 'done');
+            entry.outputArea.textContent = evt.output || '';
+            /* Auto-collapse successful tool outputs */
+            if (!evt.error) entry.outputArea.classList.remove('expanded');
+          }}
+          chatArea.scrollTop = chatArea.scrollHeight;
+        }}
+
+        /* ── Approval needed ── */
+        else if (type === 'approval_needed') {{
+          const card = _makeApprovalCard(evt.approval_id, evt.tool, evt.input);
+          bodyWrap.appendChild(card);
+          chatArea.scrollTop = chatArea.scrollHeight;
+        }}
+
+        /* ── Tool skipped ── */
+        else if (type === 'tool_skipped') {{
+          /* Find the most recent approval card and mark it */
+        }}
+
+        /* ── Done ── */
+        else if (type === 'done') {{
+          cursor.remove();
+          /* Finalize text */
+          if (accText) textBubble.textContent = accText;
+          else if (!textBubble.textContent) textBubble.textContent = '(no text response)';
+          /* Add meta */
+          const meta = document.createElement('div');
+          meta.className = 'msg-meta';
+          meta.textContent = 'claude-opus-4-5 · ' + new Date().toLocaleTimeString([], {{hour:'2-digit', minute:'2-digit'}});
+          bodyWrap.appendChild(meta);
+          /* Save assistant turn in history */
+          _agentMessages.push({{ role: 'assistant', content: accText }});
+        }}
+
+        /* ── Error ── */
+        else if (type === 'error') {{
+          cursor.remove();
+          textBubble.textContent = '⚠ ' + (evt.message || 'Unknown error');
+        }}
+
+        /* ── Max turns ── */
+        else if (type === 'max_turns') {{
+          cursor.remove();
+          const notice = document.createElement('div');
+          notice.className = 'msg-meta';
+          notice.textContent = '(reached max turns — task may be incomplete)';
+          bodyWrap.appendChild(notice);
+        }}
+      }}
+    }}
+
   }} catch(e) {{
-    chatArea.removeChild(typingRow);
-    appendMsg('jarvis', 'No connection to JARVIS — ' + e.message, null);
+    cursor.remove();
+    textBubble.textContent = 'Connection error: ' + e.message;
+  }} finally {{
+    _agentStreaming = false;
+    chatArea.scrollTop = chatArea.scrollHeight;
   }}
 }}
 
@@ -6274,8 +7376,13 @@ function forgeRenderCapture(sessions) {{
     if (captured.has(v)) {{ cls = 'view-captured'; icon = '✓'; }}
     else if (isRequired) {{ cls = 'view-missing'; icon = '✗'; }}
     const label = v.replace('_reference','').replace('_',' ');
-    return '<div class="forge-view-chip ' + cls + '">' + icon + '<span>' + escHtml(label) + '</span></div>';
+    return '<button class="forge-view-chip ' + cls + '" onclick="forgeUploadViewCapture(\\'' + v + '\\')" title="Upload ' + label + ' view">' + icon + '<span>' + escHtml(label) + '</span></button>';
   }}).join('');
+  const buildBtn = document.getElementById('forge-build-3d-btn');
+  if (buildBtn) {{
+    const reqCaptured = [...required].filter(rv => captured.has(rv)).length;
+    buildBtn.style.display = reqCaptured >= 3 ? '' : 'none';
+  }}
   if (confRow) {{
     confRow.innerHTML = [
       ['Geometry', confidence.geometry || '—'],
@@ -6504,6 +7611,404 @@ async function forgeUploadPhotos(files) {{
     showToast(ok + ' uploaded, ' + fail + ' failed', fail === arr.length ? 'error' : 'warn');
   }}
   forgeLoadProject(_forgeCurrentProjectId);
+}}
+
+async function forgeUploadViewCapture(viewType) {{
+  if (!_forgeCurrentProjectId) {{ showToast('Select or create a project first.', 'warn'); return; }}
+  const inp = document.getElementById('forge-view-capture-input');
+  if (!inp) return;
+  inp._pendingViewType = viewType;
+  inp.value = '';
+  inp.click();
+}}
+
+async function forgeHandleViewCaptureFiles(files, viewType) {{
+  if (!_forgeCurrentProjectId) {{ showToast('Select a project first.', 'warn'); return; }}
+  const arr = Array.from(files);
+  if (!arr.length) return;
+  const label = (viewType || 'view').replace('_reference','').replace('_',' ');
+  showToast('Uploading ' + arr.length + ' ' + label + ' photo' + (arr.length > 1 ? 's' : '') + '...', 'info');
+  let ok = 0, fail = 0;
+  for (const file of arr) {{
+    const fd = new FormData();
+    fd.append('file', file);
+    let uploadedFilename = null;
+    try {{
+      const res = await fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId) + '/upload', {{
+        method: 'POST', body: fd,
+      }});
+      if (res.ok) {{
+        const data = await res.json();
+        uploadedFilename = data.filename || file.name;
+        ok++;
+      }} else {{ fail++; continue; }}
+    }} catch(e) {{ fail++; continue; }}
+    try {{
+      await fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId) + '/capture-frame', {{
+        method: 'POST',
+        headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify({{ filename: uploadedFilename, view_type: viewType }}),
+      }});
+    }} catch(e) {{ /* non-fatal — frame registered on next load */ }}
+  }}
+  if (fail === 0) {{
+    showToast(ok + ' ' + label + ' photo' + (ok > 1 ? 's' : '') + ' captured ✓', 'success');
+  }} else {{
+    showToast(ok + ' captured, ' + fail + ' failed', fail === arr.length ? 'error' : 'warn');
+  }}
+  forgeLoadProject(_forgeCurrentProjectId);
+}}
+
+async function forgeTriggerReconstruct() {{
+  if (!_forgeCurrentProjectId) {{ showToast('Select a project first.', 'warn'); return; }}
+  const btn = document.getElementById('forge-build-3d-btn');
+  if (btn) {{ btn.disabled = true; btn.textContent = '⏳ Building...'; }}
+  try {{
+    const res = await fetch('/api/forge/reconstruct', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ project_id: _forgeCurrentProjectId }}),
+    }});
+    if (res.ok) {{
+      showToast('3D reconstruction started! Check the model viewer in a few minutes.', 'success');
+    }} else {{
+      const err = await res.json().catch(() => ({{}}));
+      showToast('Reconstruction failed: ' + (err.detail || res.status), 'error');
+      if (btn) {{ btn.disabled = false; btn.textContent = '🧊 Build 3D Model'; }}
+    }}
+  }} catch(e) {{
+    showToast('Network error: ' + e, 'error');
+    if (btn) {{ btn.disabled = false; btn.textContent = '🧊 Build 3D Model'; }}
+  }}
+}}
+
+// ── WoW Model Bridge ──────────────────────────────────────────
+
+let _wowModels = [];   // cached model list from last refresh
+
+function forgeWowToggle() {{
+  const body = document.getElementById('forge-wow-body');
+  if (!body) return;
+  const opening = body.style.display === 'none';
+  body.style.display = opening ? '' : 'none';
+  if (opening) forgeWowRefresh();
+}}
+
+async function forgeWowRefresh() {{
+  const statusRow  = document.getElementById('forge-wow-status-row');
+  const countBadge = document.getElementById('forge-wow-count');
+  const listEl     = document.getElementById('forge-wow-model-list');
+  if (statusRow) statusRow.textContent = 'Refreshing…';
+  try {{
+    const [statusRes, modelsRes] = await Promise.all([
+      fetch('/api/forge/wow/status'),
+      fetch('/api/forge/wow/models'),
+    ]);
+    const status = statusRes.ok ? await statusRes.json() : {{}};
+    const modelsData = modelsRes.ok ? await modelsRes.json() : {{}};
+    // Endpoint returns {{models: [...]}} or a bare array
+    const models = Array.isArray(modelsData) ? modelsData : (modelsData.models || []);
+    _wowModels = models;
+
+    // Status row
+    const lines = [];
+    lines.push('📁 ' + (status.export_folder || '—') +
+               (status.export_folder_exists ? ' ✓' : ' ✗ (not found)'));
+    if (status.wow_install_found) lines.push('🎮 WoW install found ✓');
+    if (status.blender_found)     lines.push('🧊 Blender found ✓');
+    if (!status.export_folder_exists) {{
+      lines.push('');
+      lines.push('💡 ' + (status.wow_export_setup_tip || 'Configure folder in Setup'));
+    }}
+    if (statusRow) statusRow.innerHTML = lines.map(l => escHtml(l)).join('<br>');
+    if (countBadge) countBadge.textContent = models.length ? models.length + ' model' + (models.length !== 1 ? 's' : '') : '';
+
+    forgeWowRenderList(_wowModels);
+  }} catch(e) {{
+    if (statusRow) statusRow.textContent = 'Error: ' + e;
+  }}
+}}
+
+function forgeWowRenderList(models) {{
+  const listEl = document.getElementById('forge-wow-model-list');
+  if (!listEl) return;
+  if (!models || models.length === 0) {{
+    listEl.innerHTML = '<div style="font-size:11px;color:var(--text-3);padding:4px 0;">No models found. Export a character from wow.export first.</div>';
+    return;
+  }}
+  listEl.innerHTML = models.map(m => {{
+    const kb = Math.round(m.size_bytes / 1024);
+    const size = kb > 1024 ? (kb/1024).toFixed(1) + ' MB' : kb + ' KB';
+    return '<div style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px;background:var(--glass-1);font-size:11px;">' +
+      '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font-mono);" title="' + escHtml(m.filename) + '">' + escHtml(m.filename) + '</span>' +
+      '<span style="color:var(--text-3);flex-shrink:0;">' + escHtml(size) + '</span>' +
+      '<button class="forge-action-btn" style="padding:2px 8px;font-size:10px;flex-shrink:0;" ' +
+        'onclick="forgeWowImport(' + JSON.stringify(m.filename) + ')">Import</button>' +
+      '</div>';
+  }}).join('');
+}}
+
+function forgeWowSearch(query) {{
+  const q = query.trim().toLowerCase();
+  const filtered = q ? _wowModels.filter(m => m.filename.toLowerCase().includes(q)) : _wowModels;
+  forgeWowRenderList(filtered);
+}}
+
+async function forgeWowOpenSetup() {{
+  // Load current config first
+  try {{
+    const res = await fetch('/api/forge/wow/config');
+    const cfg = res.ok ? await res.json() : {{}};
+    const f = document.getElementById('forge-wow-cfg-folder');
+    const w = document.getElementById('forge-wow-cfg-wow');
+    const b = document.getElementById('forge-wow-cfg-blender');
+    if (f) f.value = cfg.export_folder    || '';
+    if (w) w.value = cfg.wow_install_path || '';
+    if (b) b.value = cfg.blender_path     || '';
+  }} catch(e) {{ /* proceed with empty fields */ }}
+  const modal = document.getElementById('forge-wow-setup-modal');
+  if (modal) modal.classList.remove('hidden');
+}}
+
+async function forgeWowSaveConfig() {{
+  const folder  = (document.getElementById('forge-wow-cfg-folder')  || {{}}).value || '';
+  const wow     = (document.getElementById('forge-wow-cfg-wow')     || {{}}).value || '';
+  const blender = (document.getElementById('forge-wow-cfg-blender') || {{}}).value || '';
+  try {{
+    const res = await fetch('/api/forge/wow/config', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ export_folder: folder, wow_install_path: wow, blender_path: blender }}),
+    }});
+    if (res.ok) {{
+      showToast('WoW config saved ✓', 'success');
+      const modal = document.getElementById('forge-wow-setup-modal');
+      if (modal) modal.classList.add('hidden');
+      forgeWowRefresh();
+    }} else {{
+      showToast('Failed to save config', 'error');
+    }}
+  }} catch(e) {{ showToast('Error: ' + e, 'error'); }}
+}}
+
+async function forgeWowImport(filename) {{
+  if (!_forgeCurrentProjectId) {{
+    showToast('Select or create a Forge project first.', 'warn');
+    return;
+  }}
+  showToast('Importing ' + filename + '…', 'info');
+  try {{
+    const res = await fetch('/api/forge/wow/import', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ filename, project_id: _forgeCurrentProjectId }}),
+    }});
+    const data = await res.json();
+    if (data.ok) {{
+      showToast('Imported ' + filename + ' into project ✓', 'success');
+      forgeLoadProject(_forgeCurrentProjectId);
+    }} else {{
+      showToast('Import failed: ' + (data.error || 'unknown error'), 'error');
+    }}
+  }} catch(e) {{ showToast('Network error: ' + e, 'error'); }}
+}}
+
+// ── Forge Convert ─────────────────────────────────────────────
+
+function forgeConvertToggle() {{
+  const body = document.getElementById('forge-convert-body');
+  if (!body) return;
+  body.style.display = body.style.display === 'none' ? '' : 'none';
+  if (body.style.display !== 'none') forgeConvertPopulateFiles();
+}}
+
+function forgeConvertPopulateFiles() {{
+  if (!_forgeCurrentProjectId) return;
+  const selIds = ['forge-conv-src-file', 'forge-repair-src-file', 'forge-scale-src-file'];
+  fetch('/api/forge/projects/' + encodeURIComponent(_forgeCurrentProjectId))
+    .then(r => r.ok ? r.json() : null)
+    .then(proj => {{
+      if (!proj) return;
+      const files3d = (proj.source_files || [])
+        .filter(f => /[.](stl|obj|glb|gltf|ply)$/i.test(f.filename))
+        .map(f => f.filename);
+      selIds.forEach(id => {{
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">— pick project file —</option>' +
+          files3d.map(fn =>
+            '<option value="' + escHtml(fn) + '"' + (fn === cur ? ' selected' : '') + '>' + escHtml(fn) + '</option>'
+          ).join('');
+      }});
+    }})
+    .catch(() => {{}});
+}}
+
+async function forgeConvertFormat() {{
+  if (!_forgeCurrentProjectId) {{ showToast('Select a project first.', 'warn'); return; }}
+  const srcSel = document.getElementById('forge-conv-src-file');
+  const fmtSel = document.getElementById('forge-conv-fmt');
+  if (!srcSel || !srcSel.value) {{ showToast('Pick a source file first.', 'warn'); return; }}
+  const fd = new FormData();
+  fd.append('project_id', _forgeCurrentProjectId);
+  fd.append('source_filename', srcSel.value);
+  fd.append('target_format', fmtSel ? fmtSel.value : 'stl');
+  showToast('Converting ' + srcSel.value + ' → ' + (fmtSel ? fmtSel.value.toUpperCase() : '') + '…', 'info');
+  try {{
+    const res = await fetch('/api/forge/convert/format', {{ method: 'POST', body: fd }});
+    const data = await res.json();
+    if (data.ok) {{
+      showToast('Converted: ' + data.filename + ' ✓', 'success');
+      forgeConvertPopulateFiles();
+      forgeLoadProject(_forgeCurrentProjectId);
+    }} else {{
+      showToast('Convert failed: ' + (data.detail || data.error || 'unknown'), 'error');
+    }}
+  }} catch(e) {{ showToast('Network error: ' + e, 'error'); }}
+}}
+
+async function forgeConvertFormatFromUpload(input) {{
+  if (!_forgeCurrentProjectId) {{ showToast('Select a project first.', 'warn'); return; }}
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const fmtSel = document.getElementById('forge-conv-fmt');
+  const fd = new FormData();
+  fd.append('project_id', _forgeCurrentProjectId);
+  fd.append('target_format', fmtSel ? fmtSel.value : 'stl');
+  fd.append('file', file);
+  showToast('Uploading & converting ' + file.name + '…', 'info');
+  try {{
+    const res = await fetch('/api/forge/convert/format', {{ method: 'POST', body: fd }});
+    const data = await res.json();
+    if (data.ok) {{
+      showToast('Converted: ' + data.filename + ' ✓', 'success');
+      forgeConvertPopulateFiles();
+      forgeLoadProject(_forgeCurrentProjectId);
+    }} else {{
+      showToast('Convert failed: ' + (data.detail || data.error || 'unknown'), 'error');
+    }}
+  }} catch(e) {{ showToast('Network error: ' + e, 'error'); }}
+  input.value = '';
+}}
+
+async function forgeConvertCheckBlender() {{
+  const resultDiv = document.getElementById('forge-conv-blender-result');
+  if (resultDiv) {{ resultDiv.style.display = 'block'; resultDiv.textContent = 'Checking…'; }}
+  try {{
+    const res = await fetch('/api/forge/convert/blender-check');
+    const data = await res.json();
+    if (resultDiv) {{
+      const lines = [];
+      lines.push(data.blender_found
+        ? '🧊 Blender: ' + (data.blender_version || 'found ✓')
+        : '✗ Blender not found at configured path');
+      lines.push(data.addon_found
+        ? '✅ WoW Blender Studio: installed'
+        : '⚠ WoW Blender Studio: NOT found');
+      (data.details || []).slice(0, 5).forEach(d => lines.push('  ' + d));
+      resultDiv.innerHTML = lines.map(l => escHtml(l)).join('<br>');
+    }}
+    if (!data.ok) showToast('Blender setup incomplete — see details below', 'warn');
+    else showToast('Blender setup looks good ✓', 'success');
+  }} catch(e) {{
+    if (resultDiv) resultDiv.textContent = 'Check failed: ' + e;
+    showToast('Network error: ' + e, 'error');
+  }}
+}}
+
+async function forgeConvertRepair() {{
+  if (!_forgeCurrentProjectId) {{ showToast('Select a project first.', 'warn'); return; }}
+  const srcSel = document.getElementById('forge-repair-src-file');
+  if (!srcSel || !srcSel.value) {{ showToast('Pick a source file first.', 'warn'); return; }}
+  const resultDiv = document.getElementById('forge-conv-repair-result');
+  if (resultDiv) {{ resultDiv.style.display = 'block'; resultDiv.textContent = 'Repairing…'; }}
+  showToast('Running mesh repair on ' + srcSel.value + '…', 'info');
+  try {{
+    const res = await fetch('/api/forge/convert/repair', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{
+        project_id:      _forgeCurrentProjectId,
+        source_filename: srcSel.value,
+        fix_normals:  !!(document.getElementById('forge-repair-normals')?.checked),
+        fill_holes:   !!(document.getElementById('forge-repair-holes')?.checked),
+        fix_winding:  !!(document.getElementById('forge-repair-winding')?.checked),
+      }}),
+    }});
+    const data = await res.json();
+    if (data.ok) {{
+      showToast('Repair done: ' + data.filename + ' ✓', 'success');
+      if (resultDiv) {{
+        const wt = v => v ? '✓ watertight' : '✗ not watertight';
+        resultDiv.innerHTML =
+          escHtml('Ops: ' + (data.ops_applied || []).join(', ')) + '<br>' +
+          escHtml('Before: ' + wt(data.was_watertight) + '  →  After: ' + wt(data.is_watertight)) + '<br>' +
+          '<a href="' + escHtml(data.download_url || '') + '" download style="color:var(--hue);">⬇ Download repaired file</a>';
+      }}
+      forgeConvertPopulateFiles();
+      forgeLoadProject(_forgeCurrentProjectId);
+    }} else {{
+      const msg = data.detail || data.error || 'unknown';
+      showToast('Repair failed: ' + msg, 'error');
+      if (resultDiv) resultDiv.textContent = 'Error: ' + msg;
+    }}
+  }} catch(e) {{
+    showToast('Network error: ' + e, 'error');
+    if (resultDiv) resultDiv.textContent = 'Network error: ' + e;
+  }}
+}}
+
+function forgeConvertScaleOpChange(op) {{
+  const opts = document.getElementById('forge-scale-rescale-opts');
+  if (opts) opts.style.display = op === 'rescale' ? 'flex' : 'none';
+}}
+
+async function forgeConvertScale() {{
+  if (!_forgeCurrentProjectId) {{ showToast('Select a project first.', 'warn'); return; }}
+  const srcSel = document.getElementById('forge-scale-src-file');
+  const opSel  = document.getElementById('forge-scale-op');
+  if (!srcSel || !srcSel.value) {{ showToast('Pick a source file first.', 'warn'); return; }}
+  const operation = opSel ? opSel.value : 'rescale';
+  const resultDiv = document.getElementById('forge-conv-scale-result');
+  if (resultDiv) {{ resultDiv.style.display = 'block'; resultDiv.textContent = 'Processing…'; }}
+  const payload = {{
+    project_id:      _forgeCurrentProjectId,
+    source_filename: srcSel.value,
+    operation,
+    target_size:  parseFloat(document.getElementById('forge-scale-target-size')?.value  || '100'),
+    target_unit:  document.getElementById('forge-scale-target-unit')?.value  || 'mm',
+    current_unit: document.getElementById('forge-scale-current-unit')?.value || 'mm',
+  }};
+  showToast('Applying ' + operation + ' to ' + srcSel.value + '…', 'info');
+  try {{
+    const res = await fetch('/api/forge/convert/scale', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify(payload),
+    }});
+    const data = await res.json();
+    if (data.ok) {{
+      showToast('Scale done: ' + data.filename + ' ✓', 'success');
+      if (resultDiv) {{
+        const fmt3 = v => Array.isArray(v) ? v.map(n => n.toFixed(2)).join(' × ') : '—';
+        resultDiv.innerHTML =
+          escHtml('Scale factor: ' + (data.scale_factor || 1).toFixed(6)) + '<br>' +
+          escHtml('Before bbox: ' + fmt3(data.original_bbox_mm)) + '<br>' +
+          escHtml('After bbox:  ' + fmt3(data.final_bbox_mm)) + '<br>' +
+          '<a href="' + escHtml(data.download_url || '') + '" download style="color:var(--hue);">⬇ Download scaled file</a>';
+      }}
+      forgeConvertPopulateFiles();
+      forgeLoadProject(_forgeCurrentProjectId);
+    }} else {{
+      const msg = data.detail || data.error || 'unknown';
+      showToast('Scale failed: ' + msg, 'error');
+      if (resultDiv) resultDiv.textContent = 'Error: ' + msg;
+    }}
+  }} catch(e) {{
+    showToast('Network error: ' + e, 'error');
+    if (resultDiv) resultDiv.textContent = 'Network error: ' + e;
+  }}
 }}
 
 // ── Chat ──────────────────────────────────────────────────────
@@ -6972,6 +8477,45 @@ function setCmd(text) {{
   if (input) {{ input.value = text; input.focus(); }}
 }}
 
+/* ── Smart paste detection ────────────────────────────────────────────────
+   When the user pastes into the command bar, detect:
+   - Python/JS tracebacks → prepend "Diagnose this error:"
+   - URLs → prepend "Fetch and summarize this URL:"
+   - File paths → prepend "Read and summarize this file:"
+─────────────────────────────────────────────────────────────────────────── */
+function handleSmartPaste(e) {{
+  const input = document.getElementById('cmd-input');
+  if (!input) return;
+
+  // Run detection after the paste event fills the input
+  setTimeout(() => {{
+    const text = input.value.trim();
+    if (!text || text.length < 20) return;  // too short to classify
+
+    // Already has a leading verb — don't double-wrap
+    const looksLikeCommand = /^(what|how|why|when|who|show|list|run|build|fix|find|check|get|add|create|delete|update|help|diagnose|fetch|read|search)/i.test(text);
+    if (looksLikeCommand) return;
+
+    // Python/JS traceback
+    if (/Traceback .most recent call last.|Error:|ReferenceError:|TypeError:|SyntaxError:|AttributeError:|ValueError:|KeyError:|ImportError:|ModuleNotFoundError:/.test(text)) {{
+      input.value = 'Diagnose this error and fix it:\n\n' + text;
+      return;
+    }}
+
+    // URL
+    if (/^https?:[/][/]/.test(text) && !text.includes(' ')) {{
+      input.value = 'Fetch and summarize this URL: ' + text;
+      return;
+    }}
+
+    // Absolute file path
+    if (/^[/][^ \t\n\r]+[.](py|ts|tsx|js|json|md|yaml|yml|toml|txt|sh|env)$/.test(text)) {{
+      input.value = 'Read this file and summarize what it does: ' + text;
+      return;
+    }}
+  }}, 0);
+}}
+
 function cmdKey(e) {{
   if (e.key === 'Enter' && !e.shiftKey) {{
     e.preventDefault();
@@ -6985,8 +8529,64 @@ function sendCmd() {{
   const text = input.value.trim();
   if (!text) return;
   input.value = '';
+
+  /* ── Slash command handling ── */
+  if (text.startsWith('/')) {{
+    const cmd = text.slice(1).split(' ')[0].toLowerCase();
+    switch (cmd) {{
+      case 'clear':
+        _agentMessages = [];
+        _agentConvId   = '';
+        const ca = document.getElementById('chat-area');
+        if (ca) ca.innerHTML = '<div class="chat-empty" id="chat-empty"><div class="chat-empty-icon">💬</div><div class="chat-empty-text">Conversation cleared — type to start fresh</div></div>';
+        return;
+      case 'memory':
+        sendCommand('/memory — show all saved facts');
+        return;
+      case 'context':
+        sendCommand('/context — show project context summary');
+        return;
+      case 'restart':
+        sendCommand('Please restart the JARVIS server using the bash tool');
+        return;
+      case 'tools':
+        sendCommand('/tools — list all available agent tools and what they do');
+        return;
+      case 'undo':
+        sendCommand('Please undo the last file change using git checkout or git revert');
+        return;
+    }}
+  }}
+
   sendCommand(text);
 }}
+
+/* ── Restart signal poller ────────────────────────────────────────────────
+   Polls every 3 seconds when the agent is streaming. If the server signals a
+   restart (e.g. agent wrote new code and requested a reload), the page reloads
+   automatically after a short grace delay so the agent can finish its response.
+─────────────────────────────────────────────────────────────────────────── */
+(function _startRestartPoller() {{
+  let _restartCheckTimer = null;
+  let _reloadPending     = false;
+
+  async function _checkRestart() {{
+    if (_reloadPending) return;
+    try {{
+      const res = await fetch('/api/agent/restart-pending');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.pending) {{
+        _reloadPending = true;
+        showToast('JARVIS restarting — reloading in 3s…', 'info');
+        setTimeout(() => location.reload(), 3000);
+      }}
+    }} catch(_) {{}}
+  }}
+
+  // Check every 5 seconds
+  setInterval(_checkRestart, 5000);
+}})();
 
 function toggleMic() {{
   micActive = !micActive;
@@ -7106,6 +8706,829 @@ function escHtml(str) {{
     .replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;')
     .replace(/'/g,'&#39;');
+}}
+
+/**
+ * Format a UTC timestamp string (ISO or "YYYY-MM-DD HH:MM:SS ±HH:MM") into
+ * the user's local time. Falls back to the raw string if parsing fails.
+ */
+function fmtLocalTime(utcStr, {{dateOnly=false, short=false}}={{}}) {{
+  if (!utcStr) return '—';
+  try {{
+    // Normalise: add Z if no timezone info and no offset present
+    let s = String(utcStr).trim();
+    // "2026-05-20 02:35:33 -0400"  →  "2026-05-20T02:35:33-04:00"
+    s = s.replace(/^(\d{{4}}-\d{{2}}-\d{{2}}) (\d{{2}}:\d{{2}}:\d{{2}}) ([+-]\d{{2}}):?(\d{{2}})$/, '$1T$2$3:$4');
+    // "2026-05-20T19:03:28" (no tz) → treat as UTC
+    if (/^\d{{4}}-\d{{2}}-\d{{2}}T\d{{2}}:\d{{2}}:\d{{2}}$/.test(s)) s += 'Z';
+    const d = new Date(s);
+    if (isNaN(d)) return utcStr;
+    if (dateOnly) {{
+      return d.toLocaleDateString('en-US', {{month:'short', day:'numeric', year:'numeric'}});
+    }}
+    if (short) {{
+      return d.toLocaleTimeString('en-US', {{hour:'numeric', minute:'2-digit', hour12:true}}) +
+             ' ' + d.toLocaleDateString('en-US', {{month:'short', day:'numeric'}});
+    }}
+    return d.toLocaleString('en-US', {{
+      month:'short', day:'numeric', year:'numeric',
+      hour:'numeric', minute:'2-digit', hour12:true
+    }});
+  }} catch(e) {{ return String(utcStr); }}
+}}
+
+// ── Health Intelligence (Helen Cho) ─────────────────────────────────────────
+
+let _helenNarrativeExpanded = false;
+
+async function loadHealth() {{
+  // Fire all data loads in parallel
+  const [sumRes, ecgRes, bpRes, omronRes, helenRes, dbRes] = await Promise.all([
+    fetch('/api/health/summary').catch(() => null),
+    fetch('/api/health/ecg').catch(() => null),
+    fetch('/api/health/bp').catch(() => null),
+    fetch('/api/health/omron/status').catch(() => null),
+    fetch('/api/health/helen/analysis').catch(() => null),
+    fetch('/api/health/db/summary').catch(() => null),
+  ]);
+
+  if (sumRes && sumRes.ok) {{
+    const d = await sumRes.json();
+    _renderHealthDashboard(d);
+  }}
+  if (ecgRes && ecgRes.ok) {{
+    const e = await ecgRes.json();
+    _renderEcgList(e.readings || []);
+  }}
+  if (bpRes && bpRes.ok) {{
+    const b = await bpRes.json();
+    _renderBpPanel(b);
+  }}
+  if (omronRes && omronRes.ok) {{
+    const o = await omronRes.json();
+    _renderOmronStatus(o);
+  }}
+  if (helenRes && helenRes.ok) {{
+    const h = await helenRes.json();
+    if (h.status === 'generating') {{
+      // Poll for result
+      _helenPollForAnalysis();
+    }} else {{
+      _renderHelenAnalysis(h);
+    }}
+  }}
+  if (dbRes && dbRes.ok) {{
+    const db = await dbRes.json();
+    _renderConditions(db);
+    _renderGoals(db);
+    _renderLabAlerts(null, db);  // use DB data until Helen returns
+  }}
+  // Load next appointment date
+  _loadNextApptDate();
+}}
+
+async function helenRefresh() {{
+  const btn = document.getElementById('helen-refresh-btn');
+  if (btn) {{ btn.disabled = true; btn.textContent = '⟳ Analysing…'; }}
+  document.getElementById('helen-headline').textContent = 'Helen is analysing your complete health record…';
+  document.getElementById('helen-actions').innerHTML =
+    '<div style="font-size:11px;color:var(--text-3);padding:8px 0;">Generating action plan…</div>';
+
+  const res = await fetch('/api/health/helen/refresh', {{method:'POST'}}).catch(() => null);
+  if (res && res.ok) {{
+    const h = await res.json();
+    _renderHelenAnalysis(h);
+  }} else {{
+    document.getElementById('helen-headline').textContent = 'Analysis failed — check LLM gateway status.';
+  }}
+  if (btn) {{ btn.disabled = false; btn.textContent = '↻ Refresh Analysis'; }}
+}}
+
+function _helenPollForAnalysis() {{
+  const maxTries = 40;
+  let tries = 0;
+  const timer = setInterval(async () => {{
+    tries++;
+    if (tries > maxTries) {{ clearInterval(timer); return; }}
+    const res = await fetch('/api/health/helen/analysis').catch(() => null);
+    if (!res || !res.ok) return;
+    const h = await res.json();
+    if (h.status !== 'generating' && !h.error) {{
+      clearInterval(timer);
+      _renderHelenAnalysis(h);
+    }}
+  }}, 3000);
+}}
+
+function _renderHealthDashboard(d) {{
+  // Readiness
+  const r = d.readiness || {{}};
+  const scoreEl = document.getElementById('health-readiness-score');
+  const gradeEl = document.getElementById('health-readiness-grade');
+  const msgEl   = document.getElementById('health-readiness-message');
+  const facEl   = document.getElementById('health-readiness-factors');
+  if (scoreEl) scoreEl.textContent = r.score != null ? r.score : '—';
+  if (gradeEl) gradeEl.textContent = r.grade || '—';
+  if (msgEl)   msgEl.textContent   = r.message || '';
+  if (facEl && r.factors && r.factors.length) {{
+    facEl.innerHTML = r.factors.map(f =>
+      `<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;border-bottom:1px solid var(--border);">
+        <span style="color:var(--text-2);">${{escHtml(f.label)}}</span>
+        <span style="color:var(--amber);">${{f.value}} <span style="color:var(--text-3);">(score ${{f.score}})</span></span>
+      </div>`
+    ).join('');
+  }}
+
+  // Metrics grid
+  const gridEl = document.getElementById('health-metrics-grid');
+  if (gridEl) {{
+    const LABELS = {{
+      steps:'Steps', resting_hr:'Resting HR', hrv:'HRV',
+      sleep_hours:'Sleep', blood_oxygen:'Blood O₂',
+      active_calories:'Active Cal', exercise_minutes:'Exercise',
+      weight:'Weight'
+    }};
+    const UNITS = {{
+      steps:'', resting_hr:'bpm', hrv:'ms',
+      sleep_hours:'hrs', blood_oxygen:'%',
+      active_calories:'kcal', exercise_minutes:'min', weight:'lbs'
+    }};
+    const entries = d.metrics
+      ? Object.entries(d.metrics).filter(([k,v]) => v !== null && v !== undefined)
+      : [];
+    gridEl.innerHTML = entries.map(([k,v]) =>
+      `<div style="background:var(--surface-2);border-radius:6px;padding:8px 10px;">
+        <div style="font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;">${{LABELS[k]||k}}</div>
+        <div style="font-size:18px;font-weight:600;color:var(--text-1);font-family:var(--font-mono);">${{typeof v==='number'?v.toLocaleString():v}}<span style="font-size:9px;color:var(--text-3);margin-left:2px;">${{UNITS[k]||''}}</span></div>
+      </div>`
+    ).join('') || '<div style="grid-column:1/-1;font-size:11px;color:var(--text-3);">No data — configure Health Auto Export</div>';
+  }}
+
+  // Header sync label
+  const syncEl = document.getElementById('health-last-sync');
+  if (syncEl) syncEl.textContent = d.has_data && d.date ? 'Data: ' + fmtLocalTime(d.date,{{dateOnly:true}}) : 'No wearable data';
+
+  const appleBadge = document.getElementById('health-apple-badge');
+  if (appleBadge) appleBadge.textContent = d.has_data ? 'Connected' : 'Not connected';
+}}
+
+// ── Helen Cho Analysis Renderers ─────────────────────────────────────────────
+
+function _renderHelenAnalysis(h) {{
+  if (!h || h.error || h.status === 'generating') return;
+
+  const RISK_COLORS = {{
+    critical: 'var(--red)', high: 'var(--red)', moderate: 'var(--amber)', low: 'var(--green)'
+  }};
+  const URGENCY_COLORS = {{
+    critical:'#ef4444', high:'#f97316', moderate:'#f59e0b', low:'#10b981'
+  }};
+
+  // Score + grade
+  const riskCol = RISK_COLORS[h.risk_level] || 'var(--amber)';
+  const scoreEl = document.getElementById('helen-score');
+  const gradeEl = document.getElementById('helen-grade');
+  const riskBadge = document.getElementById('helen-risk-badge');
+  if (scoreEl) {{ scoreEl.textContent = h.overall_score ?? '—'; scoreEl.style.color = riskCol; }}
+  if (gradeEl) gradeEl.textContent = h.overall_grade || '—';
+  if (riskBadge) {{
+    riskBadge.textContent = (h.risk_level || '').toUpperCase() + ' RISK';
+    riskBadge.style.background = (riskCol || 'var(--surface-2)') + '22';
+    riskBadge.style.color = riskCol;
+    riskBadge.style.border = '1px solid ' + riskCol + '44';
+  }}
+
+  // Headline
+  const hlEl = document.getElementById('helen-headline');
+  if (hlEl) hlEl.textContent = h.headline || '';
+
+  // Narrative
+  const narrativeEl = document.getElementById('helen-narrative-text');
+  const fadeEl      = document.getElementById('helen-narrative-fade');
+  const expandBtn   = document.getElementById('helen-expand-btn');
+  if (narrativeEl && h.analysis_narrative) {{
+    narrativeEl.innerHTML = h.analysis_narrative
+      .split('\\n\\n').map(p => `<p style="margin:0 0 8px 0;">${{escHtml(p)}}</p>`).join('');
+    setTimeout(() => {{
+      const narWrap = document.getElementById('helen-narrative');
+      if (narWrap && narrativeEl.scrollHeight > 125) {{
+        if (fadeEl) fadeEl.style.display = 'block';
+        if (expandBtn) expandBtn.style.display = 'block';
+      }}
+    }}, 50);
+  }}
+
+  // Positive findings strip
+  const posEl = document.getElementById('helen-positives');
+  if (posEl && h.positive_findings && h.positive_findings.length) {{
+    posEl.style.display = 'block';
+    posEl.innerHTML = '✓ ' + h.positive_findings.join(' &nbsp;·&nbsp; ✓ ');
+  }}
+
+  // Actions
+  _renderActions(h.priority_actions || []);
+
+  // Conditions analysis
+  if (h.conditions_analysis && h.conditions_analysis.length) {{
+    _renderConditionsAnalysis(h.conditions_analysis);
+  }}
+
+  // Lab alerts from Helen
+  if (h.lab_alerts && h.lab_alerts.length) {{
+    _renderLabAlerts(h.lab_alerts, null);
+  }}
+
+  // Medication insights
+  const medEl = document.getElementById('helen-med-insights');
+  if (medEl && h.medication_insights && h.medication_insights.length) {{
+    const PRIORITY_COL = {{high:'var(--red)', medium:'var(--amber)', low:'var(--text-2)'}};
+    medEl.innerHTML = h.medication_insights.map(m => `
+      <div style="padding:5px 0;border-bottom:1px solid var(--border);">
+        <div style="font-size:10px;font-weight:600;color:${{PRIORITY_COL[m.priority]||'var(--text-2)'}};">${{escHtml(m.medication)}}</div>
+        <div style="font-size:10px;color:var(--text-2);line-height:1.5;margin-top:2px;">${{escHtml(m.observation)}}</div>
+      </div>`
+    ).join('');
+  }}
+
+  // Cardiovascular risk
+  const cvEl = document.getElementById('helen-cv-risk');
+  if (cvEl && h.cardiovascular_risk) {{
+    const cv = h.cardiovascular_risk;
+    const cvCol = (cv['10yr_risk_estimate']||'').includes('high') ? 'var(--red)' :
+                  (cv['10yr_risk_estimate']||'').includes('intermediate') ? 'var(--amber)' : 'var(--text-2)';
+    cvEl.innerHTML = `
+      <div style="font-size:11px;font-weight:700;color:${{cvCol}};margin-bottom:4px;">${{escHtml(cv['10yr_risk_estimate']||'—')}}</div>
+      <div style="font-size:10px;color:var(--text-3);line-height:1.5;">${{escHtml(cv.assessment||'')}}</div>
+      ${{(cv.key_drivers||[]).length ? `<div style="margin-top:6px;">${{cv.key_drivers.map(d=>`<span style="font-size:9px;background:var(--surface-2);border-radius:8px;padding:2px 6px;margin:2px 2px 0 0;display:inline-block;color:var(--text-3);">${{escHtml(d)}}</span>`).join('')}}</div>` : ''}}
+    `;
+  }}
+
+  // Diabetes complications risk
+  const diabEl = document.getElementById('helen-diabetes-risk');
+  if (diabEl && h.diabetes_complications_risk) {{
+    const dr = h.diabetes_complications_risk;
+    const RISK_C = {{high:'var(--red)',moderate:'var(--amber)',low:'var(--green)'}};
+    const items = [
+      ['Nephropathy', dr.nephropathy],
+      ['Retinopathy', dr.retinopathy],
+      ['Neuropathy',  dr.neuropathy],
+      ['Cardiovascular', dr.cardiovascular],
+    ];
+    diabEl.innerHTML = items.map(([label,level]) => `
+      <div style="display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px solid var(--border);">
+        <span style="color:var(--text-2);">${{label}}</span>
+        <span style="color:${{RISK_C[level]||'var(--text-3)'}}; font-weight:600;text-transform:uppercase;font-size:9px;">${{level||'—'}}</span>
+      </div>`
+    ).join('') + (dr.assessment ? `<div style="font-size:10px;color:var(--text-3);margin-top:6px;line-height:1.5;">${{escHtml(dr.assessment)}}</div>` : '');
+  }}
+
+  // Doctor questions
+  const qEl = document.getElementById('helen-doctor-questions');
+  if (qEl && h.doctor_questions && h.doctor_questions.length) {{
+    qEl.innerHTML = h.doctor_questions.map((q,i) =>
+      `<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;">
+        <span style="color:var(--hue);font-weight:700;flex-shrink:0;">${{i+1}}.</span>
+        <span style="color:var(--text-2);line-height:1.5;">${{escHtml(q)}}</span>
+      </div>`
+    ).join('');
+  }}
+
+  // Missing data
+  const missingEl = document.getElementById('helen-missing-data');
+  if (missingEl && h.missing_data && h.missing_data.length) {{
+    missingEl.innerHTML = h.missing_data.map(m =>
+      `<div style="font-size:10px;color:var(--text-3);padding:3px 0;">⬜ ${{escHtml(m)}}</div>`
+    ).join('');
+  }}
+
+  // Key trends panel
+  const trendsEl = document.getElementById('helen-key-trends');
+  if (trendsEl && h.key_trends && h.key_trends.length) {{
+    const TRAJ_ICON = {{improving:'↗', stable:'→', worsening:'↘', stalled:'↔'}};
+    const TRAJ_COL  = {{improving:'var(--green)', stable:'var(--text-3)', worsening:'var(--red)', stalled:'var(--amber)'}};
+    trendsEl.innerHTML = h.key_trends.map(t => {{
+      const traj = (t.trajectory||'stable').toLowerCase();
+      const icon = TRAJ_ICON[traj] || '→';
+      const col  = TRAJ_COL[traj]  || 'var(--text-3)';
+      return `
+      <div style="padding:7px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:11px;font-weight:600;color:var(--text-1);">${{escHtml(t.metric||'')}}</span>
+          <span style="font-size:13px;color:${{col}};font-weight:700;">${{icon}} <span style="font-size:10px;">${{escHtml(t.latest_value||'')}}</span></span>
+        </div>
+        <div style="font-size:10px;color:var(--text-2);margin-top:2px;line-height:1.4;">${{escHtml(t.trend_summary||'')}}</div>
+        <div style="font-size:9px;color:var(--text-3);margin-top:2px;font-style:italic;">${{escHtml(t.clinical_significance||'')}}</div>
+      </div>`;
+    }}).join('');
+  }}
+
+  // Trajectory summary
+  const trajEl = document.getElementById('helen-trajectory');
+  if (trajEl && h.trajectory_summary) {{
+    trajEl.innerHTML = `<div style="font-size:11px;color:var(--text-2);line-height:1.6;padding:8px 10px;background:rgba(239,68,68,0.06);border-radius:6px;border-left:3px solid var(--red);">${{escHtml(h.trajectory_summary)}}</div>`;
+  }}
+
+  // Post-bariatric status
+  const pbEl = document.getElementById('helen-post-bariatric');
+  if (pbEl && h.post_bariatric_status) {{
+    const pb = h.post_bariatric_status;
+    pbEl.innerHTML = `
+      <div style="font-size:10px;color:var(--text-3);line-height:1.5;">${{escHtml(pb.assessment||'')}}</div>
+      ${{(pb.nutrition_gaps||[]).length ? `<div style="margin-top:6px;">${{(pb.nutrition_gaps||[]).map(g=>`<span style="font-size:9px;background:rgba(245,158,11,0.12);color:var(--amber);border-radius:8px;padding:2px 7px;margin:2px 2px 0 0;display:inline-block;">${{escHtml(g)}}</span>`).join('')}}</div>` : ''}}
+    `;
+  }}
+
+  // Generated timestamp in header
+  if (h._generated_utc) {{
+    const syncEl = document.getElementById('health-last-sync');
+    if (syncEl) syncEl.textContent = 'Analysed ' + fmtLocalTime(h._generated_utc, {{short:true}});
+  }}
+}}
+
+function helenToggleNarrative() {{
+  _helenNarrativeExpanded = !_helenNarrativeExpanded;
+  const narWrap  = document.getElementById('helen-narrative');
+  const fadeEl   = document.getElementById('helen-narrative-fade');
+  const btn      = document.getElementById('helen-expand-btn');
+  if (narWrap) narWrap.style.maxHeight = _helenNarrativeExpanded ? 'none' : '120px';
+  if (fadeEl)  fadeEl.style.display    = _helenNarrativeExpanded ? 'none' : 'block';
+  if (btn)     btn.textContent         = _helenNarrativeExpanded ? 'Show less ▴' : 'Show more ▾';
+}}
+
+function _renderActions(actions) {{
+  const el = document.getElementById('helen-actions');
+  const countEl = document.getElementById('helen-action-count');
+  if (!el) return;
+  if (!actions.length) {{ el.innerHTML = '<div style="font-size:11px;color:var(--text-3);">No actions generated.</div>'; return; }}
+  if (countEl) countEl.textContent = '(' + actions.length + ' items)';
+
+  const URGENCY_BG = {{
+    critical: 'rgba(239,68,68,0.1)', high: 'rgba(249,115,22,0.08)',
+    moderate: 'rgba(245,158,11,0.08)', low: 'rgba(16,185,129,0.06)'
+  }};
+  const URGENCY_BORDER = {{
+    critical:'#ef4444', high:'#f97316', moderate:'#f59e0b', low:'#10b981'
+  }};
+  const URGENCY_LABEL = {{
+    critical:'CRITICAL', high:'HIGH', moderate:'MODERATE', low:'LOW'
+  }};
+
+  el.innerHTML = actions.map(a => {{
+    const urg = (a.urgency||'low').toLowerCase();
+    const borderCol = URGENCY_BORDER[urg] || '#666';
+    const bgCol     = URGENCY_BG[urg]     || 'var(--surface-2)';
+    return `
+    <div style="display:flex;gap:12px;padding:10px 14px;border-radius:8px;border-left:3px solid ${{borderCol}};background:${{bgCol}};">
+      <div style="flex-shrink:0;text-align:center;min-width:28px;">
+        <div style="font-size:14px;font-weight:800;color:${{borderCol}};font-family:var(--font-mono);">${{a.rank||''}}</div>
+        <div style="font-size:8px;color:${{borderCol}};font-weight:700;letter-spacing:0.5px;">${{URGENCY_LABEL[urg]||urg}}</div>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+          <span style="font-size:9px;background:var(--surface-2);border-radius:8px;padding:1px 7px;color:var(--text-3);">${{escHtml(a.category||'')}}</span>
+          <span style="font-size:9px;color:var(--text-3);">${{escHtml(a.timeline||'')}}</span>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:var(--text-1);line-height:1.4;">${{escHtml(a.action||'')}}</div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:3px;line-height:1.5;">${{escHtml(a.why||'')}}</div>
+        ${{a.expected_benefit ? `<div style="font-size:10px;color:var(--green);margin-top:4px;line-height:1.4;">→ ${{escHtml(a.expected_benefit)}}</div>` : ''}}
+      </div>
+    </div>`;
+  }}).join('');
+}}
+
+function _renderConditions(db) {{
+  const el = document.getElementById('helen-conditions');
+  if (!el) return;
+  const conds = db.conditions || [];
+  if (!conds.length) {{ el.innerHTML = '<div style="font-size:11px;color:var(--text-3);">No conditions synced</div>'; return; }}
+  el.innerHTML = conds.map(c =>
+    `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);">
+      <div style="width:7px;height:7px;border-radius:50%;background:var(--amber);flex-shrink:0;"></div>
+      <span style="font-size:11px;color:var(--text-2);">${{escHtml(c)}}</span>
+    </div>`
+  ).join('');
+}}
+
+function _renderConditionsAnalysis(conditions) {{
+  const el = document.getElementById('helen-conditions');
+  if (!el) return;
+  const STATUS_COL = {{
+    controlled:'var(--green)', borderline:'var(--amber)', uncontrolled:'var(--red)',
+    improving:'var(--green)', worsening:'var(--red)', stable:'var(--text-3)'
+  }};
+  const TRAJ_ICON = {{ improving:'↑', stable:'→', worsening:'↓' }};
+  el.innerHTML = conditions.map(c => {{
+    const col  = STATUS_COL[(c.status||'').toLowerCase()] || 'var(--text-2)';
+    const traj = TRAJ_ICON[(c.trajectory||'').toLowerCase()] || '';
+    return `
+    <div style="padding:6px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+        <span style="font-size:11px;font-weight:600;color:var(--text-1);">${{escHtml(c.condition||'')}}</span>
+        <span style="font-size:9px;font-weight:700;color:${{col}};text-transform:uppercase;">${{escHtml(c.status||'')}} ${{traj}}</span>
+      </div>
+      <div style="font-size:10px;color:var(--text-3);line-height:1.4;">${{escHtml(c.key_finding||'')}}</div>
+      ${{c.complications_risk ? `<div style="font-size:9px;color:var(--amber);margin-top:2px;">Risk: ${{escHtml(c.complications_risk)}}</div>` : ''}}
+    </div>`;
+  }}).join('');
+}}
+
+function _renderGoals(db) {{
+  const el = document.getElementById('helen-goals');
+  if (!el) return;
+  const goals = db.treatment_goals || [];
+  if (!goals.length) {{ el.innerHTML = '<div style="font-size:11px;color:var(--text-3);">No goals synced</div>'; return; }}
+  el.innerHTML = goals.map(g => {{
+    const onTrack = g.on_track;
+    const col     = onTrack ? 'var(--green)' : 'var(--red)';
+    const icon    = onTrack ? '✓' : '✗';
+    return `
+    <div style="padding:5px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:11px;color:var(--text-2);">${{escHtml(g.goal_name||'')}}</span>
+        <span style="font-size:10px;font-weight:700;color:${{col}};">${{icon}}</span>
+      </div>
+      <div style="display:flex;gap:12px;font-size:10px;color:var(--text-3);margin-top:2px;">
+        <span>Target: <b style="color:var(--text-2);">${{escHtml(g.target||'—')}}</b></span>
+        <span>Now: <b style="color:${{col}};">${{escHtml(g.current_value||'—')}}</b></span>
+      </div>
+    </div>`;
+  }}).join('');
+}}
+
+function _renderLabAlerts(helenAlerts, db) {{
+  const el = document.getElementById('helen-lab-alerts');
+  if (!el) return;
+
+  // If Helen's alerts are available, use them
+  if (helenAlerts && helenAlerts.length) {{
+    el.innerHTML = helenAlerts.map(a => {{
+      const isSerious = (a.significance||'').length > 0;
+      return `
+      <div style="padding:5px 0;border-bottom:1px solid var(--border);">
+        <div style="font-size:10px;font-weight:600;color:var(--amber);">${{escHtml(a.test||'')}}</div>
+        <div style="font-size:10px;color:var(--text-2);margin:2px 0;">${{escHtml(a.pattern||'')}}</div>
+        <div style="font-size:9px;color:var(--text-3);line-height:1.4;">${{escHtml(a.significance||'')}}</div>
+        ${{a.action ? `<div style="font-size:9px;color:var(--hue);margin-top:3px;">→ ${{escHtml(a.action)}}</div>` : ''}}
+      </div>`;
+    }}).join('');
+    return;
+  }}
+
+  // Fallback: show abnormal results from DB
+  if (db) {{
+    const tests  = db.recent_tests || [];
+    const abnormal = tests.filter(t => (t.status||'').toLowerCase() === 'abnormal');
+    if (abnormal.length) {{
+      el.innerHTML = abnormal.map(t =>
+        `<div style="display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px solid var(--border);">
+          <span style="color:var(--text-2);">${{escHtml(t.test_name||'').substring(0,40)}}</span>
+          <span style="color:var(--red);font-weight:700;">ABNORMAL</span>
+        </div>`
+      ).join('');
+    }} else {{
+      el.innerHTML = '<div style="font-size:11px;color:var(--text-3);">No abnormal results found</div>';
+    }}
+  }}
+}}
+
+async function _loadNextApptDate() {{
+  const el = document.getElementById('helen-appt-date');
+  if (!el) return;
+  const res = await fetch('/api/health/db/summary').catch(() => null);
+  if (!res || !res.ok) return;
+  const d = await res.json();
+  if (d.next_appointment) {{
+    el.textContent = '· Next: ' + escHtml(d.next_appointment.visit_date||'') +
+                     ' with ' + escHtml(d.next_appointment.provider||'');
+  }}
+}}
+
+// ── ECG list renderer ────────────────────────────────────────────────────────
+function _renderEcgList(readings) {{
+  const el = document.getElementById('health-ecg-list');
+  if (!el) return;
+  if (!readings || !readings.length) {{
+    el.innerHTML = '<div style="font-size:11px;color:var(--text-3);">No ECG readings yet — your KardiaMobile recordings sync automatically via Health Auto Export.</div>';
+    return;
+  }}
+  const _classColor = c => {{
+    if (!c) return 'var(--text-3)';
+    const cl = c.toLowerCase();
+    if (cl.includes('sinus') || cl.includes('normal')) return 'var(--green)';
+    if (cl.includes('afib') || cl.includes('fibrillation')) return 'var(--red)';
+    if (cl.includes('unclassified') || cl.includes('possible')) return 'var(--amber)';
+    return 'var(--text-2)';
+  }};
+  el.innerHTML = readings.map(r => `
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);">
+      <div style="width:8px;height:8px;border-radius:50%;background:${{_classColor(r.classification)}};flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:11px;font-weight:600;color:${{_classColor(r.classification)}};">${{escHtml(r.classification || 'Unknown')}}</div>
+        <div style="font-size:10px;color:var(--text-3);">${{fmtLocalTime(r.reading_date, {{short:true}})}}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:13px;font-weight:600;color:var(--text-1);font-family:var(--font-mono);">${{r.avg_heart_rate ? r.avg_heart_rate + ' bpm' : '—'}}</div>
+        <div style="font-size:9px;color:var(--text-3);">${{r.sample_count ? r.sample_count.toLocaleString() + ' samples' : ''}}</div>
+      </div>
+    </div>`
+  ).join('');
+  const badge = document.getElementById('health-ecg-badge');
+  if (badge) badge.textContent = readings.length + ' reading' + (readings.length !== 1 ? 's' : '');
+}}
+
+// ── BP panel renderer ────────────────────────────────────────────────────────
+function _renderBpPanel(data) {{
+  const latest  = data.latest;
+  const history = data.history || [];
+
+  const valEl   = document.getElementById('health-bp-value');
+  const pulseEl = document.getElementById('health-bp-pulse');
+  const dateEl  = document.getElementById('health-bp-date');
+  const histEl  = document.getElementById('health-bp-history');
+
+  if (latest && latest.systolic) {{
+    if (valEl)   valEl.textContent   = latest.systolic + '/' + latest.diastolic;
+    if (pulseEl) pulseEl.textContent = latest.pulse ? latest.pulse + ' bpm' : '';
+    if (dateEl)  dateEl.textContent  = fmtLocalTime(latest.reading_date, {{short:true}});
+
+    // Color-code by AHA categories
+    const sys = latest.systolic, dia = latest.diastolic;
+    const cat = sys >= 180 || dia >= 120 ? {{label:'Crisis', col:'var(--red)'}}
+              : sys >= 140 || dia >= 90  ? {{label:'High Stage 2', col:'var(--red)'}}
+              : sys >= 130 || dia >= 80  ? {{label:'High Stage 1', col:'var(--amber)'}}
+              : sys >= 120               ? {{label:'Elevated', col:'var(--amber)'}}
+              :                           {{label:'Normal', col:'var(--green)'}};
+    if (valEl) valEl.style.color = cat.col;
+  }} else {{
+    if (valEl) valEl.textContent = '—/—';
+  }}
+
+  if (histEl && history.length) {{
+    histEl.innerHTML = history.map(r => {{
+      const sys = r.systolic, dia = r.diastolic;
+      const col = sys >= 140 || dia >= 90 ? 'var(--red)' : sys >= 130 ? 'var(--amber)' : 'var(--green)';
+      return `<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;">
+        <span style="color:${{col}};font-family:var(--font-mono);font-weight:600;">${{sys}}/${{dia}}</span>
+        <span style="color:var(--text-3);">${{r.pulse ? r.pulse + ' bpm · ' : ''}}</span>
+        <span style="color:var(--text-3);">${{fmtLocalTime(r.reading_date, {{short:true}})}}</span>
+      </div>`;
+    }}).join('');
+  }} else if (histEl) {{
+    histEl.innerHTML = '<div style="font-size:11px;color:var(--text-3);">No readings yet</div>';
+  }}
+}}
+
+// ── Omron status renderer ────────────────────────────────────────────────────
+function _renderOmronStatus(o) {{
+  const badge   = document.getElementById('health-omron-badge');
+  const btn     = document.getElementById('health-omron-btn');
+  const section = document.getElementById('health-omron-connect-section');
+  if (badge) {{
+    badge.textContent  = o.connected ? 'Connected' : (o.configured ? 'Ready to connect' : 'Not configured');
+    badge.style.color  = o.connected ? 'var(--green)' : o.configured ? 'var(--amber)' : 'var(--text-3)';
+  }}
+  if (btn && section) {{
+    if (!o.configured) {{
+      section.innerHTML = '<div style="font-size:10px;color:var(--text-3);">Add OMRON_CLIENT_ID + OMRON_CLIENT_SECRET to .env to enable</div>';
+    }} else if (o.connected) {{
+      section.innerHTML = `<div style="font-size:10px;color:var(--green);">✓ Connected${{o.last_sync ? ' · Last sync: ' + fmtLocalTime(o.last_sync, {{short:true}}) : ''}}</div>
+        <button class="btn-ghost" onclick="omronSync()" style="font-size:10px;margin-top:4px;">Sync Now</button>`;
+    }} else {{
+      btn.textContent = o.expired ? 'Reconnect Omron' : 'Connect Omron Account';
+    }}
+  }}
+}}
+
+function omronConnect() {{
+  window.open('/api/health/omron/connect', '_blank', 'width=600,height=700');
+}}
+
+async function omronSync() {{
+  const res = await fetch('/api/health/omron/sync', {{method:'POST',
+    headers:{{'Content-Type':'application/json'}}, body:'{{}}'}}).catch(() => null);
+  if (res && res.ok) {{
+    showToast('Omron sync started', 'success');
+    setTimeout(loadHealth, 4000);
+  }} else {{
+    showToast('Omron sync failed', 'error');
+  }}
+}}
+
+
+async function healthTestIngest() {{
+  const sample = {{
+    source: "test",
+    steps: 8432,
+    resting_hr: 58,
+    hrv: 45,
+    sleep_hours: 7.5,
+    sleep_deep_hours: 1.8,
+    sleep_rem_hours: 1.6,
+    active_calories: 523,
+    exercise_minutes: 42,
+    stand_hours: 10,
+    blood_oxygen: 98,
+    weight_lbs: 185
+  }};
+  const res = await fetch('/api/health/ingest', {{
+    method: 'POST',
+    headers: {{'Content-Type': 'application/json'}},
+    body: JSON.stringify(sample),
+  }});
+  if (res.ok) {{ showToast('Sample data ingested!', 'success'); loadHealth(); }}
+  else showToast('Ingest failed', 'error');
+}}
+
+async function mychartStartSync() {{
+  const btn      = document.getElementById('mychart-sync-btn');
+  const status   = document.getElementById('mychart-sync-status');
+  const badge    = document.getElementById('mychart-sync-badge');
+  const progWrap = document.getElementById('mychart-progress-wrap');
+  const progBar  = document.getElementById('mychart-progress-bar');
+
+  if (btn) {{ btn.disabled = true; btn.textContent = '⟳ Starting…'; }}
+  if (progWrap) progWrap.style.display = '';
+  if (progBar)  progBar.style.width = '5%';
+  if (status)   status.textContent = 'Launching Chromium…';
+  if (badge)    badge.textContent  = 'syncing';
+
+  // Kick off the server-side Playwright sync (opens Chromium window)
+  const r = await fetch('/api/health/mychart/sync', {{
+    method: 'POST',
+    headers: {{'Content-Type': 'application/json'}},
+    body: JSON.stringify({{headless: false}}),
+  }});
+  const d = await r.json();
+  if (!d.ok && d.error !== 'Sync already running') {{
+    if (status) status.textContent = 'Error: ' + (d.error || 'failed to start');
+    if (btn)    {{ btn.disabled = false; btn.textContent = '⟳ Sync MyChart'; }}
+    if (progWrap) progWrap.style.display = 'none';
+    return;
+  }}
+
+  // Poll /api/health/mychart/sync-status every 1.5s
+  let pollTimer = setInterval(async () => {{
+    try {{
+      const sr = await fetch('/api/health/mychart/sync-status');
+      const s  = await sr.json();
+
+      if (progBar)  progBar.style.width = s.progress + '%';
+      if (status)   status.textContent  = s.step || '';
+
+      if (s.needs_login) {{
+        if (badge)  badge.textContent = 'login needed';
+        if (status) status.textContent = 'Log into MyChart in the browser window that opened, then sync will continue automatically.';
+      }}
+
+      if (!s.running) {{
+        clearInterval(pollTimer);
+        if (s.progress >= 100) {{
+          if (badge)  badge.textContent = s.pages_done.length + ' pages ✓';
+          if (status) status.textContent = 'Sync complete — ' + s.pages_done.join(', ');
+          mychartViewRecords();
+        }} else if (s.error) {{
+          if (badge)  badge.textContent = 'error';
+          if (status) status.textContent = 'Sync failed: ' + s.error;
+        }}
+        if (btn)      {{ btn.disabled = false; btn.textContent = '⟳ Sync MyChart'; }}
+        if (progWrap) progWrap.style.display = 'none';
+      }}
+    }} catch(e) {{
+      clearInterval(pollTimer);
+      if (btn) {{ btn.disabled = false; btn.textContent = '⟳ Sync MyChart'; }}
+      if (progWrap) progWrap.style.display = 'none';
+    }}
+  }}, 1500);
+}}
+
+async function mychartViewRecords() {{
+  const el = document.getElementById('health-medical-records');
+  if (!el) return;
+  // Prefer the structured DB summary; fall back to raw page summaries
+  const [dbRes, rawRes] = await Promise.all([
+    fetch('/api/health/db/summary').catch(() => null),
+    fetch('/api/health/mychart/summary').catch(() => null),
+  ]);
+
+  const db  = dbRes  && dbRes.ok  ? await dbRes.json()  : {{}};
+  const raw = rawRes && rawRes.ok ? await rawRes.json() : {{}};
+
+  const pages    = raw.records  || {{}};
+  const conds    = db.conditions || [];
+  const meds     = db.medications || [];
+  const tests    = db.recent_tests || [];
+  const nextAppt = db.next_appointment;
+  const goals    = db.treatment_goals || [];
+
+  if (!Object.keys(pages).length && !conds.length && !meds.length) {{
+    el.innerHTML = '<div style="font-size:11px;color:var(--text-3);">No records synced yet. Click Sync MyChart.</div>';
+    return;
+  }}
+
+  let html = '';
+
+  // Conditions block
+  if (conds.length) {{
+    html += `<div style="margin-bottom:12px;">
+      <div style="font-size:10px;color:var(--amber);text-transform:uppercase;margin-bottom:4px;">Conditions</div>
+      ${{conds.map(c => `<div style="font-size:11px;color:var(--text-2);padding:1px 0;">${{escHtml(c)}}</div>`).join('')}}
+    </div>`;
+  }}
+
+  // Treatment goals block
+  if (goals.length) {{
+    html += `<div style="margin-bottom:12px;">
+      <div style="font-size:10px;color:var(--amber);text-transform:uppercase;margin-bottom:4px;">Treatment Goals</div>`;
+    for (const g of goals) {{
+      const dot = g.on_track ? '🟢' : '🔴';
+      html += `<div style="font-size:11px;color:var(--text-2);padding:2px 0;">
+        ${{dot}} ${{escHtml(g.goal_name)}} — target ${{escHtml(g.target || '')}} · current ${{escHtml(g.current_value || '')}}
+      </div>`;
+    }}
+    html += '</div>';
+  }}
+
+  // Medications block
+  if (meds.length) {{
+    html += `<div style="margin-bottom:12px;">
+      <div style="font-size:10px;color:var(--amber);text-transform:uppercase;margin-bottom:4px;">Medications (${{meds.length}})</div>
+      ${{meds.slice(0,8).map(m =>
+        `<div style="font-size:11px;color:var(--text-2);padding:1px 0;">
+          <b>${{escHtml(m.name || '')}}</b>
+          <span style="color:var(--text-3);"> ${{escHtml(m.dosage || '')}}</span>
+         </div>`
+      ).join('')}}
+      ${{meds.length > 8 ? `<div style="font-size:10px;color:var(--text-3);">+${{meds.length - 8}} more</div>` : ''}}
+    </div>`;
+  }}
+
+  // Recent tests
+  if (tests.length) {{
+    html += `<div style="margin-bottom:12px;">
+      <div style="font-size:10px;color:var(--amber);text-transform:uppercase;margin-bottom:4px;">Recent Labs</div>
+      ${{tests.map(t => {{
+        const flag = t.status === 'Abnormal' ? '<span style="color:var(--red);font-size:9px;"> ▲ ABNORMAL</span>' : '';
+        return `<div style="font-size:11px;color:var(--text-2);padding:1px 0;">${{escHtml(t.test_name)}}${{flag}} <span style="color:var(--text-3);">${{escHtml(t.result_date || '')}}</span></div>`;
+      }}).join('')}}
+    </div>`;
+  }}
+
+  // Next appointment
+  if (nextAppt) {{
+    html += `<div style="margin-bottom:12px;">
+      <div style="font-size:10px;color:var(--amber);text-transform:uppercase;margin-bottom:4px;">Next Appointment</div>
+      <div style="font-size:11px;color:var(--text-2);">${{escHtml(nextAppt.visit_date || '')}} — ${{escHtml(nextAppt.provider || '')}}</div>
+    </div>`;
+  }}
+
+  // Fallback: raw page previews if structured data sparse
+  if (!conds.length && !meds.length && Object.keys(pages).length) {{
+    for (const [key, rec] of Object.entries(pages)) {{
+      const label = key.replace(/_/g,' ').replace(/\\b\\w/g, c => c.toUpperCase());
+      const preview = (rec.content_preview || '').substring(0,150).replace(/</g,'&lt;');
+      html += `<div style="margin-bottom:10px;">
+        <div style="font-size:10px;color:var(--amber);text-transform:uppercase;margin-bottom:3px;">${{label}}</div>
+        <div style="font-size:11px;color:var(--text-2);">${{preview}}…</div>
+      </div>`;
+    }}
+  }}
+
+  // Last sync time
+  if (raw.last_updated) {{
+    html += `<div style="font-size:10px;color:var(--text-3);margin-top:8px;">Last synced ${{fmtLocalTime(raw.last_updated)}}</div>`;
+  }}
+
+  el.innerHTML = html || '<div style="font-size:11px;color:var(--text-3);">No records found.</div>';
+}}
+
+async function loadOverviewHealth() {{
+  const el    = document.getElementById('overview-health-content');
+  const badge = document.getElementById('overview-health-badge');
+  if (!el) return;
+  try {{
+    const res = await fetch('/api/health/summary');
+    if (!res.ok) return;
+    const d = await res.json();
+    const r = d.readiness || {{}};
+    if (badge) badge.textContent = r.score != null ? r.grade : '—';
+    if (!d.has_data) {{
+      el.innerHTML = '<div style="color:var(--text-3);">No data — configure Health Auto Export</div>';
+      return;
+    }}
+    const m     = d.metrics || {{}};
+    const lines = [];
+    if (r.score != null) lines.push(`<div>Readiness: <b style="color:var(--amber)">${{r.score}}/100</b> (${{r.grade}})</div>`);
+    if (m.sleep_hours)   lines.push(`<div>Sleep: <b>${{m.sleep_hours}}h</b></div>`);
+    if (m.hrv)           lines.push(`<div>HRV: <b>${{m.hrv}}ms</b></div>`);
+    if (m.resting_hr)    lines.push(`<div>HR: <b>${{m.resting_hr}}bpm</b></div>`);
+    if (m.steps)         lines.push(`<div>Steps: <b>${{Number(m.steps).toLocaleString()}}</b></div>`);
+    el.innerHTML = lines.join('') || '<div style="color:var(--text-3);">No data</div>';
+    if (d.anomalies && d.anomalies.length) {{
+      el.innerHTML += `<div style="color:var(--amber);font-size:10px;margin-top:4px;">! ${{d.anomalies.length}} alert(s)</div>`;
+    }}
+  }} catch(e) {{
+    if (el) el.innerHTML = '<div style="color:var(--text-3);">Unavailable</div>';
+  }}
 }}
 
 /* ── Boot ── */

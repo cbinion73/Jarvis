@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Query, Request, UploadFile, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
@@ -353,6 +353,22 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         if not enabled or shell_warmer_task is not None:
             return
         shell_warmer_task = asyncio.create_task(_shell_state_warmer(), name="jarvis-shell-state-warmer")
+
+    @app.on_event("startup")
+    async def _start_ghostwritr_events() -> None:
+        """Start Ghostwritr event poller."""
+        import logging as _ev_log
+        _log = _ev_log.getLogger("jarvis.service")
+        bridge = _get_ghostwritr_bridge()
+        if bridge is None:
+            _log.info("GhostwritrEvents: bridge not available, skipping event poller")
+            return
+        try:
+            from .ghostwritr_events import run_event_loop as _run_events
+            asyncio.create_task(_run_events(bridge), name="jarvis-ghostwritr-events")
+            _log.info("GhostwritrEvents: event poller started")
+        except Exception as exc:
+            _log.warning("GhostwritrEvents: could not start event poller: %s", exc)
 
     @app.on_event("shutdown")
     async def _stop_shell_state_warmer() -> None:
@@ -1243,6 +1259,15 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 parts.append(rss["finance_text"])
             news_prefix = "\n\n".join(parts)
             briefing = news_prefix + "\n\n---\n\n" + briefing
+
+        # Append health summary if data is available
+        try:
+            from .health_agent import get_morning_summary as _health_summary
+            health_para = await asyncio.to_thread(_health_summary)
+            if health_para:
+                briefing = briefing + "\n\n---\n\n" + health_para
+        except Exception:
+            pass
 
         return _json(
             {
@@ -2489,6 +2514,115 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         background_tasks.add_task(_broadcast_dashboard, "response.completed")
         return _json(result)
 
+    # ── Agentic streaming chat ─────────────────────────────────────────────
+    @app.post("/api/agent/stream")
+    async def api_agent_stream(payload: dict[str, Any]) -> StreamingResponse:
+        """
+        Agentic streaming endpoint. Returns Server-Sent Events.
+        Each event: data: {"type": "text_delta"|"tool_call"|"tool_result"|
+                                  "approval_needed"|"tool_skipped"|"done"|"error", ...}
+
+        Body: { "message": str, "conversation_id": str, "messages": [...] }
+        """
+        from .agent import run_agent, StreamEvent
+        from .context_builder import build_context
+        from .agent_memory import load_recent_summaries, load_facts, save_session_summary
+
+        user_message = str(payload.get("message", "")).strip()
+        conversation_id = str(payload.get("conversation_id", ""))
+        # Client may send full prior message list for multi-turn
+        prior_messages: list[dict] = list(payload.get("messages", []))
+
+        if not user_message:
+            async def _err():
+                yield 'data: {"type":"error","message":"No message provided"}\n\n'
+            return StreamingResponse(_err(), media_type="text/event-stream")
+
+        # Build full message list
+        messages: list[dict] = prior_messages + [{"role": "user", "content": user_message}]
+
+        # Build context (project state, services, git log)
+        try:
+            ctx = await build_context()
+        except Exception:
+            ctx = ""
+
+        # Prepend recent session summaries + facts
+        recent = load_recent_summaries(3)
+        facts  = load_facts()
+        extra_ctx = ""
+        if facts:
+            extra_ctx += f"\n\n=== PERSISTENT FACTS ===\n{facts}"
+        if recent:
+            extra_ctx += f"\n\n=== RECENT SESSION SUMMARIES ===\n{recent}"
+
+        system_context = ctx + extra_ctx
+
+        async def _stream():
+            full_response = ""
+            try:
+                async for event in run_agent(messages, system_context=system_context, conversation_id=conversation_id):
+                    if event.type == "text_delta":
+                        full_response += event.data.get("delta", "")
+                    yield event.to_sse()
+            except Exception as exc:
+                import json as _json_mod
+                yield f'data: {_json_mod.dumps({"type": "error", "message": str(exc)})}\n\n'
+            finally:
+                # Auto-save session summary in background
+                if full_response:
+                    try:
+                        save_session_summary(conversation_id, messages, full_response)
+                    except Exception:
+                        pass
+
+        return StreamingResponse(
+            _stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive",
+            },
+        )
+
+    @app.post("/api/agent/approve")
+    async def api_agent_approve(payload: dict[str, Any]) -> JSONResponse:
+        """Resolve a pending approval gate (approve or decline)."""
+        from .agent import resolve_approval
+        approval_id = str(payload.get("approval_id", ""))
+        approved    = bool(payload.get("approved", False))
+        found = resolve_approval(approval_id, approved)
+        return _json({"ok": found, "approval_id": approval_id, "approved": approved})
+
+    @app.get("/api/agent/tools")
+    async def api_agent_tools() -> JSONResponse:
+        """List available agent tools."""
+        from .tools import TOOL_DEFINITIONS
+        return _json({"tools": TOOL_DEFINITIONS})
+
+    @app.post("/api/agent/restart-signal")
+    async def api_agent_restart_signal() -> JSONResponse:
+        """
+        Write a restart signal file. The bash tool can call this so the agent can
+        signal JARVIS to restart without killing its own process mid-response.
+        The UI polls /api/agent/restart-pending and re-launches when it sees the signal.
+        """
+        signal_path = Path.home() / ".jarvis" / "restart_requested"
+        signal_path.parent.mkdir(parents=True, exist_ok=True)
+        signal_path.touch()
+        return _json({"ok": True, "message": "Restart signal written. JARVIS will restart shortly."})
+
+    @app.get("/api/agent/restart-pending")
+    async def api_agent_restart_pending() -> JSONResponse:
+        """Poll endpoint — returns {pending: true} when a restart has been requested."""
+        signal_path = Path.home() / ".jarvis" / "restart_requested"
+        if signal_path.exists():
+            signal_path.unlink(missing_ok=True)
+            return _json({"pending": True})
+        return _json({"pending": False})
+    # ── End agentic streaming chat ─────────────────────────────────────────
+
     @app.post("/api/mode-transition")
     async def api_mode_transition(
         payload: dict[str, Any],
@@ -3416,6 +3550,816 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             return _json({"active_project": None, "error": str(exc)})
 
     # ------------------------------------------------------------------
+    # Book Launch Asset Generation (Ghostwritr → JARVIS pipeline)
+    # ------------------------------------------------------------------
+
+    @app.get("/api/publishing/launch/{slug}")
+    async def api_publishing_book_launch_get(slug: str) -> JSONResponse:
+        """Return stored launch assets for a book slug, or not_generated."""
+        from .book_launch import load_assets as _la
+        assets = await asyncio.to_thread(_la, slug)
+        if assets is None:
+            return _json({"slug": slug, "status": "not_generated", "assets": None})
+        return _json(assets)
+
+    @app.post("/api/publishing/launch/{slug}/generate")
+    async def api_publishing_book_launch_generate(
+        slug: str,
+        background_tasks: BackgroundTasks,
+        request: Request,
+    ) -> JSONResponse:
+        """Kick off launch asset generation in the background. Returns immediately."""
+        bridge = _get_ghostwritr_bridge()
+        gw = _get_gateway()
+        body = {}
+        try:
+            body = await request.json()
+        except Exception:
+            pass
+        force = bool(body.get("force", False))
+        trigger = str(body.get("trigger", "pre_launch"))
+
+        def _run() -> None:
+            from .book_launch import (
+                get_book_brief as _gbf,
+                generate_launch_assets as _gla,
+                load_assets as _la,
+            )
+            if not force and _la(slug) is not None:
+                logger.info("Launch assets already exist for %s; skipping (use force=true to regenerate)", slug)
+                return
+            brief = _gbf(bridge, slug) if bridge else None
+            if brief is None:
+                # Minimal brief from slug alone if bridge unavailable
+                from .book_launch import BookBrief
+                brief = BookBrief(slug=slug, title=slug.replace("-", " ").title(),
+                                  subtitle="", workflow_type="NONFICTION",
+                                  book_status="DRAFT", current_stage="")
+            _gla(brief, gw, trigger=trigger)
+
+        background_tasks.add_task(_run)
+        return _json({"status": "started", "slug": slug})
+
+    @app.get("/api/publishing/launch/{slug}/status")
+    async def api_publishing_book_launch_status(slug: str) -> JSONResponse:
+        """Check whether generation is warranted and whether assets exist."""
+        from .book_launch import check_launch_trigger as _clt, load_assets as _la
+        bridge = _get_ghostwritr_bridge()
+        trigger = None
+        if bridge:
+            trigger = await asyncio.to_thread(_clt, bridge, slug)
+        existing = await asyncio.to_thread(_la, slug)
+        return _json({
+            "slug":         slug,
+            "trigger":      trigger,
+            "has_assets":   existing is not None,
+            "generated_at": existing.get("generated_at") if existing else None,
+            "asset_status": existing.get("status") if existing else None,
+        })
+
+    @app.delete("/api/publishing/launch/{slug}")
+    async def api_publishing_book_launch_delete(slug: str) -> JSONResponse:
+        """Clear launch assets so they can be regenerated."""
+        assets_path = (
+            Path.home() / ".jarvis" / "publishing" / "launches" / slug / "assets.json"
+        )
+        if assets_path.exists():
+            assets_path.unlink()
+            return _json({"status": "cleared", "slug": slug})
+        return _json({"status": "not_found", "slug": slug})
+
+    @app.get("/api/publishing/launch-scan")
+    async def api_publishing_launch_scan() -> JSONResponse:
+        """Scan all active Ghostwritr books and return launch asset status for each."""
+        from .book_launch import check_launch_trigger as _clt, load_assets as _la
+        bridge = _get_ghostwritr_bridge()
+        if bridge is None:
+            return _json({"books": [], "bridge_available": False})
+
+        def _scan() -> list[dict]:
+            try:
+                books = bridge.list_active_books() if hasattr(bridge, "list_active_books") \
+                    else bridge._db.list_books() if (hasattr(bridge, "_db") and bridge._db) \
+                    else []
+            except Exception:
+                books = []
+            results = []
+            for book in books:
+                slug = book.get("slug") or book.get("id", "")
+                title = book.get("titleWorking") or book.get("title") or slug
+                existing = _la(slug)
+                trigger = _clt(bridge, slug)
+                results.append({
+                    "slug":         slug,
+                    "title":        title,
+                    "book_status":  book.get("status", ""),
+                    "has_assets":   existing is not None,
+                    "asset_status": existing.get("status") if existing else None,
+                    "trigger":      trigger,
+                    "generated_at": existing.get("generated_at") if existing else None,
+                })
+            return results
+
+        scan = await asyncio.to_thread(_scan)
+        return _json({"books": scan, "count": len(scan), "bridge_available": True})
+
+    # ------------------------------------------------------------------
+    # Ghostwritr Webhook — receives events pushed from Ghostwritr
+    # ------------------------------------------------------------------
+
+    @app.post("/api/webhooks/ghostwritr")
+    async def api_webhook_ghostwritr(request: Request) -> JSONResponse:
+        """Receive events from Ghostwritr and take JARVIS action."""
+        from .book_launch import check_launch_trigger as _clt
+        import logging as _wh_log_module
+        _wh_log = _wh_log_module.getLogger("jarvis.webhooks")
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"ok": False, "error": "Invalid JSON"}, status_code=400)
+
+        event_type = body.get("event_type", "")
+        slug = body.get("slug", "")
+        source = body.get("source", "unknown")
+        _wh_log.info("Ghostwritr webhook: %s / %s from %s", event_type, slug, source)
+
+        result: dict = {"ok": True, "event_type": event_type, "slug": slug, "actions": []}
+
+        if event_type == "trigger_launch" and slug:
+            force = bool(body.get("force", False))
+            trigger = body.get("trigger", "pre_launch")
+            try:
+                bridge = _get_ghostwritr_bridge()
+                from .book_launch import generate_launch_assets as _gen, get_book_brief as _brief
+                gw = _get_gateway()
+                async def _bg():
+                    try:
+                        brief = await asyncio.to_thread(_brief, bridge, slug)
+                        assets = await asyncio.to_thread(_gen, brief, gw, trigger)
+                        from .book_launch import save_assets as _sa
+                        _sa(slug, assets)
+                    except Exception as exc:
+                        _wh_log.error("Ghostwritr webhook launch bg failed: %s", exc)
+                asyncio.create_task(_bg(), name=f"launch-{slug}")
+                result["actions"].append(f"launch_pipeline_started:{slug}")
+                result["message"] = f"Launch pipeline started for '{slug}'"
+            except Exception as exc:
+                result["actions"].append(f"launch_error:{exc}")
+
+        elif event_type == "add_idea" and body.get("text"):
+            try:
+                from .ideas import add_idea as _ai
+                idea = await asyncio.to_thread(
+                    _ai,
+                    body.get("text", ""),
+                    source="ghostwritr",
+                    notes=body.get("notes", ""),
+                    domain=body.get("domain", "books"),
+                    tags=body.get("tags", []),
+                )
+                result["actions"].append(f"idea_added:{idea.get('id','')}")
+                result["message"] = f"Idea added: {idea.get('text','')}"
+            except Exception as exc:
+                result["actions"].append(f"idea_error:{exc}")
+
+        elif event_type == "stage_changed" and slug:
+            result["actions"].append(f"stage_change_logged:{slug}")
+            result["message"] = f"Stage change acknowledged for '{slug}'"
+
+        elif event_type == "post_production_committed" and slug and body.get("content"):
+            # Store Ghostwritr post-production artifact in JARVIS launch assets
+            stage = body.get("stage", "")
+            agent = body.get("agent", "")
+            content = body.get("content", "")
+            # Map stage key to JARVIS asset key
+            stage_to_asset = {
+                "LAUNCH_LISTING":  "marquee",
+                "PRESS_KIT":       "bureau",
+                "SOCIAL_CAMPAIGN": "dispatch",
+                "AUDIO_PREP":      "studio",
+                "COURSE_DESIGN":   "podium",
+                "SPEAKING_KIT":    "lectern",
+            }
+            asset_key = stage_to_asset.get(stage, stage.lower())
+            try:
+                from .book_launch import load_assets as _la, save_assets as _sa
+                existing = await asyncio.to_thread(_la, slug) or {}
+                # Ensure assets dict exists
+                if "assets" not in existing:
+                    existing["assets"] = {}
+                existing["assets"][asset_key] = content
+                existing["book_slug"] = slug
+                existing["title"] = body.get("title", slug)
+                if not existing.get("generated_at"):
+                    from datetime import datetime, timezone
+                    existing["generated_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                if not existing.get("status"):
+                    existing["status"] = "partial"
+                await asyncio.to_thread(_sa, slug, existing)
+                result["actions"].append(f"post_production_stored:{asset_key}:{slug}")
+                result["message"] = f"{agent} ({stage}) artifact stored for '{slug}'"
+                _wh_log.info("Stored post-production artifact %s for %s", asset_key, slug)
+            except Exception as exc:
+                result["actions"].append(f"post_production_error:{exc}")
+                _wh_log.warning("Failed to store post-production artifact: %s", exc)
+
+        elif event_type == "create_task" and body.get("title"):
+            result["actions"].append("task_creation_not_yet_implemented")
+            result["message"] = "Task queue coming soon"
+
+        else:
+            result["message"] = f"Event '{event_type}' received and logged"
+
+        return _json(result)
+
+    # ------------------------------------------------------------------
+    # Health Bridge — Apple Health + Epic FHIR (Helen Cho)
+    # ------------------------------------------------------------------
+
+    @app.post("/api/health/ingest")
+    async def api_health_ingest(request: Request) -> JSONResponse:
+        """Apple Health data → SQLite daily_metrics.
+        Accepts two formats:
+          1. Health Auto Export: {"data": {"metrics": [{"name": "step_count", "data": [...]}]}}
+          2. Flat: {"steps": 9000, "resting_hr": 58, ...}
+        """
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"ok": False, "error": "Invalid JSON"}, status_code=400)
+        try:
+            from .health_db import upsert_daily_metrics, log_sync as _ls
+            from datetime import date as _date
+
+            # ── Health Auto Export format ──────────────────────────────────
+            # Also handles non-metric HAE payloads (ecg, workouts, etc.) gracefully
+            _hae_data = body.get("data", {}) if isinstance(body.get("data"), dict) else {}
+            if "data" in body and "metrics" in _hae_data:
+                metrics_raw = body["data"]["metrics"]
+
+                # Map Health Auto Export names → our DB columns
+                _NAME_MAP = {
+                    "step_count":                   "steps",
+                    "resting_heart_rate":            "resting_hr",
+                    "heart_rate_variability_sdnn":   "hrv",
+                    "active_energy_burned":          "active_cal",
+                    "blood_oxygen_saturation":       "blood_oxygen",
+                    "body_mass":                     "weight",
+                    "sleep_analysis":                "sleep_hours",
+                    "exercise_time":                 "exercise_min",
+                    "stand_hours":                   "stand_hours",
+                    "respiratory_rate":              "respiratory_rate",
+                }
+                # Aggregate / extract per metric
+                parsed: dict = {"source": "apple_health", "date": _date.today().isoformat()}
+                for m in metrics_raw:
+                    name   = m.get("name", "")
+                    col    = _NAME_MAP.get(name)
+                    if not col:
+                        continue
+                    data_pts = m.get("data", [])
+                    if not data_pts:
+                        continue
+                    qtys = [p["qty"] for p in data_pts if "qty" in p]
+                    if not qtys:
+                        continue
+                    # Steps & calories: sum the day; everything else: latest value
+                    if col in ("steps", "active_cal", "exercise_min"):
+                        parsed[col] = round(sum(qtys))
+                    elif col == "sleep_hours":
+                        # sleep_analysis qty is usually in hours or seconds
+                        # Health Auto Export sends hours for sleep stages
+                        # sum all "inBed" or "asleep" stages
+                        asleep = [p["qty"] for p in data_pts
+                                  if p.get("value", "") in ("asleep", "inBed", "")
+                                  and "qty" in p]
+                        parsed[col] = round(sum(asleep) if asleep else max(qtys), 2)
+                    else:
+                        parsed[col] = round(qtys[-1], 2)  # latest reading
+
+                await upsert_daily_metrics(parsed)
+                await _ls("apple_health", "success",
+                          f"Health Auto Export: {list(parsed.keys())}")
+                return _json({"ok": True, "format": "health_auto_export",
+                              "date": parsed["date"], "fields": list(parsed.keys())})
+
+            # ── Health Auto Export non-metric payload (ecg, workouts, etc.) ──
+            elif "data" in body and isinstance(_hae_data, dict) and _hae_data:
+                results: dict = {"ok": True, "format": "hae_other",
+                                 "keys": list(_hae_data.keys())}
+
+                # ── ECG data (KardiaMobile via Apple Health) ──────────────
+                if "ecg" in _hae_data:
+                    from .health_db import upsert_ecg_reading as _uecg
+                    import json as _json_mod
+                    ecg_list = _hae_data["ecg"]
+                    stored = []
+                    for rec in ecg_list:
+                        start = rec.get("start", "")
+                        end   = rec.get("end", "")
+                        # Compute duration in seconds
+                        dur_sec = None
+                        try:
+                            from datetime import datetime as _dt
+                            _fmt = "%Y-%m-%d %H:%M:%S %z"
+                            s = _dt.strptime(start.strip(), _fmt)
+                            e = _dt.strptime(end.strip(), _fmt)
+                            dur_sec = (e - s).total_seconds()
+                        except Exception:
+                            pass
+                        vms = rec.get("voltageMeasurements", [])
+                        await _uecg({
+                            "reading_date":  start,
+                            "source":        "kardia",
+                            "classification": rec.get("classification"),
+                            "avg_heart_rate": rec.get("averageHeartRate"),
+                            "sampling_freq":  rec.get("samplingFrequency"),
+                            "sample_count":   rec.get("numberOfVoltageMeasurements"),
+                            "duration_sec":   dur_sec,
+                            "voltage_json":   _json_mod.dumps(vms),
+                            "raw_json":       _json_mod.dumps(rec),
+                        })
+                        stored.append({
+                            "date":           start,
+                            "classification": rec.get("classification"),
+                            "hr":             rec.get("averageHeartRate"),
+                            "samples":        rec.get("numberOfVoltageMeasurements"),
+                        })
+                    await _ls("apple_health", "success",
+                              f"ECG: {len(stored)} reading(s) stored")
+                    results["ecg"] = stored
+                    results["format"] = "ecg"
+
+                return _json(results)
+
+            # ── Flat / manual Shortcuts format ────────────────────────────
+            else:
+                _FLAT_FIELDS = {"steps", "resting_hr", "hrv", "active_cal",
+                                "blood_oxygen", "weight", "sleep_hours",
+                                "exercise_min", "stand_hours", "date", "source"}
+                if not any(k in _FLAT_FIELDS for k in body):
+                    await _ls("apple_health", "info",
+                              f"Unrecognized payload shape; skipping upsert. keys={list(body.keys())[:8]}")
+                    return _json({"ok": True, "format": "unknown", "skipped": True})
+                await upsert_daily_metrics(body)
+                await _ls("apple_health", "success",
+                          f"Flat ingest: {len(body)} fields")
+                return _json({"ok": True, "format": "flat",
+                              "date": body.get("date"), "source": body.get("source")})
+
+        except Exception as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
+
+    @app.get("/api/health/latest")
+    async def api_health_latest() -> JSONResponse:
+        from .health_db import get_today_metrics, get_latest_metrics
+        from .health_bridge import compute_readiness as _cr
+        snap = await get_today_metrics() or (await get_latest_metrics(1) or [None])[0]
+        if snap is None:
+            return _json({"has_data": False,
+                          "message": "No health data yet. Set up Apple Shortcuts."})
+        readiness = await asyncio.to_thread(_cr, snap)
+        return _json({"has_data": True, "snapshot": snap, "readiness": readiness})
+
+    @app.get("/api/health/summary")
+    async def api_health_summary() -> JSONResponse:
+        from .health_db import get_today_metrics, get_latest_metrics
+        from .health_bridge import compute_readiness as _cr, get_morning_summary as _gms
+        snap = await get_today_metrics() or (await get_latest_metrics(1) or [None])[0]
+        has_data = snap is not None
+        readiness = await asyncio.to_thread(_cr, snap) if has_data else {}
+        metrics = {
+            "steps":        snap.get("steps"),
+            "resting_hr":   snap.get("resting_hr"),
+            "hrv":          snap.get("hrv"),
+            "sleep_hours":  snap.get("sleep_hours"),
+            "sleep_deep_hours": snap.get("sleep_deep"),
+            "blood_oxygen": snap.get("blood_oxygen"),
+            "active_calories": snap.get("active_cal"),
+            "exercise_minutes": snap.get("exercise_min"),
+            "weight":       snap.get("weight"),
+        } if has_data else {}
+        anomalies: list = []
+        if has_data:
+            m = metrics
+            if m.get("resting_hr") and m["resting_hr"] > 90:
+                anomalies.append({"metric": "resting_hr", "value": m["resting_hr"], "note": "Elevated resting HR"})
+            if m.get("blood_oxygen") and m["blood_oxygen"] < 95:
+                anomalies.append({"metric": "blood_oxygen", "value": m["blood_oxygen"], "note": "Low blood oxygen"})
+            if m.get("hrv") and m["hrv"] < 20:
+                anomalies.append({"metric": "hrv", "value": m["hrv"], "note": "Low HRV"})
+            if m.get("sleep_hours") and m["sleep_hours"] < 5:
+                anomalies.append({"metric": "sleep", "value": m["sleep_hours"], "note": "Short sleep"})
+        return _json({
+            "has_data": has_data,
+            "readiness": readiness,
+            "metrics": metrics,
+            "anomalies": anomalies,
+            "date": snap.get("date") if has_data else None,
+        })
+
+    @app.get("/api/health/trends")
+    async def api_health_trends(metric: str = "hrv", days: int = 30) -> JSONResponse:
+        from .health_db import get_latest_metrics
+        rows = await get_latest_metrics(days)
+        series = [{"date": r["date"], "value": r.get(metric)} for r in rows
+                  if r.get(metric) is not None]
+        return _json({"metric": metric, "days": days, "series": series})
+
+    @app.get("/api/health/history")
+    async def api_health_history(days: int = 30) -> JSONResponse:
+        from .health_db import get_latest_metrics
+        return _json({"days": days, "history": await get_latest_metrics(days)})
+
+    # ------------------------------------------------------------------
+    # MyChart — Playwright sync + DB-backed records
+    # ------------------------------------------------------------------
+
+    @app.post("/api/health/mychart/sync")
+    async def api_mychart_sync(background_tasks: BackgroundTasks,
+                               request: Request) -> JSONResponse:
+        """
+        Trigger a full MyChart sync via Playwright.
+        If the browser profile has no saved session it will open a visible
+        Chromium window so the user can log in; subsequent syncs are headless.
+        """
+        from .mychart_sync import run_sync, get_sync_state
+        state = get_sync_state()
+        if state["running"]:
+            return _json({"ok": False, "error": "Sync already running",
+                          "state": state})
+        body = {}
+        try:
+            body = await request.json()
+        except Exception:
+            pass
+        headless = body.get("headless", False)
+        background_tasks.add_task(run_sync, headless)
+        return _json({"ok": True, "message": "Sync started", "headless": headless})
+
+    @app.get("/api/health/mychart/sync-status")
+    async def api_mychart_sync_status() -> JSONResponse:
+        from .mychart_sync import get_sync_state
+        return _json(get_sync_state())
+
+    @app.post("/api/health/mychart/store")
+    async def api_mychart_store(request: Request) -> JSONResponse:
+        """Legacy endpoint — store a single page (used by manual flow)."""
+        from .health_db import upsert_mychart_page
+        body     = await request.json()
+        page_key = body.get("page_key", "unknown")
+        content  = body.get("content", "")
+        page_type = body.get("page_type", "text")
+        await upsert_mychart_page(page_key, page_type, content)
+        return _json({"ok": True, "page_key": page_key})
+
+    @app.get("/api/health/mychart/summary")
+    async def api_mychart_summary() -> JSONResponse:
+        from .health_db import get_mychart_pages, get_health_summary
+        pages = await get_mychart_pages()
+        summary = await get_health_summary()
+        return _json({
+            "last_updated":  summary.get("mychart_last_sync"),
+            "pages_scraped": [p["page_key"] for p in pages],
+            "records": {
+                p["page_key"]: {
+                    "scraped_at":     p["synced_at"],
+                    "has_content":    bool(p.get("content") or p.get("preview")),
+                    "content_preview": (p.get("content") or p.get("preview") or "")[:200],
+                }
+                for p in pages
+            },
+        })
+
+    @app.get("/api/health/mychart/records")
+    async def api_mychart_records(page: str = "") -> JSONResponse:
+        from .health_db import get_mychart_page, get_mychart_pages
+        if page:
+            rec = await get_mychart_page(page)
+            return _json({"page": page, "data": rec})
+        return _json({"pages": await get_mychart_pages()})
+
+    @app.delete("/api/health/mychart/records")
+    async def api_mychart_clear() -> JSONResponse:
+        from .health_db import _get_db
+        async with _get_db() as db:
+            await db.execute("DELETE FROM mychart_pages")
+            await db.execute("DELETE FROM test_results")
+            await db.execute("DELETE FROM medications")
+            await db.execute("DELETE FROM conditions")
+            await db.execute("DELETE FROM visits")
+            await db.commit()
+        return _json({"ok": True, "message": "MyChart records cleared from DB"})
+
+    @app.get("/api/health/db/summary")
+    async def api_health_db_summary() -> JSONResponse:
+        """Full structured summary from the SQLite health DB."""
+        from .health_db import get_health_summary
+        return _json(await get_health_summary())
+
+    # ── Helen Cho — AI Health Intelligence ───────────────────────────
+    @app.get("/api/health/helen/analysis")
+    async def api_helen_analysis() -> JSONResponse:
+        """Return cached Helen Cho health analysis (runs LLM if no cache)."""
+        from .health_intelligence import run_analysis, get_cached_analysis
+        cached = get_cached_analysis()
+        if cached and not cached.get("error"):
+            return _json(cached)
+        # No cache — trigger async analysis and return placeholder
+        asyncio.create_task(run_analysis(force_refresh=False))
+        return _json({"status": "generating", "message": "Helen is analysing your records…"})
+
+    @app.post("/api/health/helen/refresh")
+    async def api_helen_refresh() -> JSONResponse:
+        """Force a fresh LLM analysis of all health data."""
+        from .health_intelligence import run_analysis
+        result = await run_analysis(force_refresh=True)
+        return _json(result)
+
+    # ── Longevity Council ─────────────────────────────────────────────
+
+    @app.get("/api/health/council")
+    async def api_council_get() -> JSONResponse:
+        """Return cached Longevity Council report. Triggers analysis if no cache."""
+        from .longevity_council import get_cached_council, run_council
+        from .health_intelligence import _build_health_context_v2, _build_lab_trends
+        from .health_db import get_health_summary, get_today_metrics, get_latest_metrics
+        cached = get_cached_council()
+        if cached and not cached.get("_error"):
+            return _json(cached)
+        # No cache — kick off async and return placeholder
+        async def _run_council():
+            try:
+                summary, trends = await asyncio.gather(get_health_summary(), _build_lab_trends())
+                snap = await get_today_metrics() or (await get_latest_metrics(1) or [None])[0]
+                metrics = None
+                if snap:
+                    metrics = {k: snap.get(k) for k in
+                               ("steps", "resting_hr", "hrv", "sleep_hours", "blood_oxygen",
+                                "active_cal", "exercise_min", "weight") if snap.get(k) is not None}
+                ctx = await _build_health_context_v2(summary, metrics, trends)
+                await run_council(ctx, force_refresh=True)
+            except Exception as exc:
+                import logging
+                logging.getLogger(__name__).error("Council run failed: %s", exc)
+        asyncio.create_task(_run_council())
+        return _json({"status": "generating",
+                      "message": "The Longevity Council is assembling. Check back in ~2 minutes."})
+
+    @app.post("/api/health/council/refresh")
+    async def api_council_refresh(request: Request) -> JSONResponse:
+        """Force a fresh council analysis (all 13 specialists). Takes ~60-90s."""
+        from .longevity_council import run_council
+        from .health_intelligence import _build_health_context_v2, _build_lab_trends
+        from .health_db import get_health_summary, get_today_metrics, get_latest_metrics
+        body = {}
+        try:
+            body = await request.json()
+        except Exception:
+            pass
+        members = body.get("members")  # optional list of agent_ids to run
+        summary, trends = await asyncio.gather(get_health_summary(), _build_lab_trends())
+        snap = await get_today_metrics() or (await get_latest_metrics(1) or [None])[0]
+        metrics = None
+        if snap:
+            metrics = {k: snap.get(k) for k in
+                       ("steps", "resting_hr", "hrv", "sleep_hours", "blood_oxygen",
+                        "active_cal", "exercise_min", "weight") if snap.get(k) is not None}
+        ctx = await _build_health_context_v2(summary, metrics, trends)
+        result = await run_council(ctx, force_refresh=True, members=members)
+        return _json(result)
+
+    # ── Dexcom G7 CGM ─────────────────────────────────────────────────
+
+    @app.get("/api/health/dexcom/status")
+    async def api_dexcom_status() -> JSONResponse:
+        from .dexcom_sync import get_connection_status, get_current_reading
+        from .health_db import get_glucose_stats
+        status = get_connection_status()
+        if status.get("connected"):
+            status["current"]   = await get_current_reading()
+            status["stats_24h"] = await get_glucose_stats(24)
+            status["stats_7d"]  = await get_glucose_stats(168)
+        return _json(status)
+
+    @app.get("/api/health/dexcom/connect")
+    async def api_dexcom_connect(request: Request) -> RedirectResponse:
+        from .dexcom_sync import build_auth_url
+        base = str(request.base_url).rstrip("/")
+        redirect_uri = f"{base}/api/health/dexcom/callback"
+        url = build_auth_url(redirect_uri)
+        return RedirectResponse(url)
+
+    @app.get("/api/health/dexcom/callback")
+    async def api_dexcom_callback(
+        request: Request,
+        code: str | None = None,
+        error: str | None = None,
+        state: str | None = None,
+    ) -> RedirectResponse:
+        from .dexcom_sync import exchange_code
+        if error:
+            log.error("Dexcom OAuth error: %s", error)
+            return RedirectResponse(f"/?dexcom=error&detail={error}")
+        if not code:
+            return RedirectResponse("/?dexcom=missing_code")
+        base = str(request.base_url).rstrip("/")
+        redirect_uri = f"{base}/api/health/dexcom/callback"
+        try:
+            await exchange_code(code, redirect_uri)
+            return RedirectResponse("/?dexcom=connected")
+        except Exception as exc:
+            log.error("Dexcom callback exchange failed: %s", exc)
+            # Return JSON error instead of 500 so we can see what went wrong
+            return JSONResponse(
+                {"error": "Token exchange failed", "detail": str(exc)},
+                status_code=400,
+            )
+
+    @app.post("/api/health/dexcom/sync")
+    async def api_dexcom_sync(request: Request) -> JSONResponse:
+        from .dexcom_sync import sync_egvs
+        body = {}
+        try:
+            body = await request.json()
+        except Exception:
+            pass
+        hours_back = int(body.get("hours_back", 24))
+        result = await sync_egvs(hours_back=hours_back)
+        return _json(result)
+
+    @app.get("/api/health/dexcom/current")
+    async def api_dexcom_current() -> JSONResponse:
+        from .dexcom_sync import get_current_reading, sync_egvs
+        reading = await get_current_reading()
+        if not reading or reading.get("stale"):
+            await sync_egvs(hours_back=3)
+            reading = await get_current_reading()
+        return _json(reading or {"error": "No glucose data available"})
+
+    @app.get("/api/health/dexcom/history")
+    async def api_dexcom_history(hours: int = 24) -> JSONResponse:
+        from .health_db import get_glucose_readings, get_glucose_stats
+        readings = await get_glucose_readings(hours=hours)
+        stats    = await get_glucose_stats(hours=hours)
+        return _json({"readings": readings, "stats": stats, "hours": hours})
+
+    @app.get("/api/health/council/roster")
+    async def api_council_roster() -> JSONResponse:
+        """Return the Longevity Council member roster."""
+        from .longevity_council import get_council_roster
+        return _json({"council": get_council_roster()})
+
+    @app.get("/api/health/council/{agent_id}")
+    async def api_council_member(agent_id: str) -> JSONResponse:
+        """Return a single council member's latest report."""
+        from .longevity_council import get_cached_council
+        cached = get_cached_council()
+        if not cached:
+            return JSONResponse({"error": "No council report available"}, status_code=404)
+        # Oracle is stored as _oracle
+        if agent_id == "the-oracle":
+            report = cached.get("_oracle")
+        else:
+            report = cached.get(agent_id)
+        if not report:
+            return JSONResponse({"error": f"No report for {agent_id}"}, status_code=404)
+        return _json(report)
+
+    # ── EHI export ingest ─────────────────────────────────────────────
+    @app.post("/api/health/ehi/ingest")
+    async def api_ehi_ingest(request: Request, background_tasks: BackgroundTasks) -> JSONResponse:
+        """Ingest a pre-extracted Epic EHI export directory into the health DB."""
+        from .ehi_ingest import ingest_all
+        body = {}
+        try:
+            body = await request.json()
+        except Exception:
+            pass
+        record_dir = body.get("record_dir", "/tmp/health_record")
+        async def _run():
+            try:
+                await ingest_all(record_dir)
+            except Exception as exc:
+                import logging
+                logging.getLogger(__name__).error("EHI ingest failed: %s", exc)
+        background_tasks.add_task(_run)
+        return _json({"ok": True, "message": f"EHI ingestion started from {record_dir}"})
+
+    # ── ECG readings ──────────────────────────────────────────────────
+    @app.get("/api/health/ecg")
+    async def api_ecg_list() -> JSONResponse:
+        from .health_db import get_ecg_readings
+        return _json({"readings": await get_ecg_readings(20)})
+
+    @app.get("/api/health/ecg/{ecg_id}")
+    async def api_ecg_waveform(ecg_id: int) -> JSONResponse:
+        from .health_db import get_ecg_waveform
+        rec = await get_ecg_waveform(ecg_id)
+        if not rec:
+            return JSONResponse({"error": "Not found"}, status_code=404)
+        return _json(rec)
+
+    # ── Blood pressure ────────────────────────────────────────────────
+    @app.get("/api/health/bp")
+    async def api_bp_list() -> JSONResponse:
+        from .health_db import get_bp_readings, get_latest_bp
+        return _json({
+            "latest":  await get_latest_bp(),
+            "history": await get_bp_readings(30),
+        })
+
+    @app.post("/api/health/bp/ingest")
+    async def api_bp_ingest(request: Request) -> JSONResponse:
+        """Manual BP reading ingest — accepts flat {systolic, diastolic, pulse, date}."""
+        from .health_db import upsert_bp_reading, log_sync as _ls2
+        try:
+            body = await request.json()
+            if not body.get("systolic") or not body.get("diastolic"):
+                return JSONResponse({"ok": False, "error": "systolic and diastolic required"}, status_code=400)
+            body.setdefault("source", "manual")
+            body.setdefault("reading_date", __import__("datetime").datetime.utcnow().isoformat())
+            await upsert_bp_reading(body)
+            await _ls2("bp_manual", "success", f"{body['systolic']}/{body['diastolic']}")
+            return _json({"ok": True})
+        except Exception as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
+
+    # ── Omron Connect OAuth ───────────────────────────────────────────
+    @app.get("/api/health/omron/status")
+    async def api_omron_status() -> JSONResponse:
+        from .omron_sync import get_connection_status
+        return _json(get_connection_status())
+
+    @app.get("/api/health/omron/connect")
+    async def api_omron_connect(request: Request):
+        """Redirect user to Omron authorization page."""
+        from fastapi.responses import RedirectResponse
+        from .omron_sync import build_auth_url
+        try:
+            base = str(request.base_url).rstrip("/")
+            redirect_uri = f"{base}/api/health/omron/callback"
+            url = build_auth_url(redirect_uri)
+            return RedirectResponse(url)
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=503)
+
+    @app.get("/api/health/omron/callback")
+    async def api_omron_callback(request: Request, code: str = "", error: str = ""):
+        """Omron OAuth callback — exchanges code for tokens then redirects home."""
+        from fastapi.responses import RedirectResponse
+        from .omron_sync import exchange_code
+        if error:
+            return JSONResponse({"error": error}, status_code=400)
+        if not code:
+            return JSONResponse({"error": "No code received"}, status_code=400)
+        base = str(request.base_url).rstrip("/")
+        redirect_uri = f"{base}/api/health/omron/callback"
+        tokens = await exchange_code(code, redirect_uri)
+        # Persist redirect_uri so refresh flow can reuse it
+        from .omron_sync import _load_tokens, _save_tokens
+        t = _load_tokens()
+        t["redirect_uri"] = redirect_uri
+        _save_tokens(t)
+        return RedirectResponse("/?omron=connected")
+
+    @app.post("/api/health/omron/sync")
+    async def api_omron_sync(request: Request,
+                             background_tasks: BackgroundTasks) -> JSONResponse:
+        from .omron_sync import sync_bp
+        body = {}
+        try:
+            body = await request.json()
+        except Exception:
+            pass
+        days_back = int(body.get("days_back", 90))
+        background_tasks.add_task(sync_bp, days_back)
+        return _json({"ok": True, "message": f"Omron sync started (last {days_back} days)"})
+
+    @app.post("/api/health/omron/notification")
+    async def api_omron_notification(request: Request,
+                                     background_tasks: BackgroundTasks) -> JSONResponse:
+        """
+        Webhook endpoint for Omron push notifications.
+        Omron POSTs here whenever the user uploads new data.
+        Must return HTTP 200.  Triggers an automatic sync in background.
+        """
+        from .omron_sync import handle_notification
+        try:
+            payload = await request.json()
+        except Exception:
+            payload = {}
+        background_tasks.add_task(handle_notification, payload)
+        return JSONResponse({"ok": True}, status_code=200)
+
+    @app.post("/api/health/omron/revoke")
+    async def api_omron_revoke() -> JSONResponse:
+        """Revoke Omron consent and clear stored tokens."""
+        from .omron_sync import revoke
+        ok = await revoke()
+        return _json({"ok": ok, "message": "Consent revoked" if ok else "Nothing to revoke"})
+
+    # ------------------------------------------------------------------
     # LLM Gateway — must be registered BEFORE the legacy catch-all below
     # ------------------------------------------------------------------
 
@@ -3426,6 +4370,12 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             return JSONResponse({"error": "LLM gateway not initialised", "available": False}, status_code=503)
         status = await asyncio.to_thread(gw.get_status)
         return JSONResponse({"available": True, **status})
+
+    @app.get("/api/gateway/usage")
+    async def api_gateway_usage(hours: int = 24) -> JSONResponse:
+        """Token usage and estimated cost summary for the past N hours."""
+        from .llm_gateway import usage_summary
+        return _json(usage_summary(hours=hours))
 
     @app.post("/api/gateway/test")
     async def api_gateway_test(request: Request) -> JSONResponse:
@@ -4104,6 +5054,173 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             list(body.get("tags", [])),
         )
         return _json({"idea": idea}, status_code=201)
+
+    @app.post("/api/ideas/bulk-import")
+    async def api_ideas_bulk_import(
+        file: UploadFile = File(None),
+        domain: str = Form("passive-income"),
+        tags: str = Form(""),          # comma-separated
+        source: str = Form("import"),
+    ) -> JSONResponse:
+        """
+        Import multiple ideas from a .docx, .txt, or .json file.
+
+        Smart .docx mode: detects title/citation lines and pairs each with the
+        following description paragraph, saving it as the idea's notes field.
+        Year headers and category labels are extracted as auto-tags.
+
+        Plain text / .txt: one idea per non-empty line (no description pairing).
+        JSON: array of strings, or array of {text, notes} objects.
+
+        Returns {imported, skipped, ideas[]}.
+        """
+        import re as _re
+        from .ideas import add_idea as _add_idea
+
+        if file is None or not file.filename:
+            raise HTTPException(status_code=400, detail="No file provided")
+
+        raw_bytes = await file.read()
+        fname = (file.filename or "").lower()
+        base_tags = [t.strip() for t in tags.split(",") if t.strip()]
+
+        # Each entry: {"text": str, "notes": str, "tags": list[str]}
+        entries: list[dict] = []
+
+        # ── parse by file type ───────────────────────────────────────────
+        if fname.endswith(".docx"):
+            try:
+                import io
+                from docx import Document  # python-docx
+
+                doc = Document(io.BytesIO(raw_bytes))
+                paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+            except Exception as exc:
+                raise HTTPException(status_code=422, detail=f"Could not parse .docx: {exc}")
+
+            # Heuristics ─────────────────────────────────────────────────────
+            # A paragraph is a YEAR HEADER if it's just a 4-digit year (2024–2040).
+            # A paragraph is a CATEGORY HEADER if it's short (≤80 chars), no period,
+            #   looks like a label (e.g. "Leadership", "Christian Formation (CF)").
+            # A paragraph is a TITLE/CITATION if it's reasonably short (≤300 chars)
+            #   AND it does NOT start with common description phrases like "This book",
+            #   "This work", "Designed as", "Focused on", etc.
+            # A paragraph is a DESCRIPTION if it's longer than the title or starts
+            #   with those description phrases.
+            _year_re  = _re.compile(r'^\d{4}$')
+            _desc_starts = (
+                "this book", "this work", "this volume", "this formation",
+                "this capstone", "this revised", "this final", "this applied",
+                "this practical", "this culminating", "designed as", "designed for",
+                "focused on", "focusing on", "reframing", "intended for",
+            )
+
+            def _is_year(p: str) -> bool:
+                return bool(_year_re.match(p))
+
+            def _is_category(p: str) -> bool:
+                # Short, no trailing period after meaningful text, no year in parens
+                return (
+                    len(p) <= 80
+                    and not _re.search(r'\(\d{4}\)', p)
+                    and not p.lower().startswith(_desc_starts)
+                )
+
+            def _is_description(p: str) -> bool:
+                return p.lower().startswith(_desc_starts) or len(p) > 300
+
+            current_year = ""
+            current_category = ""
+            i = 0
+            while i < len(paragraphs):
+                para = paragraphs[i]
+                next_para = paragraphs[i + 1] if i + 1 < len(paragraphs) else ""
+
+                # ── Year header (e.g. "2026") ─────────────────────────────
+                if _is_year(para):
+                    current_year = para
+                    i += 1
+                    continue
+
+                # ── Orphaned / leading description — skip ─────────────────
+                if _is_description(para):
+                    i += 1
+                    continue
+
+                # ── Category header vs. title ─────────────────────────────
+                # A paragraph is a CATEGORY HEADER when it is short AND the
+                # next paragraph is NOT a description (i.e. nothing follows it
+                # that would pair with it as notes).
+                is_short_label = (
+                    len(para) <= 80
+                    and not _re.search(r'\(\d{4}\)', para)   # no year-in-parens
+                    and not para.endswith('.')                 # not a sentence
+                )
+                if is_short_label and not _is_description(next_para):
+                    current_category = para
+                    i += 1
+                    continue
+
+                # ── Title (with optional paired description) ──────────────
+                auto_tags = list(base_tags)
+                if current_year:
+                    auto_tags.append(current_year)
+                if current_category:
+                    auto_tags.append(current_category)
+
+                if next_para and _is_description(next_para):
+                    entries.append({"text": para, "notes": next_para, "tags": auto_tags})
+                    i += 2  # consume title + description together
+                else:
+                    entries.append({"text": para, "notes": "", "tags": auto_tags})
+                    i += 1
+
+        elif fname.endswith(".json"):
+            try:
+                data = json.loads(raw_bytes.decode("utf-8", errors="replace"))
+                if isinstance(data, list):
+                    for item in data:
+                        if isinstance(item, dict):
+                            t = str(item.get("text", item.get("title", ""))).strip()
+                            n = str(item.get("notes", item.get("description", ""))).strip()
+                            if t:
+                                entries.append({"text": t, "notes": n, "tags": list(base_tags)})
+                        elif str(item).strip():
+                            entries.append({"text": str(item).strip(), "notes": "", "tags": list(base_tags)})
+                else:
+                    raise HTTPException(status_code=422, detail="JSON must be an array")
+            except json.JSONDecodeError as exc:
+                raise HTTPException(status_code=422, detail=f"Invalid JSON: {exc}")
+
+        else:
+            # Plain text / .txt / .md — one idea per non-empty line
+            text = raw_bytes.decode("utf-8", errors="replace")
+            for ln in text.splitlines():
+                ln = ln.strip().lstrip("-•*·▪‣⁃").strip()
+                if ln:
+                    entries.append({"text": ln, "notes": "", "tags": list(base_tags)})
+
+        # ── deduplicate and create ────────────────────────────────────────
+        imported: list[dict] = []
+        skipped = 0
+        seen: set[str] = set()
+        for entry in entries:
+            key = entry["text"].lower()[:120]
+            if key in seen or len(entry["text"]) < 3:
+                skipped += 1
+                continue
+            seen.add(key)
+            idea = await asyncio.to_thread(
+                _add_idea,
+                entry["text"],
+                source,
+                entry["notes"],
+                domain,
+                entry["tags"],
+            )
+            imported.append(idea)
+
+        return _json({"imported": len(imported), "skipped": skipped, "ideas": imported}, status_code=201)
 
     @app.post("/api/ideas/{idea_id}/queue")
     async def api_ideas_queue(idea_id: str) -> JSONResponse:
@@ -6128,7 +7245,17 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         request: Request,
         background_tasks: BackgroundTasks,
     ) -> JSONResponse:
-        """Trigger Shap-E reconstruction (async). Body: {project_id, image_filename?, prompt?}"""
+        """Trigger TRELLIS (preferred) or Shap-E (fallback) reconstruction.
+
+        Body: {
+          project_id,
+          image_filename?,   # explicit upload filename; auto-detected if omitted
+          prompt?,           # text prompt for Shap-E text-mode fallback
+          pipeline_type?,    # "512" | "1024" | "1024_cascade"  (default "512")
+          texture_size?,     # 512 | 1024 | 2048  (default 1024)
+          seed?,             # int  (default 42)
+        }
+        """
         support = _forge_support_or_503()
         body = await request.json()
         project_id = str(body.get("project_id", "")).strip()
@@ -6142,36 +7269,272 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
         image_filename = str(body.get("image_filename", "")).strip()
         prompt = str(body.get("prompt", "")).strip()
+        pipeline_type = str(body.get("pipeline_type", "512")).strip()
+        texture_size = int(body.get("texture_size", 1024))
+        seed = int(body.get("seed", 42))
 
+        # ── Auto-detect best image ──────────────────────────────────────────
+        uploads_dir = await asyncio.to_thread(store.uploads_dir, project_id)
         image_path = ""
+
         if image_filename:
-            uploads_dir = await asyncio.to_thread(store.uploads_dir, project_id)
             candidate = uploads_dir / image_filename
             if candidate.exists():
                 image_path = str(candidate)
 
-        # Run Shap-E in background (it can be slow)
-        async def _run_reconstruct():
+        if not image_path:
+            # Prefer 'front' capture frame, then any captured frame, then any photo upload
+            _photo_exts = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".tiff", ".bmp"}
+            sessions = project.get("capture_sessions", [])
+            # Look through all sessions for a front frame first, then any frame
+            for preferred_view in ("front", ""):
+                for session in reversed(sessions):
+                    for frame in (session.get("frames") or []):
+                        if preferred_view and frame.get("view_type") != preferred_view:
+                            continue
+                        fname = frame.get("filename", "")
+                        candidate = uploads_dir / fname
+                        if candidate.exists() and candidate.suffix.lower() in _photo_exts:
+                            image_path = str(candidate)
+                            break
+                    if image_path:
+                        break
+                if image_path:
+                    break
+
+        if not image_path:
+            # Last resort: any photo file in uploads/
             try:
-                await asyncio.to_thread(
-                    support.reconstruct_shape_e, project_id, image_path, prompt
+                _photo_exts = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".tiff", ".bmp"}
+                for f in sorted(uploads_dir.iterdir()):
+                    if f.suffix.lower() in _photo_exts:
+                        image_path = str(f)
+                        break
+            except Exception:
+                pass
+
+        # ── Launch background reconstruction ───────────────────────────────
+        _trellis_venv = (
+            Path(__file__).parent.parent
+            / "vendor" / "trellis-mac" / ".venv" / "bin" / "python"
+        )
+        use_trellis = _trellis_venv.exists() and bool(image_path)
+
+        async def _run_reconstruct():
+            if use_trellis:
+                result = await asyncio.to_thread(
+                    support.reconstruct_trellis,
+                    project_id, image_path,
+                    seed, pipeline_type, texture_size,
                 )
-            except Exception as _exc:
-                await asyncio.to_thread(
-                    store.log_event, project_id, "reconstruct_error", str(_exc)
-                )
+                if not result.get("ok"):
+                    # TRELLIS failed — log and fall back to Shap-E
+                    await asyncio.to_thread(
+                        store.log_event, project_id,
+                        "trellis_fallback",
+                        f"TRELLIS failed ({result.get('error','?')}); trying Shap-E",
+                    )
+                    try:
+                        await asyncio.to_thread(
+                            support.reconstruct_shape_e, project_id, image_path, prompt
+                        )
+                    except Exception as _exc:
+                        await asyncio.to_thread(
+                            store.log_event, project_id, "reconstruct_error", str(_exc)
+                        )
+            else:
+                # No TRELLIS venv (or no image) — use Shap-E
+                try:
+                    await asyncio.to_thread(
+                        support.reconstruct_shape_e, project_id, image_path, prompt
+                    )
+                except Exception as _exc:
+                    await asyncio.to_thread(
+                        store.log_event, project_id, "reconstruct_error", str(_exc)
+                    )
 
         background_tasks.add_task(_run_reconstruct)
+        method = "trellis" if use_trellis else "shap_e"
         await asyncio.to_thread(
             store.set_status, project_id, "modeling",
-            "Shap-E reconstruction started"
+            f"{method} reconstruction started",
         )
         return _json({
             "ok": True,
             "status": "modeling",
-            "message": "Shap-E reconstruction started in background.",
+            "method": method,
+            "image": Path(image_path).name if image_path else None,
+            "pipeline_type": pipeline_type if use_trellis else None,
+            "message": (
+                f"TRELLIS reconstruction started (image: {Path(image_path).name}, pipeline: {pipeline_type})."
+                if use_trellis else
+                "Shap-E reconstruction started in background."
+            ),
             "project_id": project_id,
         })
+
+    # ── WoW Model Bridge ──────────────────────────────────────────────────────
+
+    @app.get("/api/forge/wow/status")
+    async def api_wow_status() -> JSONResponse:
+        """WoW bridge health — export folder, wow install, blender, model count."""
+        from .wow_forge import get_status as _wow_status
+        return _json(await asyncio.to_thread(_wow_status))
+
+    @app.get("/api/forge/wow/models")
+    async def api_wow_models(search: str = "") -> JSONResponse:
+        """List GLB/OBJ files available in the wow.export watch folder."""
+        from .wow_forge import list_available_models
+        return _json({"models": await asyncio.to_thread(list_available_models, search)})
+
+    @app.post("/api/forge/wow/import")
+    async def api_wow_import(request: Request) -> JSONResponse:
+        """Copy a model from the watch folder into a Forge project."""
+        body = await request.json()
+        filename   = str(body.get("filename",   "")).strip()
+        project_id = str(body.get("project_id", "")).strip()
+        if not filename or not project_id:
+            raise HTTPException(status_code=400, detail="filename and project_id are required")
+        store = _forge_store_or_503()
+        from .wow_forge import import_model_to_forge
+        result = await asyncio.to_thread(import_model_to_forge, filename, store, project_id)
+        if not result.get("ok"):
+            raise HTTPException(status_code=400, detail=result.get("error", "Import failed"))
+        return _json(result)
+
+    @app.get("/api/forge/wow/config")
+    async def api_wow_get_config() -> JSONResponse:
+        from .wow_forge import load_config as _wc
+        return _json(await asyncio.to_thread(_wc))
+
+    @app.post("/api/forge/wow/config")
+    async def api_wow_set_config(request: Request) -> JSONResponse:
+        from .wow_forge import save_config as _wsc
+        body = await request.json()
+        result = await asyncio.to_thread(_wsc, body)
+        return _json({"ok": True, **result})
+
+    # ── Forge Convert — format conversion, repair, scale, WoW tools ───────────
+
+    @app.post("/api/forge/convert/format")
+    async def api_forge_convert_format(
+        project_id: str = Form(...),
+        target_format: str = Form(...),
+        file: UploadFile = File(None),
+        source_filename: str = Form(None),
+    ) -> JSONResponse:
+        """Convert an uploaded or existing project file to a new 3D format."""
+        store = _forge_store_or_503()
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+
+        uploads_dir = await asyncio.to_thread(store.uploads_dir, project_id)
+
+        if file is not None and file.filename:
+            safe_name = re.sub(r"[^A-Za-z0-9._-]+", "-", file.filename).strip("-._") or "upload"
+            src_path = uploads_dir / safe_name
+            src_path.write_bytes(await file.read())
+        elif source_filename:
+            src_path = uploads_dir / Path(source_filename).name
+            if not src_path.exists():
+                raise HTTPException(status_code=404, detail=f"File not found in project: {source_filename}")
+        else:
+            raise HTTPException(status_code=400, detail="Provide a file upload or source_filename")
+
+        from .forge_convert import convert_format as _cf
+        result = await asyncio.to_thread(_cf, src_path, target_format, uploads_dir)
+        if not result.get("ok"):
+            raise HTTPException(status_code=422, detail=result.get("error", "Conversion failed"))
+
+        await asyncio.to_thread(
+            store.add_source_file, project_id, result["filename"], "3d_model", result["size_bytes"]
+        )
+        result["download_url"] = f"/api/forge/projects/{project_id}/file/{result['filename']}"
+        return _json(result)
+
+    @app.post("/api/forge/convert/repair")
+    async def api_forge_convert_repair(request: Request) -> JSONResponse:
+        """Run mesh repair (fix normals, fill holes, fix winding) on a project file."""
+        store = _forge_store_or_503()
+        body = await request.json()
+        project_id      = str(body.get("project_id", "")).strip()
+        source_filename = str(body.get("source_filename", "")).strip()
+        if not project_id or not source_filename:
+            raise HTTPException(status_code=400, detail="project_id and source_filename are required")
+
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+
+        uploads_dir = await asyncio.to_thread(store.uploads_dir, project_id)
+        src_path = uploads_dir / Path(source_filename).name
+        if not src_path.exists():
+            raise HTTPException(status_code=404, detail=f"File not found: {source_filename}")
+
+        from .forge_convert import repair_mesh as _rm
+        result = await asyncio.to_thread(
+            _rm,
+            src_path,
+            uploads_dir,
+            fix_normals=bool(body.get("fix_normals", True)),
+            fill_holes=bool(body.get("fill_holes", True)),
+            fix_winding=bool(body.get("fix_winding", True)),
+        )
+        if not result.get("ok"):
+            raise HTTPException(status_code=422, detail=result.get("error", "Repair failed"))
+
+        await asyncio.to_thread(
+            store.add_source_file, project_id, result["filename"], "3d_model", result["size_bytes"]
+        )
+        result["download_url"] = f"/api/forge/projects/{project_id}/file/{result['filename']}"
+        return _json(result)
+
+    @app.post("/api/forge/convert/scale")
+    async def api_forge_convert_scale(request: Request) -> JSONResponse:
+        """Rescale, normalize bounding box, or center a project mesh."""
+        store = _forge_store_or_503()
+        body = await request.json()
+        project_id      = str(body.get("project_id", "")).strip()
+        source_filename = str(body.get("source_filename", "")).strip()
+        operation       = str(body.get("operation", "rescale")).strip()
+        if not project_id or not source_filename:
+            raise HTTPException(status_code=400, detail="project_id and source_filename are required")
+
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+
+        uploads_dir = await asyncio.to_thread(store.uploads_dir, project_id)
+        src_path = uploads_dir / Path(source_filename).name
+        if not src_path.exists():
+            raise HTTPException(status_code=404, detail=f"File not found: {source_filename}")
+
+        from .forge_convert import scale_mesh as _sm
+        result = await asyncio.to_thread(
+            _sm,
+            src_path,
+            uploads_dir,
+            operation=operation,
+            target_size=float(body.get("target_size", 100.0)),
+            target_unit=str(body.get("target_unit", "mm")),
+            current_unit=str(body.get("current_unit", "mm")),
+        )
+        if not result.get("ok"):
+            raise HTTPException(status_code=422, detail=result.get("error", "Scale operation failed"))
+
+        await asyncio.to_thread(
+            store.add_source_file, project_id, result["filename"], "3d_model", result["size_bytes"]
+        )
+        result["download_url"] = f"/api/forge/projects/{project_id}/file/{result['filename']}"
+        return _json(result)
+
+    @app.get("/api/forge/convert/blender-check")
+    async def api_forge_convert_blender_check() -> JSONResponse:
+        """Check whether Blender and the WoW Blender Studio addon are installed."""
+        from .forge_convert import check_blender_setup as _cbs
+        result = await asyncio.to_thread(_cbs)
+        return _json(result)
 
     # ── End Forge ──────────────────────────────────────────────────────────────
 
