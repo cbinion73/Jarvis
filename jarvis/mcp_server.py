@@ -272,6 +272,190 @@ async def jarvis_approvals() -> str:
 
 
 # ---------------------------------------------------------------------------
+# Publishing & Ideas tools (added for Ghostwritr integration)
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+async def jarvis_add_idea(
+    text: str,
+    notes: str = "",
+    domain: str = "passive-income",
+    tags: list[str] = [],
+) -> str:
+    """
+    Add a new idea to the JARVIS Idea Inbox.
+    Ghostwritr can use this to push book concepts directly into JARVIS.
+
+    Args:
+        text: The idea title or short description (required).
+        notes: Optional longer notes or description.
+        domain: Category — 'books', 'passive-income', 'content', etc.
+        tags: Optional list of tag strings.
+    """
+    result = await _post("/api/ideas", {"text": text, "notes": notes, "domain": domain, "tags": tags, "source": "ghostwritr"})
+    idea = result.get("idea", result)
+    return f"✅ Idea added: [{idea.get('id','')}] {idea.get('text', text)}"
+
+
+@mcp.tool()
+async def jarvis_list_ideas(
+    status: str = "",
+    domain: str = "",
+    limit: int = 20,
+) -> str:
+    """
+    List ideas from the JARVIS Idea Inbox.
+    Ghostwritr can use this to pull book ideas captured in JARVIS.
+
+    Args:
+        status: Filter by status — 'captured', 'queued', 'researching', 'done', 'passed'. Empty = all.
+        domain: Filter by domain — 'books', 'passive-income', etc. Empty = all.
+        limit: Max results to return (default 20).
+    """
+    params: dict = {}
+    if status:
+        params["status"] = status
+    if domain:
+        params["domain"] = domain
+    data = await _get("/api/ideas", **params)
+    ideas = data if isinstance(data, list) else data.get("ideas", [])
+    ideas = ideas[:limit]
+    if not ideas:
+        return "No ideas found."
+    lines = [f"💡 {len(ideas)} idea(s):"]
+    for i in ideas:
+        status_icon = {"captured": "💭", "queued": "📋", "researching": "🔍", "done": "✅", "passed": "⏭"}.get(i.get("status",""), "•")
+        notes_snippet = (" — " + i.get("notes","")[:80]) if i.get("notes") else ""
+        lines.append(f"  {status_icon} [{i.get('id','')[:8]}] {i.get('text','')}{notes_snippet}")
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def jarvis_trigger_launch(
+    slug: str,
+    trigger_type: str = "pre_launch",
+    force: bool = False,
+) -> str:
+    """
+    Trigger the JARVIS book launch pipeline for a Ghostwritr book.
+    Generates social posts, press release, emails, and Amazon copy.
+
+    Args:
+        slug: The book slug from Ghostwritr (e.g. 'the-thinking-partner').
+        trigger_type: 'pre_launch' (editing stage) or 'post_publish' (published).
+        force: If True, regenerate even if assets already exist.
+    """
+    result = await _post(f"/api/publishing/launch/{slug}/generate", {"force": force, "trigger": trigger_type})
+    if result.get("ok") or result.get("status") == "started":
+        return f"🚀 Launch pipeline started for '{slug}'. Generation runs in the background — check status in a few minutes."
+    return f"Response: {json.dumps(result, indent=2)}"
+
+
+@mcp.tool()
+async def jarvis_get_launch_status(slug: str) -> str:
+    """
+    Check the status of launch asset generation for a book.
+
+    Args:
+        slug: The book slug from Ghostwritr.
+    """
+    data = await _get(f"/api/publishing/launch/{slug}")
+    if not data:
+        return f"No launch assets found for '{slug}'."
+    status = data.get("status", "unknown")
+    generated_at = data.get("generated_at", "")[:10] if data.get("generated_at") else "never"
+    assets = data.get("assets", {})
+    available = [k for k, v in assets.items() if v]
+    lines = [
+        f"📚 Launch assets for '{slug}':",
+        f"  Status: {status}",
+        f"  Generated: {generated_at}",
+        f"  Available: {', '.join(available) if available else 'none'}",
+    ]
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def jarvis_create_work_item(
+    title: str,
+    description: str = "",
+    priority: str = "normal",
+    agent: str = "",
+) -> str:
+    """
+    Create a work item / task in the JARVIS agent queue.
+    Ghostwritr can use this to request research, marketing work, etc.
+
+    Args:
+        title: Task title (required).
+        description: Detailed description of the work.
+        priority: 'high', 'normal', or 'low'.
+        agent: Optional agent ID to assign to (e.g. 'pepper', 'friday').
+    """
+    body = {"title": title, "description": description, "priority": priority}
+    if agent:
+        body["agent_id"] = agent
+    result = await _post("/api/work-items", body)
+    item = result.get("item", result)
+    return f"✅ Work item created: [{item.get('id','')}] {item.get('title', title)}"
+
+
+@mcp.tool()
+async def jarvis_queue_social_post(
+    platform: str,
+    content: str,
+    book_slug: str = "",
+    schedule_at: str = "",
+) -> str:
+    """
+    Queue a social media post through JARVIS.
+
+    Args:
+        platform: 'twitter', 'linkedin', or 'both'.
+        content: The post text.
+        book_slug: Optional associated book slug for context.
+        schedule_at: Optional ISO 8601 scheduled time. Empty = now.
+    """
+    body = {"platform": platform, "content": content, "source": "ghostwritr"}
+    if book_slug:
+        body["book_slug"] = book_slug
+    if schedule_at:
+        body["schedule_at"] = schedule_at
+    result = await _post("/api/social/queue", body)
+    return f"📤 Post queued: {result.get('message', json.dumps(result))}"
+
+
+@mcp.tool()
+async def jarvis_publishing_overview() -> str:
+    """
+    Get a summary of the JARVIS publishing dashboard — active books,
+    pipeline status, pending reviews, and launch asset readiness.
+    """
+    data = await _get("/api/publishing/dashboard")
+    scan = await _get("/api/publishing/launch-scan")
+    books_with_assets = sum(1 for b in scan.get("books", []) if b.get("has_assets"))
+    total_books = len(scan.get("books", []))
+    pipeline = data.get("pipeline", {})
+    pending_reviews = len(data.get("pending_reviews", []))
+    lines = [
+        "📊 Publishing Overview:",
+        f"  Books in Ghostwritr: {total_books}",
+        f"  Books with launch assets: {books_with_assets}/{total_books}",
+        f"  Pending reviews: {pending_reviews}",
+    ]
+    if pipeline:
+        for stage, count in pipeline.items():
+            if count:
+                lines.append(f"  Pipeline — {stage}: {count}")
+    if scan.get("books"):
+        lines.append("\n  Books:")
+        for b in scan["books"][:10]:
+            icon = "✅" if b.get("has_assets") else ("🚀" if b.get("trigger") else "·")
+            lines.append(f"    {icon} {b.get('title', b.get('slug'))} [{b.get('book_status','')}]")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # Entry point — SSE transport for network access
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":

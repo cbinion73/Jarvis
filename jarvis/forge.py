@@ -8,6 +8,8 @@ Data root: ~/.jarvis/forge/
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 import threading
 import uuid
 from datetime import datetime, timezone
@@ -882,6 +884,127 @@ Voice guidance:
                 "error": str(exc),
                 "method": "shap_e",
             }
+
+    def reconstruct_trellis(
+        self,
+        project_id: str,
+        image_path: str,
+        seed: int = 42,
+        pipeline_type: str = "512",
+        texture_size: int = 1024,
+    ) -> dict:
+        """Use TRELLIS.2 (Apple Silicon) to generate a GLB from a single photo.
+
+        Runs the trellis-mac venv as a subprocess so its heavyweight deps stay
+        isolated from the main JARVIS environment.  Falls back gracefully if the
+        venv or generate.py is not found.
+        """
+        # Resolve paths relative to this file (jarvis/forge.py → repo root)
+        repo_root = Path(__file__).parent.parent
+        venv_python = repo_root / "vendor" / "trellis-mac" / ".venv" / "bin" / "python"
+        generate_script = repo_root / "vendor" / "trellis-mac" / "generate.py"
+
+        if not venv_python.exists():
+            return {
+                "ok": False,
+                "error": f"TRELLIS venv not found at {venv_python}. Run vendor/trellis-mac/setup.sh first.",
+                "method": "trellis",
+            }
+        if not generate_script.exists():
+            return {
+                "ok": False,
+                "error": f"TRELLIS generate.py not found at {generate_script}.",
+                "method": "trellis",
+            }
+        if not image_path or not Path(image_path).exists():
+            return {
+                "ok": False,
+                "error": f"Image not found: {image_path}",
+                "method": "trellis",
+            }
+
+        model_id = str(uuid.uuid4())
+        models_dir = self.store.models_dir(project_id)
+        output_stem = str(models_dir / f"trellis_{model_id[:8]}")
+
+        try:
+            result = subprocess.run(
+                [
+                    str(venv_python),
+                    str(generate_script),
+                    image_path,
+                    "--output", output_stem,
+                    "--seed", str(seed),
+                    "--pipeline-type", pipeline_type,
+                    "--texture-size", str(texture_size),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=3600,  # 60 min hard limit (TRELLIS.2-4B is slow on first MPS load)
+            )
+        except subprocess.TimeoutExpired:
+            self.store.log_event(project_id, "trellis_error", "subprocess timed out after 3600s")
+            return {"ok": False, "error": "TRELLIS reconstruction timed out.", "method": "trellis"}
+        except Exception as exc:
+            self.store.log_event(project_id, "trellis_error", str(exc))
+            return {"ok": False, "error": str(exc), "method": "trellis"}
+
+        glb_path = Path(output_stem + ".glb")
+        obj_path = Path(output_stem + ".obj")
+
+        if result.returncode != 0 or not glb_path.exists():
+            err = (result.stderr or result.stdout or "unknown error").strip()[-500:]
+            self.store.log_event(project_id, "trellis_error", err)
+            return {
+                "ok": False,
+                "error": err,
+                "returncode": result.returncode,
+                "method": "trellis",
+            }
+
+        glb_filename = glb_path.name
+        file_size = glb_path.stat().st_size
+
+        model_dict = {
+            "model_id": model_id,
+            "version": 1,
+            "title": f"TRELLIS reconstruction ({Path(image_path).name[:40]})",
+            "method": "trellis",
+            "filename": glb_filename,
+            "format": "glb",
+            "file_size_bytes": file_size,
+            "pipeline_type": pipeline_type,
+            "texture_size": texture_size,
+            "source_image": Path(image_path).name,
+            "bounding_box_mm": {},
+            "is_manifold": None,
+            "was_repaired": False,
+            "repair_notes": "",
+            "print_readiness": {},
+            "created_at": _now(),
+            "notes": "TRELLIS.2 reconstruction — confirm scale before printing.",
+        }
+
+        # Register the OBJ too if present (full-res geometry, no textures)
+        if obj_path.exists():
+            obj_dict = {**model_dict,
+                        "model_id": str(uuid.uuid4()),
+                        "title": model_dict["title"] + " (OBJ, full-res)",
+                        "filename": obj_path.name,
+                        "format": "obj",
+                        "file_size_bytes": obj_path.stat().st_size,
+                        "notes": "Full-resolution OBJ (no textures). Use GLB for viewing.",
+                        }
+            self.store.add_generated_model(project_id, obj_dict)
+
+        self.store.add_generated_model(project_id, model_dict)
+        self.store.set_status(project_id, "model_ready")
+        self.store.log_event(
+            project_id,
+            "trellis_reconstruction",
+            f"image={Path(image_path).name!r} pipeline={pipeline_type!r} glb={glb_filename!r}",
+        )
+        return {"ok": True, **model_dict}
 
     # ── Parametric generation from description ────────────────────────────────
 
