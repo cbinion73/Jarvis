@@ -3,17 +3,21 @@ from __future__ import annotations
 """
 JARVIS Browser Search — hybrid free web search.
 ================================================
-Strategy:
-  • Search:  Direct HTTP requests (urllib) — fast, no bot detection, free.
-             Primary: DuckDuckGo HTML  (html.duckduckgo.com/html/)
-             Fallback: Bing HTML       (www.bing.com/search)
-  • Fetch:   Playwright headless Chrome — for rendering JS-heavy article pages.
+Search strategy (in priority order):
+  1. Brave Search API   — real-time independent index, free 2k/month
+                          Requires: BRAVE_SEARCH_API_KEY in .env
+                          Sign up:  https://brave.com/search/api/
+  2. Wikipedia API      — encyclopedic fallback, always free, never blocked
+  3. Curated fetch      — Playwright for specific authoritative research URLs
 
-This combination gives reliable search results (HTTP avoids headless-Chrome
-bot detection on DDG) while still fetching full article text for deep research.
+Fetch strategy (for full article text):
+  1. Plain HTTP         — fast, works for most articles
+  2. Playwright Chrome  — headless fallback for JS-rendered pages
 """
 
+import json
 import logging
+import os
 import re
 import threading
 import time
@@ -162,8 +166,7 @@ def _search_wikipedia(query: str, num_results: int) -> list[SearchResult]:
         return []
 
     try:
-        import json as _json
-        data = _json.loads(html)
+        data = json.loads(html)
         search_hits = data.get("query", {}).get("search", [])
     except Exception:
         return []
@@ -184,8 +187,7 @@ def _search_wikipedia(query: str, num_results: int) -> list[SearchResult]:
         extract_html = _http_get(extract_url, timeout=8)
         if extract_html:
             try:
-                import json as _j2
-                summary = _j2.loads(extract_html)
+                summary = json.loads(extract_html)
                 extract = summary.get("extract", "")[:500]
                 if extract:
                     snippet = extract
@@ -237,13 +239,73 @@ def _fetch_curated_context(keywords: list[str], num_pages: int = 2) -> list[Sear
 
 
 # ---------------------------------------------------------------------------
+# Brave Search API (primary — free tier: 2,000 queries/month, no CC needed)
+# Sign up: https://brave.com/search/api/
+# Set BRAVE_SEARCH_API_KEY in .env
+# ---------------------------------------------------------------------------
+
+def _search_brave(query: str, num_results: int) -> list[SearchResult]:
+    """
+    Brave Search API — independent index, real-time results, free up to 2k/month.
+    Returns empty list if key not configured or request fails.
+    """
+    import json as _json
+    api_key = os.getenv("BRAVE_SEARCH_API_KEY", "")
+    if not api_key:
+        return []
+
+    url = (
+        "https://api.search.brave.com/res/v1/web/search"
+        f"?q={urllib.parse.quote_plus(query)}"
+        f"&count={min(num_results, 10)}"
+        "&search_lang=en"
+        "&text_decorations=false"
+        "&safesearch=moderate"
+    )
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Accept":                "application/json",
+            "Accept-Encoding":       "gzip",
+            "X-Subscription-Token": api_key,
+        },
+    )
+    try:
+        import gzip as _gzip
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            raw = resp.read()
+            if resp.info().get("Content-Encoding") == "gzip":
+                raw = _gzip.decompress(raw)
+            data = json.loads(raw.decode("utf-8"))
+
+        results: list[SearchResult] = []
+        for item in data.get("web", {}).get("results", [])[:num_results]:
+            title   = item.get("title", "")
+            url_    = item.get("url", "")
+            snippet = item.get("description", "") or item.get("extra_snippets", [""])[0]
+            if title and url_:
+                results.append(SearchResult(
+                    title=title,
+                    url=url_,
+                    snippet=snippet[:400],
+                ))
+        logger.info("Brave search '%s' → %d results", query[:50], len(results))
+        return results
+
+    except urllib.error.HTTPError as exc:
+        logger.warning("Brave search HTTP %s: %s", exc.code, exc.reason)
+        return []
+    except Exception as exc:
+        logger.warning("Brave search failed: %s", exc)
+        return []
+
+
+# ---------------------------------------------------------------------------
 # DDG HTTP (kept for future use if bot detection is resolved)
 # ---------------------------------------------------------------------------
 
 def _search_ddg_http(query: str, num_results: int) -> list[SearchResult]:
     """DuckDuckGo HTML search — currently blocked; returns empty list."""
-    # DDG detects and blocks both headless Chrome and plain HTTP from servers.
-    # Kept as a stub; returns empty so callers fall through to Wikipedia.
     logger.debug("DDG HTML search skipped (bot detection active)")
     return []
 
@@ -324,14 +386,15 @@ def search(
     Search the web. Returns up to num_results SearchResult objects.
 
     Strategy (in order):
-      1. Wikipedia API — official, never blocked, real factual data
-      2. Curated domain fetch — Playwright fetches authoritative research URLs
-      3. DDG / Bing HTTP stubs — kept for future use
+      1. Brave Search API — real-time, independent index, free 2k/month
+         (requires BRAVE_SEARCH_API_KEY in .env — https://brave.com/search/api/)
+      2. Wikipedia API — encyclopedic fallback, always free, never blocked
+      3. Curated domain fetch — Playwright for authoritative research URLs
 
     Args:
         query:         Search query string
         num_results:   Max results to return (default 5)
-        engine:        "auto", "wikipedia", "curated", "duckduckgo", "bing", "google"
+        engine:        "auto", "brave", "wikipedia", "curated"
         fetch_content: If True, fetches the first result's full article text
         timeout_ms:    Browser timeout for fetch fallback
 
@@ -342,23 +405,31 @@ def search(
     results: list[SearchResult] = []
 
     try:
-        # Wikipedia API: best source of factual, structured data
-        if engine in ("auto", "wikipedia"):
-            results = _search_wikipedia(query, min(num_results, 4))
+        # 1. Brave Search: real-time results with live web index
+        if engine in ("auto", "brave") and os.getenv("BRAVE_SEARCH_API_KEY"):
+            results = _search_brave(query, num_results)
 
-        # Add curated research pages if we still need more context
+        # 2. Wikipedia: encyclopedic fallback for factual queries
+        if len(results) < 2 and engine in ("auto", "wikipedia"):
+            wiki = _search_wikipedia(query, min(num_results - len(results), 4))
+            results.extend(wiki)
+
+        # 3. Curated domain fetch for research-heavy queries
         if len(results) < 2 and engine in ("auto", "curated"):
             keywords = query.lower().split()[:5]
-            curated = _fetch_curated_context(keywords, num_pages=min(2, num_results - len(results)))
+            curated = _fetch_curated_context(
+                keywords, num_pages=min(2, num_results - len(results))
+            )
             results.extend(curated)
 
     except Exception as exc:
         logger.warning("search('%s') exception: %s", query[:60], exc)
 
     elapsed = time.monotonic() - t0
+    backend = "brave" if results and os.getenv("BRAVE_SEARCH_API_KEY") else "wikipedia"
     logger.info(
-        "search('%s') → %d results in %.1fs",
-        query[:60], len(results), elapsed,
+        "search('%s') → %d results via %s in %.1fs",
+        query[:60], len(results), backend, elapsed,
     )
 
     if fetch_content and results:
