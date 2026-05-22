@@ -4247,6 +4247,150 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         background_tasks.add_task(_run)
         return _json({"ok": True, "message": f"EHI ingestion started from {record_dir}"})
 
+    # ── Phase 3: Medication Sentinel (Sherlock Holmes Protocol) ───────
+    @app.get("/api/health/medication/list")
+    async def api_medication_list() -> JSONResponse:
+        """Current medication list from health DB (cleaned, deduplicated)."""
+        from .medication_sentinel import get_medication_list
+        meds = await get_medication_list()
+        return _json({"medications": meds, "count": len(meds)})
+
+    @app.get("/api/health/medication/safety")
+    async def api_medication_safety() -> JSONResponse:
+        """Quick safety check — interactions + duplicate therapy flags."""
+        from .medication_sentinel import get_medication_list, check_interactions, check_duplicate_therapy
+        meds = await get_medication_list()
+        interactions = await check_interactions(meds)
+        duplicates = await check_duplicate_therapy(meds)
+        serious = [i for i in interactions if i.get("severity") == "Potentially serious"]
+        return _json({
+            "medication_count": len(meds),
+            "interactions": interactions,
+            "interaction_count": len(interactions),
+            "serious_count": len(serious),
+            "duplicate_therapy_concerns": duplicates,
+            "oracle_risk": "O-MONITOR" if serious else "O-CLEAR",
+        })
+
+    @app.post("/api/health/medication/sentinel")
+    async def api_medication_sentinel(request: Request) -> JSONResponse:
+        """Full Sherlock Holmes medication sentinel review."""
+        from .medication_sentinel import run_sentinel_review
+        body: dict = {}
+        try:
+            body = await request.json()
+        except Exception:
+            pass
+        result = await run_sentinel_review(
+            new_medications=body.get("new_medications"),
+            stopped_medications=body.get("stopped_medications"),
+            reported_symptoms=body.get("reported_symptoms", ""),
+            context=body.get("context", ""),
+        )
+        return _json(result)
+
+    # ── Phase 3: Lab Review Engine (Data Agent Protocol) ─────────────
+    @app.get("/api/health/labs/review")
+    async def api_labs_full_review() -> JSONResponse:
+        """Full panel-by-panel lab review across all clinical domains."""
+        from .lab_review import run_full_lab_review
+        return _json(await run_full_lab_review())
+
+    @app.get("/api/health/labs/summary")
+    async def api_labs_summary() -> JSONResponse:
+        """Quick summary of latest labs — flags and overall status."""
+        from .lab_review import run_full_lab_review
+        full = await run_full_lab_review()
+        return _json({
+            "overall_summary": full["overall_summary"],
+            "critical_flags": full["critical_flags"],
+            "trending_toward_abnormal": full["trending_toward_abnormal"],
+            "missing_labs": full["missing_labs"],
+            "top_clinical_questions": full["top_clinical_questions"],
+            "date_reviewed": full["date_reviewed"],
+        })
+
+    @app.get("/api/health/labs/abnormal")
+    async def api_labs_abnormal() -> JSONResponse:
+        """Abnormal results with clinical context."""
+        from .lab_review import run_full_lab_review
+        full = await run_full_lab_review()
+        flags = full.get("critical_flags", [])
+        return _json({
+            "abnormal_count": len(flags),
+            "flags": flags,
+            "date_reviewed": full["date_reviewed"],
+        })
+
+    @app.get("/api/health/labs/trending")
+    async def api_labs_trending() -> JSONResponse:
+        """Tests trending toward abnormal with trajectory analysis."""
+        from .lab_review import get_trending_labs
+        trends = await get_trending_labs()
+        return _json({"trending": trends, "count": len(trends)})
+
+    # ── Phase 3: Doctor Prep Engine (Hermione Granger Protocol) ──────
+    @app.get("/api/health/doctor-prep/questions")
+    async def api_doctor_prep_questions() -> JSONResponse:
+        """Standing priority questions for the Nov 13, 2026 visit with Dr. Wenk."""
+        from .doctor_prep import get_standing_priority_questions
+        questions = await get_standing_priority_questions()
+        return _json({"questions": questions, "count": len(questions), "next_visit": "2026-11-13"})
+
+    @app.post("/api/health/doctor-prep/brief")
+    async def api_doctor_prep_brief(request: Request) -> JSONResponse:
+        """Generate a one-page visit brief (LLM-powered with structured fallback)."""
+        from .doctor_prep import generate_visit_brief
+        body: dict = {}
+        try:
+            body = await request.json()
+        except Exception:
+            pass
+        result = await generate_visit_brief(
+            visit_type=body.get("visit_type", "chronic_follow_up"),
+            main_concern=body.get("main_concern", ""),
+            goals_for_visit=body.get("goals_for_visit", ""),
+        )
+        return _json(result)
+
+    @app.post("/api/health/doctor-prep/portal-msg")
+    async def api_doctor_prep_portal_msg(request: Request) -> JSONResponse:
+        """Generate a portal message to Dr. Wenk."""
+        from .doctor_prep import generate_portal_message
+        body: dict = {}
+        try:
+            body = await request.json()
+        except Exception:
+            pass
+        if not body.get("subject") or not body.get("concern"):
+            return JSONResponse({"error": "subject and concern are required"}, status_code=400)
+        result = await generate_portal_message(
+            subject=body["subject"],
+            concern=body["concern"],
+            relevant_data=body.get("relevant_data", ""),
+        )
+        return _json(result)
+
+    @app.post("/api/health/doctor-prep/post-visit")
+    async def api_doctor_prep_post_visit(request: Request) -> JSONResponse:
+        """Translate post-visit clinician instructions into plain-English action items."""
+        from .doctor_prep import translate_post_visit
+        body: dict = {}
+        try:
+            body = await request.json()
+        except Exception:
+            pass
+        if not body.get("clinician_said"):
+            return JSONResponse({"error": "clinician_said is required"}, status_code=400)
+        result = await translate_post_visit(
+            clinician_said=body["clinician_said"],
+            diagnosis=body.get("diagnosis", ""),
+            medications=body.get("medications", ""),
+            tests_ordered=body.get("tests_ordered", ""),
+            follow_up=body.get("follow_up", ""),
+        )
+        return _json(result)
+
     # ── ECG readings ──────────────────────────────────────────────────
     @app.get("/api/health/ecg")
     async def api_ecg_list() -> JSONResponse:
