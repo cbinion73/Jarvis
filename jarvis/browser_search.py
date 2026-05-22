@@ -7,11 +7,8 @@ Search strategy (in priority order):
   1. Tavily Search API  — AI-optimized, pre-cleaned content, free 1k/month
                           Requires: TAVILY_API_KEY in .env
                           Sign up:  https://tavily.com  (free, no CC)
-  2. Brave Search API   — real-time independent index, free 2k/month
-                          Requires: BRAVE_SEARCH_API_KEY in .env
-                          Sign up:  https://brave.com/search/api/
-  3. Wikipedia API      — encyclopedic fallback, always free, never blocked
-  4. Curated fetch      — Playwright for specific authoritative research URLs
+  2. Wikipedia API      — encyclopedic fallback, always free, never blocked
+  3. Curated fetch      — Playwright for specific authoritative research URLs
 
 Fetch strategy (for full article text):
   1. Plain HTTP         — fast, works for most articles
@@ -320,68 +317,6 @@ def research(query: str, num_results: int = 5) -> list[SearchResult]:
 
 
 # ---------------------------------------------------------------------------
-# Brave Search API (tier 2 — real-time index, free 2,000/month, no CC needed)
-# Sign up: https://brave.com/search/api/
-# Set BRAVE_SEARCH_API_KEY in .env
-# ---------------------------------------------------------------------------
-
-def _search_brave(query: str, num_results: int) -> list[SearchResult]:
-    """
-    Brave Search API — independent index, real-time results, free up to 2k/month.
-    Returns empty list if key not configured or request fails.
-    """
-    import json as _json
-    api_key = os.getenv("BRAVE_SEARCH_API_KEY", "")
-    if not api_key:
-        return []
-
-    url = (
-        "https://api.search.brave.com/res/v1/web/search"
-        f"?q={urllib.parse.quote_plus(query)}"
-        f"&count={min(num_results, 10)}"
-        "&search_lang=en"
-        "&text_decorations=false"
-        "&safesearch=moderate"
-    )
-    req = urllib.request.Request(
-        url,
-        headers={
-            "Accept":                "application/json",
-            "Accept-Encoding":       "gzip",
-            "X-Subscription-Token": api_key,
-        },
-    )
-    try:
-        import gzip as _gzip
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            raw = resp.read()
-            if resp.info().get("Content-Encoding") == "gzip":
-                raw = _gzip.decompress(raw)
-            data = json.loads(raw.decode("utf-8"))
-
-        results: list[SearchResult] = []
-        for item in data.get("web", {}).get("results", [])[:num_results]:
-            title   = item.get("title", "")
-            url_    = item.get("url", "")
-            snippet = item.get("description", "") or item.get("extra_snippets", [""])[0]
-            if title and url_:
-                results.append(SearchResult(
-                    title=title,
-                    url=url_,
-                    snippet=snippet[:400],
-                ))
-        logger.info("Brave search '%s' → %d results", query[:50], len(results))
-        return results
-
-    except urllib.error.HTTPError as exc:
-        logger.warning("Brave search HTTP %s: %s", exc.code, exc.reason)
-        return []
-    except Exception as exc:
-        logger.warning("Brave search failed: %s", exc)
-        return []
-
-
-# ---------------------------------------------------------------------------
 # DDG HTTP (kept for future use if bot detection is resolved)
 # ---------------------------------------------------------------------------
 
@@ -467,15 +402,14 @@ def search(
     Search the web. Returns up to num_results SearchResult objects.
 
     Strategy (in order):
-      1. Tavily  — AI-optimized, pre-cleaned content, free 1k/month (TAVILY_API_KEY)
-      2. Brave   — real-time independent index, free 2k/month (BRAVE_SEARCH_API_KEY)
-      3. Wikipedia — encyclopedic fallback, always free, no key needed
-      4. Curated   — Playwright fetches of authoritative research URLs
+      1. Tavily    — AI-optimized, pre-cleaned content, free 1k/month (TAVILY_API_KEY)
+      2. Wikipedia — encyclopedic fallback, always free, no key needed
+      3. Curated   — Playwright fetches of authoritative research URLs
 
     Args:
         query:         Search query string
         num_results:   Max results to return (default 5)
-        engine:        "auto", "tavily", "brave", "wikipedia", "curated"
+        engine:        "auto", "tavily", "wikipedia", "curated"
         fetch_content: If True, fetches the first result's full article text
         timeout_ms:    Browser timeout for fetch fallback
 
@@ -493,14 +427,7 @@ def search(
             if results:
                 backend_used = "tavily"
 
-        # 2. Brave: real-time live web results
-        if len(results) < 2 and engine in ("auto", "brave") and os.getenv("BRAVE_SEARCH_API_KEY"):
-            brave = _search_brave(query, num_results - len(results))
-            results.extend(brave)
-            if brave:
-                backend_used = "brave" if backend_used == "wikipedia" else backend_used
-
-        # 3. Wikipedia: encyclopedic fallback
+        # 2. Wikipedia: encyclopedic fallback
         if len(results) < 2 and engine in ("auto", "wikipedia"):
             wiki = _search_wikipedia(query, min(num_results - len(results), 4))
             results.extend(wiki)
