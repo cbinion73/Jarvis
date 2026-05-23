@@ -379,6 +379,83 @@ class OutlookBridge:
 
         return self._normalise_events(payload.get("value") or [])
 
+    def create_calendar_event(
+        self,
+        title: str,
+        start: str,
+        end: str | None = None,
+        description: str = "",
+        location: str = "",
+    ) -> dict[str, Any]:
+        """Create an event on the user's primary Outlook calendar.
+
+        Args:
+            title:       Event subject line.
+            start:       ISO 8601 datetime, e.g. ``'2026-05-23T15:00:00'``.
+            end:         ISO 8601 datetime.  Defaults to start + 1 hour.
+            description: Optional body text.
+            location:    Optional location string.
+
+        Returns:
+            Dict with ``{id, title, start, end, web_link}`` on success,
+            or ``{error: str}`` on failure.
+        """
+        from datetime import datetime as _dt
+        try:
+            _load = _dt.fromisoformat(start)
+        except Exception:
+            return {"error": f"Cannot parse start datetime: {start!r}"}
+
+        if end is None:
+            end = (_load + timedelta(hours=1)).isoformat()
+
+        event_body: dict[str, Any] = {
+            "subject": title,
+            "start": {"dateTime": start, "timeZone": "America/Chicago"},
+            "end":   {"dateTime": end,   "timeZone": "America/Chicago"},
+            "isReminderOn": True,
+            "reminderMinutesBeforeStart": 15,
+        }
+        if description:
+            event_body["body"] = {"contentType": "text", "content": description}
+        if location:
+            event_body["location"] = {"displayName": location}
+
+        try:
+            token = self._load_token()
+            if not token.get("access_token"):
+                return {"error": "Outlook token missing — please reconnect in Settings."}
+
+            url = f"{GRAPH_BASE}/me/events"
+            if _REQUESTS_AVAILABLE:
+                resp = _requests.post(url, headers=self._auth_headers(), json=event_body, timeout=20)
+                if not resp.ok:
+                    return {"error": f"Graph POST /me/events failed ({resp.status_code}): {resp.text[:300]}"}
+                result = resp.json()
+            else:
+                from urllib import error as _uerr, request as _ureq
+                data = json.dumps(event_body).encode("utf-8")
+                headers = {**self._auth_headers(), "Content-Type": "application/json"}
+                req = _ureq.Request(url, data=data, headers=headers, method="POST")
+                try:
+                    with _ureq.urlopen(req, timeout=20) as r:
+                        result = json.loads(r.read().decode("utf-8"))
+                except _uerr.HTTPError as exc:
+                    detail = exc.read().decode("utf-8", errors="replace")
+                    return {"error": f"Graph POST /me/events failed ({exc.code}): {detail}"}
+
+            log.info("OutlookBridge: created event '%s' (id=%s)", title, result.get("id", ""))
+            return {
+                "id":       result.get("id", ""),
+                "title":    result.get("subject", title),
+                "start":    (result.get("start") or {}).get("dateTime", start),
+                "end":      (result.get("end")   or {}).get("dateTime", end),
+                "web_link": result.get("webLink", ""),
+            }
+        except Exception as exc:
+            log.error("OutlookBridge.create_calendar_event('%s'): %s", title, exc)
+            return {"error": str(exc)}
+
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
