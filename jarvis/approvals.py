@@ -594,13 +594,59 @@ class ActionExecutors:
 
     @staticmethod
     def calendar_change(payload: dict) -> dict:
-        """Create / update a calendar event. Stub pending Google Calendar integration."""
+        """Create / update a calendar event via Google Calendar or Outlook."""
         event_title = payload.get("title", payload.get("event_title", ""))
-        logger.info("STUB calendar_change: event=%s", event_title)
+        start       = payload.get("start", payload.get("start_time", ""))
+        end         = payload.get("end",   payload.get("end_time", ""))
+        description = payload.get("description", payload.get("body", ""))
+        location    = payload.get("location", "")
+
+        if not start:
+            return {"status": "error", "error": "Missing start time for calendar event."}
+
+        # ── Try Google Calendar first ─────────────────────────────────────────
+        try:
+            from .gcal_bridge import get_gcal_bridge
+            gcal = get_gcal_bridge()
+            if gcal is not None:
+                result = gcal.create_event(
+                    title=event_title,
+                    start=start,
+                    end=end or start,
+                    description=description or None,
+                    location=location or None,
+                )
+                if result.get("error"):
+                    logger.warning("calendar_change: gcal error: %s", result["error"])
+                else:
+                    logger.info("calendar_change: gcal created '%s'", event_title)
+                    return {"status": "ok", "backend": "google", "event": result}
+        except Exception as exc:
+            logger.warning("calendar_change: gcal unavailable: %s", exc)
+
+        # ── Fall back to Outlook ──────────────────────────────────────────────
+        try:
+            from .outlook_bridge import get_outlook_bridge
+            outlook = get_outlook_bridge()
+            if outlook is not None:
+                result = outlook.create_calendar_event(
+                    title=event_title,
+                    start=start,
+                    end=end or None,
+                    description=description,
+                    location=location,
+                )
+                if result.get("error"):
+                    logger.warning("calendar_change: outlook error: %s", result["error"])
+                    return {"status": "error", "error": result["error"]}
+                logger.info("calendar_change: outlook created '%s'", event_title)
+                return {"status": "ok", "backend": "outlook", "event": result}
+        except Exception as exc:
+            logger.warning("calendar_change: outlook unavailable: %s", exc)
+
         return {
-            "status": "staged",
-            "event_title": event_title,
-            "note": "Google Calendar integration pending",
+            "status": "error",
+            "error": "No calendar backend available. Please connect Google Calendar or Outlook in Settings.",
         }
 
     @staticmethod

@@ -14225,6 +14225,17 @@ class JarvisRuntime:
                 output_text=task_result.output_text,
             )
             return task_result
+        # ── Calendar event intercept ──────────────────────────────────────────
+        cal_result = self._try_handle_calendar_event(request)
+        if cal_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=cal_result.provider,
+                model=cal_result.model,
+                active_nodes=["calendar-engine"],
+                output_text=cal_result.output_text,
+            )
+            return cal_result
         # ─────────────────────────────────────────────────────────────────────
         result = run_response_graph(self, plan)
         self.audit_log.log_response(
@@ -14410,6 +14421,228 @@ class JarvisRuntime:
         return OpenAIResult(
             provider="task-engine",
             model="task-engine",
+            output_text=confirmation,
+        )
+
+    # ── Calendar event helper ─────────────────────────────────────────────────
+
+    # Matches WRITE/ADD calendar intents.  Read queries ("what's on my calendar?")
+    # are excluded by a question-word guard at runtime.
+    _CAL_ADD_RE = re.compile(
+        r"\b("
+        # "add that to my calendar", "add to calendar", "add to my google calendar"
+        r"add(?:\s+that)?(?:\s+to)?(?:\s+my)?(?:\s+(?:google\s+)?)?calendar"
+        # "X to my calendar" / "X onto my calendar"  (catches "add graduation to my calendar")
+        r"|(?:on)?to\s+(?:my\s+)?(?:google\s+)?calendar"
+        # "schedule ..." (with or without "on my calendar" suffix)
+        r"|schedule(?:\s+(?:that|it|this|an?\s+event))?(?:\s+on\s+(?:my\s+)?calendar)?"
+        # "put X on my calendar"
+        r"|put(?:\s+(?:that|it|this))?(?:\s+on)?(?:\s+my)?(?:\s+calendar)"
+        # "add/create/make an event"
+        r"|(?:add|create|make)(?:\s+an?)?\s+(?:calendar\s+)?event"
+        # "block off time"
+        r"|block(?:\s+(?:off|out))?(?:\s+time)?(?:\s+(?:for|on))?(?:\s+(?:my\s+)?calendar)?"
+        r")\b",
+        re.IGNORECASE,
+    )
+    # Read-only / question patterns — these must NOT be treated as write requests
+    _CAL_QUERY_RE = re.compile(
+        r"^(?:what|show|check|when|is|are|do|does|can|how|tell|list|view|see|read|look)\b"
+        r"|\?",
+        re.IGNORECASE,
+    )
+
+    # Time patterns: "3pm", "3:30 pm", "15:00", "noon", "midnight"
+    _TIME_RE = re.compile(
+        r"\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b"
+        r"|\b(?:at\s+)?(noon|midnight)\b"
+        r"|\b(?:at\s+)?(\d{1,2}):(\d{2})\b",
+        re.IGNORECASE,
+    )
+    # Day-of-week patterns
+    _DOW_RE = re.compile(
+        r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
+        re.IGNORECASE,
+    )
+    # Month + day patterns: "June 5", "May 23rd", "the 5th"
+    _MONTH_DAY_RE = re.compile(
+        r"\b(january|february|march|april|may|june|july|august|september|october|november|december)"
+        r"\s+(\d{1,2})(?:st|nd|rd|th)?\b"
+        r"|\bthe\s+(\d{1,2})(?:st|nd|rd|th)?\b",
+        re.IGNORECASE,
+    )
+
+    _MONTHS = {
+        "january": 1, "february": 2, "march": 3, "april": 4,
+        "may": 5, "june": 6, "july": 7, "august": 8,
+        "september": 9, "october": 10, "november": 11, "december": 12,
+    }
+
+    def _try_handle_calendar_event(self, request: str) -> "OpenAIResult | None":
+        """Detect calendar-add intents and create the event directly.
+
+        Supports: Google Calendar (primary), Outlook (fallback).
+        Returns an OpenAIResult if handled, None to fall through to the LLM.
+        """
+        import datetime as _dt
+
+        if not self._CAL_ADD_RE.search(request):
+            return None
+        # Don't intercept read queries ("what's on my calendar?")
+        if self._CAL_QUERY_RE.search(request.strip()):
+            return None
+
+        today = _dt.date.today()
+        now   = _dt.datetime.now()
+
+        # ── Parse date ───────────────────────────────────────────────────────
+        event_date: _dt.date = today  # default to today
+
+        if re.search(r"\btomorrow\b", request, re.IGNORECASE):
+            event_date = today + _dt.timedelta(days=1)
+        elif re.search(r"\btoday\b", request, re.IGNORECASE):
+            event_date = today
+        else:
+            # Day-of-week: "next Monday", "on Friday"
+            dow_m = self._DOW_RE.search(request)
+            if dow_m:
+                target_name = dow_m.group(1).lower()
+                days_map = {
+                    "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
+                    "friday": 4, "saturday": 5, "sunday": 6,
+                }
+                target_dow = days_map[target_name]
+                current_dow = today.weekday()
+                delta = (target_dow - current_dow) % 7
+                if delta == 0:
+                    delta = 7  # "Monday" when today is Monday → next Monday
+                event_date = today + _dt.timedelta(days=delta)
+            else:
+                # Month + day: "June 5", "May 23rd"
+                mday_m = self._MONTH_DAY_RE.search(request)
+                if mday_m:
+                    month_name = (mday_m.group(1) or "").lower()
+                    day_num = int(mday_m.group(2) or mday_m.group(3) or 1)
+                    if month_name:
+                        month_num = self._MONTHS.get(month_name, today.month)
+                        year = today.year
+                        # If date is already past this year, use next year
+                        try:
+                            candidate = _dt.date(year, month_num, day_num)
+                            if candidate < today:
+                                candidate = _dt.date(year + 1, month_num, day_num)
+                            event_date = candidate
+                        except ValueError:
+                            event_date = today
+
+        # ── Parse time ───────────────────────────────────────────────────────
+        hour, minute = now.hour, 0  # default to current hour if no time found
+
+        time_m = self._TIME_RE.search(request)
+        if time_m:
+            named = (time_m.group(4) or "").lower()  # noon / midnight
+            if named == "noon":
+                hour, minute = 12, 0
+            elif named == "midnight":
+                hour, minute = 0, 0
+            elif time_m.group(1):  # 3pm / 3:30 pm style
+                hour   = int(time_m.group(1))
+                minute = int(time_m.group(2) or 0)
+                ampm   = (time_m.group(3) or "").lower()
+                if ampm == "pm" and hour != 12:
+                    hour += 12
+                elif ampm == "am" and hour == 12:
+                    hour = 0
+            elif time_m.group(5):  # 15:00 style (24-hour, no am/pm)
+                hour   = int(time_m.group(5))
+                minute = int(time_m.group(6) or 0)
+
+        start_dt = _dt.datetime(event_date.year, event_date.month, event_date.day, hour, minute)
+        end_dt   = start_dt + _dt.timedelta(hours=1)
+        start_iso = start_dt.strftime("%Y-%m-%dT%H:%M:%S")
+        end_iso   = end_dt.strftime("%Y-%m-%dT%H:%M:%S")
+
+        # ── Extract event title ───────────────────────────────────────────────
+        # Strip calendar/scheduling command words to isolate the event title
+        title = request.strip()
+        # Strip "Hey Jarvis" prefix
+        title = re.sub(r"(?i)^(?:hey\s+jarvis[,\.\s]*|jarvis[,\.\s]+)", "", title).strip()
+        # Strip leading filler like "today is", "by the way"
+        title = re.sub(r"(?i)^(?:today\s+is\s+|by\s+the\s+way[,\s]*)", "", title).strip()
+        # Remove the calendar-action phrase
+        title = self._CAL_ADD_RE.sub("", title).strip()
+        # Remove time phrases: "at 3pm", "at noon", "at 15:00"
+        title = re.sub(
+            r"(?i)\s*(?:at\s+)?(?:\d{1,2}(?::\d{2})?\s*(?:am|pm)|noon|midnight|"
+            r"\d{1,2}:\d{2})\s*", " ", title
+        ).strip()
+        # Remove date phrases
+        title = re.sub(
+            r"(?i)\s*(?:on\s+)?(?:today|tomorrow|monday|tuesday|wednesday|thursday|"
+            r"friday|saturday|sunday|next\s+\w+|"
+            r"(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?)\s*",
+            " ", title
+        ).strip()
+        # Remove trailing prepositions and conjunctions
+        title = re.sub(r"(?i)\s*(to\s+my|to|for|on|at)\s*$", "", title).strip(" ,.")
+        if not title:
+            title = "Event"
+
+        # ── Create the event ──────────────────────────────────────────────────
+        backend_used = None
+        event_result: dict = {}
+
+        try:
+            from .gcal_bridge import get_gcal_bridge
+            gcal = get_gcal_bridge()
+            if gcal is not None:
+                event_result = gcal.create_event(
+                    title=title, start=start_iso, end=end_iso
+                )
+                if not event_result.get("error"):
+                    backend_used = "Google Calendar"
+        except Exception as exc:
+            pass  # fall through to Outlook
+
+        if backend_used is None:
+            try:
+                from .outlook_bridge import get_outlook_bridge
+                outlook = get_outlook_bridge()
+                if outlook is not None:
+                    event_result = outlook.create_calendar_event(
+                        title=title, start=start_iso, end=end_iso
+                    )
+                    if not event_result.get("error"):
+                        backend_used = "Outlook"
+            except Exception:
+                pass
+
+        # ── Build response ────────────────────────────────────────────────────
+        if backend_used is None or event_result.get("error"):
+            err = event_result.get("error", "No calendar backend connected.")
+            return OpenAIResult(
+                provider="calendar-engine",
+                model="calendar-engine",
+                output_text=(
+                    f"I wasn't able to add that to the calendar: {err}  "
+                    "Please connect Google Calendar or Outlook in Settings."
+                ),
+            )
+
+        # Friendly date/time confirmation
+        try:
+            friendly_date = start_dt.strftime("%A, %B %-d")
+            friendly_time = start_dt.strftime("%-I:%M %p").lstrip("0")
+        except ValueError:
+            friendly_date = start_iso[:10]
+            friendly_time = start_iso[11:16]
+
+        confirmation = (
+            f"Done. \"{title}\" is on your calendar for {friendly_date} at {friendly_time}."
+        )
+        return OpenAIResult(
+            provider="calendar-engine",
+            model="calendar-engine",
             output_text=confirmation,
         )
 
