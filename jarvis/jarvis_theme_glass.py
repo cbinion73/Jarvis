@@ -7367,16 +7367,16 @@ function _kasaDeviceCard(d) {{
     sliders +=
       '<div class="kasa-slider-row"><span class="kasa-slider-label">☀</span>'
       + '<input class="kasa-slider" type="range" min="1" max="100" value="' + d.brightness + '" id="' + uid + '-bright"'
-      + ' oninput="document.getElementById(\'' + uid + '-bright-val\').textContent=this.value+\'%\'"'
-      + ' onchange="kasaSetBrightness(\'' + d.ip + '\',\'' + d.alias + '\',parseInt(this.value))">'
+      + ' oninput="document.getElementById(&apos;' + uid + '-bright-val&apos;).textContent=this.value+&apos;%&apos;"'
+      + ' onchange="kasaSetBrightness(&apos;' + d.ip + '&apos;,&apos;' + d.alias + '&apos;,parseInt(this.value))">'
       + '<span class="kasa-slider-val" id="' + uid + '-bright-val">' + d.brightness + '%</span></div>';
   }}
   if (d.is_on && d.color_temp != null) {{
     sliders +=
       '<div class="kasa-slider-row"><span class="kasa-slider-label">K</span>'
       + '<input class="kasa-slider" type="range" min="2500" max="6500" value="' + d.color_temp + '" id="' + uid + '-ct"'
-      + ' oninput="document.getElementById(\'' + uid + '-ct-val\').textContent=this.value+\'K\'"'
-      + ' onchange="kasaSetColorTemp(\'' + d.ip + '\',\'' + d.alias + '\',parseInt(this.value))">'
+      + ' oninput="document.getElementById(&apos;' + uid + '-ct-val&apos;).textContent=this.value+&apos;K&apos;"'
+      + ' onchange="kasaSetColorTemp(&apos;' + d.ip + '&apos;,&apos;' + d.alias + '&apos;,parseInt(this.value))">'
       + '<span class="kasa-slider-val" id="' + uid + '-ct-val">' + d.color_temp + 'K</span></div>';
   }}
   return '<div class="kasa-device-card ' + onCls + '" id="' + uid + '">'
@@ -7384,7 +7384,7 @@ function _kasaDeviceCard(d) {{
     + '<span class="kasa-device-icon">' + icon + '</span>'
     + '<div class="kasa-device-info"><div class="kasa-device-alias">' + escHtml(d.alias) + '</div>'
     + '<div class="kasa-device-model">' + escHtml(d.model || d.device_type) + '</div></div>'
-    + '<label class="kasa-toggle"><input type="checkbox" ' + checked + ' onchange="kasaToggle(\'' + d.ip + '\',\'' + d.alias + '\')">'
+    + '<label class="kasa-toggle"><input type="checkbox" ' + checked + ' onchange="kasaToggle(&apos;' + d.ip + '&apos;,&apos;' + d.alias + '&apos;)">'
     + '<div class="kasa-toggle-track"></div><div class="kasa-toggle-thumb"></div></label></div>'
     + sliders + '</div>';
 }}
@@ -9182,7 +9182,7 @@ function injectSpiritualContext(ctx) {{
       <div class="brief-spiritual-row">
         <span class="brief-spiritual-icon">🙏</span>
         <span class="brief-spiritual-text">Praying for: ${{prayerText}}</span>
-        <button class="brief-chr-btn" onclick="switchView(\'chronicle\')">→ Chronicle</button>
+        <button class="brief-chr-btn" onclick="switchView('chronicle')">→ Chronicle</button>
       </div>`);
   }}
 
