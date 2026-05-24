@@ -345,7 +345,10 @@ class UnifiedInbox:
             start = now - timedelta(days=1)
             end = now + timedelta(days=14)
 
-            if hasattr(self._gcal, "get_upcoming_events"):
+            if hasattr(self._gcal, "fetch_upcoming_events"):
+                raw = self._gcal.fetch_upcoming_events(days=15)
+                event_list = raw if isinstance(raw, list) else raw.get("events", [])
+            elif hasattr(self._gcal, "get_upcoming_events"):
                 raw = self._gcal.get_upcoming_events(days=15)
                 event_list = raw if isinstance(raw, list) else raw.get("events", [])
             elif hasattr(self._gcal, "list_events"):

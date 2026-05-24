@@ -1,23 +1,24 @@
 """
-catalyst_bridge.py — Epic 8: Catalyst Integration
-====================================================
-Manages bidirectional context flow between JARVIS and Catalyst.
-Mantis (catalyst-personal) orchestrates the workflow intelligence layer.
+catalyst_bridge.py — RETIRED (external Catalyst app integration)
+=================================================================
+The external Catalyst app has been consolidated into JARVIS.
+Work intelligence is now native:  jarvis/work_intelligence.py
+Persistent storage is now native: jarvis/catalyst_db.py (PostgreSQL)
+Background workers:               jarvis/wi_workers.py
 
-JARVIS → Catalyst flows:
-  - Morning briefing handoff
-  - Meeting prep packages
-  - Decision support packages
-  - Action packages from conversation
+What remains active in this file
+---------------------------------
+- ``extract_action_items()``   — pure-Python regex helper, still used by
+  the /api/catalyst/extract-actions endpoint in service.py.
 
-Catalyst → JARVIS flows:
-  - Completed action notifications
-  - Project status updates
-  - New decisions/signals needing JARVIS intelligence
+Everything else in this module (CatalystBridge, MantisWorkflow,
+init_catalyst_bridge, get_catalyst_bridge, get_mantis) is inert:
+the bridge is no longer initialised at startup and the corresponding
+service endpoints return HTTP 410 Gone.
 
-Storage:
-  ~/.jarvis/catalyst/contexts/   — one JSON file per CatalystContext
-  ~/.jarvis/catalyst/pending_handoffs.jsonl — contexts awaiting Catalyst pickup
+Do NOT delete this file yet — extract_action_items is still imported
+by service.py.  When that endpoint is migrated to work_intelligence.py
+this file can be safely removed.
 """
 
 from __future__ import annotations

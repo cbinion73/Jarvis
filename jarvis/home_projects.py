@@ -879,11 +879,11 @@ class HomeDB:
                     """)
                     today_cal = _one(cur) or {"cnt": 0}
 
-                    # --- Calendar: upcoming 3 days ---
+                    # --- Calendar: upcoming 14 days ---
                     cur.execute("""
                         SELECT * FROM calendar_events
                          WHERE start_time >= NOW()
-                           AND start_time <  NOW() + INTERVAL '3 days'
+                           AND start_time <  NOW() + INTERVAL '14 days'
                          ORDER BY start_time ASC
                          LIMIT 20
                     """)

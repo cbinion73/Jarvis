@@ -319,7 +319,8 @@ class GoogleCalendarBridge:
 
     def fetch_todays_events(self) -> list[dict]:
         """
-        Fetch all events occurring today (midnight to midnight local UTC day).
+        Fetch all events occurring today across ALL accessible calendars,
+        sorted by start time.
 
         Returns:
             List of normalized event dicts for today.
@@ -332,25 +333,41 @@ class GoogleCalendarBridge:
             now = _now_utc()
             today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
             today_end = today_start + timedelta(days=1)
+            time_min = _iso_utc(today_start)
+            time_max = _iso_utc(today_end)
 
-            meta = self._get_calendar_metadata("primary")
-            calendar_name = meta.get("name", "")
-            calendar_color = meta.get("color", "")
+            cal_list_resp = service.calendarList().list().execute()
+            calendars = cal_list_resp.get("items", [])
 
-            response = (
-                service.events()
-                .list(
-                    calendarId="primary",
-                    timeMin=_iso_utc(today_start),
-                    timeMax=_iso_utc(today_end),
-                    singleEvents=True,
-                    orderBy="startTime",
-                )
-                .execute()
-            )
+            INCLUDE_ROLES = {"owner", "writer", "reader"}
+            all_events: list[dict] = []
 
-            raw_events = response.get("items", [])
-            return [_event_to_dict(e, calendar_name, calendar_color) for e in raw_events]
+            for cal in calendars:
+                cal_id   = cal.get("id", "")
+                role     = cal.get("accessRole", "")
+                if role not in INCLUDE_ROLES:
+                    continue
+                cal_name  = str(cal.get("summary", "") or cal_id)
+                cal_color = str(cal.get("backgroundColor", "") or cal.get("colorId", "") or "")
+                try:
+                    response = (
+                        service.events()
+                        .list(
+                            calendarId=cal_id,
+                            timeMin=time_min,
+                            timeMax=time_max,
+                            singleEvents=True,
+                            orderBy="startTime",
+                        )
+                        .execute()
+                    )
+                    for e in response.get("items", []):
+                        all_events.append(_event_to_dict(e, cal_name, cal_color))
+                except Exception as cal_exc:
+                    logger.warning("gcal_bridge: skipping calendar %s: %s", cal_id[:20], cal_exc)
+
+            all_events.sort(key=lambda ev: ev.get("start_time", "") or "9999")
+            return all_events
 
         except Exception as exc:
             logger.error("gcal_bridge.fetch_todays_events: %s", exc)
@@ -358,13 +375,14 @@ class GoogleCalendarBridge:
 
     def fetch_upcoming_events(self, days: int = 7) -> list[dict]:
         """
-        Fetch upcoming events starting from now for the next `days` days.
+        Fetch upcoming events across ALL accessible calendars for the next `days` days,
+        sorted by start time.
 
         Args:
             days: Number of days forward to fetch.
 
         Returns:
-            List of normalized event dicts.
+            List of normalized event dicts sorted by start_time.
         """
         service = self._get_service()
         if service is None:
@@ -372,26 +390,49 @@ class GoogleCalendarBridge:
 
         try:
             now = _now_utc()
+            time_min = _iso_utc(now)
             time_max = _iso_utc(now + timedelta(days=days))
 
-            meta = self._get_calendar_metadata("primary")
-            calendar_name = meta.get("name", "")
-            calendar_color = meta.get("color", "")
+            # Get all calendars the user has access to
+            cal_list_resp = service.calendarList().list().execute()
+            calendars = cal_list_resp.get("items", [])
 
-            response = (
-                service.events()
-                .list(
-                    calendarId="primary",
-                    timeMin=_iso_utc(now),
-                    timeMax=time_max,
-                    singleEvents=True,
-                    orderBy="startTime",
-                )
-                .execute()
-            )
+            # Skip calendars the user only reads (not their own) unless
+            # they are the owner or writer — always include primary
+            INCLUDE_ROLES = {"owner", "writer", "reader"}
+            all_events: list[dict] = []
 
-            raw_events = response.get("items", [])
-            return [_event_to_dict(e, calendar_name, calendar_color) for e in raw_events]
+            for cal in calendars:
+                cal_id = cal.get("id", "")
+                role = cal.get("accessRole", "")
+                if role not in INCLUDE_ROLES:
+                    continue
+                cal_name  = str(cal.get("summary", "") or cal_id)
+                cal_color = str(cal.get("backgroundColor", "") or cal.get("colorId", "") or "")
+                try:
+                    response = (
+                        service.events()
+                        .list(
+                            calendarId=cal_id,
+                            timeMin=time_min,
+                            timeMax=time_max,
+                            singleEvents=True,
+                            orderBy="startTime",
+                        )
+                        .execute()
+                    )
+                    for e in response.get("items", []):
+                        all_events.append(_event_to_dict(e, cal_name, cal_color))
+                except Exception as cal_exc:
+                    logger.warning("gcal_bridge: skipping calendar %s: %s", cal_id[:20], cal_exc)
+
+            # Sort merged results by start_time
+            def _sort_key(ev: dict) -> str:
+                t = ev.get("start_time", "")
+                return t if t else "9999"
+
+            all_events.sort(key=_sort_key)
+            return all_events
 
         except Exception as exc:
             logger.error("gcal_bridge.fetch_upcoming_events: %s", exc)

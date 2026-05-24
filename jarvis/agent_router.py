@@ -125,6 +125,32 @@ def route_by_domain(domain: str) -> RouteResult:
     )
 
 
+def log_route_to_catalyst(route: RouteResult, query_text: str) -> None:
+    """
+    Log a routing decision to CatalystDB as a LOW-criticality signal.
+    Fire-and-forget: never raises. Call after route_request().
+
+    This ensures every agent interaction is tracked in the Work Intelligence
+    system, making routing patterns visible in the Signals pane.
+    """
+    try:
+        from .agent_catalyst import get_agent_catalyst
+        cat = get_agent_catalyst(route.agent_id)
+        cat.log_signal(
+            content=f"Routed to {route.agent_label}: {query_text[:200]}",
+            signal_type="agent_route",
+            criticality="LOW",
+            metadata={
+                "domain":     route.domain,
+                "confidence": round(route.confidence, 3),
+                "signals":    route.signals,
+                "query_len":  len(query_text),
+            },
+        )
+    except Exception:
+        pass
+
+
 def get_agents_for_event(event_type: str) -> list[RouteResult]:
     """
     Return list of agents that should be notified/triggered for a given event type.

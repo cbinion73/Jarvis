@@ -25,6 +25,99 @@ from typing import Any
 logger = logging.getLogger("jarvis.agent_work")
 
 # ---------------------------------------------------------------------------
+# Catalyst sync helper — mirrors every agent work event into CatalystDB.
+# Fire-and-forget: never raises, never blocks the calling thread.
+# ---------------------------------------------------------------------------
+
+def _catalyst_sync(item: "WorkItem", event: str) -> None:
+    """
+    Mirror an agent work item state change into CatalystDB.
+    Called after every mutation in AgentWorkStore.
+
+    Mapping:
+      dreamed      → raw_signal (LOW)
+      researching  → raw_signal (STANDARD)
+      proposed     → raw_signal (STANDARD)
+      approved     → raw_signal (CRITICAL) + catalyst_task + decision record
+      rejected     → raw_signal (STANDARD)
+      implementing → raw_signal (STANDARD) + commitment record
+      tracking     → raw_signal (LOW)
+      closed       → raw_signal (LOW)
+    """
+    try:
+        from .catalyst_db import get_catalyst_db
+        db = get_catalyst_db()
+        if db is None:
+            return
+
+        crit_map = {
+            "dreamed":      "LOW",
+            "researching":  "STANDARD",
+            "proposed":     "STANDARD",
+            "approved":     "CRITICAL",
+            "rejected":     "STANDARD",
+            "implementing": "STANDARD",
+            "tracking":     "LOW",
+            "closed":       "LOW",
+        }
+        # Also escalate by item priority
+        priority_crit = (
+            "CRITICAL" if item.priority <= 2
+            else ("LOW" if item.priority >= 8 else "STANDARD")
+        )
+        crit = "CRITICAL" if "CRITICAL" in (crit_map.get(event, "STANDARD"), priority_crit) else priority_crit
+
+        signal = db.ingest_signal(
+            user_id="chris",
+            signal_type="agent_work",
+            content=f"[{item.agent_id}] {event}: {item.title}",
+            external_id=f"agent_work:{item.work_id}:{event}",
+            source_metadata={
+                "work_id":  item.work_id,
+                "agent_id": item.agent_id,
+                "domain":   item.domain,
+                "status":   item.status,
+                "event":    event,
+                "priority": item.priority,
+                "tags":     item.tags,
+            },
+            criticality=crit,
+        )
+        signal_id = (signal or {}).get("id")
+
+        # approved → create a catalyst_task so it appears in the Tasks pane
+        if event == "approved" and signal_id:
+            task_pri = "high" if item.priority <= 2 else ("low" if item.priority >= 8 else "medium")
+            db.create_task(
+                user_id="chris",
+                title=item.title,
+                task_type="agent_approved",
+                source_signal_id=signal_id,
+            )
+            # Record the approval as a decision
+            db.record_decision(
+                user_id="chris",
+                signal_id=signal_id,
+                description=f"Approved agent work item: {item.title}",
+                reasoning=(item.proposal or item.idea)[:400],
+                confidence=0.9,
+            )
+
+        # implementing → create a commitment so it appears in the Commitments panel
+        if event == "implementing" and signal_id:
+            db.create_commitment(
+                user_id="chris",
+                signal_id=signal_id,
+                description=f"{item.agent_id} implementing: {item.title}",
+                responsible_party=item.agent_id,
+                confidence=0.85,
+            )
+
+    except Exception:
+        pass  # Catalyst is additive — agent work continues even if sync fails
+
+
+# ---------------------------------------------------------------------------
 # Status constants
 # ---------------------------------------------------------------------------
 
@@ -202,7 +295,8 @@ class AgentWorkStore:
             self._items.append(item)
             self._save()
             logger.info("[%s] Dreamed: %s", self.agent_id, title[:60])
-            return item
+        _catalyst_sync(item, "dreamed")
+        return item
 
     def advance_to_research(self, work_id: str, research_notes: str) -> WorkItem | None:
         with self._lock:
@@ -213,7 +307,8 @@ class AgentWorkStore:
             item.research = research_notes
             self._touch(item)
             self._save()
-            return item
+        _catalyst_sync(item, "researching")
+        return item
 
     def submit_proposal(self, work_id: str, proposal_text: str) -> WorkItem | None:
         with self._lock:
@@ -224,7 +319,8 @@ class AgentWorkStore:
             item.proposal = proposal_text
             self._touch(item)
             self._save()
-            return item
+        _catalyst_sync(item, "proposed")
+        return item
 
     def mark_approved(self, work_id: str, approved_by: str = "Chris") -> WorkItem | None:
         with self._lock:
@@ -236,7 +332,8 @@ class AgentWorkStore:
             item.approved_at = _now_iso()
             self._touch(item)
             self._save()
-            return item
+        _catalyst_sync(item, "approved")
+        return item
 
     def mark_rejected(self, work_id: str, reason: str = "") -> WorkItem | None:
         with self._lock:
@@ -248,7 +345,8 @@ class AgentWorkStore:
             item.closed_at = _now_iso()
             self._touch(item)
             self._save()
-            return item
+        _catalyst_sync(item, "rejected")
+        return item
 
     def start_implementing(self, work_id: str, implementation_notes: str = "") -> WorkItem | None:
         with self._lock:
@@ -260,7 +358,8 @@ class AgentWorkStore:
                 item.implementation = implementation_notes
             self._touch(item)
             self._save()
-            return item
+        _catalyst_sync(item, "implementing")
+        return item
 
     def log_result(
         self,
@@ -279,7 +378,8 @@ class AgentWorkStore:
                 item.status = STATUS_TRACKING
             self._touch(item)
             self._save()
-            return item
+        _catalyst_sync(item, "tracking")
+        return item
 
     def close(self, work_id: str, final_metrics: str = "") -> WorkItem | None:
         with self._lock:
@@ -292,7 +392,8 @@ class AgentWorkStore:
                 item.metrics = final_metrics
             self._touch(item)
             self._save()
-            return item
+        _catalyst_sync(item, "closed")
+        return item
 
     def update_metrics(self, work_id: str, metrics: str, score: float) -> WorkItem | None:
         with self._lock:

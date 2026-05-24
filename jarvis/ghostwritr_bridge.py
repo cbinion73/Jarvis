@@ -54,13 +54,23 @@ _DB_AVAILABLE = _ASYNCPG_AVAILABLE or _PSYCOPG2_AVAILABLE
 NONFICTION_STAGES = [
     "BOOK_SETUP",
     "PROMISE",
+    "AUDIENCE",
+    "MARKET_ANALYSIS",
     "OUTLINE",
     "BASE_STORY",
     "RESEARCH",
     "EXTERNAL_STORIES",
     "PERSONAL_STORIES",
+    "MANIFEST",
     "CHAPTER_DRAFT",
     "EDITING",
+    "TYPESET",
+    "LAUNCH_LISTING",
+    "PRESS_KIT",
+    "SOCIAL_CAMPAIGN",
+    "AUDIO_PREP",
+    "COURSE_DESIGN",
+    "SPEAKING_KIT",
 ]
 
 FICTION_STAGES = [
@@ -72,24 +82,51 @@ FICTION_STAGES = [
     "SCENE_PLAN",
     "FICTION_DRAFT",
     "EDITING",
+    "TYPESET",
+    "LAUNCH_LISTING",
+    "PRESS_KIT",
+    "SOCIAL_CAMPAIGN",
 ]
 
 STAGE_DISPLAY_NAMES: dict[str, str] = {
+    # Setup
     "BOOK_SETUP": "Book Setup",
     "PROMISE": "Promise",
+    "AUDIENCE": "Audience",
+    "MARKET_ANALYSIS": "Market Analysis",
+    # Material
     "OUTLINE": "Outline",
     "BASE_STORY": "Base Story",
     "RESEARCH": "Research",
     "EXTERNAL_STORIES": "External Stories",
     "PERSONAL_STORIES": "Personal Stories",
+    # Production
+    "MANIFEST": "Manifest",
     "CHAPTER_DRAFT": "Chapter Draft",
+    "EDITING": "Editing",
+    "TYPESET": "Typeset",
+    # Post-Production
+    "LAUNCH_LISTING": "Launch Listing",
+    "PRESS_KIT": "Press Kit",
+    "SOCIAL_CAMPAIGN": "Social Campaign",
+    "AUDIO_PREP": "Audio Prep",
+    "COURSE_DESIGN": "Course Design",
+    "SPEAKING_KIT": "Speaking Kit",
+    # Fiction-specific
     "STORY_SETUP": "Story Setup",
     "STORY_CORE": "Story Core",
     "WORLD_CAST": "World & Cast",
     "PLOT_BLUEPRINT": "Plot Blueprint",
     "SCENE_PLAN": "Scene Plan",
     "FICTION_DRAFT": "Fiction Draft",
-    "EDITING": "Editing",
+}
+
+# Stage groups matching Ghostwritr's sidebar navigation
+STAGE_GROUPS: dict[str, list[str]] = {
+    "SETUP": ["BOOK_SETUP", "PROMISE", "AUDIENCE", "MARKET_ANALYSIS"],
+    "MATERIAL": ["OUTLINE", "BASE_STORY", "RESEARCH", "EXTERNAL_STORIES", "PERSONAL_STORIES"],
+    "PRODUCTION": ["MANIFEST", "CHAPTER_DRAFT", "EDITING", "TYPESET"],
+    "POST-PRODUCTION": ["LAUNCH_LISTING", "PRESS_KIT", "SOCIAL_CAMPAIGN", "AUDIO_PREP", "COURSE_DESIGN", "SPEAKING_KIT"],
 }
 
 # Stage statuses
@@ -131,6 +168,67 @@ def _current_stage(stages: list[dict]) -> str:
         if s.get("status") in _ACTIVE_STATUSES
     ]
     return in_progress_keys[-1] if in_progress_keys else ""
+
+
+def _compute_stage_groups(stages: list[dict]) -> list[dict]:
+    """
+    Compute stage group breakdown for UI display.
+    Returns a list of group dicts ordered as: SETUP, MATERIAL, PRODUCTION, POST-PRODUCTION.
+    Each group: {name, stages: [{key, display, status}], complete, total, group_status}
+    group_status: 'committed' | 'in_progress' | 'review' | 'blocked' | 'not_started'
+    """
+    # Build a map of stageKey -> status from the stages list
+    status_map: dict[str, str] = {}
+    for s in stages:
+        key = str(s.get("stageKey") or s.get("stage_key") or "")
+        if key:
+            status_map[key] = str(s.get("status") or STATUS_NOT_STARTED)
+
+    result = []
+    for group_name, group_keys in STAGE_GROUPS.items():
+        stage_items = []
+        committed = 0
+        total = len(group_keys)
+        has_review = False
+        has_in_progress = False
+        has_blocked = False
+
+        for key in group_keys:
+            st = status_map.get(key, STATUS_NOT_STARTED)
+            stage_items.append({
+                "key": key,
+                "display": _stage_display(key),
+                "status": st,
+            })
+            if st == STATUS_COMMITTED:
+                committed += 1
+            elif st == STATUS_READY_FOR_REVIEW:
+                has_review = True
+            elif st == STATUS_IN_PROGRESS:
+                has_in_progress = True
+            elif st == STATUS_BLOCKED:
+                has_blocked = True
+
+        # Derive group-level status
+        if committed == total:
+            group_status = "committed"
+        elif has_review:
+            group_status = "review"
+        elif has_blocked:
+            group_status = "blocked"
+        elif has_in_progress:
+            group_status = "in_progress"
+        else:
+            group_status = "not_started"
+
+        result.append({
+            "name": group_name,
+            "stages": stage_items,
+            "complete": committed,
+            "total": total,
+            "group_status": group_status,
+        })
+    return result
 
 
 def _load_jsonl(path: Path) -> list[dict]:
@@ -856,7 +954,7 @@ class GhostwritrBridge:
           {
             "ghostwritr_available": bool,
             "db_available": bool,
-            "active_books": [BookProject.to_dict()...],
+            "active_books": [BookProject.to_dict() + stage_groups + word_count...],
             "pending_reviews": int,
             "pending_review_list": [DraftReview.to_dict()...],
             "total_books": int,
@@ -868,7 +966,38 @@ class GhostwritrBridge:
         # get_active_books() uses HTTP API first so this doesn't gate data)
         db_up = self._db.is_available()
 
-        active_books = self.get_active_books()
+        # Fetch raw pairs so we can compute stage groups from the full stage list
+        pairs = self._list_books_with_stages()
+        active_books: list[BookProject] = []
+        books_with_groups: list[dict] = []
+
+        for book, stages in pairs:
+            try:
+                bp = self._rows_to_book_project(book, stages)
+                active_books.append(bp)
+                book_dict = bp.to_dict()
+                book_dict["stage_groups"] = _compute_stage_groups(stages)
+                # Attempt lightweight word-count from manuscript export
+                word_count = 0
+                chapter_count = 0
+                try:
+                    if ghostwritr_up:
+                        ms = self._client.get_manuscript(bp.slug)
+                        chapters = ms.get("chapters") or [] if ms else []
+                        if isinstance(chapters, list):
+                            chapter_count = len(chapters)
+                            for ch in chapters:
+                                content = ch.get("content") or ch.get("text") or ""
+                                word_count += len(str(content).split())
+                except Exception:
+                    pass
+                book_dict["word_count"] = word_count
+                book_dict["chapter_count"] = chapter_count
+                books_with_groups.append(book_dict)
+            except Exception as exc:
+                logger.debug("GhostwritrBridge dashboard: failed to map book %s: %s",
+                             book.get("id"), exc)
+
         pending = self.get_pending_reviews()
 
         books_in_progress = sum(
@@ -879,7 +1008,7 @@ class GhostwritrBridge:
         return {
             "ghostwritr_available": ghostwritr_up,
             "db_available": db_up,
-            "active_books": [b.to_dict() for b in active_books],
+            "active_books": books_with_groups,
             "pending_reviews": len(pending),
             "pending_review_list": [r.to_dict() for r in pending],
             "total_books": len(active_books),

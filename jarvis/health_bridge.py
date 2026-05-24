@@ -31,8 +31,10 @@ METRIC_LABELS = {
     "blood_oxygen":       "Blood Oxygen %",
     "respiratory_rate":   "Respiratory Rate",
     "sleep_hours":        "Sleep Hours",
-    "sleep_deep_hours":   "Deep Sleep",
-    "sleep_rem_hours":    "REM Sleep",
+    "sleep_deep":         "Deep Sleep",
+    "sleep_deep_hours":   "Deep Sleep",   # legacy alias
+    "sleep_rem":          "REM Sleep",
+    "sleep_rem_hours":    "REM Sleep",    # legacy alias
     "sleep_core_hours":   "Core Sleep",
     "weight_lbs":         "Weight (lbs)",
     "bmi":                "BMI",
@@ -47,8 +49,8 @@ READINESS_CONFIG = {
     # metric: (ideal_value, weight, direction)  direction: 'higher'|'lower'
     "hrv":          (60,  0.35, "higher"),
     "resting_hr":   (58,  0.25, "lower"),
-    "sleep_hours":  (8.0, 0.25, "higher"),
-    "sleep_deep_hours": (1.5, 0.15, "higher"),
+    "sleep_hours":      (8.0, 0.25, "higher"),
+    "sleep_deep":       (1.5, 0.15, "higher"),   # matches SQLite column name
 }
 
 
@@ -147,10 +149,19 @@ def compute_readiness(snapshot: dict | None = None) -> dict:
     factors = []
     total_weight = 0.0
     weighted_score = 0.0
+    missing_weight = 0.0  # track weight of metrics with no data
+
+    # Neutral penalty score for missing metrics — prevents inflation when data gaps exist
+    MISSING_SCORE = 50
 
     for metric, (ideal, weight, direction) in READINESS_CONFIG.items():
         val = snapshot.get(metric)
         if val is None:
+            # Apply neutral penalty rather than silently dropping the metric
+            weighted_score += MISSING_SCORE * weight
+            total_weight += weight
+            missing_weight += weight
+            factors.append({"metric": metric, "label": METRIC_LABELS[metric], "value": None, "score": MISSING_SCORE, "weight": weight, "missing": True})
             continue
         # Score this metric 0–100
         if direction == "higher":
@@ -168,6 +179,8 @@ def compute_readiness(snapshot: dict | None = None) -> dict:
         return {"score": None, "grade": "—", "factors": [], "message": "No data yet — connect Apple Health via Shortcuts."}
 
     score = round(weighted_score / total_weight)
+    # Flag data quality — if more than 30% of weight has no data, note it
+    data_incomplete = missing_weight / total_weight > 0.30
     if score >= 85:
         grade, message = "Excellent", "You're well-rested and primed to perform."
     elif score >= 70:
@@ -179,7 +192,11 @@ def compute_readiness(snapshot: dict | None = None) -> dict:
     else:
         grade, message = "Low", "Significantly under-recovered. Rest is the priority."
 
-    return {"score": score, "grade": grade, "factors": factors, "message": message}
+    # Append data quality note when significant metrics are missing
+    if data_incomplete:
+        message += " (Sleep data missing — score estimated.)"
+
+    return {"score": score, "grade": grade, "factors": factors, "message": message, "data_incomplete": data_incomplete}
 
 
 def get_morning_summary() -> str:
