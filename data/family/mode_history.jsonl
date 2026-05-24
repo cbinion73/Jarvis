@@ -22,3 +22,10 @@
 {"mode": "dawn-protocol", "status": "manual", "reason": "Automated E2E mode transition check.", "actor": "Chris", "timestamp": "2026-05-10T18:04:14.950099+00:00"}
 {"mode": "family-morning", "status": "manual", "reason": "Automated E2E mode transition check.", "actor": "Chris", "timestamp": "2026-05-10T18:13:18.705440+00:00"}
 {"mode": "dawn-protocol", "status": "manual", "reason": "Automated E2E mode transition check.", "actor": "Chris", "timestamp": "2026-05-10T20:27:21.455937+00:00"}
+{"mode": "lunch_brief", "status": "manual", "reason": "User selected mode", "actor": "Chris", "timestamp": "2026-05-22T18:27:55.369262+00:00"}
+{"mode": "lunch_brief", "status": "manual", "reason": "User selected mode", "actor": "Chris", "timestamp": "2026-05-22T18:28:10.045772+00:00"}
+{"mode": "daily_recap", "status": "manual", "reason": "User selected mode", "actor": "Chris", "timestamp": "2026-05-22T18:28:10.045794+00:00"}
+{"mode": "morning_brief", "status": "manual", "reason": "User selected mode", "actor": "Chris", "timestamp": "2026-05-22T18:28:18.127133+00:00"}
+{"mode": "morning_brief", "status": "manual", "reason": "User selected mode", "actor": "Chris", "timestamp": "2026-05-22T18:28:18.127375+00:00"}
+{"mode": "lunch_brief", "status": "manual", "reason": "User selected mode", "actor": "Chris", "timestamp": "2026-05-22T18:28:18.128268+00:00"}
+{"mode": "daily_recap", "status": "manual", "reason": "User selected mode", "actor": "Chris", "timestamp": "2026-05-22T18:28:18.128869+00:00"}
