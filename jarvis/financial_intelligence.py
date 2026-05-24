@@ -1056,10 +1056,11 @@ class FinancialIntelligenceOrchestrator:
 # ---------------------------------------------------------------------------
 
 def _seed_if_empty(store: FinancialStore) -> None:
-    """Seed with sample accounts, passive income streams if store is empty."""
+    """Seed disabled — Chris enters real data via the Finance setup modal."""
+    return  # noqa: real data only
 
-    # Accounts
-    if not store.load_accounts():
+    # Accounts (disabled)
+    if not store.load_accounts():  # type: ignore[unreachable]
         store.save_accounts([
             Account(
                 account_id="chase-checking",
