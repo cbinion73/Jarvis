@@ -1813,6 +1813,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         """Add or update a financial account. Required: name, account_type, balance."""
         try:
             import uuid as _uuid
+            from datetime import datetime as _dt, timezone as _tz
             from .financial_intelligence import get_finance, Account
             fi = get_finance()
             if fi is None:
@@ -1824,7 +1825,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 institution=str(payload.get("institution", "")),
                 balance=float(payload["balance"]),
                 currency=str(payload.get("currency", "USD")),
-                last_updated=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                last_updated=_dt.now(_tz.utc).strftime("%Y-%m-%d"),
                 notes=str(payload.get("notes", "")),
                 is_manual=True,
                 hidden=bool(payload.get("hidden", False)),
