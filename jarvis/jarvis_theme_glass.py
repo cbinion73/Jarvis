@@ -1795,6 +1795,216 @@ body::after {{
   background: rgba(255,255,255,0.03);
   transition: border-color 0.2s;
 }}
+/* ── Quick Capture ──────────────────────────────────────────────────────── */
+.cmd-chip-faith {{
+  border-color: rgba(139,92,246,0.35);
+  color: rgba(139,92,246,0.9);
+}}
+.cmd-chip-faith:hover {{
+  background: rgba(139,92,246,0.12);
+  border-color: rgba(139,92,246,0.6);
+  color: #a78bfa;
+}}
+.chr-capture-card {{
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}}
+.chr-capture-type-row {{
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}}
+.chr-capture-type {{
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: var(--text-3);
+  transition: all .15s;
+}}
+.chr-capture-type:hover {{
+  color: var(--text-2);
+  background: rgba(255,255,255,0.09);
+}}
+.chr-capture-type.active {{
+  background: rgba(var(--hue-rgb),0.15);
+  border-color: var(--hue);
+  color: var(--hue);
+}}
+.chr-capture-input-row {{
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}}
+.chr-capture-input {{
+  flex: 2;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-1);
+  font-size: 13px;
+  padding: 8px 12px;
+  outline: none;
+  font-family: inherit;
+}}
+.chr-capture-input:focus {{ border-color: var(--hue); }}
+.chr-capture-passage {{
+  flex: 1;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-2);
+  font-size: 12px;
+  padding: 8px 10px;
+  outline: none;
+  font-family: inherit;
+  min-width: 0;
+}}
+.chr-capture-passage:focus {{ border-color: var(--hue); }}
+
+/* Quick capture modal (from command bar) */
+.qc-modal-backdrop {{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(6px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}}
+.qc-modal {{
+  background: rgba(10,18,32,0.97);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 16px;
+  padding: 24px;
+  width: min(480px,90vw);
+  box-shadow: 0 24px 60px rgba(0,0,0,.6);
+}}
+.qc-modal-title {{
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 14px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}}
+.qc-modal-textarea {{
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-1);
+  font-size: 14px;
+  padding: 12px 14px;
+  resize: none;
+  outline: none;
+  font-family: inherit;
+  line-height: 1.55;
+  margin-bottom: 10px;
+}}
+.qc-modal-textarea:focus {{ border-color: var(--hue); }}
+.qc-passage-input {{
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-2);
+  font-size: 12px;
+  padding: 7px 10px;
+  outline: none;
+  font-family: inherit;
+  margin-bottom: 14px;
+}}
+.qc-passage-input:focus {{ border-color: var(--hue); }}
+.qc-footer {{
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}}
+
+/* Spiritual context in Morning Brief */
+.brief-spiritual-ctx {{
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+}}
+.brief-spiritual-row {{
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--text-3);
+}}
+.brief-spiritual-icon {{
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+  font-size: 12px;
+  margin-top: 1px;
+}}
+.brief-spiritual-text {{
+  flex: 1;
+  color: var(--text-2);
+  line-height: 1.45;
+}}
+.brief-chr-btn {{
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(var(--hue-rgb),0.12);
+  border: 1px solid rgba(var(--hue-rgb),0.25);
+  color: var(--hue);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background .15s;
+}}
+.brief-chr-btn:hover {{ background: rgba(var(--hue-rgb),0.22); }}
+
+/* Pattern insights in Faith/Chronicle */
+.pattern-grid {{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px,1fr));
+  gap: 10px;
+  margin-top: 12px;
+}}
+.pattern-tile {{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}}
+.pattern-tile-num {{
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--hue);
+  margin-bottom: 2px;
+}}
+.pattern-tile-lbl {{
+  font-size: 10px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}}
+.pattern-theme-chip {{
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  background: rgba(var(--hue-rgb),0.10);
+  border: 1px solid rgba(var(--hue-rgb),0.20);
+  color: var(--hue);
+  margin: 3px;
+}}
 /* Chat area */
 .chr-chat-messages {{
   flex: 1;
@@ -5467,6 +5677,25 @@ body::after {{
       <div class="view-subtitle">Entries · Prayer · Formation · Scripture</div>
     </div>
 
+    <!-- Quick capture card -->
+    <div class="chr-capture-card card" id="chr-capture-card">
+      <div class="chr-capture-type-row" id="chr-capture-types">
+        <button class="chr-capture-type active" data-type="note" onclick="setChrCaptureType(this,'note')">📝 Note</button>
+        <button class="chr-capture-type" data-type="gratitude" onclick="setChrCaptureType(this,'gratitude')">🙏 Gratitude</button>
+        <button class="chr-capture-type" data-type="prayer" onclick="setChrCaptureType(this,'prayer')">✦ Prayer</button>
+        <button class="chr-capture-type" data-type="insight" onclick="setChrCaptureType(this,'insight')">💡 Insight</button>
+        <button class="chr-capture-type" data-type="milestone" onclick="setChrCaptureType(this,'milestone')">🏆 Milestone</button>
+      </div>
+      <div class="chr-capture-input-row">
+        <input class="chr-capture-input" id="chr-capture-input" type="text"
+          placeholder="What's on your heart? Press Enter to capture…"
+          onkeydown="if(event.key==='Enter')chrQuickCapture()">
+        <input class="chr-capture-passage" id="chr-capture-passage" type="text"
+          placeholder="Passage (optional)">
+        <button class="btn btn-hue btn-sm" onclick="chrQuickCapture()" style="height:36px;padding:0 14px;flex-shrink:0;">Capture</button>
+      </div>
+    </div>
+
     <!-- Stats strip -->
     <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
       <div class="card" style="flex:1;min-width:100px;padding:12px 16px;">
@@ -5538,6 +5767,14 @@ body::after {{
         </div>
       </div>
 
+    </div>
+
+    <!-- Patterns section (Phase 5 foundation) -->
+    <div style="margin-top:24px;">
+      <div class="section-label" style="margin-bottom:12px;">30-Day Patterns</div>
+      <div id="chr-patterns" class="card" style="padding:16px;">
+        <div class="skel" style="height:80px;border-radius:8px;"></div>
+      </div>
     </div>
   </div>
 
@@ -6564,6 +6801,10 @@ body::after {{
     <button class="cmd-chip" onclick="setCmd('Start print job')">🖨️ Forge</button>
     <button class="cmd-chip" onclick="setCmd('Run diagnostics')">🔬 Diag</button>
     <button class="cmd-chip" onclick="setCmd('Chronicle search:')">🔍 Memory</button>
+    <button class="cmd-chip cmd-chip-faith" onclick="openQuickCapture('gratitude')">🙏 Gratitude</button>
+    <button class="cmd-chip cmd-chip-faith" onclick="openQuickCapture('prayer')">✦ Prayer</button>
+    <button class="cmd-chip cmd-chip-faith" onclick="openQuickCapture('note')">📝 Note</button>
+    <button class="cmd-chip cmd-chip-faith" onclick="openQuickCapture('milestone')">🏆 Milestone</button>
   </div>
   <div class="cmd-row">
     <input class="cmd-input" id="cmd-input" type="text" placeholder="Ask JARVIS to build, fix, or explain anything…" onkeydown="cmdKey(event)" onpaste="handleSmartPaste(event)">
@@ -6889,6 +7130,7 @@ function init() {{
   connectWebSocket();
   updateActiveCounts();
   loadHomeDashboard();
+  loadChronicleContext();
   loadOverviewAgents();
   loadOverviewCatalyst();
   loadOverviewChronicle();
@@ -7022,7 +7264,7 @@ function renderKasaView(data) {{
   const rooms = data.rooms || {{}};
   const scenes = data.scenes || [];
   const sceneHtml = scenes.map(function(s) {{
-    return '<button class="kasa-scene-btn" id="kasa-scene-' + s.id + '" onclick="runKasaScene(\'' + s.id + '\')">'
+    return '<button class="kasa-scene-btn" id="kasa-scene-' + s.id + '" onclick="runKasaScene(&apos;' + s.id + '&apos;)">'
       + (s.icon || '✨') + ' ' + escHtml(s.name) + '</button>';
   }}).join('');
   const statsHtml =
@@ -7112,7 +7354,7 @@ function _kasaDeviceCard(d) {{
       + '<span class="kasa-device-icon">📷</span>'
       + '<div class="kasa-device-info"><div class="kasa-device-alias">' + escHtml(d.alias) + '</div>'
       + '<div class="kasa-device-model">' + escHtml(d.model || 'EC70') + ' · ' + escHtml(d.sw_ver || '') + '</div></div>'
-      + '<button class="kasa-live-btn" id="cam-btn-' + cameraId + '" onclick="startCameraStream(\'' + d.ip + '\',\'' + cameraId + '\')">▶ Live</button></div>'
+      + '<button class="kasa-live-btn" id="cam-btn-' + cameraId + '" onclick="startCameraStream(&apos;' + d.ip + '&apos;,&apos;' + cameraId + '&apos;)">▶ Live</button></div>'
       + '<video id="cam-vid-' + cameraId + '" class="kasa-camera-video" controls muted playsinline style="display:none;width:100%;border-radius:8px;margin-top:8px;"></video>'
       + '</div>';
   }}
@@ -8781,12 +9023,228 @@ async function faithSend() {{
   if (input) {{ input.disabled = false; input.focus(); }}
 }}
 
+/* ═══ QUICK CAPTURE (Phase 3) ═══════════════════════════════════════════ */
+
+let _qcType = 'note';
+
+const _QC_LABELS = {{
+  note: '📝 Note',
+  gratitude: '🙏 Gratitude',
+  prayer: '✦ Prayer',
+  milestone: '🏆 Milestone',
+  reflection: '✍ Reflection',
+  insight: '💡 Insight',
+  study: '📖 Study',
+}};
+
+function openQuickCapture(type) {{
+  _qcType = type || 'note';
+  const label = _QC_LABELS[_qcType] || _qcType;
+  const html = `
+    <div class="qc-modal-backdrop" id="qc-modal" onclick="if(event.target===this)closeQcModal()">
+      <div class="qc-modal">
+        <div class="qc-modal-title">${{label}}</div>
+        <textarea class="qc-modal-textarea" id="qc-text" rows="4"
+          placeholder="What\'s on your heart?…"
+          onkeydown="if(event.key==='Enter'&&event.metaKey)submitQuickCapture()"></textarea>
+        <input class="qc-passage-input" id="qc-passage" type="text" placeholder="Passage (optional — e.g. Psalm 23:1)">
+        <div class="qc-footer">
+          <button class="btn btn-sm" onclick="closeQcModal()">Cancel</button>
+          <button class="btn btn-hue btn-sm" onclick="submitQuickCapture()">Capture →</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+  setTimeout(() => document.getElementById('qc-text')?.focus(), 50);
+}}
+
+function closeQcModal() {{
+  document.getElementById('qc-modal')?.remove();
+}}
+
+async function submitQuickCapture() {{
+  const content = document.getElementById('qc-text')?.value.trim();
+  const passage = document.getElementById('qc-passage')?.value.trim() || '';
+  if (!content) {{ showToast('Nothing to capture', 'warning'); return; }}
+
+  const btn = document.querySelector('#qc-modal .btn-hue');
+  if (btn) btn.disabled = true;
+
+  try {{
+    const res = await fetch('/api/chronicle/quick-capture', {{
+      method: 'POST',
+      headers: {{'Content-Type':'application/json'}},
+      body: JSON.stringify({{ type: _qcType, content, passage }})
+    }});
+    const data = await res.json();
+    closeQcModal();
+    if (data.ok) {{
+      showToast(`${{_QC_LABELS[_qcType] || 'Entry'}} captured ✓`, 'success');
+      // Refresh Chronicle view if active
+      if (document.getElementById('view-chronicle')?.classList.contains('active')) loadChronicle();
+    }} else {{
+      showToast(data.detail || 'Capture failed', 'warning');
+    }}
+  }} catch(e) {{
+    closeQcModal();
+    showToast('Chronicle unavailable', 'warning');
+  }}
+}}
+
+// Inline capture card in Chronicle view
+let _chrCaptureType = 'note';
+
+function setChrCaptureType(btn, type) {{
+  _chrCaptureType = type;
+  document.querySelectorAll('.chr-capture-type').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const input = document.getElementById('chr-capture-input');
+  const placeholders = {{
+    note: "What\'s on your heart? Press Enter to capture…",
+    gratitude: 'What are you grateful for today?',
+    prayer: 'What would you like to bring before the Lord?',
+    insight: 'What did God show you?',
+    milestone: 'What milestone are you marking?',
+  }};
+  if (input) input.placeholder = placeholders[type] || "What\'s on your heart?";
+}}
+
+async function chrQuickCapture() {{
+  const content = document.getElementById('chr-capture-input')?.value.trim();
+  const passage = document.getElementById('chr-capture-passage')?.value.trim() || '';
+  if (!content) return;
+
+  try {{
+    const res = await fetch('/api/chronicle/quick-capture', {{
+      method: 'POST',
+      headers: {{'Content-Type':'application/json'}},
+      body: JSON.stringify({{ type: _chrCaptureType, content, passage }})
+    }});
+    const data = await res.json();
+    if (data.ok) {{
+      document.getElementById('chr-capture-input').value = '';
+      document.getElementById('chr-capture-passage').value = '';
+      showToast('Captured ✓', 'success');
+      loadChronicle();
+    }} else {{
+      showToast(data.detail || 'Capture failed', 'warning');
+    }}
+  }} catch(e) {{
+    showToast('Chronicle unavailable', 'warning');
+  }}
+}}
+
+/* ═══ SPIRITUAL CONTEXT (Phase 4) ═══════════════════════════════════════ */
+
+let _chronicleContext = null;
+
+async function loadChronicleContext() {{
+  try {{
+    const data = await fetch('/api/chronicle/context').then(r => r.json());
+    if (!data.ok) return;
+    _chronicleContext = data;
+    injectSpiritualContext(data);
+  }} catch(e) {{
+    console.warn('loadChronicleContext', e);
+  }}
+}}
+
+function injectSpiritualContext(ctx) {{
+  // Inject into Morning Brief if the element is present
+  const briefEl = document.getElementById('brief-text');
+  if (!briefEl) return;
+
+  // Check if spiritual context already injected
+  if (briefEl.querySelector('.brief-spiritual-ctx')) return;
+
+  const rows = [];
+
+  if (ctx.study?.passage) {{
+    rows.push(`
+      <div class="brief-spiritual-row">
+        <span class="brief-spiritual-icon">📖</span>
+        <span class="brief-spiritual-text">Studying <strong>${{escHtml(ctx.study.passage)}}</strong>${{ctx.study.title ? ' — ' + escHtml(ctx.study.title) : ''}}</span>
+        <button class="brief-chr-btn" onclick="openBibleStudyModal('${{escHtml(ctx.study.passage)}}')">Study →</button>
+      </div>`);
+  }}
+
+  if (ctx.todays_rhythm?.name) {{
+    rows.push(`
+      <div class="brief-spiritual-row">
+        <span class="brief-spiritual-icon">🌱</span>
+        <span class="brief-spiritual-text">Today\'s rhythm: <strong>${{escHtml(ctx.todays_rhythm.name)}}</strong>${{ctx.todays_rhythm.description ? ' — ' + escHtml(ctx.todays_rhythm.description) : ''}}</span>
+      </div>`);
+  }}
+
+  if (ctx.active_prayers?.length) {{
+    const prayerText = ctx.active_prayers.map(p => escHtml(p.text)).join(' · ');
+    rows.push(`
+      <div class="brief-spiritual-row">
+        <span class="brief-spiritual-icon">🙏</span>
+        <span class="brief-spiritual-text">Praying for: ${{prayerText}}</span>
+        <button class="brief-chr-btn" onclick="switchView(\'chronicle\')">→ Chronicle</button>
+      </div>`);
+  }}
+
+  if (!rows.length) return;
+
+  const ctx_html = `<div class="brief-spiritual-ctx">${{rows.join('')}}</div>`;
+  briefEl.insertAdjacentHTML('beforeend', ctx_html);
+}}
+
+async function loadPatterns() {{
+  try {{
+    const data = await fetch('/api/chronicle/patterns').then(r => r.json());
+    if (!data.ok) return;
+    renderPatterns(data);
+  }} catch(e) {{ console.warn('loadPatterns', e); }}
+}}
+
+function renderPatterns(p) {{
+  const el = document.getElementById('chr-patterns');
+  if (!el) return;
+
+  const typeIcons = {{
+    insight:'💡', reflection:'✍', prayer:'🙏', gratitude:'🙏',
+    study:'📖', note:'📝', milestone:'🏆'
+  }};
+
+  const typeBreakdown = Object.entries(p.entry_type_breakdown || {{}})
+    .sort((a,b) => b[1]-a[1])
+    .map(([t,c]) => `<div class="pattern-tile"><div class="pattern-tile-num">${{c}}</div><div class="pattern-tile-lbl">${{typeIcons[t]||''}} ${{t}}</div></div>`)
+    .join('');
+
+  const themes = (p.recurring_themes || [])
+    .map(t => `<span class="pattern-theme-chip">${{escHtml(t.theme)}} <span style="opacity:.6;font-size:10px;">×${{t.count}}</span></span>`)
+    .join('');
+
+  el.innerHTML = `
+    <div class="pattern-grid">
+      <div class="pattern-tile">
+        <div class="pattern-tile-num">${{p.writing_streak_days || 0}}</div>
+        <div class="pattern-tile-lbl">Day Streak</div>
+      </div>
+      <div class="pattern-tile">
+        <div class="pattern-tile-num">${{p.total_recent_entries || 0}}</div>
+        <div class="pattern-tile-lbl">Last 30 Days</div>
+      </div>
+      <div class="pattern-tile">
+        <div class="pattern-tile-num" style="color:#3ecf8e">${{p.prayer_arc?.answered_recent || 0}}</div>
+        <div class="pattern-tile-lbl">Prayers Answered</div>
+      </div>
+      ${{typeBreakdown}}
+    </div>
+    ${{themes ? `<div style="margin-top:12px;">${{themes}}</div>` : ''}}`;
+}}
+
 async function loadChronicle() {{
   try {{
     const res = await fetch('/api/chronicle/recent');
     if (!res.ok) {{ console.warn('loadChronicle', res.status); return; }}
     const data = await res.json();
     renderChronicle(data);
+    loadChronicleContext();
+    loadPatterns();
   }} catch(e) {{ console.error('loadChronicle failed', e); }}
 }}
 
@@ -14632,6 +15090,136 @@ async function _renderHealthSparklines() {{
       'spark-weight': {{ s: series('weight'),       color: '#22c55e' }},
     }};
 
+/* ═══ FINANCE SETUP MODAL ═══════════════════════════════════ */
+function openFinanceSetup() {{
+  const ov = document.getElementById('finance-setup-overlay');
+  if (!ov) return;
+  ov.classList.remove('hidden');
+  loadFinanceSetupData();
+}}
+function closeFinanceSetup(e) {{
+  if (e && e.target !== document.getElementById('finance-setup-overlay')) return;
+  document.getElementById('finance-setup-overlay')?.classList.add('hidden');
+}}
+function switchFinanceTab(tab) {{
+  ['accounts','streams','goals'].forEach(t => {{
+    document.getElementById('finance-panel-' + t)?.classList.toggle('active', t === tab);
+  }});
+  document.querySelectorAll('.finance-tab').forEach((btn,i) =>
+    btn.classList.toggle('active', ['accounts','streams','goals'][i] === tab));
+}}
+async function loadFinanceSetupData() {{
+  await Promise.all([_loadFiAccounts(), _loadFiStreams(), _loadFiGoals()]);
+}}
+async function _loadFiAccounts() {{
+  const el = document.getElementById('finance-accounts-list');
+  if (!el) return;
+  try {{
+    const accounts = await fetch('/api/finance/accounts').then(r=>r.json());
+    if (!Array.isArray(accounts)||!accounts.length) {{ el.innerHTML='<div class="finance-empty">No accounts added yet.</div>'; return; }}
+    const fmt = n=>'$'+parseFloat(n||0).toLocaleString('en-US',{{maximumFractionDigits:0}});
+    const lbl = {{checking:'Checking',savings:'Savings',investment:'Investment',retirement:'Retirement',credit:'Credit Card',loan:'Loan',other:'Other'}};
+    el.innerHTML = accounts.map(a=>`<div class="finance-row">
+      <div style="flex:1;min-width:0;"><div class="finance-row-name">${{escHtml(a.name)}}</div>
+      <div class="finance-row-sub">${{lbl[a.account_type]||a.account_type}}${{a.institution?' · '+escHtml(a.institution):''}}</div></div>
+      <div class="finance-row-val" style="color:${{a.account_type==='credit'||a.account_type==='loan'?'var(--red)':'var(--text-1)'}}">${{fmt(a.balance)}}</div>
+      <button class="finance-row-del" onclick="deleteFinanceAccount('${{a.account_id}}','${{escHtml(a.name).replace(/'/g,''')}}')" title="Remove">✕</button>
+    </div>`).join('');
+  }} catch(e) {{ el.innerHTML='<div class="finance-empty">Could not load accounts.</div>'; }}
+}}
+async function loadFinanceAccounts() {{ await _loadFiAccounts(); }}
+async function submitFinanceAccount() {{
+  const name=document.getElementById('fi-acct-name')?.value.trim();
+  const type=document.getElementById('fi-acct-type')?.value;
+  const inst=document.getElementById('fi-acct-institution')?.value.trim();
+  const bal=parseFloat(document.getElementById('fi-acct-balance')?.value||'');
+  if (!name||isNaN(bal)) {{ showToast('Name and balance are required','warn'); return; }}
+  const res=await fetch('/api/finance/accounts',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{name,account_type:type,institution:inst,balance:bal}})}});
+  if (!res.ok) {{ showToast((await res.json()).detail||'Error','warn'); return; }}
+  ['fi-acct-name','fi-acct-institution','fi-acct-balance'].forEach(id=>{{ const el=document.getElementById(id); if(el) el.value=''; }});
+  await _loadFiAccounts(); showToast('Account added','ok'); setTimeout(()=>loadFiskCard(),600);
+}}
+async function deleteFinanceAccount(id,name) {{
+  if (!confirm('Remove "'+name+'"?')) return;
+  await fetch('/api/finance/accounts/'+encodeURIComponent(id),{{method:'DELETE'}});
+  await _loadFiAccounts(); showToast('Account removed','ok'); setTimeout(()=>loadFiskCard(),600);
+}}
+async function _loadFiStreams() {{
+  const el=document.getElementById('finance-streams-list');
+  if (!el) return;
+  try {{
+    const streams=await fetch('/api/finance/passive-income/streams').then(r=>r.json());
+    if (!Array.isArray(streams)||!streams.length) {{ el.innerHTML='<div class="finance-empty">No passive income streams yet.</div>'; return; }}
+    const fmt=n=>'$'+parseFloat(n||0).toLocaleString('en-US',{{maximumFractionDigits:0}});
+    const lbl={{book_royalty:'Book Royalty',course_revenue:'Course',dividend:'Dividends',rental:'Rental',affiliate:'Affiliate',interest:'Interest',consulting:'Consulting',other:'Other'}};
+    el.innerHTML=streams.map(s=>`<div class="finance-row">
+      <div style="flex:1;min-width:0;"><div class="finance-row-name">${{escHtml(s.name)}}</div>
+      <div class="finance-row-sub">${{lbl[s.stream_type]||s.stream_type}}${{s.platform?' · '+escHtml(s.platform):''}}</div></div>
+      <div class="finance-row-val" style="color:var(--green)">${{fmt(s.monthly_average)}}<span style="font-size:9px;color:var(--text-3);">/mo</span></div>
+      <button class="finance-row-del" onclick="deleteFinanceStream('${{s.stream_id}}','${{escHtml(s.name).replace(/'/g,''')}}')" title="Remove">✕</button>
+    </div>`).join('');
+  }} catch(e) {{ el.innerHTML='<div class="finance-empty">Could not load streams.</div>'; }}
+}}
+async function loadFinanceStreams() {{ await _loadFiStreams(); }}
+async function submitFinanceStream() {{
+  const name=document.getElementById('fi-stream-name')?.value.trim();
+  const type=document.getElementById('fi-stream-type')?.value;
+  const monthly=parseFloat(document.getElementById('fi-stream-monthly')?.value||'');
+  const platform=document.getElementById('fi-stream-platform')?.value.trim();
+  if (!name||isNaN(monthly)) {{ showToast('Name and monthly amount are required','warn'); return; }}
+  const res=await fetch('/api/finance/passive-income/streams',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{name,stream_type:type,monthly_average:monthly,platform}})}});
+  if (!res.ok) {{ showToast((await res.json()).detail||'Error','warn'); return; }}
+  ['fi-stream-name','fi-stream-monthly','fi-stream-platform'].forEach(id=>{{ const el=document.getElementById(id); if(el) el.value=''; }});
+  await _loadFiStreams(); showToast('Stream added','ok'); setTimeout(()=>loadFiskCard(),600);
+}}
+async function deleteFinanceStream(id,name) {{
+  if (!confirm('Remove "'+name+'"?')) return;
+  await fetch('/api/finance/passive-income/streams/'+encodeURIComponent(id),{{method:'DELETE'}});
+  await _loadFiStreams(); showToast('Stream removed','ok'); setTimeout(()=>loadFiskCard(),600);
+}}
+async function _loadFiGoals() {{
+  const el=document.getElementById('finance-goals-list');
+  if (!el) return;
+  try {{
+    const d=await fetch('/api/finance/goals').then(r=>r.json());
+    const goals=d.goals||d||[];
+    if (!goals.length) {{ el.innerHTML='<div class="finance-empty">No goals added yet.</div>'; return; }}
+    const fmt=n=>'$'+parseFloat(n||0).toLocaleString('en-US',{{maximumFractionDigits:0}});
+    const pct=g=>g.target_amount>0?Math.round((g.current_amount/g.target_amount)*100):0;
+    el.innerHTML=goals.map(g=>`<div class="finance-row" style="flex-direction:column;align-items:stretch;gap:6px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="flex:1;min-width:0;"><div class="finance-row-name">${{escHtml(g.title)}}</div>
+        <div class="finance-row-sub">${{fmt(g.current_amount)}} of ${{fmt(g.target_amount)}}${{g.target_date?' · by '+g.target_date:''}}</div></div>
+        <div class="finance-row-val">${{pct(g)}}%</div>
+        <button class="finance-row-del" onclick="deleteFinanceGoal('${{g.goal_id}}','${{escHtml(g.title).replace(/'/g,''')}}')" title="Remove">✕</button>
+      </div>
+      <div style="height:3px;background:rgba(255,255,255,0.08);border-radius:2px;">
+        <div style="height:100%;width:${{Math.min(pct(g),100)}}%;background:var(--blue);border-radius:2px;"></div>
+      </div>
+    </div>`).join('');
+  }} catch(e) {{ el.innerHTML='<div class="finance-empty">Could not load goals.</div>'; }}
+}}
+async function loadFinanceGoals() {{ await _loadFiGoals(); }}
+async function submitFinanceGoal() {{
+  const title=document.getElementById('fi-goal-title')?.value.trim();
+  const type=document.getElementById('fi-goal-type')?.value;
+  const target=parseFloat(document.getElementById('fi-goal-target')?.value||'');
+  const current=parseFloat(document.getElementById('fi-goal-current')?.value||'0');
+  const date=document.getElementById('fi-goal-date')?.value;
+  if (!title||isNaN(target)) {{ showToast('Title and target amount are required','warn'); return; }}
+  const res=await fetch('/api/finance/goals',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{title,goal_type:type,target_amount:target,current_amount:current||0,target_date:date||''}})}});
+  if (!res.ok) {{ showToast((await res.json()).detail||'Error','warn'); return; }}
+  ['fi-goal-title','fi-goal-target','fi-goal-current','fi-goal-date'].forEach(id=>{{ const el=document.getElementById(id); if(el) el.value=''; }});
+  await _loadFiGoals(); showToast('Goal added','ok'); setTimeout(()=>loadFiskCard(),600);
+}}
+async function deleteFinanceGoal(id,name) {{
+  if (!confirm('Remove "'+name+'"?')) return;
+  await fetch('/api/finance/goals/'+encodeURIComponent(id),{{method:'DELETE'}});
+  await _loadFiGoals(); showToast('Goal removed','ok'); setTimeout(()=>loadFiskCard(),600);
+}}
+/* ════════════════════════════════════════════════════════════ */
+
+
     Object.entries(LIVE_SPARKS).forEach(([id, cfg]) => {{
       if (cfg.s.length < 2) return;
       const el = document.getElementById(id);
@@ -14847,6 +15435,9 @@ async function loadFiskCard() {{
       ${{pi > 0 ? `<div style="font-size:11px;color:var(--green);margin-bottom:8px;">💰 Passive: ${{fmt(pi)}}/mo</div>` : ''}}
       ${{d.fisk_assessment ? `<div style="font-size:10px;color:var(--text-3);font-style:italic;line-height:1.4;border-top:1px solid rgba(255,255,255,0.08);padding-top:8px;margin-bottom:6px;">"${{escHtml(d.fisk_assessment)}}"</div>` : ''}}
       ${{goalsHtml}}
+      <div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.07);padding-top:8px;">
+        <button class="finance-setup-link" onclick="openFinanceSetup()">⚙ Manage accounts</button>
+      </div>
     `;
   }} catch(e) {{
     console.error('loadFiskCard', e);
