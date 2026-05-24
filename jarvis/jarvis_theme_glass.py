@@ -8969,8 +8969,8 @@ function faithMarkdownToHtml(md) {{
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/^#{{1,3}} (.+)$/gm, '<strong>$1</strong>')
-    .replace(/\n{{2,}}/g, '</p><p>')
-    .replace(/\n/g, '<br>')
+    .replace(/\\n{{2,}}/g, '</p><p>')
+    .replace(/\\n/g, '<br>')
     .replace(/^(.+)$/, '<p>$1</p>');
 }}
 
@@ -11855,9 +11855,9 @@ function chrMarkdownToHtml(md) {{
     .replace(/^\*\s+(.+)$/gm,'<li>$1</li>')
     .replace(/^-\s+(.+)$/gm,'<li>$1</li>')
     .replace(/(<li>.*<\/li>\n?)+/g, s => '<ul>'+s+'</ul>')
-    .replace(/\n\n+/g,'</p><p>')
+    .replace(/\\n\\n+/g,'</p><p>')
     .replace(/^(?!<[hul])(.+)$/gm,'$1')
-    .replace(/\n/g,'<br>');
+    .replace(/\\n/g,'<br>');
 }}
 
 async function chrStudySaveEntry() {{
