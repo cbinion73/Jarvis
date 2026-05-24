@@ -1879,32 +1879,8 @@ class BriefingBuilder:
         except Exception:
             logger.debug("Could not fetch approval needs for briefing", exc_info=True)
 
-        # Mantis / Catalyst handoff — package briefing for Catalyst and surface status
-        catalyst_handoff_status: dict = {}
-        try:
-            from .catalyst_bridge import get_mantis as _get_mantis
-            _mantis = _get_mantis()
-            if _mantis is not None:
-                _pre_packet = {
-                    "briefing_items": briefing_items,
-                    "needs_items": needs_items,
-                    "drift_items": drift_items,
-                    "memory_context": memory_context,
-                    "queue_depth": len(queued),
-                }
-                _mantis.on_morning_briefing_ready(_pre_packet)
-                catalyst_handoff_status = _mantis.get_workflow_status()
-                if catalyst_handoff_status:
-                    working_items.append({
-                        "agent": catalyst_handoff_status.get("agent", "Mantis"),
-                        "action": (
-                            f"Catalyst handoff packaged — "
-                            f"{catalyst_handoff_status.get('pending_handoffs', 0)} pending"
-                        ),
-                        "timestamp": now_iso,
-                    })
-        except Exception:
-            pass
+        # Note: Catalyst bridge handoff removed (external app retired).
+        # Work intelligence briefings now run natively via wi_workers.daily_briefing.
 
         # Disciple / Chronicle — spiritual context for morning briefing (Epic 9)
         spiritual_context: dict = {}

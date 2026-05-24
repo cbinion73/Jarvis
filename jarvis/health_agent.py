@@ -23,10 +23,53 @@ AGENT_NAME = "Helen Cho"
 AGENT_TITLE = "Health & Medical Intelligence"
 
 
+def _merged_snapshot() -> dict | None:
+    """
+    Build a single merged snapshot from the last 7 days of SQLite rows.
+    Prefers the most recent value for each metric, so today's resting_hr
+    combines with yesterday's sleep_hours if today's sync didn't include sleep.
+    """
+    import sqlite3 as _sq3
+    from pathlib import Path as _Path
+    db_path = _Path.home() / ".jarvis" / "health" / "health.db"
+    if not db_path.exists():
+        return None
+    try:
+        con = _sq3.connect(str(db_path))
+        con.row_factory = _sq3.Row
+        rows = con.execute(
+            "SELECT * FROM daily_metrics ORDER BY date DESC LIMIT 7"
+        ).fetchall()
+        con.close()
+    except Exception as exc:
+        logger.warning("_merged_snapshot db read failed: %s", exc)
+        return None
+    if not rows:
+        return None
+
+    FILL_KEYS = (
+        "steps", "resting_hr", "hrv", "sleep_hours", "sleep_deep", "sleep_rem",
+        "blood_oxygen", "active_cal", "exercise_min", "stand_hours", "weight",
+        "vo2_max", "body_fat_pct", "respiratory_rate", "heart_rate_avg",
+        "walking_hr_avg", "distance_km",
+    )
+    merged: dict = {}
+    for row in rows:
+        r = dict(row)
+        for k in FILL_KEYS:
+            if merged.get(k) is None and r.get(k) is not None:
+                merged[k] = r[k]
+        if not merged.get("date"):
+            merged["date"] = r["date"]
+        if all(merged.get(k) is not None for k in FILL_KEYS):
+            break   # all filled
+    return merged if merged else None
+
+
 def get_dashboard_data() -> dict:
     """Return structured data for the health overview card."""
-    from .health_bridge import get_latest, compute_readiness, get_trend
-    snap      = get_latest()
+    from .health_bridge import compute_readiness, get_trend
+    snap = _merged_snapshot()
     readiness = compute_readiness(snap)
     result: dict[str, Any] = {
         "has_data": snap is not None,
@@ -119,3 +162,50 @@ def get_labs_summary() -> list[dict]:
     except Exception as exc:
         logger.warning("Helen Cho: labs failed: %s", exc)
         return []
+
+
+def get_health_metrics() -> dict:
+    """
+    Return a flat metrics dict for use by coaching/AI systems (Sam Wilson, etc.).
+    Reads from SQLite (authoritative store) and merges across days so that
+    today's activity metrics combine with the most recent sleep/HRV data.
+    Returns {} if no data is available.
+    """
+    from .health_bridge import compute_readiness, get_trend
+    try:
+        snap = _merged_snapshot()
+        if not snap:
+            return {}
+        readiness = compute_readiness(snap)
+        metrics: dict[str, Any] = {
+            "date":          snap.get("date"),
+            "readiness":     readiness.get("score") if readiness else None,
+            "readiness_label": readiness.get("label") if readiness else None,
+            "steps":         snap.get("steps"),
+            "resting_hr":    snap.get("resting_hr"),
+            "hrv":           snap.get("hrv"),
+            "sleep_hours":   snap.get("sleep_hours"),
+            "sleep_deep":    snap.get("sleep_deep"),
+            "sleep_rem":     snap.get("sleep_rem"),
+            "blood_oxygen":  snap.get("blood_oxygen"),
+            "active_calories": snap.get("active_calories") or snap.get("active_cal"),
+            "exercise_min":  snap.get("exercise_min") or snap.get("exercise_minutes"),
+            "weight":        snap.get("weight") or snap.get("weight_lbs"),
+            "vo2_max":       snap.get("vo2_max"),
+            "body_fat_pct":  snap.get("body_fat_pct"),
+            "respiratory_rate": snap.get("respiratory_rate"),
+        }
+        # Add 7-day trends for key metrics
+        for m in ("hrv", "resting_hr", "sleep_hours", "steps"):
+            try:
+                t = get_trend(m, days=7)
+                if t.get("avg") is not None:
+                    metrics[f"{m}_7d_avg"]   = t["avg"]
+                    metrics[f"{m}_7d_trend"]  = t["trend"]
+            except Exception:
+                pass
+        # Strip None values so downstream code can cleanly check truthiness
+        return {k: v for k, v in metrics.items() if v is not None}
+    except Exception as exc:
+        logger.warning("get_health_metrics failed: %s", exc)
+        return {}

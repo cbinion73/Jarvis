@@ -74,7 +74,7 @@ async def run(
 ) -> ToolResult:
     """Call a JARVIS internal API endpoint and return the response."""
     base_url = os.environ.get("JARVIS_BASE_URL", _DEFAULT_BASE_URL).rstrip("/")
-    full_url = base_url + ("/" if not path.startswith("/") else "") + path.lstrip("/")
+    full_url = base_url + "/" + path.lstrip("/")
 
     try:
         async with httpx.AsyncClient(timeout=_TIMEOUT) as client:

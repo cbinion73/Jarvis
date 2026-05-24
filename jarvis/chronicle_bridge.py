@@ -26,6 +26,8 @@ from __future__ import annotations
 import json
 import logging
 import re
+import threading
+import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone, timedelta
@@ -378,6 +380,289 @@ class ChroniclePatternInsight:
             detected_at=str(data.get("detected_at", _now_iso())),
             surfaced_to_user=bool(data.get("surfaced_to_user", False)),
         )
+
+
+# ---------------------------------------------------------------------------
+# ChronicleSnapshotReader
+# ---------------------------------------------------------------------------
+
+
+class ChronicleSnapshotReader:
+    """
+    Reads the latest Chronicle snapshot from the ChronicleService data directory.
+    Caches for 5 minutes. Thread-safe.
+    """
+    SNAPSHOT_DIR = Path.home() / "Library" / "Application Support" / "ChronicleService" / "app" / "data" / "sync-snapshots"
+    CACHE_TTL = 300  # seconds
+
+    def __init__(self) -> None:
+        self._cache: dict | None = None
+        self._cache_at: float = 0.0
+        self._lock = threading.Lock()
+
+    def _latest_snapshot_path(self) -> Path | None:
+        if not self.SNAPSHOT_DIR.exists():
+            return None
+        # Prefer dated snapshots (snapshot-YYYY-…) over legacy files; sort by name desc
+        dated = sorted(
+            [p for p in self.SNAPSHOT_DIR.glob("*.json") if p.stem.startswith("snapshot-20")],
+            key=lambda p: p.name,
+            reverse=True,
+        )
+        return dated[0] if dated else None
+
+    def _load(self) -> dict:
+        # Try dated snapshots newest-first until we find one with appState/chronicleEntries
+        if not self.SNAPSHOT_DIR.exists():
+            return {}
+        dated = sorted(
+            [p for p in self.SNAPSHOT_DIR.glob("*.json") if p.stem.startswith("snapshot-20")],
+            key=lambda p: p.name,
+            reverse=True,
+        )
+        for path in dated:
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                state = data.get("appState", {})
+                if state.get("chronicleEntries") is not None:
+                    return state
+            except Exception:
+                continue
+        return {}
+
+    def _state(self) -> dict:
+        now = time.time()
+        with self._lock:
+            if self._cache is None or (now - self._cache_at) > self.CACHE_TTL:
+                self._cache = self._load()
+                self._cache_at = now
+            return self._cache
+
+    def get_entries(self, limit: int = 20) -> list[dict]:
+        entries = self._state().get("chronicleEntries", [])
+        # Sort by date descending
+        try:
+            entries = sorted(entries, key=lambda e: e.get("date", ""), reverse=True)
+        except Exception:
+            pass
+        return entries[:limit]
+
+    def get_prayer_items(self) -> list[dict]:
+        return self._state().get("prayerItems", [])
+
+    def get_formation_rhythms(self) -> list[dict]:
+        return self._state().get("formationRhythms", [])
+
+    def get_owned_books(self) -> list[dict]:
+        return self._state().get("ownedBooks", [])
+
+    def search_entries(self, query: str, limit: int = 20) -> list[dict]:
+        q = query.lower()
+        entries = self._state().get("chronicleEntries", [])
+        results = []
+        for e in entries:
+            text = " ".join([
+                e.get("title", ""),
+                e.get("body", ""),
+                e.get("passage", ""),
+                " ".join(e.get("themes", [])),
+            ]).lower()
+            if q in text:
+                results.append(e)
+        return results[:limit]
+
+    def quick_capture(self, entry_type: str, content: str, passage: str = "") -> dict:
+        """
+        Create a new Chronicle entry from a quick capture.
+        Generates ID, title, timestamp automatically.
+        Returns the new entry dict (does NOT write — caller does the write).
+        """
+        import time, uuid
+        type_titles = {
+            "gratitude": "Gratitude",
+            "prayer": "Prayer request",
+            "note": "Note",
+            "milestone": "Milestone",
+            "reflection": "Reflection",
+            "insight": "Insight",
+            "study": "Study note",
+        }
+        today = datetime.now().strftime("%Y-%m-%d")
+        title_prefix = type_titles.get(entry_type, entry_type.capitalize())
+        # Use first ~40 chars of content as title suffix
+        short = content[:40].strip().rstrip(".,!?")
+        title = f"{title_prefix} — {short}" if len(content) > 4 else title_prefix
+        entry = {
+            "id": str(uuid.uuid4()),
+            "date": today,
+            "type": entry_type,
+            "title": title,
+            "body": content,
+            "autoCapture": False,
+        }
+        if passage:
+            entry["passage"] = passage
+        return entry
+
+    def get_context(self) -> dict:
+        """
+        Return a compact spiritual context blob for the Morning Brief and conversation AI.
+        Includes: current study passage, top 3 active prayer needs, today's formation rhythm,
+        top 3 themes from recent entries, streak info.
+        Never raises.
+        """
+        try:
+            data = self.get_dashboard()
+            if not data.get("ok"):
+                return {"ok": False}
+
+            entries = data.get("entries", [])
+            prayers = data.get("prayer_items", [])
+            rhythms = data.get("formation_rhythms", [])
+            tags = data.get("tags", {})
+
+            # Current study: most recent entry with a passage
+            study_entry = next((e for e in entries if e.get("passage")), None)
+
+            # Active prayers (top 3, unanswered)
+            active_prayers = [p for p in prayers if not p.get("answered")][:3]
+
+            # Today's rhythm: find the one scheduled for today (or first active)
+            today = datetime.now().strftime("%A").lower()  # e.g. "monday"
+            todays_rhythm = None
+            for r in rhythms:
+                days = [d.lower() for d in r.get("days", [])]
+                if today in days or "daily" in days:
+                    todays_rhythm = r
+                    break
+            if not todays_rhythm and rhythms:
+                todays_rhythm = rhythms[0]
+
+            # Top themes (sorted by count)
+            top_themes = sorted(tags.items(), key=lambda x: x[1], reverse=True)[:5]
+
+            return {
+                "ok": True,
+                "study": {
+                    "passage": study_entry.get("passage") if study_entry else None,
+                    "title": study_entry.get("title") if study_entry else None,
+                    "date": study_entry.get("date") if study_entry else None,
+                } if study_entry else None,
+                "active_prayers": [
+                    {"id": p.get("id"), "text": p.get("text"), "category": p.get("category")}
+                    for p in active_prayers
+                ],
+                "todays_rhythm": {
+                    "name": todays_rhythm.get("name") if todays_rhythm else None,
+                    "description": todays_rhythm.get("description", "") if todays_rhythm else None,
+                } if todays_rhythm else None,
+                "top_themes": [t[0] for t in top_themes],
+                "total_entries": data.get("total", 0),
+                "active_prayer_count": data.get("active_prayers", 0),
+                "answered_prayer_count": data.get("answered_prayers", 0),
+            }
+        except Exception as exc:
+            import logging
+            logging.getLogger("jarvis.chronicle_bridge").warning("get_context failed: %s", exc)
+            return {"ok": False, "error": str(exc)}
+
+    def get_patterns(self) -> dict:
+        """
+        Analyze the last 30 days of entries for patterns.
+        Returns: recurring_themes, entry_type_breakdown, prayer_arcs, writing_streak.
+        Never raises.
+        """
+        try:
+            from collections import Counter
+            from datetime import timedelta
+            data = self.get_dashboard()
+            if not data.get("ok"):
+                return {"ok": False}
+
+            entries = data.get("entries", [])
+            prayers = data.get("prayer_items", [])
+            cutoff = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+            recent = [e for e in entries if e.get("date", "") >= cutoff]
+
+            # Entry type breakdown
+            type_counts = Counter(e.get("type", "note") for e in recent)
+
+            # Recurring themes (from themes arrays)
+            all_themes = []
+            for e in recent:
+                all_themes.extend(e.get("themes", []))
+            theme_counts = Counter(all_themes)
+            top_themes = [{"theme": t, "count": c} for t, c in theme_counts.most_common(8)]
+
+            # Prayer-to-gratitude arcs: prayers that got answered in the window
+            answered = [p for p in prayers if p.get("answered")]
+            prayer_arc = {
+                "total_active": len([p for p in prayers if not p.get("answered")]),
+                "answered_total": len(answered),
+                "answered_recent": len([p for p in answered
+                                        if p.get("dateAnswered", "") >= cutoff]),
+            }
+
+            # Writing streak: count consecutive days with entries
+            dates = sorted({e.get("date") for e in entries if e.get("date")}, reverse=True)
+            streak = 0
+            if dates:
+                check = datetime.now()
+                for d in dates:
+                    if d == check.strftime("%Y-%m-%d") or d == (check - timedelta(days=1)).strftime("%Y-%m-%d"):
+                        streak += 1
+                        check = datetime.strptime(d, "%Y-%m-%d") - timedelta(days=1)
+                    else:
+                        break
+
+            return {
+                "ok": True,
+                "window_days": 30,
+                "total_recent_entries": len(recent),
+                "entry_type_breakdown": dict(type_counts),
+                "recurring_themes": top_themes,
+                "prayer_arc": prayer_arc,
+                "writing_streak_days": streak,
+            }
+        except Exception as exc:
+            import logging
+            logging.getLogger("jarvis.chronicle_bridge").warning("get_patterns failed: %s", exc)
+            return {"ok": False, "error": str(exc)}
+
+    def get_dashboard(self) -> dict:
+        """Full dashboard payload for /api/chronicle/recent."""
+        entries = self.get_entries(limit=20)
+        prayers = self.get_prayer_items()
+        rhythms = self.get_formation_rhythms()
+        books = self.get_owned_books()
+
+        active_prayers = [p for p in prayers if not p.get("answered")]
+        answered_prayers = [p for p in prayers if p.get("answered")]
+
+        # Collect themes from entries
+        theme_counts: dict[str, int] = {}
+        for e in entries:
+            for t in e.get("themes", []):
+                theme_counts[t] = theme_counts.get(t, 0) + 1
+        tags = sorted(theme_counts.keys(), key=lambda t: -theme_counts[t])
+
+        return {
+            "ok": True,
+            "entries": entries,
+            "total": len(entries),
+            "tags": tags,
+            "prayer_items": prayers,
+            "active_prayers": len(active_prayers),
+            "answered_prayers": len(answered_prayers),
+            "formation_rhythms": rhythms,
+            "owned_books": books,
+            "chronicle_available": self._latest_snapshot_path() is not None,
+        }
+
+    def invalidate_cache(self) -> None:
+        with self._lock:
+            self._cache = None
+            self._cache_at = 0.0
 
 
 # ---------------------------------------------------------------------------

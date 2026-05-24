@@ -197,14 +197,18 @@ class CouncilMember:
         try:
             result = json.loads(raw)
         except json.JSONDecodeError:
+            # Try extracting the outermost JSON object
             m = re.search(r"\{.*\}", raw, re.DOTALL)
             if m:
                 try:
                     result = json.loads(m.group(0))
                 except Exception:
-                    return {"error": "JSON parse failed", "raw": raw[:500], "agent_id": self.agent_id}
+                    # Last resort: log full raw for debugging, return truncated snippet
+                    log.error("%s full raw response (%d chars): %s", self.label, len(raw), raw[:2000])
+                    return {"error": "JSON parse failed", "raw": raw[:2000], "agent_id": self.agent_id}
             else:
-                return {"error": "No JSON in response", "raw": raw[:500], "agent_id": self.agent_id}
+                log.error("%s no JSON object found in response (%d chars): %s", self.label, len(raw), raw[:2000])
+                return {"error": "No JSON in response", "raw": raw[:2000], "agent_id": self.agent_id}
 
         result["_agent_id"]  = self.agent_id
         result["_label"]     = self.label
@@ -1629,6 +1633,130 @@ COUNCIL_MEMBERS: list[CouncilMember] = [
     HEIMDALL,
     SHURI,
 ]
+
+
+# ---------------------------------------------------------------------------
+# Direct chat with a council member
+# ---------------------------------------------------------------------------
+
+_HELEN_CHO_SYSTEM_PROMPT = """You are Helen Cho — Chief Medical Intelligence Officer and orchestrator of the Longevity Council. You have complete access to the patient's medical history, lab trends, medications, and risk profile. You synthesize intelligence across cardiology, endocrinology, sleep medicine, nutrition, and longevity science. You are warm but precise, evidence-based, and speak directly to Chris as his personal physician-level advisor. You are not a replacement for his doctors but augment their thinking with the latest research."""
+
+_DEFAULT_HEALTH_CONTEXT = """Patient: Chris Binion, 52yo male.
+Active conditions: T2DM (A1c 7.3%), Hypertension (BP on 4 meds), Obesity BMI 35.7 (post-bariatric sleeve 2020), Statin myopathy, Hypercorticism, CKD Stage 2 (eGFR 87).
+CRITICAL SAFETY: Never recommend statins — statin myopathy on record. K+ monitoring required (ARB + spironolactone, K+ was 5.4 Mar 2025, now 4.5).
+Medications: Olmesartan 40mg, Spironolactone 25mg, Amlodipine 10mg, Semaglutide 1mg weekly, Ezetimibe pending Dr. Wenk discussion.
+Recent labs: A1c 7.3% (Apr 2026, target <7.0), LDL 156 mg/dL (Apr 2026, target <100), eGFR 87, K+ 4.5.
+Next appointment: Dr. Wenk (primary care) Nov 13, 2026."""
+
+
+async def chat_with_doctor(
+    doctor_id: str,
+    message: str,
+    history: list[dict] | None = None,
+    health_context: str | None = None,
+) -> dict:
+    """
+    Single-turn (or multi-turn) chat with a specific council member or Helen Cho.
+
+    Args:
+        doctor_id: agent_id of the council member, or "helen-cho" for Helen
+        message: The user's message
+        history: Optional list of {"role": "user"|"assistant", "content": "..."} prior turns
+        health_context: Optional health context string; if None, uses the default summary
+
+    Returns:
+        {"reply": str, "doctor_id": str, "doctor_name": str, "doctor_title": str}
+    """
+    try:
+        from .llm_gateway import get_gateway, LLMMessage
+    except ImportError:
+        from llm_gateway import get_gateway, LLMMessage
+
+    # Resolve doctor
+    member: CouncilMember | None = None
+    if doctor_id == "helen-cho":
+        doctor_name = "Helen Cho"
+        doctor_title = "Chief Medical Intelligence Officer"
+        base_system_prompt = _HELEN_CHO_SYSTEM_PROMPT
+    else:
+        for m in COUNCIL_MEMBERS:
+            if m.agent_id == doctor_id:
+                member = m
+                break
+        if member is None:
+            # Fall back to Helen Cho if unknown id
+            doctor_name = "Helen Cho"
+            doctor_title = "Chief Medical Intelligence Officer"
+            base_system_prompt = _HELEN_CHO_SYSTEM_PROMPT
+        else:
+            doctor_name = member.label
+            doctor_title = member.title
+            base_system_prompt = member.system_prompt
+
+    ctx = health_context if health_context is not None else _DEFAULT_HEALTH_CONTEXT
+
+    system_prompt = (
+        f"{base_system_prompt}\n\n"
+        f"=== PATIENT HEALTH CONTEXT ===\n"
+        f"{ctx}\n"
+        f"================================\n\n"
+        f"You are speaking directly with the patient, Chris. Respond conversationally in 2-4 paragraphs. "
+        f"Be direct, specific to his actual data, and in character. "
+        f"Do NOT output JSON — output natural conversational prose."
+    )
+
+    gw = get_gateway()
+    if gw is None:
+        return {
+            "error": "LLM gateway unavailable",
+            "doctor_id": doctor_id,
+            "doctor_name": doctor_name,
+            "doctor_title": doctor_title,
+        }
+
+    messages: list[LLMMessage] = [LLMMessage("system", system_prompt)]
+
+    for turn in (history or []):
+        role = turn.get("role", "user")
+        content = turn.get("content", "")
+        if role in ("user", "assistant") and content:
+            messages.append(LLMMessage(role, content))
+
+    messages.append(LLMMessage("user", message))
+
+    try:
+        response = await asyncio.to_thread(
+            gw.complete,
+            messages=messages,
+            task_type="critical",
+            agent_id=doctor_id,
+            force_model="gpt-4o",
+            temperature=0.7,
+        )
+    except Exception as exc:
+        log.error("chat_with_doctor (%s) LLM call failed: %s", doctor_id, exc)
+        return {
+            "error": str(exc),
+            "doctor_id": doctor_id,
+            "doctor_name": doctor_name,
+            "doctor_title": doctor_title,
+        }
+
+    if response.error:
+        log.error("chat_with_doctor (%s) LLM error: %s", doctor_id, response.error)
+        return {
+            "error": response.error,
+            "doctor_id": doctor_id,
+            "doctor_name": doctor_name,
+            "doctor_title": doctor_title,
+        }
+
+    return {
+        "reply": response.text.strip(),
+        "doctor_id": doctor_id,
+        "doctor_name": doctor_name,
+        "doctor_title": doctor_title,
+    }
 
 
 # ---------------------------------------------------------------------------

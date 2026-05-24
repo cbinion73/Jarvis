@@ -21,10 +21,13 @@ from pathlib import Path
 
 LAYOUT_STATE_PATH    = Path("data/settings/layout_state.json")
 INTERACTIONS_LOG     = Path("data/logs/layout_interactions.jsonl")
+WEIGHTS_CACHE_PATH   = Path("data/settings/layout_weights_cache.json")
 MANUAL_OVERRIDE_TTL  = 4 * 3600   # seconds — 4 hours, then returns to auto
 LEARNING_WINDOW_DAYS = 30
+WEIGHTS_CACHE_TTL_H  = 1          # hours — rebuild cache if older than this
 
-_log_lock = threading.Lock()
+_log_lock    = threading.Lock()
+_cache_dirty = False               # set True after log_interaction; cleared after rebuild
 
 # ---------------------------------------------------------------------------
 # Mode definitions — single source of truth
@@ -36,13 +39,15 @@ MODES: dict[str, dict] = {
         "icon":       "🌅",
         "time_range": (5, 11),   # 5am – 11am
         "defaults": {
+            "sam":        "hero",
             "briefing":   "hero",
-            "calendar":   "hero",
+            "calendar":   "priority",
             "approvals":  "priority",
             "health":     "priority",
             "tasks":      "priority",
-            "reminders":  "priority",
+            "reminders":  "ambient",
             "email":      "ambient",
+            "finance":    "ambient",
             "agents":     "ambient",
             "catalyst":   "ambient",
             "chronicle":  "ambient",
@@ -63,6 +68,8 @@ MODES: dict[str, dict] = {
             "approvals":  "priority",
             "reminders":  "priority",
             "email":      "priority",
+            "finance":    "priority",
+            "sam":        "ambient",
             "health":     "ambient",
             "agents":     "ambient",
             "catalyst":   "ambient",
@@ -78,8 +85,10 @@ MODES: dict[str, dict] = {
         "icon":       "🌙",
         "time_range": (17, 24),  # 5pm – midnight
         "defaults": {
+            "sam":        "hero",
             "health":     "hero",
-            "approvals":  "hero",
+            "approvals":  "priority",
+            "finance":    "priority",
             "briefing":   "priority",
             "calendar":   "priority",
             "tasks":      "priority",
@@ -219,6 +228,7 @@ def log_interaction(card_id: str, mode: str, action: str) -> None:
     Actions vocabulary: 'click', 'expand', 'navigate', 'dismiss'.
     Thread-safe. Never raises.
     """
+    global _cache_dirty
     try:
         INTERACTIONS_LOG.parent.mkdir(parents=True, exist_ok=True)
         record = {
@@ -231,8 +241,56 @@ def log_interaction(card_id: str, mode: str, action: str) -> None:
         with _log_lock:
             with INTERACTIONS_LOG.open("a") as f:
                 f.write(json.dumps(record) + "\n")
+        _cache_dirty = True
     except Exception:
         pass
+
+
+def rebuild_weights_cache() -> dict:
+    """
+    Compute learned weights for all modes and write to WEIGHTS_CACHE_PATH.
+    Called by the startup task and periodic 6-hour job. Returns the cache dict.
+    Thread-safe (uses _log_lock). Never raises.
+    """
+    global _cache_dirty
+    cache: dict = {"updated_at": _now_iso(), "weights": {}}
+    try:
+        for mode in MODES:
+            cache["weights"][mode] = get_learned_weights(mode)
+        WEIGHTS_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with _log_lock:
+            WEIGHTS_CACHE_PATH.write_text(json.dumps(cache, indent=2))
+        _cache_dirty = False
+    except Exception:
+        pass
+    return cache
+
+
+def get_cached_weights(mode: str) -> dict[str, float]:
+    """
+    Return learned weights for a mode.
+    Uses the on-disk cache if it is fresh (<= WEIGHTS_CACHE_TTL_H hours old)
+    AND not dirty. Otherwise falls back to a live log scan (and triggers a
+    background rebuild via the dirty flag).
+    Never raises.
+    """
+    global _cache_dirty
+    if not _cache_dirty:
+        try:
+            if WEIGHTS_CACHE_PATH.exists():
+                cache = json.loads(WEIGHTS_CACHE_PATH.read_text())
+                updated_str = cache.get("updated_at", "")
+                if updated_str:
+                    updated = datetime.fromisoformat(updated_str)
+                    if updated.tzinfo is None:
+                        updated = updated.replace(tzinfo=timezone.utc)
+                    age_h = (_now_utc() - updated).total_seconds() / 3600
+                    if age_h <= WEIGHTS_CACHE_TTL_H:
+                        return cache.get("weights", {}).get(mode, {})
+        except Exception:
+            pass
+    # Cache miss, stale, or dirty — live scan (cache will be rebuilt by background job)
+    return get_learned_weights(mode)
 
 
 def get_learned_weights(mode: str) -> dict[str, float]:
@@ -435,7 +493,7 @@ def get_state_payload(runtime) -> dict:
     Called from an asyncio.to_thread so it can do blocking I/O.
     """
     mode    = get_current_mode()
-    weights = get_learned_weights(mode)
+    weights = get_cached_weights(mode)
     alerts  = get_alert_state(runtime)
     layout  = compute_layout(mode, weights, alerts)
     state   = _load_state()

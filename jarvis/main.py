@@ -64,13 +64,21 @@ except Exception:  # pragma: no cover
         return None, None
 
 try:
-    from .catalyst_bridge import init_catalyst_bridge as _init_catalyst_bridge
-    _CATALYST_BRIDGE_IMPORT_OK = True
+    from .catalyst_db import init_catalyst_db as _init_catalyst_db
+    from .work_intelligence import init_work_intelligence as _init_work_intelligence
+    from .agent_catalyst import ensure_all_agents_registered as _ensure_agents_catalyst
+    _WORK_INTELLIGENCE_IMPORT_OK = True
 except Exception:  # pragma: no cover
-    _CATALYST_BRIDGE_IMPORT_OK = False
+    _WORK_INTELLIGENCE_IMPORT_OK = False
 
-    def _init_catalyst_bridge(catalyst_client=None, scheduler=None, memory_store=None):  # type: ignore[misc]
-        return None, None
+    def _init_catalyst_db(*a, **kw):  # type: ignore[misc]
+        return None
+
+    def _init_work_intelligence(*a, **kw):  # type: ignore[misc]
+        return None
+
+    def _ensure_agents_catalyst():  # type: ignore[misc]
+        pass
 
 try:
     from .voice import JarvisVoiceShell, build_voice_parser
@@ -861,15 +869,24 @@ def command_serve(runtime: JarvisRuntime, host: str, port: int) -> int:
             logging.getLogger("jarvis.main").warning(
                 "Could not initialise Chronicle bridge: %s", exc
             )
-    # Initialise the Catalyst bridge + Mantis workflow (Epic 8)
-    if _CATALYST_BRIDGE_IMPORT_OK:
+    # Initialise Work Intelligence DB + engine (Epic 8 — native Catalyst consolidation)
+    if _WORK_INTELLIGENCE_IMPORT_OK:
         try:
-            _catalyst_client = getattr(runtime, "catalyst_support", None)
-            _init_catalyst_bridge(catalyst_client=_catalyst_client)
+            _wi_db = _init_catalyst_db()
+            _init_work_intelligence(db=_wi_db, user_id="chris")
         except Exception as exc:  # pragma: no cover
             import logging
             logging.getLogger("jarvis.main").warning(
-                "Could not initialise Catalyst bridge: %s", exc
+                "Could not initialise Work Intelligence engine: %s", exc
+            )
+    # Register all 56 agents with Catalyst — pre-warms AgentCatalyst singletons
+    if _WORK_INTELLIGENCE_IMPORT_OK:
+        try:
+            _ensure_agents_catalyst()
+        except Exception as exc:  # pragma: no cover
+            import logging
+            logging.getLogger("jarvis.main").warning(
+                "Could not register agents with Catalyst: %s", exc
             )
     # Initialise the Epic 7 Voice Shell pipeline
     if _VOICE_PIPELINE_IMPORT_OK:

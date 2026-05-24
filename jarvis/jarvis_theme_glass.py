@@ -34,37 +34,38 @@ def render_glass_shell(runtime, initial_packet: str = "") -> str:
    CSS CUSTOM PROPERTIES
 ═══════════════════════════════════════════════════════════════════ */
 :root {{
-  /* Surface — surgical glass palette */
-  --bg:          #DFE8F2;
-  --bg-gradient: linear-gradient(145deg, #E8EEF6 0%, #D8E4F0 40%, #E2EAF5 100%);
-  --surface:     rgba(255,255,255,0.65);
-  --surface-hi:  rgba(255,255,255,0.88);
-  --border:      rgba(255,255,255,0.55);
-  --border-hi:   rgba(255,255,255,0.80);
+  /* Surface — Dark Command Center */
+  --bg:          #07101E;
+  --bg-gradient: linear-gradient(145deg, #08121F 0%, #060E1A 40%, #07101C 100%);
+  --surface:     rgba(255,255,255,0.065);
+  --surface-hi:  rgba(255,255,255,0.10);
+  --border:      rgba(255,255,255,0.11);
+  --border-hi:   rgba(255,255,255,0.20);
 
   /* Text */
-  --text-1:  #0F172A;
-  --text-2:  #475569;
-  --text-3:  #94A3B8;
+  --text-1:  #FFFFFF;
+  --text-2:  #D8E8F4;
+  --text-3:  #A8C4D8;
 
-  /* Fixed semantic colors — NEVER shift */
+  /* Fixed semantic colors */
   --navy:    #0A1628;
-  --crimson: #C41E3A;
-  --gold:    #C9A84C;
+  --crimson: #EF4444;
+  --gold:    #F59E0B;
   --success: #10B981;
 
-  /* Hue tokens — ONLY these shift per domain */
-  --hue:      #00B4FF;
-  --hue-dim:  rgba(0,180,255,0.12);
-  --hue-glow: rgba(0,180,255,0.35);
-  --hue-tint: rgba(0,180,255,0.03);
-  --hue-rgb:  0, 180, 255;
+  /* Hue tokens — arc reactor blue */
+  --hue:      #3B9EFF;
+  --hue-dim:  rgba(59,158,255,0.14);
+  --hue-glow: rgba(59,158,255,0.40);
+  --hue-tint: rgba(59,158,255,0.05);
+  --hue-rgb:  59, 158, 255;
 
   /* Typography */
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-mono: 'Fira Code', 'SF Mono', monospace;
 
   /* Layout */
+  --nav-w:    210px;
   --nav-h:    58px;
   --strip-h:  2px;
   --bar-h:    70px;
@@ -134,9 +135,9 @@ body::before {{
   position: fixed;
   inset: 0;
   z-index: 0;
-  opacity: 0.035;
+  opacity: 0.06;
   pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50V17L28 0l28 17v33L28 66zm0 34L0 83V67l28 17 28-17v17L28 100z' fill='none' stroke='%230A1628' stroke-width='1'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50V17L28 0l28 17v33L28 66zm0 34L0 83V67l28 17 28-17v17L28 100z' fill='none' stroke='%233B9EFF' stroke-width='0.8'/%3E%3C/svg%3E");
   background-size: 56px 100px;
 }}
 
@@ -152,90 +153,108 @@ body::after {{
 }}
 
 /* ═══════════════════════════════════════════════════════════════════
-   GLASS CARD — Surgical Glass with Marvel Feel
-   Three-layer technique:
-     1. Interior gradient  — bright frost at top → clear at bottom
-     2. Edge highlight     — asymmetric bright gleam on top-left
-     3. Corner glow        — pseudo-element ambient hue reflection
+   LIQUID GLASS CARD — Apple iOS 26 Liquid Glass aesthetic
+   Five-layer technique:
+     1. Frosted base        — deep blur + saturation picks up background
+     2. Specular highlight  — inset top-edge bright line (THE key effect)
+     3. Refraction sweep    — ::before diagonal light across glass face
+     4. Hue tint            — ::after arc reactor ambient wash
+     5. Interactive spring  — hover lifts + brightens specular
 ═══════════════════════════════════════════════════════════════════ */
 .card {{
   position: relative;
-  /* Interior gradient: luminous frost fading downward */
-  background:
-    linear-gradient(
-      160deg,
-      rgba(255,255,255,0.72) 0%,
-      rgba(255,255,255,0.40) 40%,
-      rgba(255,255,255,0.22) 100%
-    );
-  backdrop-filter: blur(28px) saturate(200%) brightness(1.05);
-  -webkit-backdrop-filter: blur(28px) saturate(200%) brightness(1.05);
-  /* Asymmetric border: bright top-left, subdued bottom-right */
-  border-top:    1px solid rgba(255,255,255,0.90);
-  border-left:   1px solid rgba(255,255,255,0.80);
-  border-right:  1px solid rgba(255,255,255,0.30);
-  border-bottom: 1px solid rgba(255,255,255,0.25);
-  border-radius: 14px;
-  /* Shadow stack: ambient + directional lift + inner glow strip */
+  overflow: hidden;
+  background: rgba(255,255,255,0.07);
+  backdrop-filter: blur(48px) saturate(200%) brightness(1.08);
+  -webkit-backdrop-filter: blur(48px) saturate(200%) brightness(1.08);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 20px;
   box-shadow:
-    0  1px  2px rgba(0,0,0,0.04),
-    0  8px 24px rgba(0,0,0,0.07),
-    0 24px 48px rgba(0,0,0,0.05),
-    inset 0 1px 0 rgba(255,255,255,0.95),
-    inset 1px 0 0 rgba(255,255,255,0.50);
+    /* Depth */
+    0  2px  4px  rgba(0,0,0,0.30),
+    0  8px  24px rgba(0,0,0,0.40),
+    0 24px  56px rgba(0,0,0,0.28),
+    /* Specular top edge — the Liquid Glass signature */
+    inset 0  1px 0 rgba(255,255,255,0.55),
+    /* Specular left edge */
+    inset 1px 0  0 rgba(255,255,255,0.18),
+    /* Base shadow */
+    inset 0 -1px 0 rgba(0,0,0,0.12);
+  transition:
+    transform   0.35s cubic-bezier(0.34,1.56,0.64,1),
+    box-shadow  0.35s ease,
+    background  0.25s ease;
 }}
 
-/* Edge highlight flare — the characteristic bright gleam seen in glass */
+/* Refraction sweep — diagonal light across the glass face */
 .card::before {{
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 1px;
+  inset: 0;
+  border-radius: 19px;
   background: linear-gradient(
-    90deg,
-    rgba(255,255,255,0) 0%,
-    rgba(255,255,255,1) 20%,
-    rgba(255,255,255,1) 50%,
-    rgba(255,255,255,0.4) 80%,
-    rgba(255,255,255,0) 100%
+    135deg,
+    rgba(255,255,255,0.16) 0%,
+    rgba(255,255,255,0.05) 30%,
+    transparent 55%,
+    rgba(255,255,255,0.02) 100%
   );
-  border-radius: 14px 14px 0 0;
-  z-index: 1;
   pointer-events: none;
+  z-index: 1;
 }}
 
-/* Corner glow — ambient hue reflection from domain accent colour */
+/* Hue ambient wash — arc reactor tint at top */
 .card::after {{
   content: '';
   position: absolute;
-  top: -10px; left: -10px;
-  width: 140px; height: 140px;
-  background: radial-gradient(
-    circle,
-    rgba(var(--hue-rgb), 0.10) 0%,
-    rgba(var(--hue-rgb), 0.04) 50%,
-    transparent 70%
+  top: 0; left: 0; right: 0;
+  height: 50%;
+  background: linear-gradient(
+    180deg,
+    rgba(var(--hue-rgb), 0.055) 0%,
+    transparent 100%
   );
-  border-radius: 50%;
+  border-radius: 19px 19px 0 0;
   pointer-events: none;
   z-index: 0;
-  transition: background 0.45s ease;
+  transition: opacity 0.35s ease;
 }}
 
-.card-hi {{
-  background:
-    linear-gradient(
-      160deg,
-      rgba(255,255,255,0.85) 0%,
-      rgba(255,255,255,0.55) 40%,
-      rgba(255,255,255,0.30) 100%
-    );
+/* Liquid Glass interactive hover — surface brightens and lifts */
+.card:hover {{
+  background: rgba(255,255,255,0.10);
+  transform: translateY(-2px);
   box-shadow:
-    0  1px  2px rgba(0,0,0,0.04),
-    0  8px 24px rgba(0,0,0,0.08),
-    0 24px 48px rgba(0,0,0,0.05),
-    inset 0 1px 0 rgba(255,255,255,1),
-    inset 1px 0 0 rgba(255,255,255,0.70);
+    0  2px  4px  rgba(0,0,0,0.25),
+    0  8px  32px rgba(0,0,0,0.45),
+    0 32px  64px rgba(0,0,0,0.32),
+    inset 0  1px 0 rgba(255,255,255,0.70),
+    inset 1px 0  0 rgba(255,255,255,0.28),
+    inset 0 -1px 0 rgba(0,0,0,0.08);
+}}
+
+/* Hero card — stronger glass, more prominent specular */
+.card-hi {{
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.24);
+  box-shadow:
+    0  2px  4px  rgba(0,0,0,0.30),
+    0  8px  32px rgba(0,0,0,0.45),
+    0 32px  64px rgba(0,0,0,0.32),
+    0  0   80px  rgba(var(--hue-rgb),0.08),
+    inset 0  1px 0 rgba(255,255,255,0.70),
+    inset 1px 0  0 rgba(255,255,255,0.28),
+    inset 0 -1px 0 rgba(0,0,0,0.10);
+}}
+
+.card-hi::before {{
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.22) 0%,
+    rgba(255,255,255,0.07) 28%,
+    transparent 52%,
+    rgba(255,255,255,0.03) 100%
+  );
 }}
 
 /* ── News view ─────────────────────────────── */
@@ -409,55 +428,44 @@ body::after {{
   border-bottom: 1px solid var(--border);
 }}
 
-/* ── Tactical card with L-bracket corner accents ── */
+/* ── Tactical card — hue-tinted Liquid Glass ── */
 .card-tactical {{
-  position: relative;
-}}
-.card-tactical::before,
-.card-tactical::after {{
-  content: '';
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  border-color: var(--hue);
-  border-style: solid;
-  transition: border-color 0.45s ease;
-  z-index: 2;
-}}
-.card-tactical::before {{
-  top: -1px; left: -1px;
-  border-width: 2px 0 0 2px;
-  border-radius: 4px 0 0 0;
-}}
-.card-tactical::after {{
-  bottom: -1px; right: -1px;
-  border-width: 0 2px 2px 0;
-  border-radius: 0 0 4px 0;
+  border-color: rgba(var(--hue-rgb), 0.30);
+  box-shadow:
+    0  2px  4px  rgba(0,0,0,0.30),
+    0  8px  24px rgba(0,0,0,0.40),
+    0 24px  56px rgba(0,0,0,0.28),
+    0  0   40px  rgba(var(--hue-rgb),0.06),
+    inset 0  1px 0 rgba(255,255,255,0.55),
+    inset 1px 0  0 rgba(255,255,255,0.18),
+    inset 0 -1px 0 rgba(0,0,0,0.12);
 }}
 
-/* ── Needs-you card with gold corner accents ── */
+/* ── Needs-you card — gold-tinted Liquid Glass ── */
 .card-needs-you {{
-  position: relative;
+  border-color: rgba(245,158,11,0.30);
+  box-shadow:
+    0  2px  4px  rgba(0,0,0,0.30),
+    0  8px  24px rgba(0,0,0,0.40),
+    0 24px  56px rgba(0,0,0,0.28),
+    0  0   40px  rgba(245,158,11,0.07),
+    inset 0  1px 0 rgba(255,255,255,0.55),
+    inset 1px 0  0 rgba(255,255,255,0.18),
+    inset 0 -1px 0 rgba(0,0,0,0.12);
 }}
-.card-needs-you::before,
 .card-needs-you::after {{
-  content: '';
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  border-color: var(--gold);
-  border-style: solid;
-  z-index: 2;
+  background: linear-gradient(
+    180deg,
+    rgba(245,158,11,0.06) 0%,
+    transparent 100%
+  );
 }}
-.card-needs-you::before {{
-  top: -1px; left: -1px;
-  border-width: 2px 0 0 2px;
-  border-radius: 4px 0 0 0;
+/* ── placeholder ── */
+.card-needs-you-x {{
+  display: none;
 }}
 .card-needs-you::after {{
   bottom: -1px; right: -1px;
-  border-width: 0 2px 2px 0;
-  border-radius: 0 0 4px 0;
 }}
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -476,47 +484,48 @@ body::after {{
 ═══════════════════════════════════════════════════════════════════ */
 .nav-bar {{
   position: fixed;
-  top: 0; left: 0; right: 0;
-  height: var(--nav-h);
+  top: 0; left: 0; bottom: 0; right: auto;
+  width: var(--nav-w);
+  height: 100vh;
   z-index: 100;
-  background: linear-gradient(
-    180deg,
-    rgba(255,255,255,0.92) 0%,
-    rgba(255,255,255,0.78) 100%
-  );
-  backdrop-filter: blur(32px) saturate(200%) brightness(1.04);
-  -webkit-backdrop-filter: blur(32px) saturate(200%) brightness(1.04);
-  /* Bright edge highlight on top; subtle bottom separator */
-  border-top: 1px solid rgba(255,255,255,1);
-  border-bottom: 1px solid rgba(200,215,232,0.60);
+  background: rgba(8,16,32,0.72);
+  backdrop-filter: blur(56px) saturate(190%) brightness(0.96);
+  -webkit-backdrop-filter: blur(56px) saturate(190%) brightness(0.96);
+  border-right: 1px solid rgba(255,255,255,0.12);
   box-shadow:
-    0 1px  0 rgba(255,255,255,0.9),
-    0 4px 20px rgba(0,0,0,0.06),
-    0 1px  3px rgba(0,0,0,0.04);
+    4px 0 32px rgba(0,0,0,0.50),
+    inset -1px 0 0 rgba(255,255,255,0.12),
+    inset  1px 0 0 rgba(255,255,255,0.04);
   display: flex;
-  align-items: center;
-  padding: 0 20px;
-  gap: 16px;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  gap: 0;
 }}
 
 .nav-wordmark {{
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.18em;
-  color: var(--navy);
+  letter-spacing: 0.20em;
+  color: var(--hue);
   white-space: nowrap;
-  flex-shrink: 0;
   user-select: none;
+  padding: 20px 16px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+  text-shadow: 0 0 20px rgba(59,158,255,0.6);
 }}
 
 .nav-tabs {{
   display: flex;
-  align-items: center;
-  gap: 4px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
   flex: 1;
-  justify-content: center;
-  overflow-x: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 8px;
   scrollbar-width: none;
 }}
 .nav-tabs::-webkit-scrollbar {{ display: none; }}
@@ -524,12 +533,12 @@ body::after {{
 .nav-tab {{
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 6px 12px;
+  gap: 8px;
+  padding: 9px 12px;
   border-radius: 8px;
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-2);
   cursor: pointer;
@@ -538,23 +547,21 @@ body::after {{
   white-space: nowrap;
   position: relative;
   user-select: none;
+  text-align: left;
+  width: 100%;
 }}
 .nav-tab:hover {{
-  background: var(--hue-dim);
-  color: var(--navy);
+  background: rgba(255,255,255,0.05);
+  color: var(--text-1);
 }}
 .nav-tab.active {{
   background: var(--hue-dim);
   color: var(--hue);
+  border-left: 2px solid var(--hue);
+  padding-left: 10px;
 }}
 .nav-tab.active::after {{
-  content: '';
-  position: absolute;
-  bottom: -2px; left: 20%; right: 20%;
-  height: 2px;
-  background: var(--hue);
-  border-radius: 99px;
-  transition: background 0.45s ease;
+  display: none;
 }}
 
 .nav-tab svg {{
@@ -564,50 +571,82 @@ body::after {{
 
 .nav-right {{
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
   flex-shrink: 0;
+  padding: 12px 12px 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
 }}
 
 .agent-badge-pill {{
   font-family: var(--font-mono);
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--hue);
   background: var(--hue-dim);
-  border: 1px solid rgba(var(--hue-rgb),0.2);
-  border-radius: 99px;
-  padding: 3px 10px;
+  border: 1px solid rgba(var(--hue-rgb),0.25);
+  border-radius: 6px;
+  padding: 4px 8px;
   white-space: nowrap;
+  width: 100%;
+  text-align: center;
   transition: background 0.45s ease, color 0.45s ease, border-color 0.45s ease;
+  text-shadow: 0 0 10px rgba(var(--hue-rgb),0.5);
 }}
 
 /* ── Weather widget ── */
 .nav-weather {{
   display: flex; align-items: center; gap: 5px;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 99px; padding: 3px 10px;
+  background: transparent; border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px; padding: 5px 8px;
   cursor: pointer; transition: background 0.2s;
-  font-family: var(--font-mono); font-size: 11px; color: var(--text-1);
-  white-space: nowrap;
+  font-family: var(--font-mono); font-size: 10px; color: var(--text-2);
+  white-space: nowrap; width: 100%;
 }}
-.nav-weather:hover {{ background: var(--surface-hi); }}
-.nav-weather-icon {{ font-size: 14px; line-height: 1; }}
-.nav-clock {{ font-family: var(--font-mono); font-size: 11px; color: var(--text-2); white-space: nowrap; }}
+.nav-weather:hover {{ background: rgba(255,255,255,0.05); color: var(--text-1); }}
+.nav-weather-icon {{ font-size: 13px; line-height: 1; }}
+.nav-clock {{ font-family: var(--font-mono); font-size: 11px; color: var(--text-3); white-space: nowrap; letter-spacing: 0.05em; }}
 
 /* ── Weather modal ── */
 .weather-modal-overlay {{
   position: fixed; inset: 0; z-index: 3000;
-  background: rgba(15,23,42,0.55); backdrop-filter: blur(4px);
+  background: rgba(5,10,20,0.50);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
   display: flex; align-items: center; justify-content: center;
+  animation: modal-overlay-in 0.25s ease;
 }}
-.weather-modal-overlay.hidden {{ display: none; }}
+.weather-modal-overlay.hidden {{ display: none; animation: none; }}
 .weather-modal {{
-  background: var(--surface-hi); border: 1px solid var(--border-hi);
-  border-radius: 20px; padding: 28px;
+  position: relative; overflow: hidden;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(60px) saturate(220%) brightness(1.10);
+  -webkit-backdrop-filter: blur(60px) saturate(220%) brightness(1.10);
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 24px; padding: 28px;
   width: min(680px, 95vw); max-height: 90vh; overflow-y: auto;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+  box-shadow:
+    0  4px  8px  rgba(0,0,0,0.35),
+    0 16px  48px rgba(0,0,0,0.50),
+    0 48px  96px rgba(0,0,0,0.35),
+    inset 0  1px 0 rgba(255,255,255,0.65),
+    inset 1px 0  0 rgba(255,255,255,0.22),
+    inset 0 -1px 0 rgba(0,0,0,0.15);
+  animation: modal-in 0.38s cubic-bezier(0.34,1.56,0.64,1);
 }}
+.weather-modal::before {{
+  content: '';
+  position: absolute; inset: 0; border-radius: 23px; pointer-events: none; z-index: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.18) 0%,
+    rgba(255,255,255,0.05) 30%,
+    transparent 55%,
+    rgba(255,255,255,0.02) 100%
+  );
+}}
+.weather-modal > * {{ position: relative; z-index: 1; }}
 .weather-modal-header {{
   display: flex; justify-content: space-between; align-items: center;
   margin-bottom: 20px;
@@ -620,7 +659,11 @@ body::after {{
 }}
 .weather-hero {{
   display: flex; align-items: center; gap: 20px; margin-bottom: 24px;
-  padding: 20px; background: rgba(255,255,255,0.4); border-radius: 14px;
+  padding: 20px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.35);
 }}
 .weather-hero-icon {{ font-size: 56px; line-height: 1; }}
 .weather-hero-temp {{ font-size: 48px; font-weight: 700; font-family: var(--font-mono); color: var(--text-1); }}
@@ -661,14 +704,21 @@ body::after {{
   cursor: pointer;
   color: var(--text-2);
 }}
-.settings-btn:hover {{ background: var(--surface-hi); color: var(--navy); }}
+.settings-btn:hover {{ background: var(--surface-hi); color: var(--text-1); }}
 
-/* ── Domain identity strip ── */
+/* ── Domain identity strip — left edge of sidebar → right border accent ── */
 .domain-strip {{
   position: fixed;
-  top: var(--nav-h); left: 0; right: 0;
-  height: var(--strip-h);
-  background: var(--hue);
+  top: 0; left: calc(var(--nav-w) - 1px); right: auto; bottom: 0;
+  width: 2px;
+  height: 100vh;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(var(--hue-rgb),0.6) 20%,
+    rgba(var(--hue-rgb),0.6) 80%,
+    transparent 100%
+  );
   z-index: 99;
   transition: background 0.45s ease;
 }}
@@ -679,12 +729,12 @@ body::after {{
 .main {{
   position: relative;
   z-index: 1;
-  padding-top: calc(var(--nav-h) + var(--strip-h) + 20px);
+  padding-top: 24px;
   padding-bottom: calc(var(--bar-h) + 24px);
-  padding-left: 20px;
-  padding-right: 20px;
-  max-width: 1400px;
-  margin: 0 auto;
+  padding-left: calc(var(--nav-w) + 24px);
+  padding-right: 24px;
+  max-width: none;
+  margin: 0;
 }}
 
 /* ── View sections ── */
@@ -696,10 +746,11 @@ body::after {{
   margin-bottom: 20px;
 }}
 .view-title {{
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
-  color: var(--navy);
-  letter-spacing: -0.01em;
+  color: var(--text-1);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -740,6 +791,57 @@ body::after {{
   background: var(--border);
 }}
 
+/* ── Sam Wilson Check-In Banner ─────────────────────────────────── */
+.sam-checkin-banner {{
+  position: relative; overflow: hidden;
+  border-radius: 16px; padding: 18px 20px 16px;
+  background: rgba(255,255,255,0.07);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.16);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.30),
+    inset 0 1px 0 rgba(255,255,255,0.45), inset 1px 0 0 rgba(255,255,255,0.12);
+  margin-bottom: 16px;
+}}
+.sam-checkin-banner::before {{
+  content: ''; position: absolute; inset: 0; border-radius: 15px; pointer-events: none;
+  background: linear-gradient(135deg, rgba(255,255,255,0.14) 0%, transparent 50%);
+}}
+.sam-checkin-banner > * {{ position: relative; z-index: 1; }}
+.sam-checkin-mode-chip {{
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 9px; font-weight: 800; letter-spacing: .10em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: 20px; margin-bottom: 10px; font-family: var(--font-mono);
+}}
+.sam-checkin-mode-chip.morning {{ background: rgba(245,158,11,0.15); color: var(--amber); border: 1px solid rgba(245,158,11,0.30); }}
+.sam-checkin-mode-chip.evening {{ background: rgba(99,102,241,0.15); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.30); }}
+.sam-checkin-greeting {{ font-size: 13px; font-weight: 600; color: var(--blue); font-style: italic; margin-bottom: 12px; line-height: 1.4; }}
+.sam-checkin-meta {{ display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }}
+.sam-checkin-stat {{ display: flex; flex-direction: column; align-items: center; min-width: 48px; }}
+.sam-checkin-stat-val {{ font-size: 18px; font-weight: 700; font-family: var(--font-mono); color: var(--text-1); line-height: 1; }}
+.sam-checkin-stat-lbl {{ font-size: 8px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); margin-top: 2px; }}
+.sam-checkin-divider {{ width: 1px; height: 28px; background: rgba(255,255,255,0.12); }}
+.sam-checkin-streak {{ font-size: 12px; font-weight: 700; color: var(--amber); display: flex; align-items: center; gap: 4px; }}
+.sam-checkin-focus {{ background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }}
+.sam-checkin-focus-label {{ font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-3); margin-bottom: 4px; }}
+.sam-checkin-focus-primary {{ font-size: 13px; font-weight: 700; color: var(--text-1); margin-bottom: 2px; }}
+.sam-checkin-focus-detail {{ font-size: 11px; color: var(--text-3); line-height: 1.4; }}
+.sam-checkin-watch {{ font-size: 11px; color: var(--amber); background: rgba(217,119,6,0.10); border: 1px solid rgba(217,119,6,0.25); border-radius: 8px; padding: 6px 10px; margin-bottom: 10px; }}
+.sam-checkin-actions {{ display: flex; gap: 8px; margin-top: 4px; }}
+.sam-evening-list {{ display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }}
+.sam-evening-item {{ display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); cursor: pointer; transition: background 0.2s; }}
+.sam-evening-item:hover {{ background: rgba(255,255,255,0.09); }}
+.sam-evening-item.checked {{ border-color: rgba(34,197,94,0.35); background: rgba(34,197,94,0.07); }}
+.sam-evening-item input[type=checkbox] {{ margin-top:1px; cursor:pointer; accent-color:#22c55e; flex-shrink:0; }}
+.sam-evening-item-icon {{ font-size: 15px; line-height: 1; }}
+.sam-evening-item-label {{ font-size: 12px; color: var(--text-2); font-weight: 500; flex: 1; }}
+.sam-evening-notes {{ width:100%; box-sizing:border-box; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:8px 10px; font-size:12px; color:var(--text-1); resize:none; outline:none; font-family:var(--font-body); transition:border-color 0.2s; }}
+.sam-evening-notes:focus {{ border-color: rgba(99,102,241,0.45); }}
+.sam-checkin-response {{ margin-top:12px; padding:12px 14px; background:rgba(99,102,241,0.10); border:1px solid rgba(99,102,241,0.25); border-radius:10px; display:none; }}
+.sam-checkin-response.visible {{ display:block; }}
+.sam-checkin-response-text {{ font-size:12px; color:var(--text-2); font-style:italic; line-height:1.6; }}
+.sam-checkin-response-streak {{ font-size:10px; color:var(--amber); font-weight:700; margin-top:6px; }}
+
 /* ═══════════════════════════════════════════════════════════════════
    STATS STRIP
 ═══════════════════════════════════════════════════════════════════ */
@@ -753,21 +855,22 @@ body::after {{
 
 .stat-tile {{
   padding: 16px 18px;
+  cursor: pointer;
 }}
 .stat-label {{
   font-family: var(--font-mono);
   font-size: 9px;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--text-3);
+  color: var(--text-2);
   margin-bottom: 6px;
 }}
 .stat-value {{
   font-family: var(--font-mono);
   font-size: 28px;
   font-weight: 500;
-  color: var(--navy);
+  color: var(--text-1);
   line-height: 1;
 }}
 .stat-tile.accent .stat-value {{
@@ -779,7 +882,7 @@ body::after {{
 }}
 .stat-sub {{
   font-size: 11px;
-  color: var(--text-3);
+  color: var(--text-2);
   margin-top: 4px;
 }}
 
@@ -802,14 +905,14 @@ body::after {{
   letter-spacing: .05em;
   text-transform: uppercase;
   font-family: var(--font-mono);
-  background: rgba(255,255,255,0.25);
-  border: 1px solid rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
   color: var(--text-2);
   cursor: pointer;
   transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
 }}
 .mode-pill:hover {{
-  background: rgba(255,255,255,0.42);
+  background: rgba(255,255,255,0.09);
   color: var(--text-1);
 }}
 .mode-pill.active {{
@@ -938,9 +1041,15 @@ body::after {{
   align-items: center;
   gap: 7px;
   padding: 7px 14px;
-  border-radius: 10px;
-  background: rgba(255,255,255,.22);
-  border: 1px solid rgba(255,255,255,.38);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.07);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.16);
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.25),
+    inset 0  1px 0 rgba(255,255,255,0.40),
+    inset 1px 0  0 rgba(255,255,255,0.12);
   cursor: pointer;
   font-size: 11px;
   font-weight: 600;
@@ -948,12 +1057,17 @@ body::after {{
   text-transform: uppercase;
   letter-spacing: .05em;
   font-family: var(--font-mono);
-  transition: background .2s, color .2s;
+  transition: background 0.25s ease, transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.25s ease, color 0.2s;
   white-space: nowrap;
 }}
 .ambient-tile:hover {{
-  background: rgba(255,255,255,.42);
+  background: rgba(255,255,255,0.12);
   color: var(--text-1);
+  transform: translateY(-2px);
+  box-shadow:
+    0 4px 16px rgba(0,0,0,0.30),
+    inset 0  1px 0 rgba(255,255,255,0.60),
+    inset 1px 0  0 rgba(255,255,255,0.20);
 }}
 .ambient-badge {{
   font-size: 10px;
@@ -1018,7 +1132,7 @@ body::after {{
 .card-title {{
   font-size: 12px;
   font-weight: 700;
-  color: var(--navy);
+  color: var(--text-1);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   font-family: var(--font-mono);
@@ -1075,7 +1189,7 @@ body::after {{
   font-family: var(--font-mono);
 }}
 .pill-hue  {{ background: var(--hue-dim); color: var(--hue); border: 1px solid rgba(var(--hue-rgb),0.25); transition: all 0.45s ease; }}
-.pill-navy {{ background: rgba(10,22,40,0.08); color: var(--navy); border: 1px solid var(--border); }}
+.pill-navy {{ background: rgba(59,158,255,0.10); color: var(--hue); border: 1px solid rgba(59,158,255,0.20); }}
 .pill-gold {{ background: rgba(201,168,76,0.12); color: var(--gold); border: 1px solid rgba(201,168,76,0.25); }}
 .pill-crimson {{ background: rgba(196,30,58,0.08); color: var(--crimson); border: 1px solid rgba(196,30,58,0.2); }}
 .pill-success {{ background: rgba(16,185,129,0.1); color: var(--success); border: 1px solid rgba(16,185,129,0.25); }}
@@ -1157,7 +1271,7 @@ body::after {{
   color: var(--text-2);
   border: 1px solid var(--border-hi);
 }}
-.btn-outline:hover {{ color: var(--navy); background: #fff; }}
+.btn-outline:hover {{ color: var(--text-1); background: rgba(255,255,255,0.08); }}
 .btn-sm {{ padding: 4px 10px; font-size: 11px; }}
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1176,7 +1290,7 @@ body::after {{
 .list-row-name {{
   font-size: 13px;
   font-weight: 600;
-  color: var(--navy);
+  color: var(--text-1);
   font-family: var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1238,6 +1352,1022 @@ body::after {{
   50%      {{ opacity: 0.4; }}
 }}
 
+/* ── Faith Agents ─────────────────────────────────────────────────────── */
+.faith-roster {{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 8px;
+}}
+.faith-agent-card {{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: border-color .18s, transform .15s, box-shadow .18s;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(18px);
+}}
+.faith-agent-card::before {{
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--agent-color, var(--hue));
+  border-radius: 12px 12px 0 0;
+}}
+.faith-agent-card:hover {{
+  border-color: var(--agent-color, var(--hue));
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}}
+.faith-agent-card.active {{
+  border-color: var(--agent-color, var(--hue));
+  box-shadow: 0 0 0 1px var(--agent-color, var(--hue)), 0 8px 24px rgba(0,0,0,.4);
+}}
+.faith-agent-avatar {{
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--agent-color, var(--hue));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: #000;
+  margin-bottom: 10px;
+  opacity: .9;
+}}
+.faith-agent-name {{
+  font-size: 14px; font-weight: 700; color: var(--text-1);
+  margin-bottom: 2px;
+}}
+.faith-agent-title {{
+  font-size: 10px; color: var(--agent-color, var(--hue));
+  text-transform: uppercase; letter-spacing: .06em;
+  margin-bottom: 6px;
+}}
+.faith-agent-desc {{
+  font-size: 11px; color: var(--text-3); line-height: 1.45;
+}}
+
+/* Daily Word banner */
+.faith-daily-word {{
+  padding: 16px 20px;
+  border-left: 3px solid var(--hue);
+}}
+.faith-dw-header {{
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}}
+.faith-dw-agent {{
+  font-size: 12px; font-weight: 700; color: var(--text-1);
+}}
+.faith-dw-tag {{
+  font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em;
+  background: rgba(255,255,255,.07); padding: 2px 8px; border-radius: 20px;
+}}
+.faith-dw-body {{
+  font-size: 14px; color: var(--text-2); line-height: 1.6; margin-bottom: 6px;
+}}
+.faith-dw-passage {{
+  font-size: 11px; color: var(--text-3); font-style: italic;
+}}
+
+/* Faith Chat Panel */
+.faith-chat-panel {{
+  padding: 0; overflow: hidden;
+}}
+.faith-chat-header {{
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}}
+.faith-chat-avatar {{
+  width: 38px; height: 38px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #000; flex-shrink: 0;
+}}
+.faith-chat-name {{
+  font-size: 14px; font-weight: 700; color: var(--text-1);
+}}
+.faith-chat-domain {{
+  font-size: 11px; color: var(--text-3);
+}}
+.faith-chat-passage-row {{
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+}}
+.faith-chat-passage-input {{
+  width: 100%; background: rgba(255,255,255,.04);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text-2); font-size: 12px; padding: 6px 10px;
+  outline: none;
+}}
+.faith-chat-passage-input:focus {{
+  border-color: var(--hue);
+}}
+.faith-chat-messages {{
+  height: 340px; overflow-y: auto;
+  padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 12px;
+}}
+.faith-chat-bubble {{
+  max-width: 82%; padding: 10px 14px; border-radius: 12px;
+  font-size: 13px; line-height: 1.55; white-space: pre-wrap;
+}}
+.faith-chat-bubble.user {{
+  align-self: flex-end;
+  background: var(--hue);
+  color: #fff; border-radius: 12px 12px 2px 12px;
+}}
+.faith-chat-bubble.agent {{
+  align-self: flex-start;
+  background: rgba(255,255,255,.08);
+  color: var(--text-1); border-radius: 2px 12px 12px 12px;
+  border: 1px solid var(--border);
+}}
+.faith-chat-bubble.agent strong {{ color: var(--text-1); }}
+.faith-chat-bubble.agent em {{ color: var(--text-3); }}
+.faith-chat-input-row {{
+  display: flex; gap: 8px; padding: 10px 18px;
+  border-top: 1px solid var(--border);
+}}
+.faith-chat-textarea {{
+  flex: 1; background: rgba(255,255,255,.04);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text-1); font-size: 13px; padding: 8px 12px;
+  resize: none; outline: none; font-family: inherit;
+}}
+.faith-chat-textarea:focus {{ border-color: var(--hue); }}
+.faith-send-btn {{ align-self: flex-end; height: 38px; padding: 0 16px; }}
+.faith-typing {{
+  display: flex; gap: 4px; align-items: center; padding: 10px 14px;
+  background: rgba(255,255,255,.08); border-radius: 2px 12px 12px 12px;
+  width: fit-content; border: 1px solid var(--border);
+}}
+.faith-typing-dot {{
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--text-3);
+  animation: faithDotPulse 1.2s ease-in-out infinite;
+}}
+.faith-typing-dot:nth-child(2) {{ animation-delay: .2s; }}
+.faith-typing-dot:nth-child(3) {{ animation-delay: .4s; }}
+@keyframes faithDotPulse {{
+  0%,80%,100% {{ opacity:.25; transform:scale(.8); }}
+  40% {{ opacity:1; transform:scale(1); }}
+}}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CHRONICLE — ENTRY CARDS & SIDEBAR
+═══════════════════════════════════════════════════════════════════ */
+.chr-entry-card {{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}}
+.chr-entry-card:hover {{
+  border-color: rgba(var(--hue-rgb), 0.30);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}}
+.chr-entry-type-bar {{
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  border-radius: 12px 0 0 12px;
+}}
+.chr-type-insight  .chr-entry-type-bar {{ background: var(--hue); }}
+.chr-type-prayer   .chr-entry-type-bar {{ background: #8B5CF6; }}
+.chr-type-study    .chr-entry-type-bar {{ background: #10B981; }}
+.chr-type-reflection .chr-entry-type-bar {{ background: #F59E0B; }}
+.chr-type-note     .chr-entry-type-bar {{ background: #64748b; }}
+.chr-entry-header {{
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 5px;
+  padding-left: 10px;
+}}
+.chr-entry-type-pill {{
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}}
+.chr-type-insight  .chr-entry-type-pill {{ background: rgba(59,158,255,0.15); color: var(--hue); }}
+.chr-type-prayer   .chr-entry-type-pill {{ background: rgba(139,92,246,0.15); color: #8B5CF6; }}
+.chr-type-study    .chr-entry-type-pill {{ background: rgba(16,185,129,0.15); color: #10B981; }}
+.chr-type-reflection .chr-entry-type-pill {{ background: rgba(245,158,11,0.15); color: #F59E0B; }}
+.chr-type-note     .chr-entry-type-pill {{ background: rgba(100,116,139,0.15); color: #94a3b8; }}
+.chr-entry-title {{
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+  flex: 1;
+}}
+.chr-entry-date {{
+  font-size: 10px;
+  color: var(--text-3);
+  flex-shrink: 0;
+}}
+.chr-entry-body {{
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.55;
+  padding-left: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}}
+.chr-entry-footer {{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-left: 10px;
+  flex-wrap: wrap;
+}}
+.chr-passage {{
+  font-size: 10px;
+  color: var(--text-3);
+  font-style: italic;
+}}
+.chr-theme-tag {{
+  font-size: 9px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--text-3);
+}}
+/* Prayer list items */
+.chr-prayer-item {{
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}}
+.chr-prayer-item:last-child {{ border-bottom: none; }}
+.chr-prayer-cat {{
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 2px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}}
+.chr-cat-people  {{ background: rgba(59,158,255,0.12); color: var(--hue); }}
+.chr-cat-needs   {{ background: rgba(245,158,11,0.12); color: #F59E0B; }}
+.chr-cat-praise  {{ background: rgba(16,185,129,0.12); color: #10B981; }}
+.chr-cat-world   {{ background: rgba(139,92,246,0.12); color: #8B5CF6; }}
+.chr-prayer-text {{ font-size: 12px; color: var(--text-2); flex: 1; line-height: 1.4; }}
+.chr-prayer-count {{ font-size: 10px; color: var(--text-3); flex-shrink: 0; margin-top: 1px; }}
+.chr-prayer-answered {{ opacity: 0.45; text-decoration: line-through; }}
+/* Rhythm items */
+.chr-rhythm-item {{
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}}
+.chr-rhythm-item:last-child {{ border-bottom: none; }}
+.chr-rhythm-title {{
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1);
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}}
+.chr-rhythm-cadence {{
+  font-size: 9px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}}
+.chr-rhythm-focus {{
+  font-size: 11px;
+  color: var(--text-3);
+  font-style: italic;
+}}
+.chr-rhythm-passage {{
+  font-size: 10px;
+  color: var(--hue);
+  margin-top: 3px;
+  opacity: 0.8;
+}}
+/* Chronicle modals */
+.chr-modal-backdrop {{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(6px);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.15s ease;
+}}
+@keyframes fadeIn {{ from {{ opacity:0; }} to {{ opacity:1; }} }}
+.chr-modal {{
+  background: rgba(10,18,34,0.96);
+  backdrop-filter: blur(32px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.13);
+  border-radius: 16px;
+  box-shadow: 0 8px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.10);
+  width: 100%;
+  max-width: 680px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUp 0.18s ease;
+}}
+.chr-modal.chr-modal-wide {{ max-width: 820px; }}
+@keyframes slideUp {{ from {{ transform: translateY(12px); opacity:0; }} to {{ transform: translateY(0); opacity:1; }} }}
+.chr-modal-header {{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}}
+.chr-modal-title {{
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-1);
+  flex: 1;
+}}
+.chr-modal-close {{
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text-3);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}}
+.chr-modal-close:hover {{ background: rgba(255,255,255,0.12); color: var(--text-1); }}
+.chr-modal-body {{
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 20px;
+}}
+.chr-modal-footer {{
+  padding: 12px 20px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}}
+/* Bible study modal tabs */
+/* Faith agent selector strip (replaces old 4-tab study mode) */
+.chr-agent-strip {{
+  display: flex;
+  gap: 6px;
+  padding: 10px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}}
+.chr-agent-strip::-webkit-scrollbar {{ display: none; }}
+.chr-agent-pill {{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 5px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.09);
+  color: var(--text-3);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}}
+.chr-agent-pill:hover {{
+  background: rgba(255,255,255,0.09);
+  color: var(--text-2);
+  border-color: var(--pill-color, var(--hue));
+}}
+.chr-agent-pill.active {{
+  background: rgba(255,255,255,0.10);
+  color: var(--text-1);
+  border-color: var(--pill-color, var(--hue));
+  box-shadow: 0 0 0 1px var(--pill-color, var(--hue));
+}}
+.chr-agent-pill-av {{
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px; font-weight: 800; color: #000;
+  flex-shrink: 0;
+}}
+.chr-agent-label {{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-left: 3px solid var(--hue);
+  background: rgba(255,255,255,0.03);
+  transition: border-color 0.2s;
+}}
+/* Chat area */
+.chr-chat-messages {{
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 200px;
+  max-height: 340px;
+}}
+.chr-chat-msg {{
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}}
+.chr-chat-msg.user {{ flex-direction: row-reverse; }}
+.chr-chat-avatar {{
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}}
+.chr-chat-bubble {{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 13px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-2);
+  max-width: 85%;
+}}
+.chr-chat-bubble.user {{
+  background: rgba(var(--hue-rgb),0.12);
+  border-color: rgba(var(--hue-rgb),0.20);
+  color: var(--text-1);
+}}
+.chr-chat-bubble p {{ margin: 0 0 6px; }}
+.chr-chat-bubble p:last-child {{ margin-bottom: 0; }}
+.chr-chat-bubble h3 {{ font-size: 12px; font-weight: 700; color: var(--text-1); margin: 8px 0 3px; }}
+.chr-chat-bubble ul, .chr-chat-bubble ol {{ margin: 4px 0; padding-left: 16px; }}
+.chr-chat-bubble li {{ margin-bottom: 3px; }}
+.chr-chat-bubble strong {{ color: var(--text-1); }}
+.chr-chat-input-row {{
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  align-items: flex-end;
+}}
+.chr-chat-input {{
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 13px;
+  font-size: 12px;
+  color: var(--text-1);
+  resize: none;
+  min-height: 38px;
+  max-height: 100px;
+  font-family: var(--font-sans);
+  outline: none;
+}}
+.chr-chat-input:focus {{ border-color: rgba(var(--hue-rgb),0.40); }}
+.chr-chat-input::placeholder {{ color: var(--text-3); }}
+.chr-typing-dot {{
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--text-3);
+  animation: typingBounce 1.2s ease-in-out infinite;
+  margin: 0 1px;
+}}
+.chr-typing-dot:nth-child(2) {{ animation-delay: 0.2s; }}
+.chr-typing-dot:nth-child(3) {{ animation-delay: 0.4s; }}
+@keyframes typingBounce {{ 0%,60%,100% {{ transform:translateY(0); }} 30% {{ transform:translateY(-5px); }} }}
+/* Prayer modal */
+.chr-prayer-meta-row {{
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}}
+.chr-prayer-stat {{
+  flex: 1;
+  min-width: 90px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-align: center;
+}}
+.chr-prayer-stat-num {{ font-size: 20px; font-weight: 700; color: var(--text-1); }}
+.chr-prayer-stat-lbl {{ font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; margin-top: 2px; }}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PUBLISHING — BOOK CARDS
+═══════════════════════════════════════════════════════════════════ */
+.pub-book-card {{
+  background: rgba(255,255,255,0.065);
+  backdrop-filter: blur(28px) saturate(160%) brightness(1.04);
+  -webkit-backdrop-filter: blur(28px) saturate(160%) brightness(1.04);
+  border: 1px solid rgba(255,255,255,0.13);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0  1px  0   rgba(255,255,255,0.06),
+    0  8px 24px rgba(0,0,0,0.40),
+    0 20px 48px rgba(0,0,0,0.25),
+    inset 0 1px 0 rgba(255,255,255,0.14),
+    inset 1px 0 0 rgba(255,255,255,0.05);
+}}
+.pub-book-card::before {{
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(var(--hue-rgb), 0.55) 25%,
+    rgba(var(--hue-rgb), 0.55) 75%,
+    transparent 100%
+  );
+  border-radius: 14px 14px 0 0;
+}}
+.pub-book-header {{
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}}
+.pub-book-title {{
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-1);
+  flex: 1;
+  line-height: 1.3;
+}}
+.pub-book-subtitle {{
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 2px;
+  font-style: italic;
+}}
+.pub-book-meta {{
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}}
+.pub-progress-wrap {{
+  margin-bottom: 14px;
+}}
+.pub-progress-label {{
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-3);
+  margin-bottom: 4px;
+}}
+.pub-progress-bar {{
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}}
+.pub-progress-fill {{
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--hue) 0%, #5BB8FF 100%);
+  transition: width 0.5s ease;
+}}
+.pub-groups-grid {{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}}
+@media (max-width: 700px) {{
+  .pub-groups-grid {{ grid-template-columns: repeat(2, 1fr); }}
+}}
+.pub-group {{
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 10px;
+  padding: 8px 10px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.09),
+    0 2px 8px rgba(0,0,0,0.30);
+}}
+.pub-group-name {{
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}}
+.pub-stage-dots {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-bottom: 4px;
+}}
+.pub-stage-dot {{
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  cursor: default;
+  transition: transform 0.15s;
+}}
+.pub-stage-dot:hover {{ transform: scale(1.4); }}
+.pub-stage-dot.committed    {{ background: #3ecf8e; }}
+.pub-stage-dot.in_progress  {{ background: var(--hue); animation: pipeline-pulse 1.5s ease-in-out infinite; }}
+.pub-stage-dot.review       {{ background: #f0b429; }}
+.pub-stage-dot.blocked      {{ background: #e5534b; }}
+.pub-stage-dot.not_started  {{ background: var(--border); }}
+.pub-group-count {{
+  font-size: 9px;
+  color: var(--text-3);
+}}
+.pub-group-count.all-done {{ color: #3ecf8e; }}
+.pub-book-footer {{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}}
+.pub-current-stage {{
+  font-size: 11px;
+  color: var(--text-2);
+}}
+.pub-current-stage .stage-chip {{
+  background: rgba(59,158,255,0.12);
+  color: var(--hue);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 500;
+  margin-left: 4px;
+}}
+.pub-review-badge {{
+  background: rgba(240,180,41,0.15);
+  color: #f0b429;
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 8px;
+  letter-spacing: 0.04em;
+}}
+.pub-open-link {{
+  font-size: 11px;
+  color: var(--hue);
+  text-decoration: none;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}}
+.pub-open-link:hover {{ opacity: 1; text-decoration: underline; }}
+.pub-review-item {{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}}
+.pub-review-item:last-child {{ border-bottom: none; }}
+.pub-review-book {{ font-size: 13px; font-weight: 600; color: var(--text-1); }}
+.pub-review-stage {{ font-size: 11px; color: #f0b429; font-weight: 500; }}
+.pub-review-preview {{ font-size: 11px; color: var(--text-3); font-style: italic; }}
+.pub-review-meta {{ font-size: 10px; color: var(--text-3); }}
+.pub-review-actions {{ display: flex; gap: 6px; margin-top: 4px; }}
+
+/* ═══════════════════════════════════════════════════════════════════
+   KASA HOME AUTOMATION
+═══════════════════════════════════════════════════════════════════ */
+.kasa-header-strip {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}}
+.kasa-stats {{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}}
+.kasa-stat {{
+  background: var(--glass-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 70px;
+}}
+.kasa-stat-val {{
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-1);
+  font-family: var(--font-mono);
+  line-height: 1;
+}}
+.kasa-stat-val.on {{ color: #FBBF24; }}
+.kasa-stat-label {{
+  font-size: 9px;
+  color: var(--text-3);
+  letter-spacing: 0.07em;
+  margin-top: 2px;
+  text-transform: uppercase;
+}}
+/* Scene buttons */
+.kasa-scenes {{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}}
+.kasa-scene-btn {{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: var(--glass-1);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+}}
+.kasa-scene-btn:hover {{
+  background: var(--surface-hi);
+  border-color: var(--hue);
+  color: var(--text-1);
+}}
+.kasa-scene-btn:active {{
+  transform: scale(0.96);
+}}
+.kasa-scene-btn.running {{
+  border-color: var(--hue);
+  color: var(--hue);
+  background: var(--hue-dim);
+}}
+/* Room sections */
+.kasa-room-section {{
+  margin-bottom: 20px;
+}}
+.kasa-room-label {{
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-3);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}}
+.kasa-room-label::after {{
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}}
+.kasa-device-grid {{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}}
+/* Individual device card */
+.kasa-device-card {{
+  background: var(--glass-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  cursor: default;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.06);
+}}
+.kasa-device-card.device-on {{
+  border-color: rgba(251,191,36,0.35);
+  box-shadow: 0 2px 12px rgba(251,191,36,0.10), inset 0 1px 0 rgba(255,255,255,0.08);
+}}
+.kasa-device-card.device-off {{
+  opacity: 0.65;
+}}
+.kasa-device-top {{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}}
+.kasa-device-icon {{
+  font-size: 20px;
+  line-height: 1;
+}}
+.kasa-device-info {{
+  flex: 1;
+  min-width: 0;
+}}
+.kasa-device-alias {{
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}}
+.kasa-device-model {{
+  font-size: 10px;
+  color: var(--text-3);
+  margin-top: 1px;
+}}
+/* Toggle switch */
+.kasa-toggle {{
+  position: relative;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+  cursor: pointer;
+}}
+.kasa-toggle input {{
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}}
+.kasa-toggle-track {{
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  transition: background 0.2s, border-color 0.2s;
+}}
+.kasa-toggle input:checked + .kasa-toggle-track {{
+  background: rgba(251,191,36,0.55);
+  border-color: rgba(251,191,36,0.6);
+}}
+.kasa-toggle-thumb {{
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  background: rgba(255,255,255,0.6);
+  border-radius: 50%;
+  transition: transform 0.2s, background 0.2s;
+}}
+.kasa-toggle input:checked ~ .kasa-toggle-thumb {{
+  transform: translateX(16px);
+  background: #fff;
+}}
+/* Brightness slider */
+.kasa-slider-row {{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}}
+.kasa-slider-label {{
+  font-size: 9px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  width: 14px;
+  text-align: right;
+  flex-shrink: 0;
+}}
+.kasa-slider {{
+  flex: 1;
+  -webkit-appearance: none;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.1);
+  outline: none;
+  cursor: pointer;
+}}
+.kasa-slider::-webkit-slider-thumb {{
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #FBBF24;
+  cursor: pointer;
+}}
+.kasa-slider-val {{
+  font-size: 10px;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}}
+/* Camera card */
+.kasa-camera-card {{
+  grid-column: 1 / -1;
+}}
+.kasa-live-btn {{
+  padding: 5px 14px;
+  background: rgba(239,68,68,0.15);
+  border: 1px solid rgba(239,68,68,0.4);
+  border-radius: 14px;
+  color: #ef4444;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}}
+.kasa-live-btn:hover {{
+  background: rgba(239,68,68,0.25);
+}}
+.kasa-camera-video {{
+  background: #000;
+  border-radius: 8px;
+}}
+/* Status dot on card */
+.kasa-device-type-badge {{
+  font-size: 9px;
+  color: var(--text-3);
+  background: rgba(255,255,255,0.05);
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-top: 3px;
+  display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}}
+/* Offline / unavailable */
+.kasa-unavailable {{
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-3);
+  font-size: 14px;
+}}
+.kasa-unavailable-icon {{
+  font-size: 36px;
+  margin-bottom: 12px;
+  opacity: 0.4;
+}}
+.kasa-refresh-btn {{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 8px 18px;
+  background: var(--glass-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--hue);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}}
+.kasa-refresh-btn:hover {{ background: var(--surface-hi); }}
+
 /* ═══════════════════════════════════════════════════════════════════
    APPROVAL ITEM
 ═══════════════════════════════════════════════════════════════════ */
@@ -1278,7 +2408,7 @@ body::after {{
 .approval-title {{
   font-size: 13px;
   font-weight: 600;
-  color: var(--navy);
+  color: var(--text-1);
   margin-bottom: 4px;
 }}
 .approval-meta {{
@@ -1332,19 +2462,12 @@ body::after {{
 
 .agent-badge {{
   position: relative;
-  background: linear-gradient(
-    150deg,
-    rgba(255,255,255,0.75) 0%,
-    rgba(255,255,255,0.45) 100%
-  );
-  backdrop-filter: blur(24px) saturate(180%) brightness(1.03);
-  -webkit-backdrop-filter: blur(24px) saturate(180%) brightness(1.03);
-  border-top:    1px solid rgba(255,255,255,0.90);
-  border-left:   1px solid rgba(255,255,255,0.75);
-  border-right:  1px solid rgba(255,255,255,0.30);
-  border-bottom: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 10px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.95);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.30), 0 4px 16px rgba(0,0,0,0.20);
   padding: 12px 14px;
   display: flex;
   align-items: center;
@@ -1354,7 +2477,7 @@ body::after {{
   cursor: default;
 }}
 .agent-badge:hover {{
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.40), 0 8px 24px rgba(0,0,0,0.30);
   transform: translateY(-1px);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }}
@@ -1364,7 +2487,7 @@ body::after {{
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 500;
-  color: var(--navy);
+  color: var(--text-1);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -1745,15 +2868,15 @@ body::after {{
   padding-left: 10px; position: relative;
 }}
 .dossier-qa-issue-item::before {{ content: "•"; position: absolute; left: 0; color: #ef4444; }}
-.dossier-card-title {{ font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 6px; }}
-.dossier-card-summary {{ font-size: 11px; color: #475569; line-height: 1.5; margin-bottom: 10px; }}
+.dossier-card-title {{ font-size: 13px; font-weight: 600; color: var(--text-1); margin-bottom: 6px; }}
+.dossier-card-summary {{ font-size: 11px; color: var(--text-2); line-height: 1.5; margin-bottom: 10px; }}
 .dossier-metrics {{
   display: flex; gap: 12px; flex-wrap: wrap;
 }}
 .dossier-metric {{
-  font-size: 10px; color: #64748b;
+  font-size: 10px; color: var(--text-3);
 }}
-.dossier-metric strong {{ color: #1e293b; }}
+.dossier-metric strong {{ color: var(--text-1); }}
 .dossier-confidence-bar {{
   width: 100%; height: 3px; background: rgba(255,255,255,0.08);
   border-radius: 2px; margin-top: 10px; overflow: hidden;
@@ -1769,10 +2892,10 @@ body::after {{
 .dossier-read-btn {{
   flex: 1; padding: 6px; border-radius: 6px; font-size: 10px;
   background: rgba(15,23,42,0.05); border: 1px solid rgba(15,23,42,0.12);
-  color: #475569; cursor: pointer; transition: all 0.2s;
+  color: var(--text-2); cursor: pointer; transition: all 0.2s;
   text-align: center;
 }}
-.dossier-read-btn:hover {{ background: rgba(15,23,42,0.1); color: #1e293b; }}
+.dossier-read-btn:hover {{ background: rgba(255,255,255,0.08); color: var(--text-1); }}
 .dossier-approve-btn {{
   flex: 1; padding: 6px; border-radius: 6px; font-size: 10px;
   background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25);
@@ -1783,16 +2906,42 @@ body::after {{
 /* Dossier Modal */
 .dossier-modal-overlay {{
   position: fixed; inset: 0; z-index: 9999;
-  background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+  background: rgba(5,10,20,0.50);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
   display: flex; align-items: center; justify-content: center;
   padding: 20px;
+  animation: modal-overlay-in 0.25s ease;
 }}
 .dossier-modal {{
-  background: var(--surface-bg, #1a1a2e);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 16px; width: 100%; max-width: 720px;
+  position: relative; overflow: hidden;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(60px) saturate(220%) brightness(1.10);
+  -webkit-backdrop-filter: blur(60px) saturate(220%) brightness(1.10);
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 24px; width: 100%; max-width: 720px;
   max-height: 85vh; overflow-y: auto; padding: 28px;
+  box-shadow:
+    0  4px  8px  rgba(0,0,0,0.35),
+    0 16px  48px rgba(0,0,0,0.50),
+    0 48px  96px rgba(0,0,0,0.35),
+    inset 0  1px 0 rgba(255,255,255,0.65),
+    inset 1px 0  0 rgba(255,255,255,0.22),
+    inset 0 -1px 0 rgba(0,0,0,0.15);
+  animation: modal-in 0.38s cubic-bezier(0.34,1.56,0.64,1);
 }}
+.dossier-modal::before {{
+  content: '';
+  position: absolute; inset: 0; border-radius: 23px; pointer-events: none; z-index: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.18) 0%,
+    rgba(255,255,255,0.05) 30%,
+    transparent 55%,
+    rgba(255,255,255,0.02) 100%
+  );
+}}
+.dossier-modal > * {{ position: relative; z-index: 1; }}
 .dossier-modal-header {{
   display: flex; justify-content: space-between; align-items: flex-start;
   margin-bottom: 20px;
@@ -1922,7 +3071,7 @@ body::after {{
   letter-spacing: 0.06em;
 }}
 .runtime-stat {{ display: flex; align-items: center; gap: 6px; }}
-.runtime-stat-val {{ font-size: 16px; font-weight: 700; font-family: var(--font-mono); color: var(--navy); }}
+.runtime-stat-val {{ font-size: 16px; font-weight: 700; font-family: var(--font-mono); color: var(--text-1); }}
 .runtime-stat-lbl {{ color: var(--text-3); }}
 .runtime-divider {{ width: 1px; height: 24px; background: rgba(0,0,0,0.08); }}
 .runtime-mode-badge {{
@@ -1968,24 +3117,22 @@ body::after {{
 
 .agent-runtime-card {{
   position: relative;
-  background: linear-gradient(150deg, rgba(255,255,255,0.78) 0%, rgba(255,255,255,0.46) 100%);
-  backdrop-filter: blur(24px) saturate(180%) brightness(1.03);
-  -webkit-backdrop-filter: blur(24px) saturate(180%) brightness(1.03);
-  border-top:    1px solid rgba(255,255,255,0.92);
-  border-left:   1px solid rgba(255,255,255,0.80);
-  border-right:  1px solid rgba(255,255,255,0.30);
-  border-bottom: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05), 0 6px 20px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 6px 20px rgba(0,0,0,0.2);
   padding: 14px 16px;
   border-left-width: 3px;
   border-left-style: solid;
-  border-left-color: rgba(0,180,255,0.5);
+  border-left-color: rgba(59,158,255,0.5);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }}
 .agent-runtime-card:hover {{
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 10px 32px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 10px 32px rgba(0,0,0,0.3);
+  background: rgba(255,255,255,0.06);
 }}
 .agent-runtime-card.state-awake  {{ border-left-color: #22c55e; }}
 .agent-runtime-card.state-idle   {{ border-left-color: rgba(100,116,139,0.5); }}
@@ -1997,7 +3144,7 @@ body::after {{
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 600;
-  color: var(--navy);
+  color: var(--text-1);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }}
@@ -2075,15 +3222,15 @@ body::after {{
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.08em;
-  background: rgba(255,255,255,0.6);
-  border: 1px solid rgba(0,0,0,0.1);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
   border-radius: 6px;
   padding: 5px 12px;
   cursor: pointer;
   color: var(--text-2);
   transition: background 0.15s;
 }}
-.roster-toggle:hover {{ background: rgba(255,255,255,0.85); }}
+.roster-toggle:hover {{ background: rgba(255,255,255,0.10); color: var(--text-1); }}
 
 /* Domain left-border colors — fixed, not hue */
 .domain-command     {{ border-left-color: #0A1628; }}
@@ -2116,7 +3263,7 @@ body::after {{
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 500;
-  color: var(--navy);
+  color: var(--text-1);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 6px;
@@ -2186,7 +3333,7 @@ body::after {{
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 500;
-  color: var(--navy);
+  color: var(--text-1);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }}
@@ -2300,7 +3447,7 @@ body::after {{
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 600;
-  color: var(--navy);
+  color: var(--text-1);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }}
@@ -2532,25 +3679,19 @@ body::after {{
 ═══════════════════════════════════════════════════════════════════ */
 .command-bar {{
   position: fixed;
-  bottom: 0; left: 0; right: 0;
+  bottom: 0; left: var(--nav-w); right: 0;
   height: auto;
   min-height: var(--bar-h);
   z-index: 100;
-  background: linear-gradient(
-    0deg,
-    rgba(255,255,255,0.96) 0%,
-    rgba(255,255,255,0.82) 100%
-  );
-  backdrop-filter: blur(32px) saturate(200%) brightness(1.03);
-  -webkit-backdrop-filter: blur(32px) saturate(200%) brightness(1.03);
-  /* Bright top gleam on command bar */
-  border-top: 1px solid rgba(255,255,255,0.95);
-  border-bottom: 1px solid rgba(255,255,255,1);
+  background: rgba(6, 11, 22, 0.82);
+  backdrop-filter: blur(40px) saturate(150%);
+  -webkit-backdrop-filter: blur(40px) saturate(150%);
+  border-top: 1px solid rgba(255,255,255,0.10);
   box-shadow:
-    0 -1px  0 rgba(200,215,232,0.50),
-    0 -4px 20px rgba(0,0,0,0.05),
-    inset 0 1px 0 rgba(255,255,255,1);
-  padding: 8px 20px 12px;
+    0 -4px 32px rgba(0,0,0,0.55),
+    0 -1px 0 rgba(var(--hue-rgb),0.10),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+  padding: 8px 24px 12px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -2596,8 +3737,8 @@ body::after {{
 .cmd-input {{
   flex: 1;
   padding: 10px 14px;
-  background: var(--surface);
-  border: 1px solid var(--border-hi);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
   border-radius: 10px;
   font-size: 14px;
   font-family: var(--font-sans);
@@ -2622,7 +3763,7 @@ body::after {{
   color: var(--text-2);
   flex-shrink: 0;
 }}
-.cmd-mic:hover {{ background: var(--surface-hi); color: var(--navy); }}
+.cmd-mic:hover {{ background: var(--surface-hi); color: var(--text-1); }}
 
 .cmd-send {{
   height: 38px;
@@ -2680,38 +3821,59 @@ body::after {{
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: rgba(10,22,40,0.55);
-  backdrop-filter: blur(4px);
+  background: rgba(5,10,20,0.50);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  animation: modal-overlay-in 0.25s ease;
 }}
-.modal-overlay.hidden {{ display: none; }}
+.modal-overlay.hidden {{ display: none; animation: none; }}
+@keyframes modal-overlay-in {{
+  from {{ opacity: 0; }}
+  to   {{ opacity: 1; }}
+}}
 
 .modal {{
   position: relative;
-  background: linear-gradient(
-    155deg,
-    rgba(255,255,255,0.97) 0%,
-    rgba(255,255,255,0.88) 50%,
-    rgba(255,255,255,0.82) 100%
-  );
-  backdrop-filter: blur(40px) saturate(220%) brightness(1.05);
-  -webkit-backdrop-filter: blur(40px) saturate(220%) brightness(1.05);
-  border-top:    1px solid rgba(255,255,255,1);
-  border-left:   1px solid rgba(255,255,255,0.90);
-  border-right:  1px solid rgba(255,255,255,0.40);
-  border-bottom: 1px solid rgba(255,255,255,0.35);
-  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(60px) saturate(220%) brightness(1.10);
+  -webkit-backdrop-filter: blur(60px) saturate(220%) brightness(1.10);
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 24px;
   box-shadow:
-    0 24px 64px rgba(0,0,0,0.16),
-    0  8px 24px rgba(0,0,0,0.10),
-    inset 0 1px 0 rgba(255,255,255,1),
-    inset 1px 0 0 rgba(255,255,255,0.60);
+    0  4px  8px  rgba(0,0,0,0.35),
+    0 16px  48px rgba(0,0,0,0.50),
+    0 48px  96px rgba(0,0,0,0.35),
+    inset 0  1px 0 rgba(255,255,255,0.65),
+    inset 1px 0  0 rgba(255,255,255,0.22),
+    inset 0 -1px 0 rgba(0,0,0,0.15);
   max-width: 480px;
   width: 100%;
   padding: 28px 28px 24px;
+  animation: modal-in 0.38s cubic-bezier(0.34,1.56,0.64,1);
+}}
+.modal::before {{
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 23px;
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.18) 0%,
+    rgba(255,255,255,0.05) 30%,
+    transparent 55%,
+    rgba(255,255,255,0.02) 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+}}
+@keyframes modal-in {{
+  from {{ opacity: 0; transform: scale(0.93) translateY(20px); }}
+  to   {{ opacity: 1; transform: scale(1)    translateY(0);    }}
 }}
 .modal-header {{
   display: flex;
@@ -2722,7 +3884,7 @@ body::after {{
 .modal-title {{
   font-size: 16px;
   font-weight: 700;
-  color: var(--navy);
+  color: var(--text-1);
   letter-spacing: -0.01em;
 }}
 .modal-close {{
@@ -2735,7 +3897,7 @@ body::after {{
   color: var(--text-2);
   font-size: 16px;
 }}
-.modal-close:hover {{ background: var(--surface-hi); color: var(--navy); }}
+.modal-close:hover {{ background: var(--surface-hi); color: var(--text-1); }}
 
 .theme-cards {{
   display: flex;
@@ -2763,7 +3925,7 @@ body::after {{
 .theme-name {{
   font-size: 12px;
   font-weight: 700;
-  color: var(--navy);
+  color: var(--text-1);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-family: var(--font-mono);
@@ -2778,7 +3940,7 @@ body::after {{
    SKELETON LOADER
 ═══════════════════════════════════════════════════════════════════ */
 .skel {{
-  background: linear-gradient(90deg, var(--border) 25%, rgba(255,255,255,0.5) 50%, var(--border) 75%);
+  background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.05) 75%);
   background-size: 200% 100%;
   animation: skel-shine 1.4s ease infinite;
   border-radius: 4px;
@@ -2845,7 +4007,7 @@ body::after {{
 .card-row .val {{
   font-size: 14px;
   font-weight: 600;
-  color: var(--navy);
+  color: var(--text-1);
 }}
 .card-cta {{
   margin-top: 10px;
@@ -2901,7 +4063,7 @@ body::after {{
   cursor: pointer;
   font-family: var(--font-sans);
 }}
-.btn-ghost:hover {{ background: var(--surface-hi); color: var(--navy); }}
+.btn-ghost:hover {{ background: var(--surface-hi); color: var(--text-1); }}
 
 /* ── Health Chat Console ──────────────────────────────── */
 .hchat-wrap {{
@@ -3138,7 +4300,7 @@ body::after {{
   font-family: var(--font-mono);
   font-size: 28px;
   font-weight: 500;
-  color: var(--navy);
+  color: var(--text-1);
   line-height: 1;
 }}
 .stat-lbl {{
@@ -3277,9 +4439,37 @@ body::after {{
 .forge-action-btn.primary:hover {{ opacity:0.88; }}
 .forge-printer-chip {{ padding:5px 12px; border-radius:99px; font-size:10px; font-family:var(--font-mono); font-weight:700; text-transform:uppercase; letter-spacing:0.06em; border:1px solid var(--border); color:var(--text-3); margin-left:auto; }}
 .forge-printer-chip.online {{ border-color:var(--success); color:var(--success); background:rgba(16,185,129,0.08); }}
-.forge-modal-overlay {{ position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:900; display:flex; align-items:center; justify-content:center; }}
-.forge-modal-overlay.hidden {{ display:none !important; }}
-.forge-modal {{ background:var(--surface-hi); border:1px solid var(--border); border-radius:16px; padding:24px; min-width:340px; max-width:540px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.2); }}
+.forge-modal-overlay {{
+  position:fixed; inset:0; z-index:900;
+  background: rgba(5,10,20,0.50);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  display:flex; align-items:center; justify-content:center;
+  animation: modal-overlay-in 0.25s ease;
+}}
+.forge-modal-overlay.hidden {{ display:none !important; animation:none; }}
+.forge-modal {{
+  position: relative; overflow: hidden;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(60px) saturate(220%) brightness(1.10);
+  -webkit-backdrop-filter: blur(60px) saturate(220%) brightness(1.10);
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 24px; padding:24px;
+  min-width:340px; max-width:540px; width:90%;
+  box-shadow:
+    0  4px  8px  rgba(0,0,0,0.35),
+    0 16px  48px rgba(0,0,0,0.50),
+    0 48px  96px rgba(0,0,0,0.35),
+    inset 0  1px 0 rgba(255,255,255,0.65),
+    inset 1px 0  0 rgba(255,255,255,0.22),
+    inset 0 -1px 0 rgba(0,0,0,0.15);
+  animation: modal-in 0.38s cubic-bezier(0.34,1.56,0.64,1);
+}}
+.forge-modal::before {{
+  content:''; position:absolute; inset:0; border-radius:23px; pointer-events:none; z-index:0;
+  background: linear-gradient(135deg,rgba(255,255,255,0.18) 0%,rgba(255,255,255,0.05) 30%,transparent 55%,rgba(255,255,255,0.02) 100%);
+}}
+.forge-modal > * {{ position:relative; z-index:1; }}
 .forge-modal-title {{ font-size:15px; font-weight:700; margin-bottom:16px; color:var(--text-1); }}
 .forge-timeline-list {{ display:flex; flex-direction:column; gap:6px; max-height:400px; overflow-y:auto; }}
 .forge-tl-row {{ display:flex; gap:10px; font-size:11px; padding:6px 0; border-bottom:1px solid var(--border); }}
@@ -3288,7 +4478,138 @@ body::after {{
 .forge-tl-detail {{ color:var(--text-2); flex:1; }}
 .forge-camera-preview {{ width:100%; border-radius:10px; margin-bottom:12px; max-height:220px; object-fit:cover; }}
 
+/* ═══ FINANCE SETUP MODAL ════════════════════════════════════ */
+.finance-modal-overlay {{
+  position:fixed; inset:0; z-index:1100;
+  background: rgba(5,10,20,0.55);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  display:flex; align-items:center; justify-content:center;
+  animation: modal-overlay-in 0.25s ease;
+}}
+.finance-modal-overlay.hidden {{ display:none !important; animation:none; }}
+.finance-modal {{
+  position:relative; overflow:hidden;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(60px) saturate(220%) brightness(1.10);
+  -webkit-backdrop-filter: blur(60px) saturate(220%) brightness(1.10);
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius:24px; padding:28px;
+  min-width:380px; max-width:620px; width:92%;
+  max-height:88vh; overflow-y:auto;
+  box-shadow:
+    0  4px  8px  rgba(0,0,0,0.35),
+    0 16px  48px rgba(0,0,0,0.50),
+    0 48px  96px rgba(0,0,0,0.35),
+    inset 0  1px 0 rgba(255,255,255,0.65),
+    inset 1px 0  0 rgba(255,255,255,0.22),
+    inset 0 -1px 0 rgba(0,0,0,0.15);
+  animation: modal-in 0.38s cubic-bezier(0.34,1.56,0.64,1);
+}}
+.finance-modal::before {{
+  content:''; position:absolute; inset:0; border-radius:23px; pointer-events:none; z-index:0;
+  background: linear-gradient(135deg,rgba(255,255,255,0.18) 0%,rgba(255,255,255,0.05) 30%,transparent 55%,rgba(255,255,255,0.02) 100%);
+}}
+.finance-modal > * {{ position:relative; z-index:1; }}
+.finance-tabs {{
+  display:flex; gap:6px; margin-bottom:20px;
+  background:rgba(255,255,255,0.05); border-radius:10px; padding:4px;
+}}
+.finance-tab {{
+  flex:1; padding:7px 0; font-size:11px; font-weight:600; text-transform:uppercase;
+  letter-spacing:0.05em; border:none; border-radius:7px; cursor:pointer;
+  background:transparent; color:var(--text-3); transition:background 0.15s,color 0.15s;
+}}
+.finance-tab.active {{
+  background:rgba(255,255,255,0.12); color:var(--text-1);
+}}
+.finance-panel {{ display:none; }}
+.finance-panel.active {{ display:block; }}
+.finance-row {{
+  display:flex; align-items:center; gap:8px;
+  padding:8px 10px; background:rgba(255,255,255,0.05);
+  border-radius:8px; margin-bottom:6px;
+}}
+.finance-row-name  {{ flex:1; font-size:12px; font-weight:600; color:var(--text-1); }}
+.finance-row-sub   {{ font-size:10px; color:var(--text-3); margin-top:1px; }}
+.finance-row-val   {{ font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--text-1); white-space:nowrap; }}
+.finance-row-del   {{
+  width:22px; height:22px; border-radius:6px; border:1px solid rgba(255,255,255,0.1);
+  background:rgba(239,68,68,0.12); color:#ef4444; cursor:pointer; font-size:11px;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  transition:background 0.15s;
+}}
+.finance-row-del:hover {{ background:rgba(239,68,68,0.30); }}
+.finance-form {{ border-top:1px solid rgba(255,255,255,0.08); padding-top:14px; margin-top:4px; }}
+.finance-form-title {{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-3); margin-bottom:10px; }}
+.finance-inputs {{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }}
+.finance-inputs.single {{ grid-template-columns:1fr; }}
+.finance-inp, .finance-sel {{
+  padding:8px 10px; font-size:12px;
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+  border-radius:8px; color:var(--text-1); outline:none;
+  transition:border-color 0.15s,background 0.15s;
+}}
+.finance-inp::placeholder {{ color:var(--text-3); }}
+.finance-inp:focus, .finance-sel:focus {{ border-color:rgba(255,255,255,0.30); background:rgba(255,255,255,0.09); }}
+.finance-sel option {{ background:#1a1f2e; color:#fff; }}
+.finance-add-btn {{
+  width:100%; padding:9px; font-size:12px; font-weight:700; text-transform:uppercase;
+  letter-spacing:0.06em; border:none; border-radius:10px; cursor:pointer;
+  background: linear-gradient(135deg,rgba(99,179,237,0.7) 0%,rgba(129,140,248,0.7) 100%);
+  color:#fff; transition:opacity 0.15s;
+}}
+.finance-add-btn:hover {{ opacity:0.85; }}
+.finance-empty {{ font-size:11px; color:var(--text-3); text-align:center; padding:16px 0; font-style:italic; }}
+.finance-setup-link {{
+  display:inline-flex; align-items:center; gap:5px;
+  padding:5px 10px; font-size:10px; font-weight:600;
+  border:1px solid rgba(255,255,255,0.15); border-radius:7px;
+  background:rgba(255,255,255,0.06); color:var(--text-2); cursor:pointer;
+  margin-top:6px; transition:background 0.15s, color 0.15s;
+}}
+.finance-setup-link:hover {{ background:rgba(255,255,255,0.12); color:var(--text-1); }}
+
+/* ═══ WORK INTELLIGENCE ══════════════════════════════════════ */
+.wi-pane {{ animation: wi-fade-in 0.18s ease; }}
+@keyframes wi-fade-in {{ from {{ opacity:0; transform:translateY(5px); }} to {{ opacity:1; transform:none; }} }}
+.wi-status-dot {{ display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:3px; background:var(--text-3); vertical-align:middle; }}
+.wi-status-dot.active {{ background:var(--success); }}
+.wi-status-dot.error  {{ background:var(--crimson); }}
+.wi-status-dot.paused {{ background:#F59E0B; }}
+.wi-signal-type {{ font-family:var(--font-mono); font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--hue); background:var(--hue-dim); padding:2px 6px; border-radius:4px; white-space:nowrap; flex-shrink:0; }}
+.wi-priority-ring {{ display:inline-block; width:8px; height:8px; border-radius:50%; flex-shrink:0; }}
+.wi-priority-ring.p1 {{ background:var(--crimson); box-shadow:0 0 0 2px rgba(239,68,68,0.25); }}
+.wi-priority-ring.p2 {{ background:#F59E0B; box-shadow:0 0 0 2px rgba(245,158,11,0.25); }}
+.wi-priority-ring.p3 {{ background:var(--success); }}
+.wi-complete-btn {{ padding:3px 10px; font-size:10px; background:var(--glass-1,rgba(255,255,255,0.06)); border:1px solid var(--border); border-radius:6px; cursor:pointer; color:var(--text-2); transition:background 0.15s,color 0.15s; white-space:nowrap; flex-shrink:0; }}
+.wi-complete-btn:hover {{ background:var(--success); color:#fff; border-color:var(--success); }}
+.wi-refresh-btn {{ padding:4px 12px; font-size:10px; background:var(--glass-1,rgba(255,255,255,0.06)); border:1px solid var(--border); border-radius:6px; cursor:pointer; color:var(--text-2); transition:background 0.15s,color 0.15s; }}
+.wi-refresh-btn:hover {{ background:var(--hue); color:#fff; border-color:var(--hue); }}
+.wi-project-row {{ display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }}
+.wi-project-row:last-child {{ border-bottom:none; padding-bottom:0; }}
+.wi-project-info {{ flex:1; min-width:0; }}
+.wi-project-name {{ font-size:13px; font-weight:600; color:var(--text-1); }}
+.wi-project-sub  {{ font-size:11px; color:var(--text-3); margin-top:2px; }}
+.wi-project-badge {{ padding:2px 8px; font-size:9px; border-radius:10px; font-family:var(--font-mono); letter-spacing:0.06em; white-space:nowrap; }}
+.wi-project-badge.on-track {{ background:rgba(16,185,129,0.15); color:var(--success); }}
+.wi-project-badge.at-risk   {{ background:rgba(245,158,11,0.15); color:#F59E0B; }}
+.wi-project-badge.active    {{ background:var(--hue-dim); color:var(--hue); }}
+.wi-commit-row {{ display:flex; align-items:flex-start; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }}
+.wi-commit-row:last-child {{ border-bottom:none; padding-bottom:0; }}
+.wi-commit-text {{ flex:1; min-width:0; font-size:12px; color:var(--text-2); line-height:1.5; }}
+.wi-commit-due  {{ font-size:10px; font-family:var(--font-mono); color:var(--text-3); white-space:nowrap; }}
+.wi-commit-status {{ font-size:9px; padding:2px 7px; border-radius:10px; font-family:var(--font-mono); letter-spacing:0.06em; white-space:nowrap; }}
+.wi-commit-status.open     {{ background:var(--hue-dim); color:var(--hue); }}
+.wi-commit-status.overdue  {{ background:rgba(239,68,68,0.15); color:var(--crimson); }}
+.wi-commit-status.on-track {{ background:rgba(16,185,129,0.15); color:var(--success); }}
+.wi-surface-item {{ padding:8px 0; border-bottom:1px solid var(--border); }}
+.wi-surface-item:last-child {{ border-bottom:none; padding-bottom:0; }}
+.wi-surface-title {{ font-size:12px; color:var(--text-1); font-weight:500; }}
+.wi-surface-reason {{ font-size:11px; color:var(--text-3); margin-top:2px; }}
+
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
 </head>
 <body>
 
@@ -3323,7 +4644,11 @@ body::after {{
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1"/><path d="M5 6h6M5 9h4"/></svg>
       Chronicle
     </button>
-    <button class="nav-tab" data-view="publishing" onclick="switchView('publishing')">
+    <button class="nav-tab" data-view="faith" onclick="switchView('faith')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v12M2 8h12" stroke-linecap="round"/></svg>
+      Faith
+    </button>
+        <button class="nav-tab" data-view="publishing" onclick="switchView('publishing')">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 1h8v14H4zM7 1v14"/></svg>
       Publishing
     </button>
@@ -3358,6 +4683,10 @@ body::after {{
     <button class="nav-tab" data-view="news" onclick="switchView('news')">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="12" rx="1.5"/><path d="M4 6h8M4 9h5"/></svg>
       News
+    </button>
+    <button class="nav-tab" data-view="home" onclick="switchView('home')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
     </button>
   </div>
 
@@ -3945,44 +5274,188 @@ body::after {{
     </div>
   </div>
 
-  <!-- ── CATALYST ───────────────────────────────────────────── -->
-  <div id="view-catalyst" class="view">
+  <!-- ── CATALYST / WORK INTELLIGENCE ───────────────────────── -->
+  <div id="view-catalyst" class="view" data-domain="catalyst">
     <div class="view-header">
-      <div class="view-title">CATALYST<div class="view-title-line"></div></div>
-      <div class="view-subtitle">Automation Flows · Triggers · Run Analytics</div>
+      <div class="view-title">WORK INTELLIGENCE<div class="view-title-line"></div></div>
+      <div class="view-subtitle">Projects · Commitments · Briefings · Signals</div>
     </div>
 
-    <div class="stats-strip" style="grid-template-columns:repeat(3,1fr);">
+    <!-- Stats strip -->
+    <div class="stats-strip" style="grid-template-columns:repeat(4,1fr);">
       <div class="card stat-tile accent">
-        <div class="stat-label">Runs Today</div>
-        <div class="stat-value" id="cat-runs">—</div>
+        <div class="stat-label">Active Projects</div>
+        <div class="stat-value" id="wi-stat-projects">—</div>
       </div>
       <div class="card stat-tile accent">
-        <div class="stat-label">Success Rate</div>
-        <div class="stat-value" id="cat-rate">—</div>
+        <div class="stat-label">Open Tasks</div>
+        <div class="stat-value" id="wi-stat-tasks">—</div>
       </div>
       <div class="card stat-tile">
-        <div class="stat-label">Flows Registered</div>
-        <div class="stat-value" id="cat-total">—</div>
+        <div class="stat-label">Overdue</div>
+        <div class="stat-value" id="wi-stat-overdue" style="color:var(--crimson);">—</div>
+      </div>
+      <div class="card stat-tile">
+        <div class="stat-label">Workers</div>
+        <div class="stat-value" id="wi-stat-workers" style="font-size:13px;padding-top:4px;">—</div>
       </div>
     </div>
 
-    <div class="card-grid-2">
-      <div class="card card-tactical">
-        <div class="card-inner">
-          <div class="card-header"><span class="card-title">Active Flows</span></div>
-          <div id="catalyst-flows">
-            <div class="list-row"><span class="dot dot-standby"></span><div><div class="list-row-name">No active flows</div></div></div>
+    <!-- Tab bar -->
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto;">
+      <button class="launch-tab active" data-wi-tab="overview"  onclick="switchWITab(this,'overview')">🏠 Overview</button>
+      <button class="launch-tab"        data-wi-tab="projects"  onclick="switchWITab(this,'projects')">📂 Projects</button>
+      <button class="launch-tab"        data-wi-tab="tasks"     onclick="switchWITab(this,'tasks')">✅ Tasks</button>
+      <button class="launch-tab"        data-wi-tab="briefing"  onclick="switchWITab(this,'briefing')">📋 Briefing</button>
+      <button class="launch-tab"        data-wi-tab="signals"   onclick="switchWITab(this,'signals')">📡 Signals</button>
+    </div>
+
+    <!-- ── Overview pane ── -->
+    <div id="wi-pane-overview" class="wi-pane">
+      <div class="card-grid-2">
+        <div class="card card-hi">
+          <div class="card-inner">
+            <div class="card-header">
+              <span class="card-title">Today's ONE Recommendation</span>
+              <span class="pill pill-hue">AI</span>
+            </div>
+            <div id="wi-one-rec" style="font-size:13px;line-height:1.7;color:var(--text-2);padding-top:4px;">
+              <div class="skel" style="height:10px;width:90%;margin-bottom:6px;"></div>
+              <div class="skel" style="height:10px;width:70%;"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card card-hi">
+          <div class="card-inner">
+            <div class="card-header"><span class="card-title">Proactive Surfaces</span></div>
+            <div id="wi-surfaces" style="font-size:12px;line-height:1.6;">
+              <div class="skel" style="height:10px;width:80%;margin-bottom:6px;"></div>
+              <div class="skel" style="height:10px;width:60%;"></div>
+            </div>
           </div>
         </div>
       </div>
       <div class="card">
         <div class="card-inner">
-          <div class="card-header"><span class="card-title">Recent Triggers</span></div>
-          <div id="catalyst-triggers">
-            <div class="list-row"><div class="list-row-name">No recent triggers</div></div>
+          <div class="card-header">
+            <span class="card-title">Open Commitments</span>
+            <span class="pill pill-hue" id="wi-commit-count">—</span>
+          </div>
+          <div id="wi-commitments">
+            <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading…</div></div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ── Projects pane ── -->
+    <div id="wi-pane-projects" class="wi-pane" style="display:none;">
+      <div class="card">
+        <div class="card-inner">
+          <div class="card-header">
+            <span class="card-title">Active Projects</span>
+            <span class="pill pill-hue" id="wi-proj-count">—</span>
+          </div>
+          <div id="wi-projects-list">
+            <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading…</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Tasks pane ── -->
+    <div id="wi-pane-tasks" class="wi-pane" style="display:none;">
+      <div class="card">
+        <div class="card-inner">
+          <div class="card-header">
+            <span class="card-title">Open Tasks</span>
+            <span class="pill pill-hue" id="wi-tasks-count">—</span>
+          </div>
+          <div id="wi-tasks-list">
+            <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading…</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Briefing pane ── -->
+    <div id="wi-pane-briefing" class="wi-pane" style="display:none;">
+      <div class="card card-hi">
+        <div class="card-inner">
+          <div class="card-header">
+            <span class="card-title">Daily Briefing</span>
+            <button class="wi-refresh-btn" onclick="wiRefreshBriefing()">↻ Refresh</button>
+          </div>
+          <div id="wi-briefing-content" style="font-size:13px;line-height:1.75;color:var(--text-2);">
+            <div class="skel" style="height:10px;width:85%;margin-bottom:6px;"></div>
+            <div class="skel" style="height:10px;width:70%;margin-bottom:6px;"></div>
+            <div class="skel" style="height:10px;width:60%;"></div>
+          </div>
+          <div id="wi-briefing-meta" style="font-size:10px;color:var(--text-3);margin-top:10px;font-family:var(--font-mono);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Signals pane ── -->
+    <div id="wi-pane-signals" class="wi-pane" style="display:none;">
+      <div class="card">
+        <div class="card-inner">
+          <div class="card-header">
+            <span class="card-title">Recent Signals</span>
+            <span class="pill pill-hue" id="wi-signals-count">—</span>
+          </div>
+          <div id="wi-signals-list">
+            <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading…</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FAITH ──────────────────────────────────────────────── -->
+  <div id="view-faith" class="view">
+    <div class="view-header">
+      <div class="view-title">FAITH<div class="view-title-line"></div></div>
+      <div class="view-subtitle" id="faith-subtitle">Your council of 11 — Scripture · Prayer · Formation · Apologetics</div>
+    </div>
+
+    <!-- Daily Word banner -->
+    <div class="faith-daily-word card" id="faith-daily-word" style="margin-bottom:20px;display:none;">
+      <div class="faith-dw-header">
+        <span class="faith-dw-agent" id="faith-dw-agent">—</span>
+        <span class="faith-dw-tag" id="faith-dw-tag">Daily Word</span>
+      </div>
+      <div class="faith-dw-body" id="faith-dw-body">—</div>
+      <div class="faith-dw-passage" id="faith-dw-passage"></div>
+    </div>
+
+    <!-- Agent roster grid -->
+    <div class="section-label" style="margin-bottom:12px;">Your Council</div>
+    <div class="faith-roster" id="faith-roster">
+      <div class="skel" style="height:120px;border-radius:12px;"></div>
+      <div class="skel" style="height:120px;border-radius:12px;"></div>
+      <div class="skel" style="height:120px;border-radius:12px;"></div>
+    </div>
+
+    <!-- Chat panel (hidden until agent selected) -->
+    <div class="faith-chat-panel card" id="faith-chat-panel" style="display:none;margin-top:24px;">
+      <div class="faith-chat-header">
+        <div class="faith-chat-avatar" id="faith-chat-avatar"></div>
+        <div>
+          <div class="faith-chat-name" id="faith-chat-name">—</div>
+          <div class="faith-chat-domain" id="faith-chat-domain">—</div>
+        </div>
+        <button class="btn btn-sm" style="margin-left:auto;" onclick="closeFaithChat()">✕ Close</button>
+      </div>
+      <div class="faith-chat-passage-row">
+        <input class="faith-chat-passage-input" id="faith-chat-passage" type="text" placeholder="Passage (optional — e.g. John 1:14)…">
+      </div>
+      <div class="faith-chat-messages" id="faith-chat-messages"></div>
+      <div class="faith-chat-input-row">
+        <textarea class="faith-chat-textarea" id="faith-chat-input" rows="2"
+          placeholder="Ask anything…"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){{event.preventDefault();faithSend();}}"></textarea>
+        <button class="btn btn-hue btn-sm faith-send-btn" onclick="faithSend()" id="faith-send-btn">Send</button>
       </div>
     </div>
   </div>
@@ -3991,43 +5464,80 @@ body::after {{
   <div id="view-chronicle" class="view">
     <div class="view-header">
       <div class="view-title">CHRONICLE<div class="view-title-line"></div></div>
-      <div class="view-subtitle">Persistent Memory · Knowledge Graph · Agent Journal</div>
+      <div class="view-subtitle">Entries · Prayer · Formation · Scripture</div>
     </div>
 
-    <div class="search-wrap">
+    <!-- Stats strip -->
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+      <div class="card" style="flex:1;min-width:100px;padding:12px 16px;">
+        <div style="font-size:10px;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">Entries</div>
+        <div style="font-size:22px;font-weight:700;color:var(--text-1);" id="chronicle-total">—</div>
+      </div>
+      <div class="card" style="flex:1;min-width:100px;padding:12px 16px;">
+        <div style="font-size:10px;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">Active Prayer</div>
+        <div style="font-size:22px;font-weight:700;color:var(--hue);" id="chr-active-prayers">—</div>
+      </div>
+      <div class="card" style="flex:1;min-width:100px;padding:12px 16px;">
+        <div style="font-size:10px;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">Answered</div>
+        <div style="font-size:22px;font-weight:700;color:#3ecf8e;" id="chr-answered-prayers">—</div>
+      </div>
+      <div class="card" style="flex:1;min-width:100px;padding:12px 16px;">
+        <div style="font-size:10px;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">Rhythms</div>
+        <div style="font-size:22px;font-weight:700;color:var(--text-2);" id="chr-rhythms-count">—</div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-wrap" style="margin-bottom:20px;">
       <svg class="search-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
         <circle cx="6.5" cy="6.5" r="4"/><path d="M11 11l3 3"/>
       </svg>
-      <input class="search-input" type="text" placeholder="Search memory entries…" id="chronicle-search" oninput="searchChronicle(this.value)">
+      <input class="search-input" type="text" placeholder="Search entries, passages, themes…" id="chronicle-search"
+             oninput="searchChronicle(this.value)">
     </div>
 
-    <div class="card-grid-2">
-      <div class="card" style="grid-column:1/-1;">
-        <div class="card-inner">
-          <div class="card-header">
-            <span class="card-title">Recent Entries</span>
-            <span class="pill pill-hue" id="chronicle-total">—</span>
-          </div>
-          <div id="chronicle-list">
-            <div class="chronicle-entry">
-              <div class="chronicle-ts">Loading…</div>
-              <div class="skel" style="height:10px;width:80%;margin:6px 0;"></div>
-              <div class="skel" style="height:10px;width:55%;"></div>
+    <!-- Two-column layout -->
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start;">
+
+      <!-- Left: Entry feed -->
+      <div>
+        <div class="section-label" style="display:flex;align-items:center;gap:8px;">
+          Recent Entries
+          <button class="btn btn-sm btn-hue" style="margin-left:auto;font-size:10px;" onclick="openBibleStudyModal()">✦ Bible Study</button>
+        </div>
+        <div id="chronicle-list">
+          <div class="chr-entry-card"><div class="skel" style="height:12px;width:60%;margin-bottom:8px;"></div><div class="skel" style="height:10px;width:85%;"></div></div>
+          <div class="chr-entry-card"><div class="skel" style="height:12px;width:45%;margin-bottom:8px;"></div><div class="skel" style="height:10px;width:70%;"></div></div>
+        </div>
+      </div>
+
+      <!-- Right: Prayer + Formation sidebar -->
+      <div>
+        <div class="section-label">Prayer List</div>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-inner" style="padding:0;">
+            <div id="chr-prayer-list">
+              <div style="padding:16px;color:var(--text-3);font-size:12px;">Loading…</div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <div class="card">
-      <div class="card-header" style="padding:16px 20px 0;">
-        <span class="card-title">Tag Cloud</span>
+        <div class="section-label">Formation Rhythms</div>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-inner" style="padding:0;">
+            <div id="chr-rhythms-list">
+              <div style="padding:16px;color:var(--text-3);font-size:12px;">Loading…</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-label">Themes</div>
+        <div class="tag-cloud" id="tag-cloud" style="margin-bottom:0;">
+          <div class="skel" style="height:24px;width:60px;border-radius:99px;"></div>
+          <div class="skel" style="height:24px;width:80px;border-radius:99px;"></div>
+        </div>
       </div>
-      <div class="tag-cloud" id="tag-cloud">
-        <div class="skel" style="height:24px;width:60px;border-radius:99px;"></div>
-        <div class="skel" style="height:24px;width:80px;border-radius:99px;"></div>
-        <div class="skel" style="height:24px;width:50px;border-radius:99px;"></div>
-      </div>
+
     </div>
   </div>
 
@@ -4035,48 +5545,57 @@ body::after {{
   <div id="view-publishing" class="view">
     <div class="view-header">
       <div class="view-title">PUBLISHING<div class="view-title-line"></div></div>
-      <div class="view-subtitle">Books · Pipeline · Pending Reviews · Stan Lee Bridge</div>
+      <div class="view-subtitle" id="pub-subtitle">Ghostwritr Book Studio · Stage Pipeline · Pending Reviews</div>
     </div>
 
-    <!-- Home Projects section -->
-    <div class="section-label">Home Projects</div>
-    <div class="card card-tactical" style="margin-bottom:20px;">
-      <div class="card-hdr">
-        <span class="card-title">ACTIVE PROJECTS</span>
-        <span class="card-badge" id="homeProjectsBadge">—</span>
+    <!-- Stats strip -->
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+      <div class="card" style="flex:1;min-width:120px;padding:12px 16px;">
+        <div style="font-size:10px;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">Books</div>
+        <div style="font-size:22px;font-weight:700;color:var(--text-1);" id="homeProjectsBadge">—</div>
       </div>
-      <div class="card-inner" style="padding-top:8px;">
-        <div id="homeProjectsList">
-          <div class="loading-state" style="text-align:left;padding:12px 0;">Loading projects...</div>
+      <div class="card" style="flex:1;min-width:120px;padding:12px 16px;">
+        <div style="font-size:10px;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">Reviews</div>
+        <div style="font-size:22px;font-weight:700;color:#f0b429;" id="pub-review-count">—</div>
+      </div>
+      <div class="card" style="flex:1;min-width:120px;padding:12px 16px;">
+        <div style="font-size:10px;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">In Progress</div>
+        <div style="font-size:22px;font-weight:700;color:var(--hue);" id="pub-inprogress-count">—</div>
+      </div>
+      <div class="card" style="flex:1;min-width:160px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:10px;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px;">Ghostwritr</div>
+          <div style="font-size:12px;font-weight:500;" id="pub-gw-status">—</div>
+        </div>
+        <a href="http://localhost:3000" target="_blank" class="btn btn-sm" style="font-size:10px;text-decoration:none;white-space:nowrap;">Open Studio ↗</a>
+      </div>
+    </div>
+
+    <!-- Pending Reviews — shown only if reviews exist -->
+    <div id="pub-reviews-section" style="display:none;margin-bottom:20px;">
+      <div class="section-label" style="display:flex;align-items:center;gap:8px;">
+        Pending Reviews
+        <span id="pub-review-count-badge" class="pill pill-gold" style="font-size:9px;">0</span>
+      </div>
+      <div class="card card-needs-you">
+        <div class="card-inner" style="padding:0;">
+          <div id="publishing-reviews"></div>
         </div>
       </div>
     </div>
 
+    <!-- Book Pipeline -->
     <div class="section-label">Book Pipeline</div>
-    <div class="card-grid" id="publishing-books">
-      <div class="card">
-        <div class="card-inner">
-          <div class="skel" style="height:12px;width:70%;margin-bottom:8px;"></div>
-          <div class="pipeline-bar">
-            <div class="pipeline-seg done"></div>
-            <div class="pipeline-seg done"></div>
-            <div class="pipeline-seg current"></div>
-            <div class="pipeline-seg"></div>
-            <div class="pipeline-seg"></div>
-            <div class="pipeline-seg"></div>
-            <div class="pipeline-seg"></div>
-            <div class="pipeline-seg"></div>
-            <div class="pipeline-seg"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section-label">Pending Reviews</div>
-    <div class="card card-needs-you">
-      <div class="card-inner">
-        <div id="publishing-reviews">
-          <div class="list-row"><span class="dot dot-gold"></span><div><div class="list-row-name">No pending reviews</div></div></div>
+    <div id="publishing-books">
+      <!-- Skeleton while loading -->
+      <div class="pub-book-card">
+        <div class="skel" style="height:14px;width:55%;margin-bottom:10px;"></div>
+        <div class="skel" style="height:4px;width:100%;margin-bottom:14px;"></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+          <div class="skel" style="height:60px;border-radius:8px;"></div>
+          <div class="skel" style="height:60px;border-radius:8px;"></div>
+          <div class="skel" style="height:60px;border-radius:8px;"></div>
+          <div class="skel" style="height:60px;border-radius:8px;"></div>
         </div>
       </div>
     </div>
@@ -4306,7 +5825,10 @@ body::after {{
   <div id="view-agents" class="view">
     <div class="view-header">
       <div class="view-title">AGENT OPS CENTER<div class="view-title-line"></div></div>
-      <div class="view-subtitle">Live Runtime · What Every Agent Is Doing Right Now</div>
+      <div class="view-subtitle">
+        Live Runtime · What Every Agent Is Doing Right Now
+        <span id="agent-roster-count" style="margin-left:12px;font-family:var(--font-mono);font-size:10px;color:var(--hue);background:var(--hue-dim);padding:2px 8px;border-radius:10px;vertical-align:middle;">— agents</span>
+      </div>
     </div>
 
     <!-- System status bar -->
@@ -4753,46 +6275,42 @@ body::after {{
       <div style="margin-bottom:4px;">
         <div class="section-label" style="margin-bottom:8px;">Lab Trends <span style="color:var(--text-3);font-weight:400;font-size:9px;">sparkline — full history</span></div>
         <div class="card">
-          <div class="card-inner" style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;padding:16px 0;">
-            <!-- A1c sparkline -->
-            <div>
-              <div style="font-size:10px;font-weight:600;color:var(--text-2);margin-bottom:2px;">A1c</div>
-              <div style="font-size:9px;color:var(--text-3);margin-bottom:6px;">Target &lt;7.0%</div>
-              <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:8px;">
-                <span style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:var(--amber);">7.3</span>
-                <span style="font-size:10px;color:var(--text-3);">%</span>
+          <div class="card-inner" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:12px 0;">
+            <!-- A1c mini sparkline -->
+            <div style="border-right:1px solid var(--border);padding-right:12px;">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;">
+                <span style="font-size:10px;font-weight:700;color:var(--text-2);">A1c</span>
+                <span style="font-size:13px;font-weight:700;font-family:var(--font-mono);color:var(--amber);">7.3<span style="font-size:9px;color:var(--text-3);font-weight:400;">%</span></span>
               </div>
-              <div id="spark-a1c"></div>
+              <div style="font-size:8px;color:var(--text-3);margin-bottom:4px;">Target &lt;7.0</div>
+              <div id="spark-lab-a1c" style="height:36px;"></div>
             </div>
-            <!-- LDL sparkline -->
-            <div>
-              <div style="font-size:10px;font-weight:600;color:var(--text-2);margin-bottom:2px;">LDL</div>
-              <div style="font-size:9px;color:var(--text-3);margin-bottom:6px;">Target &lt;100 mg/dL</div>
-              <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:8px;">
-                <span style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:var(--red,#ef4444);">156</span>
-                <span style="font-size:10px;color:var(--text-3);">mg/dL</span>
+            <!-- LDL mini sparkline -->
+            <div style="border-right:1px solid var(--border);padding-right:12px;">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;">
+                <span style="font-size:10px;font-weight:700;color:var(--text-2);">LDL</span>
+                <span style="font-size:13px;font-weight:700;font-family:var(--font-mono);color:var(--red,#ef4444);">156<span style="font-size:9px;color:var(--text-3);font-weight:400;"> mg</span></span>
               </div>
-              <div id="spark-ldl"></div>
+              <div style="font-size:8px;color:var(--text-3);margin-bottom:4px;">Target &lt;100</div>
+              <div id="spark-lab-ldl" style="height:36px;"></div>
             </div>
-            <!-- eGFR sparkline -->
-            <div>
-              <div style="font-size:10px;font-weight:600;color:var(--text-2);margin-bottom:2px;">eGFR</div>
-              <div style="font-size:9px;color:var(--text-3);margin-bottom:6px;">Stage 2 CKD watch</div>
-              <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:8px;">
-                <span style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:var(--amber);">87</span>
-                <span style="font-size:10px;color:var(--text-3);">mL/min</span>
+            <!-- eGFR mini sparkline -->
+            <div style="border-right:1px solid var(--border);padding-right:12px;">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;">
+                <span style="font-size:10px;font-weight:700;color:var(--text-2);">eGFR</span>
+                <span style="font-size:13px;font-weight:700;font-family:var(--font-mono);color:var(--amber);">87<span style="font-size:9px;color:var(--text-3);font-weight:400;"> mL</span></span>
               </div>
-              <div id="spark-egfr"></div>
+              <div style="font-size:8px;color:var(--text-3);margin-bottom:4px;">Stage 2 CKD watch</div>
+              <div id="spark-lab-egfr" style="height:36px;"></div>
             </div>
-            <!-- K+ sparkline -->
+            <!-- K+ mini sparkline -->
             <div>
-              <div style="font-size:10px;font-weight:600;color:var(--text-2);margin-bottom:2px;">K⁺</div>
-              <div style="font-size:9px;color:var(--text-3);margin-bottom:6px;">Monitor: ARB + spiro risk</div>
-              <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:8px;">
-                <span style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:var(--green);">4.5</span>
-                <span style="font-size:10px;color:var(--text-3);">mEq/L</span>
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;">
+                <span style="font-size:10px;font-weight:700;color:var(--text-2);">K⁺</span>
+                <span style="font-size:13px;font-weight:700;font-family:var(--font-mono);color:var(--green);">4.5<span style="font-size:9px;color:var(--text-3);font-weight:400;"> mEq</span></span>
               </div>
-              <div id="spark-kplus"></div>
+              <div style="font-size:8px;color:var(--text-3);margin-bottom:4px;">ARB + spiro monitor</div>
+              <div id="spark-lab-kplus" style="height:36px;"></div>
             </div>
           </div>
         </div>
@@ -4804,6 +6322,38 @@ body::after {{
         <div class="card">
           <div class="card-inner" id="helen-key-trends" style="padding:8px 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0 20px;">
             <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SAM WILSON CHECK-IN BANNER ───────────────────────────────────────── -->
+      <div id="sam-checkin-banner-wrap" style="margin-bottom:0;">
+        <div class="section-label" style="margin-bottom:8px;">🦅 Sam Wilson
+          <span style="color:var(--text-3);font-weight:400;font-size:9px;">Health &amp; Fitness Coach</span>
+        </div>
+        <div class="sam-checkin-banner" id="sam-checkin-banner">
+          <div style="font-size:11px;color:var(--text-3);">Loading check-in…</div>
+        </div>
+      </div>
+
+      <!-- ── SAM WILSON DAILY PROTOCOL ────────────────────────────────────────── -->
+      <div style="margin-bottom:16px;" id="sam-protocol-section">
+        <div class="section-label" style="margin-bottom:8px;">Full Daily Protocol
+          <span id="sam-streak-badge" class="card-badge" style="margin-left:8px;display:none;">🔥 0 day streak</span>
+        </div>
+        <div class="card">
+          <div class="card-inner" id="sam-protocol-content" style="padding:12px 0;">
+            <div style="font-size:11px;color:var(--text-3);">Loading protocol…</div>
+          </div>
+        </div>
+        <!-- Sam Chat -->
+        <div style="margin-top:10px;">
+          <div id="sam-chat-messages" style="display:none;max-height:200px;overflow-y:auto;padding:8px;background:var(--surface-2);border-radius:8px;margin-bottom:8px;font-size:12px;"></div>
+          <div style="display:flex;gap:6px;">
+            <input id="sam-chat-input" type="text" placeholder="Talk to Sam…"
+              style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--text-1);outline:none;"
+              onkeydown="if(event.key==='Enter'){{samChat();}}"/>
+            <button class="btn-ghost" style="font-size:11px;padding:6px 12px;" onclick="samChat()">Send</button>
           </div>
         </div>
       </div>
@@ -4962,6 +6512,20 @@ body::after {{
     </div>
   </div><!-- end view-health -->
 
+  <!-- ── HOME AUTOMATION ────────────────────────────────────── -->
+  <div id="view-home" class="view" style="display:none;">
+    <div class="view-header">
+      <div class="view-title">HOME<div class="view-title-line"></div></div>
+      <div class="view-subtitle">Smart Devices · Kasa Control · Scenes &amp; Rooms</div>
+    </div>
+    <div id="kasa-content">
+      <div class="kasa-unavailable">
+        <div class="kasa-unavailable-icon">🏠</div>
+        <div>Scanning for devices…</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── NEWS ──────────────────────────────────────────────── -->
   <div id="view-news" class="view" style="display:none;">
     <div class="view-header">
@@ -5044,6 +6608,92 @@ body::after {{
 
     <p style="font-size:12px;color:var(--text-3);margin:20px 0 10px;font-family:var(--font-mono);letter-spacing:0.04em;text-transform:uppercase;">Welcome, {user_name}</p>
     <p style="font-size:12px;color:var(--text-2);">JARVIS Glass — Adaptive Chromatic Interface<br>Version 3.0 · S.H.I.E.L.D. Clearance Level 6</p>
+  </div>
+</div>
+
+<!-- Finance setup modal -->
+<div class="finance-modal-overlay hidden" id="finance-setup-overlay" onclick="closeFinanceSetup(event)">
+  <div class="finance-modal">
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:var(--text-1);">💰 Financial Setup</div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:3px;">Enter your real balances — nothing connects to your bank</div>
+      </div>
+      <button onclick="closeFinanceSetup()" style="width:28px;height:28px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:var(--text-2);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <!-- Tabs -->
+    <div class="finance-tabs" id="finance-tabs">
+      <button class="finance-tab active" onclick="switchFinanceTab('accounts')">Accounts</button>
+      <button class="finance-tab" onclick="switchFinanceTab('streams')">Passive Income</button>
+      <button class="finance-tab" onclick="switchFinanceTab('goals')">Goals</button>
+    </div>
+    <!-- Accounts panel -->
+    <div id="finance-panel-accounts" class="finance-panel active">
+      <div id="finance-accounts-list"></div>
+      <div class="finance-form">
+        <div class="finance-form-title">Add Account</div>
+        <div class="finance-inputs">
+          <input class="finance-inp" id="fi-acct-name" placeholder="e.g. Chase Checking" autocomplete="off">
+          <select class="finance-sel" id="fi-acct-type">
+            <option value="checking">Checking</option>
+            <option value="savings">Savings</option>
+            <option value="investment">Investment / Brokerage</option>
+            <option value="retirement">Retirement (401k / IRA)</option>
+            <option value="credit">Credit Card</option>
+            <option value="loan">Loan / Mortgage</option>
+            <option value="other">Other</option>
+          </select>
+          <input class="finance-inp" id="fi-acct-institution" placeholder="Bank / Brokerage name" autocomplete="off">
+          <input class="finance-inp" id="fi-acct-balance" type="number" step="0.01" placeholder="Balance ($)" autocomplete="off">
+        </div>
+        <button class="finance-add-btn" onclick="submitFinanceAccount()">＋ Add Account</button>
+      </div>
+    </div>
+    <!-- Passive Income panel -->
+    <div id="finance-panel-streams" class="finance-panel">
+      <div id="finance-streams-list"></div>
+      <div class="finance-form">
+        <div class="finance-form-title">Add Income Stream</div>
+        <div class="finance-inputs">
+          <input class="finance-inp" id="fi-stream-name" placeholder="e.g. Book Royalties" autocomplete="off">
+          <select class="finance-sel" id="fi-stream-type">
+            <option value="book_royalty">Book Royalty</option>
+            <option value="course_revenue">Course Revenue</option>
+            <option value="dividend">Dividends</option>
+            <option value="rental">Rental Income</option>
+            <option value="affiliate">Affiliate</option>
+            <option value="interest">Interest</option>
+            <option value="consulting">Consulting</option>
+            <option value="other">Other</option>
+          </select>
+          <input class="finance-inp" id="fi-stream-monthly" type="number" step="0.01" placeholder="Monthly avg ($)" autocomplete="off">
+          <input class="finance-inp" id="fi-stream-platform" placeholder="Platform (optional)" autocomplete="off">
+        </div>
+        <button class="finance-add-btn" onclick="submitFinanceStream()">＋ Add Stream</button>
+      </div>
+    </div>
+    <!-- Goals panel -->
+    <div id="finance-panel-goals" class="finance-panel">
+      <div id="finance-goals-list"></div>
+      <div class="finance-form">
+        <div class="finance-form-title">Add Goal</div>
+        <div class="finance-inputs">
+          <input class="finance-inp" id="fi-goal-title" placeholder="Goal name" autocomplete="off">
+          <select class="finance-sel" id="fi-goal-type">
+            <option value="savings">Savings</option>
+            <option value="debt_payoff">Debt Payoff</option>
+            <option value="investment">Investment</option>
+            <option value="income_target">Income Target</option>
+            <option value="emergency_fund">Emergency Fund</option>
+          </select>
+          <input class="finance-inp" id="fi-goal-target" type="number" step="0.01" placeholder="Target amount ($)" autocomplete="off">
+          <input class="finance-inp" id="fi-goal-current" type="number" step="0.01" placeholder="Current amount ($)" autocomplete="off">
+          <input class="finance-inp" id="fi-goal-date" type="date" placeholder="Target date" style="grid-column:1/-1;" autocomplete="off">
+        </div>
+        <button class="finance-add-btn" onclick="submitFinanceGoal()">＋ Add Goal</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -5145,9 +6795,16 @@ const AGENTS = [
   {{id:'nova',            name:'NOVA',              title:'Speed Ops',            domain:'Operations',    status:'standby'}},
   {{id:'makkari',         name:'MAKKARI',           title:'Data Transfer',        domain:'Engineering',   status:'standby'}},
 ];
+// NOTE: AGENTS is seeded above as a fallback. loadAgentRoster() replaces it
+// with the live unified roster from /api/agents/roster on every Agents tab visit.
+// Any agent registered from Chronicle, Ghostwritr, Catalyst, or a future system
+// will automatically appear here without code changes.
 
-/* Domain → left-border CSS class */
+/* Domain → left-border CSS class
+   Covers both the original PascalCase values (from the hardcoded array)
+   and the lowercase values coming from life_agents.json / external_agents.json */
 const DOMAIN_CLASS = {{
+  // PascalCase (original hardcoded array)
   'Command':      'domain-command',
   'Engineering':  'domain-engineering',
   'Intelligence': 'domain-intelligence',
@@ -5161,6 +6818,23 @@ const DOMAIN_CLASS = {{
   'Workshop':     'domain-workshop',
   'Operations':   'domain-operations',
   'Chronicle':    'domain-chronicle',
+  'Workflow':     'domain-operations',
+  // Lowercase (life_agents.json domain values)
+  'core':         'domain-command',
+  'executive':    'domain-operations',
+  'family':       'domain-chronicle',
+  'formation':    'domain-chronicle',
+  'finance':      'domain-finance',
+  'security':     'domain-intelligence',
+  'system':       'domain-engineering',
+  'workshop':     'domain-workshop',
+  'community':    'domain-publishing',
+  'health':       'domain-power',
+  'workflow':     'domain-operations',
+  'publishing':   'domain-publishing',
+  'intelligence': 'domain-intelligence',
+  'engineering':  'domain-engineering',
+  'analysis':     'domain-analysis',
 }};
 
 /* ── State ── */
@@ -5295,20 +6969,509 @@ function loadViewData(name) {{
     case 'overview':     loadLayoutState(); break;
     case 'forge':        forgeInit(); break;
     case 'agents':
-      loadLiveAgents();
+      loadAgentRoster();   // populates AGENTS from /api/agents/roster
+      loadLiveAgents();    // overlays runtime status
       // Auto-refresh every 30s while on this view
-      _agentsRefreshTimer = setInterval(loadLiveAgents, 30000);
+      _agentsRefreshTimer = setInterval(() => {{ loadLiveAgents(); }}, 30000);
       break;
     case 'huddle':       loadHuddle(); loadPassiveIncomePipeline(); loadDossiers(); loadPartyStatus(); loadIdeaInbox(); break;
     case 'publishing':   loadPublishing(); loadHomeProjects(); break;
     case 'intelligence': loadStatus(); break;
     case 'chronicle':    loadChronicle(); break;
+    case 'faith':        loadFaith(); break;
     case 'email':        loadHomeEmail(); break;
     case 'calendar':     loadHomeCalendar(); break;
     case 'health':       loadHealth(); break;
     case 'workshop':     loadHomeTasks(); break;
+    case 'catalyst':     loadWorkIntelligence(); break;
     case 'news':         loadNews(false); break;
+    case 'home':         loadKasaDevices(); break;
   }}
+}}
+
+/* ═══════════════════════════════════════════════════════════════
+   KASA HOME AUTOMATION
+═══════════════════════════════════════════════════════════════ */
+let _kasaData = null;
+
+function _deviceIcon(type) {{
+  switch (type) {{
+    case 'bulb':       return '💡';
+    case 'color_bulb': return '🌈';
+    case 'dimmer':     return '🔆';
+    case 'camera':     return '📷';
+    case 'strip':
+    case 'plug':       return '🔌';
+    default:           return '⚡';
+  }}
+}}
+
+function renderKasaView(data) {{
+  _kasaData = data;
+  const el = document.getElementById('kasa-content');
+  if (!el) return;
+  if (!data.kasa_available || data.total === 0) {{
+    el.innerHTML = '<div class="kasa-unavailable">'
+      + '<div class="kasa-unavailable-icon">🏠</div>'
+      + '<div>' + (data.total === 0 && data.kasa_available
+          ? 'No Kasa devices found on your network.'
+          : 'Kasa devices unavailable.') + '</div>'
+      + '<button class="kasa-refresh-btn" onclick="loadKasaDevices(true)">↺ Scan Again</button></div>';
+    return;
+  }}
+  const rooms = data.rooms || {{}};
+  const scenes = data.scenes || [];
+  const sceneHtml = scenes.map(function(s) {{
+    return '<button class="kasa-scene-btn" id="kasa-scene-' + s.id + '" onclick="runKasaScene(\'' + s.id + '\')">'
+      + (s.icon || '✨') + ' ' + escHtml(s.name) + '</button>';
+  }}).join('');
+  const statsHtml =
+    '<div class="kasa-stats">'
+    + '<div class="kasa-stat"><div class="kasa-stat-val">' + data.total + '</div><div class="kasa-stat-label">Devices</div></div>'
+    + '<div class="kasa-stat"><div class="kasa-stat-val on">' + data.on_count + '</div><div class="kasa-stat-label">On</div></div>'
+    + '<div class="kasa-stat"><div class="kasa-stat-val">' + (data.total - data.on_count) + '</div><div class="kasa-stat-label">Off</div></div>'
+    + '</div>';
+  const roomsHtml = Object.entries(rooms).map(function(entry) {{
+    const room = entry[0]; const devices = entry[1];
+    return '<div class="kasa-room-section"><div class="kasa-room-label">' + room + '</div>'
+      + '<div class="kasa-device-grid">' + devices.map(function(d) {{ return _kasaDeviceCard(d); }}).join('') + '</div></div>';
+  }}).join('');
+  el.innerHTML =
+    '<div class="kasa-header-strip">' + statsHtml
+    + '<button class="kasa-scene-btn" onclick="loadKasaDevices(true)" style="color:var(--text-3);">↺ Refresh</button></div>'
+    + '<div class="kasa-scenes">' + sceneHtml + '</div>'
+    + roomsHtml;
+}}
+
+let _hls = null;
+
+async function startCameraStream(ip, cameraId) {{
+  const btn = document.getElementById('cam-btn-' + cameraId);
+  const vid = document.getElementById('cam-vid-' + cameraId);
+  if (btn) {{ btn.textContent = '⏳ Starting…'; btn.disabled = true; }}
+
+  try {{
+    const res = await fetch('/api/kasa/stream/start', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ip: ip, camera_id: cameraId}}),
+    }});
+    const r = await res.json();
+    if (!r.ok) {{
+      if (btn) {{ btn.textContent = '▶ Live'; btn.disabled = false; }}
+      alert('Stream failed: ' + r.error);
+      return;
+    }}
+
+    if (vid) {{
+      vid.style.display = 'block';
+      if (typeof Hls !== 'undefined' && Hls.isSupported()) {{
+        if (_hls) {{ _hls.destroy(); _hls = null; }}
+        _hls = new Hls({{ lowLatencyMode: true }});
+        _hls.loadSource(r.hls_url);
+        _hls.attachMedia(vid);
+        _hls.on(Hls.Events.MANIFEST_PARSED, function() {{ vid.play(); }});
+      }} else if (vid.canPlayType('application/vnd.apple.mpegurl')) {{
+        vid.src = r.hls_url;
+        vid.play();
+      }}
+    }}
+    if (btn) {{
+      btn.textContent = '◼ Stop';
+      btn.disabled = false;
+      btn.onclick = function() {{ stopCameraStream(ip, cameraId); }};
+    }}
+  }} catch(e) {{
+    if (btn) {{ btn.textContent = '▶ Live'; btn.disabled = false; }}
+  }}
+}}
+
+async function stopCameraStream(ip, cameraId) {{
+  const btn = document.getElementById('cam-btn-' + cameraId);
+  const vid = document.getElementById('cam-vid-' + cameraId);
+  if (_hls) {{ _hls.destroy(); _hls = null; }}
+  if (vid) {{ vid.pause(); vid.src = ''; vid.style.display = 'none'; }}
+  await fetch('/api/kasa/stream/stop', {{
+    method: 'POST',
+    headers: {{'Content-Type': 'application/json'}},
+    body: JSON.stringify({{camera_id: cameraId}}),
+  }});
+  if (btn) {{
+    btn.textContent = '▶ Live';
+    btn.onclick = function() {{ startCameraStream(ip, cameraId); }};
+  }}
+}}
+
+function _kasaDeviceCard(d) {{
+  const uid = 'kd-' + (d.ip || d.alias).replace(/[^a-zA-Z0-9]/g, '_');
+
+  if (d.device_type === 'camera') {{
+    const cameraId = (d.ip || '').replace(/\./g, '_');
+    return '<div class="kasa-device-card kasa-camera-card" id="' + uid + '">'
+      + '<div class="kasa-device-top">'
+      + '<span class="kasa-device-icon">📷</span>'
+      + '<div class="kasa-device-info"><div class="kasa-device-alias">' + escHtml(d.alias) + '</div>'
+      + '<div class="kasa-device-model">' + escHtml(d.model || 'EC70') + ' · ' + escHtml(d.sw_ver || '') + '</div></div>'
+      + '<button class="kasa-live-btn" id="cam-btn-' + cameraId + '" onclick="startCameraStream(\'' + d.ip + '\',\'' + cameraId + '\')">▶ Live</button></div>'
+      + '<video id="cam-vid-' + cameraId + '" class="kasa-camera-video" controls muted playsinline style="display:none;width:100%;border-radius:8px;margin-top:8px;"></video>'
+      + '</div>';
+  }}
+
+  const onCls = d.is_on ? 'device-on' : 'device-off';
+  const checked = d.is_on ? 'checked' : '';
+  const icon = _deviceIcon(d.device_type);
+  let sliders = '';
+  if (d.is_on && d.brightness != null) {{
+    sliders +=
+      '<div class="kasa-slider-row"><span class="kasa-slider-label">☀</span>'
+      + '<input class="kasa-slider" type="range" min="1" max="100" value="' + d.brightness + '" id="' + uid + '-bright"'
+      + ' oninput="document.getElementById(\'' + uid + '-bright-val\').textContent=this.value+\'%\'"'
+      + ' onchange="kasaSetBrightness(\'' + d.ip + '\',\'' + d.alias + '\',parseInt(this.value))">'
+      + '<span class="kasa-slider-val" id="' + uid + '-bright-val">' + d.brightness + '%</span></div>';
+  }}
+  if (d.is_on && d.color_temp != null) {{
+    sliders +=
+      '<div class="kasa-slider-row"><span class="kasa-slider-label">K</span>'
+      + '<input class="kasa-slider" type="range" min="2500" max="6500" value="' + d.color_temp + '" id="' + uid + '-ct"'
+      + ' oninput="document.getElementById(\'' + uid + '-ct-val\').textContent=this.value+\'K\'"'
+      + ' onchange="kasaSetColorTemp(\'' + d.ip + '\',\'' + d.alias + '\',parseInt(this.value))">'
+      + '<span class="kasa-slider-val" id="' + uid + '-ct-val">' + d.color_temp + 'K</span></div>';
+  }}
+  return '<div class="kasa-device-card ' + onCls + '" id="' + uid + '">'
+    + '<div class="kasa-device-top">'
+    + '<span class="kasa-device-icon">' + icon + '</span>'
+    + '<div class="kasa-device-info"><div class="kasa-device-alias">' + escHtml(d.alias) + '</div>'
+    + '<div class="kasa-device-model">' + escHtml(d.model || d.device_type) + '</div></div>'
+    + '<label class="kasa-toggle"><input type="checkbox" ' + checked + ' onchange="kasaToggle(\'' + d.ip + '\',\'' + d.alias + '\')">'
+    + '<div class="kasa-toggle-track"></div><div class="kasa-toggle-thumb"></div></label></div>'
+    + sliders + '</div>';
+}}
+
+async function loadKasaDevices(force) {{
+  const refresh = force ? '?refresh=true' : '';
+  try {{
+    const res = await fetch('/api/kasa/devices' + refresh);
+    const data = await res.json();
+    renderKasaView(data);
+  }} catch(e) {{
+    const el = document.getElementById('kasa-content');
+    if (el) el.innerHTML = '<div class="kasa-unavailable"><div class="kasa-unavailable-icon">⚠️</div><div>Error loading devices</div></div>';
+  }}
+}}
+
+async function kasaToggle(ip, alias) {{
+  try {{
+    const res = await fetch('/api/kasa/toggle', {{
+      method: 'POST', headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ ip_or_alias: ip || alias }}),
+    }});
+    const r = await res.json();
+    if (r.ok) setTimeout(function() {{ loadKasaDevices(false); }}, 500);
+  }} catch(e) {{}}
+}}
+
+async function kasaSetBrightness(ip, alias, value) {{
+  try {{
+    await fetch('/api/kasa/set', {{
+      method: 'POST', headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ ip_or_alias: ip || alias, brightness: value }}),
+    }});
+  }} catch(e) {{}}
+}}
+
+async function kasaSetColorTemp(ip, alias, value) {{
+  try {{
+    await fetch('/api/kasa/set', {{
+      method: 'POST', headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ ip_or_alias: ip || alias, color_temp: value }}),
+    }});
+  }} catch(e) {{}}
+}}
+
+async function runKasaScene(sceneId) {{
+  const btn = document.getElementById('kasa-scene-' + sceneId);
+  if (btn) btn.classList.add('running');
+  try {{
+    const res = await fetch('/api/kasa/scene', {{
+      method: 'POST', headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ scene_id: sceneId }}),
+    }});
+    const r = await res.json();
+    if (r.ok) setTimeout(function() {{ loadKasaDevices(false); }}, 700);
+  }} catch(e) {{}}
+  setTimeout(function() {{ if (btn) btn.classList.remove('running'); }}, 1500);
+}}
+
+/* ═══════════════════════════════════════════════════════════════
+   WORK INTELLIGENCE (CATALYST VIEW)
+═══════════════════════════════════════════════════════════════ */
+let _wiCurrentTab = 'overview';
+let _wiBriefingData = null;
+
+function switchWITab(btn, tabId) {{
+  document.querySelectorAll('[data-wi-tab]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.wi-pane').forEach(p => {{ p.style.display = 'none'; }});
+  const pane = document.getElementById('wi-pane-' + tabId);
+  if (pane) pane.style.display = '';
+  _wiCurrentTab = tabId;
+  if      (tabId === 'projects') wiLoadProjects();
+  else if (tabId === 'tasks')    wiLoadTasks();
+  else if (tabId === 'briefing') wiLoadBriefing();
+  else if (tabId === 'signals')  wiLoadSignals();
+}}
+
+async function loadWorkIntelligence() {{
+  wiLoadSummary();
+  wiLoadCommitments();
+  wiLoadWorkerStatus();
+  wiLoadSurfaces();
+}}
+
+async function wiLoadSummary() {{
+  try {{
+    const res = await fetch('/api/wi/summary');
+    if (!res.ok) return;
+    const d = await res.json();
+    const ps = document.getElementById('wi-stat-projects');
+    const ts = document.getElementById('wi-stat-tasks');
+    const os = document.getElementById('wi-stat-overdue');
+    if (ps) ps.textContent = d.active_projects ?? '—';
+    if (ts) ts.textContent = d.open_tasks ?? '—';
+    if (os) os.textContent = d.overdue_commitments ?? '0';
+    if (d.one_recommendation) {{
+      const el = document.getElementById('wi-one-rec');
+      if (el) el.innerHTML = '<p style="margin:0;">' + escHtml(d.one_recommendation) + '</p>';
+    }}
+  }} catch(e) {{ console.error('wiLoadSummary', e); }}
+}}
+
+async function wiLoadWorkerStatus() {{
+  const el = document.getElementById('wi-stat-workers');
+  if (!el) return;
+  try {{
+    const res = await fetch('/api/wi/workers/status');
+    if (!res.ok) {{ el.textContent = '—'; return; }}
+    const d = await res.json();
+    const workers = d.workers || [];
+    const running = workers.filter(w => w.status === 'running').length;
+    el.innerHTML = workers.map(w => {{
+      const cls = w.status === 'running' ? 'active' : w.status === 'error' ? 'error' : 'paused';
+      return `<span class="wi-status-dot ${{cls}}"></span>`;
+    }}).join('') + ` <span style="font-size:11px;color:var(--text-3);">${{running}}/${{workers.length}}</span>`;
+  }} catch(e) {{ el.textContent = '—'; }}
+}}
+
+async function wiLoadCommitments() {{
+  const el  = document.getElementById('wi-commitments');
+  const cnt = document.getElementById('wi-commit-count');
+  if (!el) return;
+  try {{
+    const res = await fetch('/api/wi/commitments');
+    if (!res.ok) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Unavailable</div></div>'; return; }}
+    const d = await res.json();
+    const items = d.commitments || [];
+    if (cnt) cnt.textContent = items.length;
+    if (!items.length) {{
+      el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">No open commitments</div></div>';
+      return;
+    }}
+    el.innerHTML = items.slice(0, 6).map(c => {{
+      const isOverdue = (c.status || '').toLowerCase() === 'overdue';
+      const statusCls = isOverdue ? 'overdue' : 'open';
+      const dotCls    = isOverdue ? 'dot-error' : 'dot-gold';
+      return `<div class="wi-commit-row">
+        <span class="dot ${{dotCls}}" style="margin-top:3px;flex-shrink:0;"></span>
+        <div class="wi-commit-text">${{escHtml(c.description || c.commitment_text || '—')}}</div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          <span class="wi-commit-status ${{statusCls}}">${{escHtml(c.status || 'open')}}</span>
+          ${{c.due_date ? `<span class="wi-commit-due">${{fmtLocalTime(c.due_date, {{dateOnly:true}})}}</span>` : ''}}
+        </div>
+      </div>`;
+    }}).join('');
+    if (items.length > 6) {{
+      el.innerHTML += `<div class="list-row" style="text-align:right;cursor:pointer;" onclick="switchWITab(document.querySelector('[data-wi-tab=tasks]'),'tasks')">
+        <span style="font-size:11px;color:var(--hue);">${{items.length - 6}} more →</span></div>`;
+    }}
+  }} catch(e) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Error loading commitments</div></div>'; }}
+}}
+
+async function wiLoadSurfaces() {{
+  const el = document.getElementById('wi-surfaces');
+  if (!el) return;
+  try {{
+    const res = await fetch('/api/wi/surface', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{}})
+    }});
+    if (!res.ok) {{ el.innerHTML = '<div style="color:var(--text-3);font-size:12px;">Nothing to surface right now.</div>'; return; }}
+    const d = await res.json();
+    const items = d.suggestions || d.surfaces || [];
+    if (!items.length) {{ el.innerHTML = '<div style="color:var(--text-3);font-size:12px;">Nothing to surface right now.</div>'; return; }}
+    el.innerHTML = items.slice(0, 4).map(s =>
+      `<div class="wi-surface-item">
+        <div class="wi-surface-title">${{escHtml(s.title || s.surface || '—')}}</div>
+        ${{s.reason ? `<div class="wi-surface-reason">${{escHtml(s.reason)}}</div>` : ''}}
+      </div>`
+    ).join('');
+  }} catch(e) {{ el.innerHTML = '<div style="color:var(--text-3);font-size:12px;">Nothing to surface right now.</div>'; }}
+}}
+
+async function wiLoadProjects() {{
+  const el  = document.getElementById('wi-projects-list');
+  const cnt = document.getElementById('wi-proj-count');
+  if (!el) return;
+  el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading…</div></div>';
+  try {{
+    const res = await fetch('/api/wi/projects');
+    if (!res.ok) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Unavailable</div></div>'; return; }}
+    const d = await res.json();
+    const items = d.projects || [];
+    if (cnt) cnt.textContent = items.length;
+    if (!items.length) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">No projects yet</div></div>'; return; }}
+    el.innerHTML = items.map(p => {{
+      const health   = (p.health_status || p.status || 'active').toLowerCase().replace('_','-');
+      const badgeCls = health === 'at-risk'   ? 'at-risk' :
+                       health === 'on-track'  ? 'on-track' : 'active';
+      const dotCls   = badgeCls === 'at-risk'  ? 'dot-gold' :
+                       badgeCls === 'on-track' ? 'dot-success' : 'dot-active';
+      return `<div class="wi-project-row">
+        <span class="dot ${{dotCls}}" style="margin-top:3px;flex-shrink:0;"></span>
+        <div class="wi-project-info">
+          <div class="wi-project-name">${{escHtml(p.name || p.title || '—')}}</div>
+          ${{p.description ? `<div class="wi-project-sub">${{escHtml(p.description.slice(0, 90))}}</div>` : ''}}
+        </div>
+        <span class="wi-project-badge ${{badgeCls}}">${{escHtml(health)}}</span>
+      </div>`;
+    }}).join('');
+  }} catch(e) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--crimson);">Error loading projects</div></div>'; }}
+}}
+
+async function wiLoadTasks() {{
+  const el  = document.getElementById('wi-tasks-list');
+  const cnt = document.getElementById('wi-tasks-count');
+  if (!el) return;
+  el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading…</div></div>';
+  try {{
+    const res = await fetch('/api/wi/tasks');
+    if (!res.ok) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Unavailable</div></div>'; return; }}
+    const d = await res.json();
+    const items = (d.tasks || []).filter(t => t.status !== 'completed');
+    if (cnt) cnt.textContent = items.length;
+    if (!items.length) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">All clear — no open tasks ✓</div></div>'; return; }}
+    el.innerHTML = items.map(t => {{
+      const pri    = parseInt(t.priority) || 3;
+      const priCls = pri <= 1 ? 'p1' : pri === 2 ? 'p2' : 'p3';
+      return `<div class="list-row" id="wi-task-${{t.id}}">
+        <span class="wi-priority-ring ${{priCls}}" style="margin-top:3px;flex-shrink:0;"></span>
+        <div style="flex:1;min-width:0;">
+          <div class="list-row-name">${{escHtml(t.title || t.task_title || '—')}}</div>
+          ${{t.project_name ? `<div class="list-row-sub">${{escHtml(t.project_name)}}</div>` : ''}}
+        </div>
+        <button class="wi-complete-btn" onclick="wiCompleteTask(${{t.id}})">Done</button>
+      </div>`;
+    }}).join('');
+  }} catch(e) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--crimson);">Error loading tasks</div></div>'; }}
+}}
+
+async function wiLoadBriefing() {{
+  const el   = document.getElementById('wi-briefing-content');
+  const meta = document.getElementById('wi-briefing-meta');
+  if (!el) return;
+  if (_wiBriefingData) {{ _wiRenderBriefing(_wiBriefingData); return; }}
+  el.innerHTML = '<div class="skel" style="height:10px;width:85%;margin-bottom:6px;"></div><div class="skel" style="height:10px;width:70%;margin-bottom:6px;"></div><div class="skel" style="height:10px;width:60%;"></div>';
+  try {{
+    const res = await fetch('/api/wi/summary');
+    if (!res.ok) throw new Error(res.status);
+    const d = await res.json();
+    if (d.latest_briefing) {{
+      _wiBriefingData = d.latest_briefing;
+      _wiRenderBriefing(d.latest_briefing);
+    }} else {{
+      el.innerHTML = '<div style="color:var(--text-3);font-size:12px;text-align:center;padding:20px 0;">No briefing yet. Workers run daily at the configured hour, or click ↻ Refresh to generate now.</div>';
+    }}
+  }} catch(e) {{ el.innerHTML = '<div style="color:var(--text-3);font-size:12px;">Unable to load briefing.</div>'; }}
+}}
+
+async function wiRefreshBriefing() {{
+  const el = document.getElementById('wi-briefing-content');
+  if (el) el.innerHTML = '<div style="text-align:center;padding:20px 0;color:var(--hue);">Generating briefing… <span style="font-family:var(--font-mono);font-size:10px;">(~15s)</span></div>';
+  _wiBriefingData = null;
+  try {{
+    const res = await fetch('/api/wi/briefing/generate', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{}})
+    }});
+    if (!res.ok) throw new Error(res.status);
+    const d = await res.json();
+    _wiBriefingData = d;
+    _wiRenderBriefing(d);
+    showToast('Briefing generated ✓', 'success');
+  }} catch(e) {{
+    if (el) el.innerHTML = '<div style="color:var(--crimson);font-size:12px;">Generation failed — check worker logs.</div>';
+  }}
+}}
+
+function _wiRenderBriefing(d) {{
+  const el   = document.getElementById('wi-briefing-content');
+  const meta = document.getElementById('wi-briefing-meta');
+  if (!el) return;
+  const narrative = d.narrative || d.briefing_text || d.content || '';
+  if (!narrative) {{ el.innerHTML = '<div style="color:var(--text-3);font-size:12px;">No briefing content available.</div>'; return; }}
+  el.innerHTML = narrative.split('\\n').filter(l => l.trim()).map(line => {{
+    if (/^#+\\s/.test(line))  return `<p style="font-weight:700;color:var(--text-1);margin:12px 0 4px;">${{escHtml(line.replace(/^#+\\s*/,''))}}</p>`;
+    if (/^[-*]\\s/.test(line)) return `<p style="margin:3px 0 3px 10px;color:var(--text-2);">• ${{escHtml(line.replace(/^[-*]\\s*/,''))}}</p>`;
+    return `<p style="margin:4px 0;">${{escHtml(line)}}</p>`;
+  }}).join('');
+  if (meta && d.generated_at) meta.textContent = 'Generated ' + fmtLocalTime(d.generated_at);
+}}
+
+async function wiLoadSignals() {{
+  const el  = document.getElementById('wi-signals-list');
+  const cnt = document.getElementById('wi-signals-count');
+  if (!el) return;
+  el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading…</div></div>';
+  try {{
+    const res = await fetch('/api/wi/signals');
+    if (!res.ok) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Unavailable</div></div>'; return; }}
+    const d = await res.json();
+    const items = d.signals || [];
+    if (cnt) cnt.textContent = items.length;
+    if (!items.length) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">No recent signals</div></div>'; return; }}
+    el.innerHTML = items.slice(0, 15).map(s => {{
+      const crit   = (s.criticality || 'STANDARD').toUpperCase();
+      const dotCls = crit === 'CRITICAL' ? 'dot-error' : crit === 'LOW' ? 'dot-standby' : 'dot-active';
+      return `<div class="list-row">
+        <span class="dot ${{dotCls}}" style="margin-top:3px;flex-shrink:0;"></span>
+        <div style="flex:1;min-width:0;">
+          <div class="list-row-name">${{escHtml((s.content || s.signal_text || '—').slice(0, 120))}}</div>
+          <div class="list-row-sub">${{escHtml(s.signal_type || 'unknown')}} · ${{fmtLocalTime(s.created_at, {{short:true}})}}</div>
+        </div>
+        <span class="wi-signal-type">${{escHtml(crit)}}</span>
+      </div>`;
+    }}).join('');
+  }} catch(e) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--crimson);">Error loading signals</div></div>'; }}
+}}
+
+async function wiCompleteTask(taskId) {{
+  const row = document.getElementById('wi-task-' + taskId);
+  try {{
+    const res = await fetch('/api/wi/tasks/' + taskId + '/complete', {{method: 'POST'}});
+    if (res.ok) {{
+      if (row) {{
+        row.style.opacity = '0.4';
+        row.style.transition = 'opacity 0.3s';
+        setTimeout(() => row.remove(), 350);
+      }}
+      const cnt = document.getElementById('wi-tasks-count');
+      if (cnt && cnt.textContent) cnt.textContent = Math.max(0, parseInt(cnt.textContent) - 1);
+      const stat = document.getElementById('wi-stat-tasks');
+      if (stat && stat.textContent) stat.textContent = Math.max(0, parseInt(stat.textContent) - 1);
+      showToast('Task completed ✓', 'success');
+    }} else {{ showToast('Could not complete task', 'warning'); }}
+  }} catch(e) {{ showToast('Error completing task', 'error'); }}
 }}
 
 /* ═══════════════════════════════════════════════════════════════
@@ -5983,6 +8146,72 @@ const CARD_REGISTRY = {{
     ambientRender: () => `<div class="ambient-tile" onclick="cardInteract('idea_inbox','click')" data-card="idea_inbox">💡 Ideas <span class="ambient-badge" id="idea-inbox-badge">—</span></div>`,
   }},
 
+  sam: {{
+    id: 'sam', title: 'Sam Wilson', icon: '🦅',
+    load: () => loadSamOverviewCard(),
+    heroRender: () => `
+      <div class="card layout-card" id="lc-sam" data-card="sam"
+           style="min-height:200px;" onclick="cardInteract('sam','click')">
+        <div class="card-hdr">
+          <span class="card-icon">🦅</span>
+          <span class="card-title">SAM WILSON</span>
+          <span class="card-badge" id="sam-ov-streak-badge" style="display:none;"></span>
+        </div>
+        <div class="card-body" id="sam-ov-content" style="padding:14px 18px;">
+          <div class="skel" style="height:10px;width:80%;margin-bottom:8px;"></div>
+          <div class="skel" style="height:10px;width:60%;margin-bottom:8px;"></div>
+          <div class="skel" style="height:10px;width:72%;"></div>
+        </div>
+      </div>`,
+    priorityRender: () => `
+      <div class="card card-tactical layout-card" id="lc-sam" data-card="sam"
+           onclick="cardInteract('sam','click')">
+        <div class="card-hdr">
+          <span class="card-icon">🦅</span>
+          <span class="card-title">SAM</span>
+          <span class="card-badge" id="sam-ov-streak-badge"></span>
+        </div>
+        <div class="card-body" id="sam-ov-content" style="padding:10px 14px;"></div>
+      </div>`,
+    ambientRender: () => `
+      <div class="ambient-tile" onclick="cardInteract('sam','navigate');switchView('health')" data-card="sam">
+        🦅 Sam <span class="ambient-badge" id="sam-ov-streak-badge">—</span>
+      </div>`,
+  }},
+
+  finance: {{
+    id: 'finance', title: 'Finance', icon: '💰',
+    load: () => loadFiskCard(),
+    heroRender: () => `
+      <div class="card layout-card" id="lc-finance" data-card="finance"
+           style="min-height:200px;" onclick="cardInteract('finance','click')">
+        <div class="card-hdr">
+          <span class="card-icon">💰</span>
+          <span class="card-title">FINANCE</span>
+          <span class="card-badge" id="fisk-health-badge">—</span>
+        </div>
+        <div class="card-body" id="fisk-ov-content" style="padding:14px 18px;">
+          <div class="skel" style="height:10px;width:60%;margin-bottom:8px;"></div>
+          <div class="skel" style="height:10px;width:80%;margin-bottom:8px;"></div>
+          <div class="skel" style="height:10px;width:50%;"></div>
+        </div>
+      </div>`,
+    priorityRender: () => `
+      <div class="card card-tactical layout-card" id="lc-finance" data-card="finance"
+           onclick="cardInteract('finance','click')">
+        <div class="card-hdr">
+          <span class="card-icon">💰</span>
+          <span class="card-title">FINANCE</span>
+          <span class="card-badge" id="fisk-health-badge">—</span>
+        </div>
+        <div class="card-body" id="fisk-ov-content" style="padding:10px 14px;"></div>
+      </div>`,
+    ambientRender: () => `
+      <div class="ambient-tile" onclick="cardInteract('finance','click')" data-card="finance">
+        💰 Finance <span class="ambient-badge" id="fisk-health-badge">—</span>
+      </div>`,
+  }},
+
 }};
 
 // ---------------------------------------------------------------------------
@@ -6039,6 +8268,15 @@ function applyLayout(layout, alerts, animate) {{
   const alertedMap = {{}};
   (alerts || []).forEach(a => {{ alertedMap[a.card] = a.level; }});
 
+  // FLIP Phase 1: snapshot current card positions before re-render
+  const oldRects = {{}};
+  if (animate) {{
+    document.querySelectorAll('[data-card]').forEach(el => {{
+      const id = el.dataset.card;
+      if (id) oldRects[id] = el.getBoundingClientRect();
+    }});
+  }}
+
   function renderZone(containerId, cards, renderFn) {{
     const zone = document.getElementById(containerId);
     if (!zone) return;
@@ -6050,16 +8288,62 @@ function applyLayout(layout, alerts, animate) {{
       tmp.innerHTML = renderFn(reg).trim();
       const el = tmp.firstElementChild;
       if (!el) return;
-      if (animate) el.classList.add('entering');
       if (alertedMap[cardId]) el.classList.add('alert-pulse-' + alertedMap[cardId]);
       zone.appendChild(el);
-      if (animate) requestAnimationFrame(() => el.classList.remove('entering'));
     }});
   }}
 
   renderZone('overview-hero-zone',      layout.hero     || [], r => r.heroRender());
   renderZone('overview-priority-strip', layout.priority || [], r => r.priorityRender());
   renderZone('overview-ambient-row',    layout.ambient  || [], r => r.ambientRender());
+
+  if (!animate) return;
+
+  // FLIP Phase 2: invert + play
+  document.querySelectorAll('[data-card]').forEach(el => {{
+    const id = el.dataset.card;
+    const old = oldRects[id];
+
+    if (!old) {{
+      // New card — liquid glass entrance: fade + rise
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(14px) scale(0.96)';
+      el.style.transition = 'none';
+      requestAnimationFrame(() => {{
+        el.style.transition = 'opacity 0.4s ease, transform 0.45s cubic-bezier(0.34,1.56,0.64,1)';
+        el.style.opacity = '1';
+        el.style.transform = '';
+      }});
+      return;
+    }}
+
+    // Existing card — FLIP to new position
+    const newRect = el.getBoundingClientRect();
+    const dx = old.left - newRect.left;
+    const dy = old.top  - newRect.top;
+    const sx = old.width  / Math.max(newRect.width,  1);
+    const sy = old.height / Math.max(newRect.height, 1);
+
+    // Skip if barely moved
+    if (Math.abs(dx) < 2 && Math.abs(dy) < 2 && Math.abs(sx - 1) < 0.02) return;
+
+    // Invert: snap visually to old position/size
+    el.style.transition = 'none';
+    el.style.transform  = `translate(${{dx}}px,${{dy}}px) scale(${{sx}},${{sy}})`;
+    el.style.transformOrigin = 'top left';
+    el.style.opacity = '0.7';
+
+    // Play: spring to natural position
+    requestAnimationFrame(() => requestAnimationFrame(() => {{
+      el.style.transition = [
+        'transform 0.55s cubic-bezier(0.34,1.56,0.64,1)',
+        'opacity 0.3s ease',
+      ].join(',');
+      el.style.transform  = '';
+      el.style.transformOrigin = '';
+      el.style.opacity = '';
+    }}));
+  }});
 }}
 
 function _fireLayoutLoaders(layout) {{
@@ -6338,6 +8622,165 @@ async function loadBriefing() {{
   }} catch(e) {{ console.error('loadBriefing failed', e); }}
 }}
 
+/* ═══ FAITH AGENTS ═══════════════════════════════════════════════════════ */
+
+let _faithAgents = [];
+let _faithActiveAgent = null;
+let _faithMessages = [];
+
+async function loadFaith() {{
+  // Load daily word
+  try {{
+    const dw = await fetch('/api/faith/daily-word').then(r => r.json());
+    if (dw && dw.word) {{
+      document.getElementById('faith-dw-agent').textContent = dw.agent_name + ' · ' + dw.agent_title;
+      document.getElementById('faith-dw-body').textContent = dw.word;
+      document.getElementById('faith-dw-passage').textContent = dw.passage || '';
+      const banner = document.getElementById('faith-daily-word');
+      if (banner) {{ banner.style.display = ''; banner.style.borderColor = dw.color || 'var(--hue)'; }}
+    }}
+  }} catch(e) {{ console.warn('faith daily word', e); }}
+
+  // Load roster
+  try {{
+    const data = await fetch('/api/faith/agents').then(r => r.json());
+    _faithAgents = data.agents || [];
+    renderFaithRoster();
+  }} catch(e) {{
+    document.getElementById('faith-roster').innerHTML = '<div class="empty-state">Faith agents unavailable</div>';
+  }}
+}}
+
+function renderFaithRoster() {{
+  const el = document.getElementById('faith-roster');
+  if (!el) return;
+  if (!_faithAgents.length) {{
+    el.innerHTML = '<div class="empty-state">No agents found</div>';
+    return;
+  }}
+  el.innerHTML = _faithAgents.map(a => `
+    <div class="faith-agent-card ${{_faithActiveAgent?.id === a.id ? 'active' : ''}}"
+         style="--agent-color:${{a.color}}"
+         onclick="openFaithChat('${{a.id}}')">
+      <div class="faith-agent-avatar" style="background:${{a.color}}">${{a.initials}}</div>
+      <div class="faith-agent-name">${{a.name}}</div>
+      <div class="faith-agent-title">${{a.title}}</div>
+      <div class="faith-agent-desc">${{a.description}}</div>
+    </div>
+  `).join('');
+}}
+
+function openFaithChat(agentId) {{
+  const agent = _faithAgents.find(a => a.id === agentId);
+  if (!agent) return;
+  _faithActiveAgent = agent;
+  _faithMessages = [];
+
+  // Update card highlight
+  renderFaithRoster();
+
+  // Set header
+  const avatar = document.getElementById('faith-chat-avatar');
+  if (avatar) {{ avatar.textContent = agent.initials; avatar.style.background = agent.color; }}
+  const nameEl = document.getElementById('faith-chat-name');
+  if (nameEl) nameEl.textContent = agent.name + ' — ' + agent.title;
+  const domainEl = document.getElementById('faith-chat-domain');
+  if (domainEl) domainEl.textContent = agent.domain;
+
+  // Show panel + clear messages
+  const panel = document.getElementById('faith-chat-panel');
+  if (panel) panel.style.display = '';
+  faithRenderMessages();
+
+  // Scroll to chat
+  panel?.scrollIntoView({{ behavior: 'smooth', block: 'nearest' }});
+}}
+
+function closeFaithChat() {{
+  _faithActiveAgent = null;
+  _faithMessages = [];
+  const panel = document.getElementById('faith-chat-panel');
+  if (panel) panel.style.display = 'none';
+  renderFaithRoster();
+}}
+
+function faithRenderMessages() {{
+  const el = document.getElementById('faith-chat-messages');
+  if (!el) return;
+  if (!_faithMessages.length) {{
+    const a = _faithActiveAgent;
+    el.innerHTML = `<div style="text-align:center;color:var(--text-3);font-size:12px;padding:40px 0;">
+      Begin your conversation with ${{a?.name || 'your agent'}}.<br>
+      <span style="font-size:11px;opacity:.6;">Ask about a passage, a question, or just say hello.</span>
+    </div>`;
+    return;
+  }}
+  el.innerHTML = _faithMessages.map(m => {{
+    const body = m.role === 'user' ? m.content : faithMarkdownToHtml(m.content);
+    return `<div class="faith-chat-bubble ${{m.role === 'user' ? 'user' : 'agent'}}">${{body}}</div>`;
+  }}).join('');
+  el.scrollTop = el.scrollHeight;
+}}
+
+function faithMarkdownToHtml(md) {{
+  return md
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^#{{1,3}} (.+)$/gm, '<strong>$1</strong>')
+    .replace(/\n{{2,}}/g, '</p><p>')
+    .replace(/\n/g, '<br>')
+    .replace(/^(.+)$/, '<p>$1</p>');
+}}
+
+async function faithSend() {{
+  const input = document.getElementById('faith-chat-input');
+  const passage = document.getElementById('faith-chat-passage')?.value.trim() || '';
+  const text = input?.value.trim();
+  if (!text || !_faithActiveAgent) return;
+
+  const btn = document.getElementById('faith-send-btn');
+  if (btn) btn.disabled = true;
+  if (input) {{ input.value = ''; input.disabled = true; }}
+
+  _faithMessages.push({{ role: 'user', content: text }});
+  faithRenderMessages();
+
+  // Typing indicator
+  const messagesEl = document.getElementById('faith-chat-messages');
+  const typing = document.createElement('div');
+  typing.className = 'faith-typing';
+  typing.id = 'faith-typing';
+  typing.innerHTML = '<div class="faith-typing-dot"></div><div class="faith-typing-dot"></div><div class="faith-typing-dot"></div>';
+  messagesEl?.appendChild(typing);
+  messagesEl && (messagesEl.scrollTop = messagesEl.scrollHeight);
+
+  try {{
+    const res = await fetch('/api/faith/chat', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{
+        agent_id: _faithActiveAgent.id,
+        passage,
+        messages: _faithMessages.map(m => ({{ role: m.role, content: m.content }}))
+      }})
+    }});
+    const data = await res.json();
+    document.getElementById('faith-typing')?.remove();
+    if (data.ok && data.reply) {{
+      _faithMessages.push({{ role: 'assistant', content: data.reply }});
+    }} else {{
+      _faithMessages.push({{ role: 'assistant', content: data.detail || 'Something went wrong.' }});
+    }}
+  }} catch(e) {{
+    document.getElementById('faith-typing')?.remove();
+    _faithMessages.push({{ role: 'assistant', content: 'Faith agent unavailable right now.' }});
+  }}
+
+  faithRenderMessages();
+  if (btn) btn.disabled = false;
+  if (input) {{ input.disabled = false; input.focus(); }}
+}}
+
 async function loadChronicle() {{
   try {{
     const res = await fetch('/api/chronicle/recent');
@@ -6474,6 +8917,61 @@ async function completeTask(taskId) {{
 /* ─── Live Agents Ops Center ─── */
 
 let _agentsRefreshTimer = null;
+
+/* ═══════════════════════════════════════════════════════════════
+   UNIVERSAL AGENT ROSTER
+   Fetches from /api/agents/roster which merges life_agents.json +
+   external_agents.json (Chronicle, Ghostwritr, Catalyst, future).
+   Any POST to /api/agents/register immediately appears here.
+═══════════════════════════════════════════════════════════════ */
+async function loadAgentRoster() {{
+  try {{
+    const res = await fetch('/api/agents/roster');
+    if (!res.ok) {{ console.warn('loadAgentRoster', res.status); return; }}
+    const d = await res.json();
+    const incoming = d.agents || [];
+    if (!incoming.length) return;
+
+    // Normalize domain to a DOMAIN_CLASS key
+    const domNorm = s => {{
+      if (!s) return 'Operations';
+      const mapped = DOMAIN_CLASS[s];
+      if (mapped) return s;  // known key
+      // Title-case fallback
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    }};
+
+    // Build a merged array: API data takes priority, fallback keeps existing
+    const existingById = {{}};
+    AGENTS.forEach(a => {{ existingById[a.id] = a; }});
+
+    const merged = incoming.map(a => ({{
+      id:     a.id,
+      name:   a.name || a.id.toUpperCase(),
+      title:  a.title || '',
+      domain: domNorm(a.domain),
+      tier:   a.tier || 'execution',
+      status: existingById[a.id]?.status || a.status || 'standby',
+      source: a.source || 'jarvis',
+      purpose: a.purpose || '',
+    }}));
+
+    // Splice in any locally-known agents the API didn't return (graceful fallback)
+    const mergedIds = new Set(merged.map(a => a.id));
+    AGENTS.forEach(a => {{ if (!mergedIds.has(a.id)) merged.push(a); }});
+
+    AGENTS.length = 0;
+    merged.forEach(a => AGENTS.push(a));
+
+    renderAgents(currentFilter);
+    _updateRosterSourceBadge(d.count || AGENTS.length);
+  }} catch(e) {{ console.error('loadAgentRoster failed', e); }}
+}}
+
+function _updateRosterSourceBadge(count) {{
+  const el = document.getElementById('agent-roster-count');
+  if (el) el.textContent = count + ' agents';
+}}
 
 async function loadLiveAgents() {{
   try {{
@@ -8293,6 +10791,34 @@ async function handleApproval(id, action) {{
   }}
 }}
 
+async function approveDraft(reviewId) {{
+  try {{
+    const res = await fetch('/api/publishing/draft/approve', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ review_id: reviewId }})
+    }});
+    if (!res.ok) {{ showToast('Approve failed', 'error'); return; }}
+    showToast('Draft approved ✓', 'success');
+    loadPublishing();
+  }} catch(e) {{ showToast('No connection', 'error'); }}
+}}
+
+async function reviseDraft(reviewId) {{
+  const feedback = prompt('What needs to change?');
+  if (feedback === null) return;
+  try {{
+    const res = await fetch('/api/publishing/draft/revise', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ review_id: reviewId, feedback: feedback || 'Needs revision' }})
+    }});
+    if (!res.ok) {{ showToast('Revise request failed', 'error'); return; }}
+    showToast('Revision requested', 'info');
+    loadPublishing();
+  }} catch(e) {{ showToast('No connection', 'error'); }}
+}}
+
 /* ═══════════════════════════════════════════════════════════════
    RENDER FUNCTIONS
 ═══════════════════════════════════════════════════════════════ */
@@ -8458,71 +10984,615 @@ function renderBriefSection(s) {{
 
 function renderPublishing(data) {{
   if (!data) return;
-  const booksEl = document.getElementById('publishing-books');
-  if (data.books && data.books.length > 0) {{
-    const STAGES = ['Outline','Draft','Edit','Review','Polish','Cover','Format','Proof','Publish'];
-    booksEl.innerHTML = data.books.map(book => {{
-      const current = (book.stage || 0);
-      const segs = STAGES.map((s, i) => {{
-        const cls = i < current ? 'done' : i === current ? 'current' : '';
-        return `<div class="pipeline-seg ${{cls}}" title="${{s}}"></div>`;
-      }}).join('');
-      return `
-        <div class="card">
-          <div class="card-inner">
-            <div class="card-header">
-              <span class="card-title">${{escHtml(book.title)}}</span>
-              <span class="pill pill-hue">${{STAGES[current] || '—'}}</span>
-            </div>
-            <div class="pipeline-bar">${{segs}}</div>
-          </div>
-        </div>
-      `;
-    }}).join('');
+
+  const books   = data.active_books || [];
+  const reviews = data.pending_review_list || [];
+
+  // ── Stat strip ─────────────────────────────────────────────────
+  const _set = (id, v) => {{ const el = document.getElementById(id); if (el) el.textContent = v; }};
+  _set('homeProjectsBadge',  books.length  || '0');
+  _set('pub-review-count',   reviews.length || '0');
+  _set('pub-review-count-badge', reviews.length || '0');
+  _set('pub-inprogress-count', data.books_in_progress ?? '—');
+  const gwEl = document.getElementById('pub-gw-status');
+  if (gwEl) {{
+    gwEl.textContent = data.ghostwritr_available ? '● Online' : '○ Offline';
+    gwEl.style.color = data.ghostwritr_available ? '#3ecf8e' : 'var(--text-3)';
   }}
-  if (data.pending_reviews && data.pending_reviews.length > 0) {{
-    const revEl = document.getElementById('publishing-reviews');
-    revEl.innerHTML = data.pending_reviews.map(r => `
-      <div class="approval-item">
-        <div class="approval-title">${{escHtml(r.title)}}</div>
-        <div class="approval-meta">${{escHtml(r.type || 'REVIEW')}}</div>
-        <div class="approval-actions">
-          <button class="btn btn-hue btn-sm" onclick="handleApproval('${{r.id}}','approve')">Approve</button>
-          <button class="btn btn-crimson btn-sm" onclick="handleApproval('${{r.id}}','deny')">Reject</button>
+
+  // ── Pending Reviews ────────────────────────────────────────────
+  const revSection = document.getElementById('pub-reviews-section');
+  const revEl      = document.getElementById('publishing-reviews');
+  if (revSection) revSection.style.display = reviews.length > 0 ? '' : 'none';
+  if (revEl) {{
+    if (reviews.length === 0) {{
+      revEl.innerHTML = '';
+    }} else {{
+      revEl.innerHTML = reviews.map(r => {{
+        const stageLabel = (r.stage_display || (r.stage_key || '').replace(/_/g,' ').replace(/\\b\\w/g, c => c.toUpperCase()));
+        const wordCount  = r.word_count ? r.word_count.toLocaleString() + ' words' : '';
+        const rawPrev    = (r.content_preview || '').trim();
+        let preview = '';
+        if (rawPrev.startsWith('{{')) {{
+          try {{
+            const parsed = JSON.parse(rawPrev);
+            const parts = [];
+            if (parsed.totalWords)    parts.push(parsed.totalWords.toLocaleString() + ' words');
+            if (parsed.chapterCount)  parts.push(parsed.chapterCount + ' chapters');
+            if (parsed.subtitle)      parts.push(parsed.subtitle.slice(0, 80));
+            preview = parts.join(' · ');
+          }} catch(e) {{ preview = ''; }}
+        }} else {{
+          preview = rawPrev.slice(0, 120);
+        }}
+        const rid = escHtml(r.review_id || r.id || '');
+        return `<div class="pub-review-item">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+            <div class="pub-review-book">${{escHtml(r.title || '—')}}</div>
+            <div class="pub-review-stage">⚠ ${{escHtml(stageLabel)}}</div>
+          </div>
+          ${{wordCount ? `<div class="pub-review-meta">${{escHtml(wordCount)}}</div>` : ''}}
+          ${{preview ? `<div class="pub-review-preview">"${{escHtml(preview)}}"</div>` : ''}}
+          <div class="pub-review-actions">
+            <button class="btn btn-hue btn-sm" onclick="approveDraft('${{rid}}')">✓ Approve</button>
+            <button class="btn btn-crimson btn-sm" onclick="reviseDraft('${{rid}}')">↩ Needs Work</button>
+            ${{r.slug ? `<a href="${{escHtml(data.ghostwritr_available ? 'http://localhost:3000/books/' + r.slug : '#')}}" target="_blank" class="pub-open-link" style="margin-left:auto;">Open ↗</a>` : ''}}
+          </div>
+        </div>`;
+      }}).join('');
+    }}
+  }}
+
+  // ── Book Pipeline ──────────────────────────────────────────────
+  const STATUS_ICONS = {{
+    committed:   {{ cls: 'committed',   tip: 'Committed' }},
+    in_progress: {{ cls: 'in_progress', tip: 'In Progress' }},
+    review:      {{ cls: 'review',      tip: 'Ready for Review' }},
+    blocked:     {{ cls: 'blocked',     tip: 'Blocked' }},
+    not_started: {{ cls: 'not_started', tip: 'Not Started' }},
+  }};
+
+  // Map stage status strings → dot class
+  function stageStatusClass(status) {{
+    if (status === 'COMMITTED')         return 'committed';
+    if (status === 'IN_PROGRESS')       return 'in_progress';
+    if (status === 'READY_FOR_REVIEW')  return 'review';
+    if (status === 'BLOCKED')           return 'blocked';
+    return 'not_started';
+  }}
+
+  const booksEl = document.getElementById('publishing-books');
+  if (!booksEl) return;
+
+  if (books.length === 0) {{
+    booksEl.innerHTML = `<div class="pub-book-card" style="color:var(--text-3);font-size:13px;text-align:center;padding:32px;">
+      No active books found in Ghostwritr. <a href="http://localhost:3000" target="_blank" class="pub-open-link">Open Studio ↗</a>
+    </div>`;
+    return;
+  }}
+
+  booksEl.innerHTML = books.map(book => {{
+    const total  = book.total_stages || 19;
+    const done   = Math.min(book.stages_complete || 0, total);
+    const pct    = total > 0 ? Math.round((done / total) * 100) : 0;
+    const ready  = (book.stages_ready_for_review || []);
+    const hasReady = ready.length > 0;
+
+    // Overall progress bar
+    const progressHtml = `
+      <div class="pub-progress-wrap">
+        <div class="pub-progress-label">
+          <span>${{done}} / ${{total}} stages complete</span>
+          <span>${{pct}}%</span>
+        </div>
+        <div class="pub-progress-bar">
+          <div class="pub-progress-fill" style="width:${{pct}}%"></div>
+        </div>
+      </div>`;
+
+    // Stage groups
+    const groups = book.stage_groups || [];
+    const groupsHtml = groups.length > 0
+      ? `<div class="pub-groups-grid">
+          ${{groups.map(g => {{
+            const allDone = g.complete === g.total;
+            const dots = (g.stages || []).map(s => {{
+              const cls = stageStatusClass(s.status);
+              return `<div class="pub-stage-dot ${{cls}}" title="${{escHtml(s.display + ': ' + s.status.replace(/_/g,' '))}}"></div>`;
+            }}).join('');
+            const countCls = allDone ? 'all-done' : '';
+            return `<div class="pub-group">
+              <div class="pub-group-name">${{escHtml(g.name)}}</div>
+              <div class="pub-stage-dots">${{dots}}</div>
+              <div class="pub-group-count ${{countCls}}">${{g.complete}}/${{g.total}}${{allDone ? ' ✓' : ''}}</div>
+            </div>`;
+          }}).join('')}}
+        </div>`
+      : '';
+
+    // Footer: current stage + review badge + link
+    const curStage = book.current_stage
+      ? book.current_stage.replace(/_/g,' ').replace(/\\b\\w/g, c => c.toUpperCase())
+      : (pct >= 100 ? 'Complete' : '—');
+    const reviewBadge = hasReady
+      ? `<span class="pub-review-badge">⚠ ${{ready.length}} REVIEW${{ready.length > 1 ? 'S' : ''}}</span>` : '';
+    const wordInfo = book.word_count
+      ? `${{book.word_count.toLocaleString()}} words${{book.chapter_count ? ' · ' + book.chapter_count + ' ch' : ''}} · ` : '';
+    const gwUrl = book.ghostwritr_url || ('#');
+
+    return `<div class="pub-book-card">
+      <div class="pub-book-header">
+        <div>
+          <div class="pub-book-title">${{escHtml(book.title || book.slug || '—')}}</div>
+          ${{book.subtitle ? `<div class="pub-book-subtitle">${{escHtml(book.subtitle)}}</div>` : ''}}
+        </div>
+        <div class="pub-book-meta">
+          ${{reviewBadge}}
+          <span class="pill pill-hue" style="font-size:9px;">${{escHtml(book.workflow_type || 'NONFICTION')}}</span>
         </div>
       </div>
-    `).join('');
+      ${{progressHtml}}
+      ${{groupsHtml}}
+      <div class="pub-book-footer">
+        <div class="pub-current-stage">
+          ${{wordInfo}}Current:<span class="stage-chip">${{escHtml(curStage)}}</span>
+        </div>
+        <a href="${{escHtml(gwUrl)}}" target="_blank" class="pub-open-link">Open in Ghostwritr ↗</a>
+      </div>
+    </div>`;
+  }}).join('');
+}}
+
+/* ═══════════════════════════════════════════════════════════════
+   CHRONICLE MODALS
+═══════════════════════════════════════════════════════════════ */
+
+// ── Entry Detail Modal ─────────────────────────────────────────
+function openEntryModal(entry) {{
+  const TYPE_LABELS = {{insight:'Insight',prayer:'Prayer',study:'Study',reflection:'Reflection',note:'Note'}};
+  const typeLbl = TYPE_LABELS[entry.type] || entry.type || 'Note';
+  const themes = (entry.themes || []).map(t => `<span class="chr-theme-tag">${{escHtml(t)}}</span>`).join('');
+  const html = `
+    <div class="chr-modal-backdrop" id="chr-entry-modal" onclick="if(event.target===this)closeChrModal('chr-entry-modal')">
+      <div class="chr-modal">
+        <div class="chr-modal-header">
+          <span class="chr-entry-type-pill chr-type-${{escHtml(entry.type || 'note')}}">${{escHtml(typeLbl)}}</span>
+          <span class="chr-modal-title">${{escHtml(entry.title || '—')}}</span>
+          <button class="chr-modal-close" onclick="closeChrModal('chr-entry-modal')">✕</button>
+        </div>
+        <div class="chr-modal-body">
+          ${{entry.passage ? `<div style="font-size:13px;color:var(--hue);font-weight:500;margin-bottom:12px;">${{escHtml(entry.passage)}}</div>` : ''}}
+          ${{entry.body ? `<div style="font-size:13px;color:var(--text-2);line-height:1.65;margin-bottom:14px;white-space:pre-wrap;">${{escHtml(entry.body)}}</div>` : ''}}
+          ${{themes ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px;">${{themes}}</div>` : ''}}
+          <div style="font-size:11px;color:var(--text-3);">${{escHtml(entry.date || '')}}</div>
+        </div>
+        <div class="chr-modal-footer">
+          <button class="btn btn-hue btn-sm" onclick="saveEntryToChronicle(${{JSON.stringify(entry).replace(/"/g,'&quot;')}})">Save to Chronicle ↗</button>
+          <button class="btn btn-sm" style="margin-left:auto;" onclick="closeChrModal('chr-entry-modal')">Close</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}}
+
+// ── Prayer Item Modal ──────────────────────────────────────────
+function openPrayerModal(prayer) {{
+  const catLabels = {{people:'People',needs:'Needs',praise:'Praise',world:'World'}};
+  const catLbl = catLabels[prayer.category] || prayer.category || '—';
+  const isAnswered = prayer.answered;
+  const prayed = prayer.timesPrayed || 0;
+  const html = `
+    <div class="chr-modal-backdrop" id="chr-prayer-modal" onclick="if(event.target===this)closeChrModal('chr-prayer-modal')">
+      <div class="chr-modal">
+        <div class="chr-modal-header">
+          <span class="chr-prayer-cat chr-cat-${{escHtml(prayer.category || 'needs')}}">${{escHtml(catLbl)}}</span>
+          <span class="chr-modal-title">${{escHtml(prayer.text || '—')}}</span>
+          <button class="chr-modal-close" onclick="closeChrModal('chr-prayer-modal')">✕</button>
+        </div>
+        <div class="chr-modal-body">
+          <div class="chr-prayer-meta-row">
+            <div class="chr-prayer-stat">
+              <div class="chr-prayer-stat-num">${{prayed}}</div>
+              <div class="chr-prayer-stat-lbl">Times Prayed</div>
+            </div>
+            <div class="chr-prayer-stat">
+              <div class="chr-prayer-stat-num" style="color:${{isAnswered?'#3ecf8e':'var(--text-3)'}}">
+                ${{isAnswered ? '✓' : '—'}}
+              </div>
+              <div class="chr-prayer-stat-lbl">Answered</div>
+            </div>
+            <div class="chr-prayer-stat">
+              <div class="chr-prayer-stat-num" style="font-size:13px;">${{escHtml(prayer.dateAdded || '—')}}</div>
+              <div class="chr-prayer-stat-lbl">Added</div>
+            </div>
+            ${{prayer.lastPrayedAt ? `<div class="chr-prayer-stat"><div class="chr-prayer-stat-num" style="font-size:13px;">${{escHtml(prayer.lastPrayedAt)}}</div><div class="chr-prayer-stat-lbl">Last Prayed</div></div>` : ''}}
+          </div>
+          ${{prayer.answerSummary ? `<div style="background:rgba(62,207,142,0.08);border:1px solid rgba(62,207,142,0.20);border-radius:8px;padding:12px;font-size:12px;color:var(--text-2);margin-bottom:12px;">✓ ${{escHtml(prayer.answerSummary)}}</div>` : ''}}
+          <div id="chr-prayer-notes" style="margin-top:8px;">
+            <label style="font-size:11px;color:var(--text-3);display:block;margin-bottom:6px;">Add a note</label>
+            <textarea id="chr-prayer-note-input" class="chr-chat-input" style="width:100%;height:80px;" placeholder="Record what happened, what you prayed, an answer…"></textarea>
+          </div>
+        </div>
+        <div class="chr-modal-footer">
+          <button class="btn btn-hue btn-sm" onclick="markPrayedChronicle('${{escHtml(prayer.id)}}', ${{prayed}})">🙏 Mark Prayed</button>
+          ${{!isAnswered ? `<button class="btn btn-sm" style="background:rgba(62,207,142,0.15);color:#3ecf8e;" onclick="markAnsweredChronicle('${{escHtml(prayer.id)}}')">✓ Answered</button>` : ''}}
+          <button class="btn btn-sm" style="margin-left:auto;" onclick="closeChrModal('chr-prayer-modal')">Close</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}}
+
+// ── Bible Study Modal — Faith Council ─────────────────────────
+let _chrStudyMessages = [];
+let _chrStudyAgent = 'ezra';
+
+const _CHR_STUDY_ROSTER = [
+  {{id:'ezra',    name:'Ezra',              initials:'EZ', color:'#C9A84C', title:'The Scribe'}},
+  {{id:'david',   name:'David',             initials:'DV', color:'#8B5CF6', title:'The Psalmist'}},
+  {{id:'solomon', name:'Solomon',           initials:'SL', color:'#10B981', title:'The Sage'}},
+  {{id:'timothy', name:'Timothy',           initials:'TM', color:'#60A5FA', title:'The Shepherd'}},
+  {{id:'corey',   name:'Corey Russell',     initials:'CR', color:'#F97316', title:'The Intercessor'}},
+  {{id:'paul',    name:'Paul',              initials:'PA', color:'#EF4444', title:'The Apostle'}},
+  {{id:'amos',    name:'Amos Yong',         initials:'AY', color:'#38BDF8', title:'The Theologian'}},
+  {{id:'thomas',  name:'Thomas à Kempis',   initials:'TK', color:'#94A3B8', title:'The Contemplative'}},
+  {{id:'wallace', name:'J. Warner Wallace', initials:'JW', color:'#3B82F6', title:'The Detective'}},
+  {{id:'mcdowell',name:'Josh McDowell',     initials:'JM', color:'#F59E0B', title:'The Advocate'}},
+  {{id:'graham',  name:'Billy Graham',      initials:'BG', color:'#FDE68A', title:'The Evangelist'}},
+  {{id:'stanley', name:'Andy Stanley',      initials:'AS', color:'#84CC16', title:'The Communicator'}},
+  {{id:'furtick', name:'Steven Furtick',    initials:'SF', color:'#EC4899', title:'The Preacher'}},
+  {{id:'cahn',    name:'Jonathan Cahn',     initials:'JC', color:'#6366F1', title:'The Harbinger'}},
+  {{id:'strobel', name:'Lee Strobel',       initials:'LS', color:'#0E7490', title:'The Investigator'}},
+  {{id:'heiser',  name:'Michael Heiser',    initials:'MH', color:'#C084FC', title:'The Scholar'}},
+];
+
+function openBibleStudyModal(passage) {{
+  _chrStudyMessages = [];
+  const defaultPassage = passage || '';
+  const roster = (_faithAgents && _faithAgents.length) ? _faithAgents : _CHR_STUDY_ROSTER;
+  const activeAgent = roster.find(a => a.id === _chrStudyAgent) || roster[0];
+
+  const agentPills = roster.map(a => `
+    <button class="chr-agent-pill${{a.id === _chrStudyAgent ? ' active' : ''}}"
+            data-agent="${{a.id}}"
+            style="--pill-color:${{a.color}}"
+            onclick="switchStudyAgent(this,'${{a.id}}')">
+      <span class="chr-agent-pill-av" style="background:${{a.color}}">${{a.initials}}</span>
+      ${{a.name}}
+    </button>`).join('');
+
+  const html = `
+    <div class="chr-modal-backdrop" id="chr-study-modal" onclick="if(event.target===this)closeChrModal('chr-study-modal')">
+      <div class="chr-modal chr-modal-wide" style="max-height:90vh;">
+        <div class="chr-modal-header" style="padding-bottom:0;border-bottom:none;gap:10px;">
+          <span class="chr-modal-title">✦ Bible Study</span>
+          <input id="chr-study-passage" value="${{defaultPassage}}"
+            style="font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text-1);width:160px;"
+            placeholder="Passage (e.g. John 1:14)…">
+          <button class="chr-modal-close" onclick="closeChrModal('chr-study-modal')">✕</button>
+        </div>
+        <div class="chr-agent-strip" id="chr-agent-strip">${{agentPills}}</div>
+        <div class="chr-agent-label" id="chr-agent-label" style="border-color:${{activeAgent.color}}">
+          <span class="chr-agent-pill-av" style="background:${{activeAgent.color}};width:22px;height:22px;font-size:9px;">${{activeAgent.initials}}</span>
+          <span style="font-size:12px;font-weight:600;color:var(--text-1);">${{activeAgent.name}}</span>
+          <span style="font-size:11px;color:var(--text-3);">— ${{activeAgent.title}}</span>
+        </div>
+        <div class="chr-modal-body" style="display:flex;flex-direction:column;gap:0;padding:14px 20px;">
+          <div class="chr-chat-messages" id="chr-study-messages">
+            <div style="text-align:center;color:var(--text-3);font-size:12px;padding:20px 0;">
+              Choose your guide above, enter a passage, and begin.
+            </div>
+          </div>
+          <div class="chr-chat-input-row">
+            <textarea id="chr-study-input" class="chr-chat-input" rows="1"
+              placeholder="Ask anything…"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){{event.preventDefault();chrStudySend();}}"
+              oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+            <button class="btn btn-hue btn-sm" onclick="chrStudySend()" id="chr-study-send-btn" style="height:38px;padding:0 14px;">Send</button>
+          </div>
+        </div>
+        <div class="chr-modal-footer">
+          <button class="btn btn-sm" onclick="chrStudySaveEntry()" style="font-size:11px;">💾 Save to Chronicle</button>
+          <span style="font-size:10px;color:var(--text-3);margin-left:4px;">Saves this session as a Chronicle study entry</span>
+          <button class="btn btn-sm" style="margin-left:auto;" onclick="closeChrModal('chr-study-modal')">Close</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+  document.getElementById('chr-study-input').focus();
+}}
+
+function switchStudyAgent(btn, agentId) {{
+  _chrStudyAgent = agentId;
+  _chrStudyMessages = [];
+  document.querySelectorAll('.chr-agent-pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  const roster = (_faithAgents && _faithAgents.length) ? _faithAgents : _CHR_STUDY_ROSTER;
+  const agent = roster.find(a => a.id === agentId) || {{name:agentId, initials:agentId.slice(0,2).toUpperCase(), title:'', color:'var(--hue)'}};
+  const label = document.getElementById('chr-agent-label');
+  if (label) {{
+    label.style.borderColor = agent.color;
+    label.innerHTML = `
+      <span class="chr-agent-pill-av" style="background:${{agent.color}};width:22px;height:22px;font-size:9px;">${{agent.initials}}</span>
+      <span style="font-size:12px;font-weight:600;color:var(--text-1);">${{agent.name}}</span>
+      <span style="font-size:11px;color:var(--text-3);">— ${{agent.title}}</span>`;
+  }}
+  const msgs = document.getElementById('chr-study-messages');
+  if (msgs) msgs.innerHTML = `<div style="text-align:center;color:var(--text-3);font-size:12px;padding:20px 0;">
+    Now speaking with ${{agent.name}}. Enter a passage and ask anything.
+  </div>`;
+}}
+
+async function chrStudySend() {{
+  const input = document.getElementById('chr-study-input');
+  const passageEl = document.getElementById('chr-study-passage');
+  const text = (input?.value || '').trim();
+  if (!text) return;
+  const passage = passageEl?.value?.trim() || '';
+
+  const btn = document.getElementById('chr-study-send-btn');
+  if (btn) btn.disabled = true;
+  if (input) {{ input.disabled = true; }}
+
+  _chrStudyMessages.push({{role:'user', text}});
+  input.value = '';
+  input.style.height = 'auto';
+  chrRenderMessages();
+
+  const msgs = document.getElementById('chr-study-messages');
+  const typing = document.createElement('div');
+  typing.className = 'chr-chat-msg';
+  typing.id = 'chr-typing';
+  typing.innerHTML = `<div class="chr-chat-avatar">✦</div><div class="chr-chat-bubble"><span class="chr-typing-dot"></span><span class="chr-typing-dot"></span><span class="chr-typing-dot"></span></div>`;
+  msgs?.appendChild(typing);
+  msgs?.scrollTo(0, msgs.scrollHeight);
+
+  try {{
+    const res = await fetch('/api/faith/chat', {{
+      method: 'POST',
+      headers: {{'Content-Type':'application/json'}},
+      body: JSON.stringify({{
+        agent_id: _chrStudyAgent,
+        passage,
+        messages: _chrStudyMessages.map(m => ({{role: m.role === 'user' ? 'user' : 'assistant', content: m.text}})),
+      }})
+    }});
+    const data = await res.json();
+    const reply = data.reply || data.detail || 'No response.';
+    _chrStudyMessages.push({{role:'assistant', text: reply}});
+  }} catch(e) {{
+    _chrStudyMessages.push({{role:'assistant', text:'Faith agent unavailable right now.'}});
+  }}
+
+  document.getElementById('chr-typing')?.remove();
+  chrRenderMessages();
+  if (btn) btn.disabled = false;
+  if (input) {{ input.disabled = false; input.focus(); }}
+}}
+
+function chrRenderMessages() {{
+  const msgs = document.getElementById('chr-study-messages');
+  if (!msgs) return;
+  if (_chrStudyMessages.length === 0) return;
+  msgs.innerHTML = _chrStudyMessages.map(m => {{
+    const isUser = m.role === 'user';
+    const bubble = isUser
+      ? `<div class="chr-chat-bubble user">${{escHtml(m.text)}}</div>`
+      : `<div class="chr-chat-bubble">${{chrMarkdownToHtml(m.text)}}</div>`;
+    const avatar = isUser ? '👤' : '✦';
+    return `<div class="chr-chat-msg ${{isUser?'user':''}}">${{isUser?'':('<div class="chr-chat-avatar">'+avatar+'</div>')}}${{bubble}}${{isUser?('<div class="chr-chat-avatar">'+avatar+'</div>'):''}}
+    </div>`;
+  }}).join('');
+  msgs.scrollTo(0, msgs.scrollHeight);
+}}
+
+function chrMarkdownToHtml(md) {{
+  // Minimal markdown: **bold**, ### headings, bullets
+  return md
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^###\s+(.+)$/gm,'<h3>$1</h3>')
+    .replace(/^##\s+(.+)$/gm,'<h3>$1</h3>')
+    .replace(/^#\s+(.+)$/gm,'<h3>$1</h3>')
+    .replace(/^\*\s+(.+)$/gm,'<li>$1</li>')
+    .replace(/^-\s+(.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, s => '<ul>'+s+'</ul>')
+    .replace(/\n\n+/g,'</p><p>')
+    .replace(/^(?!<[hul])(.+)$/gm,'$1')
+    .replace(/\n/g,'<br>');
+}}
+
+async function chrStudySaveEntry() {{
+  if (_chrStudyMessages.length === 0) {{ alert('No conversation to save yet.'); return; }}
+  const passage = document.getElementById('chr-study-passage')?.value || 'Psalm 23';
+  const body = _chrStudyMessages.map(m => (m.role==='user'?'You: ':'Chronicle AI: ') + m.text).join('\n\n');
+  const entry = {{
+    id: 'jarvis-study-' + Date.now(),
+    date: new Date().toISOString().slice(0,10),
+    type: 'study',
+    title: `Bible Study — ${{passage}}`,
+    body: body.slice(0, 2000),
+    passage,
+    themes: ['Study'],
+    autoCapture: false,
+  }};
+  await saveEntryToChronicle(entry);
+}}
+
+// ── Shared write-back helpers ──────────────────────────────────
+async function saveEntryToChronicle(entry) {{
+  try {{
+    const res = await fetch('/api/chronicle/write-entry', {{
+      method:'POST',
+      headers:{{'Content-Type':'application/json'}},
+      body: JSON.stringify({{entry}})
+    }});
+    const data = await res.json();
+    if (data.ok) {{
+      showToast('Saved to Chronicle ✓', 'success');
+      // Refresh Chronicle view if active
+      if (document.getElementById('view-chronicle')?.classList.contains('active')) loadChronicle();
+    }} else {{
+      showToast('Failed to save to Chronicle', 'warning');
+    }}
+  }} catch(e) {{
+    showToast('Chronicle unavailable', 'warning');
   }}
 }}
 
+async function markPrayedChronicle(prayerId, currentCount) {{
+  const note = document.getElementById('chr-prayer-note-input')?.value.trim() || '';
+  const today = new Date().toISOString().slice(0,10);
+  try {{
+    const res = await fetch('/api/chronicle/update-prayer', {{
+      method:'POST',
+      headers:{{'Content-Type':'application/json'}},
+      body: JSON.stringify({{
+        id: prayerId,
+        timesPrayed: (currentCount || 0) + 1,
+        lastPrayedAt: today,
+      }})
+    }});
+    const data = await res.json();
+    if (data.ok) {{
+      showToast('Prayer recorded ✓', 'success');
+      closeChrModal('chr-prayer-modal');
+      if (note) {{
+        // Save a note entry too
+        await saveEntryToChronicle({{
+          id: 'jarvis-prayer-note-' + Date.now(),
+          date: today, type: 'prayer', title: 'Prayer note',
+          body: note, themes: ['Prayer'], autoCapture: false,
+        }});
+      }}
+      loadChronicle();
+    }}
+  }} catch(e) {{ showToast('Chronicle unavailable','warning'); }}
+}}
+
+async function markAnsweredChronicle(prayerId) {{
+  const note = document.getElementById('chr-prayer-note-input')?.value.trim() || '';
+  const today = new Date().toISOString().slice(0,10);
+  try {{
+    const res = await fetch('/api/chronicle/update-prayer', {{
+      method:'POST',
+      headers:{{'Content-Type':'application/json'}},
+      body: JSON.stringify({{
+        id: prayerId, answered: true,
+        dateAnswered: today,
+        answerSummary: note || 'Marked answered.',
+      }})
+    }});
+    const data = await res.json();
+    if (data.ok) {{
+      showToast('Prayer marked answered ✓ 🙌', 'success');
+      closeChrModal('chr-prayer-modal');
+      loadChronicle();
+    }}
+  }} catch(e) {{ showToast('Chronicle unavailable','warning'); }}
+}}
+
+function closeChrModal(id) {{
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}}
+
 function renderChronicle(data) {{
-  const list = document.getElementById('chronicle-list');
-  const total = document.getElementById('chronicle-total');
   if (!data) return;
 
-  if (total && data.total != null) total.textContent = data.total + ' entries';
-  if (data.entries && data.entries.length > 0) {{
-    list.innerHTML = data.entries.map(entry => {{
-      const fullContent = entry.content || '';
-      const shortContent = fullContent.slice(0, 120);
-      const contentHtml = fullContent.length > 120
-        ? `<div class="chronicle-text expand-toggle" data-full="${{escHtml(fullContent)}}" data-short="${{escHtml(shortContent)}}" data-expanded="0" title="Click to expand" onclick="toggleExpand(this)" style="cursor:pointer;">${{escHtml(shortContent)}}…</div>`
-        : `<div class="chronicle-text">${{escHtml(shortContent)}}</div>`;
-      return `
-        <div class="chronicle-entry">
-          <div class="chronicle-ts">${{escHtml(entry.ts || entry.created_at || '—')}}</div>
-          ${{contentHtml}}
-          <div class="chronicle-tags">${{(entry.tags || []).map(t => `<span class="pill pill-hue">${{escHtml(t)}}</span>`).join('')}}</div>
-        </div>
-      `;
-    }}).join('');
-  }} else {{
-    list.innerHTML = '<div class="chronicle-entry"><div class="chronicle-ts">No entries found</div></div>';
+  const entries  = data.entries || [];
+  const prayers  = data.prayer_items || [];
+  const rhythms  = data.formation_rhythms || [];
+  const tags     = data.tags || [];
+
+  // ── Stats ────────────────────────────────────────────────────
+  const _set = (id, v) => {{ const el = document.getElementById(id); if (el) el.textContent = v; }};
+  _set('chronicle-total',      data.total ?? entries.length);
+  _set('chr-active-prayers',   data.active_prayers ?? '—');
+  _set('chr-answered-prayers', data.answered_prayers ?? '—');
+  _set('chr-rhythms-count',    rhythms.length || '—');
+
+  // ── Entry feed ────────────────────────────────────────────────
+  const TYPE_LABELS = {{
+    insight: 'Insight', prayer: 'Prayer', study: 'Study',
+    reflection: 'Reflection', note: 'Note',
+  }};
+  const list = document.getElementById('chronicle-list');
+  if (list) {{
+    if (entries.length === 0) {{
+      list.innerHTML = `<div class="chr-entry-card" style="text-align:center;color:var(--text-3);padding:32px;">
+        No entries found.${{data.chronicle_available === false ? ' Chronicle snapshot not found.' : ''}}
+      </div>`;
+    }} else {{
+      list.innerHTML = entries.map(e => {{
+        const typeClass = 'chr-type-' + (e.type || 'note');
+        const typeLbl   = TYPE_LABELS[e.type] || e.type || 'Note';
+        const themes    = (e.themes || []).map(t => `<span class="chr-theme-tag">${{escHtml(t)}}</span>`).join('');
+        const passage   = e.passage ? `<span class="chr-passage">${{escHtml(e.passage)}}</span>` : '';
+        return `<div class="chr-entry-card ${{typeClass}}" onclick="openEntryModal(${{JSON.stringify(e).replace(/\'/g,'&apos;')}})" style="cursor:pointer;">
+          <div class="chr-entry-type-bar"></div>
+          <div class="chr-entry-header">
+            <span class="chr-entry-type-pill">${{escHtml(typeLbl)}}</span>
+            <span class="chr-entry-title">${{escHtml(e.title || '—')}}</span>
+            <span class="chr-entry-date">${{escHtml(e.date || '')}}</span>
+          </div>
+          ${{e.body ? `<div class="chr-entry-body">${{escHtml(e.body)}}</div>` : ''}}
+          ${{(passage || themes) ? `<div class="chr-entry-footer">${{passage}}${{themes}}</div>` : ''}}
+        </div>`;
+      }}).join('');
+    }}
   }}
 
-  if (data.tags) {{
-    const cloud = document.getElementById('tag-cloud');
-    cloud.innerHTML = data.tags.map(t => `<span class="tag-chip" onclick="searchChronicle('${{escHtml(t)}}')">${{escHtml(t)}}</span>`).join('');
+  // ── Prayer list ───────────────────────────────────────────────
+  const prayerEl = document.getElementById('chr-prayer-list');
+  if (prayerEl) {{
+    if (prayers.length === 0) {{
+      prayerEl.innerHTML = '<div style="padding:14px 16px;color:var(--text-3);font-size:12px;">No prayer items.</div>';
+    }} else {{
+      // Active first, then answered
+      const sorted = [...prayers].sort((a, b) => (a.answered ? 1 : 0) - (b.answered ? 1 : 0));
+      prayerEl.innerHTML = sorted.map(p => {{
+        const catClass = 'chr-cat-' + (p.category || 'needs');
+        const answered = p.answered ? 'chr-prayer-answered' : '';
+        const count    = p.timesPrayed ? `${{p.timesPrayed}}×` : '';
+        return `<div class="chr-prayer-item" onclick="openPrayerModal(${{JSON.stringify(p).replace(/\'/g,'&apos;')}})" style="cursor:pointer;">
+          <span class="chr-prayer-cat ${{catClass}}">${{escHtml(p.category || '—')}}</span>
+          <span class="chr-prayer-text ${{answered}}">${{escHtml(p.text || '—')}}</span>
+          ${{count ? `<span class="chr-prayer-count">${{escHtml(count)}}</span>` : ''}}
+        </div>`;
+      }}).join('');
+    }}
+  }}
+
+  // ── Formation rhythms ─────────────────────────────────────────
+  const rhythmsEl = document.getElementById('chr-rhythms-list');
+  if (rhythmsEl) {{
+    if (rhythms.length === 0) {{
+      rhythmsEl.innerHTML = '<div style="padding:14px 16px;color:var(--text-3);font-size:12px;">No rhythms configured.</div>';
+    }} else {{
+      rhythmsEl.innerHTML = rhythms.map(r => {{
+        return `<div class="chr-rhythm-item">
+          <div class="chr-rhythm-title">
+            ${{escHtml(r.title || '—')}}
+            <span class="chr-rhythm-cadence">${{escHtml(r.cadence || '')}}</span>
+          </div>
+          ${{r.focus ? `<div class="chr-rhythm-focus">${{escHtml(r.focus)}}</div>` : ''}}
+          ${{r.relatedPassage ? `<div class="chr-rhythm-passage">${{escHtml(r.relatedPassage)}}</div>` : ''}}
+        </div>`;
+      }}).join('');
+    }}
+  }}
+
+  // ── Tag cloud ─────────────────────────────────────────────────
+  const cloud = document.getElementById('tag-cloud');
+  if (cloud) {{
+    if (tags.length === 0) {{
+      cloud.innerHTML = '<span style="color:var(--text-3);font-size:12px;">No themes yet.</span>';
+    }} else {{
+      cloud.innerHTML = tags.map(t =>
+        `<span class="tag-chip" onclick="searchChronicle('${{escHtml(t)}}')">${{escHtml(t)}}</span>`
+      ).join('');
+    }}
   }}
 }}
 
@@ -10235,6 +13305,62 @@ function handlePacket(pkt) {{
     case 'briefing_update':   renderBriefing(pkt.data);    break;
     case 'toast':             showToast(pkt.message, pkt.level || 'info'); break;
     case 'layout.mode_changed': if (currentView === 'overview') loadLayoutState(); break;
+    case 'layout.alert':
+      if (currentView === 'overview') {{
+        // Patch the live alert state and re-render banner + pulse rings in-place
+        // without a full layout reload (cards don't move, just the banner updates)
+        if (_layoutState) {{
+          _layoutState.alerts = pkt.alerts || [];
+          applyAlertBanner(_layoutState.alerts);
+          // Re-apply pulse rings: clear old ones, set new
+          document.querySelectorAll('[data-card]').forEach(el => {{
+            el.classList.remove('alert-pulse-amber','alert-pulse-red','alert-pulse-blue');
+          }});
+          (_layoutState.alerts || []).forEach(a => {{
+            const el = document.querySelector(`[data-card="${{a.card}}"]`);
+            if (el) el.classList.add('alert-pulse-' + a.level);
+          }});
+        }}
+        // If a new alert appeared, show a toast too
+        if (pkt.alerts && pkt.alerts.length > 0) {{
+          const top = pkt.alerts[0];
+          showToast(top.message || 'Heads up', top.level === 'red' ? 'error' : 'warning');
+        }}
+      }} else if (pkt.alerts && pkt.alerts.some(a => a.level === 'red' || a.level === 'amber')) {{
+        const top = pkt.alerts.find(a => a.level === 'red') || pkt.alerts[0];
+        showToast(top.message || 'Action needed', top.level === 'red' ? 'error' : 'warning');
+      }}
+      break;
+    case 'wi.daily_briefing.ready':
+      if (currentView === 'catalyst') {{
+        _wiBriefingData = null;
+        if (_wiCurrentTab === 'briefing') wiLoadBriefing();
+        showToast('Daily briefing ready 📋', 'info');
+      }}
+      break;
+    case 'wi.email_sweep.completed':
+      if (currentView === 'catalyst') {{
+        wiLoadSummary();
+        if (_wiCurrentTab === 'signals') wiLoadSignals();
+      }}
+      break;
+    case 'wi.meeting_prep.ready':
+      if (currentView === 'catalyst') {{
+        showToast('Meeting prep ready 📅', 'info');
+        if (_wiCurrentTab === 'briefing') wiLoadBriefing();
+      }}
+      break;
+    case 'wi.commitments.updated':
+      if (currentView === 'catalyst') {{
+        wiLoadCommitments();
+        wiLoadSummary();
+        if (_wiCurrentTab === 'tasks') wiLoadTasks();
+      }}
+      break;
+    case 'agent_roster_updated':
+      // A new agent was registered from any external system — reload the roster
+      if (currentView === 'agents') loadAgentRoster();
+      break;
     case 'agent_status': {{
       const agent = AGENTS.find(a => a.id === pkt.agent_id);
       if (agent) {{ agent.status = pkt.status; renderAgents(currentFilter); updateActiveCounts(); }}
@@ -10391,6 +13517,9 @@ async function loadHealth() {{
   loadLongevityInHealth();
   // Load digital twin
   loadHealthTwin();
+  // Load Sam Wilson check-in banner + daily protocol
+  loadSamCheckin();
+  loadSamProtocol();
   // Init health chat (load doctor roster)
   hchatInit();
 }}
@@ -11436,17 +14565,49 @@ function _buildHealthSparkline(points, color) {{
   </svg>`;
 }}
 
+/* Compact 36px sparkline — just the trend, no labels */
+function _buildMiniSparkline(points, color) {{
+  if (!points || points.length < 2) return '';
+  const vals = points.map(p => p.y);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const range = max - min || 1;
+  const W = 200, H = 30, PAD = 3;
+  const coords = points.map((p, i) => [
+    PAD + (i / (points.length - 1)) * (W - PAD * 2),
+    H - PAD - ((p.y - min) / range) * (H - PAD * 2)
+  ]);
+  const path = coords.map((c, i) => (i === 0 ? `M${{c[0]}},${{c[1]}}` : `L${{c[0]}},${{c[1]}}`)).join(' ');
+  const area = `${{path}} L${{coords[coords.length-1][0]}},${{H}} L${{PAD}},${{H}} Z`;
+  const last = coords[coords.length - 1];
+  const gid  = 'ms' + (Math.random() * 1e6 | 0);
+  return `<svg viewBox="0 0 ${{W}} ${{H}}" style="width:100%;height:36px;" preserveAspectRatio="none">
+    <defs><linearGradient id="${{gid}}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${{color}}" stop-opacity=".3"/>
+      <stop offset="100%" stop-color="${{color}}" stop-opacity=".02"/>
+    </linearGradient></defs>
+    <path d="${{area}}" fill="url(#${{gid}})"/>
+    <path d="${{path}}" fill="none" stroke="${{color}}" stroke-width="1.8" stroke-linejoin="round"/>
+    <circle cx="${{last[0]}}" cy="${{last[1]}}" r="2.5" fill="${{color}}"/>
+  </svg>`;
+}}
+
 async function _renderHealthSparklines() {{
-  // ── Static lab results (known values by date) ──
-  const LAB_SPARKS = {{
-    'spark-a1c':   {{ points: [{{y:10.2,x:"'21"}},{{y:7.1,x:"mid"}},{{y:6.3,x:"'23"}},{{y:5.9,x:"'24"}},{{y:7.3,x:"'26"}}], color: '#d29922' }},
-    'spark-ldl':   {{ points: [{{y:99,x:"'21"}},{{y:138,x:"'24"}},{{y:146,x:"'25"}},{{y:156,x:"'26"}}], color: '#ef4444' }},
-    'spark-egfr':  {{ points: [{{y:98,x:"'20"}},{{y:91,x:"'22"}},{{y:87,x:"'26"}}], color: '#d29922' }},
-    'spark-kplus': {{ points: [{{y:5.4,x:"'25"}},{{y:4.5,x:"'26"}}], color: '#22c55e' }},
+  // ── Static lab results (known historical values) ──
+  const LAB_DATA = {{
+    a1c:   {{ points: [{{y:10.2,x:"'21"}},{{y:7.1,x:"mid"}},{{y:6.3,x:"'23"}},{{y:5.9,x:"'24"}},{{y:7.3,x:"'26"}}], color: '#d29922' }},
+    ldl:   {{ points: [{{y:99,x:"'21"}},{{y:138,x:"'24"}},{{y:146,x:"'25"}},{{y:156,x:"'26"}}], color: '#ef4444' }},
+    egfr:  {{ points: [{{y:98,x:"'20"}},{{y:91,x:"'22"}},{{y:87,x:"'26"}}], color: '#d29922' }},
+    kplus: {{ points: [{{y:5.4,x:"'25"}},{{y:4.5,x:"'26"}}], color: '#22c55e' }},
   }};
-  Object.entries(LAB_SPARKS).forEach(([id, cfg]) => {{
-    const el = document.getElementById(id);
+  // Metric strip (larger sparklines)
+  Object.entries(LAB_DATA).forEach(([key, cfg]) => {{
+    const el = document.getElementById('spark-' + (key === 'kplus' ? 'kplus' : key));
     if (el) el.innerHTML = _buildHealthSparkline(cfg.points, cfg.color);
+  }});
+  // Lab Trends compact sparklines (unique IDs — no collision with strip)
+  Object.entries(LAB_DATA).forEach(([key, cfg]) => {{
+    const el = document.getElementById('spark-lab-' + key);
+    if (el) el.innerHTML = _buildMiniSparkline(cfg.points, cfg.color);
   }});
 
   // ── Live metrics from DB history (last 30 days) ──
@@ -11495,6 +14656,527 @@ async function _renderHealthSparklines() {{
       }}
     }} catch(e) {{}}
   }} catch(e) {{}}
+}}
+
+// ─── Sam Wilson Daily Protocol ──────────────────────────────────────────────
+let _samProtocol = null;
+let _samHistory  = [];
+let _samChecked  = new Set();
+
+/* ─── SAM WILSON OVERVIEW CARD ─────────────────────────────────────── */
+async function loadSamOverviewCard() {{
+  const content = document.getElementById('sam-ov-content');
+  const badge   = document.getElementById('sam-ov-streak-badge');
+  if (!content) return;
+
+  const isEvening = new Date().getHours() >= 16;
+  try {{
+    const [mRes, pRes] = await Promise.all([
+      fetch('/api/health/sam/morning-checkin'),
+      fetch('/api/health/sam/daily'),
+    ]);
+    const m  = mRes.ok  ? await mRes.json() : {{}};
+    const pd = pRes.ok  ? await pRes.json() : {{}};
+    const p  = pd.protocol || {{}};
+    const streak = (m.streak || pd.streak || {{}}).streak || 0;
+
+    if (badge) {{
+      if (streak > 0) {{ badge.textContent = '🔥 ' + streak + 'd'; badge.style.display = ''; }}
+      else badge.style.display = 'none';
+    }}
+
+    if (!isEvening) {{
+      // ── Morning mode ───────────────────────────────────────────────
+      const readiness = m.readiness != null ? m.readiness : null;
+      const hrv = m.hrv;
+      const sleep = m.sleep_hours != null ? parseFloat(m.sleep_hours).toFixed(1) : null;
+      const mv = p.movement || {{}};
+      const focus = mv.primary || m.focus_primary || 'Zone 2 cardio';
+      const watch = (p.nutrition || {{}}).watch || m.nutrition_watch;
+
+      content.innerHTML = `
+        <div style="font-size:12px;font-style:italic;color:var(--blue);margin-bottom:10px;line-height:1.4;">
+          "${{escHtml(p.greeting || m.greeting || 'On your left, brother.')}}"
+        </div>
+        ${{readiness || hrv || sleep ? `<div style="display:flex;gap:12px;margin-bottom:10px;">
+          ${{readiness ? `<div style="text-align:center;">
+            <div style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--amber);">${{readiness}}</div>
+            <div style="font-size:8px;font-weight:700;text-transform:uppercase;color:var(--text-3);">Ready</div>
+          </div><div style="width:1px;background:rgba(255,255,255,0.12);margin:0 2px;"></div>` : ''}}
+          ${{hrv ? `<div style="text-align:center;">
+            <div style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--text-1);">${{hrv}}</div>
+            <div style="font-size:8px;font-weight:700;text-transform:uppercase;color:var(--text-3);">HRV ms</div>
+          </div><div style="width:1px;background:rgba(255,255,255,0.12);margin:0 2px;"></div>` : ''}}
+          ${{sleep ? `<div style="text-align:center;">
+            <div style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--text-1);">${{sleep}}</div>
+            <div style="font-size:8px;font-weight:700;text-transform:uppercase;color:var(--text-3);">Sleep h</div>
+          </div>` : ''}}
+        </div>` : ''}}
+        <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.10);border-radius:8px;padding:8px 10px;margin-bottom:8px;">
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:3px;">💪 Today</div>
+          <div style="font-size:12px;font-weight:600;color:var(--text-1);">${{escHtml(focus)}}</div>
+        </div>
+        ${{watch ? `<div style="font-size:11px;color:var(--amber);background:rgba(217,119,6,.10);border:1px solid rgba(217,119,6,.25);border-radius:6px;padding:5px 8px;">⚠ ${{escHtml(watch)}}</div>` : ''}}
+        <div style="margin-top:10px;">
+          <span style="font-size:11px;color:var(--blue);cursor:pointer;" onclick="switchView('health')">Full protocol + chat →</span>
+        </div>
+      `;
+    }} else {{
+      // ── Evening mode ───────────────────────────────────────────────
+      const checklist = [
+        {{id:'workout',   icon:'🏃', label:(p.movement||{{}}).primary||'Zone 2 cardio'}},
+        {{id:'breakfast', icon:'🥚', label:'Clean breakfast'}},
+        {{id:'hydration', icon:'💧', label:`${{(p.hydration||{{}}).target_oz||96}}oz water`}},
+        {{id:'recovery',  icon:'😴', label:`Lights out by ${{(p.recovery||{{}}).bedtime||'10:30 PM'}}`}},
+      ];
+      const itemsHtml = checklist.map(item => `
+        <label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;"
+               onclick="samOvToggle(this)">
+          <input type="checkbox" style="accent-color:#22c55e;cursor:pointer;">
+          <span style="font-size:12px;color:var(--text-2);">${{item.icon}} ${{escHtml(item.label)}}</span>
+        </label>`).join('');
+
+      content.innerHTML = `
+        <div style="font-size:12px;font-style:italic;color:var(--blue);margin-bottom:10px;">"How'd today go, brother?"</div>
+        <div id="sam-ov-list">${{itemsHtml}}</div>
+        <button onclick="submitSamOvCheckin(this)"
+          style="width:100%;margin-top:10px;padding:7px;border-radius:8px;
+                 background:rgba(99,102,241,0.20);border:1px solid rgba(99,102,241,0.40);
+                 color:#a5b4fc;font-size:11px;font-weight:700;cursor:pointer;">
+          Log My Day →
+        </button>
+        <div id="sam-ov-reply" style="display:none;margin-top:8px;font-size:11px;
+             color:var(--text-2);font-style:italic;line-height:1.5;
+             padding:8px 10px;background:rgba(99,102,241,0.10);border-radius:6px;"></div>
+      `;
+    }}
+  }} catch(e) {{
+    if (content) content.innerHTML = '<div style="font-size:11px;color:var(--text-3);">On your left.</div>';
+  }}
+}}
+
+function samOvToggle(label) {{
+  const cb = label.querySelector('input[type=checkbox]');
+  if (cb) cb.checked = !cb.checked;
+  const txt = label.querySelector('span');
+  if (txt) txt.style.textDecoration = cb && cb.checked ? 'line-through' : '';
+}}
+
+async function submitSamOvCheckin(btn) {{
+  const checks = document.querySelectorAll('#sam-ov-list input[type=checkbox]');
+  const labels = document.querySelectorAll('#sam-ov-list label span');
+  const completed = [];
+  checks.forEach((cb, i) => {{ if (cb.checked) completed.push(labels[i]?.textContent?.trim() || 'item'); }});
+  if (btn) {{ btn.textContent = 'Logging…'; btn.disabled = true; }}
+  try {{
+    const res = await fetch('/api/health/sam/evening-checkin', {{
+      method: 'POST',
+      headers: {{'Content-Type':'application/json'}},
+      body: JSON.stringify({{completed, notes: ''}}),
+    }});
+    const d = await res.json();
+    const replyEl = document.getElementById('sam-ov-reply');
+    if (replyEl) {{
+      replyEl.textContent = d.reply || '';
+      replyEl.style.display = 'block';
+    }}
+    const pct = d.adherence_pct || 0;
+    if (btn) {{ btn.textContent = `✓ ${{pct}}% logged`; }}
+  }} catch(e) {{
+    if (btn) {{ btn.textContent = 'Log My Day →'; btn.disabled = false; }}
+  }}
+}}
+
+/* ─── FISK FINANCIAL CARD ─────────────────────────────────────────── */
+async function loadFiskCard() {{
+  const content = document.getElementById('fisk-ov-content');
+  const badge   = document.getElementById('fisk-health-badge');
+  if (!content) return;
+  try {{
+    const res = await fetch('/api/finance/snapshot');
+    if (!res.ok) {{
+      if (content) content.innerHTML = `<div style="font-size:11px;color:var(--text-3);margin-bottom:8px;">Financial data unavailable.</div>`;
+      return;
+    }}
+    const d = await res.json();
+    const _emptyState = () => `
+      <div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">No accounts yet — add your balances to get started.</div>
+      <button class="finance-setup-link" onclick="openFinanceSetup()">⚙ Set up accounts →</button>`;
+    if (d.net_worth == null) {{
+      if (content) content.innerHTML = _emptyState();
+      return;
+    }}
+
+    const fmt = (n) => n == null ? '—' : '$' + Math.abs(n).toLocaleString('en-US', {{maximumFractionDigits:0}});
+    const nw  = d.net_worth;
+    const cf  = d.monthly_cashflow;
+    const pi  = d.passive_income_monthly;
+    const score = d.health_score;
+
+    if (badge) {{
+      badge.textContent = score != null ? score + '/10' : '—';
+      badge.style.color = score >= 7 ? 'var(--green)' : score >= 4 ? 'var(--amber)' : 'var(--red)';
+    }}
+
+    const cfColor = cf == null ? 'var(--text-2)' : cf >= 0 ? 'var(--green)' : 'var(--red)';
+    const cfSign  = cf == null ? '' : cf >= 0 ? '+' : '-';
+
+    // Goals progress (top 2)
+    const goals = (d.goals_progress || []).slice(0,2);
+    const goalsHtml = goals.map(g => `
+      <div style="margin-top:8px;">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-3);margin-bottom:3px;">
+          <span>${{escHtml(g.title)}}</span><span>${{g.percent_complete}}%</span>
+        </div>
+        <div style="height:3px;background:rgba(255,255,255,0.1);border-radius:2px;">
+          <div style="height:100%;width:${{Math.min(g.percent_complete,100)}}%;background:var(--blue);border-radius:2px;"></div>
+        </div>
+      </div>`).join('');
+
+    content.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div style="text-align:center;padding:8px;background:rgba(255,255,255,0.06);border-radius:8px;">
+          <div style="font-size:16px;font-weight:700;font-family:var(--font-mono);color:var(--text-1);">${{fmt(nw)}}</div>
+          <div style="font-size:8px;font-weight:700;text-transform:uppercase;color:var(--text-3);margin-top:2px;">Net Worth</div>
+        </div>
+        <div style="text-align:center;padding:8px;background:rgba(255,255,255,0.06);border-radius:8px;">
+          <div style="font-size:16px;font-weight:700;font-family:var(--font-mono);color:${{cfColor}};">${{cfSign}}${{cf != null ? Math.abs(cf).toLocaleString('en-US',{{maximumFractionDigits:0}}) : '—'}}</div>
+          <div style="font-size:8px;font-weight:700;text-transform:uppercase;color:var(--text-3);margin-top:2px;">Cashflow/mo</div>
+        </div>
+      </div>
+      ${{pi > 0 ? `<div style="font-size:11px;color:var(--green);margin-bottom:8px;">💰 Passive: ${{fmt(pi)}}/mo</div>` : ''}}
+      ${{d.fisk_assessment ? `<div style="font-size:10px;color:var(--text-3);font-style:italic;line-height:1.4;border-top:1px solid rgba(255,255,255,0.08);padding-top:8px;margin-bottom:6px;">"${{escHtml(d.fisk_assessment)}}"</div>` : ''}}
+      ${{goalsHtml}}
+    `;
+  }} catch(e) {{
+    console.error('loadFiskCard', e);
+    if (content) content.innerHTML = `<div style="font-size:11px;color:var(--text-3);">Financial data unavailable.</div>`;
+  }}
+}}
+
+async function loadSamProtocol() {{
+  try {{
+    const res = await fetch('/api/health/sam/daily').catch(() => null);
+    if (!res || !res.ok) return;
+    const d = await res.json();
+    _samProtocol = d.protocol || {{}};
+    renderSamProtocol(_samProtocol, d.streak || {{}});
+  }} catch(e) {{ console.error('loadSamProtocol', e); }}
+}}
+
+function renderSamProtocol(p, streak) {{
+  const el = document.getElementById('sam-protocol-content');
+  if (!el || !p) return;
+
+  // Streak badge
+  const sb = document.getElementById('sam-streak-badge');
+  if (sb && streak.streak > 0) {{
+    sb.textContent = '🔥 ' + streak.streak + ' day streak';
+    sb.style.display = '';
+  }}
+
+  const t = p.targets || {{}};
+  const mv = p.movement || {{}};
+  const nu = p.nutrition || {{}};
+  const hy = p.hydration || {{}};
+  const rc = p.recovery  || {{}};
+
+  el.innerHTML = `
+    <!-- Greeting -->
+    <div style="font-size:13px;font-weight:600;color:var(--blue);margin-bottom:12px;font-style:italic;">"${{escHtml(p.greeting || 'On your left.')}}"</div>
+
+    <!-- Movement -->
+    <div style="margin-bottom:10px;">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px;">💪 Movement</div>
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:4px;">
+        <input type="checkbox" id="sc-movement" onchange="samCheck('movement',this.checked)" style="margin-top:2px;cursor:pointer;accent-color:var(--blue);">
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--text-1);">${{escHtml(mv.primary || '—')}}</div>
+          <div style="font-size:11px;color:var(--text-3);margin-top:1px;">${{escHtml(mv.details || '')}}</div>
+          <div style="font-size:10px;color:var(--blue);margin-top:2px;">⏰ ${{escHtml(mv.timing || '')}}</div>
+          ${{mv.alternative ? `<div style="font-size:10px;color:var(--text-3);margin-top:2px;">Alt: ${{escHtml(mv.alternative)}}</div>` : ''}}
+        </div>
+      </div>
+    </div>
+
+    <!-- Nutrition -->
+    <div style="margin-bottom:10px;">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px;">🥗 Nutrition <span style="font-weight:400;text-transform:none;">&nbsp;·&nbsp;${{t.protein_g || 85}}g protein · ${{t.fiber_g || 35}}g fiber</span></div>
+      ${{['breakfast','lunch','dinner'].map(meal => `
+        <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:4px;">
+          <input type="checkbox" id="sc-${{meal}}" onchange="samCheck('${{meal}}',this.checked)" style="margin-top:2px;cursor:pointer;accent-color:var(--blue);">
+          <div>
+            <span style="font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;">${{meal}}</span>
+            <span style="font-size:12px;color:var(--text-2);margin-left:6px;">${{escHtml(nu[meal] || '—')}}</span>
+          </div>
+        </div>`).join('')}}
+      ${{nu.watch ? `<div style="font-size:10px;color:var(--amber);margin-top:4px;padding:4px 8px;background:rgba(217,119,6,.1);border-radius:4px;">⚠ ${{escHtml(nu.watch)}}</div>` : ''}}
+    </div>
+
+    <!-- Hydration -->
+    <div style="margin-bottom:10px;">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px;">💧 Hydration</div>
+      <div style="display:flex;align-items:flex-start;gap:8px;">
+        <input type="checkbox" id="sc-hydration" onchange="samCheck('hydration',this.checked)" style="margin-top:2px;cursor:pointer;accent-color:var(--blue);">
+        <div>
+          <div style="font-size:12px;color:var(--text-2);">${{hy.target_oz || 96}}oz · ${{escHtml(hy.schedule || '')}}</div>
+          <div style="font-size:10px;color:var(--text-3);margin-top:2px;">${{escHtml(hy.why || '')}}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recovery -->
+    <div style="margin-bottom:12px;">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px;">😴 Recovery</div>
+      <div style="display:flex;align-items:flex-start;gap:8px;">
+        <input type="checkbox" id="sc-recovery" onchange="samCheck('recovery',this.checked)" style="margin-top:2px;cursor:pointer;accent-color:var(--blue);">
+        <div>
+          <div style="font-size:12px;color:var(--text-2);">${{rc.sleep_target_h || 7.5}}h · Lights out ${{escHtml(rc.bedtime || '10:30 PM')}}</div>
+          <div style="font-size:10px;color:var(--text-3);margin-top:2px;">${{escHtml(rc.tip || '')}}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sam Says -->
+    <div style="border-top:1px solid var(--border);padding-top:10px;display:flex;align-items:flex-start;gap:8px;">
+      <span style="font-size:18px;">🦅</span>
+      <div style="font-size:11px;color:var(--text-2);font-style:italic;line-height:1.5;">"${{escHtml(p.sam_says || '')}}"</div>
+    </div>
+  `;
+}}
+
+function samCheck(item, checked) {{
+  if (checked) _samChecked.add(item);
+  else _samChecked.delete(item);
+  // Auto-save after short delay
+  clearTimeout(window._samSaveTimer);
+  window._samSaveTimer = setTimeout(samSave, 2000);
+}}
+
+async function samSave() {{
+  try {{
+    await fetch('/api/health/sam/checkin', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{completed: [..._samChecked]}})
+    }});
+  }} catch(e) {{}}
+}}
+
+/* ─── SAM CHECK-IN BANNER ─────────────────────────────────────────── */
+let _samCheckinItems = [];  // evening checklist state
+
+async function loadSamCheckin() {{
+  const isEvening = new Date().getHours() >= 16;
+  if (isEvening) {{
+    await renderSamEveningCheckin();
+  }} else {{
+    await renderSamMorningCheckin();
+  }}
+}}
+
+async function renderSamMorningCheckin() {{
+  const banner = document.getElementById('sam-checkin-banner');
+  if (!banner) return;
+  try {{
+    const [mRes, pRes] = await Promise.all([
+      fetch('/api/health/sam/morning-checkin'),
+      fetch('/api/health/sam/daily'),
+    ]);
+    const m = mRes.ok ? await mRes.json() : {{}};
+    const pd = pRes.ok ? await pRes.json() : {{}};
+    const streak = m.streak || pd.streak || {{}};
+
+    const readiness = m.readiness != null ? m.readiness : '—';
+    const hrv = m.hrv != null ? m.hrv : '—';
+    const sleep = m.sleep_hours != null ? parseFloat(m.sleep_hours).toFixed(1) : '—';
+    const streakN = streak.streak || 0;
+
+    banner.innerHTML = `
+      <div class="sam-checkin-mode-chip morning">☀️ Morning Check-In</div>
+      <div class="sam-checkin-greeting">"${{escHtml(m.greeting || 'On your left. Let\'s work, brother.')}}"</div>
+
+      <div class="sam-checkin-meta">
+        ${{readiness !== '—' ? `<div class="sam-checkin-stat">
+          <div class="sam-checkin-stat-val" style="color:var(--amber)">${{readiness}}</div>
+          <div class="sam-checkin-stat-lbl">Readiness</div>
+        </div><div class="sam-checkin-divider"></div>` : ''}}
+        ${{hrv !== '—' ? `<div class="sam-checkin-stat">
+          <div class="sam-checkin-stat-val">${{hrv}}</div>
+          <div class="sam-checkin-stat-lbl">HRV ms</div>
+        </div><div class="sam-checkin-divider"></div>` : ''}}
+        ${{sleep !== '—' ? `<div class="sam-checkin-stat">
+          <div class="sam-checkin-stat-val">${{sleep}}</div>
+          <div class="sam-checkin-stat-lbl">Sleep h</div>
+        </div>` : ''}}
+        ${{streakN > 0 ? `<div class="sam-checkin-divider"></div>
+          <div class="sam-checkin-streak">🔥 ${{streakN}} day${{streakN !== 1 ? 's' : ''}}</div>` : ''}}
+      </div>
+
+      <div class="sam-checkin-focus">
+        <div class="sam-checkin-focus-label">💪 Today's Focus</div>
+        <div class="sam-checkin-focus-primary">${{escHtml(m.focus_primary || 'Zone 2 cardio')}}</div>
+        <div class="sam-checkin-focus-detail">${{escHtml(m.focus_details || '')}}
+          ${{m.timing ? ` · <span style="color:var(--blue);">⏰ ${{escHtml(m.timing)}}</span>` : ''}}
+        </div>
+      </div>
+
+      ${{m.nutrition_watch ? `<div class="sam-checkin-watch">⚠ ${{escHtml(m.nutrition_watch)}}</div>` : ''}}
+
+      <div class="sam-checkin-actions">
+        <button class="btn-ghost" style="font-size:11px;padding:6px 14px;"
+          onclick="document.getElementById('sam-protocol-section').scrollIntoView({{behavior:'smooth'}})">
+          View Full Protocol ↓
+        </button>
+        <button class="btn-ghost" style="font-size:11px;padding:6px 14px;"
+          onclick="document.getElementById('sam-chat-input').focus();document.getElementById('sam-chat-input').scrollIntoView({{behavior:'smooth'}})">
+          Talk to Sam 💬
+        </button>
+      </div>
+    `;
+  }} catch(e) {{
+    console.error('renderSamMorningCheckin', e);
+    const banner = document.getElementById('sam-checkin-banner');
+    if (banner) banner.innerHTML = '<div style="font-size:11px;color:var(--text-3);">On your left. Let\'s work.</div>';
+  }}
+}}
+
+async function renderSamEveningCheckin() {{
+  const banner = document.getElementById('sam-checkin-banner');
+  if (!banner) return;
+  try {{
+    const [pRes] = await Promise.all([fetch('/api/health/sam/daily')]);
+    const pd = pRes.ok ? await pRes.json() : {{}};
+    const protocol = pd.protocol || {{}};
+    const streak = pd.streak || {{}};
+    const streakN = streak.streak || 0;
+    const mv = protocol.movement || {{}};
+    const nu = protocol.nutrition || {{}};
+    const hy = protocol.hydration || {{}};
+    const rc = protocol.recovery || {{}};
+
+    // Build checklist from today's protocol
+    _samCheckinItems = [
+      {{id:'workout',   icon:'🏃', label: mv.primary  || 'Zone 2 cardio'}},
+      {{id:'breakfast', icon:'🥚', label: nu.breakfast || 'Clean breakfast'}},
+      {{id:'lunch',     icon:'🥗', label: nu.lunch     || 'Clean lunch'}},
+      {{id:'dinner',    icon:'🍽', label: nu.dinner    || 'Clean dinner'}},
+      {{id:'hydration', icon:'💧', label: `${{hy.target_oz || 96}}oz water`}},
+      {{id:'recovery',  icon:'😴', label: `Lights out by ${{rc.bedtime || '10:30 PM'}}`}},
+    ];
+
+    const itemsHtml = _samCheckinItems.map(item => `
+      <label class="sam-evening-item" id="sei-${{item.id}}" onclick="samEveningToggle('${{item.id}}')">
+        <input type="checkbox" id="sic-${{item.id}}" onclick="event.stopPropagation();samEveningToggle('${{item.id}}')">
+        <span class="sam-evening-item-icon">${{item.icon}}</span>
+        <span class="sam-evening-item-label">${{escHtml(item.label)}}</span>
+      </label>
+    `).join('');
+
+    banner.innerHTML = `
+      <div class="sam-checkin-mode-chip evening">🌙 Evening Check-In</div>
+      <div class="sam-checkin-greeting">"How'd today go, brother?"</div>
+      ${{streakN > 0 ? `<div class="sam-checkin-streak" style="margin-bottom:12px;">🔥 ${{streakN}} day${{streakN !== 1 ? 's' : ''}} — keep it going</div>` : ''}}
+
+      <div class="sam-evening-list" id="sam-evening-list">${{itemsHtml}}</div>
+
+      <textarea class="sam-evening-notes" id="sam-evening-notes"
+        rows="2" placeholder="Any notes? Injuries, energy levels, what got in the way…"></textarea>
+
+      <div class="sam-checkin-actions" style="margin-top:10px;">
+        <button class="btn-accent" style="font-size:11px;padding:7px 18px;flex:1;"
+          onclick="submitSamEveningCheckin()">
+          Log My Day →
+        </button>
+        <button class="btn-ghost" style="font-size:11px;padding:7px 14px;"
+          onclick="document.getElementById('sam-chat-input').focus();document.getElementById('sam-chat-input').scrollIntoView({{behavior:'smooth'}})">
+          Talk to Sam 💬
+        </button>
+      </div>
+
+      <div class="sam-checkin-response" id="sam-checkin-response">
+        <div style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px;">🦅 Sam's Take</div>
+        <div class="sam-checkin-response-text" id="sam-checkin-response-text"></div>
+        <div class="sam-checkin-response-streak" id="sam-checkin-response-streak"></div>
+      </div>
+    `;
+  }} catch(e) {{
+    console.error('renderSamEveningCheckin', e);
+  }}
+}}
+
+function samEveningToggle(id) {{
+  const cb  = document.getElementById('sic-' + id);
+  const row = document.getElementById('sei-' + id);
+  if (!cb || !row) return;
+  cb.checked = !cb.checked;
+  row.classList.toggle('checked', cb.checked);
+}}
+
+async function submitSamEveningCheckin() {{
+  const completed = _samCheckinItems
+    .filter(item => document.getElementById('sic-' + item.id)?.checked)
+    .map(item => item.id);
+  const notes = (document.getElementById('sam-evening-notes')?.value || '').trim();
+
+  const btn = document.querySelector('.sam-checkin-actions .btn-accent');
+  if (btn) {{ btn.textContent = 'Logging…'; btn.disabled = true; }}
+
+  try {{
+    const res = await fetch('/api/health/sam/evening-checkin', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{completed, notes}}),
+    }});
+    const d = await res.json();
+    const pct = d.adherence_pct ?? 0;
+    const streakN = (d.streak || {{}}).streak || 0;
+
+    const respEl = document.getElementById('sam-checkin-response');
+    const textEl = document.getElementById('sam-checkin-response-text');
+    const strEl  = document.getElementById('sam-checkin-response-streak');
+    if (respEl && textEl) {{
+      textEl.textContent = d.reply || '';
+      if (strEl) strEl.textContent = streakN > 0 ? `🔥 ${{streakN}} day streak · ${{pct}}% today` : `${{pct}}% today`;
+      respEl.classList.add('visible');
+      respEl.scrollIntoView({{behavior:'smooth', block:'nearest'}});
+    }}
+    if (btn) {{ btn.textContent = `✓ Logged (${{pct}}%)`; }}
+  }} catch(e) {{
+    console.error('submitSamEveningCheckin', e);
+    if (btn) {{ btn.textContent = 'Log My Day →'; btn.disabled = false; }}
+  }}
+}}
+
+async function samChat() {{
+  const inp = document.getElementById('sam-chat-input');
+  const msgs = document.getElementById('sam-chat-messages');
+  if (!inp || !msgs) return;
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  msgs.style.display = '';
+  msgs.innerHTML += `<div style="margin-bottom:6px;"><b style="color:var(--text-3);">You:</b> ${{escHtml(text)}}</div>`;
+  msgs.innerHTML += `<div id="sam-typing" style="margin-bottom:6px;color:var(--text-3);font-style:italic;">Sam is thinking…</div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+  _samHistory.push({{role:'user', content:text}});
+  try {{
+    const res = await fetch('/api/health/sam/chat', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{message:text, history:_samHistory.slice(-6)}})
+    }});
+    const d = await res.json();
+    const reply = d.reply || '…';
+    document.getElementById('sam-typing')?.remove();
+    msgs.innerHTML += `<div style="margin-bottom:8px;"><b style="color:var(--blue);">Sam:</b> ${{escHtml(reply)}}</div>`;
+    msgs.scrollTop = msgs.scrollHeight;
+    _samHistory.push({{role:'assistant', content:reply}});
+    voiceSpeak(reply);
+  }} catch(e) {{
+    document.getElementById('sam-typing')?.remove();
+    msgs.innerHTML += `<div style="color:var(--red);">Connection error</div>`;
+  }}
 }}
 
 // ─── Health Digital Twin ────────────────────────────────────────────────────
@@ -11559,31 +15241,85 @@ async function loadOverviewHealth() {{
     if (!res || !res.ok) return;
     const d = await res.json();
     const r = d.readiness || {{}};
-    if (badge) badge.textContent = r.score != null ? r.grade : '—';
+    const m = d.metrics   || {{}};
+    if (badge) badge.textContent = r.score != null ? r.grade || r.score : '—';
+
     if (!d.has_data) {{
-      el.innerHTML = '<div style="color:var(--text-3);">No data — configure Health Auto Export</div>';
+      el.innerHTML = '<div style="color:var(--text-3);font-size:11px;">No data — configure Health Auto Export</div>';
       return;
     }}
-    const m     = d.metrics || {{}};
-    const lines = [];
-    if (r.score != null) lines.push(`<div>Readiness: <b style="color:var(--amber)">${{r.score}}/100</b> (${{r.grade}})</div>`);
-    if (m.sleep_hours)   lines.push(`<div>Sleep: <b>${{m.sleep_hours}}h</b></div>`);
-    if (m.hrv)           lines.push(`<div>HRV: <b>${{m.hrv}}ms</b></div>`);
-    if (m.resting_hr)    lines.push(`<div>HR: <b>${{m.resting_hr}}bpm</b></div>`);
-    if (m.steps)         lines.push(`<div>Steps: <b>${{Number(m.steps).toLocaleString()}}</b></div>`);
-    // Longevity line
-    if (lonRes && lonRes.ok) {{
-      const lon = await lonRes.json();
-      const le = lon.estimated_life_expectancy || lon.life_expectancy;
-      if (le) {{
-        const rem = lon.years_remaining || (le - 52);
-        lines.push(`<div style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border);">LE: <b style="color:var(--blue);">${{le}} yr</b> <span style="color:var(--text-3);font-size:10px;">(${{rem}} remaining)</span></div>`);
+
+    // ── Build Top 3 priority items ────────────────────────────────────────
+    const items = [];
+
+    // 1. Readiness — what today's energy budget looks like
+    if (r.score != null) {{
+      const sc  = r.score;
+      const col = sc >= 80 ? 'var(--green)' : sc >= 60 ? 'var(--amber)' : 'var(--red,#ef4444)';
+      const msg = sc >= 85 ? 'Green light — full capacity' :
+                  sc >= 70 ? 'Moderate — manage intensity' :
+                  sc >= 50 ? 'Recovery day recommended' : 'Rest priority today';
+      items.push({{ icon: sc >= 80 ? '✓' : '!', label: 'Readiness', val: sc + '/100 ' + (r.grade || ''), note: msg, col }});
+    }}
+
+    // 2. Recovery quality — sleep + HRV together
+    const sl  = m.sleep_hours, hrv = m.hrv, hr = m.resting_hr;
+    if (sl || hrv) {{
+      const parts = [];
+      if (sl)  parts.push(sl + 'h sleep');
+      if (hrv) parts.push('HRV ' + hrv + 'ms');
+      if (hr)  parts.push(hr + 'bpm');
+      const ok  = (sl >= 7) && (hrv >= 45);
+      const col = ok ? 'var(--green)' : 'var(--amber)';
+      items.push({{ icon: ok ? '✓' : '→', label: 'Recovery', val: parts.join(' · '), note: ok ? 'Well rested' : 'Sub-optimal recovery', col }});
+    }}
+
+    // 3. Priority watchpoint — anomaly if present, else K+/LDL safety note + LE
+    const anom = d.anomalies || [];
+    if (anom.length) {{
+      const a   = anom[0];
+      const col = 'var(--amber)';
+      items.push({{ icon: '⚠', label: 'Alert', val: a.metric || 'Lab flag', note: (a.message || a.detail || '').slice(0,60), col }});
+    }} else {{
+      let leStr = '';
+      if (lonRes && lonRes.ok) {{
+        const lon = await lonRes.json();
+        const le  = lon.estimated_life_expectancy || lon.life_expectancy;
+        if (le) leStr = 'LE ' + le + 'yr · ' + (lon.years_remaining || (le - 52)) + ' remaining';
       }}
+      items.push({{ icon: '→', label: 'Watch', val: 'K⁺  ·  LDL 156↑', note: leStr || 'Monitor: ARB + spiro · ezetimibe target', col: 'var(--text-2)' }});
     }}
-    el.innerHTML = lines.join('') || '<div style="color:var(--text-3);">No data</div>';
-    if (d.anomalies && d.anomalies.length) {{
-      el.innerHTML += `<div style="color:var(--amber);font-size:10px;margin-top:4px;">! ${{d.anomalies.length}} alert(s)</div>`;
-    }}
+
+    // ── Render ────────────────────────────────────────────────────────────
+    el.innerHTML = items.slice(0, 3).map((it, i) => `
+      <div style="${{i > 0 ? 'border-top:1px solid var(--border);margin-top:7px;padding-top:7px;' : ''}}display:flex;align-items:flex-start;gap:8px;">
+        <span style="font-size:10px;color:${{it.col}};margin-top:2px;flex-shrink:0;">${{it.icon}}</span>
+        <div style="min-width:0;flex:1;">
+          <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-3);">${{it.label}}</span>
+            <span style="font-size:12px;font-weight:600;color:${{it.col}};">${{escHtml(it.val)}}</span>
+          </div>
+          ${{it.note ? `<div style="font-size:10px;color:var(--text-3);margin-top:1px;">${{escHtml(it.note)}}</div>` : ''}}
+        </div>
+      </div>`).join('');
+    // Sam's daily priority quote
+    try {{
+      const samRes = await fetch('/api/health/sam/daily').catch(() => null);
+      if (samRes && samRes.ok) {{
+        const sd = await samRes.json();
+        const greeting = sd.protocol && sd.protocol.greeting;
+        const move = sd.protocol && sd.protocol.movement && sd.protocol.movement.primary;
+        if (greeting || move) {{
+          el.innerHTML += `<div style="border-top:1px solid var(--border);margin-top:7px;padding-top:7px;display:flex;gap:8px;align-items:flex-start;">
+            <span style="font-size:12px;">🦅</span>
+            <div style="min-width:0;">
+              ${{move ? `<div style="font-size:11px;font-weight:600;color:var(--blue);">${{escHtml(move)}}</div>` : ''}}
+              ${{greeting ? `<div style="font-size:10px;color:var(--text-3);font-style:italic;">"${{escHtml(greeting.slice(0,60))}}${{greeting.length>60?'…':''}}"</div>` : ''}}
+            </div>
+          </div>`;
+        }}
+      }}
+    }} catch(_) {{}}
   }} catch(e) {{
     if (el) el.innerHTML = '<div style="color:var(--text-3);">Unavailable</div>';
   }}
