@@ -14182,6 +14182,117 @@ async function loadHealth() {{
   hchatInit();
 }}
 
+/* ═══ MANUAL VITALS ENTRY ════════════════════════════════════ */
+function openVitalsEntry() {{
+  const ov = document.getElementById('vitals-entry-overlay');
+  if (!ov) return;
+  // Default date to today
+  const today = new Date().toISOString().slice(0, 10);
+  const di = document.getElementById('vitals-date');
+  if (di && !di.value) di.value = today;
+  ov.classList.remove('hidden');
+}}
+function closeVitalsEntry(e) {{
+  if (e && e.target !== document.getElementById('vitals-entry-overlay')) return;
+  document.getElementById('vitals-entry-overlay')?.classList.add('hidden');
+}}
+async function submitVitals() {{
+  const btn = document.getElementById('vitals-submit-btn');
+  if (btn) {{ btn.disabled = true; btn.textContent = 'Saving…'; }}
+  try {{
+    const dateVal = document.getElementById('vitals-date')?.value ||
+                    new Date().toISOString().slice(0,10);
+
+    // Helper: parse a numeric field, return undefined if empty
+    const num = id => {{
+      const v = document.getElementById(id)?.value;
+      if (v === '' || v == null) return undefined;
+      return parseFloat(v);
+    }};
+
+    // Build daily metrics payload — skip undefined fields
+    const metrics = {{ date: dateVal, source: 'manual' }};
+    const set = (key, val) => {{ if (val !== undefined && !isNaN(val)) metrics[key] = val; }};
+    set('sleep_hours',  num('vi-sleep'));
+    set('hrv',          num('vi-hrv'));
+    set('resting_hr',   num('vi-rhr'));
+    set('blood_oxygen', num('vi-spo2'));
+    set('weight',       num('vi-weight'));
+    set('body_fat_pct', num('vi-bodyfat'));
+    set('steps',        num('vi-steps'));
+    set('active_cal',   num('vi-cal'));
+    set('exercise_min', num('vi-exercise'));
+    set('stand_hours',  num('vi-stand'));
+
+    const sys = num('vi-sys');
+    const dia = num('vi-dia');
+    const pulse = num('vi-pulse');
+
+    // Determine if we have any meaningful data
+    const hasDailyMetrics = Object.keys(metrics).length > 2;  // more than just date+source
+    const hasBP = sys !== undefined && dia !== undefined;
+
+    if (!hasDailyMetrics && !hasBP) {{
+      showToast('Enter at least one value', 'warn');
+      return;
+    }}
+
+    const results = [];
+
+    // POST daily metrics
+    if (hasDailyMetrics) {{
+      const res = await fetch('/api/health/ingest', {{
+        method: 'POST',
+        headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify(metrics),
+      }});
+      if (res.ok) results.push('vitals');
+      else {{
+        const e = await res.json().catch(() => ({{}}));
+        console.error('vitals ingest error', e);
+      }}
+    }}
+
+    // POST blood pressure separately (goes to bp_readings table)
+    if (hasBP) {{
+      const bpPayload = {{
+        systolic: sys,
+        diastolic: dia,
+        source: 'manual',
+        reading_date: new Date(dateVal + 'T12:00:00').toISOString(),
+      }};
+      if (pulse !== undefined && !isNaN(pulse)) bpPayload.pulse = pulse;
+      const res = await fetch('/api/health/bp/ingest', {{
+        method: 'POST',
+        headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify(bpPayload),
+      }});
+      if (res.ok) results.push('blood pressure');
+    }}
+
+    if (results.length) {{
+      showToast('Logged: ' + results.join(' + '), 'ok');
+      // Clear all fields
+      ['vi-sleep','vi-hrv','vi-rhr','vi-spo2','vi-weight','vi-bodyfat',
+       'vi-steps','vi-cal','vi-exercise','vi-stand','vi-sys','vi-dia','vi-pulse']
+        .forEach(id => {{ const el=document.getElementById(id); if(el) el.value=''; }});
+      document.getElementById('vitals-entry-overlay')?.classList.add('hidden');
+      // Refresh the health view if it's visible
+      if (document.getElementById('view-health')?.style.display !== 'none') {{
+        setTimeout(() => loadHealthView && loadHealthView(), 800);
+      }}
+    }} else {{
+      showToast('Could not save — check console', 'warn');
+    }}
+  }} catch(e) {{
+    console.error('submitVitals', e);
+    showToast('Network error', 'warn');
+  }} finally {{
+    if (btn) {{ btn.disabled = false; btn.textContent = 'Save Vitals'; }}
+  }}
+}}
+/* ════════════════════════════════════════════════════════════ */
+
 async function helenRefresh() {{
   const btn = document.getElementById('helen-refresh-btn');
   if (btn) {{ btn.disabled = true; btn.textContent = '⟳ Analysing…'; }}
