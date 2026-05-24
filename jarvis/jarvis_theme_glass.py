@@ -4780,6 +4780,95 @@ body::after {{
 }}
 .finance-setup-link:hover {{ background:rgba(255,255,255,0.12); color:var(--text-1); }}
 
+/* ═══ VITALS ENTRY MODAL ════════════════════════════════════ */
+.vitals-modal-overlay {{
+  position:fixed; inset:0; z-index:1200;
+  background: rgba(5,10,20,0.55);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  display:flex; align-items:center; justify-content:center;
+  animation: modal-overlay-in 0.25s ease;
+}}
+.vitals-modal-overlay.hidden {{ display:none !important; animation:none; }}
+.vitals-modal {{
+  position:relative; overflow:hidden;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(60px) saturate(220%) brightness(1.10);
+  -webkit-backdrop-filter: blur(60px) saturate(220%) brightness(1.10);
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius:24px; padding:28px;
+  min-width:360px; max-width:560px; width:92%;
+  max-height:88vh; overflow-y:auto;
+  box-shadow:
+    0  4px  8px  rgba(0,0,0,0.35),
+    0 16px  48px rgba(0,0,0,0.50),
+    0 48px  96px rgba(0,0,0,0.35),
+    inset 0  1px 0 rgba(255,255,255,0.65),
+    inset 1px 0  0 rgba(255,255,255,0.22),
+    inset 0 -1px 0 rgba(0,0,0,0.15);
+  animation: modal-in 0.38s cubic-bezier(0.34,1.56,0.64,1);
+}}
+.vitals-modal::before {{
+  content:''; position:absolute; inset:0; border-radius:23px; pointer-events:none; z-index:0;
+  background: linear-gradient(135deg,rgba(255,255,255,0.18) 0%,rgba(255,255,255,0.05) 30%,transparent 55%,rgba(255,255,255,0.02) 100%);
+}}
+.vitals-modal > * {{ position:relative; z-index:1; }}
+.vitals-section-label {{
+  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em;
+  color:var(--text-3); margin-bottom:10px; margin-top:18px; padding-bottom:6px;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}}
+.vitals-section-label:first-of-type {{ margin-top:4px; }}
+.vitals-grid {{
+  display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:4px;
+}}
+.vitals-grid.triple {{ grid-template-columns:1fr 1fr 1fr; }}
+.vitals-field {{ display:flex; flex-direction:column; gap:4px; }}
+.vitals-label {{
+  font-size:10px; font-weight:600; color:var(--text-3);
+  text-transform:uppercase; letter-spacing:0.06em;
+}}
+.vitals-inp {{
+  padding:9px 11px; font-size:13px; font-family:var(--font-mono);
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+  border-radius:9px; color:var(--text-1); outline:none; width:100%; box-sizing:border-box;
+  transition:border-color 0.15s, background 0.15s;
+}}
+.vitals-inp::placeholder {{ color:rgba(255,255,255,0.2); font-family:var(--font-mono); }}
+.vitals-inp:focus {{ border-color:rgba(99,179,237,0.5); background:rgba(255,255,255,0.09); }}
+.vitals-unit {{
+  font-size:9px; color:var(--text-3); margin-top:2px;
+  text-transform:uppercase; letter-spacing:0.05em;
+}}
+.vitals-date-row {{
+  display:flex; align-items:center; gap:8px; margin-bottom:14px;
+  font-size:11px; color:var(--text-3);
+}}
+.vitals-date-inp {{
+  padding:6px 10px; font-size:11px;
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+  border-radius:7px; color:var(--text-1); outline:none;
+  transition:border-color 0.15s;
+}}
+.vitals-date-inp:focus {{ border-color:rgba(99,179,237,0.5); }}
+.vitals-submit {{
+  width:100%; padding:10px; font-size:12px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.07em;
+  border:none; border-radius:11px; cursor:pointer; margin-top:18px;
+  background: linear-gradient(135deg,rgba(99,179,237,0.75) 0%,rgba(129,140,248,0.75) 100%);
+  color:#fff; transition:opacity 0.15s;
+}}
+.vitals-submit:hover {{ opacity:0.85; }}
+.vitals-submit:disabled {{ opacity:0.4; cursor:not-allowed; }}
+.vitals-log-btn {{
+  display:inline-flex; align-items:center; gap:5px;
+  padding:5px 11px; font-size:10px; font-weight:700; text-transform:uppercase;
+  letter-spacing:0.06em; border:1px solid rgba(255,255,255,0.15);
+  border-radius:7px; background:rgba(255,255,255,0.06); color:var(--text-2);
+  cursor:pointer; transition:background 0.15s, color 0.15s;
+}}
+.vitals-log-btn:hover {{ background:rgba(255,255,255,0.12); color:var(--text-1); }}
+
 /* ═══ WORK INTELLIGENCE ══════════════════════════════════════ */
 .wi-pane {{ animation: wi-fade-in 0.18s ease; }}
 @keyframes wi-fade-in {{ from {{ opacity:0; transform:translateY(5px); }} to {{ opacity:1; transform:none; }} }}
@@ -6278,6 +6367,7 @@ body::after {{
       <div class="view-title">HEALTH INTELLIGENCE</div>
       <div style="display:flex;align-items:center;gap:12px;">
         <div style="font-size:11px;color:var(--text-3);" id="health-last-sync">—</div>
+        <button class="vitals-log-btn" onclick="openVitalsEntry()" title="Log missed vitals">＋ Log vitals</button>
         <button class="btn btn-hue btn-sm" onclick="helenRefresh()" id="helen-refresh-btn" style="font-size:10px;">↻ Refresh Analysis</button>
       </div>
     </div>
@@ -6849,6 +6939,116 @@ body::after {{
 
     <p style="font-size:12px;color:var(--text-3);margin:20px 0 10px;font-family:var(--font-mono);letter-spacing:0.04em;text-transform:uppercase;">Welcome, {user_name}</p>
     <p style="font-size:12px;color:var(--text-2);">JARVIS Glass — Adaptive Chromatic Interface<br>Version 3.0 · S.H.I.E.L.D. Clearance Level 6</p>
+  </div>
+</div>
+
+<!-- Manual Vitals Entry modal -->
+<div class="vitals-modal-overlay hidden" id="vitals-entry-overlay" onclick="closeVitalsEntry(event)">
+  <div class="vitals-modal">
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:var(--text-1);">📋 Log Vitals</div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:3px;">Enter any readings that Apple Watch missed</div>
+      </div>
+      <button onclick="closeVitalsEntry()" style="width:28px;height:28px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:var(--text-2);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <!-- Date selector -->
+    <div class="vitals-date-row">
+      <span>Date:</span>
+      <input type="date" class="vitals-date-inp" id="vitals-date">
+      <span style="margin-left:auto;font-size:10px;opacity:0.6;">Leave blank = today</span>
+    </div>
+
+    <!-- Sleep & Recovery -->
+    <div class="vitals-section-label">😴 Sleep &amp; Recovery</div>
+    <div class="vitals-grid">
+      <div class="vitals-field">
+        <div class="vitals-label">Sleep</div>
+        <input type="number" class="vitals-inp" id="vi-sleep" placeholder="7.5" min="0" max="24" step="0.25">
+        <div class="vitals-unit">hours</div>
+      </div>
+      <div class="vitals-field">
+        <div class="vitals-label">HRV</div>
+        <input type="number" class="vitals-inp" id="vi-hrv" placeholder="58" min="0" max="300" step="1">
+        <div class="vitals-unit">ms</div>
+      </div>
+    </div>
+
+    <!-- Heart & Circulation -->
+    <div class="vitals-section-label">❤️ Heart &amp; Circulation</div>
+    <div class="vitals-grid">
+      <div class="vitals-field">
+        <div class="vitals-label">Resting HR</div>
+        <input type="number" class="vitals-inp" id="vi-rhr" placeholder="62" min="30" max="200" step="1">
+        <div class="vitals-unit">bpm</div>
+      </div>
+      <div class="vitals-field">
+        <div class="vitals-label">Blood Oxygen</div>
+        <input type="number" class="vitals-inp" id="vi-spo2" placeholder="98" min="80" max="100" step="0.1">
+        <div class="vitals-unit">% SpO₂</div>
+      </div>
+    </div>
+    <!-- BP in its own row — 3 fields -->
+    <div class="vitals-grid triple" style="margin-top:10px;">
+      <div class="vitals-field">
+        <div class="vitals-label">BP Systolic</div>
+        <input type="number" class="vitals-inp" id="vi-sys" placeholder="118" min="60" max="240" step="1">
+        <div class="vitals-unit">mmHg</div>
+      </div>
+      <div class="vitals-field">
+        <div class="vitals-label">BP Diastolic</div>
+        <input type="number" class="vitals-inp" id="vi-dia" placeholder="76" min="40" max="160" step="1">
+        <div class="vitals-unit">mmHg</div>
+      </div>
+      <div class="vitals-field">
+        <div class="vitals-label">Pulse</div>
+        <input type="number" class="vitals-inp" id="vi-pulse" placeholder="68" min="30" max="200" step="1">
+        <div class="vitals-unit">bpm</div>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="vitals-section-label">⚖️ Body</div>
+    <div class="vitals-grid">
+      <div class="vitals-field">
+        <div class="vitals-label">Weight</div>
+        <input type="number" class="vitals-inp" id="vi-weight" placeholder="195.0" min="50" max="500" step="0.1">
+        <div class="vitals-unit">lbs</div>
+      </div>
+      <div class="vitals-field">
+        <div class="vitals-label">Body Fat</div>
+        <input type="number" class="vitals-inp" id="vi-bodyfat" placeholder="22.5" min="1" max="60" step="0.1">
+        <div class="vitals-unit">%</div>
+      </div>
+    </div>
+
+    <!-- Activity -->
+    <div class="vitals-section-label">🏃 Activity</div>
+    <div class="vitals-grid">
+      <div class="vitals-field">
+        <div class="vitals-label">Steps</div>
+        <input type="number" class="vitals-inp" id="vi-steps" placeholder="8500" min="0" max="100000" step="100">
+        <div class="vitals-unit">steps</div>
+      </div>
+      <div class="vitals-field">
+        <div class="vitals-label">Active Cal</div>
+        <input type="number" class="vitals-inp" id="vi-cal" placeholder="520" min="0" max="5000" step="10">
+        <div class="vitals-unit">kcal</div>
+      </div>
+      <div class="vitals-field">
+        <div class="vitals-label">Exercise</div>
+        <input type="number" class="vitals-inp" id="vi-exercise" placeholder="45" min="0" max="600" step="5">
+        <div class="vitals-unit">min</div>
+      </div>
+      <div class="vitals-field">
+        <div class="vitals-label">Stand Hours</div>
+        <input type="number" class="vitals-inp" id="vi-stand" placeholder="10" min="0" max="24" step="1">
+        <div class="vitals-unit">hours</div>
+      </div>
+    </div>
+
+    <button class="vitals-submit" id="vitals-submit-btn" onclick="submitVitals()">Save Vitals</button>
   </div>
 </div>
 
@@ -11854,7 +12054,7 @@ function chrMarkdownToHtml(md) {{
     .replace(/^#\s+(.+)$/gm,'<h3>$1</h3>')
     .replace(/^\*\s+(.+)$/gm,'<li>$1</li>')
     .replace(/^-\s+(.+)$/gm,'<li>$1</li>')
-    .replace(/(<li>.*<\/li>\n?)+/g, s => '<ul>'+s+'</ul>')
+    .replace(/(<li>.*<\/li>\\n?)+/g, s => '<ul>'+s+'</ul>')
     .replace(/\\n\\n+/g,'</p><p>')
     .replace(/^(?!<[hul])(.+)$/gm,'$1')
     .replace(/\\n/g,'<br>');
@@ -11863,7 +12063,7 @@ function chrMarkdownToHtml(md) {{
 async function chrStudySaveEntry() {{
   if (_chrStudyMessages.length === 0) {{ alert('No conversation to save yet.'); return; }}
   const passage = document.getElementById('chr-study-passage')?.value || 'Psalm 23';
-  const body = _chrStudyMessages.map(m => (m.role==='user'?'You: ':'Chronicle AI: ') + m.text).join('\n\n');
+  const body = _chrStudyMessages.map(m => (m.role==='user'?'You: ':'Chronicle AI: ') + m.text).join('\\n\\n');
   const entry = {{
     id: 'jarvis-study-' + Date.now(),
     date: new Date().toISOString().slice(0,10),
@@ -15123,7 +15323,7 @@ async function _loadFiAccounts() {{
       <div style="flex:1;min-width:0;"><div class="finance-row-name">${{escHtml(a.name)}}</div>
       <div class="finance-row-sub">${{lbl[a.account_type]||a.account_type}}${{a.institution?' · '+escHtml(a.institution):''}}</div></div>
       <div class="finance-row-val" style="color:${{a.account_type==='credit'||a.account_type==='loan'?'var(--red)':'var(--text-1)'}}">${{fmt(a.balance)}}</div>
-      <button class="finance-row-del" onclick="deleteFinanceAccount('${{a.account_id}}','${{escHtml(a.name).replace(/'/g,''')}}')" title="Remove">✕</button>
+      <button class="finance-row-del" onclick="deleteFinanceAccount('${{a.account_id}}','${{escHtml(a.name).replace(/'/g,'')}}')" title="Remove">✕</button>
     </div>`).join('');
   }} catch(e) {{ el.innerHTML='<div class="finance-empty">Could not load accounts.</div>'; }}
 }}
@@ -15156,7 +15356,7 @@ async function _loadFiStreams() {{
       <div style="flex:1;min-width:0;"><div class="finance-row-name">${{escHtml(s.name)}}</div>
       <div class="finance-row-sub">${{lbl[s.stream_type]||s.stream_type}}${{s.platform?' · '+escHtml(s.platform):''}}</div></div>
       <div class="finance-row-val" style="color:var(--green)">${{fmt(s.monthly_average)}}<span style="font-size:9px;color:var(--text-3);">/mo</span></div>
-      <button class="finance-row-del" onclick="deleteFinanceStream('${{s.stream_id}}','${{escHtml(s.name).replace(/'/g,''')}}')" title="Remove">✕</button>
+      <button class="finance-row-del" onclick="deleteFinanceStream('${{s.stream_id}}','${{escHtml(s.name).replace(/'/g,'')}}')" title="Remove">✕</button>
     </div>`).join('');
   }} catch(e) {{ el.innerHTML='<div class="finance-empty">Could not load streams.</div>'; }}
 }}
@@ -15191,7 +15391,7 @@ async function _loadFiGoals() {{
         <div style="flex:1;min-width:0;"><div class="finance-row-name">${{escHtml(g.title)}}</div>
         <div class="finance-row-sub">${{fmt(g.current_amount)}} of ${{fmt(g.target_amount)}}${{g.target_date?' · by '+g.target_date:''}}</div></div>
         <div class="finance-row-val">${{pct(g)}}%</div>
-        <button class="finance-row-del" onclick="deleteFinanceGoal('${{g.goal_id}}','${{escHtml(g.title).replace(/'/g,''')}}')" title="Remove">✕</button>
+        <button class="finance-row-del" onclick="deleteFinanceGoal('${{g.goal_id}}','${{escHtml(g.title).replace(/'/g,'')}}')" title="Remove">✕</button>
       </div>
       <div style="height:3px;background:rgba(255,255,255,0.08);border-radius:2px;">
         <div style="height:100%;width:${{Math.min(pct(g),100)}}%;background:var(--blue);border-radius:2px;"></div>
@@ -15585,7 +15785,7 @@ async function renderSamMorningCheckin() {{
 
     banner.innerHTML = `
       <div class="sam-checkin-mode-chip morning">☀️ Morning Check-In</div>
-      <div class="sam-checkin-greeting">"${{escHtml(m.greeting || 'On your left. Let\'s work, brother.')}}"</div>
+      <div class="sam-checkin-greeting">"${{escHtml(m.greeting || 'On your left. Let\\'s work, brother.')}}"</div>
 
       <div class="sam-checkin-meta">
         ${{readiness !== '—' ? `<div class="sam-checkin-stat">
@@ -15628,7 +15828,7 @@ async function renderSamMorningCheckin() {{
   }} catch(e) {{
     console.error('renderSamMorningCheckin', e);
     const banner = document.getElementById('sam-checkin-banner');
-    if (banner) banner.innerHTML = '<div style="font-size:11px;color:var(--text-3);">On your left. Let\'s work.</div>';
+    if (banner) banner.innerHTML = '<div style="font-size:11px;color:var(--text-3);">On your left. Let\\'s work.</div>';
   }}
 }}
 
