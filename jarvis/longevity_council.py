@@ -133,6 +133,164 @@ def health_state_summary() -> str:
         lines.append(f"\nOPEN CLINICAL QUESTIONS: {len(open_q)} items (e.g. {open_q[0] if open_q else 'none'})")
 
     lines.append("=== END HEALTH STATE PACKAGE ===")
+
+    # ── Live daily data (last 7 days) ────────────────────────────────────────
+    try:
+        daily_lines = _build_daily_context(days=7)
+        if daily_lines:
+            lines.append("\n" + daily_lines)
+    except Exception as exc:
+        log.warning("health_state_summary: daily context failed: %s", exc)
+
+    return "\n".join(lines)
+
+
+def _build_daily_context(days: int = 7) -> str:
+    """
+    Pull recent journal, nutrition, sleep, and adherence logs and return a
+    compact text block suitable for injection into council context.
+
+    Data sources:
+        data/logs/sam_daily_journal.jsonl   — exercise, mood, sleep, water
+        ~/.jarvis/health/nutrition_log.jsonl — daily macros
+        ~/.jarvis/health/sleep_log.jsonl     — structured sleep entries
+        data/logs/sam_adherence.jsonl        — protocol adherence
+    """
+    from datetime import date, timedelta
+    import json
+    from pathlib import Path
+
+    cutoff = (date.today() - timedelta(days=days)).isoformat()
+
+    # ── Helpers ──────────────────────────────────────────────────────────────
+    def _read_jsonl(path: Path) -> list[dict]:
+        if not path.exists():
+            return []
+        rows = []
+        try:
+            for line in path.read_text().splitlines():
+                line = line.strip()
+                if line:
+                    try:
+                        rows.append(json.loads(line))
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+        return rows
+
+    # ── Load sources ─────────────────────────────────────────────────────────
+    journal_path   = Path("data/logs/sam_daily_journal.jsonl")
+    nutrition_path = Path.home() / ".jarvis" / "health" / "nutrition_log.jsonl"
+    sleep_path     = Path.home() / ".jarvis" / "health" / "sleep_log.jsonl"
+    adherence_path = Path("data/logs/sam_adherence.jsonl")
+
+    journals   = {r["date"]: r for r in _read_jsonl(journal_path)   if r.get("date", "") >= cutoff}
+    nutritions = {r["date"]: r for r in _read_jsonl(nutrition_path) if r.get("date", "") >= cutoff}
+    sleeps     = {r["date"]: r for r in _read_jsonl(sleep_path)     if r.get("date", "") >= cutoff}
+    adherences = {r["date"]: r for r in _read_jsonl(adherence_path) if r.get("date", "") >= cutoff}
+
+    all_dates = sorted(
+        set(journals) | set(nutritions) | set(sleeps) | set(adherences),
+        reverse=True
+    )[:days]
+
+    if not all_dates:
+        return ""
+
+    lines = ["=== DAILY HEALTH LOG (last 7 days — live from journals) ==="]
+
+    for d in sorted(all_dates):
+        lines.append(f"\n── {d} ──")
+
+        # Nutrition
+        nut = nutritions.get(d)
+        if nut:
+            meals = nut.get("meals", [])
+            names = [m.get("name", "?") for m in meals if isinstance(m, dict)]
+            # Sum macros from meals list (totals may not be pre-stored)
+            tot_cal = nut.get("total_calories") or sum(m.get("calories", 0) for m in meals if isinstance(m, dict))
+            tot_p   = nut.get("total_protein_g") or sum(m.get("protein_g", 0) for m in meals if isinstance(m, dict))
+            tot_c   = nut.get("total_carbs_g") or sum(m.get("carb_g", 0) for m in meals if isinstance(m, dict))
+            tot_f   = nut.get("total_fat_g") or sum(m.get("fat_g", 0) for m in meals if isinstance(m, dict))
+            lines.append(
+                f"  Nutrition: {round(tot_cal)} kcal | "
+                f"P {round(tot_p, 1)}g / "
+                f"C {round(tot_c, 1)}g / "
+                f"F {round(tot_f, 1)}g"
+            )
+            if names:
+                lines.append(f"  Meals: {', '.join(names[:6])}" + (" …" if len(names) > 6 else ""))
+
+        # Sleep (structured log preferred; fall back to journal extract)
+        slp = sleeps.get(d)
+        jrn = journals.get(d)
+        if slp:
+            lines.append(
+                f"  Sleep: {slp.get('total_hours', '?')}h | quality {slp.get('sleep_quality', '?')}/10"
+                + (f" | HRV {slp.get('hrv_morning')}ms" if slp.get('hrv_morning') else "")
+                + (f" | SpO2 min {slp.get('spo2_min')}%" if slp.get('spo2_min') else "")
+                + (f" | {slp.get('notes', '')}" if slp.get('notes') else "")
+            )
+        elif jrn:
+            ext = jrn.get("extracted", {})
+            sq  = ext.get("sleep_quality")
+            if sq:
+                lines.append(f"  Sleep quality (self-report): {sq}")
+
+        # Exercise
+        if jrn:
+            ext = jrn.get("extracted", {})
+            exercises = ext.get("exercise", [])
+            if exercises:
+                ex_strs = []
+                for ex in exercises:
+                    if isinstance(ex, dict):
+                        dur  = ex.get("duration_min", "")
+                        typ  = ex.get("type", "activity")
+                        note = ex.get("notes", "")
+                        ex_strs.append(f"{typ}" + (f" {dur}min" if dur else "") + (f" ({note})" if note else ""))
+                if ex_strs:
+                    lines.append(f"  Exercise: {'; '.join(ex_strs)}")
+
+            # Water
+            water = ext.get("water_oz")
+            if water:
+                lines.append(f"  Water: {water} oz")
+
+            # Mood / mental health
+            mood   = ext.get("mood")
+            stress = ext.get("stress_level")
+            energy = ext.get("energy_level")
+            mental = ext.get("mental_notes")
+            parts  = []
+            if mood:   parts.append(f"mood={mood}")
+            if stress: parts.append(f"stress={stress}/10")
+            if energy: parts.append(f"energy={energy}/10")
+            if parts:
+                lines.append(f"  Mental: {', '.join(parts)}" + (f" — {mental}" if mental else ""))
+
+            # Physical symptoms
+            syms = ext.get("physical_symptoms", [])
+            if syms:
+                lines.append(f"  Symptoms: {', '.join(syms)}")
+
+            # Wins / challenges
+            wins = ext.get("wins", [])
+            if wins:
+                lines.append(f"  Wins: {'; '.join(wins[:3])}" + (" …" if len(wins) > 3 else ""))
+            challenges = ext.get("challenges", [])
+            if challenges:
+                lines.append(f"  Challenges: {'; '.join(challenges[:3])}" + (" …" if len(challenges) > 3 else ""))
+
+        # Adherence
+        adh = adherences.get(d)
+        if adh:
+            completed = adh.get("completed", [])
+            if completed:
+                lines.append(f"  Protocol adherence: {', '.join(completed)}")
+
+    lines.append("\n=== END DAILY LOG ===")
     return "\n".join(lines)
 
 
