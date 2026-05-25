@@ -10261,10 +10261,11 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         return _json(result)
 
     @app.get("/api/health/sam/food-log")
-    async def api_sam_food_log_get() -> JSONResponse:
-        """Return today's food log summary: meals logged, macros, running totals."""
+    async def api_sam_food_log_get(date: str | None = None) -> JSONResponse:
+        """Return food log summary for a given date (defaults to today).
+        Pass ?date=2026-05-25 to get a specific day."""
         from .sam_wilson import get_today_food_log
-        summary = await asyncio.to_thread(get_today_food_log)
+        summary = await asyncio.to_thread(get_today_food_log, date or None)
         return _json(summary)
 
     @app.get("/api/health/sam/food-preferences")
