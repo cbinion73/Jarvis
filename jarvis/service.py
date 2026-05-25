@@ -10238,11 +10238,15 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
     @app.post("/api/health/sam/chat")
     async def api_sam_chat(request: Request) -> JSONResponse:
-        """Chat with Sam Wilson about health and fitness."""
+        """Chat with Sam Wilson about health and fitness.
+        Supports mode: 'chat' | 'food' | 'interview', plus interview_step and food_date."""
         from .sam_wilson import chat_with_sam
         data = await request.json()
-        message = str(data.get("message", "")).strip()
-        history = data.get("history", [])
+        message        = str(data.get("message", "")).strip()
+        history        = data.get("history", [])
+        mode           = str(data.get("mode", "chat"))
+        interview_step = int(data.get("interview_step", 0))
+        food_date      = data.get("food_date") or None
         try:
             from .health_agent import get_health_metrics as _metrics
             metrics = await asyncio.to_thread(_metrics)
@@ -10250,7 +10254,35 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             metrics = {}
         if not message:
             return _json({"error": "message required"}, status_code=400)
-        result = await chat_with_sam(message, history, metrics, runtime.openai_client)
+        result = await chat_with_sam(
+            message, history, metrics, runtime.openai_client,
+            mode=mode, interview_step=interview_step, food_date=food_date,
+        )
+        return _json(result)
+
+    @app.get("/api/health/sam/food-log")
+    async def api_sam_food_log_get() -> JSONResponse:
+        """Return today's food log summary: meals logged, macros, running totals."""
+        from .sam_wilson import get_today_food_log
+        summary = await asyncio.to_thread(get_today_food_log)
+        return _json(summary)
+
+    @app.get("/api/health/sam/food-preferences")
+    async def api_sam_food_prefs_get() -> JSONResponse:
+        """Return Sam's stored food preferences for Chris."""
+        from .sam_wilson import get_food_preferences
+        prefs = await asyncio.to_thread(get_food_preferences)
+        return _json(prefs)
+
+    @app.post("/api/health/sam/diet-interview")
+    async def api_sam_diet_interview(request: Request) -> JSONResponse:
+        """Drive the diet interview one step at a time.
+        Body: {step: int, answer: str}. Returns {step, question, done, prefs}."""
+        from .sam_wilson import run_diet_interview
+        data   = await request.json()
+        step   = int(data.get("step", 0))
+        answer = str(data.get("answer", "")).strip()
+        result = await asyncio.to_thread(run_diet_interview, step, answer, runtime.openai_client)
         return _json(result)
 
     @app.get("/api/health/sam/morning-checkin")
