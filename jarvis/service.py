@@ -10282,6 +10282,73 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         )
         return _json(result)
 
+    @app.get("/api/health/sam/history")
+    async def api_sam_history(days: int = 30) -> JSONResponse:
+        """Return adherence history for the last N days, most-recent first.
+        Each record: {date, completed[], notes, adherence_pct}.
+        When a date has multiple records (re-submissions) the latest wins."""
+        log_path = Path("data/logs/sam_adherence.jsonl")
+        records: dict[str, dict] = {}
+        if log_path.exists():
+            for line in log_path.read_text().splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rec = json.loads(line)
+                    d = rec.get("date", "")
+                    if d:
+                        records[d] = rec  # last record per date wins
+                except Exception:
+                    continue
+        TOTAL_ITEMS = 6
+        result = []
+        for date_str, rec in sorted(records.items(), reverse=True)[:days]:
+            completed = rec.get("completed", [])
+            result.append({
+                "date": date_str,
+                "completed": completed,
+                "notes": rec.get("notes", ""),
+                "adherence_pct": round(len(completed) / TOTAL_ITEMS * 100),
+                "timestamp": rec.get("timestamp", ""),
+            })
+        return _json(result)
+
+    @app.post("/api/health/sam/history")
+    async def api_sam_history_upsert(request: Request) -> JSONResponse:
+        """Upsert a historical adherence record for a given date.
+        Body: {date, completed[], notes}. Rewrites the matching line in the JSONL."""
+        data      = await request.json()
+        date_str  = str(data.get("date", "")).strip()
+        completed = list(data.get("completed", []))
+        notes     = str(data.get("notes", ""))
+        if not date_str:
+            raise HTTPException(status_code=400, detail="date is required")
+        log_path = Path("data/logs/sam_adherence.jsonl")
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        # Read all existing lines
+        existing: list[str] = []
+        if log_path.exists():
+            existing = [l for l in log_path.read_text().splitlines() if l.strip()]
+        # Remove any previous records for this date
+        kept = [l for l in existing if json.loads(l).get("date") != date_str]
+        # Append the new record
+        from datetime import datetime as _dt, timezone as _tz
+        new_rec = {
+            "date": date_str,
+            "timestamp": _dt.now(_tz.utc).isoformat(),
+            "completed": completed,
+            "notes": notes,
+        }
+        kept.append(json.dumps(new_rec))
+        log_path.write_text("\n".join(kept) + "\n")
+        TOTAL_ITEMS = 6
+        return _json({
+            "ok": True,
+            "date": date_str,
+            "adherence_pct": round(len(completed) / TOTAL_ITEMS * 100),
+        })
+
     # ── Health chat — direct conversation with a council member ───────
 
     @app.get("/api/health/chat/doctors")

@@ -4870,6 +4870,135 @@ body::after {{
 }}
 .vitals-log-btn:hover {{ background:rgba(255,255,255,0.12); color:var(--text-1); }}
 
+/* ═══ SAM HISTORY MODAL ══════════════════════════════════════ */
+.sam-hist-overlay {{
+  position:fixed; inset:0; z-index:1300;
+  background: rgba(5,10,20,0.55);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  display:flex; align-items:center; justify-content:center;
+  animation: modal-overlay-in 0.25s ease;
+}}
+.sam-hist-overlay.hidden {{ display:none !important; animation:none; }}
+.sam-hist-modal {{
+  position:relative; overflow:hidden;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(60px) saturate(220%) brightness(1.10);
+  -webkit-backdrop-filter: blur(60px) saturate(220%) brightness(1.10);
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius:24px; padding:26px 28px;
+  width:92%; max-width:480px; max-height:88vh; overflow-y:auto;
+  box-shadow:
+    0  4px  8px  rgba(0,0,0,0.35),
+    0 16px  48px rgba(0,0,0,0.50),
+    0 48px  96px rgba(0,0,0,0.35),
+    inset 0  1px 0 rgba(255,255,255,0.65),
+    inset 1px 0  0 rgba(255,255,255,0.22),
+    inset 0 -1px 0 rgba(0,0,0,0.15);
+  animation: modal-in 0.38s cubic-bezier(0.34,1.56,0.64,1);
+}}
+.sam-hist-modal::before {{
+  content:''; position:absolute; inset:0; border-radius:23px; pointer-events:none; z-index:0;
+  background: linear-gradient(135deg,rgba(255,255,255,0.18) 0%,rgba(255,255,255,0.05) 30%,transparent 55%,rgba(255,255,255,0.02) 100%);
+}}
+.sam-hist-modal > * {{ position:relative; z-index:1; }}
+/* Day navigator */
+.sam-hist-nav {{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:18px;
+}}
+.sam-hist-nav-btn {{
+  width:34px; height:34px; border-radius:10px;
+  border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.06);
+  color:var(--text-2); font-size:16px; cursor:pointer; display:flex;
+  align-items:center; justify-content:center;
+  transition:background 0.15s, color 0.15s;
+}}
+.sam-hist-nav-btn:hover {{ background:rgba(255,255,255,0.14); color:var(--text-1); }}
+.sam-hist-nav-btn:disabled {{ opacity:0.25; cursor:default; }}
+.sam-hist-date {{
+  text-align:center; flex:1; padding:0 12px;
+}}
+.sam-hist-date-label {{
+  font-size:15px; font-weight:700; color:var(--text-1);
+}}
+.sam-hist-date-rel {{
+  font-size:10px; color:var(--text-3); margin-top:2px;
+  text-transform:uppercase; letter-spacing:0.08em;
+}}
+/* Adherence ring / bar */
+.sam-hist-pct {{
+  text-align:center; margin-bottom:16px;
+}}
+.sam-hist-pct-num {{
+  font-size:36px; font-weight:700; font-family:var(--font-mono); line-height:1;
+}}
+.sam-hist-pct-bar {{
+  height:4px; background:rgba(255,255,255,0.08); border-radius:3px; margin:8px 0 2px;
+}}
+.sam-hist-pct-fill {{
+  height:100%; border-radius:3px; transition:width 0.5s ease;
+  background: linear-gradient(90deg, var(--green), #34d399);
+}}
+/* Checklist */
+.sam-hist-list {{
+  display:flex; flex-direction:column; gap:8px; margin-bottom:14px;
+}}
+.sam-hist-item {{
+  display:flex; align-items:center; gap:10px;
+  padding:9px 12px; border-radius:10px;
+  background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07);
+  cursor:pointer; user-select:none; transition:background 0.12s, border-color 0.12s;
+}}
+.sam-hist-item:hover {{ background:rgba(255,255,255,0.08); }}
+.sam-hist-item.checked {{
+  background:rgba(52,211,153,0.10); border-color:rgba(52,211,153,0.30);
+}}
+.sam-hist-item-icon {{ font-size:16px; width:22px; text-align:center; flex-shrink:0; }}
+.sam-hist-item-label {{ flex:1; font-size:12px; font-weight:500; color:var(--text-2); }}
+.sam-hist-item.checked .sam-hist-item-label {{ color:var(--text-1); font-weight:600; }}
+.sam-hist-cb {{
+  width:17px; height:17px; border-radius:5px; border:1.5px solid rgba(255,255,255,0.2);
+  background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; transition:all 0.12s;
+}}
+.sam-hist-item.checked .sam-hist-cb {{
+  background:var(--green); border-color:var(--green); color:#000; font-size:10px;
+}}
+/* Notes */
+.sam-hist-notes {{
+  width:100%; box-sizing:border-box; resize:vertical; min-height:60px;
+  padding:9px 11px; font-size:12px; font-family:var(--font-body);
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+  border-radius:9px; color:var(--text-1); outline:none;
+  transition:border-color 0.15s;
+  margin-bottom:14px;
+}}
+.sam-hist-notes::placeholder {{ color:rgba(255,255,255,0.2); }}
+.sam-hist-notes:focus {{ border-color:rgba(99,179,237,0.4); }}
+/* Save button */
+.sam-hist-save {{
+  width:100%; padding:10px; font-size:12px; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.07em;
+  border:none; border-radius:11px; cursor:pointer;
+  background: linear-gradient(135deg,rgba(52,211,153,0.7) 0%,rgba(99,179,237,0.7) 100%);
+  color:#fff; transition:opacity 0.15s;
+}}
+.sam-hist-save:hover {{ opacity:0.85; }}
+.sam-hist-save:disabled {{ opacity:0.4; cursor:not-allowed; }}
+/* Streak ribbon */
+.sam-hist-streak {{
+  display:flex; gap:6px; flex-wrap:wrap; justify-content:center;
+  margin-bottom:14px;
+}}
+.sam-hist-dot {{
+  width:8px; height:8px; border-radius:50%;
+  background:rgba(255,255,255,0.12);
+  transition:background 0.2s;
+}}
+.sam-hist-dot.done {{ background:var(--green); }}
+.sam-hist-dot.today {{ background:var(--amber); }}
+
 /* ═══ WORK INTELLIGENCE ══════════════════════════════════════ */
 .wi-pane {{ animation: wi-fade-in 0.18s ease; }}
 @keyframes wi-fade-in {{ from {{ opacity:0; transform:translateY(5px); }} to {{ opacity:1; transform:none; }} }}
@@ -6940,6 +7069,42 @@ body::after {{
 
     <p style="font-size:12px;color:var(--text-3);margin:20px 0 10px;font-family:var(--font-mono);letter-spacing:0.04em;text-transform:uppercase;">Welcome, {user_name}</p>
     <p style="font-size:12px;color:var(--text-2);">JARVIS Glass — Adaptive Chromatic Interface<br>Version 3.0 · S.H.I.E.L.D. Clearance Level 6</p>
+  </div>
+</div>
+
+<!-- Sam Wilson adherence history modal -->
+<div class="sam-hist-overlay hidden" id="sam-hist-overlay" onclick="closeSamHistory(event)">
+  <div class="sam-hist-modal">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-size:15px;font-weight:700;color:var(--text-1);">🦅 Sam's Log</div>
+      <button onclick="closeSamHistory()" style="width:28px;height:28px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:var(--text-2);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <!-- Day navigator -->
+    <div class="sam-hist-nav">
+      <button class="sam-hist-nav-btn" id="sam-hist-prev" onclick="navSamHistory(-1)" title="Previous day">‹</button>
+      <div class="sam-hist-date">
+        <div class="sam-hist-date-label" id="sam-hist-date-label">—</div>
+        <div class="sam-hist-date-rel" id="sam-hist-date-rel">—</div>
+      </div>
+      <button class="sam-hist-nav-btn" id="sam-hist-next" onclick="navSamHistory(+1)" title="Next day">›</button>
+    </div>
+    <!-- Adherence % -->
+    <div class="sam-hist-pct">
+      <div class="sam-hist-pct-num" id="sam-hist-pct-num">—%</div>
+      <div class="sam-hist-pct-bar">
+        <div class="sam-hist-pct-fill" id="sam-hist-pct-fill" style="width:0%"></div>
+      </div>
+      <div style="font-size:10px;color:var(--text-3);" id="sam-hist-pct-label">adherence</div>
+    </div>
+    <!-- 30-day dot streak -->
+    <div class="sam-hist-streak" id="sam-hist-streak"></div>
+    <!-- Checklist -->
+    <div class="sam-hist-list" id="sam-hist-list"></div>
+    <!-- Notes -->
+    <textarea class="sam-hist-notes" id="sam-hist-notes" placeholder="Notes for this day…" rows="2"></textarea>
+    <!-- Save -->
+    <button class="sam-hist-save" id="sam-hist-save" onclick="saveSamHistoryDay()">Save Changes</button>
   </div>
 </div>
 
@@ -15936,6 +16101,10 @@ async function renderSamMorningCheckin() {{
           onclick="document.getElementById('sam-chat-input').focus();document.getElementById('sam-chat-input').scrollIntoView({{behavior:'smooth'}})">
           Talk to Sam 💬
         </button>
+        <button class="btn-ghost" style="font-size:11px;padding:6px 14px;"
+          onclick="openSamHistory()">
+          📅 History
+        </button>
       </div>
     `;
   }} catch(e) {{
@@ -15996,6 +16165,10 @@ async function renderSamEveningCheckin() {{
           onclick="document.getElementById('sam-chat-input').focus();document.getElementById('sam-chat-input').scrollIntoView({{behavior:'smooth'}})">
           Talk to Sam 💬
         </button>
+        <button class="btn-ghost" style="font-size:11px;padding:7px 14px;"
+          onclick="openSamHistory()">
+          📅 History
+        </button>
       </div>
 
       <div class="sam-checkin-response" id="sam-checkin-response">
@@ -16051,6 +16224,181 @@ async function submitSamEveningCheckin() {{
     if (btn) {{ btn.textContent = 'Log My Day →'; btn.disabled = false; }}
   }}
 }}
+
+/* ═══ SAM HISTORY MODAL ═══════════════════════════════════════ */
+
+// Canonical 6 checklist items — labels used in history log view
+const _SAM_HIST_ITEMS = [
+  {{ id:'workout',   icon:'🏃', label:'Workout / Movement' }},
+  {{ id:'breakfast', icon:'🥚', label:'Clean breakfast' }},
+  {{ id:'lunch',     icon:'🥗', label:'Clean lunch' }},
+  {{ id:'dinner',    icon:'🍽', label:'Clean dinner' }},
+  {{ id:'hydration', icon:'💧', label:'Hydration goal' }},
+  {{ id:'recovery',  icon:'😴', label:'Lights out on time' }},
+];
+
+let _samHistoryRecords = [];   // [{date, completed[], notes, adherence_pct}, …]
+let _samHistoryIdx     = 0;    // which record we're currently viewing (0 = most recent)
+
+async function openSamHistory() {{
+  const ov = document.getElementById('sam-hist-overlay');
+  if (!ov) return;
+  ov.classList.remove('hidden');
+  await _fetchSamHistory();
+  _renderSamHistoryDay();
+}}
+
+function closeSamHistory(e) {{
+  if (e && e.target !== document.getElementById('sam-hist-overlay')) return;
+  document.getElementById('sam-hist-overlay')?.classList.add('hidden');
+}}
+
+async function _fetchSamHistory() {{
+  try {{
+    const res = await fetch('/api/health/sam/history?days=60');
+    _samHistoryRecords = await res.json();
+    // If today has no record yet, prepend an empty placeholder
+    const today = new Date().toISOString().slice(0,10);
+    if (!_samHistoryRecords.length || _samHistoryRecords[0].date !== today) {{
+      _samHistoryRecords.unshift({{ date: today, completed: [], notes: '', adherence_pct: 0 }});
+    }}
+    _samHistoryIdx = 0;
+  }} catch(e) {{
+    console.error('_fetchSamHistory', e);
+    _samHistoryRecords = [];
+  }}
+}}
+
+function navSamHistory(delta) {{
+  const newIdx = _samHistoryIdx + delta;
+  if (newIdx < 0 || newIdx >= _samHistoryRecords.length) return;
+  _samHistoryIdx = newIdx;
+  _renderSamHistoryDay();
+}}
+
+function _renderSamHistoryDay() {{
+  const rec = _samHistoryRecords[_samHistoryIdx] || {{ date:'', completed:[], notes:'', adherence_pct:0 }};
+  const today = new Date().toISOString().slice(0,10);
+  const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+
+  // Date label
+  const [y,mo,d] = rec.date.split('-').map(Number);
+  const dt = new Date(y, mo-1, d);
+  const dayStr = dt.toLocaleDateString('en-US', {{weekday:'long', month:'long', day:'numeric'}});
+  let relLabel = '';
+  if (rec.date === today) relLabel = 'Today';
+  else if (rec.date === yesterday) relLabel = 'Yesterday';
+  else {{
+    const diffDays = Math.round((new Date(today) - new Date(rec.date)) / 86400000);
+    relLabel = diffDays + ' days ago';
+  }}
+
+  document.getElementById('sam-hist-date-label').textContent = dayStr;
+  document.getElementById('sam-hist-date-rel').textContent   = relLabel;
+
+  // Nav buttons
+  document.getElementById('sam-hist-prev').disabled = (_samHistoryIdx >= _samHistoryRecords.length - 1);
+  document.getElementById('sam-hist-next').disabled = (_samHistoryIdx <= 0);
+
+  // Adherence %
+  const pct = rec.adherence_pct ?? Math.round((rec.completed||[]).length / 6 * 100);
+  const pctEl = document.getElementById('sam-hist-pct-num');
+  const fillEl = document.getElementById('sam-hist-pct-fill');
+  const lblEl  = document.getElementById('sam-hist-pct-label');
+  if (pctEl) pctEl.textContent = pct + '%';
+  if (pctEl) pctEl.style.color = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--amber)' : 'var(--red)';
+  if (fillEl) fillEl.style.width = pct + '%';
+  if (fillEl) fillEl.style.background = pct >= 80
+    ? 'linear-gradient(90deg,var(--green),#34d399)'
+    : pct >= 50 ? 'linear-gradient(90deg,var(--amber),#fbbf24)'
+    : 'linear-gradient(90deg,var(--red),#f87171)';
+  if (lblEl) lblEl.textContent = rec.date === today ? 'so far today' : 'adherence';
+
+  // 30-day streak dots (most recent = rightmost)
+  const streakEl = document.getElementById('sam-hist-streak');
+  if (streakEl) {{
+    const dots = _samHistoryRecords.slice(0, 30).reverse();
+    streakEl.innerHTML = dots.map((r, i) => {{
+      const isToday = r.date === today;
+      const isDone  = (r.adherence_pct || 0) >= 50;
+      const isCur   = r.date === rec.date;
+      return `<div class="sam-hist-dot${{isDone?' done':''}}${{isToday?' today':''}}"
+        style="${{isCur ? 'outline:2px solid rgba(255,255,255,0.5);outline-offset:2px;' : ''}}"
+        title="${{r.date}}: ${{r.adherence_pct||0}}%"></div>`;
+    }}).join('');
+  }}
+
+  // Checklist
+  const listEl = document.getElementById('sam-hist-list');
+  if (listEl) {{
+    const done = new Set(rec.completed || []);
+    listEl.innerHTML = _SAM_HIST_ITEMS.map(item => `
+      <div class="sam-hist-item${{done.has(item.id) ? ' checked' : ''}}"
+           id="shi-${{item.id}}" onclick="toggleSamHistItem('${{item.id}}')">
+        <span class="sam-hist-item-icon">${{item.icon}}</span>
+        <span class="sam-hist-item-label">${{escHtml(item.label)}}</span>
+        <div class="sam-hist-cb">${{done.has(item.id) ? '✓' : ''}}</div>
+      </div>`).join('');
+  }}
+
+  // Notes
+  const notesEl = document.getElementById('sam-hist-notes');
+  if (notesEl) notesEl.value = rec.notes || '';
+
+  // Reset save button
+  const saveBtn = document.getElementById('sam-hist-save');
+  if (saveBtn) {{ saveBtn.disabled = false; saveBtn.textContent = 'Save Changes'; }}
+}}
+
+function toggleSamHistItem(id) {{
+  const row = document.getElementById('shi-' + id);
+  if (!row) return;
+  const isChecked = row.classList.toggle('checked');
+  const cb = row.querySelector('.sam-hist-cb');
+  if (cb) cb.textContent = isChecked ? '✓' : '';
+  // Update adherence display live
+  const checkedCount = document.querySelectorAll('#sam-hist-list .sam-hist-item.checked').length;
+  const pct = Math.round(checkedCount / 6 * 100);
+  const pctEl = document.getElementById('sam-hist-pct-num');
+  const fillEl = document.getElementById('sam-hist-pct-fill');
+  if (pctEl) {{ pctEl.textContent = pct + '%'; pctEl.style.color = pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)'; }}
+  if (fillEl) fillEl.style.width = pct + '%';
+}}
+
+async function saveSamHistoryDay() {{
+  const rec = _samHistoryRecords[_samHistoryIdx];
+  if (!rec) return;
+  const saveBtn = document.getElementById('sam-hist-save');
+  if (saveBtn) {{ saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }}
+  try {{
+    const completed = _SAM_HIST_ITEMS
+      .filter(item => document.getElementById('shi-' + item.id)?.classList.contains('checked'))
+      .map(item => item.id);
+    const notes = (document.getElementById('sam-hist-notes')?.value || '').trim();
+    const res = await fetch('/api/health/sam/history', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ date: rec.date, completed, notes }}),
+    }});
+    const d = await res.json();
+    if (d.ok) {{
+      // Update local record
+      _samHistoryRecords[_samHistoryIdx] = {{ ...rec, completed, notes, adherence_pct: d.adherence_pct }};
+      showToast('Saved · ' + d.adherence_pct + '% adherence', 'ok');
+      if (saveBtn) {{ saveBtn.textContent = '✓ Saved'; }}
+      setTimeout(() => _renderSamHistoryDay(), 1200);
+    }} else {{
+      showToast('Could not save', 'warn');
+      if (saveBtn) {{ saveBtn.disabled = false; saveBtn.textContent = 'Save Changes'; }}
+    }}
+  }} catch(e) {{
+    console.error('saveSamHistoryDay', e);
+    showToast('Network error', 'warn');
+    if (saveBtn) {{ saveBtn.disabled = false; saveBtn.textContent = 'Save Changes'; }}
+  }}
+}}
+
+/* ════════════════════════════════════════════════════════════ */
 
 async function samChat() {{
   const inp = document.getElementById('sam-chat-input');
