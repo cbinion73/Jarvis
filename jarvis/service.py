@@ -10282,6 +10282,23 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         )
         return _json(result)
 
+    @app.post("/api/health/sam/evaluate")
+    async def api_sam_evaluate(request: Request) -> JSONResponse:
+        """Sam evaluates Chris's free-text day description and maps it to the
+        6 protocol checklist items. Returns {completed, reply, adherence_pct, reasoning}."""
+        from .sam_wilson import evaluate_day_narrative
+        data      = await request.json()
+        narrative = str(data.get("narrative", "")).strip()
+        if not narrative:
+            return _json({"completed": [], "reply": "Tell me what you did today, brother.", "adherence_pct": 0})
+        try:
+            from .health_agent import get_health_metrics as _metrics
+            metrics = await asyncio.to_thread(_metrics)
+        except Exception:
+            metrics = {}
+        result = await evaluate_day_narrative(narrative, metrics, runtime.openai_client)
+        return _json(result)
+
     @app.get("/api/health/sam/history")
     async def api_sam_history(days: int = 30) -> JSONResponse:
         """Return adherence history for the last N days, most-recent first.
