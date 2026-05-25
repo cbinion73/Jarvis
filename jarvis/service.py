@@ -10282,7 +10282,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         data   = await request.json()
         step   = int(data.get("step", 0))
         answer = str(data.get("answer", "")).strip()
-        result = await asyncio.to_thread(run_diet_interview, step, answer, runtime.openai_client)
+        result = await run_diet_interview(step, answer, runtime.openai_client)
         return _json(result)
 
     @app.get("/api/health/sam/morning-checkin")
