@@ -16360,7 +16360,7 @@ async function askSamToEvaluate() {{
     if (btn) {{ btn.textContent = `✓ ${{d.adherence_pct}}% — adjust & save below`; }}
   }} catch(e) {{
     console.error('askSamToEvaluate', e);
-    showToast('Sam couldn\'t connect — try again', 'warn');
+    showToast("Sam couldn't connect — try again", 'warn');
     if (btn) {{ btn.disabled = false; btn.textContent = '🦅 Have Sam evaluate →'; }}
   }}
 }}
@@ -16588,11 +16588,11 @@ function samSwitchMode(mode) {{
     samLoadFoodLog();
   }} else if (mode === 'interview') {{
     if (modeBar) {{ modeBar.style.display = 'flex'; }}
-    if (modeLabel) modeLabel.textContent = '🎤 Diet interview — answer Sam\'s questions';
+    if (modeLabel) modeLabel.textContent = "🎤 Diet interview — answer Sam's questions";
     if (inp) inp.placeholder = 'Type your answer…';
   }} else {{
     if (modeBar) modeBar.style.display = 'none';
-    if (inp) inp.placeholder = 'Talk to Sam… or log food (e.g. \'I had eggs and toast\')';
+    if (inp) inp.placeholder = "Talk to Sam… or log food (e.g. 'I had eggs and toast')";
   }}
 }}
 
