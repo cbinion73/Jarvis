@@ -79,7 +79,13 @@ You are Chris's coach, not his hype man. Real coaches tell hard truths.
 - Celebrate genuine wins with the same intensity you call out misses. Both matter.
 - If a choice was medically risky (high-K food, excess sugar with A1c at 7.3%, no hydration with CKD), flag it explicitly. His medical team is watching this data.
 
-VOICE: Direct. Warm. Military precision. Competitive but caring. Call Chris "brother" or by name. Short punchy sentences. No fluff. Real talk. Honest even when it's uncomfortable."""
+VOICE: Direct. Warm. Military precision. Competitive but caring. Short punchy sentences. No fluff. Real talk. Honest even when it's uncomfortable.
+
+LANGUAGE VARIETY — this is important:
+- You sound like Sam Wilson, but you don't always announce it. Real people don't repeat their catchphrases every sentence.
+- "On your left" and "brother" are in your vocabulary but use them sparingly — maybe once every several exchanges, when it genuinely lands. Overusing them makes you sound like a bit from a sketch.
+- Vary how you address Chris: use his name sometimes, "man" sometimes, nothing at all sometimes. Let the coaching speak.
+- Your personality comes through your directness, your precision, and your care — not your catchphrases."""
 
 
 def _compute_targets(metrics: dict) -> dict:
@@ -110,7 +116,7 @@ def _fallback_protocol(targets: dict, today_str: str) -> dict:
     mins = targets["cardio_minutes"]
     return {
         "date": today_str,
-        "greeting": "On your left. Let's work, brother.",
+        "greeting": "Let's get to work.",
         "movement": {
             "primary": f"{mins}-min Zone 2 run" if mins > 0 else "Active recovery walk",
             "details": f"Keep HR {CHRIS_PROFILE['zone2_hr_low']}–{CHRIS_PROFILE['zone2_hr_high']} bpm. Nose breathing only.",
@@ -287,7 +293,7 @@ async def get_morning_checkin(metrics: dict | None = None) -> dict:
     protocol = get_cached_protocol()
     streak   = get_streak()
 
-    greeting        = "On your left. Let's work, brother."
+    greeting        = "Let's get to work."
     focus_primary   = "Zone 2 cardio — before breakfast"
     focus_details   = f"HR {CHRIS_PROFILE['zone2_hr_low']}–{CHRIS_PROFILE['zone2_hr_high']} bpm · Nose breathing"
     timing          = "Before breakfast — morning cardio hits glucose hardest."
@@ -333,7 +339,7 @@ async def submit_evening_checkin(
 
     if llm_client is None:
         if pct >= 80:
-            reply = f"That's what I'm talking about — {pct}% done. Sleep well, brother. You earned it."
+            reply = f"That's what I'm talking about — {pct}% done. You earned the rest tonight."
         elif pct >= 50:
             reply = f"{pct}% is progress. Use the night for recovery. Stack it better tomorrow."
         else:
@@ -367,7 +373,7 @@ async def submit_evening_checkin(
     except Exception as exc:
         log.error("submit_evening_checkin: %s", exc)
         return {
-            "reply": f"{pct}% today. Keep stacking. See you in the morning, brother.",
+            "reply": f"{pct}% today. Keep stacking. See you in the morning.",
             "streak": streak,
             "adherence_pct": pct,
         }
@@ -396,7 +402,7 @@ async def evaluate_day_narrative(
     """
     narrative = narrative.strip()
     if not narrative:
-        return {"completed": [], "reply": "Tell me what you did today, brother — I'm listening.", "adherence_pct": 0}
+        return {"completed": [], "reply": "Tell me what you did today — I'm listening.", "adherence_pct": 0}
 
     TOTAL = 6
 
@@ -468,7 +474,7 @@ async def evaluate_day_narrative(
     pct = round(len(completed) / TOTAL * 100)
     reply = (
         f"{pct}% based on what you described. " +
-        ("That's solid work — keep stacking, brother." if pct >= 80 else
+        ("That's solid work — keep stacking." if pct >= 80 else
          "Progress. Hit the gaps tomorrow — every item counts." if pct >= 50 else
          "Rough one. Tomorrow: morning movement and hit your water. Everything else builds from there.")
     )
@@ -743,7 +749,7 @@ async def run_diet_interview(
         save_food_preferences(prefs)
         # Sam closes out
         closing = (
-            "That's what I needed, brother. I've got a solid picture of how you eat — "
+            "That's what I needed. I've got a solid picture of how you eat — "
             "the wins, the gaps, the comfort patterns. From here I'll factor all of this into every meal "
             "conversation we have. No more generic advice — this is your playbook now."
         )
@@ -882,7 +888,7 @@ async def chat_with_sam(
         return {**_SAM_REPLY, "reply": reply.strip()}
     except Exception as exc:
         log.error("chat_with_sam: %s", exc)
-        return {**_SAM_REPLY, "reply": "Give me a second, brother. System catching up."}
+        return {**_SAM_REPLY, "reply": "Give me a second. System catching up."}
 
 
 # ── Daily Journal ─────────────────────────────────────────────────────────────
@@ -1249,7 +1255,7 @@ async def process_journal_entry(
             log.error("process_journal_entry adherence: %s", exc)
 
     # ── Step 6: Generate Sam's coaching reply ─────────────────────────────────
-    reply = "Good work logging today, brother. Keep the consistency going."
+    reply = "Good work logging today. Keep the consistency going."
 
     if llm_client is not None:
         wins       = extracted.get("wins") or []
