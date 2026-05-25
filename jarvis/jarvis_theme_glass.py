@@ -16151,6 +16151,36 @@ async function renderSamEveningCheckin() {{
       <div class="sam-checkin-greeting">"How'd today go, brother?"</div>
       ${{streakN > 0 ? `<div class="sam-checkin-streak" style="margin-bottom:12px;">🔥 ${{streakN}} day${{streakN !== 1 ? 's' : ''}} — keep it going</div>` : ''}}
 
+      <!-- Tell Sam section -->
+      <div style="margin-bottom:12px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-3);margin-bottom:6px;">
+          Tell Sam what you did today
+        </div>
+        <textarea id="sam-narrative-input"
+          style="width:100%;box-sizing:border-box;resize:vertical;min-height:70px;padding:9px 11px;
+                 font-size:12px;font-family:var(--font-body);background:rgba(255,255,255,0.06);
+                 border:1px solid rgba(255,255,255,0.12);border-radius:9px;color:var(--text-1);
+                 outline:none;transition:border-color 0.15s;margin-bottom:7px;"
+          placeholder="e.g. Did a 40-min bike ride this morning, had eggs for breakfast, drank about 80oz of water, skipped lunch, dinner was grilled chicken and veggies. In bed by 10:30."
+          rows="3"></textarea>
+        <button id="sam-evaluate-btn"
+          onclick="askSamToEvaluate()"
+          style="width:100%;padding:8px;font-size:11px;font-weight:700;text-transform:uppercase;
+                 letter-spacing:0.07em;border:none;border-radius:9px;cursor:pointer;
+                 background:linear-gradient(135deg,rgba(99,179,237,0.7) 0%,rgba(129,140,248,0.7) 100%);
+                 color:#fff;transition:opacity 0.15s;">
+          🦅 Have Sam evaluate →
+        </button>
+        <div id="sam-eval-response" style="display:none;margin-top:10px;padding:10px 12px;
+             background:rgba(255,255,255,0.05);border-radius:9px;border-left:3px solid var(--hue);">
+          <div style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px;">🦅 Sam's Read</div>
+          <div id="sam-eval-text" style="font-size:12px;color:var(--text-1);line-height:1.5;font-style:italic;"></div>
+        </div>
+      </div>
+
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-3);margin-bottom:8px;">
+        Or check off manually
+      </div>
       <div class="sam-evening-list" id="sam-evening-list">${{itemsHtml}}</div>
 
       <textarea class="sam-evening-notes" id="sam-evening-notes"
@@ -16188,6 +16218,55 @@ function samEveningToggle(id) {{
   if (!cb || !row) return;
   cb.checked = !cb.checked;
   row.classList.toggle('checked', cb.checked);
+}}
+
+async function askSamToEvaluate() {{
+  const narrativeEl = document.getElementById('sam-narrative-input');
+  const btn         = document.getElementById('sam-evaluate-btn');
+  const respEl      = document.getElementById('sam-eval-response');
+  const textEl      = document.getElementById('sam-eval-text');
+  const narrative   = narrativeEl?.value.trim();
+  if (!narrative) {{ showToast('Tell Sam what you did first', 'warn'); return; }}
+
+  if (btn) {{ btn.disabled = true; btn.textContent = '🦅 Sam is reading your day…'; }}
+  if (respEl) respEl.style.display = 'none';
+
+  try {{
+    const res = await fetch('/api/health/sam/evaluate', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ narrative }}),
+    }});
+    const d = await res.json();
+
+    // Pre-fill the checkboxes based on Sam's evaluation
+    const completed = new Set(d.completed || []);
+    _samCheckinItems.forEach(item => {{
+      const cb  = document.getElementById('sic-' + item.id);
+      const row = document.getElementById('sei-' + item.id);
+      if (!cb || !row) return;
+      const shouldCheck = completed.has(item.id);
+      cb.checked = shouldCheck;
+      row.classList.toggle('checked', shouldCheck);
+    }});
+
+    // Show Sam's response
+    if (textEl) textEl.textContent = d.reply || '';
+    if (respEl) respEl.style.display = 'block';
+
+    // Copy narrative into the notes field so it's saved with the log
+    const notesEl = document.getElementById('sam-evening-notes');
+    if (notesEl && !notesEl.value) notesEl.value = narrative;
+
+    // Scroll checklist into view
+    document.getElementById('sam-evening-list')?.scrollIntoView({{behavior:'smooth', block:'nearest'}});
+
+    if (btn) {{ btn.textContent = `✓ ${{d.adherence_pct}}% — adjust & save below`; }}
+  }} catch(e) {{
+    console.error('askSamToEvaluate', e);
+    showToast('Sam couldn\'t connect — try again', 'warn');
+    if (btn) {{ btn.disabled = false; btn.textContent = '🦅 Have Sam evaluate →'; }}
+  }}
 }}
 
 async function submitSamEveningCheckin() {{

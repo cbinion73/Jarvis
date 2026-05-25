@@ -340,6 +340,108 @@ async def submit_evening_checkin(
         }
 
 
+CHECKLIST_ITEMS = {
+    "workout":   "Any intentional exercise or movement — walk, bike, gym, cardio, resistance training",
+    "breakfast": "Ate a nutritious breakfast (protein-focused, low glycemic — eggs, Greek yogurt, etc.)",
+    "lunch":     "Ate a healthy lunch (clean protein, vegetables, avoided high-glycemic carbs)",
+    "dinner":    "Ate a healthy dinner (lean protein, low-carb, avoided late junk food)",
+    "hydration": f"Met daily water goal (~{CHRIS_PROFILE['water_target_oz']}oz / 3L) throughout the day",
+    "recovery":  "Prioritized sleep — in bed at a reasonable hour, wound down properly",
+}
+
+
+async def evaluate_day_narrative(
+    narrative: str,
+    metrics:    dict | None = None,
+    llm_client: Any = None,
+) -> dict:
+    """
+    Parse Chris's free-text description of his day and map it to the 6
+    protocol checklist items. Returns:
+      {completed: [...], reply: str, adherence_pct: int}
+    Falls back to keyword heuristics if LLM is unavailable.
+    """
+    narrative = narrative.strip()
+    if not narrative:
+        return {"completed": [], "reply": "Tell me what you did today, brother — I'm listening.", "adherence_pct": 0}
+
+    TOTAL = 6
+
+    # ── LLM path ──────────────────────────────────────────────────────────
+    if llm_client is not None:
+        m = metrics or {}
+        items_desc = "\n".join(f'  "{k}": {v}' for k, v in CHECKLIST_ITEMS.items())
+        system = (
+            SAM_SYSTEM_PROMPT
+            + "\n\nYou are evaluating Chris's day based on his narrative description. "
+            "You must respond with ONLY valid JSON — no prose before or after.\n"
+            "JSON format:\n"
+            '{\n'
+            '  "completed": ["workout", "breakfast"],   // subset of the 6 item IDs Chris accomplished\n'
+            '  "reply": "Sam\'s 2–3 sentence coaching response",\n'
+            '  "reasoning": {"workout": "He mentioned a 40-min walk", ...}  // brief per-item notes\n'
+            '}'
+        )
+        prompt = (
+            f"Chris's day (in his own words):\n\"{narrative}\"\n\n"
+            f"The 6 protocol items and what counts as completing each:\n{items_desc}\n\n"
+            f"Current metrics: readiness {m.get('readiness','?')}/100 · "
+            f"HRV {m.get('hrv','?')}ms · sleep {m.get('sleep_hours','?')}h\n\n"
+            "Evaluate which items Chris completed based ONLY on what he described. "
+            "Be fair but precise — if he says he 'had a big bowl of cereal' that doesn't count as a clean breakfast. "
+            "Give honest coaching in 'reply': acknowledge wins, call out misses, end with ONE tomorrow action."
+        )
+        try:
+            import asyncio, re
+            raw = await asyncio.to_thread(
+                llm_client.prompt_text,
+                system,
+                prompt,
+                max_output_tokens=350,
+            )
+            # Extract JSON — model may wrap in ```json ... ```
+            raw = raw.strip()
+            m2 = re.search(r'\{.*\}', raw, re.DOTALL)
+            if m2:
+                raw = m2.group(0)
+            parsed = json.loads(raw)
+            completed = [k for k in parsed.get("completed", []) if k in CHECKLIST_ITEMS]
+            pct = round(len(completed) / TOTAL * 100)
+            return {
+                "completed":     completed,
+                "reply":         parsed.get("reply", "").strip(),
+                "adherence_pct": pct,
+                "reasoning":     parsed.get("reasoning", {}),
+            }
+        except Exception as exc:
+            log.error("evaluate_day_narrative LLM error: %s", exc)
+            # fall through to heuristic
+
+    # ── Heuristic fallback ────────────────────────────────────────────────
+    nl = narrative.lower()
+    completed: list[str] = []
+    if any(w in nl for w in ["walk", "ran", "run", "bike", "gym", "workout", "cardio", "exercise", "jog", "lift", "weights", "zone 2"]):
+        completed.append("workout")
+    if any(w in nl for w in ["breakfast", "eggs", "oatmeal", "yogurt", "morning meal"]):
+        completed.append("breakfast")
+    if any(w in nl for w in ["lunch", "midday", "noon"]):
+        completed.append("lunch")
+    if any(w in nl for w in ["dinner", "supper", "evening meal"]):
+        completed.append("dinner")
+    if any(w in nl for w in ["water", "hydrat", "oz", "gallon", "drank"]):
+        completed.append("hydration")
+    if any(w in nl for w in ["bed", "sleep", "lights out", "early night", "recovery"]):
+        completed.append("recovery")
+    pct = round(len(completed) / TOTAL * 100)
+    reply = (
+        f"{pct}% based on what you described. " +
+        ("That's solid work — keep stacking, brother." if pct >= 80 else
+         "Progress. Hit the gaps tomorrow — every item counts." if pct >= 50 else
+         "Rough one. Tomorrow: morning movement and hit your water. Everything else builds from there.")
+    )
+    return {"completed": completed, "reply": reply, "adherence_pct": pct, "reasoning": {}}
+
+
 async def chat_with_sam(
     message: str,
     history: list[dict],
