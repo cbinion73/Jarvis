@@ -15859,7 +15859,7 @@ async function loadSamOverviewCard() {{
     }} else {{
       // ── Evening mode: Daily Journal is the primary CTA ─────────────
       // Check if journal was already done today
-      const todayStr = new Date().toISOString().slice(0,10);
+      const todayStr = _localDateStr();
       let journalDone = false;
       let journalSummary = null;
       try {{
@@ -16634,7 +16634,7 @@ async function samStartInterview() {{
 async function samLoadFoodLog() {{
   const strip = document.getElementById('sam-food-strip');
   try {{
-    const res = await fetch('/api/health/sam/food-log').catch(() => null);
+    const res = await fetch('/api/health/sam/food-log?date=' + _localDateStr()).catch(() => null);
     if (!res || !res.ok) return;
     const d = await res.json();
     const protein = Math.round(d.protein_g || 0);
@@ -16659,6 +16659,14 @@ async function samLoadFoodLog() {{
   }} catch(e) {{}}
 }}
 
+// ─── Local date helper (avoids UTC-vs-local mismatch) ────────────────────────
+function _localDateStr(d) {{
+  const dt = d || new Date();
+  return dt.getFullYear() + '-' +
+    String(dt.getMonth() + 1).padStart(2, '0') + '-' +
+    String(dt.getDate()).padStart(2, '0');
+}}
+
 // ─── Sam Daily Journal ───────────────────────────────────────────────────────
 let _sjHistory = [];
 let _sjDate = null;
@@ -16668,7 +16676,7 @@ async function openSamJournal() {{
   if (!ov) return;
   ov.classList.remove('hidden');
   _sjHistory = [];
-  _sjDate = new Date().toISOString().slice(0, 10);
+  _sjDate = _localDateStr();
   const dateEl = document.getElementById('sj-date');
   if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-US', {{weekday:'long', month:'long', day:'numeric'}});
   const msgs = document.getElementById('sj-messages');

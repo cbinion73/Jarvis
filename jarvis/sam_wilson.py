@@ -618,28 +618,34 @@ def _try_log_meal(date_str: str, meal: dict) -> tuple[bool, dict]:
         return False, {}
 
 
-def get_today_food_log() -> dict:
+def get_today_food_log(date_str: str | None = None) -> dict:
     """Return today's nutrition summary from the nutrition engine."""
     try:
         from .nutrition_engine import get_daily_nutrition
-        rec = get_daily_nutrition(date.today().isoformat())
-        protein_g = round(rec.total_protein_g, 1)
+        rec = get_daily_nutrition(date_str or date.today().isoformat())
+        protein_g  = round(float(rec.total_protein_g or 0), 1)
+        meals_list = rec.meals or []
+        # NutritionLog.meals is a list of dicts (not objects)
+        meal_count = len(meals_list)
+        def _meal_row(m):
+            if isinstance(m, dict):
+                return {"name": m.get("name",""), "protein_g": m.get("protein_g",0), "calories": m.get("calories",0), "time": m.get("time","")}
+            return {"name": getattr(m,"name",""), "protein_g": getattr(m,"protein_g",0), "calories": getattr(m,"calories",0), "time": getattr(m,"time","")}
         return {
             "date":             rec.date,
-            "meal_count":       rec.meal_count,
-            "protein_g":        protein_g,        # frontend alias
+            "meal_count":       meal_count,
+            "protein_g":        protein_g,
             "total_protein_g":  protein_g,
-            "total_carbs_g":    round(rec.total_carbs_g, 1),
-            "total_fat_g":      round(rec.total_fat_g, 1),
-            "total_calories":   round(rec.total_calories, 0),
+            "total_carbs_g":    round(float(rec.total_carbs_g or 0), 1),
+            "total_fat_g":      round(float(rec.total_fat_g or 0), 1),
+            "total_calories":   round(float(rec.total_calories or 0), 0),
             "protein_target_g": CHRIS_PROFILE["protein_target_g"],
             "protein_gap_g":    max(0, round(CHRIS_PROFILE["protein_target_g"] - protein_g, 1)),
-            "meals":            [{"name": m.name, "protein_g": m.protein_g, "calories": m.calories, "time": m.time}
-                                 for m in (rec.meals or [])],
+            "meals":            [_meal_row(m) for m in meals_list],
         }
     except Exception as exc:
         log.error("get_today_food_log: %s", exc)
-        return {"meal_count": 0, "total_protein_g": 0, "protein_gap_g": CHRIS_PROFILE["protein_target_g"], "meals": []}
+        return {"meal_count": 0, "protein_g": 0, "total_protein_g": 0, "protein_gap_g": CHRIS_PROFILE["protein_target_g"], "meals": []}
 
 
 # ─── Diet interview ────────────────────────────────────────────────────────────
@@ -1067,14 +1073,19 @@ async def process_journal_entry(
         except Exception as exc:
             log.error("process_journal_entry log food %s: %s", name, exc)
 
-    # ── Step 3: Get running daily protein total ───────────────────────────────
-    daily_protein_g = 0.0
+    # ── Step 3: Get running daily protein total from nutrition engine ─────────
+    daily_protein_g = protein_logged_g  # fallback: use LLM estimates
     try:
         from .nutrition_engine import get_daily_nutrition
         daily = get_daily_nutrition(date_str)
-        daily_protein_g = float(daily.get("total_protein_g") or 0)
-    except Exception:
-        daily_protein_g = protein_logged_g
+        # DailyNutrition is a dataclass/object — use attribute access, not .get()
+        engine_protein = getattr(daily, "total_protein_g", None)
+        if engine_protein is None:
+            engine_protein = daily.get("total_protein_g") if hasattr(daily, "get") else None
+        if engine_protein is not None:
+            daily_protein_g = float(engine_protein)
+    except Exception as exc:
+        log.debug("process_journal_entry get nutrition: %s", exc)
 
     # ── Step 4: Save journal entry (upsert) ───────────────────────────────────
     adherence_items = extracted.get("adherence_items") or []
