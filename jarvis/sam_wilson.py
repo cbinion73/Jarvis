@@ -839,3 +839,321 @@ async def chat_with_sam(
     except Exception as exc:
         log.error("chat_with_sam: %s", exc)
         return {**_SAM_REPLY, "reply": "Give me a second, brother. System catching up."}
+
+
+# ── Daily Journal ─────────────────────────────────────────────────────────────
+
+JOURNAL_PATH = Path("data/logs/sam_daily_journal.jsonl")
+
+_JOURNAL_SCHEMA = """\
+{
+  "exercise": [{"type":"", "duration_min":0, "intensity":"light|moderate|hard", "notes":""}],
+  "food": [{"name":"", "meal_type":"breakfast|lunch|dinner|snack|drink", "time":"HH:MM or empty"}],
+  "water_oz": 0,
+  "caffeine": "",
+  "alcohol": false,
+  "mood": "great|good|okay|low|anxious|stressed",
+  "stress_level": 5,
+  "energy_level": 5,
+  "sleep_quality": "great|good|okay|poor",
+  "physical_symptoms": [],
+  "mental_notes": "",
+  "wins": [],
+  "challenges": [],
+  "adherence_items": []
+}"""
+
+_EMPTY_EXTRACTED: dict = {
+    "exercise": [], "food": [], "water_oz": 0, "caffeine": "",
+    "alcohol": False, "mood": None, "stress_level": None, "energy_level": None,
+    "sleep_quality": None, "physical_symptoms": [], "mental_notes": "",
+    "wins": [], "challenges": [], "adherence_items": [],
+}
+
+
+def _merge_extracted(base: dict, new: dict) -> dict:
+    """Merge a new extracted entry into an existing one (for upsert)."""
+    merged = dict(base)
+    # Extend lists
+    for key in ("exercise", "food", "physical_symptoms", "wins", "challenges", "adherence_items"):
+        existing = merged.get(key) or []
+        incoming = new.get(key) or []
+        merged[key] = existing + incoming
+    # Sum water
+    merged["water_oz"] = (merged.get("water_oz") or 0) + (new.get("water_oz") or 0)
+    # Take latest non-null scalars
+    for key in ("mood", "stress_level", "energy_level", "sleep_quality", "caffeine", "alcohol", "mental_notes"):
+        val = new.get(key)
+        if val is not None and val != "" and val is not False:
+            merged[key] = val
+        elif merged.get(key) is None:
+            merged[key] = new.get(key)
+    return merged
+
+
+def _upsert_journal(date_str: str, raw_entry: str, extracted: dict,
+                    total_protein_g: float, adherence_items: list[str]) -> None:
+    """Read JSONL, find matching date, merge, rewrite."""
+    JOURNAL_PATH.parent.mkdir(parents=True, exist_ok=True)
+    existing: list[dict] = []
+    if JOURNAL_PATH.exists():
+        for line in JOURNAL_PATH.read_text().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                existing.append(json.loads(line))
+            except Exception:
+                pass
+
+    record: dict | None = None
+    kept: list[dict] = []
+    for rec in existing:
+        if rec.get("date") == date_str:
+            record = rec
+        else:
+            kept.append(rec)
+
+    if record is None:
+        record = {
+            "date": date_str,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "raw_entries": [],
+            "extracted": dict(_EMPTY_EXTRACTED),
+            "total_protein_g": 0.0,
+            "adherence_items": [],
+        }
+
+    record["raw_entries"] = record.get("raw_entries", []) + [raw_entry]
+    record["extracted"] = _merge_extracted(record.get("extracted", {}), extracted)
+    record["total_protein_g"] = float(record.get("total_protein_g") or 0) + total_protein_g
+    # Merge adherence_items deduped
+    existing_adh = record.get("adherence_items") or []
+    record["adherence_items"] = list(dict.fromkeys(existing_adh + adherence_items))
+    record["timestamp"] = datetime.now(timezone.utc).isoformat()
+
+    kept.append(record)
+    JOURNAL_PATH.write_text("\n".join(json.dumps(r) for r in kept) + "\n")
+
+
+def _upsert_adherence(date_str: str, items: list[str]) -> None:
+    """Merge adherence items into the adherence log for the given date."""
+    ADHERENCE_LOG.parent.mkdir(parents=True, exist_ok=True)
+    existing: list[str] = []
+    if ADHERENCE_LOG.exists():
+        existing = [l for l in ADHERENCE_LOG.read_text().splitlines() if l.strip()]
+    kept: list[str] = []
+    current_rec: dict | None = None
+    for line in existing:
+        try:
+            rec = json.loads(line)
+            if rec.get("date") == date_str:
+                current_rec = rec
+            else:
+                kept.append(line)
+        except Exception:
+            kept.append(line)
+    if current_rec is None:
+        current_rec = {"date": date_str, "completed": [], "notes": ""}
+    # Merge items
+    merged = list(dict.fromkeys((current_rec.get("completed") or []) + items))
+    current_rec["completed"] = merged
+    current_rec["timestamp"] = datetime.now(timezone.utc).isoformat()
+    kept.append(json.dumps(current_rec))
+    ADHERENCE_LOG.write_text("\n".join(kept) + "\n")
+
+
+async def process_journal_entry(
+    narrative: str,
+    history: list[dict],
+    date_str: str | None,
+    metrics: dict,
+    llm_client: Any,
+) -> dict:
+    """
+    Process a free-text daily health journal entry from Chris.
+    Extracts structured data, logs meals, updates adherence, and returns
+    Sam's coaching reply.
+    """
+    import asyncio, re
+
+    date_str = date_str or date.today().isoformat()
+    PROTEIN_TARGET_G = 87  # midpoint of 85-90g CKD target
+
+    # ── Step 1: Extract structured data via LLM ──────────────────────────────
+    extracted: dict = dict(_EMPTY_EXTRACTED)
+
+    if llm_client is not None:
+        extract_system = (
+            "You are a health data extractor for JARVIS. "
+            "Extract health data from Chris's journal entry and return ONLY valid JSON — "
+            "no prose, no markdown fences. Use the exact schema below.\n\n"
+            f"Schema:\n{_JOURNAL_SCHEMA}\n\n"
+            "Rules:\n"
+            "- If something isn't mentioned, use null or empty list/string.\n"
+            "- adherence_items: list of items from "
+            "[workout, breakfast, lunch, dinner, hydration, recovery] "
+            "that Chris clearly completed. Be conservative — only check if clearly described.\n"
+            "- mood: pick closest from great|good|okay|low|anxious|stressed.\n"
+            "- stress_level and energy_level: integer 1-10.\n"
+            "- For food items include a time if mentioned."
+        )
+        extract_prompt = (
+            f"Date: {date_str}\n"
+            f"Journal entry:\n\"{narrative}\"\n\n"
+            "Return only the JSON object."
+        )
+        try:
+            raw = await asyncio.to_thread(
+                llm_client.prompt_text,
+                extract_system,
+                extract_prompt,
+                max_output_tokens=600,
+            )
+            m = re.search(r'\{.*\}', raw.strip(), re.DOTALL)
+            if m:
+                parsed = json.loads(m.group(0))
+                # Safely coerce types
+                extracted["exercise"]          = parsed.get("exercise") or []
+                extracted["food"]              = parsed.get("food") or []
+                extracted["water_oz"]          = int(parsed.get("water_oz") or 0)
+                extracted["caffeine"]          = str(parsed.get("caffeine") or "")
+                extracted["alcohol"]           = bool(parsed.get("alcohol") or False)
+                extracted["mood"]              = parsed.get("mood")
+                extracted["stress_level"]      = parsed.get("stress_level")
+                extracted["energy_level"]      = parsed.get("energy_level")
+                extracted["sleep_quality"]     = parsed.get("sleep_quality")
+                extracted["physical_symptoms"] = parsed.get("physical_symptoms") or []
+                extracted["mental_notes"]      = str(parsed.get("mental_notes") or "")
+                extracted["wins"]              = parsed.get("wins") or []
+                extracted["challenges"]        = parsed.get("challenges") or []
+                extracted["adherence_items"]   = parsed.get("adherence_items") or []
+        except Exception as exc:
+            log.error("process_journal_entry extract: %s", exc)
+    else:
+        # Keyword heuristic fallback
+        nl = narrative.lower()
+        if any(w in nl for w in ("workout", "exercise", "bike", "run", "walk", "gym", "lift")):
+            extracted["adherence_items"].append("workout")
+            extracted["exercise"].append({"type": "exercise", "duration_min": 30, "intensity": "moderate", "notes": narrative[:60]})
+        if any(w in nl for w in ("breakfast",)):
+            extracted["adherence_items"].append("breakfast")
+        if any(w in nl for w in ("lunch",)):
+            extracted["adherence_items"].append("lunch")
+        if any(w in nl for w in ("dinner",)):
+            extracted["adherence_items"].append("dinner")
+        for oz_m in re.findall(r'(\d+)\s*oz', nl):
+            extracted["water_oz"] += int(oz_m)
+        if extracted["water_oz"] >= 64:
+            extracted["adherence_items"].append("hydration")
+
+    # ── Step 2: Log each food item via analyze_food_entry ────────────────────
+    logged_meals: list[str] = []
+    protein_logged_g = 0.0
+    for food_item in (extracted.get("food") or []):
+        name = food_item.get("name") or ""
+        if not name:
+            continue
+        meal_time = food_item.get("time") or ""
+        description = name
+        if meal_time:
+            description += f" (at {meal_time})"
+        try:
+            food_result = await analyze_food_entry(description, date_str, None, metrics, llm_client)
+            meal = food_result.get("meal") or {}
+            protein_logged_g += float(meal.get("protein_g") or 0)
+            if meal.get("name"):
+                logged_meals.append(meal["name"])
+        except Exception as exc:
+            log.error("process_journal_entry log food %s: %s", name, exc)
+
+    # ── Step 3: Get running daily protein total ───────────────────────────────
+    daily_protein_g = 0.0
+    try:
+        from .nutrition_engine import get_daily_nutrition
+        daily = get_daily_nutrition(date_str)
+        daily_protein_g = float(daily.get("total_protein_g") or 0)
+    except Exception:
+        daily_protein_g = protein_logged_g
+
+    # ── Step 4: Save journal entry (upsert) ───────────────────────────────────
+    adherence_items = extracted.get("adherence_items") or []
+    _upsert_journal(date_str, narrative, extracted, protein_logged_g, adherence_items)
+
+    # ── Step 5: Update adherence log ──────────────────────────────────────────
+    if adherence_items:
+        try:
+            _upsert_adherence(date_str, adherence_items)
+        except Exception as exc:
+            log.error("process_journal_entry adherence: %s", exc)
+
+    # ── Step 6: Generate Sam's coaching reply ─────────────────────────────────
+    reply = "Good work logging today, brother. Keep the consistency going."
+
+    if llm_client is not None:
+        wins       = extracted.get("wins") or []
+        challenges = extracted.get("challenges") or []
+        exercise   = extracted.get("exercise") or []
+        mood       = extracted.get("mood") or "okay"
+        water      = extracted.get("water_oz") or 0
+        protein_pct = round(daily_protein_g / PROTEIN_TARGET_G * 100)
+
+        # Build health flags
+        flags: list[str] = []
+        if daily_protein_g > 80:
+            flags.append(f"Protein at {daily_protein_g:.0f}g — approaching CKD limit of 85-90g. Watch portion sizes.")
+        if water < 48:
+            flags.append(f"Only {water}oz water logged — hydration is non-negotiable for kidney function.")
+        if extracted.get("alcohol"):
+            flags.append("Alcohol noted — watch glucose and sleep quality impact.")
+        # K+ food scan on narrative
+        for food in _HIGH_K_FOODS:
+            if food.lower() in narrative.lower():
+                flags.append(f"High-K+ food ({food}) — be mindful with ARB + spironolactone.")
+                break
+
+        history_ctx = "\n".join(
+            f"{'CHRIS' if h.get('role') == 'user' else 'SAM'}: {h.get('content', '')}"
+            for h in (history or [])[-6:]
+        )
+
+        coaching_prompt = (
+            f"Date: {date_str}\n"
+            f"Chris's journal entry:\n\"{narrative}\"\n\n"
+            f"Extracted summary:\n"
+            f"- Exercise: {exercise}\n"
+            f"- Meals logged: {logged_meals}\n"
+            f"- Water: {water}oz\n"
+            f"- Mood: {mood} | Stress: {extracted.get('stress_level')} | Energy: {extracted.get('energy_level')}\n"
+            f"- Protein today: {daily_protein_g:.0f}g / {PROTEIN_TARGET_G}g target ({protein_pct}%)\n"
+            f"- Sleep quality: {extracted.get('sleep_quality')}\n"
+            f"- Wins: {wins}\n"
+            f"- Challenges: {challenges}\n"
+            f"- Health flags: {flags}\n\n"
+            + (f"Prior conversation:\n{history_ctx}\n\n" if history_ctx else "")
+            + "Respond as Sam Wilson — direct, warm, military precision. "
+            "Acknowledge what Chris did well. Give ONE specific actionable piece of feedback. "
+            "Note any health flag if present (K+, protein, hydration, late eating). "
+            "Reference specific things Chris mentioned. 3-5 sentences max."
+        )
+        try:
+            reply = await asyncio.to_thread(
+                llm_client.prompt_text,
+                SAM_SYSTEM_PROMPT,
+                coaching_prompt,
+                max_output_tokens=200,
+            )
+            reply = reply.strip()
+        except Exception as exc:
+            log.error("process_journal_entry reply: %s", exc)
+
+    return {
+        "reply":            reply,
+        "extracted":        extracted,
+        "logged_meals":     logged_meals,
+        "adherence_items":  adherence_items,
+        "daily_protein_g":  round(daily_protein_g, 1),
+        "protein_target_g": PROTEIN_TARGET_G,
+        "journal_saved":    True,
+        "mode":             "journal",
+    }

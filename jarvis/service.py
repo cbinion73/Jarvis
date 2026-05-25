@@ -10398,6 +10398,41 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "adherence_pct": round(len(completed) / TOTAL_ITEMS * 100),
         })
 
+    @app.post("/api/health/sam/journal")
+    async def api_sam_journal(request: Request) -> JSONResponse:
+        """Process a daily health journal entry with Sam."""
+        from .sam_wilson import process_journal_entry
+        data      = await request.json()
+        narrative = str(data.get("message", "")).strip()
+        history   = data.get("history", [])
+        date_str  = data.get("date") or None
+        if not narrative:
+            return _json({"error": "narrative required"}, status_code=400)
+        try:
+            from .health_agent import get_health_metrics as _metrics
+            metrics = await asyncio.to_thread(_metrics)
+        except Exception:
+            metrics = {}
+        result = await process_journal_entry(narrative, history, date_str, metrics, runtime.openai_client)
+        return _json(result)
+
+    @app.get("/api/health/sam/journal")
+    async def api_sam_journal_get(days: int = 7) -> JSONResponse:
+        """Return last N daily journal entries, most-recent first."""
+        journal_path = Path("data/logs/sam_daily_journal.jsonl")
+        records: list[dict] = []
+        if journal_path.exists():
+            for line in journal_path.read_text().splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    records.append(json.loads(line))
+                except Exception:
+                    continue
+        records.sort(key=lambda r: r.get("date", ""), reverse=True)
+        return _json(records[:days])
+
     # ── Health chat — direct conversation with a council member ───────
 
     @app.get("/api/health/chat/doctors")

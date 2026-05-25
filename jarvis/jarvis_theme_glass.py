@@ -4880,6 +4880,10 @@ body::after {{
   animation: modal-overlay-in 0.25s ease;
 }}
 .sam-hist-overlay.hidden {{ display:none !important; animation:none; }}
+
+/* Sam Daily Journal */
+#sam-journal-overlay {{ display:flex; }}
+#sam-journal-overlay.hidden {{ display:none !important; }}
 .sam-hist-modal {{
   position:relative; overflow:hidden;
   background: rgba(255,255,255,0.08);
@@ -6833,6 +6837,7 @@ body::after {{
           <div style="display:flex;gap:6px;margin-top:6px;">
             <button class="btn-ghost" style="font-size:10px;padding:4px 10px;" onclick="samStartInterview()">📋 Diet Interview</button>
             <button class="btn-ghost" style="font-size:10px;padding:4px 10px;" onclick="samSwitchMode('food')">🍽 Log Food</button>
+            <button class="btn-ghost" style="font-size:10px;padding:4px 10px;" onclick="openSamJournal()">📓 Daily Journal</button>
           </div>
         </div>
       </div>
@@ -7127,6 +7132,38 @@ body::after {{
     <textarea class="sam-hist-notes" id="sam-hist-notes" placeholder="Notes for this day…" rows="2"></textarea>
     <!-- Save -->
     <button class="sam-hist-save" id="sam-hist-save" onclick="saveSamHistoryDay()">Save Changes</button>
+  </div>
+</div>
+
+<!-- Sam Daily Journal modal -->
+<div id="sam-journal-overlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);z-index:1400;display:flex;align-items:flex-end;justify-content:center;">
+  <div id="sam-journal-modal" style="width:100%;max-width:640px;height:85vh;background:var(--surface-1);border-radius:20px 20px 0 0;display:flex;flex-direction:column;overflow:hidden;">
+    <!-- header -->
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--text-1);">📓 Daily Journal</div>
+        <div id="sj-date" style="font-size:11px;color:var(--text-3);"></div>
+      </div>
+      <button onclick="closeSamJournal()" style="background:none;border:none;font-size:18px;color:var(--text-3);cursor:pointer;">✕</button>
+    </div>
+    <!-- messages -->
+    <div id="sj-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;"></div>
+    <!-- summary card (hidden until first entry) -->
+    <div id="sj-summary" style="display:none;margin:0 16px 8px;padding:12px;background:var(--surface-2);border-radius:10px;border:1px solid var(--border);flex-shrink:0;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:8px;">Captured Today</div>
+      <div id="sj-summary-content"></div>
+    </div>
+    <!-- input -->
+    <div style="padding:12px 16px 20px;border-top:1px solid var(--border);flex-shrink:0;">
+      <textarea id="sj-input" placeholder="Tell Sam about your day…" rows="3"
+        style="width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text-1);resize:none;outline:none;font-family:inherit;box-sizing:border-box;"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){{event.preventDefault();samJournalSend();}}"
+        oninput="this.style.height='';this.style.height=Math.min(this.scrollHeight,140)+'px'"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn-ghost" style="flex:1;font-size:12px;padding:8px;" onclick="samJournalSend()">Send to Sam →</button>
+        <button class="btn-ghost" style="font-size:12px;padding:8px 14px;" onclick="closeSamJournal()">Done</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -16590,6 +16627,120 @@ async function samLoadFoodLog() {{
   }} catch(e) {{}}
 }}
 
+// ─── Sam Daily Journal ───────────────────────────────────────────────────────
+let _sjHistory = [];
+let _sjDate = null;
+
+async function openSamJournal() {{
+  const ov = document.getElementById('sam-journal-overlay');
+  if (!ov) return;
+  ov.classList.remove('hidden');
+  _sjHistory = [];
+  _sjDate = new Date().toISOString().slice(0, 10);
+  const dateEl = document.getElementById('sj-date');
+  if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-US', {{weekday:'long', month:'long', day:'numeric'}});
+  const msgs = document.getElementById('sj-messages');
+  if (msgs) msgs.innerHTML = '';
+  const summary = document.getElementById('sj-summary');
+  if (summary) summary.style.display = 'none';
+  _sjAppendMsg('sam', "Talk to me about your day — exercise, food, drinks, how you're feeling mentally, stress, sleep from last night. Everything. Just go.");
+  document.getElementById('sj-input')?.focus();
+}}
+
+function closeSamJournal() {{
+  document.getElementById('sam-journal-overlay')?.classList.add('hidden');
+  samLoadFoodLog();
+}}
+
+function _sjAppendMsg(who, text, extraHtml) {{
+  const msgs = document.getElementById('sj-messages');
+  if (!msgs) return;
+  const isUser = who === 'user';
+  const bubble = `
+    <div style="display:flex;flex-direction:column;align-items:${{isUser ? 'flex-end' : 'flex-start'}};">
+      <div style="max-width:85%;padding:10px 14px;border-radius:${{isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px'}};
+        background:${{isUser ? 'var(--blue)' : 'var(--surface-2)'}};color:${{isUser ? '#fff' : 'var(--text-1)'}};font-size:13px;line-height:1.5;">
+        ${{escHtml(text)}}
+      </div>
+      ${{extraHtml || ''}}
+    </div>`;
+  msgs.innerHTML += bubble;
+  msgs.scrollTop = msgs.scrollHeight;
+}}
+
+function _sjRenderSummary(extracted, logged_meals, adherence_items, daily_protein_g, protein_target_g) {{
+  const summary = document.getElementById('sj-summary');
+  const content = document.getElementById('sj-summary-content');
+  if (!summary || !content) return;
+  const parts = [];
+  const pct = Math.min(100, Math.round((daily_protein_g || 0) / (protein_target_g || 87) * 100));
+  parts.push(`
+    <div style="margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:3px;">
+        <span>Protein</span><span>${{daily_protein_g || 0}}g / ${{protein_target_g || 87}}g</span>
+      </div>
+      <div style="height:4px;background:var(--surface-3);border-radius:2px;overflow:hidden;">
+        <div style="height:100%;width:${{pct}}%;background:var(--blue);border-radius:2px;"></div>
+      </div>
+    </div>`);
+  if (logged_meals && logged_meals.length) {{
+    parts.push(`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">
+      ${{logged_meals.map(m => `<span style="font-size:10px;background:var(--surface-3);border-radius:8px;padding:2px 8px;">🍽 ${{escHtml(m)}}</span>`).join('')}}
+    </div>`);
+  }}
+  const ex = (extracted && extracted.exercise) || [];
+  if (ex.length) {{
+    parts.push(`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">
+      ${{ex.map(e => `<span style="font-size:10px;background:var(--surface-3);border-radius:8px;padding:2px 8px;">💪 ${{escHtml(e.type || 'exercise')}} ${{e.duration_min ? e.duration_min+'min' : ''}}</span>`).join('')}}
+    </div>`);
+  }}
+  if (extracted && extracted.water_oz) {{
+    parts.push(`<div style="font-size:11px;color:var(--text-2);">💧 ${{extracted.water_oz}}oz water</div>`);
+  }}
+  if (adherence_items && adherence_items.length) {{
+    parts.push(`<div style="font-size:11px;color:var(--green);margin-top:4px;">✓ ${{adherence_items.join(' · ')}}</div>`);
+  }}
+  content.innerHTML = parts.join('');
+  summary.style.display = '';
+}}
+
+async function samJournalSend() {{
+  const inp = document.getElementById('sj-input');
+  if (!inp) return;
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  inp.style.height = '';
+  _sjAppendMsg('user', text);
+  _sjHistory.push({{role: 'user', content: text}});
+  const msgs = document.getElementById('sj-messages');
+  if (msgs) {{
+    msgs.innerHTML += `<div id="sj-typing" style="color:var(--text-3);font-size:12px;font-style:italic;padding:4px 0;">Sam is processing…</div>`;
+    msgs.scrollTop = msgs.scrollHeight;
+  }}
+  try {{
+    const res = await fetch('/api/health/sam/journal', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{
+        message: text,
+        history: _sjHistory.slice(-10),
+        date: _sjDate,
+      }})
+    }});
+    const d = await res.json();
+    document.getElementById('sj-typing')?.remove();
+    _sjAppendMsg('sam', d.reply || '…');
+    _sjHistory.push({{role: 'assistant', content: d.reply || ''}});
+    _sjRenderSummary(d.extracted, d.logged_meals, d.adherence_items, d.daily_protein_g, d.protein_target_g);
+    if (typeof voiceSpeak === 'function') voiceSpeak(d.reply);
+  }} catch(e) {{
+    document.getElementById('sj-typing')?.remove();
+    if (msgs) msgs.innerHTML += `<div style="color:var(--red);font-size:12px;">Connection error — try again</div>`;
+  }}
+}}
+
+// ─── Sam Chat ────────────────────────────────────────────────────────────────
 async function samChat() {{
   const inp = document.getElementById('sam-chat-input');
   const msgs = document.getElementById('sam-chat-messages');
