@@ -13,6 +13,30 @@ log = logging.getLogger(__name__)
 ADHERENCE_LOG  = Path("data/logs/sam_adherence.jsonl")
 PROTOCOL_CACHE = Path("data/settings/sam_protocol_today.json")
 
+# ── Longevity Council context cache (TTL = 10 min) ───────────────────────────
+_council_ctx_cache: str = ""
+_council_ctx_ts: datetime | None = None
+_COUNCIL_CTX_TTL = timedelta(minutes=10)
+
+
+def _get_council_context() -> str:
+    """
+    Return health_state_summary() with a 10-minute in-process cache.
+    Never raises — returns empty string on any error.
+    """
+    global _council_ctx_cache, _council_ctx_ts
+    now = datetime.now(timezone.utc)
+    if _council_ctx_ts and (now - _council_ctx_ts) < _COUNCIL_CTX_TTL and _council_ctx_cache:
+        return _council_ctx_cache
+    try:
+        from .longevity_council import health_state_summary
+        _council_ctx_cache = health_state_summary()
+        _council_ctx_ts = now
+    except Exception as exc:
+        log.warning("_get_council_context: %s", exc)
+        _council_ctx_cache = ""
+    return _council_ctx_cache
+
 CHRIS_PROFILE = {
     "age": 52, "weight_lbs": 247, "weight_kg": 112,
     "a1c_pct": 7.3, "ldl_mg_dl": 156, "egfr": 87, "k_plus_meq": 4.5,
@@ -46,7 +70,16 @@ ABSOLUTE SAFETY RULES — NEVER VIOLATE:
 4. Hydration always high priority — kidney function depends on it
 5. Low glycemic nutrition — A1c management
 
-VOICE: Direct. Warm. Military precision. Competitive but caring. Call Chris "brother" or by name. Short punchy sentences. No fluff. Real talk."""
+HONESTY MANDATE — THIS IS NON-NEGOTIABLE:
+You are Chris's coach, not his hype man. Real coaches tell hard truths.
+- Call out bad choices DIRECTLY by name. "That pizza and cake spiked your glucose and your LDL doesn't have room for that" is correct. "Interesting choices today" is cowardly.
+- Use a scorecard framing when reviewing a day: what was a WIN, what was a MISS, and what's the IMPACT on his actual health numbers.
+- Never sugarcoat food choices that contradict his medical goals. If he had cake and pizza on a day with zero water and poor sleep, say it plainly.
+- Balance honesty with respect. You're not shaming him — you're treating him like a capable adult who can handle the truth and use it to improve.
+- Celebrate genuine wins with the same intensity you call out misses. Both matter.
+- If a choice was medically risky (high-K food, excess sugar with A1c at 7.3%, no hydration with CKD), flag it explicitly. His medical team is watching this data.
+
+VOICE: Direct. Warm. Military precision. Competitive but caring. Call Chris "brother" or by name. Short punchy sentences. No fluff. Real talk. Honest even when it's uncomfortable."""
 
 
 def _compute_targets(metrics: dict) -> dict:
@@ -835,9 +868,14 @@ async def chat_with_sam(
     conv += f"\nCHRIS: {message}"
     try:
         import asyncio
+        council_ctx = _get_council_context()
+        council_block = (
+            f"\n\nLONGEVITY COUNCIL INTELLIGENCE (silent — use to ground your coaching):\n"
+            f"{council_ctx[:2500]}"
+        ) if council_ctx else ""
         reply = await asyncio.to_thread(
             llm_client.prompt_text,
-            SAM_SYSTEM_PROMPT + "\n\nContext: " + ctx,
+            SAM_SYSTEM_PROMPT + "\n\nContext: " + ctx + council_block,
             conv,
             max_output_tokens=300,
         )
@@ -1240,6 +1278,15 @@ async def process_journal_entry(
             for h in (history or [])[-6:]
         )
 
+        # Pull Longevity Council context so Sam's reply is medically grounded
+        council_ctx = _get_council_context()
+        council_block = (
+            f"\n\nLONGEVITY COUNCIL INTELLIGENCE (silent — for your coaching context only):\n"
+            f"{council_ctx[:3000]}\n"
+            "Cross-check your coaching against this data. If your recommendation conflicts with "
+            "any clinical finding above, defer to the medical picture."
+        ) if council_ctx else ""
+
         coaching_prompt = (
             f"Date: {date_str}\n"
             f"Chris's journal entry:\n\"{narrative}\"\n\n"
@@ -1255,16 +1302,17 @@ async def process_journal_entry(
             f"- Health flags: {flags}\n\n"
             + (f"Prior conversation:\n{history_ctx}\n\n" if history_ctx else "")
             + "Respond as Sam Wilson — direct, warm, military precision. "
-            "Acknowledge what Chris did well. Give ONE specific actionable piece of feedback. "
-            "Note any health flag if present (K+, protein, hydration, late eating). "
-            "Reference specific things Chris mentioned. 3-5 sentences max."
+            "Give Chris a scorecard on today: name specific WINS and specific MISSES. "
+            "Call out any bad food or lifestyle choices by name — be honest, not brutal. "
+            "Note any health flag if present (glucose impact, K+, protein, hydration, sleep). "
+            "Reference specific things Chris mentioned. 4-6 sentences max."
         )
         try:
             reply = await asyncio.to_thread(
                 llm_client.prompt_text,
-                SAM_SYSTEM_PROMPT,
+                SAM_SYSTEM_PROMPT + council_block,
                 coaching_prompt,
-                max_output_tokens=200,
+                max_output_tokens=280,
             )
             reply = reply.strip()
         except Exception as exc:
