@@ -17219,7 +17219,7 @@ function renderScoreSparkline(history) {{
 
   const valid = (history || []).filter(h => h.score !== null && h.score !== undefined);
   if (valid.length < 2) {{
-    svg.innerHTML = "<text x=\"140\" y=\"24\" text-anchor=\"middle\" fill=\"rgba(255,255,255,0.2)\" font-size=\"10\">Not enough data yet</text>";
+    svg.innerHTML = '<text x="140" y="24" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="10">Not enough data yet</text>';
     return;
   }}
 
