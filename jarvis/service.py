@@ -10417,6 +10417,20 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         result = await process_journal_entry(narrative, history, date_str, metrics, runtime.openai_client)
         return _json(result)
 
+    @app.get("/api/health/score")
+    async def api_health_score_get(date: str | None = None) -> JSONResponse:
+        from .health_score import compute_daily_score
+        from datetime import date as _date
+        d = date or _date.today().isoformat()
+        result = await asyncio.to_thread(compute_daily_score, d)
+        return _json(result)
+
+    @app.get("/api/health/score/history")
+    async def api_health_score_history(days: int = 30) -> JSONResponse:
+        from .health_score import get_score_history
+        result = await asyncio.to_thread(get_score_history, days)
+        return _json(result)
+
     @app.get("/api/health/sam/journal")
     async def api_sam_journal_get(days: int = 7) -> JSONResponse:
         """Return last N daily journal entries, most-recent first."""

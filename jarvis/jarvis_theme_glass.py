@@ -854,6 +854,67 @@ body::after {{
 }}
 @media(max-width:640px) {{ .stats-strip {{ grid-template-columns: repeat(2,1fr); }} }}
 
+/* ── Daily Health Score ── */
+.health-score-panel {{
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}}
+.health-score-ring {{
+  flex-shrink: 0;
+  position: relative;
+  width: 72px;
+  height: 72px;
+}}
+.health-score-sparkline {{
+  flex: 1;
+  min-width: 0;
+}}
+.sparkline-svg {{
+  width: 100%;
+  height: 44px;
+  overflow: visible;
+}}
+.score-domain-bar {{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}}
+.score-domain-label {{
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text-3);
+  width: 68px;
+  flex-shrink: 0;
+}}
+.score-domain-track {{
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}}
+.score-domain-fill {{
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}}
+.score-domain-pts {{
+  font-size: 9px;
+  font-family: var(--font-mono);
+  color: var(--text-3);
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}}
+
 .stat-tile {{
   padding: 16px 18px;
   cursor: pointer;
@@ -6507,6 +6568,39 @@ body::after {{
     </div>
     <div class="view-body" style="padding:20px;display:flex;flex-direction:column;gap:16px;">
 
+      <!-- ── DAILY HEALTH SCORE ──────────────────────────────────────────── -->
+      <div class="health-score-panel" id="daily-score-panel">
+        <!-- Score ring -->
+        <div class="health-score-ring">
+          <svg viewBox="0 0 72 72" style="width:72px;height:72px;transform:rotate(-90deg);">
+            <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"/>
+            <circle id="dhs-ring" cx="36" cy="36" r="30" fill="none" stroke="#f59e0b" stroke-width="6"
+              stroke-linecap="round" stroke-dasharray="188.5" stroke-dashoffset="188.5"
+              style="transition:stroke-dashoffset 1s ease,stroke 0.5s ease;"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div id="dhs-score" style="font-size:20px;font-weight:800;font-family:var(--font-mono);color:var(--amber);line-height:1;">—</div>
+            <div id="dhs-grade" style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-3);margin-top:1px;">—</div>
+          </div>
+        </div>
+        <!-- Breakdown + sparkline -->
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-2);">Daily Health Score</div>
+            <div id="dhs-date" style="font-size:10px;color:var(--text-3);">Today</div>
+          </div>
+          <!-- Domain bars -->
+          <div id="dhs-breakdown" style="margin-bottom:10px;"></div>
+          <!-- Sparkline -->
+          <div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);margin-bottom:4px;">30-Day Trend</div>
+            <svg id="dhs-sparkline" class="sparkline-svg" viewBox="0 0 280 44" preserveAspectRatio="none">
+              <text x="140" y="24" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="10">Loading…</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+
       <!-- ── HELEN CHO ASSESSMENT HEADER ─────────────────────────────────── -->
       <div class="card card-tactical" id="helen-assessment-card" style="border-left:3px solid var(--hue);">
         <div class="card-inner" style="padding:16px;">
@@ -7567,6 +7661,7 @@ function init() {{
   setTimeout(voiceInit, 1000); // slight delay so browser permissions settle
   loadOverviewHealth();
   loadLayoutState();
+  loadDailyHealthScore();
   setInterval(checkAutoMode, 5 * 60 * 1000);
   updateModeBarClock();
   setInterval(updateModeBarClock, 60 * 1000);
@@ -7648,7 +7743,7 @@ function loadViewData(name) {{
     case 'faith':        loadFaith(); break;
     case 'email':        loadHomeEmail(); break;
     case 'calendar':     loadHomeCalendar(); break;
-    case 'health':       loadHealth(); break;
+    case 'health':       loadHealth(); loadDailyHealthScore(); break;
     case 'workshop':     loadHomeTasks(); break;
     case 'catalyst':     loadWorkIntelligence(); break;
     case 'news':         loadNews(false); break;
@@ -15848,6 +15943,11 @@ async function loadSamOverviewCard() {{
         </div>
         ${{watch ? `<div style="font-size:11px;color:var(--amber);background:rgba(217,119,6,.10);border:1px solid rgba(217,119,6,.25);border-radius:6px;padding:5px 8px;">⚠ ${{escHtml(watch)}}</div>` : ''}}
         <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <div id="sam-ov-score-row" style="margin-bottom:8px;display:none;">
+          <span id="sam-ov-score-badge" style="font-family:var(--font-mono);font-size:13px;font-weight:800;"></span>
+          <span id="sam-ov-score-label" style="font-size:10px;color:var(--text-3);margin-left:6px;"></span>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
           <button onclick="openSamJournal()"
             style="padding:6px 14px;border-radius:8px;background:rgba(99,102,241,0.20);border:1px solid rgba(99,102,241,0.40);
                    color:#a5b4fc;font-size:11px;font-weight:700;cursor:pointer;">
@@ -16692,6 +16792,7 @@ function closeSamJournal() {{
   samLoadFoodLog();
   // Refresh Sam overview card so summary shows up immediately
   if (typeof loadSamOverviewCard === 'function') loadSamOverviewCard();
+  loadDailyHealthScore();
 }}
 
 function _sjAppendMsg(who, text, extraHtml) {{
@@ -17021,6 +17122,157 @@ async function loadOverviewHealth() {{
   }} catch(e) {{
     if (el) el.innerHTML = '<div style="color:var(--text-3);">Unavailable</div>';
   }}
+}}
+
+/* ═══ DAILY HEALTH SCORE ═══ */
+
+async function loadDailyHealthScore() {{
+  try {{
+    const [scoreRes, histRes] = await Promise.all([
+      fetch('/api/health/score').catch(() => null),
+      fetch('/api/health/score/history?days=30').catch(() => null),
+    ]);
+    if (scoreRes && scoreRes.ok) {{
+      const d = await scoreRes.json();
+      renderDailyScorePanel(d);
+      renderSamOvScore(d);
+    }}
+    if (histRes && histRes.ok) {{
+      const hist = await histRes.json();
+      renderScoreSparkline(hist);
+    }}
+  }} catch(e) {{ console.warn("loadDailyHealthScore:", e); }}
+}}
+
+function renderDailyScorePanel(d) {{
+  const score = d.score ?? null;
+  const ring  = document.getElementById("dhs-ring");
+  const sc    = document.getElementById("dhs-score");
+  const gr    = document.getElementById("dhs-grade");
+  const dt    = document.getElementById("dhs-date");
+  const brk   = document.getElementById("dhs-breakdown");
+  if (!sc) return;
+
+  if (score === null) {{
+    sc.textContent = "—";
+    gr.textContent = "No data";
+    return;
+  }}
+
+  const color = d.color || (score >= 75 ? "#10b981" : score >= 50 ? "#f59e0b" : "#ef4444");
+  sc.textContent = score;
+  sc.style.color = color;
+  gr.textContent = d.grade || "—";
+  if (dt) dt.textContent = d.date || "Today";
+
+  // Animate ring (circumference = 2π×30 ≈ 188.5)
+  if (ring) {{
+    ring.style.stroke = color;
+    ring.style.strokeDashoffset = String(188.5 - (score / 100) * 188.5);
+  }}
+
+  // Domain breakdown bars
+  if (brk && d.breakdown) {{
+    const domains = [
+      {{ key: "sleep",      label: "Sleep",    max: 20 }},
+      {{ key: "glycemic",   label: "Glycemic", max: 18 }},
+      {{ key: "exercise",   label: "Exercise", max: 15 }},
+      {{ key: "hydration",  label: "Hydration",max: 10 }},
+      {{ key: "protein",    label: "Protein",  max: 10 }},
+      {{ key: "mental",     label: "Mental",   max: 10 }},
+      {{ key: "adherence",  label: "Protocol", max: 10 }},
+      {{ key: "baseline",   label: "Baseline", max: 7  }},
+    ];
+    brk.innerHTML = domains.map(dom => {{
+      const info = d.breakdown[dom.key] || {{}};
+      const pts  = info.pts ?? 0;
+      const pct  = Math.round((pts / dom.max) * 100);
+      const col  = pct >= 75 ? "#10b981" : pct >= 50 ? "#f59e0b" : "#ef4444";
+      return `<div class="score-domain-bar" title="${{escHtml(info.detail || "")}}">
+        <span class="score-domain-label">${{dom.label}}</span>
+        <div class="score-domain-track">
+          <div class="score-domain-fill" style="width:${{pct}}%;background:${{col}};"></div>
+        </div>
+        <span class="score-domain-pts">${{pts}}/${{dom.max}}</span>
+      </div>`;
+    }}).join("");
+  }}
+}}
+
+function renderSamOvScore(d) {{
+  const row   = document.getElementById("sam-ov-score-row");
+  const badge = document.getElementById("sam-ov-score-badge");
+  const label = document.getElementById("sam-ov-score-label");
+  if (!row || !badge) return;
+  const score = d.score ?? null;
+  if (score === null) return;
+  const color = d.color || (score >= 75 ? "#10b981" : score >= 50 ? "#f59e0b" : "#ef4444");
+  badge.textContent = score + "/100";
+  badge.style.color = color;
+  label.textContent = (d.grade || "") + " — " + (score >= 75 ? "Strong day" : score >= 50 ? "Average day" : "Tough day");
+  row.style.display = "";
+}}
+
+function renderScoreSparkline(history) {{
+  const svg = document.getElementById("dhs-sparkline");
+  if (!svg) return;
+
+  const valid = (history || []).filter(h => h.score !== null && h.score !== undefined);
+  if (valid.length < 2) {{
+    svg.innerHTML = "<text x=\"140\" y=\"24\" text-anchor=\"middle\" fill=\"rgba(255,255,255,0.2)\" font-size=\"10\">Not enough data yet</text>";
+    return;
+  }}
+
+  const W = 280, H = 44, PAD = 4;
+  const scores = valid.map(h => h.score);
+  const minS = Math.max(0,  Math.min(...scores) - 5);
+  const maxS = Math.min(100, Math.max(...scores) + 5);
+  const xStep = (W - PAD * 2) / (valid.length - 1);
+
+  const pts = valid.map((h, i) => {{
+    const x = PAD + i * xStep;
+    const y = H - PAD - ((h.score - minS) / (maxS - minS + 1)) * (H - PAD * 2);
+    return {{ x, y, score: h.score, date: h.date, color: h.color || "#f59e0b" }};
+  }});
+
+  const polyPts = pts.map(p => `${{p.x.toFixed(1)}},${{p.y.toFixed(1)}}`).join(" ");
+
+  // gradient fill path
+  const fillPath = "M " + pts[0].x.toFixed(1) + "," + H +
+    " L " + pts.map(p => `${{p.x.toFixed(1)}},${{p.y.toFixed(1)}}`).join(" L ") +
+    " L " + pts[pts.length-1].x.toFixed(1) + "," + H + " Z";
+
+  // reference lines at 75 and 50
+  const y75 = H - PAD - ((75 - minS) / (maxS - minS + 1)) * (H - PAD * 2);
+  const y50 = H - PAD - ((50 - minS) / (maxS - minS + 1)) * (H - PAD * 2);
+
+  // color the polyline segments
+  const segLines = pts.slice(1).map((p, i) => {{
+    const prev = pts[i];
+    const col  = p.color || "#f59e0b";
+    return `<line x1="${{prev.x.toFixed(1)}}" y1="${{prev.y.toFixed(1)}}" x2="${{p.x.toFixed(1)}}" y2="${{p.y.toFixed(1)}}" stroke="${{col}}" stroke-width="1.5" stroke-linecap="round"/>`;
+  }}).join("");
+
+  // dots for each data point
+  const dotCircles = pts.map(p =>
+    `<circle cx="${{p.x.toFixed(1)}}" cy="${{p.y.toFixed(1)}}" r="2" fill="${{p.color || "#f59e0b"}}" opacity="0.8">
+      <title>${{p.date}}: ${{p.score}}</title>
+    </circle>`
+  ).join("");
+
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="spark-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#10b981" stop-opacity="0.15"/>
+        <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    ${{y75 > 0 && y75 < H ? `<line x1="${{PAD}}" y1="${{y75.toFixed(1)}}" x2="${{W-PAD}}" y2="${{y75.toFixed(1)}}" stroke="rgba(16,185,129,0.2)" stroke-width="1" stroke-dasharray="3,3"/>` : ""}}
+    ${{y50 > 0 && y50 < H ? `<line x1="${{PAD}}" y1="${{y50.toFixed(1)}}" x2="${{W-PAD}}" y2="${{y50.toFixed(1)}}" stroke="rgba(245,158,11,0.2)" stroke-width="1" stroke-dasharray="3,3"/>` : ""}}
+    <path d="${{fillPath}}" fill="url(#spark-grad)"/>
+    ${{segLines}}
+    ${{dotCircles}}
+  `;
 }}
 
 /* ── Boot ── */
