@@ -897,6 +897,115 @@ def _merge_extracted(base: dict, new: dict) -> dict:
     return merged
 
 
+# Sleep parsing schema for LLM extraction
+_SLEEP_EXTRACT_SCHEMA = """{
+  "bedtime": "HH:MM or null",
+  "wake_time": "HH:MM or null",
+  "total_night_hours": null,
+  "nap_hours": null,
+  "sleep_quality_score": null
+}"""
+
+async def _maybe_log_sleep(
+    narrative: str,
+    extracted: dict,
+    date_str: str,
+    llm_client: Any,
+) -> None:
+    """
+    Parse sleep details from the narrative and append to sleep_log.jsonl.
+    Only writes if sleep info is actually mentioned.  Skips if no LLM available.
+    """
+    import asyncio, re as _re
+    from pathlib import Path as _Path
+
+    # Quick gate: skip if no obvious sleep mention
+    nl = narrative.lower()
+    sleep_keywords = ("bed", "sleep", "slept", "woke", "wake", "nap", "tired", "exhausted", "rest")
+    if not any(k in nl for k in sleep_keywords):
+        return
+
+    parsed_sleep: dict = {}
+    if llm_client is not None:
+        try:
+            sys_prompt = (
+                "You are a health data extractor. Extract sleep timing from the text and return ONLY valid JSON. "
+                "Use 24-hour HH:MM for times. Set to null if not clearly stated.\n\n"
+                f"Schema:\n{_SLEEP_EXTRACT_SCHEMA}"
+            )
+            user_prompt = f"Date: {date_str}\nText:\n\"{narrative}\"\n\nReturn only JSON."
+            raw = await asyncio.to_thread(
+                llm_client.prompt_text,
+                sys_prompt,
+                user_prompt,
+                max_output_tokens=150,
+            )
+            m = _re.search(r"\{.*\}", raw.strip(), _re.DOTALL)
+            if m:
+                parsed_sleep = json.loads(m.group(0))
+        except Exception as exc:
+            log.warning("_maybe_log_sleep LLM extract: %s", exc)
+            return
+    else:
+        return  # no LLM, no sleep log
+
+    # Map sleep_quality string from extracted to integer 1-10
+    sq_str = extracted.get("sleep_quality") or ""
+    sq_map = {"great": 9, "good": 7, "okay": 5, "poor": 3}
+    sq_int = parsed_sleep.get("sleep_quality_score") or sq_map.get(sq_str, 5)
+    try:
+        sq_int = int(sq_int)
+    except (TypeError, ValueError):
+        sq_int = 5
+
+    # Total hours: night + nap
+    night_h = parsed_sleep.get("total_night_hours")
+    nap_h   = parsed_sleep.get("nap_hours") or 0
+    if night_h is None:
+        return  # no usable sleep data
+
+    try:
+        night_h = float(night_h)
+        nap_h   = float(nap_h)
+    except (TypeError, ValueError):
+        return
+
+    total_h = round(night_h + nap_h, 2)
+    if total_h <= 0:
+        return
+
+    bedtime   = parsed_sleep.get("bedtime") or "00:00"
+    wake_time = parsed_sleep.get("wake_time") or "00:00"
+
+    # Build notes
+    notes_parts = []
+    if nap_h > 0:
+        notes_parts.append(f"Nap: {nap_h}h")
+    sq_label = extracted.get("sleep_quality") or sq_str
+    if sq_label:
+        notes_parts.append(f"quality={sq_label}")
+    notes = " | ".join(notes_parts) if notes_parts else ""
+
+    # Write to sleep_log.jsonl
+    try:
+        from .sleep_intelligence import SleepLog, log_sleep
+        entry = SleepLog(
+            date=date_str,
+            bedtime=bedtime,
+            wake_time=wake_time,
+            total_hours=total_h,
+            sleep_quality=sq_int,
+            hrv_morning=None,
+            resting_hr=None,
+            spo2_min=None,
+            notes=notes,
+        )
+        result = await asyncio.to_thread(log_sleep, entry)
+        log.info("_maybe_log_sleep: logged %s — %.1fh (night=%.1fh, nap=%.1fh)", date_str, total_h, night_h, nap_h)
+    except Exception as exc:
+        log.error("_maybe_log_sleep write: %s", exc)
+
+
 def _upsert_journal(date_str: str, raw_entry: str, extracted: dict,
                     total_protein_g: float, adherence_items: list[str]) -> None:
     """Read JSONL, find matching date, merge, rewrite."""
@@ -1086,6 +1195,9 @@ async def process_journal_entry(
             daily_protein_g = float(engine_protein)
     except Exception as exc:
         log.debug("process_journal_entry get nutrition: %s", exc)
+
+    # ── Step 3.5: Extract sleep details and log to sleep_log.jsonl ───────────
+    await _maybe_log_sleep(narrative, extracted, date_str, llm_client)
 
     # ── Step 4: Save journal entry (upsert) ───────────────────────────────────
     adherence_items = extracted.get("adherence_items") or []
