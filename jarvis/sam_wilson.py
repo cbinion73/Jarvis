@@ -442,25 +442,389 @@ async def evaluate_day_narrative(
     return {"completed": completed, "reply": reply, "adherence_pct": pct, "reasoning": {}}
 
 
+# ─── Food preferences store ───────────────────────────────────────────────────
+FOOD_PREFS_PATH = Path("data/settings/sam_food_prefs.json")
+
+# High-K+ foods Sam always flags (CKD + ARB + spiro risk)
+_HIGH_K_FOODS = [
+    "banana", "avocado", "potato", "tomato juice", "orange juice", "OJ",
+    "spinach", "sweet potato", "beans", "lentils", "bran", "nuts", "prunes",
+    "raisins", "coconut water", "yogurt", "salmon", "sardines",
+]
+
+_SAM_REPLY = {"coach": "sam_wilson", "coach_name": "Sam Wilson", "coach_title": "Health & Fitness Coach"}
+
+# Diet interview questions — Sam leads this
+_INTERVIEW_QUESTIONS = [
+    ("likes",         "Let's figure out what actually works for your palate. What foods do you genuinely enjoy eating — anything goes, just be honest."),
+    ("dislikes",      "What foods are hard nos for you? Things you refuse to eat or strongly dislike."),
+    ("allergies",     "Any food allergies or intolerances I need to know about?"),
+    ("typical_meals", "Walk me through what a typical weekday looks like for meals — breakfast, lunch, dinner, snacks. Be real with me."),
+    ("eat_out",       "How often do you eat out or order in? What are your go-to spots or cuisines?"),
+    ("cooking",       "How comfortable are you in the kitchen? Quick 15-minute meals, or do you actually enjoy cooking?"),
+    ("cravings",      "What do you reach for when you're stressed, tired, or just want comfort food?"),
+    ("goals",         "What's your biggest food goal right now — weight, energy, blood sugar control, building a better relationship with food?"),
+    ("wins",          "Any foods or meals you've discovered that actually feel good — give you energy, don't spike your glucose, just work?"),
+    ("done",          None),  # Sentinel — interview complete
+]
+
+
+def get_food_preferences() -> dict:
+    """Load food preferences from disk. Returns empty skeleton if missing."""
+    try:
+        if FOOD_PREFS_PATH.exists():
+            return json.loads(FOOD_PREFS_PATH.read_text())
+    except Exception:
+        pass
+    return {
+        "interview_step": 0,
+        "interview_complete": False,
+        "interview_notes": {},
+        "likes": [],
+        "dislikes": [],
+        "allergies": [],
+        "typical_meals": "",
+        "eat_out_freq": "",
+        "cooking_skill": "",
+        "cravings": [],
+        "goals": "",
+        "wins": [],
+        "updated_at": "",
+    }
+
+
+def save_food_preferences(prefs: dict) -> None:
+    try:
+        FOOD_PREFS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        prefs["updated_at"] = datetime.now(timezone.utc).isoformat()
+        FOOD_PREFS_PATH.write_text(json.dumps(prefs, indent=2))
+    except Exception as exc:
+        log.error("save_food_preferences: %s", exc)
+
+
+def _prefs_summary(prefs: dict) -> str:
+    """One-line context string for Sam's system prompt."""
+    if not prefs.get("interview_complete"):
+        return "Diet interview: not yet completed."
+    parts = []
+    if prefs.get("likes"):
+        parts.append("Likes: " + ", ".join(prefs["likes"][:6]))
+    if prefs.get("dislikes"):
+        parts.append("Dislikes: " + ", ".join(prefs["dislikes"][:4]))
+    if prefs.get("cravings"):
+        parts.append("Cravings/comfort: " + ", ".join(prefs["cravings"][:3]))
+    if prefs.get("goals"):
+        parts.append(f"Food goal: {prefs['goals'][:80]}")
+    return " · ".join(parts) if parts else "Diet interview complete."
+
+
+async def analyze_food_entry(
+    description: str,
+    date_str:    str | None = None,
+    prefs:       dict | None = None,
+    metrics:     dict | None = None,
+    llm_client:  Any = None,
+) -> dict:
+    """
+    Parse a natural-language food description, estimate macros, flag
+    CKD / K+ / glucose concerns, log to nutrition_engine, and return
+    Sam's coaching response.
+
+    Returns:
+      {meal: {name, protein_g, carb_g, fat_g, calories, time},
+       daily: {total_protein_g, protein_gap_g, meal_count, …},
+       reply: str, warnings: [str], logged: bool}
+    """
+    import asyncio, re
+    date_str  = date_str or date.today().isoformat()
+    now_time  = datetime.now().strftime("%H:%M")
+    warnings: list[str] = []
+
+    # Quick K+ keyword scan
+    desc_lower = description.lower()
+    for food in _HIGH_K_FOODS:
+        if food.lower() in desc_lower:
+            warnings.append(f"⚠ High-K+ food detected ({food}) — watch portion with your ARB + spiro combo")
+
+    if llm_client is None:
+        # Minimal fallback — heuristic macros
+        meal = {"name": description[:80], "protein_g": 20.0, "carb_g": 30.0, "fat_g": 10.0, "calories": 290.0, "time": now_time}
+        reply = "Logged. I couldn't analyse the macros right now — check back when I'm fully online."
+        logged, daily = _try_log_meal(date_str, meal)
+        return {"meal": meal, "daily": daily, "reply": reply, "warnings": warnings, "logged": logged}
+
+    # LLM: extract meal + estimate macros + coaching
+    prefs_ctx  = _prefs_summary(prefs or {})
+    m = metrics or {}
+    system = (
+        SAM_SYSTEM_PROMPT
+        + "\n\nYou are analysing a food entry Chris logged. Respond ONLY with valid JSON — no prose outside the JSON.\n"
+        'Format:\n'
+        '{\n'
+        '  "meal_name": "Scrambled eggs, toast, OJ",\n'
+        '  "protein_g": 28.0,\n'
+        '  "carb_g": 42.0,\n'
+        '  "fat_g": 14.0,\n'
+        '  "calories": 410.0,\n'
+        '  "glucose_impact": "medium",   // low | medium | high\n'
+        '  "k_concern": true,            // true if high-K+ foods present\n'
+        '  "reply": "Sam\'s 2–3 sentence coaching comment on this meal"\n'
+        '}'
+    )
+    prompt = (
+        f"Food entry: \"{description}\"\n"
+        f"Time of day: {now_time}  |  Date: {date_str}\n"
+        f"Daily protein so far: {m.get('protein_today_g', '?')}g  |  Target max: {CHRIS_PROFILE['protein_target_g']}g (CKD Stage 2)\n"
+        f"Chris's food preferences: {prefs_ctx}\n\n"
+        "Estimate macros as accurately as possible for typical US serving sizes. "
+        "Flag glucose impact honestly. Call out any high-K+ foods. "
+        "Keep reply direct and specific — what was good, what to watch, one improvement."
+    )
+    try:
+        raw = await asyncio.to_thread(llm_client.prompt_text, system, prompt, max_output_tokens=250)
+        raw = raw.strip()
+        m2 = re.search(r'\{.*\}', raw, re.DOTALL)
+        if m2:
+            raw = m2.group(0)
+        parsed = json.loads(raw)
+        meal = {
+            "name":      parsed.get("meal_name", description[:80]),
+            "protein_g": float(parsed.get("protein_g", 20)),
+            "carb_g":    float(parsed.get("carb_g", 30)),
+            "fat_g":     float(parsed.get("fat_g", 10)),
+            "calories":  float(parsed.get("calories", 300)),
+            "time":      now_time,
+        }
+        if parsed.get("k_concern") and not warnings:
+            warnings.append("⚠ High-K+ food in this meal — be mindful of portions")
+        reply = parsed.get("reply", "Logged.").strip()
+        logged, daily = _try_log_meal(date_str, meal)
+        return {"meal": meal, "daily": daily, "reply": reply, "warnings": warnings, "logged": logged}
+    except Exception as exc:
+        log.error("analyze_food_entry: %s", exc)
+        meal = {"name": description[:80], "protein_g": 20.0, "carb_g": 30.0, "fat_g": 10.0, "calories": 290.0, "time": now_time}
+        logged, daily = _try_log_meal(date_str, meal)
+        return {"meal": meal, "daily": daily, "reply": "Logged — couldn't estimate macros right now.", "warnings": warnings, "logged": logged}
+
+
+def _try_log_meal(date_str: str, meal: dict) -> tuple[bool, dict]:
+    """Log meal to nutrition_engine; return (success, daily_summary)."""
+    try:
+        from .nutrition_engine import log_meal, get_daily_nutrition
+        daily_dict = log_meal(date_str, meal)
+        return True, daily_dict
+    except Exception as exc:
+        log.error("_try_log_meal: %s", exc)
+        return False, {}
+
+
+def get_today_food_log() -> dict:
+    """Return today's nutrition summary from the nutrition engine."""
+    try:
+        from .nutrition_engine import get_daily_nutrition
+        rec = get_daily_nutrition(date.today().isoformat())
+        protein_g = round(rec.total_protein_g, 1)
+        return {
+            "date":             rec.date,
+            "meal_count":       rec.meal_count,
+            "protein_g":        protein_g,        # frontend alias
+            "total_protein_g":  protein_g,
+            "total_carbs_g":    round(rec.total_carbs_g, 1),
+            "total_fat_g":      round(rec.total_fat_g, 1),
+            "total_calories":   round(rec.total_calories, 0),
+            "protein_target_g": CHRIS_PROFILE["protein_target_g"],
+            "protein_gap_g":    max(0, round(CHRIS_PROFILE["protein_target_g"] - protein_g, 1)),
+            "meals":            [{"name": m.name, "protein_g": m.protein_g, "calories": m.calories, "time": m.time}
+                                 for m in (rec.meals or [])],
+        }
+    except Exception as exc:
+        log.error("get_today_food_log: %s", exc)
+        return {"meal_count": 0, "total_protein_g": 0, "protein_gap_g": CHRIS_PROFILE["protein_target_g"], "meals": []}
+
+
+# ─── Diet interview ────────────────────────────────────────────────────────────
+
+async def run_diet_interview(
+    step:        int,
+    user_answer: str | None,
+    llm_client:  Any = None,
+) -> dict:
+    """
+    Drive the structured diet interview.
+    step=0 starts fresh. For step>0, user_answer contains Chris's response
+    to the previous question.
+
+    Returns:
+      {step, question, done, reply, prefs_updated}
+    """
+    prefs = get_food_preferences()
+
+    # If an answer was provided, have Sam process it and store the insight
+    if user_answer and step > 0 and step <= len(_INTERVIEW_QUESTIONS):
+        field_key = _INTERVIEW_QUESTIONS[step - 1][0]
+        prefs.setdefault("interview_notes", {})[field_key] = user_answer
+
+        # Update structured fields from the answer
+        low = user_answer.lower()
+        if field_key == "likes":
+            # Simple comma-split heuristic; LLM refines later
+            items = [x.strip() for x in user_answer.replace(" and ", ",").split(",") if x.strip()]
+            prefs["likes"] = items[:20]
+        elif field_key == "dislikes":
+            items = [x.strip() for x in user_answer.replace(" and ", ",").split(",") if x.strip()]
+            prefs["dislikes"] = items[:20]
+        elif field_key == "allergies":
+            prefs["allergies"] = [x.strip() for x in user_answer.replace(" and ", ",").split(",") if x.strip()]
+        elif field_key == "typical_meals":
+            prefs["typical_meals"] = user_answer[:500]
+        elif field_key == "eat_out":
+            prefs["eat_out_freq"] = user_answer[:200]
+        elif field_key == "cooking":
+            prefs["cooking_skill"] = user_answer[:200]
+        elif field_key == "cravings":
+            items = [x.strip() for x in user_answer.replace(" and ", ",").split(",") if x.strip()]
+            prefs["cravings"] = items[:10]
+        elif field_key == "goals":
+            prefs["goals"] = user_answer[:300]
+        elif field_key == "wins":
+            items = [x.strip() for x in user_answer.replace(" and ", ",").split(",") if x.strip()]
+            prefs["wins"] = items[:10]
+
+        prefs["interview_step"] = step
+        save_food_preferences(prefs)
+
+    # Advance to next question.
+    # step is 1-indexed: step=0 = start (no answer yet), step=N = answer to Q[N-1] was given.
+    # next_step = the step number the client should send next (= which question to show now, 1-indexed).
+    next_step  = step + 1          # always increment; step=0 → show Q[0]; step=1 → show Q[1] etc.
+    next_q_idx = next_step - 1     # 0-indexed into _INTERVIEW_QUESTIONS
+
+    if next_q_idx >= len(_INTERVIEW_QUESTIONS) or _INTERVIEW_QUESTIONS[next_q_idx][0] == "done":
+        prefs["interview_complete"] = True
+        save_food_preferences(prefs)
+        # Sam closes out
+        closing = (
+            "That's what I needed, brother. I've got a solid picture of how you eat — "
+            "the wins, the gaps, the comfort patterns. From here I'll factor all of this into every meal "
+            "conversation we have. No more generic advice — this is your playbook now."
+        )
+        if llm_client is not None:
+            try:
+                import asyncio
+                notes_text = " | ".join(f"{k}: {v[:60]}" for k, v in prefs.get("interview_notes", {}).items())
+                closing = await asyncio.to_thread(
+                    llm_client.prompt_text,
+                    SAM_SYSTEM_PROMPT,
+                    f"Diet interview complete. Chris's answers summary: {notes_text}\n\n"
+                    "Give a 2-3 sentence closing that acknowledges what you learned about Chris's diet, "
+                    "names one strength and one challenge you noticed, and tells him what changes in your coaching from here.",
+                    max_output_tokens=150,
+                )
+                closing = closing.strip()
+            except Exception:
+                pass
+        return {"step": next_step, "question": None, "done": True, "reply": closing, "prefs_updated": True}
+
+    # Return the next question, with Sam's acknowledgment of the previous answer (if any)
+    _, raw_question = _INTERVIEW_QUESTIONS[next_q_idx]
+    reply = raw_question  # default — raw question text, no LLM transition for the opening
+
+    if user_answer and llm_client is not None:
+        try:
+            import asyncio
+            prev_field = _INTERVIEW_QUESTIONS[step - 1][0] if 0 < step <= len(_INTERVIEW_QUESTIONS) else ""
+            reply = await asyncio.to_thread(
+                llm_client.prompt_text,
+                SAM_SYSTEM_PROMPT,
+                f"Chris just answered the '{prev_field}' question in our diet interview: \"{user_answer}\"\n\n"
+                f"Give a 1-sentence acknowledgment (direct, no fluff, maybe one brief reaction), "
+                f"then immediately ask this next question: \"{raw_question}\"",
+                max_output_tokens=120,
+            )
+            reply = reply.strip()
+        except Exception:
+            reply = raw_question
+
+    return {"step": next_step, "question": raw_question, "done": False, "reply": reply, "prefs_updated": bool(user_answer)}
+
+
+# ─── Enhanced chat_with_sam (food-aware) ──────────────────────────────────────
+
+_FOOD_TRIGGERS = [
+    "i had", "i ate", "i just ate", "for breakfast", "for lunch", "for dinner",
+    "for a snack", "i drank", "i'm eating", "just had", "eating", "just ate",
+    "meal was", "food was", "grabbed", "ordered", "cooked",
+]
+
+
+def _is_food_message(text: str) -> bool:
+    low = text.lower()
+    return any(t in low for t in _FOOD_TRIGGERS)
+
+
 async def chat_with_sam(
     message: str,
     history: list[dict],
     metrics: dict | None = None,
     llm_client: Any = None,
+    mode: str = "chat",            # "chat" | "food" | "interview"
+    interview_step: int = 0,
+    food_date: str | None = None,
 ) -> dict:
+    """
+    Enhanced Sam chat: auto-detects food entries, handles diet interview mode,
+    and provides food-aware coaching in normal chat.
+    """
     if llm_client is None:
-        return {"reply": "Sam's offline right now. Check back shortly.", "coach": "sam_wilson", "coach_name": "Sam Wilson", "coach_title": "Health & Fitness Coach"}
-    metrics = metrics or {}
+        return {**_SAM_REPLY, "reply": "Sam's offline right now. Check back shortly."}
+
+    metrics   = metrics or {}
+    prefs     = get_food_preferences()
+
+    # ── Interview mode ────────────────────────────────────────────────────────
+    if mode == "interview":
+        result = await run_diet_interview(interview_step, message or None, llm_client)
+        return {**_SAM_REPLY, **result}
+
+    # ── Food log mode (explicit) or auto-detected food entry ─────────────────
+    if mode == "food" or _is_food_message(message):
+        result   = await analyze_food_entry(message, food_date, prefs, metrics, llm_client)
+        warnings = result.get("warnings", [])
+        reply    = result.get("reply", "")
+        daily    = result.get("daily", {})
+        footer = ""
+        if daily:
+            prot = daily.get("total_protein_g", 0)
+            gap  = daily.get("protein_gap_g", 0)
+            cnt  = daily.get("meal_count", 0)
+            footer = f"\n\n📊 Today so far: {prot}g protein across {cnt} meal{'s' if cnt != 1 else ''}"
+            if gap > 0:
+                footer += f" — {gap}g to go to hit your target"
+            else:
+                footer += " — protein target hit 💪"
+        return {**_SAM_REPLY, "mode": "food", "reply": (reply + footer).strip(), "meal": result.get("meal"), "daily": daily, "logged": result.get("logged", False), "warnings": warnings}
+
+    # ── Regular chat (food-context-enriched) ─────────────────────────────────
     readiness_val = metrics.get("readiness") or metrics.get("readiness_score") or "?"
+    today_food    = get_today_food_log()
+    food_ctx = (
+        f"Today's food log: {today_food.get('meal_count', 0)} meals, "
+        f"{today_food.get('total_protein_g', 0)}g protein "
+        f"({'target met' if today_food.get('protein_gap_g', 1) <= 0 else str(today_food.get('protein_gap_g', '?')) + 'g to go'}). "
+    ) if today_food.get("meal_count", 0) > 0 else ""
+
+    prefs_ctx = _prefs_summary(prefs) if prefs.get("interview_complete") else ""
+
     ctx = (
-        f"Chris's stats right now — Readiness: {readiness_val}/100 · "
+        f"Chris's stats — Readiness: {readiness_val}/100 · "
         f"HRV: {metrics.get('hrv','?')}ms · Sleep: {metrics.get('sleep_hours','?')}h · "
         f"Steps: {int(metrics.get('steps') or 0):,} · A1c: {CHRIS_PROFILE['a1c_pct']}% · "
-        f"LDL: {CHRIS_PROFILE['ldl_mg_dl']} · K+: {CHRIS_PROFILE['k_plus_meq']}"
+        f"LDL: {CHRIS_PROFILE['ldl_mg_dl']} · K+: {CHRIS_PROFILE['k_plus_meq']}. "
+        f"{food_ctx}{prefs_ctx}"
     )
     conv = "\n".join(
         f"{'CHRIS' if h.get('role')=='user' else 'SAM'}: {h.get('content','')}"
-        for h in (history or [])[-6:]
+        for h in (history or [])[-8:]
     )
     conv += f"\nCHRIS: {message}"
     try:
@@ -471,7 +835,7 @@ async def chat_with_sam(
             conv,
             max_output_tokens=300,
         )
-        return {"reply": reply.strip(), "coach": "sam_wilson", "coach_name": "Sam Wilson", "coach_title": "Health & Fitness Coach"}
+        return {**_SAM_REPLY, "reply": reply.strip()}
     except Exception as exc:
         log.error("chat_with_sam: %s", exc)
-        return {"reply": "Give me a second, brother. System catching up.", "coach": "sam_wilson", "coach_name": "Sam Wilson", "coach_title": "Health & Fitness Coach"}
+        return {**_SAM_REPLY, "reply": "Give me a second, brother. System catching up."}

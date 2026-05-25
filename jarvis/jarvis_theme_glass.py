@@ -6803,14 +6803,36 @@ body::after {{
             <div style="font-size:11px;color:var(--text-3);">Loading protocol…</div>
           </div>
         </div>
+        <!-- Food Diary Strip -->
+        <div id="sam-food-strip" style="margin-top:12px;display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);">Today's Food Log</span>
+            <span id="sam-food-protein-label" style="font-size:10px;color:var(--text-3);font-family:var(--font-mono);">—g protein</span>
+          </div>
+          <!-- Protein progress bar -->
+          <div style="height:4px;background:var(--surface-3);border-radius:2px;margin-bottom:8px;overflow:hidden;">
+            <div id="sam-food-protein-bar" style="height:100%;width:0%;background:var(--blue);border-radius:2px;transition:width .4s ease;"></div>
+          </div>
+          <!-- Meal list -->
+          <div id="sam-food-meals" style="font-size:11px;color:var(--text-2);display:flex;flex-wrap:wrap;gap:4px;"></div>
+        </div>
         <!-- Sam Chat -->
         <div style="margin-top:10px;">
-          <div id="sam-chat-messages" style="display:none;max-height:200px;overflow-y:auto;padding:8px;background:var(--surface-2);border-radius:8px;margin-bottom:8px;font-size:12px;"></div>
-          <div style="display:flex;gap:6px;">
-            <input id="sam-chat-input" type="text" placeholder="Talk to Sam…"
+          <!-- Mode indicator -->
+          <div id="sam-chat-mode-bar" style="display:none;margin-bottom:6px;padding:5px 10px;background:var(--surface-3);border-radius:6px;font-size:11px;color:var(--blue);display:flex;align-items:center;justify-content:space-between;">
+            <span id="sam-chat-mode-label">🎤 Interview mode</span>
+            <button onclick="samCancelMode()" style="background:none;border:none;color:var(--text-3);font-size:10px;cursor:pointer;padding:0;">✕ Cancel</button>
+          </div>
+          <div id="sam-chat-messages" style="display:none;max-height:240px;overflow-y:auto;padding:8px;background:var(--surface-2);border-radius:8px;margin-bottom:8px;font-size:12px;"></div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input id="sam-chat-input" type="text" placeholder="Talk to Sam… or log food (e.g. 'I had eggs and toast')"
               style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--text-1);outline:none;"
               onkeydown="if(event.key==='Enter'){{samChat();}}"/>
             <button class="btn-ghost" style="font-size:11px;padding:6px 12px;" onclick="samChat()">Send</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <button class="btn-ghost" style="font-size:10px;padding:4px 10px;" onclick="samStartInterview()">📋 Diet Interview</button>
+            <button class="btn-ghost" style="font-size:10px;padding:4px 10px;" onclick="samSwitchMode('food')">🍽 Log Food</button>
           </div>
         </div>
       </div>
@@ -14345,6 +14367,8 @@ async function loadHealth() {{
   // Load Sam Wilson check-in banner + daily protocol
   loadSamCheckin();
   loadSamProtocol();
+  // Load today's food diary strip
+  samLoadFoodLog();
   // Init health chat (load doctor roster)
   hchatInit();
 }}
@@ -15728,6 +15752,9 @@ async function deleteFinanceGoal(id,name) {{
 let _samProtocol = null;
 let _samHistory  = [];
 let _samChecked  = new Set();
+let _samChatMode         = 'chat';   // 'chat' | 'food' | 'interview'
+let _samInterviewStep    = 0;
+let _samFoodDate         = null;     // null = today
 
 /* ─── SAM WILSON OVERVIEW CARD ─────────────────────────────────────── */
 async function loadSamOverviewCard() {{
@@ -16316,7 +16343,7 @@ const _SAM_HIST_ITEMS = [
   {{ id:'recovery',  icon:'😴', label:'Lights out on time' }},
 ];
 
-let _samHistoryRecords = [];   // [{date, completed[], notes, adherence_pct}, …]
+let _samHistoryRecords = [];   // [{{date, completed[], notes, adherence_pct}}, …]
 let _samHistoryIdx     = 0;    // which record we're currently viewing (0 = most recent)
 
 async function openSamHistory() {{
@@ -16479,6 +16506,90 @@ async function saveSamHistoryDay() {{
 
 /* ════════════════════════════════════════════════════════════ */
 
+// ─── Sam Chat helpers ────────────────────────────────────────────────────────
+function samSwitchMode(mode) {{
+  _samChatMode = mode;
+  const modeBar = document.getElementById('sam-chat-mode-bar');
+  const modeLabel = document.getElementById('sam-chat-mode-label');
+  const inp = document.getElementById('sam-chat-input');
+  if (mode === 'food') {{
+    if (modeBar) {{ modeBar.style.display = 'flex'; }}
+    if (modeLabel) modeLabel.textContent = '🍽 Food log mode — describe what you ate';
+    if (inp) inp.placeholder = 'e.g. "I had grilled chicken breast and brown rice"';
+    samLoadFoodLog();
+  }} else if (mode === 'interview') {{
+    if (modeBar) {{ modeBar.style.display = 'flex'; }}
+    if (modeLabel) modeLabel.textContent = '🎤 Diet interview — answer Sam\'s questions';
+    if (inp) inp.placeholder = 'Type your answer…';
+  }} else {{
+    if (modeBar) modeBar.style.display = 'none';
+    if (inp) inp.placeholder = 'Talk to Sam… or log food (e.g. \'I had eggs and toast\')';
+  }}
+}}
+
+function samCancelMode() {{
+  _samChatMode = 'chat';
+  _samInterviewStep = 0;
+  samSwitchMode('chat');
+}}
+
+async function samStartInterview() {{
+  _samChatMode = 'interview';
+  _samInterviewStep = 0;
+  samSwitchMode('interview');
+  const msgs = document.getElementById('sam-chat-messages');
+  if (msgs) msgs.style.display = '';
+  // Send an empty answer to get the first question
+  const msgs2 = document.getElementById('sam-chat-messages');
+  if (msgs2) {{
+    msgs2.innerHTML += `<div style="margin-bottom:6px;color:var(--text-3);font-style:italic;">Starting diet interview…</div>`;
+    msgs2.scrollTop = msgs2.scrollHeight;
+  }}
+  try {{
+    const res = await fetch('/api/health/sam/diet-interview', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{step: 0, answer: ''}})
+    }});
+    const d = await res.json();
+    if (msgs2 && (d.reply || d.question)) {{
+      msgs2.innerHTML += `<div style="margin-bottom:8px;"><b style="color:var(--blue);">Sam:</b> ${{escHtml(d.reply || d.question)}}</div>`;
+      msgs2.scrollTop = msgs2.scrollHeight;
+    }}
+    _samInterviewStep = (d.step !== undefined) ? d.step : 1;
+  }} catch(e) {{
+    if (msgs2) msgs2.innerHTML += `<div style="color:var(--red);">Couldn't start interview — try again</div>`;
+  }}
+}}
+
+async function samLoadFoodLog() {{
+  const strip = document.getElementById('sam-food-strip');
+  try {{
+    const res = await fetch('/api/health/sam/food-log').catch(() => null);
+    if (!res || !res.ok) return;
+    const d = await res.json();
+    const protein = Math.round(d.protein_g || 0);
+    const target  = 87;  // midpoint of 85-90g CKD target
+    const pct     = Math.min(100, Math.round(protein / target * 100));
+    if (strip) strip.style.display = '';
+    const bar   = document.getElementById('sam-food-protein-bar');
+    const label = document.getElementById('sam-food-protein-label');
+    const meals = document.getElementById('sam-food-meals');
+    if (bar) bar.style.width = pct + '%';
+    if (label) label.textContent = protein + 'g / ' + target + 'g protein';
+    if (meals) {{
+      const mealList = d.meals || [];
+      if (mealList.length) {{
+        meals.innerHTML = mealList.map(m =>
+          `<span style="background:var(--surface-3);border-radius:10px;padding:2px 8px;">${{escHtml(m.name || '—')}}</span>`
+        ).join('');
+      }} else {{
+        meals.innerHTML = '<span style="color:var(--text-3);">No meals logged yet today</span>';
+      }}
+    }}
+  }} catch(e) {{}}
+}}
+
 async function samChat() {{
   const inp = document.getElementById('sam-chat-input');
   const msgs = document.getElementById('sam-chat-messages');
@@ -16487,6 +16598,36 @@ async function samChat() {{
   if (!text) return;
   inp.value = '';
   msgs.style.display = '';
+
+  // ── Interview mode: route to diet-interview endpoint ────────────────────
+  if (_samChatMode === 'interview') {{
+    msgs.innerHTML += `<div style="margin-bottom:6px;"><b style="color:var(--text-3);">You:</b> ${{escHtml(text)}}</div>`;
+    msgs.innerHTML += `<div id="sam-typing" style="margin-bottom:6px;color:var(--text-3);font-style:italic;">Sam is thinking…</div>`;
+    msgs.scrollTop = msgs.scrollHeight;
+    try {{
+      const res = await fetch('/api/health/sam/diet-interview', {{
+        method: 'POST',
+        headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify({{step: _samInterviewStep, answer: text}})
+      }});
+      const d = await res.json();
+      document.getElementById('sam-typing')?.remove();
+      if (d.done) {{
+        msgs.innerHTML += `<div style="margin-bottom:8px;"><b style="color:var(--blue);">Sam:</b> ${{escHtml(d.reply || d.question || 'Interview complete — preferences saved!')}}</div>`;
+        samCancelMode();
+      }} else {{
+        msgs.innerHTML += `<div style="margin-bottom:8px;"><b style="color:var(--blue);">Sam:</b> ${{escHtml(d.reply || d.question || '…')}}</div>`;
+        _samInterviewStep = (d.step !== undefined) ? d.step : (_samInterviewStep + 1);
+      }}
+      msgs.scrollTop = msgs.scrollHeight;
+    }} catch(e) {{
+      document.getElementById('sam-typing')?.remove();
+      msgs.innerHTML += `<div style="color:var(--red);">Connection error</div>`;
+    }}
+    return;
+  }}
+
+  // ── Normal chat / food mode ──────────────────────────────────────────────
   msgs.innerHTML += `<div style="margin-bottom:6px;"><b style="color:var(--text-3);">You:</b> ${{escHtml(text)}}</div>`;
   msgs.innerHTML += `<div id="sam-typing" style="margin-bottom:6px;color:var(--text-3);font-style:italic;">Sam is thinking…</div>`;
   msgs.scrollTop = msgs.scrollHeight;
@@ -16495,12 +16636,45 @@ async function samChat() {{
     const res = await fetch('/api/health/sam/chat', {{
       method: 'POST',
       headers: {{'Content-Type': 'application/json'}},
-      body: JSON.stringify({{message:text, history:_samHistory.slice(-6)}})
+      body: JSON.stringify({{
+        message: text,
+        history: _samHistory.slice(-6),
+        mode: _samChatMode,
+        interview_step: _samInterviewStep,
+        food_date: _samFoodDate || null,
+      }})
     }});
     const d = await res.json();
-    const reply = d.reply || '…';
     document.getElementById('sam-typing')?.remove();
+
+    const reply = d.reply || '…';
     msgs.innerHTML += `<div style="margin-bottom:8px;"><b style="color:var(--blue);">Sam:</b> ${{escHtml(reply)}}</div>`;
+
+    // If a meal was logged, show macro confirmation + refresh food strip
+    if (d.logged && d.meal) {{
+      const m = d.meal;
+      const macroLine = [
+        m.protein_g != null ? m.protein_g + 'g protein' : null,
+        m.calories   != null ? m.calories + ' kcal'     : null,
+      ].filter(Boolean).join(' · ');
+      if (macroLine) {{
+        msgs.innerHTML += `<div style="margin-bottom:8px;padding:5px 8px;background:var(--surface-3);border-radius:6px;font-size:11px;color:var(--text-2);">
+          ✅ Logged: <b>${{escHtml(m.name || 'meal')}}</b>${{macroLine ? ' — ' + macroLine : ''}}</div>`;
+      }}
+      samLoadFoodLog();
+    }}
+
+    // Show any K+ or health warnings
+    if (d.warnings && d.warnings.length) {{
+      const warnHtml = d.warnings.map(w => `⚠️ ${{escHtml(w)}}`).join('<br>');
+      msgs.innerHTML += `<div style="margin-bottom:8px;padding:5px 8px;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);border-radius:6px;font-size:11px;color:var(--amber);">${{warnHtml}}</div>`;
+    }}
+
+    // Switch to food mode automatically if backend detected food message
+    if (d.mode === 'food' && _samChatMode === 'chat') {{
+      samSwitchMode('food');
+    }}
+
     msgs.scrollTop = msgs.scrollHeight;
     _samHistory.push({{role:'assistant', content:reply}});
     voiceSpeak(reply);
