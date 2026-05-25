@@ -15847,38 +15847,70 @@ async function loadSamOverviewCard() {{
           <div style="font-size:12px;font-weight:600;color:var(--text-1);">${{escHtml(focus)}}</div>
         </div>
         ${{watch ? `<div style="font-size:11px;color:var(--amber);background:rgba(217,119,6,.10);border:1px solid rgba(217,119,6,.25);border-radius:6px;padding:5px 8px;">⚠ ${{escHtml(watch)}}</div>` : ''}}
-        <div style="margin-top:10px;">
-          <span style="font-size:11px;color:var(--blue);cursor:pointer;" onclick="switchView('health')">Full protocol + chat →</span>
+        <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <button onclick="openSamJournal()"
+            style="padding:6px 14px;border-radius:8px;background:rgba(99,102,241,0.20);border:1px solid rgba(99,102,241,0.40);
+                   color:#a5b4fc;font-size:11px;font-weight:700;cursor:pointer;">
+            📓 Journal Today
+          </button>
+          <span style="font-size:11px;color:var(--blue);cursor:pointer;" onclick="switchView('health')">Full protocol →</span>
         </div>
       `;
     }} else {{
-      // ── Evening mode ───────────────────────────────────────────────
-      const checklist = [
-        {{id:'workout',   icon:'🏃', label:(p.movement||{{}}).primary||'Zone 2 cardio'}},
-        {{id:'breakfast', icon:'🥚', label:'Clean breakfast'}},
-        {{id:'hydration', icon:'💧', label:`${{(p.hydration||{{}}).target_oz||96}}oz water`}},
-        {{id:'recovery',  icon:'😴', label:`Lights out by ${{(p.recovery||{{}}).bedtime||'10:30 PM'}}`}},
-      ];
-      const itemsHtml = checklist.map(item => `
-        <label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;"
-               onclick="samOvToggle(this)">
-          <input type="checkbox" style="accent-color:#22c55e;cursor:pointer;">
-          <span style="font-size:12px;color:var(--text-2);">${{item.icon}} ${{escHtml(item.label)}}</span>
-        </label>`).join('');
+      // ── Evening mode: Daily Journal is the primary CTA ─────────────
+      // Check if journal was already done today
+      const todayStr = new Date().toISOString().slice(0,10);
+      let journalDone = false;
+      let journalSummary = null;
+      try {{
+        const jRes = await fetch('/api/health/sam/journal?days=1').catch(() => null);
+        if (jRes && jRes.ok) {{
+          const jData = await jRes.json();
+          if (jData.length && jData[0].date === todayStr) {{
+            journalDone = true;
+            journalSummary = jData[0];
+          }}
+        }}
+      }} catch(e) {{}}
 
-      content.innerHTML = `
-        <div style="font-size:12px;font-style:italic;color:var(--blue);margin-bottom:10px;">"How'd today go, brother?"</div>
-        <div id="sam-ov-list">${{itemsHtml}}</div>
-        <button onclick="submitSamOvCheckin(this)"
-          style="width:100%;margin-top:10px;padding:7px;border-radius:8px;
-                 background:rgba(99,102,241,0.20);border:1px solid rgba(99,102,241,0.40);
-                 color:#a5b4fc;font-size:11px;font-weight:700;cursor:pointer;">
-          Log My Day →
-        </button>
-        <div id="sam-ov-reply" style="display:none;margin-top:8px;font-size:11px;
-             color:var(--text-2);font-style:italic;line-height:1.5;
-             padding:8px 10px;background:rgba(99,102,241,0.10);border-radius:6px;"></div>
-      `;
+      if (journalDone && journalSummary) {{
+        // Show what was logged today
+        const ex = (journalSummary.extracted || {{}}).exercise || [];
+        const exLine = ex.length ? ex.map(e => `${{e.type||'exercise'}}${{e.duration_min?' '+e.duration_min+'min':''}}`).join(', ') : null;
+        const protein = Math.round(journalSummary.total_protein_g || 0);
+        const adh = (journalSummary.adherence_items || []).length;
+        content.innerHTML = `
+          <div style="font-size:11px;font-style:italic;color:var(--blue);margin-bottom:10px;line-height:1.4;">"Solid entry today, brother. Keep stacking."</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+            <div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:8px 10px;text-align:center;">
+              <div style="font-size:18px;font-weight:700;font-family:var(--font-mono);color:var(--blue);">${{protein}}g</div>
+              <div style="font-size:8px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);">Protein</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:8px 10px;text-align:center;">
+              <div style="font-size:18px;font-weight:700;font-family:var(--font-mono);color:var(--green);">${{adh}}/6</div>
+              <div style="font-size:8px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);">Protocol</div>
+            </div>
+          </div>
+          ${{exLine ? `<div style="font-size:11px;color:var(--text-2);margin-bottom:8px;">💪 ${{escHtml(exLine)}}</div>` : ''}}
+          <button onclick="openSamJournal()"
+            style="width:100%;padding:7px;border-radius:8px;background:rgba(99,102,241,0.12);
+                   border:1px solid rgba(99,102,241,0.30);color:#a5b4fc;font-size:11px;font-weight:700;cursor:pointer;">
+            📓 Add More →
+          </button>`;
+      }} else {{
+        content.innerHTML = `
+          <div style="font-size:12px;font-style:italic;color:var(--blue);margin-bottom:12px;line-height:1.4;">"Tell me everything about today, brother."</div>
+          <button onclick="openSamJournal()"
+            style="width:100%;padding:10px;border-radius:10px;
+                   background:linear-gradient(135deg,rgba(99,102,241,0.25),rgba(59,130,246,0.20));
+                   border:1px solid rgba(99,102,241,0.45);
+                   color:#a5b4fc;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.01em;">
+            📓 Talk to Sam About Today
+          </button>
+          <div style="margin-top:10px;font-size:10px;color:var(--text-3);text-align:center;">
+            exercise · food · water · mood · stress · sleep — everything
+          </div>`;
+      }}
     }}
   }} catch(e) {{
     if (content) content.innerHTML = '<div style="font-size:11px;color:var(--text-3);">On your left.</div>';
@@ -16650,6 +16682,8 @@ async function openSamJournal() {{
 function closeSamJournal() {{
   document.getElementById('sam-journal-overlay')?.classList.add('hidden');
   samLoadFoodLog();
+  // Refresh Sam overview card so summary shows up immediately
+  if (typeof loadSamOverviewCard === 'function') loadSamOverviewCard();
 }}
 
 function _sjAppendMsg(who, text, extraHtml) {{
