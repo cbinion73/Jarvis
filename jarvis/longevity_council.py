@@ -1851,7 +1851,7 @@ async def chat_with_doctor(
             doctor_title = member.title
             base_system_prompt = member.system_prompt
 
-    ctx = health_context if health_context is not None else _DEFAULT_HEALTH_CONTEXT
+    ctx = health_context if health_context is not None else (health_state_summary() or _DEFAULT_HEALTH_CONTEXT)
 
     system_prompt = (
         f"{base_system_prompt}\n\n"
