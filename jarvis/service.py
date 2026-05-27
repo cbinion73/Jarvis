@@ -7487,6 +7487,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             categories = body.get("categories", ["food", "starbucks", "parks", "historic", "family"])
             total_miles = float(body.get("total_miles", 0))
             geocoded_waypoints = body.get("geocoded_waypoints", [])
+            parks_radius_miles = float(body.get("parks_radius_miles", 25.0))
             if not encoded_polyline:
                 return _json({"pois": {}, "nps_parks": []})
             pois = await asyncio.to_thread(
@@ -7494,12 +7495,18 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 encoded_polyline,
                 categories,
                 total_miles,
+                parks_radius_miles,
             )
             states = await asyncio.to_thread(
                 _nav.extract_states_from_route,
                 geocoded_waypoints,
             )
-            nps_parks = await asyncio.to_thread(_nav.search_nps_by_states, states)
+            nps_parks = await asyncio.to_thread(
+                _nav.search_nps_along_route,
+                encoded_polyline,
+                states,
+                parks_radius_miles,
+            )
             return _json({"pois": pois, "nps_parks": nps_parks})
         except Exception as exc:
             logger.warning("nav/pois failed: %s", exc)
