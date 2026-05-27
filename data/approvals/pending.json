@@ -6,7 +6,7 @@
     "request": "Draft a parent message about tonight's troop meeting",
     "action_class": "EXECUTE_MEDIUM_RISK",
     "second_factor_required": false,
-    "status": "pending",
+    "status": "rejected",
     "rationale": "Mode 'work-mode' maps to module 'executive-work' using model 'gpt-5.4-mini'. Permission class is EXECUTE_MEDIUM_RISK."
   },
   {
@@ -26,7 +26,7 @@
     "request": "Unlock the front door",
     "action_class": "EXECUTE_HIGH_RISK",
     "second_factor_required": true,
-    "status": "pending",
+    "status": "cancelled",
     "rationale": "Mode 'work-mode' maps to module 'executive-work' using model 'gpt-5.4-mini'. Permission class is EXECUTE_HIGH_RISK."
   },
   {
@@ -56,7 +56,7 @@
     "request": "Approve parent message to Troop parents about Indoor backup update",
     "action_class": "EXECUTE_MEDIUM_RISK",
     "second_factor_required": false,
-    "status": "pending",
+    "status": "cancelled",
     "rationale": "Parent-facing communication must be reviewed before sending."
   },
   {
@@ -66,7 +66,7 @@
     "request": "Approve parent message to Troop parents about Indoor backup update",
     "action_class": "EXECUTE_MEDIUM_RISK",
     "second_factor_required": false,
-    "status": "pending",
+    "status": "cancelled",
     "rationale": "Parent-facing communication must be reviewed before sending."
   },
   {
@@ -76,7 +76,7 @@
     "request": "can you read my email",
     "action_class": "EXECUTE_MEDIUM_RISK",
     "second_factor_required": false,
-    "status": "pending",
+    "status": "cancelled",
     "rationale": "Mode 'ambient-associate' maps to module 'household-associate', workstream 'ambient-associate', task class 'ambient', provider 'ollama', context lane 'ambient', and model 'qwen2.5:7b'. Permission class is EXECUTE_MEDIUM_RISK."
   },
   {
@@ -86,7 +86,7 @@
     "request": "what is on my calendar",
     "action_class": "EXECUTE_MEDIUM_RISK",
     "second_factor_required": false,
-    "status": "pending",
+    "status": "cancelled",
     "rationale": "Mode 'ambient-associate' maps to module 'household-associate', workstream 'ambient-associate', task class 'ambient', provider 'ollama', context lane 'ambient', and model 'qwen2.5:7b'. Permission class is EXECUTE_MEDIUM_RISK."
   },
   {
@@ -96,7 +96,7 @@
     "request": "what is on my calendar",
     "action_class": "EXECUTE_MEDIUM_RISK",
     "second_factor_required": false,
-    "status": "pending",
+    "status": "cancelled",
     "rationale": "Mode 'ambient-associate' maps to module 'household-associate', workstream 'ambient-associate', task class 'ambient', provider 'ollama', context lane 'ambient', and model 'qwen2.5:7b'. Permission class is EXECUTE_MEDIUM_RISK."
   },
   {
@@ -106,7 +106,7 @@
     "request": "Remember this: I want JARVIS to learn from normal conversation, carry context forward naturally, and feel much more like ChatGPT when I talk to it.",
     "action_class": "EXECUTE_MEDIUM_RISK",
     "second_factor_required": false,
-    "status": "pending",
+    "status": "cancelled",
     "rationale": "Mode 'work-mode' maps to module 'executive-work', workstream 'executive-brief', task class 'executive', provider 'openai', context lane 'executive', and model 'gpt-realtime-1.5'. Permission class is EXECUTE_MEDIUM_RISK."
   },
   {
@@ -116,7 +116,7 @@
     "request": "Testing messenger send behavior from the browser.",
     "action_class": "EXECUTE_MEDIUM_RISK",
     "second_factor_required": false,
-    "status": "pending",
+    "status": "cancelled",
     "rationale": "Mode 'ambient-associate' maps to module 'household-associate', workstream 'ambient-associate', task class 'ambient', provider 'ollama', context lane 'ambient', and model 'qwen2.5:7b'. Permission class is EXECUTE_MEDIUM_RISK."
   },
   {
@@ -126,7 +126,7 @@
     "request": "Testing messenger send behavior from the browser.",
     "action_class": "EXECUTE_MEDIUM_RISK",
     "second_factor_required": false,
-    "status": "pending",
+    "status": "cancelled",
     "rationale": "Mode 'ambient-associate' maps to module 'household-associate', workstream 'ambient-associate', task class 'ambient', provider 'ollama', context lane 'ambient', and model 'qwen2.5:7b'. Permission class is EXECUTE_MEDIUM_RISK."
   },
   {
@@ -136,7 +136,7 @@
     "request": "There are tables in the document.  I want to make sure you can read them ok when I paste them in.\n\nDAILY FLOW OVERVIEW\n\nEstimated Time: 30\u201345 minutes\nGoal: Encounter Jesus. Internalize truth. Live transformed.\nMethod: Stillness \u2192 Story the Scripture \u2192 S.T.E.P.S. Journal \u2192 ACTS Prayer\n \n1. Start in Stillness (1\u20132 min)\nSettle your soul. Release distractions. Open the door to divine encounter.\n\nChoose a morning prayer to start.\n \n2. Read the Word \u2014 Story the Scripture\nYou\u2019re not just reading\u2014you\u2019re stepping into the story.\n\nHOW TO STORY THE SCRIPTURE\n\n1.\tRead the passage out loud\u2014twice\no\tFirst, for familiarity.\no\tSecond, for depth.\n2.\tUse these 7 storying prompts to enter the narrative:\n1.\tWho are the characters in the story?\n\uf0a7\tWhat roles do they play? What condition are they in?\n2.\tWho is God in this story?\n\uf0a7\tWhat does He say or do? What is He revealing about Himself?\n3.\tWho am I in this story?\n\uf0a7\tWhich character do I relate to today\u2014and why?\n4.\tWhat do the characters see, feel, hear, smell, fear, or long for?\n\uf0a7\tVisualize the scene. Engage your senses.\n5.\tWhere is the tension? The turning point? The hope?\n\uf0a7\tEvery story has a heartbeat. Where does God shift the scene?\n6.\tHow would I respond in the story?\n\uf0a7\tWould I hesitate or obey? Hide or come forward? Doubt or trust?\n7.\tRetell the story \u2014 my story.\n\uf0a7\tRetell the story of me.  This is my story, told in my own words.\n \n3. Reflect & Journal with S.T.E.P.S.\nUse these prompts to record your encounter:\nStep\tMeaning\tWhat to Write\nS\tScripture\tWrite out a key verse or phrase from the passage\nT\tTruths About God\tWhat does this passage/story reveal about God\u2019s nature?\nE\tExhortation/Example\tWhat command, warning, or example do I see?\nP\tPersonal Application\tWhat is God personally saying to me today?\nS\tSpirit-Led Prayer\tWrite a simple, honest prayer in response to your encounter with God\n \n4. Pray with ACTS\nUse the Daily Theme to focus your prayer, but move through ACTS:\nLetter\tFocus\tWhat to Pray\nA\tAdoration\tPraise God for who He is in today\u2019s story\nC\tConfession\tName any sin, distraction, or resistance you sensed\nT\tThanksgiving\tThank Him for His grace, Word, and presence\nS\tSupplication\tAsk for strength, wisdom, or breakthrough\u2014based on the day\u2019s theme and what you just experienced\n\nEnd your time with expectancy:\n\u201cLord, help me live today like this story is true.\u201d\n\u2003\n1 \u2013 Still My Heart\t2 \u2013 Fan the Flame\n\u201cJesus, I\u2019m here. In this moment, I set down the rush, the noise, and the weight. I lay my thoughts at Your feet. You are the Alpha and Omega. Speak, and I will listen. Teach me to love You again\u2014deeper, truer, fuller. This time belongs to You.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cOpen my eyes to Your Word. Awaken my soul to Your presence. Let the words of Scripture become life and light. Come, Holy Spirit\u2014guide me now.\u201d\t\u201cToday, Lord, I don\u2019t want stale religion. I want fresh fire. Rekindle my first love. Fan the flame of faith that the world has tried to smother. I want truth, not just routine. Presence, not just productivity. This is Your time\u2014stoke the fire in my soul.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cSpeak clearly, Lord. I am ready to be transformed by Your Word.\u201d\n3 \u2013 Lead Me In Your Truth\t4 \u2013 Come and Speak\n\u201cFather, lead me in Your truth and teach me. For You are the God of my salvation, and I wait for You all the day long. Let me not read for knowledge alone, but for intimacy. Show me Your ways. Let the whispers of Scripture quiet the shouts of the world. I am listening.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cHoly Spirit, bring insight. Jesus, bring transformation. Father, bring me closer.\u201d\t\u201cJesus, I quiet myself before You now.\nSpeak, Lord\u2014Your servant is listening.\nI don\u2019t want to miss Your voice.\nMore than answers, I want intimacy.\nMore than clarity, I want communion.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cHoly Spirit, breathe life into these pages.\nLet the Scripture speak louder than the noise.\nMay this time not just inform me\u2014but transform me.\u201d\n5 \u2013 Awaken the Watchman\t6 \u2013 Break Me Open\n\u201cAwaken me, Lord\u2014not just from sleep but from slumber.\nLet me rise as a watchman on the wall.\nSharpen my eyes. Steady my hands.\nI stand at attention for what You will say.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cGive me ears to hear Your whisper,\ncourage to obey Your leading,\nand the discipline to walk in Your ways.\u201d\t\u201cLord, I come to You not polished, not perfect, but open.\nBreak open the hard places.\nTill the soil of my soul.\nIf You must wound, let it be to heal.\nIf You must prune, let it be to bear fruit.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cSpeak into my pain, my pride, and my pretending.\nLet this time with You be real, rich, and refining.\u201d\n7 \u2013 Walk With Me Today\t8 \u2013 Your Will Be Done\n\u201cGood morning, Lord.\nAs the sun rises, so does my need for You.\nWalk with me through every thought, every decision, every breath.\nBe my Guide, my Counselor, my Joy.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cLet Your Word be a lamp for this day.\nLet Your presence interrupt my rush.\nI don\u2019t want to go through this day without You.\u201d\t\u201cNot my will, but Yours be done today.\nIn every conversation, every moment of silence, every surprise\u2014be Lord.\nI lay down my agenda and pick up Your cross.\u201d\n[PAUSE FOR 10 SECONDS]\n\u201cShow me what matters.\nTeach me to yield with joy.\nLet Your Kingdom come\u2014in me and through me.\u201d",
     "action_class": "EXECUTE_HIGH_RISK",
     "second_factor_required": true,
-    "status": "pending",
+    "status": "cancelled",
     "rationale": "Mode 'chronicle-mode' maps to module 'faith-and-formation', workstream 'devotional-prayer', task class 'formation', provider 'openai', context lane 'formation', and model 'gpt-5.4-mini'. Permission class is EXECUTE_HIGH_RISK."
   },
   {
@@ -146,7 +146,7 @@
     "request": "Use the attached file as context and answer in one sentence.\n\nAttached files were included with this message.\nUse any excerpts below as additional context.\n- jarvis-attachment-test.txt (text/plain, 60 bytes)\n  Excerpt: Jarvis attachment smoke test\nThis should be staged into chat.",
     "action_class": "EXECUTE_MEDIUM_RISK",
     "second_factor_required": false,
-    "status": "pending",
+    "status": "cancelled",
     "rationale": "Mode 'work-mode' maps to module 'executive-work', workstream 'executive-brief', task class 'executive', provider 'openai', context lane 'executive', and model 'gpt-5.4-mini'. Permission class is EXECUTE_MEDIUM_RISK."
   },
   {
@@ -156,7 +156,7 @@
     "request": "Don't you have access to my Cozi and Google Calendars?",
     "action_class": "EXECUTE_MEDIUM_RISK",
     "second_factor_required": false,
-    "status": "pending",
+    "status": "cancelled",
     "rationale": "Mode 'ambient-associate' maps to module 'household-associate', workstream 'ambient-associate', task class 'ambient', provider 'ollama', context lane 'ambient', and model 'qwen2.5:7b'. Permission class is EXECUTE_MEDIUM_RISK."
   }
 ]
