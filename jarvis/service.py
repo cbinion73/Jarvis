@@ -1076,6 +1076,106 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         from .device_views import carplay_view
         return carplay_view()
 
+    @app.get("/api/google/maps-usage")
+    async def google_maps_usage():
+        """Query Cloud Monitoring API for Maps API usage and estimated costs this month."""
+        import json as _json_mod
+        from datetime import datetime, timezone, timedelta
+        from pathlib import Path as _Path
+
+        sa_key_path = os.environ.get("GOOGLE_CLOUD_SA_KEY_PATH", "")
+        project_id  = os.environ.get("GOOGLE_CLOUD_PROJECT_ID", "")
+        if not sa_key_path or not project_id:
+            return JSONResponse({"error": "not_configured",
+                                 "message": "Set GOOGLE_CLOUD_SA_KEY_PATH and GOOGLE_CLOUD_PROJECT_ID"})
+        # Cache result for 6 hours
+        cache_path = _Path("data/cache/maps_usage_cache.json")
+        try:
+            if cache_path.exists():
+                cached = _json_mod.loads(cache_path.read_text())
+                age_h = (datetime.now(timezone.utc).timestamp() - cached.get("_ts", 0)) / 3600
+                if age_h < 6:
+                    return JSONResponse(cached)
+        except Exception:
+            pass
+        try:
+            from google.oauth2 import service_account
+            from google.auth.transport.requests import Request as _GRequest
+            import httpx as _httpx
+
+            creds = service_account.Credentials.from_service_account_file(
+                sa_key_path,
+                scopes=["https://www.googleapis.com/auth/monitoring.read"]
+            )
+            creds.refresh(_GRequest())
+            token = creds.token
+
+            now   = datetime.now(timezone.utc)
+            start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            secs  = max(int((now - start).total_seconds()), 3600)
+
+            SERVICES = {
+                "maps-backend.googleapis.com":      {"label": "Maps / Street View",   "price": 7.00},
+                "places-backend.googleapis.com":    {"label": "Places / Autocomplete","price": 2.83},
+                "directions-backend.googleapis.com":{"label": "Directions",            "price": 5.00},
+                "geocoding-backend.googleapis.com": {"label": "Geocoding",             "price": 5.00},
+                "roads.googleapis.com":             {"label": "Roads API",             "price": 10.00},
+            }
+
+            usage = {}
+            async with _httpx.AsyncClient(timeout=15) as client:
+                for svc, meta in SERVICES.items():
+                    filt = (
+                        f'metric.type="serviceruntime.googleapis.com/api/request_count"'
+                        f' AND resource.labels.service="{svc}"'
+                    )
+                    params = {
+                        "filter": filt,
+                        "interval.startTime": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        "interval.endTime":   now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        "aggregation.alignmentPeriod": f"{secs}s",
+                        "aggregation.perSeriesAligner": "ALIGN_SUM",
+                    }
+                    r = await client.get(
+                        f"https://monitoring.googleapis.com/v3/projects/{project_id}/timeSeries",
+                        headers={"Authorization": f"Bearer {token}"},
+                        params=params,
+                    )
+                    d = r.json()
+                    total = 0
+                    for ts in d.get("timeSeries", []):
+                        for pt in ts.get("points", []):
+                            v = pt.get("value", {})
+                            total += int(v.get("int64Value", 0) or v.get("doubleValue", 0) or 0)
+                    usage[meta["label"]] = {"requests": total, "price_per_k": meta["price"]}
+
+            total_requests = sum(v["requests"] for v in usage.values())
+            total_cost = sum((v["requests"] / 1000) * v["price_per_k"] for v in usage.values())
+            # Project to end of month
+            days_total = (start.replace(month=start.month % 12 + 1, day=1) - timedelta(days=1)).day
+            days_elapsed = max(now.day, 1)
+            projected = round(total_cost * days_total / days_elapsed, 2)
+
+            result = {
+                "month": now.strftime("%B %Y"),
+                "project_id": project_id,
+                "usage": usage,
+                "total_requests": total_requests,
+                "estimated_cost": round(total_cost, 2),
+                "projected_cost": projected,
+                "free_credit": 200.0,
+                "remaining_credit": round(max(0.0, 200.0 - total_cost), 2),
+                "pct_used": round(min(100, (total_cost / 200) * 100), 1),
+                "days_elapsed": days_elapsed,
+                "days_in_month": days_total,
+                "_ts": now.timestamp(),
+            }
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            cache_path.write_text(_json_mod.dumps(result))
+            return JSONResponse(result)
+        except Exception as e:
+            return JSONResponse({"error": str(e)})
+
     @app.get("/manifest.json")
     async def pwa_manifest() -> JSONResponse:
         return JSONResponse({

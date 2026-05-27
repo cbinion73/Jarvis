@@ -10084,6 +10084,40 @@ const CARD_REGISTRY = {{
       </div>`,
   }},
 
+  maps_usage: {{
+    id: 'maps_usage',
+    title: 'Google APIs',
+    icon: '🗺',
+    load: () => loadOverviewMapsUsage(),
+    heroRender: () => `
+      <div class="card layout-card" id="lc-maps-usage" data-card="maps_usage"
+           style="min-height:200px;" onclick="cardInteract('maps_usage','click')">
+        <div class="card-hdr">
+          <span class="card-icon">🗺</span>
+          <span class="card-title">GOOGLE APIs</span>
+          <span class="card-badge" id="maps-usage-badge">—</span>
+        </div>
+        <div class="card-body" id="maps-usage-content" style="padding:14px 18px;">
+          <div class="skel" style="height:10px;width:70%;margin-bottom:8px;"></div>
+          <div class="skel" style="height:10px;width:50%;"></div>
+        </div>
+      </div>`,
+    priorityRender: () => `
+      <div class="card card-tactical layout-card" id="lc-maps-usage" data-card="maps_usage"
+           onclick="cardInteract('maps_usage','click')">
+        <div class="card-hdr">
+          <span class="card-icon">🗺</span>
+          <span class="card-title">GOOGLE APIs</span>
+          <span class="card-badge" id="maps-usage-badge">—</span>
+        </div>
+        <div class="card-body" id="maps-usage-content" style="padding:10px 14px;"></div>
+      </div>`,
+    ambientRender: () => `
+      <div class="ambient-tile" onclick="cardInteract('maps_usage','click')" data-card="maps_usage">
+        🗺 Google APIs <span class="ambient-badge" id="maps-usage-badge">—</span>
+      </div>`,
+  }},
+
 }};
 
 // ---------------------------------------------------------------------------
@@ -11919,6 +11953,66 @@ async function dossierChat(dossierId) {{
 }}
 
 /* ─── Overview mini-card loaders (populate overview-* elements) ─── */
+
+async function loadOverviewMapsUsage() {{
+  const content = document.getElementById('maps-usage-content');
+  const badge   = document.getElementById('maps-usage-badge');
+  if (!content) return;
+  try {{
+    const res = await fetch('/api/google/maps-usage');
+    const d   = await res.json();
+    if (d.error === 'not_configured') {{
+      content.innerHTML = `<div style="font-size:12px;color:var(--text-3);padding:4px 0;">
+        Set <code>GOOGLE_CLOUD_SA_KEY_PATH</code> and<br><code>GOOGLE_CLOUD_PROJECT_ID</code> to enable.
+      </div>`;
+      if (badge) badge.textContent = 'setup needed';
+      return;
+    }}
+    if (d.error) {{
+      content.innerHTML = `<div style="font-size:11px;color:rgba(255,80,80,0.8);">${{escHtml(d.error)}}</div>`;
+      return;
+    }}
+
+    const pct   = d.pct_used || 0;
+    const barW  = Math.min(100, pct);
+    const barClr = pct > 80 ? '#ff4444' : pct > 50 ? '#FFD700' : '#00D4FF';
+
+    if (badge) badge.textContent = '$' + d.estimated_cost.toFixed(2) + ' / $200';
+
+    const rows = Object.entries(d.usage || {{}}).map(([name, info]) => {{
+      const reqs = info.requests.toLocaleString();
+      const cost = ((info.requests / 1000) * info.price_per_k).toFixed(3);
+      return `<div style="display:flex;justify-content:space-between;align-items:center;
+                          padding:2px 0;font-size:11px;color:var(--text-2);">
+        <span>${{escHtml(name)}}</span>
+        <span style="font-family:var(--font-mono);color:var(--text-3);">${{reqs}} req · $${cost}</span>
+      </div>`;
+    }}).join('');
+
+    content.innerHTML = `
+      <div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;
+                    color:var(--text-3);margin-bottom:4px;">
+          <span>${{escHtml(d.month)}} · ${{d.days_elapsed}}/${{d.days_in_month}} days</span>
+          <span style="color:${{barClr}};font-weight:700;">${{pct}}% of free credit used</span>
+        </div>
+        <div style="height:6px;border-radius:3px;background:rgba(255,255,255,0.08);overflow:hidden;">
+          <div style="height:100%;width:${{barW}}%;background:${{barClr}};
+                      border-radius:3px;transition:width 0.6s;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;
+                    color:var(--text-3);margin-top:3px;">
+          <span>${{d.remaining_credit.toFixed(2)}} remaining</span>
+          <span>Projected: $${{d.projected_cost}}/mo</span>
+        </div>
+      </div>
+      <div style="border-top:1px solid rgba(255,255,255,0.07);padding-top:8px;">
+        ${{rows}}
+      </div>`;
+  }} catch(e) {{
+    if (content) content.innerHTML = '<div style="font-size:11px;color:var(--text-3);">Unavailable</div>';
+  }}
+}}
 
 async function loadOverviewAgents() {{
   try {{
