@@ -1046,6 +1046,68 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def carplay_device_view() -> str:
         from .device_views import carplay_view
         return carplay_view()
+
+    @app.get("/manifest.json")
+    async def pwa_manifest() -> JSONResponse:
+        return JSONResponse({
+            "name": "JARVIS Drive",
+            "short_name": "JARVIS",
+            "description": "J.A.R.V.I.S. Navigation & In-Vehicle Command",
+            "start_url": "/carplay",
+            "scope": "/",
+            "display": "fullscreen",
+            "orientation": "landscape",
+            "background_color": "#0d1117",
+            "theme_color": "#00D4FF",
+            "icons": [
+                {"src": "/assets/icons/icon-192.png",  "sizes": "192x192",  "type": "image/png", "purpose": "any maskable"},
+                {"src": "/assets/icons/icon-512.png",  "sizes": "512x512",  "type": "image/png", "purpose": "any maskable"},
+                {"src": "/assets/icons/icon-144.png",  "sizes": "144x144",  "type": "image/png"},
+                {"src": "/assets/icons/icon-96.png",   "sizes": "96x96",    "type": "image/png"},
+            ],
+            "categories": ["navigation", "utilities"],
+            "lang": "en-US"
+        })
+
+    @app.get("/sw.js")
+    async def service_worker() -> Response:
+        js = r"""
+const CACHE = 'jarvis-drive-v1';
+const PRECACHE = ['/carplay', '/assets/icons/icon-192.png', '/assets/icons/icon-512.png'];
+
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE).then(c => c.addAll(PRECACHE)).then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', e => {
+  const url = e.request.url;
+  // Always network-first for API, Maps, and SSE
+  if (url.includes('/api/') || url.includes('googleapis') || url.includes('/sse')) return;
+  e.respondWith(
+    fetch(e.request)
+      .then(resp => {
+        if (resp && resp.status === 200 && e.request.method === 'GET') {
+          const clone = resp.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return resp;
+      })
+      .catch(() => caches.match(e.request))
+  );
+});
+"""
+        return Response(content=js, media_type="application/javascript",
+                        headers={"Service-Worker-Allowed": "/"})
     # ────────────────────────────────────────────────────────────────────
 
     @app.get("/storm-dashboard")

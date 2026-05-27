@@ -2059,6 +2059,17 @@ def carplay_view() -> str:
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>JARVIS Drive</title>
+  <!-- PWA / Home Screen -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#00D4FF">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="JARVIS Drive">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-180.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/assets/icons/icon-152.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="/assets/icons/icon-167.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/icon-180.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png">
   <style>
 """ + _DARK_VARS + """
 /* ===== Drive Mode Layout ===== */
@@ -3086,6 +3097,10 @@ loadKasaScenes();
 driveLoadStoredData();
 driveStartStateTracking();
 driveLoadMapsScript();
+// Register service worker for PWA offline support
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(function() {});
+}
 
 // ---- TTS helper ----
 function speak(text, onEnd) {
