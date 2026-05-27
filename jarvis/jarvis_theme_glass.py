@@ -15146,14 +15146,13 @@ async function settingsConnectGoogle() {{
   const msg = document.getElementById('settings-google-msg');
   try {{
     const r = await fetch('/api/accounts');
-    const accounts = await r.json();
-    const personal = (accounts.accounts || []).find(a => a.type === 'personal');
-    const accountId = personal?.id;
-    if (!accountId) {{ if (msg) msg.textContent = 'No personal account found.'; return; }}
-    const r2 = await fetch('/api/accounts/' + accountId + '/connect', {{method: 'POST', headers: {{'Content-Type':'application/json'}}, body: JSON.stringify({{provider:'google'}})}});
-    const d2 = await r2.json();
-    if (d2.url) {{ window.open(d2.url, '_blank'); if (msg) msg.textContent = 'Google login opened in new tab.'; }}
-    else {{ if (msg) msg.textContent = d2.detail || 'Could not start Google login.'; }}
+    const data = await r.json();
+    const acct = (data.accounts || []).find(a => a.provider === 'google' && a.owner_user_id === 'chris')
+                 || (data.accounts || []).find(a => a.provider === 'google');
+    if (!acct) {{ if (msg) msg.textContent = 'No Google account found. Add one in the Accounts section.'; return; }}
+    const connectUrl = '/accounts/' + acct.account_id + '/connect';
+    window.open(connectUrl, '_blank');
+    if (msg) msg.textContent = 'Google login opened in a new tab.';
   }} catch(e) {{
     if (msg) msg.textContent = 'Error: ' + e.message;
   }}
