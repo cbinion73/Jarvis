@@ -354,6 +354,12 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             await asyncio.sleep(interval_seconds)
 
     @app.on_event("startup")
+    async def _seed_user_profiles() -> None:
+        """Seed default profiles for all known family members at startup."""
+        from .user_profile import seed_default_profiles
+        await asyncio.to_thread(seed_default_profiles)
+
+    @app.on_event("startup")
     async def _start_mcp_server() -> None:
         """Start FastMCP on its own port (8788) to avoid lifespan/ASGI mount conflicts."""
         import logging as _mcp_log
@@ -1759,6 +1765,31 @@ self.addEventListener('fetch', e => {
             "authenticated_via_cloudflare": bool(email),
             "member": member,
         })
+
+    @app.get("/api/profile")
+    async def api_get_profile(request: Request) -> JSONResponse:
+        """Get the current user's profile."""
+        from .user_profile import load_profile
+        user_id = getattr(request.state, "cf_user_id", "chris")
+        return _json(await asyncio.to_thread(load_profile, user_id))
+
+    @app.post("/api/profile")
+    async def api_save_profile(request: Request, payload: dict[str, Any]) -> JSONResponse:
+        """Save settings to the current user's profile."""
+        from .user_profile import save_profile
+        user_id = getattr(request.state, "cf_user_id", "chris")
+        payload.pop("user_id", None)  # prevent user_id spoofing
+        updated = await asyncio.to_thread(save_profile, user_id, payload)
+        return _json({"ok": True, "profile": updated})
+
+    @app.get("/api/profile/{user_id}")
+    async def api_get_profile_by_id(request: Request, user_id: str) -> JSONResponse:
+        """Get a specific user's profile (admin only — requires chris identity)."""
+        from .user_profile import load_profile
+        requester = getattr(request.state, "cf_user_id", "chris")
+        if requester != "chris":
+            return _json({"error": "Not authorized"}, status_code=403)
+        return _json(await asyncio.to_thread(load_profile, user_id))
 
     @app.get("/api/connected-devices")
     async def api_connected_devices(request: Request, current_device_id: str = "") -> JSONResponse:

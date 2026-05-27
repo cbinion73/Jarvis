@@ -8459,23 +8459,80 @@ let currentView    = 'overview';
 let ws             = null;
 let wsRetries      = 0;
 let _cfIdentity    = null;
+let _userProfile   = {{}};
 
 async function loadCfIdentity() {{
   try {{
-    const r = await fetch('/api/identity/me');
-    _cfIdentity = await r.json();
-    // Update nav greeting if it exists
+    const [meRes, profileRes] = await Promise.all([
+      fetch('/api/identity/me'),
+      fetch('/api/profile')
+    ]);
+    _cfIdentity = await meRes.json();
+    _userProfile = await profileRes.json();
+    applyUserProfile(_userProfile);
+    // update greeting
     const nameEl = document.getElementById('nav-user-name');
-    if (nameEl && _cfIdentity.display_name) nameEl.textContent = _cfIdentity.display_name;
-    // Update page title greeting
+    const name = _userProfile.greeting_name || _cfIdentity.display_name;
+    if (nameEl && name) nameEl.textContent = name;
     const greetEl = document.getElementById('nav-greeting');
-    if (greetEl && _cfIdentity.display_name) {{
+    if (greetEl && name) {{
       const hour = new Date().getHours();
       const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-      greetEl.textContent = greeting + ', ' + _cfIdentity.display_name;
+      greetEl.textContent = greeting + ', ' + name;
     }}
-  }} catch(e) {{ _cfIdentity = {{user_id: 'chris', display_name: 'Chris'}}; }}
+  }} catch(e) {{
+    _cfIdentity = {{user_id: 'chris', display_name: 'Chris'}};
+    _userProfile = {{}};
+  }}
 }}
+
+function applyUserProfile(profile) {{
+  if (!profile) return;
+  // Apply theme if different from current cookie
+  const currentTheme = document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('jarvis-theme='));
+  const cookieTheme = currentTheme ? currentTheme.split('=')[1] : 'glass';
+  if (profile.theme && profile.theme !== cookieTheme) {{
+    // Set cookie and reload to apply theme
+    document.cookie = 'jarvis-theme=' + profile.theme + '; path=/; max-age=31536000';
+    // Only reload if theme actually differs (avoid reload loop)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!urlParams.get('_theme_applied')) {{
+      window.location.href = window.location.pathname + '?_theme_applied=1';
+    }}
+  }}
+}}
+
+async function profileSaveSettings() {{
+  const msg = document.getElementById('profile-settings-msg');
+  const greetingName = document.getElementById('profile-greeting-name')?.value.trim();
+  const theme = document.getElementById('profile-theme')?.value;
+  const timezone = document.getElementById('profile-timezone')?.value;
+  const dashboard = {{
+    show_health:     document.getElementById('profile-show-health')?.checked ?? true,
+    show_chronicle:  document.getElementById('profile-show-chronicle')?.checked ?? true,
+    show_dining:     document.getElementById('profile-show-dining')?.checked ?? true,
+    show_publishing: document.getElementById('profile-show-publishing')?.checked ?? false,
+    show_finance:    document.getElementById('profile-show-finance')?.checked ?? false,
+  }};
+  try {{
+    const r = await fetch('/api/profile', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{greeting_name: greetingName, theme, timezone, dashboard}})
+    }});
+    const d = await r.json();
+    if (d.ok) {{
+      _userProfile = d.profile;
+      if (msg) msg.textContent = '✓ Settings saved.';
+      applyUserProfile(d.profile);
+    }} else {{
+      if (msg) msg.textContent = 'Error saving.';
+    }}
+  }} catch(e) {{
+    if (msg) msg.textContent = 'Error: ' + e.message;
+  }}
+}}
+
 let micActive      = false;
 let currentFilter  = 'all';
 let homeData       = {{}};
@@ -15516,8 +15573,58 @@ function settingsBuildInterface() {{
     <div style="font-size:12px;color:var(--text-2);display:flex;align-items:center;gap:8px;">
       <span id="settings-cf-identity">Loading…</span>
     </div>
+    <div class="sset-divider"></div>
+    <p class="sset-section-hdr">My Profile</p>
+    <div class="sset-card" id="profile-settings-card">
+      <div id="profile-identity-row" style="font-size:12px;color:var(--text-2);margin-bottom:12px;">Loading…</div>
+      <div class="sset-row">
+        <div class="sset-label">Preferred Name</div>
+        <input id="profile-greeting-name" type="text" placeholder="How JARVIS addresses you" class="sset-select" style="flex:1;">
+      </div>
+      <div class="sset-row">
+        <div class="sset-label">Theme</div>
+        <select id="profile-theme" class="sset-select" style="flex:1;">
+          <option value="glass">Glass — Surgical · Adaptive</option>
+          <option value="classic">Classic — Dark Navy · Arc Blue</option>
+          <option value="nexus">Nexus — Obsidian · Violet</option>
+        </select>
+      </div>
+      <div class="sset-row">
+        <div class="sset-label">Timezone</div>
+        <select id="profile-timezone" class="sset-select" style="flex:1;">
+          <option value="America/New_York">Eastern</option>
+          <option value="America/Chicago">Central</option>
+          <option value="America/Denver">Mountain</option>
+          <option value="America/Los_Angeles">Pacific</option>
+        </select>
+      </div>
+      <div class="sset-row" style="align-items:flex-start;">
+        <div class="sset-label" style="padding-top:4px;">Dashboard Cards</div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex:1;">
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2);cursor:pointer;">
+            <input type="checkbox" id="profile-show-health" style="accent-color:var(--accent);"> Health
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2);cursor:pointer;">
+            <input type="checkbox" id="profile-show-chronicle"> Chronicle / Faith
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2);cursor:pointer;">
+            <input type="checkbox" id="profile-show-dining"> Dining
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2);cursor:pointer;">
+            <input type="checkbox" id="profile-show-publishing"> Publishing / KDP
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2);cursor:pointer;">
+            <input type="checkbox" id="profile-show-finance"> Finance
+          </label>
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;">
+        <button class="sset-btn sset-btn-accent" onclick="profileSaveSettings()">Save My Settings</button>
+      </div>
+      <div id="profile-settings-msg" class="sset-msg"></div>
+    </div>
   `;
-  // Populate CF identity after render
+  // Populate CF identity and profile after render
   (async () => {{
     try {{
       const me = _cfIdentity || await fetch('/api/identity/me').then(r=>r.json());
@@ -15527,6 +15634,25 @@ function settingsBuildInterface() {{
           ? `<span style="color:#4ade80;">✓</span> Signed in as <strong>${{me.display_name}}</strong> <span style="color:var(--text-3);">(${{me.email}})</span>`
           : `<span style="color:var(--text-3);">Local session · </span><strong>${{me.display_name}}</strong>`;
       }}
+    }} catch(e) {{}}
+    // Load profile into My Profile form
+    try {{
+      const p = _userProfile || await fetch('/api/profile').then(r=>r.json());
+      const idRow = document.getElementById('profile-identity-row');
+      if (idRow) {{
+        const name = _cfIdentity?.display_name || 'Unknown';
+        const via = _cfIdentity?.authenticated_via_cloudflare ? ' · via Cloudflare' : ' · local session';
+        idRow.innerHTML = `Signed in as <strong>${{name}}</strong><span style="color:var(--text-3);">${{via}}</span>`;
+      }}
+      if (p.greeting_name) {{ const el = document.getElementById('profile-greeting-name'); if(el) el.value = p.greeting_name; }}
+      if (p.theme) {{ const el = document.getElementById('profile-theme'); if(el) el.value = p.theme; }}
+      if (p.timezone) {{ const el = document.getElementById('profile-timezone'); if(el) el.value = p.timezone; }}
+      const dash = p.dashboard || {{}};
+      const checks = [['show-health','show_health'],['show-chronicle','show_chronicle'],['show-dining','show_dining'],['show-publishing','show_publishing'],['show-finance','show_finance']];
+      checks.forEach(([domId, key]) => {{
+        const el = document.getElementById('profile-' + domId);
+        if (el) el.checked = dash[key] !== false;
+      }});
     }} catch(e) {{}}
   }})();
 }}
