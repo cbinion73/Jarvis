@@ -12229,12 +12229,17 @@ async function loadOverviewCosts() {{
     if (!res.ok) throw new Error('fetch failed');
     const d = await res.json();
 
-    const monthTotal = (d.month_total || 0).toFixed(2);
-    const today      = (d.today_llm  || 0).toFixed(3);
-    const monthLLM   = (d.month_llm  || 0).toFixed(2);
-    const monthMaps  = (d.month_maps || 0).toFixed(2);
+    // Net cost = what you actually owe after Google's $200/mo Maps credit
+    const netTotal   = (d.net_total    || 0).toFixed(2);
+    const today      = (d.today_llm    || 0).toFixed(3);
+    const monthLLM   = (d.month_llm    || 0).toFixed(2);
+    const mapsGross  = (d.month_maps   || 0).toFixed(2);
+    const mapsNet    = (d.month_maps_net || 0).toFixed(2);
+    const credit     = (d.maps_free_credit || 200).toFixed(0);
+    const remaining  = (d.maps_remaining  || 200).toFixed(2);
+    const mapsPct    = d.maps_pct_used || 0;
 
-    if (badge) badge.textContent = '$' + monthTotal + '/mo';
+    if (badge) badge.textContent = '$' + netTotal + '/mo net';
 
     // Build per-model breakdown rows
     const models = d.by_model || {{}};
@@ -12248,52 +12253,77 @@ async function loadOverviewCosts() {{
           : '<span style="color:#FFD700;font-size:9px;margin-left:4px;">PAID</span>';
         return `<div style="display:flex;justify-content:space-between;align-items:center;
                             padding:2px 0;font-size:11px;color:var(--text-2);">
-          <span style="display:flex;align-items:center;">
-            ${{escHtml(name)}}${{back}}
-          </span>
-          <span style="font-family:var(--font-mono);color:var(--text-3);">
-            ${{calls}} calls · $${{cost}}
-          </span>
+          <span style="display:flex;align-items:center;">${{escHtml(name)}}${{back}}</span>
+          <span style="font-family:var(--font-mono);color:var(--text-3);">${{calls}} calls · $${{cost}}</span>
         </div>`;
       }}).join('');
 
-    const daysLeft = (d.days_in_month || 30) - (d.days_elapsed || 0);
+    const daysLeft  = (d.days_in_month || 30) - (d.days_elapsed || 0);
     const projected = d.days_elapsed > 0
-      ? ((d.month_total / d.days_elapsed) * (d.days_in_month || 30)).toFixed(2)
+      ? ((d.net_total / d.days_elapsed) * (d.days_in_month || 30)).toFixed(2)
       : '—';
-
-    const tokens = d.month_tokens || {{}};
-    const tokStr = tokens.input
+    const tokens  = d.month_tokens || {{}};
+    const tokStr  = tokens.input
       ? ((tokens.input + (tokens.output||0)) / 1000000).toFixed(2) + 'M tokens'
       : '';
+    const barW    = Math.min(100, mapsPct);
+    const barClr  = mapsPct > 80 ? '#ff4444' : mapsPct > 50 ? '#FFD700' : '#4ade80';
 
     content.innerHTML = `
-      <!-- Today / Month headline -->
-      <div style="display:flex;gap:12px;margin-bottom:12px;">
-        <div style="flex:1;background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 10px;text-align:center;">
-          <div style="font-size:18px;font-weight:700;color:#00D4FF;font-family:var(--font-mono);">$${{today}}</div>
-          <div style="font-size:10px;color:var(--text-3);margin-top:2px;">today</div>
+      <!-- Net cost hero tile -->
+      <div style="background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.18);
+                  border-radius:10px;padding:10px 14px;margin-bottom:12px;
+                  display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:11px;color:var(--text-3);margin-bottom:2px;">NET THIS MONTH</div>
+          <div style="font-size:26px;font-weight:700;color:#00D4FF;font-family:var(--font-mono);line-height:1;">
+            $${{netTotal}}
+          </div>
+          <div style="font-size:10px;color:var(--text-3);margin-top:3px;">
+            after Google's $${{credit}} Maps credit
+          </div>
         </div>
-        <div style="flex:1;background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 10px;text-align:center;">
-          <div style="font-size:18px;font-weight:700;color:#FFD700;font-family:var(--font-mono);">$${{monthLLM}}</div>
-          <div style="font-size:10px;color:var(--text-3);margin-top:2px;">LLM · ${{escHtml(d.month||'')}}</div>
-        </div>
-        <div style="flex:1;background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 10px;text-align:center;">
-          <div style="font-size:18px;font-weight:700;color:#a78bfa;font-family:var(--font-mono);">$${{monthMaps}}</div>
-          <div style="font-size:10px;color:var(--text-3);margin-top:2px;">Maps API</div>
+        <div style="text-align:right;">
+          <div style="font-size:10px;color:var(--text-3);">today</div>
+          <div style="font-size:15px;font-weight:600;color:#00D4FF;font-family:var(--font-mono);">$${{today}}</div>
+          <div style="font-size:10px;color:var(--text-3);margin-top:4px;">projected</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text-2);font-family:var(--font-mono);">$${{projected}}/mo</div>
         </div>
       </div>
 
-      <!-- Projection -->
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-3);
-                  margin-bottom:8px;padding:0 2px;">
-        <span>Projected: <strong style="color:var(--text-2);">$${{projected}}/mo</strong></span>
-        <span>${{daysLeft}} days left · ${{tokStr}}</span>
+      <!-- LLM + Maps row -->
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <div style="flex:1;background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 10px;">
+          <div style="font-size:10px;color:var(--text-3);margin-bottom:3px;">LLM (AI models)</div>
+          <div style="font-size:16px;font-weight:700;color:#FFD700;font-family:var(--font-mono);">$${{monthLLM}}</div>
+          <div style="font-size:9px;color:var(--text-3);margin-top:2px;">${{tokStr}}</div>
+        </div>
+        <div style="flex:1;background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 10px;">
+          <div style="font-size:10px;color:var(--text-3);margin-bottom:3px;">Google Maps API</div>
+          <div style="font-size:16px;font-weight:700;color:${{mapsNet==='0.00'?'#4ade80':'#f87171'}};font-family:var(--font-mono);">
+            ${{mapsNet === '0.00' ? 'FREE' : '$$'+mapsNet}}
+          </div>
+          <div style="font-size:9px;color:var(--text-3);margin-top:2px;">
+            $${{mapsGross}} gross · $${{remaining}} credit left
+          </div>
+          <!-- Credit bar -->
+          <div style="height:3px;border-radius:2px;background:rgba(255,255,255,0.08);
+                      overflow:hidden;margin-top:5px;">
+            <div style="height:100%;width:${{barW}}%;background:${{barClr}};
+                        border-radius:2px;transition:width 0.6s;"></div>
+          </div>
+          <div style="font-size:9px;color:${{barClr}};margin-top:2px;">${{mapsPct}}% of $${{credit}} used</div>
+        </div>
       </div>
 
       <!-- Per-model breakdown -->
       <div style="border-top:1px solid rgba(255,255,255,0.07);padding-top:8px;">
+        <div style="font-size:9px;color:var(--text-3);margin-bottom:4px;text-transform:uppercase;
+                    letter-spacing:0.08em;">Model Breakdown</div>
         ${{modelRows}}
+        <div style="font-size:9px;color:var(--text-3);margin-top:6px;text-align:right;">
+          ${{daysLeft}} days left in ${{escHtml(d.month||'')}}
+        </div>
       </div>`;
   }} catch(e) {{
     if (content) content.innerHTML = '<div style="font-size:11px;color:var(--text-3);">Unavailable</div>';

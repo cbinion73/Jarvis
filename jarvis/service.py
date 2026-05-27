@@ -1021,7 +1021,8 @@ self.addEventListener('fetch',e=>{const u=e.request.url;if(u.includes('/api/')||
                 except Exception:
                     pass
         # Grab cached maps cost (don't re-fetch — respect 6h cache)
-        maps_cost  = 0.0
+        maps_cost        = 0.0
+        maps_free_credit = 200.0   # Google gives $200/mo free
         maps_cache = Path("data/cache/maps_usage_cache.json")
         if maps_cache.exists():
             try:
@@ -1029,19 +1030,27 @@ self.addEventListener('fetch',e=>{const u=e.request.url;if(u.includes('/api/')||
                 maps_cost = float(mc.get("estimated_cost", 0))
             except Exception:
                 pass
-        total_month = round(month_cost + maps_cost, 4)
+        maps_net       = max(0.0, maps_cost - maps_free_credit)   # what you actually owe after credit
+        maps_remaining = max(0.0, maps_free_credit - maps_cost)   # credit still available
+        maps_pct       = round(min(100.0, (maps_cost / maps_free_credit) * 100), 1)
+        net_total      = round(month_cost + maps_net, 4)          # true out-of-pocket this month
         return JSONResponse({
-            "month":         now.strftime("%B %Y"),
-            "today_llm":     round(today_cost, 4),
-            "month_llm":     round(month_cost, 4),
-            "month_maps":    round(maps_cost, 4),
-            "month_total":   total_month,
-            "alltime_llm":   round(alltime, 4),
-            "month_tokens":  {"input": month_in, "output": month_out},
-            "by_model":      by_model,
-            "by_backend":    by_backend,
-            "free_llm":      False,
-            "days_elapsed":  now.day,
+            "month":              now.strftime("%B %Y"),
+            "today_llm":          round(today_cost, 4),
+            "month_llm":          round(month_cost, 4),
+            "month_maps":         round(maps_cost, 4),
+            "month_maps_net":     round(maps_net, 4),
+            "maps_free_credit":   maps_free_credit,
+            "maps_remaining":     round(maps_remaining, 2),
+            "maps_pct_used":      maps_pct,
+            "net_total":          net_total,
+            "month_total":        round(month_cost + maps_cost, 4),  # gross (kept for compat)
+            "alltime_llm":        round(alltime, 4),
+            "month_tokens":       {"input": month_in, "output": month_out},
+            "by_model":           by_model,
+            "by_backend":         by_backend,
+            "free_llm":           False,
+            "days_elapsed":       now.day,
         })
 
     @app.get("/storm-dashboard")
