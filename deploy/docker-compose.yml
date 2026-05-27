@@ -1,0 +1,116 @@
+name: jarvis-family
+
+services:
+
+  # ── JARVIS ──────────────────────────────────────────────────────────────
+  jarvis:
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - jarvis_data:/app/data
+      - chronicle_snapshots:/chronicle-snapshots
+    environment:
+      CHRONICLE_SNAPSHOT_DIR: /chronicle-snapshots
+      CHRONICLE_API_URL: http://chronicle:5174
+      GHOSTWRITR_API_URL: http://ghostwritr:3000
+    networks:
+      - internal
+
+  # ── CHRONICLE ───────────────────────────────────────────────────────────
+  chronicle:
+    build:
+      context: ../../chronicle
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - chronicle_snapshots:/app/chronicle-data
+    networks:
+      - internal
+
+  # ── GHOSTWRITR ──────────────────────────────────────────────────────────
+  ghostwritr:
+    build:
+      context: ../../ghostwritr
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+
+  # ── POSTGRES ────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ghostwritr
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  # ── REDIS ───────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - internal
+
+  # ── NGINX ───────────────────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - jarvis
+    networks:
+      - internal
+
+  # ── CLOUDFLARE TUNNEL ───────────────────────────────────────────────────
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - nginx
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  jarvis_data:
+  chronicle_snapshots:
+  postgres_data:
+  redis_data:
