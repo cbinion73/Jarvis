@@ -807,6 +807,54 @@ def _is_food_message(text: str) -> bool:
     return any(t in low for t in _FOOD_TRIGGERS)
 
 
+_DINING_OUT_TRIGGERS = {
+    "restaurant", "restaurants", "eat out", "eating out", "where should i eat",
+    "where to eat", "where can i eat", "dining", "dine", "grab a bite",
+    "place to eat", "good spot", "good place", "lunch spot", "dinner spot",
+    "recommend a place", "suggest a place", "recommend somewhere",
+    "what's good near", "what is good near", "close to eat", "nearby",
+}
+
+def _is_dining_out_query(text: str) -> bool:
+    """Detect questions about where to eat (not logging food, but seeking restaurant recs)."""
+    low = text.lower()
+    # Must contain at least one dining-out keyword
+    if not any(t in low for t in _DINING_OUT_TRIGGERS):
+        return False
+    # And a seeking / question intent — avoid triggering on pure food logs
+    seeking = any(w in low for w in (
+        "where", "what", "recommend", "suggest", "good", "near", "nearby",
+        "tonight", "today", "lunch", "dinner", "breakfast", "should i", "can i",
+        "find", "looking for", "want to", "craving",
+    ))
+    return seeking
+
+
+def _get_dining_context() -> str:
+    """Pull live restaurant recommendations to give Sam real local picks."""
+    try:
+        from .dining import recommend_restaurants
+        rec = recommend_restaurants(limit=3)
+        ctx = rec.get("sam_context", "")
+        allergies = rec.get("allergies") or []
+        goals     = rec.get("goals") or ""
+        lines = []
+        if ctx:
+            lines.append(f"LIVE NEARBY RESTAURANT DATA:\n{ctx}")
+        if allergies:
+            lines.append(f"Chris's known allergies/restrictions: {', '.join(allergies)}")
+        if goals:
+            lines.append(f"Current nutrition goal: {goals}")
+        lines.append(
+            "Use this data to recommend specific real restaurants by name. "
+            "Apply your medical filters (low-glycemic, kidney-safe, no excess K+). "
+            "Be direct — pick the best one or two and say why."
+        )
+        return "\n".join(lines)
+    except Exception:
+        return ""
+
+
 async def chat_with_sam(
     message: str,
     history: list[dict],
@@ -860,6 +908,13 @@ async def chat_with_sam(
 
     prefs_ctx = _prefs_summary(prefs) if prefs.get("interview_complete") else ""
 
+    # ── Dining-out query: inject live restaurant data ─────────────────────────
+    dining_block = ""
+    if _is_dining_out_query(message):
+        dining_ctx = _get_dining_context()
+        if dining_ctx:
+            dining_block = f"\n\nDINING INTELLIGENCE (live — use to give real picks):\n{dining_ctx}"
+
     ctx = (
         f"Chris's stats — Readiness: {readiness_val}/100 · "
         f"HRV: {metrics.get('hrv','?')}ms · Sleep: {metrics.get('sleep_hours','?')}h · "
@@ -881,7 +936,7 @@ async def chat_with_sam(
         ) if council_ctx else ""
         reply = await asyncio.to_thread(
             llm_client.prompt_text,
-            SAM_SYSTEM_PROMPT + "\n\nContext: " + ctx + council_block,
+            SAM_SYSTEM_PROMPT + "\n\nContext: " + ctx + council_block + dining_block,
             conv,
             max_output_tokens=300,
         )

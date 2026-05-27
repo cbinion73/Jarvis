@@ -1532,6 +1532,35 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         except Exception:
             pass
 
+        # ── Dining — Sam's meal pick for the current time of day ──────────────
+        try:
+            from .dining import recommend_restaurants as _recommend_restaurants
+            from datetime import datetime as _dtm
+            _hour = _dtm.now().hour
+            if 5 <= _hour or _hour < 1:   # Waking hours (5am – 1am)
+                _rec = await asyncio.to_thread(_recommend_restaurants, None, 2)
+                _picks = _rec.get("recommendations") or []
+                if _picks:
+                    sections.append({
+                        "id": "dining",
+                        "title": "Sam's Picks",
+                        "icon": "🍽️",
+                        "meal_type": _rec.get("meal_type", ""),
+                        "items": [
+                            {
+                                "name": p.get("name", ""),
+                                "rating": p.get("rating"),
+                                "price": p.get("price", ""),
+                                "distance_mi": p.get("distance_mi"),
+                                "open_now": p.get("open_now"),
+                                "place_id": p.get("place_id", ""),
+                            }
+                            for p in _picks
+                        ],
+                    })
+        except Exception:
+            pass
+
         date_str = _dt.now().strftime("%a, %b %-d")
         return _json({"actor": actor, "date": date_str, "sections": sections})
 

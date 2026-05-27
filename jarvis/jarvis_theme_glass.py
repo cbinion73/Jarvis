@@ -12011,6 +12011,8 @@ function updateOverviewHomeCards(d) {{
     const nextDate = next.start_time ? new Date(next.start_time).toLocaleDateString([], {{weekday:'short',month:'short',day:'numeric'}}) : '';
     const nextEl = document.getElementById('overviewNextEvent');
     if (nextEl) nextEl.innerHTML = '<b>' + escHtml(next.title) + '</b>' + (nextDate ? '<br><span style="opacity:0.7;font-size:11px;">' + escHtml(nextDate) + '</span>' : '');
+    // Dining hint — show if next event is at a meal-time hour
+    _maybeShowCalendarDiningHint(next);
   }} else {{
     setEl('overviewNextEvent', 'No upcoming events');
   }}
@@ -12022,6 +12024,31 @@ function updateOverviewHomeCards(d) {{
 function setEl(id, val) {{
   const el = document.getElementById(id);
   if (el) el.textContent = val;
+}}
+
+function _maybeShowCalendarDiningHint(event) {{
+  // Show a dining chip if the next event falls during a meal window
+  if (!event || !event.start_time) return;
+  const h = new Date(event.start_time).getHours();
+  const isMealTime = (h >= 11 && h <= 14) || (h >= 17 && h <= 20);
+  if (!isMealTime) return;
+  const mealLabel = h < 15 ? 'lunch' : 'dinner';
+  // Inject hint chip into calendar card body (hero or priority render)
+  ['lc-calendar', 'lc-calendar-priority'].forEach(function(id) {{
+    const card = document.getElementById(id);
+    if (!card) return;
+    // Don't add twice
+    if (card.querySelector('.dining-cal-hint')) return;
+    const chip = document.createElement('div');
+    chip.className = 'dining-cal-hint';
+    chip.style.cssText = 'margin-top:10px;display:inline-flex;align-items:center;gap:6px;' +
+      'background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);' +
+      'border-radius:8px;padding:5px 11px;cursor:pointer;font-size:11px;color:var(--hue);';
+    chip.innerHTML = '🍽️ Find ' + mealLabel + ' spots nearby →';
+    chip.onclick = function(e) {{ e.stopPropagation(); switchView('dining'); }};
+    card.querySelector('.card-body, .card-hdr')?.insertAdjacentElement('afterend', chip) ||
+    card.appendChild(chip);
+  }});
 }}
 
 function renderEmailList(emails, filter) {{
@@ -12611,6 +12638,25 @@ function renderBriefSection(s) {{
       <span style="color:var(--amber);font-weight:600;">${{s.count}} item${{s.count !== 1 ? 's' : ''}} waiting</span>
       <button class="btn-ghost" style="font-size:10px;padding:2px 8px;" onclick="switchView('approvals')">Review →</button>
     </div>`;
+  }}
+
+  // Dining — Sam's meal picks
+  if (s.id === 'dining' && s.items && s.items.length) {{
+    const mealLabel = s.meal_type ? escHtml(s.meal_type) + ' picks' : 'picks';
+    const rows = s.items.map(p => {{
+      const openBadge = p.open_now === true
+        ? '<span style="color:#4ade80;font-size:9px;font-weight:700;margin-left:4px;">OPEN</span>'
+        : p.open_now === false ? '<span style="color:#f87171;font-size:9px;margin-left:4px;">CLOSED</span>' : '';
+      const stars = p.rating ? `<span style="color:var(--hue);font-weight:700;">${{p.rating}}★</span> ` : '';
+      const dist  = p.distance_mi ? `<span style="color:var(--text-3);font-size:10px;">${{p.distance_mi}} mi</span>` : '';
+      const price = p.price ? `<span style="color:var(--text-3);font-size:10px;margin-left:4px;">${{escHtml(p.price)}}</span>` : '';
+      return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;cursor:pointer;" onclick="switchView('dining')">
+        <span style="font-size:12px;font-weight:600;color:var(--text-1);flex:1;">${{escHtml(p.name)}}</span>
+        ${{stars}}${{dist}}${{price}}${{openBadge}}
+      </div>`;
+    }}).join('');
+    return hdr + `<div style="font-size:11px;color:var(--text-3);margin-bottom:4px;">${{mealLabel}}</div>` + rows +
+      `<button class="btn-ghost" style="font-size:10px;padding:2px 8px;margin-top:2px;" onclick="switchView('dining')">More spots →</button>`;
   }}
 
   // Situation / Health — prose
@@ -16891,8 +16937,11 @@ async function openDiningDetail(placeId, name) {{
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-3);margin-bottom:6px;">Hours</div>
         ${{hours}}
       </div>
-      <div style="display:flex;gap:10px;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <a href="${{mapsUrl}}" target="_blank" rel="noopener" class="btn-primary" style="text-decoration:none;font-size:12px;">📍 Open in Maps</a>
+        <button class="btn-ghost" style="font-size:12px;"
+          onclick="navigateToDining('${{escHtml((d.name||name).replace(/'/g,'&#39;'))}}','${{escHtml((d.formatted_address||'').replace(/'/g,'&#39;'))}}')">
+          🧭 Navigate</button>
         <button class="btn-ghost" style="font-size:12px;"
           onclick="toggleDiningFav('${{escHtml(placeId)}}','${{escHtml((d.name||name).replace(/'/g,'&#39;'))}}','${{escHtml((d.formatted_address||'').replace(/'/g,'&#39;'))}}','${{d.rating}}')"
           id="detail-fav-btn">♡ Save</button>
@@ -16906,6 +16955,25 @@ async function openDiningDetail(placeId, name) {{
 function closeDiningDetail() {{
   const sheet = document.getElementById('dining-detail-sheet');
   if (sheet) sheet.style.display = 'none';
+}}
+
+function navigateToDining(name, address) {{
+  closeDiningDetail();
+  switchView('navigate');
+  // Give the nav view a moment to render, then pre-fill destination
+  setTimeout(function() {{
+    var dest = document.getElementById('nav-dest');
+    if (dest) {{
+      dest.value = name + (address ? ', ' + address : '');
+      dest.dispatchEvent(new Event('input'));
+      // Auto-trigger route if start is already set
+      var startEl = document.getElementById('nav-origin');
+      if (startEl && startEl.value) {{
+        navGetRoute();
+      }}
+    }}
+  }}, 350);
+  cardInteract('dining', 'navigate');
 }}
 
 /* ─── DINING CARD ─────────────────────────────────────────────────── */
@@ -18637,13 +18705,15 @@ function showAerialView(destinationAddress) {{
         .then(function(r) {{ return r.json(); }})
         .then(function(d) {{
             if (loadingEl) loadingEl.style.display = 'none';
+            // Prefer HLS for streaming (avoids CORS issues with direct MP4 URLs)
+            var hlsUri = d.uris && d.uris.HLS || '';
             var videoUri = d.videoUri || (d.uris && d.uris.MP4_HIGH) || (d.uris && d.uris.MP4_MEDIUM) || '';
-            if (videoUri) {{
-                // Wire up error + black-screen timeout before setting src
+            if (hlsUri || videoUri) {{
                 var _aerialFallbackShown = false;
                 function _showAerialFallback() {{
                     if (_aerialFallbackShown) return;
                     _aerialFallbackShown = true;
+                    if (window._aerialHls) {{ window._aerialHls.destroy(); window._aerialHls = null; }}
                     video.style.display = 'none';
                     fallback.style.display = 'block';
                     var destLat = 0, destLng = 0;
@@ -18655,19 +18725,38 @@ function showAerialView(destinationAddress) {{
                     }}
                     fallback.src = '/api/nav/streetview?lat=' + destLat + '&lng=' + destLng + '&heading=0&width=800&height=450';
                 }}
-                video.onerror = _showAerialFallback;
-                video.onloadeddata = function() {{ _aerialFallbackShown = true; }}; // cancel timeout
-                video.src = videoUri;
                 video.style.display = 'block';
                 fallback.style.display = 'none';
-                video.load();
-                video.play().catch(function() {{ _showAerialFallback(); }});
-                // If video is still black after 6 seconds, fall back to Street View
+                if (hlsUri && window.Hls && Hls.isSupported()) {{
+                    // Use HLS.js — designed for streaming, no CORS issues
+                    if (window._aerialHls) {{ window._aerialHls.destroy(); }}
+                    window._aerialHls = new Hls({{
+                        maxBufferLength: 10,
+                        enableWorker: true
+                    }});
+                    window._aerialHls.loadSource(hlsUri);
+                    window._aerialHls.attachMedia(video);
+                    window._aerialHls.on(Hls.Events.MANIFEST_PARSED, function() {{
+                        video.play().catch(_showAerialFallback);
+                        _aerialFallbackShown = true; // HLS loaded — cancel MP4 fallback timer
+                    }});
+                    window._aerialHls.on(Hls.Events.ERROR, function(e, data) {{
+                        if (data.fatal) _showAerialFallback();
+                    }});
+                }} else {{
+                    // Direct MP4 fallback (Safari supports HLS natively)
+                    video.onerror = _showAerialFallback;
+                    video.onloadeddata = function() {{ _aerialFallbackShown = true; }};
+                    video.src = hlsUri || videoUri;
+                    video.load();
+                    video.play().catch(_showAerialFallback);
+                }}
+                // Safety net: if still no video after 8s, show Street View
                 setTimeout(function() {{
                     if (!_aerialFallbackShown && (video.readyState === 0 || video.videoWidth === 0)) {{
                         _showAerialFallback();
                     }}
-                }}, 6000);
+                }}, 8000);
             }} else {{
                 // Fallback: Street View of destination using route end point coords
                 video.style.display = 'none';
@@ -18710,6 +18799,7 @@ function closeAerialModal() {{
     if (modal) modal.style.display = 'none';
     var video = document.getElementById('nav-aerial-video');
     if (video) {{ video.pause(); video.src = ''; }}
+    if (window._aerialHls) {{ window._aerialHls.destroy(); window._aerialHls = null; }}
 }}
 
 // ── STREET VIEW TURN PREVIEW ─────────────────────────────────────────────────
