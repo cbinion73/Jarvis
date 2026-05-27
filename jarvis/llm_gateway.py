@@ -233,26 +233,27 @@ TASK_TEMPERATURE_MAP: dict[str, float] = {
 ESCALATION_THRESHOLD = 0.68
 
 # ---------------------------------------------------------------------------
-# Five-tier escalation ladder
+# Six-tier escalation ladder
 # ---------------------------------------------------------------------------
-# Tier 1  phi3.5                  — local, ~100ms,  classify/route/tag
-# Tier 2a qwen2.5:14b (substantive) — local, ~2s,   converse/plan/draft/reason
-# Tier 2b qwen2.5:7b  (background)  — local, ~1s,   summarize/extract/format
-# Tier 2c openai/gpt-oss-120b (Groq) — cloud free, 120B, deep reasoning
-# Tier 3  gpt-5.4-mini            — cloud, fast,    strategy / drafts
-# Tier 4  gpt-5.4-thinking        — cloud, slow,    high-stakes + extended thinking
-# Tier 5  gpt-5.5-thinking        — cloud, slowest, critical decisions — APPROVAL REQUIRED
+# Tier 1  phi3.5                     — local, ~100ms,  classify/route/tag
+# Tier 2a qwen2.5:14b (substantive)  — local, ~2s,     converse/plan/draft/reason
+# Tier 2b qwen2.5:7b  (background)   — local, ~1s,     summarize/extract/format
+# Tier 3  llama-3.3-70b (Groq)       — cloud FREE,     smart escalation, fast LPU
+# Tier 4  gpt-5.4-mini               — cloud PAID,     strategy / drafts
+# Tier 5  gpt-5.4-thinking           — cloud, slow,    high-stakes + extended thinking
+# Tier 6  gpt-5.5-thinking           — cloud, slowest, critical decisions — APPROVAL REQUIRED
 # ---------------------------------------------------------------------------
 
 ESCALATION_PATH: dict[str, str] = {
-    "phi3.5":            "qwen2.5:14b",      # phi3.5 → substantive local
-    "qwen2.5:14b":       "gpt-5.4-mini",     # substantive local → cloud
-    "qwen2.5:7b":        "qwen2.5:14b",      # background → substantive
-    "qwen2.5":           "gpt-5.4-mini",     # legacy alias
-    "gpt-oss:20b":       "gpt-5.4-mini",     # legacy alias (broken local)
+    "phi3.5":            "qwen2.5:14b",        # phi3.5 → substantive local
+    "qwen2.5:14b":       "groq",               # substantive local → Groq free tier
+    "qwen2.5:7b":        "qwen2.5:14b",        # background → substantive
+    "qwen2.5":           "groq",               # legacy alias
+    "gpt-oss:20b":       "groq",               # legacy alias (broken local)
+    "groq":              "gpt-5.4-mini",       # Groq free → paid OpenAI
     "gpt-5.4-mini":      "gpt-5.4-thinking",
-    "gpt-5.4-thinking":  "gpt-5.5-thinking", # approval gate fires here
-    "gpt-5.5-thinking":  "gpt-5.5-thinking", # already at top
+    "gpt-5.4-thinking":  "gpt-5.5-thinking",   # approval gate fires here
+    "gpt-5.5-thinking":  "gpt-5.5-thinking",   # already at top
 }
 
 # Models that use OpenAI's reasoning/thinking mode (reasoning_effort=high)
@@ -827,16 +828,23 @@ class LLMGateway:
         return "ollama"
 
     def _escalate_model(self, model: str) -> str | None:
-        """Return the next-tier model, or None if already at the top."""
-        fast = _FAST_MODEL()
-        substantive = _SUBSTANTIVE_MODEL()
-        background = _BACKGROUND_MODEL()
-        openai_m = _OPENAI_MODEL()
+        """Return the next-tier model, or None if already at the top.
 
-        if model == fast:          return substantive
-        if model == background:    return substantive
-        if model == substantive:   return openai_m
-        if model == openai_m:      return "gpt-5.4-thinking"
+        Ladder: phi3.5 → qwen2.5:14b → Groq (free) → gpt-5.4-mini → gpt-5.4-thinking → gpt-5.5-thinking
+        Groq sits between local and paid OpenAI, acting as a free speed bump that
+        handles the majority of escalations without incurring cloud costs.
+        """
+        fast        = _FAST_MODEL()
+        substantive = _SUBSTANTIVE_MODEL()
+        background  = _BACKGROUND_MODEL()
+        groq_m      = _GROQ_MODEL()
+        openai_m    = _OPENAI_MODEL()
+
+        if model == fast:               return substantive   # phi3.5 → qwen2.5:14b
+        if model == background:         return substantive   # qwen2.5:7b → qwen2.5:14b
+        if model == substantive:        return groq_m        # qwen2.5:14b → Groq (free)
+        if model == groq_m:             return openai_m      # Groq → gpt-5.4-mini (paid)
+        if model == openai_m:           return "gpt-5.4-thinking"
         if model == "gpt-5.4-thinking": return "gpt-5.5-thinking"
         return None   # already at top
 
@@ -972,17 +980,17 @@ class LLMGateway:
         escalated = False
 
         # If Ollama is offline, immediately escalate Ollama-bound tasks.
-        # Voice tasks prefer Groq (fast LPU); other tasks escalate to OpenAI.
+        # Try Groq first (free) for all task types; fall back to OpenAI only if Groq is also down.
         if not self._ollama.is_available() and self._backend_for(model) == "ollama":
-            if task_type in ("voice", "voice_quick") and self._groq.is_available():
+            if self._groq.is_available():
                 _log.info(
-                    "Ollama offline, escalating voice task %s/%s to Groq", task_type, model
+                    "Ollama offline, escalating %s/%s to Groq (free tier)", task_type, model
                 )
                 model = _GROQ_MODEL()
                 escalated = True
             elif self._openai.is_available():
                 _log.info(
-                    "Ollama offline, escalating %s/%s to OpenAI", task_type, model
+                    "Ollama offline, Groq unavailable — escalating %s/%s to OpenAI", task_type, model
                 )
                 model = _OPENAI_MODEL()
                 escalated = True
@@ -1079,19 +1087,34 @@ class LLMGateway:
                 fallback.escalated = True
                 response = fallback
 
-        if response.error and self._backend_for(model) == "ollama" and self._openai.is_available() and allow_escalation:
-            _log.warning(
-                "Ollama error for %s/%s: %s — falling back to OpenAI",
-                task_type, model, response.error,
-            )
-            fallback = self._openai.complete(
-                messages, _OPENAI_MODEL(),
-                temperature=temperature, max_tokens=max_tokens, stream=stream,
-            )
-            if not fallback.error:
-                fallback.task_type = task_type
-                fallback.escalated = True
-                response = fallback
+        if response.error and self._backend_for(model) == "ollama" and allow_escalation:
+            # Try Groq first (free), then OpenAI as last resort
+            if self._groq.is_available():
+                _log.warning(
+                    "Ollama error for %s/%s: %s — falling back to Groq",
+                    task_type, model, response.error,
+                )
+                fallback = self._groq.complete(
+                    messages, _GROQ_MODEL(),
+                    temperature=temperature, max_tokens=max_tokens, stream=stream,
+                )
+                if not fallback.error:
+                    fallback.task_type = task_type
+                    fallback.escalated = True
+                    response = fallback
+            if response.error and self._openai.is_available():
+                _log.warning(
+                    "Groq error for %s/%s: %s — falling back to OpenAI",
+                    task_type, model, response.error,
+                )
+                fallback = self._openai.complete(
+                    messages, _OPENAI_MODEL(),
+                    temperature=temperature, max_tokens=max_tokens, stream=stream,
+                )
+                if not fallback.error:
+                    fallback.task_type = task_type
+                    fallback.escalated = True
+                    response = fallback
 
         total_ms = int((time.monotonic() - t_start) * 1000)
 
