@@ -3068,12 +3068,23 @@ var MANEUVER_ARROWS = {
   'arrive':            '&#11088;'
 };
 
+var _drivePendingDest = '';  // queued destination if Maps not ready yet
+
 function driveLoadMapsScript() {
   fetch('/api/nav/maps-key').then(function(r) { return r.json(); }).then(function(d) {
-    if (!d.key) return;
+    if (!d.key) {
+      document.getElementById('drive-map-loading').innerHTML =
+        '<div style="font-size:14px;padding:20px;text-align:center;color:rgba(255,100,100,0.8)">Maps API key not configured</div>';
+      return;
+    }
     var s = document.createElement('script');
-    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + d.key + '&callback=driveOnMapsReady';
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + d.key +
+            '&loading=async&callback=driveOnMapsReady';
     s.async = true;
+    s.onerror = function() {
+      document.getElementById('drive-map-loading').innerHTML =
+        '<div style="font-size:14px;padding:20px;text-align:center;color:rgba(255,100,100,0.8)">Map failed to load</div>';
+    };
     document.head.appendChild(s);
   }).catch(function() {});
 }
@@ -3082,6 +3093,12 @@ function driveOnMapsReady() {
   _driveNavMapsLoaded = true;
   var loading = document.getElementById('drive-map-loading');
   if (loading) loading.style.display = 'none';
+  // Execute any route that was queued before Maps finished loading
+  if (_drivePendingDest) {
+    var dest = _drivePendingDest;
+    _drivePendingDest = '';
+    driveNavRoute('My Location', dest);
+  }
   var darkStyles = [
     {elementType:'geometry', stylers:[{color:'#1a1a2e'}]},
     {elementType:'labels.text.fill', stylers:[{color:'#9e9e9e'}]},
@@ -3164,23 +3181,46 @@ function driveNavGo() {
   var dest = document.getElementById('drive-nav-dest').value.trim();
   if (!dest) return;
   document.getElementById('drive-nav-ac').style.display = 'none';
-  if (!_driveNavMapsLoaded) { window.location = 'maps://?daddr=' + encodeURIComponent(dest); return; }
+  var goBtn = document.querySelector('.drive-nav-go');
+  if (!_driveNavMapsLoaded) {
+    // Queue it — will fire automatically once driveOnMapsReady() runs
+    _drivePendingDest = dest;
+    if (goBtn) goBtn.textContent = 'Loading…';
+    return;
+  }
+  if (goBtn) goBtn.textContent = 'Routing…';
   driveNavRoute('My Location', dest);
 }
 
 function driveNavHome() {
   if (!_driveNavHomeAddr) return;
   document.getElementById('drive-nav-dest').value = _driveNavHomeAddr;
+  var goBtn = document.querySelector('.drive-nav-go');
+  if (goBtn) goBtn.textContent = 'Routing…';
   driveNavRoute('My Location', _driveNavHomeAddr);
 }
 
 function driveNavRoute(origin, dest) {
-  if (!_driveNavMapsLoaded) { window.location = 'maps://?daddr=' + encodeURIComponent(dest); return; }
+  if (!_driveNavMapsLoaded) {
+    _drivePendingDest = dest;
+    return;
+  }
   if (!_driveNavDirectionsService) _driveNavDirectionsService = new google.maps.DirectionsService();
   if (origin === 'My Location' && navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(function(pos) {
-      _driveDoRoute(new google.maps.LatLng(pos.coords.latitude, pos.coords.longitude), dest);
-    }, function() { _driveDoRoute(origin, dest); });
+    navigator.geolocation.getCurrentPosition(
+      function(pos) {
+        _driveDoRoute(new google.maps.LatLng(pos.coords.latitude, pos.coords.longitude), dest);
+      },
+      function() {
+        // Geolocation denied or timed out — route from map center if available
+        if (_driveNavMap) {
+          _driveDoRoute(_driveNavMap.getCenter(), dest);
+        } else {
+          _driveDoRoute(dest, dest); // last resort: same place (Maps will show destination)
+        }
+      },
+      {timeout: 5000, maximumAge: 30000, enableHighAccuracy: false}
+    );
   } else {
     _driveDoRoute(origin, dest);
   }
@@ -3191,7 +3231,12 @@ function _driveDoRoute(origin, dest) {
     origin: origin, destination: dest,
     travelMode: google.maps.TravelMode.DRIVING
   }, function(result, status) {
-    if (status !== 'OK') return;
+    var goBtn = document.querySelector('.drive-nav-go');
+    if (goBtn) goBtn.textContent = 'Go';
+    if (status !== 'OK') {
+      if (goBtn) { goBtn.textContent = 'No route'; setTimeout(function(){ goBtn.textContent='Go'; }, 2000); }
+      return;
+    }
     _driveNavRenderer.setDirections(result);
     _driveNavRouteLeg = result.routes[0].legs[0];
     _driveNavSteps = _driveNavRouteLeg.steps || [];
