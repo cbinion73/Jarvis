@@ -2166,11 +2166,12 @@ def carplay_view() -> str:
   right: 12px;
   z-index: 10;
   display: flex;
-  gap: 8px;
-  background: rgba(13,17,23,0.92);
+  align-items: center;
+  gap: 6px;
+  background: rgba(13,17,23,0.94);
   border: 1px solid rgba(88,166,255,0.35);
   border-radius: 12px;
-  padding: 6px 10px;
+  padding: 5px 8px;
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
@@ -2180,21 +2181,52 @@ def carplay_view() -> str:
   color: #fff;
   border: none;
   outline: none;
-  font-size: 18px;
+  font-size: 17px;
   font-family: var(--font-sans);
+  min-width: 0;
 }
-.drive-nav-input::placeholder { color: rgba(255,255,255,0.4); }
+.drive-nav-input::placeholder { color: rgba(255,255,255,0.35); }
+/* Icon buttons inside the search bar */
+.drive-nav-icon-btn {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  line-height: 1;
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+  transition: color 0.15s;
+}
+.drive-nav-icon-btn:active { background: rgba(255,255,255,0.1); }
+.drive-nav-icon-btn.mic-active { color: #ff4444; }
+.drive-nav-icon-btn.starred { color: #FFD700; }
+/* Autocomplete section headers (Favorites / Recent) */
+.drive-nav-ac-section {
+  padding: 8px 16px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.drive-nav-ac-fav { color: #FFD700; }
+.drive-nav-ac-hist { color: rgba(255,255,255,0.75); }
 .drive-nav-go {
   background: var(--hue);
   color: #000;
   border: none;
   border-radius: 8px;
-  padding: 8px 18px;
-  font-size: 16px;
+  padding: 7px 16px;
+  font-size: 15px;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
   font-family: var(--font-sans);
+  flex-shrink: 0;
 }
 /* Autocomplete dropdown */
 .drive-nav-autocomplete {
@@ -2624,10 +2656,19 @@ def carplay_view() -> str:
       </div>
       <!-- Destination search bar -->
       <div class="drive-nav-bar">
+        <button class="drive-nav-icon-btn" id="drive-nav-mic-btn"
+                onclick="driveMicForNav()" title="Voice input">&#127908;</button>
         <input class="drive-nav-input" id="drive-nav-dest"
                placeholder="Where to?" autocomplete="off"
                oninput="driveNavAutocomplete(this.value)"
+               onfocus="driveOnDestFocus()"
                onkeydown="if(event.key==='Enter'){driveNavGo();}">
+        <button class="drive-nav-icon-btn" id="drive-nav-fav-btn"
+                onclick="driveToggleFavorite()" title="Favorite"
+                style="display:none">&#9733;</button>
+        <button class="drive-nav-icon-btn"
+                onclick="document.getElementById('drive-nav-dest').focus()"
+                title="Keyboard">&#9000;</button>
         <button class="drive-nav-go" onclick="driveNavGo()">Go</button>
       </div>
       <!-- Autocomplete results -->
@@ -2888,6 +2929,7 @@ function loadKasaScenes() {
   }).catch(function() {});
 }
 loadKasaScenes();
+driveLoadStoredData();
 driveLoadMapsScript();
 
 // ---- TTS helper ----
@@ -3109,6 +3151,124 @@ var MANEUVER_ARROWS = {
 };
 
 var _drivePendingDest = '';  // queued destination if Maps not ready yet
+var _driveCurrentDest = ''; // destination of active/last route
+var _driveHistory = [];     // recent destinations (localStorage)
+var _driveFavorites = {};   // starred destinations (localStorage)
+var _driveMicRecognition = null;
+
+// ---- History & Favorites ----
+function driveLoadStoredData() {
+  try {
+    var h = localStorage.getItem('jarvis_drive_history');
+    _driveHistory = h ? JSON.parse(h) : [];
+  } catch(e) { _driveHistory = []; }
+  try {
+    var f = localStorage.getItem('jarvis_drive_favorites');
+    _driveFavorites = f ? JSON.parse(f) : {};
+  } catch(e) { _driveFavorites = {}; }
+}
+
+function driveSaveToHistory(dest) {
+  if (!dest) return;
+  _driveHistory = _driveHistory.filter(function(d) { return d !== dest; });
+  _driveHistory.unshift(dest);
+  if (_driveHistory.length > 10) _driveHistory = _driveHistory.slice(0, 10);
+  try { localStorage.setItem('jarvis_drive_history', JSON.stringify(_driveHistory)); } catch(e) {}
+}
+
+function driveToggleFavorite() {
+  if (!_driveCurrentDest) return;
+  if (_driveFavorites[_driveCurrentDest]) {
+    delete _driveFavorites[_driveCurrentDest];
+  } else {
+    _driveFavorites[_driveCurrentDest] = true;
+  }
+  try { localStorage.setItem('jarvis_drive_favorites', JSON.stringify(_driveFavorites)); } catch(e) {}
+  driveUpdateFavBtn(_driveCurrentDest);
+}
+
+function driveUpdateFavBtn(dest) {
+  var btn = document.getElementById('drive-nav-fav-btn');
+  if (!btn) return;
+  if (!dest) { btn.style.display = 'none'; return; }
+  btn.style.display = 'inline-block';
+  if (_driveFavorites[dest]) {
+    btn.classList.add('starred');
+    btn.title = 'Remove from favorites';
+  } else {
+    btn.classList.remove('starred');
+    btn.title = 'Add to favorites';
+  }
+}
+
+function driveOnDestFocus() {
+  var val = document.getElementById('drive-nav-dest').value;
+  if (val && val.length >= 3) return;
+  driveShowHistoryDropdown();
+}
+
+function driveShowHistoryDropdown() {
+  var ac = document.getElementById('drive-nav-ac');
+  var html = '';
+  var favKeys = Object.keys(_driveFavorites);
+  if (favKeys.length) {
+    html += '<div class="drive-nav-ac-section">&#9733; Favorites</div>';
+    for (var i = 0; i < Math.min(favKeys.length, 3); i++) {
+      html += '<div class="drive-nav-ac-item drive-nav-ac-fav" data-desc="' +
+              escHtml(favKeys[i]) + '" onclick="driveNavSelect(this.dataset.desc)">' +
+              '&#9733; ' + escHtml(favKeys[i]) + '</div>';
+    }
+  }
+  if (_driveHistory.length) {
+    html += '<div class="drive-nav-ac-section">&#128336; Recent</div>';
+    for (var j = 0; j < Math.min(_driveHistory.length, 5); j++) {
+      html += '<div class="drive-nav-ac-item drive-nav-ac-hist" data-desc="' +
+              escHtml(_driveHistory[j]) + '" onclick="driveNavSelect(this.dataset.desc)">' +
+              '&#128336; ' + escHtml(_driveHistory[j]) + '</div>';
+    }
+  }
+  if (!html) { ac.style.display = 'none'; return; }
+  ac.innerHTML = html;
+  ac.style.display = 'block';
+}
+
+// ---- Voice mic for destination ----
+function driveMicForNav() {
+  var btn = document.getElementById('drive-nav-mic-btn');
+  if (_driveMicRecognition) {
+    _driveMicRecognition.stop();
+    _driveMicRecognition = null;
+    if (btn) btn.classList.remove('mic-active');
+    return;
+  }
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    var inp = document.getElementById('drive-nav-dest');
+    if (inp) inp.focus();
+    return;
+  }
+  _driveMicRecognition = new SR();
+  _driveMicRecognition.lang = 'en-US';
+  _driveMicRecognition.interimResults = false;
+  _driveMicRecognition.maxAlternatives = 1;
+  if (btn) btn.classList.add('mic-active');
+  _driveMicRecognition.onresult = function(event) {
+    var transcript = event.results[0][0].transcript;
+    var navMatch = transcript.match(/(?:navigate to|take me to|go to|directions to|route to)[ \t]+(.+)/i);
+    var dest = navMatch ? navMatch[1] : transcript;
+    document.getElementById('drive-nav-dest').value = dest;
+    driveNavGo();
+  };
+  _driveMicRecognition.onerror = function() {
+    if (btn) btn.classList.remove('mic-active');
+    _driveMicRecognition = null;
+  };
+  _driveMicRecognition.onend = function() {
+    if (btn) btn.classList.remove('mic-active');
+    _driveMicRecognition = null;
+  };
+  _driveMicRecognition.start();
+}
 
 function driveLoadMapsScript() {
   fetch('/api/nav/maps-key').then(function(r) { return r.json(); }).then(function(d) {
@@ -3221,6 +3381,7 @@ function driveNavGo() {
   var dest = document.getElementById('drive-nav-dest').value.trim();
   if (!dest) return;
   document.getElementById('drive-nav-ac').style.display = 'none';
+  driveSaveToHistory(dest);
   var goBtn = document.querySelector('.drive-nav-go');
   if (!_driveNavMapsLoaded) {
     // Queue it — will fire automatically once driveOnMapsReady() runs
@@ -3288,6 +3449,8 @@ function _driveDoRoute(origin, dest) {
     _driveNavRouteLeg = result.routes[0].legs[0];
     _driveNavSteps = _driveNavRouteLeg.steps || [];
     _driveNavCurrentStep = 0;
+    _driveCurrentDest = dest;
+    driveUpdateFavBtn(dest);
     // Capture polyline + mileage for POI searches
     // Maps JS API returns overview_polyline as a plain string;
     // the HTTP Directions API returns {points: "..."} — handle both
@@ -3424,6 +3587,8 @@ function driveNavCancel() {
   _driveNavRouteLeg = null;
   _drivePolyline = '';
   _driveTotalMiles = 0;
+  _driveCurrentDest = '';
+  driveUpdateFavBtn('');
   driveClearAllPois();
   driveSetNavState(false);
   document.getElementById('drive-nav-dest').value = '';
