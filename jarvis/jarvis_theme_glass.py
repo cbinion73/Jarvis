@@ -1269,6 +1269,20 @@ body::after {{
   /* Stats strip: 2-col on mobile */
   .stats-strip {{ grid-template-columns: repeat(2,1fr) !important; }}
 
+  /* Command bar: full width on mobile (nav is hidden) */
+  .command-bar {{
+    left: 0 !important;
+    padding: 8px 12px 16px;
+  }}
+
+  /* Mic button: larger tap target on mobile */
+  .cmd-mic {{
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    flex-shrink: 0;
+  }}
+
   #nav-close-btn {{ display: block !important; }}
 }}
 @media(max-width: 768px) {{
@@ -16090,16 +16104,43 @@ let _vcsr       = null;    // command recognizer instance
 let _vListening = false;   // currently capturing a command
 let _vWakeOn    = false;   // wake-word loop is running
 let _vTtsOn     = true;    // speak responses
+let _vMuted     = false;   // user explicitly muted mic — blocks auto-restart
+
+function _voiceUpdateMicBtn() {{
+  const btn = document.getElementById('cmd-mic');
+  if (!btn) return;
+  if (_vMuted) {{
+    btn.title   = 'Microphone muted — tap to unmute';
+    btn.style.color       = '#ef4444';
+    btn.style.opacity     = '0.55';
+    btn.style.borderColor = '#ef4444';
+  }} else {{
+    btn.title   = 'Click to speak · Say "Hey JARVIS" to activate';
+    btn.style.color       = '';
+    btn.style.opacity     = '1';
+    btn.style.borderColor = '';
+  }}
+}}
 
 function voiceInit() {{
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const btn = document.getElementById('cmd-mic');
-  if (!SR) {{ if (btn) btn.title = 'Voice not supported in this browser'; return; }}
+  if (!SR) {{
+    if (btn) {{ btn.title = 'Voice not supported in this browser'; btn.style.opacity = '0.35'; }}
+    return;
+  }}
+  // On mobile, start muted — user must tap to opt in (avoids constant iOS permission prompts)
+  const isMobile = window.matchMedia('(max-width: 768px)').matches;
+  if (isMobile) {{
+    _vMuted = true;
+    _voiceUpdateMicBtn();
+    return;
+  }}
   _voiceStartWake();
 }}
 
 function _voiceStartWake() {{
-  if (_vWakeOn || _vListening) return;
+  if (_vMuted || _vWakeOn || _vListening) return;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return;
   _vWakeOn = true;
@@ -16118,19 +16159,19 @@ function _voiceStartWake() {{
       }}
     }}
   }};
-  r.onend   = () => {{ _vWakeOn = false; if (!_vListening) setTimeout(_voiceStartWake, 800); }};
-  r.onerror = () => {{ _vWakeOn = false; setTimeout(_voiceStartWake, 2000); }};
+  r.onend   = () => {{ _vWakeOn = false; if (!_vListening && !_vMuted) setTimeout(_voiceStartWake, 800); }};
+  r.onerror = () => {{ _vWakeOn = false; if (!_vMuted) setTimeout(_voiceStartWake, 2000); }};
   try {{ r.start(); }} catch(e) {{ _vWakeOn = false; }}
 }}
 
 function _voiceActivate(fromWake, isSecondChance) {{
-  if (_vListening) return;
+  if (_vListening || _vMuted) return;
   if (_vsr) {{ try {{ _vsr.stop(); }} catch(e) {{}} }}
   _vWakeOn    = false;
   _vListening = true;
 
   const btn = document.getElementById('cmd-mic');
-  if (btn) {{ btn.style.color = '#ef4444'; btn.style.borderColor = '#ef4444'; btn.style.boxShadow = '0 0 0 3px rgba(239,68,68,0.25)'; }}
+  if (btn) {{ btn.style.color = '#ef4444'; btn.style.borderColor = '#ef4444'; btn.style.opacity = '1'; btn.style.boxShadow = '0 0 0 3px rgba(239,68,68,0.25)'; }}
   if (fromWake && !isSecondChance) showToast('Hey JARVIS — listening…', 'info');
 
   const SR  = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -16152,7 +16193,7 @@ function _voiceActivate(fromWake, isSecondChance) {{
 
   r.onend = () => {{
     _vListening = false;
-    if (btn) {{ btn.style.color = ''; btn.style.borderColor = ''; btn.style.boxShadow = ''; }}
+    if (btn) {{ btn.style.color = ''; btn.style.borderColor = ''; btn.style.boxShadow = ''; btn.style.opacity = '1'; }} _voiceUpdateMicBtn();
     const inp   = document.getElementById('cmd-input');
     const spoke = inp && inp.value.trim();
     if (spoke) {{
@@ -16170,7 +16211,7 @@ function _voiceActivate(fromWake, isSecondChance) {{
 
   r.onerror = () => {{
     _vListening = false;
-    if (btn) {{ btn.style.color = ''; btn.style.borderColor = ''; btn.style.boxShadow = ''; }}
+    if (btn) {{ btn.style.color = ''; btn.style.borderColor = ''; btn.style.boxShadow = ''; btn.style.opacity = '1'; }} _voiceUpdateMicBtn();
     setTimeout(_voiceStartWake, 600);
   }};
 
@@ -16207,10 +16248,29 @@ async function _voiceGreetAndListen() {{
 }}
 
 function toggleMic() {{
-  if (_vListening) {{
-    if (_vcsr) {{ try {{ _vcsr.stop(); }} catch(e) {{}} }}
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {{ showToast('Voice not supported in this browser', 'info'); return; }}
+
+  if (_vMuted) {{
+    // UNMUTE — restart wake-word listener
+    _vMuted = false;
+    _voiceUpdateMicBtn();
+    _voiceStartWake();
+    showToast('🎤 Microphone on', 'info');
+  }} else if (_vListening) {{
+    // Stop active command capture
+    if (_vcsr) {{ try {{ _vcsr.stop(); }} catch(e) {{}} _vcsr = null; }}
+    _vListening = false;
+    _voiceUpdateMicBtn();
   }} else {{
-    _voiceActivate(false);
+    // MUTE — kill both wake-word AND command listeners entirely
+    _vMuted = true;
+    if (_vcsr) {{ try {{ _vcsr.stop(); }} catch(e) {{}} _vcsr = null; }}
+    if (_vsr)  {{ try {{ _vsr.stop();  }} catch(e) {{}} _vsr  = null; }}
+    _vListening = false;
+    _vWakeOn    = false;
+    _voiceUpdateMicBtn();
+    showToast('🔇 Microphone off', 'info');
   }}
 }}
 
