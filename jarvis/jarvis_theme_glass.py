@@ -948,6 +948,31 @@ body::after {{
   margin-top: 4px;
 }}
 
+/* ── Journey View ────────────────────────────────────────────────── */
+.journey-day-header {{
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.35);
+  text-transform: uppercase;
+  padding: 4px 0;
+  margin-top: 8px;
+}}
+.journey-event {{
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 10px;
+  border-left: 2px solid rgba(255,255,255,0.1);
+}}
+.journey-event-icon {{ font-size: 18px; flex-shrink: 0; margin-top: 1px; }}
+.journey-event-body {{ flex: 1; min-width: 0; }}
+.journey-event-title {{ font-size: 13px; color: rgba(255,255,255,0.85); font-weight: 500; }}
+.journey-event-time {{ font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 2px; }}
+.journey-event-payload {{ font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 3px; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 400px; }}
+
 /* ── Adaptive Overview Layout ───────────────────────────────────── */
 .overview-mode-bar {{
   display: flex;
@@ -5790,6 +5815,10 @@ body::after {{
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
       Navigate
     </button>
+    <button class="nav-tab" data-view="journey" onclick="switchView('journey')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/><circle cx="8" cy="12" r="2" fill="currentColor" stroke="none"/></svg>
+      Journey
+    </button>
   </div>
 
   <div class="nav-right">
@@ -7972,6 +8001,36 @@ body::after {{
     </div>
   </div>
 
+  <!-- ── JOURNEY ────────────────────────────────────────────────────── -->
+  <div id="view-journey" class="view" style="display:none;">
+    <div class="view-header">
+      <div class="view-title">JOURNEY <div class="view-title-line"></div></div>
+      <div class="view-subtitle" id="journey-subtitle">Your story with JARVIS</div>
+    </div>
+
+    <!-- Stats strip -->
+    <div class="stats-strip" id="journey-stats-strip">
+      <div class="card stat-tile"><div class="stat-label">This Month</div><div class="stat-value" id="journey-total">—</div><div class="stat-sub">events logged</div></div>
+      <div class="card stat-tile accent"><div class="stat-label">Tasks Done</div><div class="stat-value" id="journey-tasks">—</div><div class="stat-sub">this month</div></div>
+      <div class="card stat-tile gold-accent"><div class="stat-label">Ideas</div><div class="stat-value" id="journey-ideas">—</div><div class="stat-sub">captured</div></div>
+      <div class="card stat-tile"><div class="stat-label">Briefs Read</div><div class="stat-value" id="journey-briefs">—</div><div class="stat-sub">this month</div></div>
+    </div>
+
+    <!-- Insights (Phase 6) -->
+    <div class="card" id="journey-insights-card" style="margin-bottom:16px;display:none;">
+      <div class="card-title">🧠 What JARVIS Has Learned</div>
+      <div id="journey-insights-list" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;"></div>
+    </div>
+
+    <!-- Timeline -->
+    <div id="journey-timeline" style="display:flex;flex-direction:column;gap:12px;">
+      <div style="color:rgba(255,255,255,0.3);font-size:13px;">Loading your journey...</div>
+    </div>
+    <div style="text-align:center;margin-top:20px;">
+      <button class="glass-btn" onclick="loadJourneyMore()" id="journey-load-more" style="display:none;">Load more</button>
+    </div>
+  </div>
+
 </main>
 
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -8708,7 +8767,120 @@ function loadViewData(name) {{
     case 'home':         loadKasaDevices(); break;
     case 'navigate':     initNavView(); break;
     case 'dining':       loadDiningView(); break;
+    case 'journey':      loadJourneyView(); break;
   }}
+}}
+
+/* ═══════════════════════════════════════════════════════════════
+   JOURNEY TRACKING (Phase 5 + 6)
+═══════════════════════════════════════════════════════════════ */
+let _journeyDays = 30;
+let _journeyAllEvents = [];
+
+async function loadJourneyView() {{
+  try {{
+    const [journeyRes, statsRes, layoutRes] = await Promise.all([
+      fetch('/api/journey?days=' + _journeyDays),
+      fetch('/api/journey/stats?days=30'),
+      fetch('/api/layout/state'),
+    ]);
+    const journey = await journeyRes.json();
+    const stats   = await statsRes.json();
+    const layout  = layoutRes.ok ? await layoutRes.json() : {{}};
+
+    _journeyAllEvents = journey.events || [];
+
+    // Stats strip
+    const byType = stats.by_type || {{}};
+    const setEl = (id, v) => {{ const el = document.getElementById(id); if(el) el.textContent = v ?? '—'; }};
+    setEl('journey-total',  stats.total || 0);
+    setEl('journey-tasks',  (byType.task_completed || 0));
+    setEl('journey-ideas',  (byType.idea_captured  || 0));
+    setEl('journey-briefs', (byType.brief_received || 0));
+
+    // Update subtitle with user name
+    const sub = document.getElementById('journey-subtitle');
+    if (sub) {{
+      const name = (_userProfile && _userProfile.greeting_name) || (_cfIdentity && _cfIdentity.display_name) || 'Your';
+      sub.textContent = name + "'s story with JARVIS";
+    }}
+
+    // Insights (Phase 6)
+    const insights = layout.insights || [];
+    const insightsCard = document.getElementById('journey-insights-card');
+    const insightsList = document.getElementById('journey-insights-list');
+    if (insightsCard && insightsList) {{
+      if (insights.length > 0) {{
+        insightsCard.style.display = '';
+        insightsList.innerHTML = insights.map(txt =>
+          '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.05);border-radius:8px;">' +
+          '<span style="font-size:16px;">💡</span><span style="font-size:13px;color:rgba(255,255,255,0.75);">' + escHtml(txt) + '</span></div>'
+        ).join('');
+      }} else {{
+        insightsCard.style.display = 'none';
+      }}
+    }}
+
+    renderJourneyTimeline(_journeyAllEvents);
+
+    // Show load-more button
+    const loadMoreBtn = document.getElementById('journey-load-more');
+    if (loadMoreBtn) loadMoreBtn.style.display = _journeyAllEvents.length >= 200 ? '' : 'none';
+  }} catch(e) {{
+    console.error('loadJourneyView failed', e);
+  }}
+}}
+
+const EVENT_META = {{
+  task_created:      {{ icon: '✅', label: 'Task created' }},
+  task_completed:    {{ icon: '🏁', label: 'Task completed' }},
+  task_deleted:      {{ icon: '🗑', label: 'Task removed' }},
+  reminder_created:  {{ icon: '🔔', label: 'Reminder set' }},
+  reminder_completed:{{ icon: '✓',  label: 'Reminder done' }},
+  approval_actioned: {{ icon: '⚡', label: 'Approval actioned' }},
+  brief_received:    {{ icon: '📋', label: 'Morning brief read' }},
+  chronicle_entry:   {{ icon: '📖', label: 'Chronicle entry' }},
+  agent_run:         {{ icon: '🤖', label: 'Agent activated' }},
+  kdp_sync:          {{ icon: '📚', label: 'KDP data synced' }},
+  idea_captured:     {{ icon: '💡', label: 'Idea captured' }},
+  login:             {{ icon: '🌐', label: 'Session started' }},
+}};
+
+function renderJourneyTimeline(events) {{
+  const container = document.getElementById('journey-timeline');
+  if (!container) return;
+  if (!events || events.length === 0) {{
+    container.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:13px;padding:20px 0;">No events yet — start using JARVIS to build your journey.</div>';
+    return;
+  }}
+
+  let html = '';
+  let lastDay = '';
+  events.forEach(ev => {{
+    const d = new Date(ev.ts);
+    const dayKey = d.toLocaleDateString([], {{weekday:'long', month:'long', day:'numeric'}});
+    if (dayKey !== lastDay) {{
+      html += '<div class="journey-day-header">' + escHtml(dayKey) + '</div>';
+      lastDay = dayKey;
+    }}
+    const meta = EVENT_META[ev.type] || {{ icon: '•', label: ev.type }};
+    const timeStr = d.toLocaleTimeString([], {{hour:'2-digit', minute:'2-digit'}});
+    const payloadText = ev.payload && (ev.payload.title || ev.payload.text || ev.payload.summary || '');
+    html += '<div class="journey-event">' +
+      '<span class="journey-event-icon">' + meta.icon + '</span>' +
+      '<div class="journey-event-body">' +
+        '<div class="journey-event-title">' + escHtml(meta.label) + '</div>' +
+        (payloadText ? '<div class="journey-event-payload">' + escHtml(payloadText) + '</div>' : '') +
+        '<div class="journey-event-time">' + timeStr + '</div>' +
+      '</div>' +
+    '</div>';
+  }});
+  container.innerHTML = html;
+}}
+
+function loadJourneyMore() {{
+  _journeyDays += 30;
+  loadJourneyView();
 }}
 
 /* ═══════════════════════════════════════════════════════════════
