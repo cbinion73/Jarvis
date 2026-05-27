@@ -2629,6 +2629,31 @@ def carplay_view() -> str:
   min-height: 60px !important;
 }
 .drive-btn-end-route:active { background: rgba(180,40,40,0.35); }
+/* Send to Ram (Apple Maps hand-off) button */
+.drive-btn-send-ram {
+  background: rgba(0,120,215,0.12);
+  border: 2px solid rgba(0,120,215,0.5);
+  color: #4da6ff;
+  flex: 0 0 auto !important;
+  min-height: 54px !important;
+  font-size: 14px;
+}
+.drive-btn-send-ram:active { background: rgba(0,120,215,0.28); }
+/* Small Ram badge on search bar Go button (alternate launch path) */
+.drive-nav-ram-btn {
+  background: rgba(0,120,215,0.15);
+  border: 1px solid rgba(0,120,215,0.5);
+  color: #4da6ff;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 15px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: var(--font-sans);
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.drive-nav-ram-btn:active { background: rgba(0,120,215,0.3); }
 
 /* POI button grid */
 .drive-poi-grid {
@@ -2773,6 +2798,7 @@ def carplay_view() -> str:
                 onclick="document.getElementById('drive-nav-dest').focus()"
                 title="Keyboard">&#9000;</button>
         <button class="drive-nav-go" onclick="driveNavGo()">Go</button>
+        <button class="drive-nav-ram-btn" onclick="driveOpenInAppleMaps()" title="Send to Ram via Apple Maps">&#x1F697;</button>
       </div>
       <!-- Autocomplete results -->
       <div class="drive-nav-autocomplete" id="drive-nav-ac"></div>
@@ -2903,6 +2929,12 @@ def carplay_view() -> str:
 
       <!-- POI status line -->
       <div id="drive-poi-status" style="text-align:center;font-size:12px;color:rgba(255,255,255,0.45);min-height:16px;flex-shrink:0;"></div>
+
+      <!-- Send to Ram via Apple Maps CarPlay -->
+      <button class="drive-btn drive-btn-send-ram" onclick="driveOpenInAppleMaps()">
+        <span class="drive-btn-icon">&#x1F697;</span>
+        <span>Send to Ram</span>
+      </button>
 
       <!-- End Route -->
       <button class="drive-btn drive-btn-end-route" onclick="driveNavCancel()">
@@ -3745,6 +3777,20 @@ function driveFitRoute() {
   if (!_driveNavMap || !_driveRouteResult) return;
   var bounds = _driveRouteResult.routes[0].bounds;
   if (bounds) _driveNavMap.fitBounds(bounds, {top: 60, bottom: 60, left: 20, right: 20});
+}
+
+function driveOpenInAppleMaps() {
+  // Use active route destination if available, else whatever is typed
+  var dest = _driveCurrentDest || document.getElementById('drive-nav-dest').value.trim();
+  if (!dest) {
+    // Prompt user to enter a destination first
+    document.getElementById('drive-nav-dest').focus();
+    return;
+  }
+  // maps:// URL scheme — iOS opens Apple Maps and CarPlay mirrors it to the Ram
+  // dirflg=d = driving directions
+  var url = 'maps://?daddr=' + encodeURIComponent(dest) + '&dirflg=d';
+  window.location.href = url;
 }
 
 function driveFetchSpeedLimit(lat, lng) {
