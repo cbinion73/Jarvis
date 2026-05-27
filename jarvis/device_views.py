@@ -2384,6 +2384,101 @@ def carplay_view() -> str:
   cursor: default;
 }
 
+/* ---- Navigation guidance panel (right column, nav-active state) ---- */
+.drive-guidance-panel {
+  flex-shrink: 0;
+  background: rgba(0,212,255,0.05);
+  border: 2px solid rgba(0,212,255,0.3);
+  border-radius: 16px;
+  padding: 16px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.drive-guidance-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.drive-guidance-arrow {
+  font-size: 68px;
+  line-height: 1;
+  flex-shrink: 0;
+  width: 76px;
+  text-align: center;
+  filter: drop-shadow(0 0 14px rgba(0,212,255,0.6));
+  transition: all 0.3s;
+}
+.drive-guidance-text {
+  flex: 1;
+  min-width: 0;
+}
+.drive-guidance-action {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(0,212,255,0.7);
+  margin-bottom: 3px;
+}
+.drive-guidance-street {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.15;
+}
+.drive-guidance-dist {
+  font-size: 40px;
+  font-weight: 200;
+  color: #fff;
+  text-align: center;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  padding: 4px 0;
+}
+.drive-guidance-divider {
+  height: 1px;
+  background: rgba(0,212,255,0.15);
+  margin: 0 -4px;
+}
+.drive-guidance-eta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: rgba(255,255,255,0.55);
+  padding-top: 2px;
+}
+.drive-guidance-eta-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.85);
+}
+/* End-route button */
+.drive-btn-end-route {
+  background: rgba(180,40,40,0.15);
+  border: 2px solid rgba(180,40,40,0.6);
+  color: #ff7070;
+  flex: 0 0 auto !important;
+  min-height: 64px !important;
+}
+.drive-btn-end-route:active { background: rgba(180,40,40,0.35); }
+/* Wrapper groups for idle vs nav state */
+#drive-idle-btns {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 10px;
+}
+#drive-nav-btns {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  gap: 10px;
+}
+
 /* Fallback voice input row */
 .drive-voice-fallback {
   display: none;
@@ -2487,9 +2582,10 @@ def carplay_view() -> str:
     </div>
   </div>
 
-  <!-- Right: Action buttons -->
+  <!-- Right: Navigation guidance panel + action buttons -->
   <div class="drive-right">
-    <!-- Voice command button + optional text fallback -->
+
+    <!-- Voice command: always visible at top -->
     <button class="drive-btn drive-btn-voice" id="drive-btn-voice" onclick="handleVoiceCommand()">
       <span class="drive-btn-icon">&#127897;</span>
       <span id="drive-voice-label">Voice Command</span>
@@ -2499,25 +2595,50 @@ def carplay_view() -> str:
       <button onclick="submitTextCommand()">Go</button>
     </div>
 
-    <!-- SAM briefing button -->
-    <button class="drive-btn drive-btn-brief" id="drive-btn-brief" onclick="readSamBrief()">
-      <span class="drive-btn-icon">&#128203;</span>
-      <span id="drive-brief-label">SAM Briefing</span>
-    </button>
+    <!-- NAV ACTIVE: Guidance panel + End Route button -->
+    <div id="drive-nav-btns">
+      <!-- Guidance card -->
+      <div class="drive-guidance-panel" id="drive-guidance-panel">
+        <div class="drive-guidance-top">
+          <div class="drive-guidance-arrow" id="drive-guidance-arrow">&#8593;</div>
+          <div class="drive-guidance-text">
+            <div class="drive-guidance-action" id="drive-guidance-action">CONTINUE</div>
+            <div class="drive-guidance-street" id="drive-guidance-street">--</div>
+          </div>
+        </div>
+        <div class="drive-guidance-dist" id="drive-guidance-dist">--</div>
+        <div class="drive-guidance-divider"></div>
+        <div class="drive-guidance-eta-row">
+          <span>ETA</span>
+          <span class="drive-guidance-eta-val" id="drive-guidance-eta">--</span>
+          <span id="drive-guidance-remain">--</span>
+        </div>
+      </div>
+      <!-- End Route -->
+      <button class="drive-btn drive-btn-end-route" onclick="driveNavCancel()">
+        <span class="drive-btn-icon">&#11035;</span>
+        <span>End Route</span>
+      </button>
+    </div>
 
-    <!-- Arrive Home -->
-    <button class="drive-btn drive-btn-kasa no-scene" id="drive-btn-arrive"
-            onclick="triggerKasaScene(_arriveSceneId, this)">
-      <span class="drive-btn-icon">&#127968;</span>
-      <span id="drive-arrive-label">Arrive Home</span>
-    </button>
+    <!-- IDLE: SAM brief + home scenes -->
+    <div id="drive-idle-btns">
+      <button class="drive-btn drive-btn-brief" id="drive-btn-brief" onclick="readSamBrief()">
+        <span class="drive-btn-icon">&#128203;</span>
+        <span id="drive-brief-label">SAM Briefing</span>
+      </button>
+      <button class="drive-btn drive-btn-kasa no-scene" id="drive-btn-arrive"
+              onclick="triggerKasaScene(_arriveSceneId, this)">
+        <span class="drive-btn-icon">&#127968;</span>
+        <span id="drive-arrive-label">Arrive Home</span>
+      </button>
+      <button class="drive-btn drive-btn-kasa no-scene" id="drive-btn-leave"
+              onclick="triggerKasaScene(_leaveSceneId, this)">
+        <span class="drive-btn-icon">&#128663;</span>
+        <span id="drive-leave-label">Leave Home</span>
+      </button>
+    </div>
 
-    <!-- Leave Home -->
-    <button class="drive-btn drive-btn-kasa no-scene" id="drive-btn-leave"
-            onclick="triggerKasaScene(_leaveSceneId, this)">
-      <span class="drive-btn-icon">&#128663;</span>
-      <span id="drive-leave-label">Leave Home</span>
-    </button>
   </div>
 
 </div>
@@ -2832,6 +2953,33 @@ var _driveNavDirectionsService = null;
 var _driveNavUserMarker = null;
 var _driveNavAcTimer = null;
 var _driveNavHomeAddr = '';
+var _driveNavSteps = [];
+var _driveNavCurrentStep = 0;
+var _driveNavWatchId = null;
+var _driveNavRouteLeg = null;
+
+// Maneuver → Unicode arrow mapping
+var MANEUVER_ARROWS = {
+  'straight':          '&#8593;',
+  'merge':             '&#8593;',
+  'keep-left':         '&#8598;',
+  'keep-right':        '&#8599;',
+  'turn-slight-left':  '&#8598;',
+  'turn-slight-right': '&#8599;',
+  'turn-left':         '&#8592;',
+  'turn-right':        '&#8594;',
+  'turn-sharp-left':   '&#8629;',
+  'turn-sharp-right':  '&#8631;',
+  'ramp-left':         '&#8592;',
+  'ramp-right':        '&#8594;',
+  'fork-left':         '&#8598;',
+  'fork-right':        '&#8599;',
+  'uturn-left':        '&#8634;',
+  'uturn-right':       '&#8635;',
+  'roundabout-left':   '&#8634;',
+  'roundabout-right':  '&#8635;',
+  'arrive':            '&#11088;'
+};
 
 function driveLoadMapsScript() {
   fetch('/api/nav/maps-key').then(function(r) { return r.json(); }).then(function(d) {
@@ -2958,27 +3106,103 @@ function _driveDoRoute(origin, dest) {
   }, function(result, status) {
     if (status !== 'OK') return;
     _driveNavRenderer.setDirections(result);
-    var leg = result.routes[0].legs[0];
-    var hud = document.getElementById('drive-nav-hud');
-    var turnEl = document.getElementById('drive-nav-hud-turn');
-    var distEl = document.getElementById('drive-nav-hud-dist');
-    if (leg.steps && leg.steps.length) {
-      turnEl.textContent = leg.steps[0].instructions.replace(/<[^>]+>/g, '');
-      distEl.textContent = leg.steps[0].distance.text + ' · ' + leg.duration.text + ' total';
-    }
-    hud.style.display = 'block';
-    document.getElementById('drive-nav-cancel').style.display = 'block';
-    document.getElementById('drive-nav-home-btn').style.display = 'none';
+    _driveNavRouteLeg = result.routes[0].legs[0];
+    _driveNavSteps = _driveNavRouteLeg.steps || [];
+    _driveNavCurrentStep = 0;
+    driveUpdateGuidance(_driveNavSteps[0], _driveNavRouteLeg);
+    driveSetNavState(true);
+    driveStartStepTracking();
   });
 }
 
+function driveUpdateGuidance(step, leg) {
+  if (!step) return;
+  var instr = step.instructions.replace(/<[^>]+>/g, '');
+  var maneuver = step.maneuver || 'straight';
+  var arrow = MANEUVER_ARROWS[maneuver] || '&#8593;';
+  // Split instruction: "Turn left onto Oak Street" → action="Turn left", street="Oak Street"
+  var action = instr;
+  var street = '';
+  var ontoMatch = instr.match(/^(.+?)\s+(?:onto|on|toward|to)\s+(.+)$/i);
+  if (ontoMatch) { action = ontoMatch[1]; street = ontoMatch[2]; }
+  // Compute ETA
+  var now = new Date();
+  var etaMs = now.getTime() + (leg.duration.value * 1000);
+  var etaDate = new Date(etaMs);
+  var h = etaDate.getHours(); var m = etaDate.getMinutes();
+  var ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12; if (!h) h = 12;
+  var etaStr = h + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;
+  // Duration remaining
+  var totalSec = leg.duration.value;
+  var remain = totalSec >= 3600
+    ? Math.floor(totalSec/3600) + 'h ' + Math.floor((totalSec%3600)/60) + 'm'
+    : Math.floor(totalSec/60) + ' min';
+  document.getElementById('drive-guidance-arrow').innerHTML = arrow;
+  document.getElementById('drive-guidance-action').textContent = action;
+  document.getElementById('drive-guidance-street').textContent = street || instr;
+  document.getElementById('drive-guidance-dist').textContent = step.distance.text;
+  document.getElementById('drive-guidance-eta').textContent = etaStr;
+  document.getElementById('drive-guidance-remain').textContent = remain + ' remaining';
+  // Also update map HUD strip
+  var hud = document.getElementById('drive-nav-hud');
+  document.getElementById('drive-nav-hud-turn').textContent = action + (street ? ' · ' + street : '');
+  document.getElementById('drive-nav-hud-dist').textContent = step.distance.text + ' · ETA ' + etaStr;
+  hud.style.display = 'block';
+}
+
+function driveSetNavState(active) {
+  document.getElementById('drive-nav-btns').style.display = active ? 'flex' : 'none';
+  document.getElementById('drive-idle-btns').style.display = active ? 'none' : 'flex';
+  document.getElementById('drive-nav-cancel').style.display = active ? 'block' : 'none';
+  document.getElementById('drive-nav-home-btn').style.display = active ? 'none' : (_driveNavHomeAddr ? 'flex' : 'none');
+  document.getElementById('drive-nav-hud').style.display = active ? 'block' : 'none';
+}
+
+function driveStartStepTracking() {
+  if (_driveNavWatchId !== null) navigator.geolocation.clearWatch(_driveNavWatchId);
+  if (!navigator.geolocation || !_driveNavSteps.length) return;
+  _driveNavWatchId = navigator.geolocation.watchPosition(function(pos) {
+    if (!_driveNavSteps.length) return;
+    var lat = pos.coords.latitude, lng = pos.coords.longitude;
+    // Update user marker
+    if (_driveNavUserMarker) {
+      _driveNavUserMarker.setPosition({lat: lat, lng: lng});
+      _driveNavUserMarker.setIcon({
+        path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+        scale: 6, fillColor: '#00D4FF', fillOpacity: 1,
+        strokeColor: '#fff', strokeWeight: 2,
+        rotation: pos.coords.heading || 0
+      });
+    }
+    // Check if close enough to advance to next step (within ~80m)
+    var nextStep = _driveNavSteps[_driveNavCurrentStep + 1];
+    if (nextStep && nextStep.start_location) {
+      var dLat = lat - nextStep.start_location.lat();
+      var dLng = lng - nextStep.start_location.lng();
+      var dist = Math.sqrt(dLat*dLat + dLng*dLng) * 111000;
+      if (dist < 80) {
+        _driveNavCurrentStep++;
+        driveUpdateGuidance(_driveNavSteps[_driveNavCurrentStep], _driveNavRouteLeg);
+      }
+    }
+  }, function() {}, {enableHighAccuracy: true, maximumAge: 3000});
+}
+
 function driveNavCancel() {
-  if (_driveNavRenderer) _driveNavRenderer.setMap(null);
-  if (_driveNavRenderer && _driveNavMap) { _driveNavRenderer.setMap(_driveNavMap); }
-  document.getElementById('drive-nav-hud').style.display = 'none';
-  document.getElementById('drive-nav-cancel').style.display = 'none';
+  if (_driveNavWatchId !== null) {
+    navigator.geolocation.clearWatch(_driveNavWatchId);
+    _driveNavWatchId = null;
+  }
+  if (_driveNavRenderer) {
+    _driveNavRenderer.setMap(null);
+    if (_driveNavMap) _driveNavRenderer.setMap(_driveNavMap);
+  }
+  _driveNavSteps = [];
+  _driveNavCurrentStep = 0;
+  _driveNavRouteLeg = null;
+  driveSetNavState(false);
   document.getElementById('drive-nav-dest').value = '';
-  if (_driveNavHomeAddr) document.getElementById('drive-nav-home-btn').style.display = 'flex';
 }
 
 // ---- Kasa scene trigger ----
