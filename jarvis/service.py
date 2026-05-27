@@ -3667,6 +3667,82 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             await _asyncio.to_thread(_log_interaction, card_id, mode, action)
         return _json({"ok": True})
 
+    # ── Dining ─────────────────────────────────────────────────────────────
+
+    @app.get("/api/dining/nearby")
+    async def api_dining_nearby(
+        cuisine:      str   = Query(default="any"),
+        open_now:     bool  = Query(default=False),
+        min_rating:   float = Query(default=3.5),
+        radius_miles: float = Query(default=10.0),
+        limit:        int   = Query(default=10),
+    ) -> JSONResponse:
+        """Return nearby restaurants filtered by cuisine, rating, open status."""
+        import asyncio as _asyncio
+        from .dining import nearby_restaurants as _nearby
+        try:
+            results = await _asyncio.to_thread(
+                _nearby, cuisine, open_now, min_rating, radius_miles, limit
+            )
+            return _json({"restaurants": results, "count": len(results)})
+        except Exception as exc:
+            logger.warning("dining/nearby failed: %s", exc)
+            return _json({"restaurants": [], "count": 0, "error": str(exc)})
+
+    @app.get("/api/dining/recommend")
+    async def api_dining_recommend(limit: int = Query(default=3)) -> JSONResponse:
+        """Sam-aware curated picks based on health goals, food prefs, and time of day."""
+        import asyncio as _asyncio
+        from .dining import recommend_restaurants as _recommend
+        try:
+            result = await _asyncio.to_thread(_recommend, runtime, limit)
+            return _json(result)
+        except Exception as exc:
+            logger.warning("dining/recommend failed: %s", exc)
+            return _json({"error": str(exc), "recommendations": []})
+
+    @app.get("/api/dining/favorites")
+    async def api_dining_favorites() -> JSONResponse:
+        """Return saved favorite restaurants."""
+        import asyncio as _asyncio
+        from .dining import get_favorites as _get_favs
+        try:
+            favs = await _asyncio.to_thread(_get_favs)
+            return _json({"favorites": favs})
+        except Exception as exc:
+            return _json({"favorites": [], "error": str(exc)})
+
+    @app.post("/api/dining/favorite")
+    async def api_dining_toggle_favorite(payload: dict[str, Any]) -> JSONResponse:
+        """Toggle a restaurant in/out of favorites."""
+        import asyncio as _asyncio
+        from .dining import toggle_favorite as _toggle
+        place_id = str(payload.get("place_id", "")).strip()
+        if not place_id:
+            return _json({"error": "place_id required"}, status_code=400)
+        try:
+            result = await _asyncio.to_thread(
+                _toggle,
+                place_id,
+                str(payload.get("name", "")),
+                str(payload.get("address", "")),
+                payload.get("rating"),
+            )
+            return _json(result)
+        except Exception as exc:
+            return _json({"error": str(exc)}, status_code=500)
+
+    @app.get("/api/dining/details/{place_id}")
+    async def api_dining_details(place_id: str) -> JSONResponse:
+        """Return rich details for a single place (hours, phone, website)."""
+        import asyncio as _asyncio
+        from .dining import get_place_details as _details
+        try:
+            detail = await _asyncio.to_thread(_details, place_id)
+            return _json(detail)
+        except Exception as exc:
+            return _json({"error": str(exc)}, status_code=500)
+
     # ── Design Review ──────────────────────────────────────────────────────
 
     @app.post("/api/design-review-state")
@@ -7525,16 +7601,34 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
     @app.get("/api/nav/aerial")
     async def nav_aerial(address: str = ""):
-        """Proxy Aerial View API — returns video URLs for destination flyover."""
+        """Proxy Aerial View API with polling for PROCESSING state.
+
+        The Aerial View API renders videos asynchronously.  The first call for
+        an address returns {"state":"PROCESSING"}.  We poll up to 8 times
+        (2 s apart, 16 s max) until the video is ready.
+        """
         key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
         if not key or not address:
             return _json({"error": "missing key or address"})
         try:
             import httpx
+            import asyncio as _aio
             url = "https://aerialview.googleapis.com/v1/videos:lookupVideo"
-            async with httpx.AsyncClient(timeout=10) as client:
-                r = await client.get(url, params={"address": address, "key": key})
-                return _json(r.json())
+            async with httpx.AsyncClient(timeout=15) as client:
+                for attempt in range(8):
+                    r = await client.get(url, params={"address": address, "key": key})
+                    data = r.json()
+                    state = data.get("state", "")
+                    # Ready states: has videoUri or uris dict with MP4 keys
+                    if data.get("videoUri") or (data.get("uris") and data["uris"].get("MP4_HIGH")):
+                        return _json(data)
+                    # No coverage / permanent error
+                    if state not in ("PROCESSING", ""):
+                        return _json({"error": f"aerial not available: {state}", "state": state})
+                    if attempt < 7:
+                        await _aio.sleep(2)
+                # Timed out waiting for render
+                return _json({"error": "aerial processing timeout", "state": "PROCESSING"})
         except Exception as e:
             return _json({"error": str(e)})
 
