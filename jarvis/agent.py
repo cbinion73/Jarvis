@@ -29,19 +29,30 @@ from .tools import TOOL_REGISTRY
 from .tools.base import ApprovalFlag, ToolResult
 
 # ── Model configuration ────────────────────────────────────────────────────
-# Prefer local Ollama (internal LLM) when available; fall back to OpenAI.
-_OLLAMA_BASE    = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/") + "/v1"
-_OLLAMA_MODEL   = os.environ.get("AGENT_OLLAMA_MODEL", "qwen2.5:14b")
-_FALLBACK_MODEL = os.environ.get("AGENT_MODEL", os.environ.get("OPENAI_MODEL", "gpt-4o"))
-MAX_TURNS       = int(os.environ.get("AGENT_MAX_TURNS", "30"))
+# Priority: 1) Local Ollama  2) Groq (llama)  3) OpenAI fallback
+_OLLAMA_BASE   = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/") + "/v1"
+_OLLAMA_MODEL  = os.environ.get("AGENT_OLLAMA_MODEL", "qwen2.5:14b")
+_GROQ_BASE     = "https://api.groq.com/openai/v1"
+_GROQ_MODEL    = os.environ.get("AGENT_GROQ_MODEL", os.environ.get("JARVIS_GROQ_MODEL", "llama-3.3-70b-versatile"))
+_GROQ_KEY      = os.environ.get("GROQ_API_KEY", "")
+_OPENAI_MODEL  = os.environ.get("AGENT_MODEL", os.environ.get("OPENAI_MODEL", "gpt-4o"))
+MAX_TURNS      = int(os.environ.get("AGENT_MAX_TURNS", "30"))
 
 
 def _make_client() -> tuple["AsyncOpenAI", str]:
-    """Return (AsyncOpenAI client, model_name) pointing at Ollama when available,
-    falling back to the configured cloud provider."""
+    """Return (AsyncOpenAI client, model_name) using the best available LLM backend.
+
+    Priority:
+      1. Local Ollama (qwen2.5:14b) — used when running on the home Mac
+      2. Groq (llama-3.3-70b-versatile) — used in cloud/Docker where Ollama isn't present
+      3. OpenAI — last resort fallback
+    """
     import httpx as _httpx
+
+    # 1 — Try local Ollama
     try:
-        r = _httpx.get(f"{_OLLAMA_BASE.rstrip('/v1').rstrip('/')}/api/tags", timeout=1.5)
+        ollama_health_url = _OLLAMA_BASE.replace("/v1", "") + "/api/tags"
+        r = _httpx.get(ollama_health_url, timeout=1.5)
         if r.status_code == 200:
             return (
                 AsyncOpenAI(base_url=_OLLAMA_BASE, api_key="ollama"),
@@ -49,8 +60,16 @@ def _make_client() -> tuple["AsyncOpenAI", str]:
             )
     except Exception:
         pass
-    # Ollama unavailable — use cloud provider
-    return AsyncOpenAI(), _FALLBACK_MODEL
+
+    # 2 — Try Groq (fast external inference, no OpenAI dependency)
+    if _GROQ_KEY:
+        return (
+            AsyncOpenAI(base_url=_GROQ_BASE, api_key=_GROQ_KEY),
+            _GROQ_MODEL,
+        )
+
+    # 3 — OpenAI fallback
+    return AsyncOpenAI(), _OPENAI_MODEL
 
 # ── Approval gate state (module-level, shared across requests) ─────────────
 _pending_approvals: dict[str, asyncio.Event] = {}
