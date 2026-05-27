@@ -2660,6 +2660,53 @@ self.addEventListener('fetch',e=>{const u=e.request.url;if(u.includes('/api/')||
         background_tasks.add_task(_broadcast_dashboard, "response.completed")
         return _json(result)
 
+    # ── Adaptive Layout Engine ────────────────────────────────────────────────
+    @app.get("/api/layout/state")
+    async def api_layout_state() -> JSONResponse:
+        """Full layout payload: mode, overrides, alerts, card weights, zone assignments."""
+        try:
+            from .layout_engine import get_state_payload
+            payload = await asyncio.to_thread(get_state_payload, runtime)
+            return JSONResponse(payload)
+        except Exception as exc:
+            _log.warning("layout/state error: %s", exc)
+            return JSONResponse({"mode": "morning_brief", "auto_mode": "morning_brief",
+                                 "manual_override": False, "override_expires_at": None,
+                                 "alerts": [], "card_weights": {}, "modes": {},
+                                 "layout": {"hero": ["sam", "briefing"],
+                                            "priority": ["calendar", "approvals", "health"],
+                                            "ambient": []}})
+
+    @app.post("/api/layout/mode")
+    async def api_layout_set_mode(
+        payload: dict[str, Any],
+        background_tasks: BackgroundTasks,
+    ) -> JSONResponse:
+        """Manually override the active layout mode."""
+        mode = str(payload.get("mode", "morning_brief"))
+        try:
+            from .layout_engine import set_mode
+            result = await asyncio.to_thread(set_mode, mode, manual=True)
+            background_tasks.add_task(_broadcast_dashboard, "layout.mode_changed")
+            return JSONResponse(result)
+        except Exception as exc:
+            _log.warning("layout/mode error: %s", exc)
+            return JSONResponse({"error": str(exc)}, status_code=500)
+
+    @app.post("/api/layout/interact")
+    async def api_layout_interact(payload: dict[str, Any]) -> JSONResponse:
+        """Log a card interaction (click/expand/navigate/dismiss) for learning."""
+        card_id = str(payload.get("card_id", ""))
+        mode    = str(payload.get("mode", ""))
+        action  = str(payload.get("action", "click"))
+        if card_id:
+            try:
+                from .layout_engine import log_interaction
+                await asyncio.to_thread(log_interaction, card_id, mode, action)
+            except Exception as exc:
+                _log.debug("layout/interact log error: %s", exc)
+        return JSONResponse({"ok": True})
+
     @app.post("/api/mode-transition")
     async def api_mode_transition(
         payload: dict[str, Any],
