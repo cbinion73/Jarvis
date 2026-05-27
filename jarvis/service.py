@@ -3696,6 +3696,31 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             await _asyncio.to_thread(_log_interaction, card_id, mode, action)
         return _json({"ok": True})
 
+    # ── Siri Bridge ────────────────────────────────────────────────────────
+
+    @app.get("/siri", response_class=HTMLResponse)
+    async def siri_setup_page() -> str:
+        """Siri Shortcut setup guide — open on your iPhone."""
+        from .siri_bridge import siri_setup_page as _setup_page
+        return _setup_page()
+
+    @app.get("/api/siri/intent")
+    async def api_siri_intent(
+        name:  str = Query(default="status"),
+        param: str = Query(default=""),
+    ) -> JSONResponse:
+        """Handle a named Siri intent (dinner, brief, health, calendar, tasks, weather)."""
+        from .siri_bridge import handle_intent as _handle_intent
+        result = await _handle_intent(name, param, runtime)
+        return _json(result)
+
+    @app.get("/api/siri")
+    async def api_siri_query(q: str = Query(default="")) -> JSONResponse:
+        """Handle a free-form natural-language Siri query."""
+        from .siri_bridge import handle_query as _handle_query
+        result = await _handle_query(q, runtime)
+        return _json(result)
+
     # ── Dining ─────────────────────────────────────────────────────────────
 
     @app.get("/api/dining/nearby")
@@ -7649,6 +7674,116 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
     # In-memory cache: address → {uris, state}  (never stores video bytes)
     _aerial_cache: dict = {}
+
+    @app.get("/api/nav/aerial-hls/manifest.m3u8")
+    async def aerial_hls_manifest(address: str = ""):
+        """Proxy the Aerial View HLS manifest and rewrite segment URLs to same-origin.
+
+        This eliminates CORS issues — the browser sees all URLs as localhost.
+        """
+        import httpx, urllib.parse as _up
+        key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
+        if not key or not address:
+            return Response(content=b"", media_type="application/vnd.apple.mpegurl")
+        # Get the HLS URL (use cache if available)
+        cache_key = address.lower().strip()
+        data = _aerial_cache.get(cache_key)
+        if not data or not (data.get("uris") or {}).get("HLS"):
+            # Fetch fresh
+            try:
+                async with httpx.AsyncClient(timeout=15) as client:
+                    r = await client.get(
+                        "https://aerialview.googleapis.com/v1/videos:lookupVideo",
+                        params={"address": address, "key": key}
+                    )
+                    data = r.json()
+                    if data.get("uris", {}).get("HLS"):
+                        _aerial_cache[cache_key] = data
+            except Exception:
+                return Response(content=b"", media_type="application/vnd.apple.mpegurl")
+        # HLS value is a dict: {"landscapeUri": "...", "portraitUri": "..."}
+        hls_obj = (data.get("uris") or {}).get("HLS", "")
+        if isinstance(hls_obj, dict):
+            hls_url = hls_obj.get("landscapeUri") or hls_obj.get("portraitUri") or ""
+        else:
+            hls_url = str(hls_obj) if hls_obj else ""
+        if not hls_url:
+            return Response(content=b"", media_type="application/vnd.apple.mpegurl")
+        try:
+            async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+                r = await client.get(hls_url)
+                manifest = r.text
+            # Rewrite absolute segment URLs → /api/nav/aerial-hls/seg?url=ENCODED
+            lines = []
+            for line in manifest.splitlines():
+                stripped = line.strip()
+                if stripped and not stripped.startswith("#"):
+                    # It's a segment URL — rewrite it
+                    encoded = _up.quote(stripped, safe="")
+                    lines.append(f"/api/nav/aerial-hls/seg?url={encoded}")
+                else:
+                    lines.append(line)
+            proxied = "\n".join(lines)
+            return Response(
+                content=proxied.encode(),
+                media_type="application/vnd.apple.mpegurl",
+                headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"},
+            )
+        except Exception as e:
+            return Response(content=b"", media_type="application/vnd.apple.mpegurl")
+
+    @app.get("/api/nav/aerial-hls/seg")
+    async def aerial_hls_seg(url: str = ""):
+        """Proxy a single HLS segment or sub-manifest from Google — same-origin delivery.
+
+        Google Aerial View returns a *variant* playlist whose stream lines are
+        sub-manifest URLs (not .ts segments).  HLS.js fetches each line; if the
+        response is another m3u8 (media playlist) we must rewrite its segment URLs
+        through this same proxy so the browser never makes a cross-origin request.
+        """
+        import httpx, urllib.parse as _up
+        if not url:
+            return Response(content=b"", media_type="video/mp2t")
+        try:
+            decoded = _up.unquote(url)
+            async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+                r = await client.get(decoded)
+                content_type = r.headers.get("content-type", "").lower()
+                # Detect sub-manifest: content-type contains mpegurl OR URL ends in .m3u8
+                is_manifest = (
+                    "mpegurl" in content_type
+                    or decoded.split("?")[0].lower().endswith(".m3u8")
+                )
+                if is_manifest:
+                    # Rewrite every non-comment, non-empty line to route through our proxy
+                    lines = []
+                    for line in r.text.splitlines():
+                        stripped = line.strip()
+                        if stripped and not stripped.startswith("#"):
+                            # Resolve relative URLs against the base URL of this manifest
+                            if stripped.startswith("http://") or stripped.startswith("https://"):
+                                seg_url = stripped
+                            else:
+                                base = decoded.rsplit("/", 1)[0]
+                                seg_url = base + "/" + stripped
+                            encoded = _up.quote(seg_url, safe="")
+                            lines.append(f"/api/nav/aerial-hls/seg?url={encoded}")
+                        else:
+                            lines.append(line)
+                    return Response(
+                        content="\n".join(lines).encode(),
+                        media_type="application/vnd.apple.mpegurl",
+                        headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"},
+                    )
+                else:
+                    # Binary segment (.ts / fMP4 etc.)
+                    return Response(
+                        content=r.content,
+                        media_type=content_type or "video/mp2t",
+                        headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "max-age=3600"},
+                    )
+        except Exception:
+            return Response(content=b"", media_type="video/mp2t")
 
     @app.get("/api/nav/aerial")
     async def nav_aerial(address: str = ""):
