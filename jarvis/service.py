@@ -314,6 +314,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     def _base_url(request: Request) -> str:
         return str(request.base_url).rstrip("/")
 
+    def _current_actor(request: Request) -> str:
+        """Return the current user's actor ID from Cloudflare identity. Defaults to 'chris'."""
+        return getattr(request.state, "cf_user_id", "chris") or "chris"
+
     async def _broadcast_dashboard(event_name: str, *, include_dashboard: bool = True) -> None:
         payload: dict[str, Any] = {
             "type": event_name,
@@ -1501,7 +1505,10 @@ self.addEventListener('fetch', e => {
         })
 
     @app.get("/api/briefing")
-    async def api_briefing(actor: str = "Chris") -> JSONResponse:
+    async def api_briefing(request: Request, actor: str = "") -> JSONResponse:
+        # Use CF identity when no explicit actor override provided
+        if not actor:
+            actor = _current_actor(request).capitalize()
         """Return a structured morning brief built entirely from real data — no fabricated content."""
         from datetime import datetime as _dt, timedelta as _td, timezone as _tz
 
@@ -1676,8 +1683,13 @@ self.addEventListener('fetch', e => {
         return _json(runtime.status())
 
     @app.get("/api/approvals")
-    async def api_approvals() -> JSONResponse:
-        return _json(runtime.list_pending_approvals())
+    async def api_approvals(request: Request) -> JSONResponse:
+        actor = _current_actor(request)
+        approvals = runtime.list_pending_approvals()
+        # Non-chris users see only their own approvals; chris sees all (admin)
+        if actor != "chris":
+            approvals = [a for a in approvals if a.get("actor_id", "chris") == actor]
+        return _json(approvals)
 
     @app.get("/api/activity")
     async def api_activity() -> JSONResponse:
@@ -1856,11 +1868,15 @@ self.addEventListener('fetch', e => {
         return _json({"events": runtime.merged_calendar_events(limit=limit), "summary": runtime.merged_calendar_brief(limit=min(limit, 6))})
 
     @app.get("/api/strategic-brief")
-    async def api_strategic_brief(actor: str = "Chris") -> JSONResponse:
+    async def api_strategic_brief(request: Request, actor: str = "") -> JSONResponse:
+        if not actor:
+            actor = _current_actor(request).capitalize()
         return _json({"actor": actor, "brief": runtime.daily_strategic_brief(actor)})
 
     @app.get("/api/cross-domain-brief")
-    async def api_cross_domain_brief(actor: str = "Chris", topic: str = "") -> JSONResponse:
+    async def api_cross_domain_brief(request: Request, actor: str = "", topic: str = "") -> JSONResponse:
+        if not actor:
+            actor = _current_actor(request).capitalize()
         return _json({"actor": actor, "topic": topic, "brief": runtime.cross_domain_synthesis_brief(actor, topic)})
 
     @app.get("/api/wealth-leverage-summary")
@@ -4392,15 +4408,19 @@ self.addEventListener('fetch', e => {
     from .reminders import (
         list_reminders, add_reminder, complete_reminder,
         delete_reminder, snooze_reminder, pending_reminders,
+        _load as _reminders_load, _save as _reminders_save, _lock as _reminders_lock,
     )
 
     @app.get("/api/reminders")
-    async def api_reminders_list(include_done: bool = False) -> JSONResponse:
+    async def api_reminders_list(request: Request, include_done: bool = False) -> JSONResponse:
+        actor = _current_actor(request)
         items = list_reminders() if include_done else pending_reminders()
+        # Scope: existing reminders without an owner belong to "chris" (backward compat)
+        items = [r for r in items if r.get("owner", "chris") == actor]
         return _json({"reminders": items, "total": len(items)})
 
     @app.post("/api/reminders")
-    async def api_reminders_add(payload: dict[str, Any]) -> JSONResponse:
+    async def api_reminders_add(request: Request, payload: dict[str, Any]) -> JSONResponse:
         text = (payload.get("text") or "").strip()
         if not text:
             return JSONResponse({"error": "text required"}, status_code=400)
@@ -4409,6 +4429,16 @@ self.addEventListener('fetch', e => {
             due_iso=payload.get("due"),
             priority=payload.get("priority", "normal"),
         )
+        # Inject owner field into the stored reminder
+        owner = payload.get("owner") or _current_actor(request)
+        with _reminders_lock:
+            reminders = _reminders_load()
+            for stored in reminders:
+                if stored.get("id") == r["id"]:
+                    stored["owner"] = owner
+                    r["owner"] = owner
+                    break
+            _reminders_save(reminders)
         return _json({"reminder": r})
 
     @app.post("/api/reminders/{reminder_id}/complete")
@@ -4437,30 +4467,34 @@ self.addEventListener('fetch', e => {
 
     @app.get("/api/tasks")
     async def api_tasks_list(
+        request: Request,
         include_done: bool = False,
         actor: str | None = None,
         domain: str | None = None,
         priority: str | None = None,
     ) -> JSONResponse:
+        # If the caller didn't specify an actor, scope to the authenticated user
+        effective_actor = actor or _current_actor(request)
         items = list_tasks(
             include_done=include_done,
-            actor=actor or None,
+            actor=effective_actor,
             domain=domain or None,
             priority=priority or None,
         )
         return _json({"tasks": items, "total": len(items)})
 
     @app.post("/api/tasks")
-    async def api_tasks_add(payload: dict[str, Any]) -> JSONResponse:
+    async def api_tasks_add(request: Request, payload: dict[str, Any]) -> JSONResponse:
         title = (payload.get("title") or "").strip()
         if not title:
             return JSONResponse({"error": "title required"}, status_code=400)
+        # Use payload actor if provided, otherwise default to the authenticated user
         t = add_task(
             title=title,
             body=payload.get("body", ""),
             priority=payload.get("priority", "normal"),
             due=payload.get("due"),
-            actor=payload.get("actor", "chris"),
+            actor=payload.get("actor") or _current_actor(request),
             domain=payload.get("domain", "personal"),
             source=payload.get("source", "manual"),
             tags=payload.get("tags"),
@@ -4503,12 +4537,18 @@ self.addEventListener('fetch', e => {
     # ------------------------------------------------------------------
 
     @app.get("/api/approvals/pending")
-    async def api_approvals_pending(actor_id: str = Query(default="chris")) -> JSONResponse:
+    async def api_approvals_pending(request: Request, actor_id: str = Query(default="")) -> JSONResponse:
         """Return pending approvals formatted for the Needs You zone in the UI."""
         guard = get_approval_guard()
         if guard is None:
             return _json({"pending": [], "error": "Approval system not initialised"})
-        return _json({"pending": guard.get_pending_for_ui(actor_id=actor_id)})
+        # Use CF identity when no explicit actor_id provided
+        effective_actor_id = actor_id or _current_actor(request)
+        pending = guard.get_pending_for_ui(actor_id=effective_actor_id)
+        # Chris sees all approvals (admin); others see only their own
+        if effective_actor_id != "chris":
+            pending = [p for p in pending if p.get("actor_id", "chris") == effective_actor_id]
+        return _json({"pending": pending})
 
     @app.post("/api/approvals/{request_id}/approve")
     async def api_approvals_approve(request_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
@@ -7386,11 +7426,13 @@ self.addEventListener('fetch', e => {
         return _json({"ok": True})
 
     @app.get("/api/chronicle/morning-context")
-    async def api_chronicle_morning_context(actor: str = "chris") -> JSONResponse:
+    async def api_chronicle_morning_context(request: Request, actor: str = "") -> JSONResponse:
         """Spiritual context packet for the morning briefing."""
         bridge = _get_chronicle_bridge()
         if bridge is None:
             raise HTTPException(status_code=503, detail="ChronicleBridge not initialised")
+        if not actor:
+            actor = _current_actor(request)
         ctx = await asyncio.to_thread(bridge.get_morning_spiritual_context, actor)
         return _json(ctx)
 
