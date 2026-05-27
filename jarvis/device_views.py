@@ -2347,15 +2347,19 @@ def carplay_view() -> str:
 }
 .drive-btn-icon { font-size: 28px; line-height: 1; }
 
-/* Voice button */
+/* Voice button — fixed height, never grows to fill panel */
 .drive-btn-voice {
-  background: rgba(88,166,255,0.15);
-  border: 2px solid var(--hue);
+  background: rgba(88,166,255,0.12);
+  border: 1px solid rgba(88,166,255,0.4);
   color: var(--hue);
+  flex: 0 0 auto !important;
+  min-height: 72px !important;
+  font-size: 18px;
 }
-.drive-btn-voice:active { background: rgba(88,166,255,0.25); }
+.drive-btn-voice:active { background: rgba(88,166,255,0.22); }
 .drive-btn-voice.listening {
-  background: rgba(88,166,255,0.30);
+  background: rgba(88,166,255,0.28);
+  border-color: var(--hue);
   animation: pulse-listen 1s ease-in-out infinite;
 }
 
@@ -2387,56 +2391,60 @@ def carplay_view() -> str:
 /* ---- Navigation guidance panel (right column, nav-active state) ---- */
 .drive-guidance-panel {
   flex-shrink: 0;
-  background: rgba(0,212,255,0.05);
-  border: 2px solid rgba(0,212,255,0.3);
-  border-radius: 16px;
-  padding: 16px 14px 12px;
+  background: #0d1520;
+  border: 1px solid rgba(0,212,255,0.25);
+  border-radius: 14px;
+  padding: 14px 14px 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 .drive-guidance-top {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 .drive-guidance-arrow {
-  font-size: 68px;
+  font-size: 56px;
   line-height: 1;
   flex-shrink: 0;
-  width: 76px;
+  width: 64px;
   text-align: center;
-  filter: drop-shadow(0 0 14px rgba(0,212,255,0.6));
-  transition: all 0.3s;
+  filter: drop-shadow(0 0 10px rgba(0,212,255,0.5));
+  transition: all 0.25s;
 }
 .drive-guidance-text {
   flex: 1;
   min-width: 0;
 }
 .drive-guidance-action {
-  font-size: 13px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(0,212,255,0.7);
-  margin-bottom: 3px;
+  letter-spacing: 0.1em;
+  color: rgba(0,212,255,0.65);
+  margin-bottom: 4px;
 }
 .drive-guidance-street {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 700;
   color: #fff;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.15;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 .drive-guidance-dist {
-  font-size: 36px;
-  font-weight: 200;
+  font-size: 42px;
+  font-weight: 100;
   color: #fff;
   text-align: center;
   letter-spacing: -0.02em;
   line-height: 1;
-  padding: 2px 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 6px 0;
 }
 /* Street view thumbnail */
 .drive-sv-wrap {
@@ -2464,23 +2472,18 @@ def carplay_view() -> str:
   color: rgba(255,255,255,0.3);
   letter-spacing: 0.05em;
 }
-.drive-guidance-divider {
-  height: 1px;
-  background: rgba(0,212,255,0.15);
-  margin: 0 -4px;
-}
+.drive-guidance-divider { display: none; } /* borders on dist element replace this */
 .drive-guidance-eta-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 14px;
-  color: rgba(255,255,255,0.55);
-  padding-top: 2px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.45);
 }
 .drive-guidance-eta-val {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
-  color: rgba(255,255,255,0.85);
+  color: rgba(255,255,255,0.9);
 }
 /* End-route button */
 .drive-btn-end-route {
@@ -2500,18 +2503,18 @@ def carplay_view() -> str:
   flex-shrink: 0;
 }
 .drive-poi-btn {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: #0d1520;
+  border: 1px solid rgba(255,255,255,0.1);
   border-radius: 12px;
-  color: var(--text-2);
+  color: rgba(255,255,255,0.6);
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  padding: 8px 4px;
-  min-height: 58px;
+  gap: 4px;
+  padding: 10px 4px;
+  min-height: 62px;
   font-family: var(--font-sans);
   position: relative;
   transition: all 0.15s;
@@ -3299,7 +3302,13 @@ function _driveDoRoute(origin, dest) {
 
 function driveUpdateGuidance(step, leg) {
   if (!step) return;
-  var instr = step.instructions.replace(/<[^>]+>/g, '');
+  // Replace block-level tags with space first so words don't concatenate
+  var instr = step.instructions
+    .replace(/<\/(div|p|li|br)[^>]*>/gi, ' ')
+    .replace(/<(br|div|p|li)[^>]*\/?>/gi, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
   var maneuver = step.maneuver || 'straight';
   var arrow = MANEUVER_ARROWS[maneuver] || '&#8593;';
   // Split instruction: "Turn left onto Oak Street" → action="Turn left", street="Oak Street"
