@@ -28,6 +28,11 @@ services:
     env_file: .env
     volumes:
       - chronicle_snapshots:/app/chronicle-data
+    environment:
+      CHRONICLE_DATABASE_URL: postgresql://jarvis:JarvisFamily2026!@postgres:5432/chronicle
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - internal
 
