@@ -15394,8 +15394,8 @@ async function settingsBuildAccounts() {{
       : `<button class="sset-btn sset-btn-accent" onclick="settingsConnectAccount('${{escHtml(a.account_id)}}')">Connect</button>`;
     return `<div class="sset-row">
       <div class="sset-label">
-        <strong style="color:var(--text-1);">${{escHtml(a.display_name || a.name || a.account_id)}}</strong>
-        <span style="color:var(--text-3);margin-left:6px;font-size:10px;font-family:var(--font-mono);">${{escHtml(a.provider || '')}}</span>
+        <strong style="color:var(--text-1);">${{escHtml(a.label || a.owner_display_name || a.account_id)}}</strong>
+        <span style="color:var(--text-3);margin-left:6px;font-size:10px;font-family:var(--font-mono);">${{escHtml(a.provider || '')}} · ${{escHtml(a.login_hint || a.service_scope || '')}}</span>
       </div>
       ${{badge}} ${{connectBtn}}
     </div>`;
