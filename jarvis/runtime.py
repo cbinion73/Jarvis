@@ -15304,6 +15304,9 @@ class JarvisRuntime:
     def google_disconnect(self) -> dict:
         return self.google_workspace.disconnect()
 
+    def google_get_client_secret_info(self) -> dict:
+        return self.google_workspace.client_secret_summary()
+
     def google_save_client_secret(self, raw_json: str) -> dict:
         return self.google_workspace.save_client_secret_json(raw_json)
 
