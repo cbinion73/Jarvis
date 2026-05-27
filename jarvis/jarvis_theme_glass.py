@@ -15529,6 +15529,14 @@ async function settingsBuildLocation() {{
         <input id="loc-new-label" type="text" placeholder="e.g. Home" class="sset-select" style="flex:1;">
       </div>
       <div class="sset-row">
+        <div class="sset-label">Coordinates</div>
+        <div style="display:flex;gap:6px;flex:1;">
+          <input id="loc-new-lat" type="number" step="any" placeholder="Latitude" class="sset-select" style="flex:1;">
+          <input id="loc-new-lon" type="number" step="any" placeholder="Longitude" class="sset-select" style="flex:1;">
+          <button class="sset-btn" onclick="settingsGeolocateNewLocation()" title="Use my current location">📍</button>
+        </div>
+      </div>
+      <div class="sset-row">
         <div class="sset-label">Notes</div>
         <input id="loc-new-notes" type="text" placeholder="Optional notes" class="sset-select" style="flex:1;">
       </div>
@@ -15574,7 +15582,8 @@ async function settingsBuildFamily() {{
 async function settingsBuildDevices() {{
   let devData = {{}};
   try {{
-    const r = await fetch('/api/connected-devices?current_device_id=');
+    const _did = window.localStorage.getItem('jarvis-shell-device-id-v1') || '';
+    const r = await fetch('/api/connected-devices?current_device_id=' + encodeURIComponent(_did));
     devData = await r.json();
   }} catch(e) {{ devData = {{error: true}}; }}
 
@@ -15608,8 +15617,26 @@ async function settingsBuildDevices() {{
       <button class="sset-btn sset-btn-accent" onclick="settingsClaimDevice()">Claim This Device</button>
       <div id="settings-device-msg" class="sset-msg"></div>
     </div>` : ''}}
+    <div class="sset-divider"></div>
+    <div class="sset-card" style="padding:12px 16px;">
+      <button class="sset-btn" style="color:#f87171;border-color:#f87171;" onclick="settingsPruneDevices()">🗑 Prune Old Devices</button>
+      <div style="font-size:11px;color:var(--text-3);margin-top:6px;">Removes unidentified devices older than 7 days.</div>
+      <div id="settings-prune-msg" class="sset-msg"></div>
+    </div>
     ${{devData.error ? '<p style="font-size:11px;color:#f87171;">Could not load device data.</p>' : ''}}
   `;
+}}
+
+async function settingsPruneDevices() {{
+  const msg = document.getElementById('settings-prune-msg');
+  try {{
+    const r = await fetch('/api/identity/devices/prune', {{method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({{max_age_days: 7}})}});
+    const d = await r.json();
+    if (msg) msg.textContent = d.detail || (d.ok ? 'Old devices pruned.' : 'Error pruning.');
+    if (d.ok) setTimeout(() => settingsLoadSection('devices'), 800);
+  }} catch(e) {{
+    if (msg) msg.textContent = 'Error: ' + e.message;
+  }}
 }}
 
 /* ── Action helpers ────────────────────────────────────────── */
@@ -15709,13 +15736,17 @@ function settingsUseCurrentLocation() {{
 async function settingsSaveLocation() {{
   const label = document.getElementById('loc-new-label')?.value.trim();
   const notes = document.getElementById('loc-new-notes')?.value.trim();
+  const latRaw = document.getElementById('loc-new-lat')?.value.trim();
+  const lonRaw = document.getElementById('loc-new-lon')?.value.trim();
   const msg = document.getElementById('settings-loc-add-msg');
   if (!label) {{ if (msg) msg.textContent = 'Enter a label first.'; return; }}
+  const lat = latRaw ? parseFloat(latRaw) : null;
+  const lon = lonRaw ? parseFloat(lonRaw) : null;
   try {{
     const r = await fetch('/api/location-settings', {{
       method: 'POST',
       headers: {{'Content-Type': 'application/json'}},
-      body: JSON.stringify({{label, notes}})
+      body: JSON.stringify({{label, notes, ...(lat !== null ? {{lat, lon}} : {{}})}})
     }});
     const d = await r.json();
     if (msg) msg.textContent = d.detail || (d.ok ? 'Location saved.' : 'Error saving.');
@@ -15723,6 +15754,18 @@ async function settingsSaveLocation() {{
   }} catch(e) {{
     if (msg) msg.textContent = 'Error: ' + e.message;
   }}
+}}
+
+function settingsGeolocateNewLocation() {{
+  if (!navigator.geolocation) {{ alert('Geolocation not available.'); return; }}
+  navigator.geolocation.getCurrentPosition(pos => {{
+    const latEl = document.getElementById('loc-new-lat');
+    const lonEl = document.getElementById('loc-new-lon');
+    if (latEl) latEl.value = pos.coords.latitude.toFixed(6);
+    if (lonEl) lonEl.value = pos.coords.longitude.toFixed(6);
+    const msg = document.getElementById('settings-loc-add-msg');
+    if (msg) msg.textContent = 'Coordinates filled from GPS.';
+  }}, err => {{ alert('Location denied: ' + err.message); }});
 }}
 
 async function settingsClaimDevice() {{
