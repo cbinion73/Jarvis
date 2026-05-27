@@ -327,6 +327,9 @@ class CouncilMember:
             return {"error": "LLM gateway unavailable", "agent_id": self.agent_id}
 
         try:
+            # Background health-record analysis: use local qwen2.5:14b (free).
+            # The gateway's escalation ladder (local → Groq → OpenAI) still applies
+            # if confidence is low, so quality is preserved without defaulting to paid cloud.
             response = await asyncio.to_thread(
                 gw.complete,
                 messages=[
@@ -335,9 +338,8 @@ class CouncilMember:
                         f"Review this patient's complete health record and deliver your specialist "
                         f"assessment. Respond ONLY with valid JSON.\n\n{health_context}"),
                 ],
-                task_type="critical",
+                task_type="reason",
                 agent_id=self.agent_id,
-                force_model="gpt-4o",
                 temperature=0.2,
             )
         except Exception as exc:
@@ -1883,12 +1885,15 @@ async def chat_with_doctor(
     messages.append(LLMMessage("user", message))
 
     try:
+        # Active conversation with a health agent: use Groq llama-3.3-70b (free tier,
+        # 70B parameter model — strong enough for specialist medical dialogue).
+        # Falls back to OpenAI automatically if Groq is unavailable.
         response = await asyncio.to_thread(
             gw.complete,
             messages=messages,
-            task_type="critical",
+            task_type="converse",
             agent_id=doctor_id,
-            force_model="gpt-4o",
+            force_model="llama-3.3-70b-versatile",
             temperature=0.7,
         )
     except Exception as exc:
