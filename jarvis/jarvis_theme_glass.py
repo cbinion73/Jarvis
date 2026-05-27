@@ -16703,22 +16703,25 @@ async function settingsBuildDevices() {{
   }} catch(e) {{ devData = {{error: true}}; }}
 
   const devices = devData.devices || [];
-  const currentId = devData.current_device_id || '';
-  const deviceRows = devices.map(d => {{
+  const currentId = devData.current_device_id || window.localStorage.getItem('jarvis-shell-device-id-v1') || '';
+  const deviceRows = devices.filter(d => d.mapped || d.device_id === currentId).map(d => {{
     const isCurrent = d.device_id === currentId;
-    const badge = isCurrent
-      ? `<span class="sset-badge sset-badge-amber">This device</span>`
-      : `<span class="sset-badge sset-badge-grey">${{escHtml(d.owner || 'Unknown')}}</span>`;
+    const ownerName = d.owner_display_name || d.owner_user_id || '';
+    const badgeLabel = isCurrent ? 'This device' : (ownerName || 'Unknown');
+    const badgeClass = isCurrent ? 'sset-badge-amber' : (ownerName ? 'sset-badge-green' : 'sset-badge-grey');
+    const badge = `<span class="sset-badge ${{badgeClass}}">${{escHtml(badgeLabel)}}</span>`;
+    const label = d.label || d.device_name || d.device_id || 'Unknown';
+    const lastSeen = d.last_seen_at ? d.last_seen_at.slice(0,10) : '';
     return `<div class="sset-row">
       <div class="sset-label">
-        <strong style="color:var(--text-1);">${{escHtml(d.device_name || d.device_id || 'Unknown')}}</strong>
-        ${{d.last_seen ? `<span style="color:var(--text-3);font-size:10px;display:block;">Last seen: ${{escHtml(d.last_seen)}}</span>` : ''}}
+        <strong style="color:var(--text-1);">${{escHtml(label)}}</strong>
+        ${{lastSeen ? `<span style="color:var(--text-3);font-size:10px;display:block;">Last seen: ${{escHtml(lastSeen)}}</span>` : ''}}
       </div>
       ${{badge}}
     </div>`;
-  }}).join('') || '<p style="font-size:12px;color:var(--text-3);">No devices found.</p>';
+  }}).join('') || '<p style="font-size:12px;color:var(--text-3);">No claimed devices yet.</p>';
 
-  const isClaimed = devices.some(d => d.device_id === currentId && d.owner);
+  const isClaimed = devices.some(d => d.device_id === currentId && (d.owner_user_id || d.owner_display_name));
 
   return `
     <p class="sset-section-hdr">Connected Devices</p>
