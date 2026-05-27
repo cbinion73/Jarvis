@@ -5408,6 +5408,23 @@ body::after {{
     width: 100%;
   }}
 }}
+/* Aerial view modal close on outside click handled by JS */
+#nav-aerial-modal video {{
+    max-height: 70vh;
+    object-fit: cover;
+}}
+#nav-sv-panel img {{
+    object-fit: cover;
+    height: 140px;
+    width: 100%;
+}}
+.nav-sv-label {{
+    font-size: 10px;
+    text-transform: uppercase;
+    opacity: 0.5;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}}
 /* ═══════════════════════════════════════════════════════════════
    END NAVIGATION CSS
 ═══════════════════════════════════════════════════════════════ */
@@ -7421,6 +7438,18 @@ body::after {{
   <!-- ── NAVIGATE ─────────────────────────────────────────── -->
   <div id="view-navigate" class="view" style="display:none; padding:0">
     <div class="nav-container">
+      <!-- Aerial View destination modal -->
+      <div id="nav-aerial-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.92); z-index:9999; flex-direction:column; align-items:center; justify-content:center;">
+        <div style="position:relative; width:min(800px,95vw);">
+          <div id="nav-aerial-dest-name" style="color:#fff; font-size:22px; font-weight:700; margin-bottom:12px; text-align:center;"></div>
+          <video id="nav-aerial-video" autoplay loop muted playsinline style="width:100%; border-radius:16px; box-shadow:0 0 60px rgba(0,212,255,0.3);"></video>
+          <img id="nav-aerial-fallback" style="display:none; width:100%; border-radius:16px;" alt="Destination">
+          <div style="display:flex; gap:12px; margin-top:16px; justify-content:center;">
+            <button onclick="startNavigation(); closeAerialModal();" style="padding:12px 32px; background:#00D4FF; color:#000; border:none; border-radius:8px; font-size:16px; font-weight:700; cursor:pointer;">&#9654; Start Navigation</button>
+            <button onclick="closeAerialModal();" style="padding:12px 24px; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:8px; font-size:16px; cursor:pointer;">&#10005; Close</button>
+          </div>
+        </div>
+      </div>
       <!-- SIDEBAR (desktop) -->
       <div class="nav-sidebar" id="nav-sidebar">
         <div class="nav-route-inputs">
@@ -7458,6 +7487,15 @@ body::after {{
         <div id="nav-turns-section" style="display:none">
           <div class="nav-section-title">Turn by Turn</div>
           <div id="nav-turns-list"></div>
+        </div>
+
+        <!-- Street View turn preview -->
+        <div id="nav-sv-panel" style="display:none; padding:12px;">
+          <div class="nav-section-title">What to Expect</div>
+          <div style="position:relative;">
+            <img id="nav-sv-img" style="width:100%; border-radius:10px; min-height:120px; background:#1a1a2e;" alt="Street View" onerror="this.style.display='none'">
+            <div id="nav-sv-caption" style="font-size:11px; opacity:0.6; margin-top:4px; text-align:center;"></div>
+          </div>
         </div>
 
         <div id="nav-pois-section" style="display:none">
@@ -9011,6 +9049,16 @@ const CARD_REGISTRY = {{
            onclick="cardInteract('health','navigate');switchView('health')">
         <div class="card-hdr"><span class="card-icon">♥</span><span class="card-title">HEALTH</span><span class="card-badge" id="overview-health-badge">—</span></div>
         <div class="card-inner" id="overview-health-content" style="font-size:12px;color:var(--text-3);padding:14px 18px;">Loading…</div>
+        <div style="padding:0 18px 10px 18px;">
+          <div style="margin-top:8px;">
+            <div style="font-size:10px; text-transform:uppercase; opacity:0.5; margin-bottom:4px;">Air Quality</div>
+            <div id="env-air-quality" style="display:flex; align-items:center;">--</div>
+          </div>
+          <div style="margin-top:8px;">
+            <div style="font-size:10px; text-transform:uppercase; opacity:0.5; margin-bottom:4px;">Pollen</div>
+            <div id="env-pollen">--</div>
+          </div>
+        </div>
       </div>`,
     priorityRender: () => `
       <div class="card card-tactical layout-card" id="lc-health" data-card="health"
@@ -9018,6 +9066,16 @@ const CARD_REGISTRY = {{
            onclick="cardInteract('health','navigate');switchView('health')">
         <div class="card-hdr"><span class="card-icon">♥</span><span class="card-title">HEALTH</span><span class="card-badge" id="overview-health-badge">—</span></div>
         <div class="card-inner" id="overview-health-content" style="font-size:11px;color:var(--text-3);">Loading…</div>
+        <div style="padding:4px 14px 8px 14px;">
+          <div style="margin-top:6px;">
+            <div style="font-size:10px; text-transform:uppercase; opacity:0.5; margin-bottom:3px;">Air Quality</div>
+            <div id="env-air-quality" style="display:flex; align-items:center;">--</div>
+          </div>
+          <div style="margin-top:6px;">
+            <div style="font-size:10px; text-transform:uppercase; opacity:0.5; margin-bottom:3px;">Pollen</div>
+            <div id="env-pollen">--</div>
+          </div>
+        </div>
       </div>`,
     ambientRender: () => `
       <div class="ambient-tile" onclick="cardInteract('health','navigate');switchView('health')" data-card="health">
@@ -17423,6 +17481,7 @@ async function loadOverviewHealth() {{
   const el    = document.getElementById('overview-health-content');
   const badge = document.getElementById('overview-health-badge');
   if (!el) return;
+  loadEnvData();
   try {{
     const [res, lonRes] = await Promise.all([
       fetch('/api/health/summary').catch(() => null),
@@ -17808,6 +17867,11 @@ function renderNavRoute(data) {{
     document.getElementById('nav-turns-list').innerHTML = html;
     document.getElementById('nav-turns-section').style.display = 'block';
     document.getElementById('nav-start-btn').style.display = 'block';
+    // Show aerial view of destination
+    var dest = document.getElementById('nav-dest') ? document.getElementById('nav-dest').value : '';
+    if (dest) showAerialView(dest);
+    // Show street view of first turn
+    updateStreetViewPreview(0);
 }}
 
 function _navStepArrow(maneuver) {{
@@ -17967,6 +18031,7 @@ function _navGPSUpdate(pos) {{
             _navCurrentStepIdx++;
             if (_navCurrentStepIdx < _navSteps.length) {{
                 _updateNavHUD();
+                updateStreetViewPreview(_navCurrentStepIdx);
                 if (_navVoiceOn) {{
                     var nextStep = _navSteps[_navCurrentStepIdx];
                     var instr = nextStep.html_instructions.replace(/<[^>]+>/g,' ').trim();
@@ -18001,6 +18066,114 @@ function _updateNavHUD() {{
     var etaStr = etaDate.toLocaleTimeString([], {{hour:'2-digit',minute:'2-digit'}});
     document.getElementById('nav-hud-eta').textContent = etaStr;
     document.getElementById('nav-hud-remain').textContent = remMiles;
+    updateStreetViewPreview(_navCurrentStepIdx);
+}}
+
+// ── AERIAL VIEW ──────────────────────────────────────────────────────────────
+function showAerialView(destinationAddress) {{
+    var modal = document.getElementById('nav-aerial-modal');
+    var video = document.getElementById('nav-aerial-video');
+    var fallback = document.getElementById('nav-aerial-fallback');
+    var nameEl = document.getElementById('nav-aerial-dest-name');
+    if (!modal) return;
+    nameEl.textContent = destinationAddress;
+    modal.style.display = 'flex';
+    fetch('/api/nav/aerial?address=' + encodeURIComponent(destinationAddress))
+        .then(function(r) {{ return r.json(); }})
+        .then(function(d) {{
+            var videoUri = d.videoUri || (d.uris && d.uris.MP4_HIGH) || (d.uris && d.uris.MP4_MEDIUM) || '';
+            if (videoUri) {{
+                video.src = videoUri;
+                video.style.display = 'block';
+                fallback.style.display = 'none';
+            }} else {{
+                video.style.display = 'none';
+                fallback.style.display = 'block';
+                fallback.src = '/api/nav/streetview?lat=0&lng=0&heading=0&width=800&height=450';
+            }}
+        }})
+        .catch(function() {{ modal.style.display = 'none'; }});
+}}
+
+function closeAerialModal() {{
+    var modal = document.getElementById('nav-aerial-modal');
+    if (modal) modal.style.display = 'none';
+    var video = document.getElementById('nav-aerial-video');
+    if (video) {{ video.pause(); video.src = ''; }}
+}}
+
+// ── STREET VIEW TURN PREVIEW ─────────────────────────────────────────────────
+function updateStreetViewPreview(stepIdx) {{
+    if (!_navSteps || stepIdx >= _navSteps.length) return;
+    var step = _navSteps[stepIdx];
+    var lat = step.end_location.lat;
+    var lng = step.end_location.lng;
+    var heading = 0;
+    var maneuverHeadings = {{
+        'turn-right': 90, 'turn-sharp-right': 135, 'turn-slight-right': 45,
+        'turn-left': 270, 'turn-sharp-left': 225, 'turn-slight-left': 315,
+        'straight': 0, 'merge': 0
+    }};
+    if (step.maneuver && maneuverHeadings[step.maneuver] !== undefined) {{
+        heading = maneuverHeadings[step.maneuver];
+    }}
+    var instr = (step.html_instructions || '').replace(/<[^>]+>/g, ' ').trim();
+    var panel = document.getElementById('nav-sv-panel');
+    var img = document.getElementById('nav-sv-img');
+    var caption = document.getElementById('nav-sv-caption');
+    if (!panel || !img) return;
+    panel.style.display = 'block';
+    img.src = '/api/nav/streetview?lat=' + lat + '&lng=' + lng + '&heading=' + heading;
+    img.style.display = 'block';
+    if (caption) caption.textContent = instr + ' (' + step.distance.text + ')';
+}}
+
+// ── ENV DATA (Air Quality + Pollen) ──────────────────────────────────────────
+function loadEnvData() {{
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(function(pos) {{
+        var lat = pos.coords.latitude;
+        var lng = pos.coords.longitude;
+        fetch('/api/env/air-quality?lat=' + lat + '&lng=' + lng)
+            .then(function(r) {{ return r.json(); }})
+            .then(function(d) {{ renderAirQuality(d); }});
+        fetch('/api/env/pollen?lat=' + lat + '&lng=' + lng)
+            .then(function(r) {{ return r.json(); }})
+            .then(function(d) {{ renderPollen(d); }});
+    }});
+}}
+
+function renderAirQuality(d) {{
+    var el = document.getElementById('env-air-quality');
+    if (!el) return;
+    var indexes = d.indexes || [];
+    if (!indexes.length) {{ el.innerHTML = '<span style="opacity:0.5">No data</span>'; return; }}
+    var idx = indexes[0];
+    var aqi = idx.aqi || '--';
+    var cat = idx.category || '';
+    var color = aqi <= 50 ? '#4CAF50' : aqi <= 100 ? '#FFC107' : aqi <= 150 ? '#FF9800' : '#F44336';
+    el.innerHTML = '<span style="font-size:28px; font-weight:700; color:' + color + '">' + aqi + '</span>' +
+        '<span style="font-size:12px; opacity:0.7; margin-left:8px">' + cat + '</span>';
+}}
+
+function renderPollen(d) {{
+    var el = document.getElementById('env-pollen');
+    if (!el) return;
+    var days = d.dailyInfo || [];
+    if (!days.length) {{ el.innerHTML = '<span style="opacity:0.5">No data</span>'; return; }}
+    var day = days[0];
+    var plants = day.plantInfo || [];
+    var html = '';
+    plants.slice(0, 4).forEach(function(p) {{
+        var lvl = (p.indexInfo && p.indexInfo.value) || 0;
+        var color = lvl <= 1 ? '#4CAF50' : lvl <= 2 ? '#FFC107' : lvl <= 3 ? '#FF9800' : '#F44336';
+        html += '<div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">' +
+            '<span style="width:8px; height:8px; border-radius:50%; background:' + color + '; display:inline-block;"></span>' +
+            '<span style="font-size:12px">' + (p.displayName || p.plantTypeId || '') + '</span>' +
+            '<span style="font-size:11px; opacity:0.6; margin-left:auto">' + (p.indexInfo && p.indexInfo.category || '') + '</span>' +
+            '</div>';
+    }});
+    el.innerHTML = html || '<span style="opacity:0.5">No pollen data</span>';
 }}
 
 function _navCheckPOIAlert(lat, lng) {{

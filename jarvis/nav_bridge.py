@@ -281,6 +281,48 @@ class NavBridge:
             )
         return parks
 
+    # ── Air Quality ──────────────────────────────────────────────────────────
+
+    def get_air_quality(self, lat: float, lng: float) -> dict:
+        """Google Air Quality API — current conditions."""
+        if not self.maps_key:
+            return {"error": "no key"}
+        try:
+            url = "https://airquality.googleapis.com/v1/currentConditions:lookup"
+            payload = {
+                "location": {"latitude": lat, "longitude": lng},
+                "extraComputations": ["HEALTH_RECOMMENDATIONS", "DOMINANT_POLLUTANT_CONCENTRATION", "POLLUTANT_ADDITIONAL_INFO"],
+                "languageCode": "en"
+            }
+            r = requests.post(
+                url,
+                json=payload,
+                params={"key": self.maps_key},
+                timeout=10
+            )
+            return r.json()
+        except Exception as e:
+            return {"error": str(e)}
+
+    # ── Pollen ────────────────────────────────────────────────────────────────
+
+    def get_pollen(self, lat: float, lng: float) -> dict:
+        """Google Pollen API — 1-day forecast."""
+        if not self.maps_key:
+            return {"error": "no key"}
+        try:
+            url = "https://pollen.googleapis.com/v1/forecast:lookup"
+            params = {
+                "location.latitude": lat,
+                "location.longitude": lng,
+                "days": 1,
+                "key": self.maps_key
+            }
+            r = requests.get(url, params=params, timeout=10)
+            return r.json()
+        except Exception as e:
+            return {"error": str(e)}
+
     # ── State extraction from geocoded waypoints ─────────────────────────────
 
     def extract_states_from_route(self, geocoded_waypoints: list[dict]) -> list[str]:

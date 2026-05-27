@@ -7516,6 +7516,60 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             logger.warning("nav/nps failed: %s", exc)
             return _json({"error": str(exc)})
 
+    @app.get("/api/nav/aerial")
+    async def nav_aerial(address: str = ""):
+        """Proxy Aerial View API — returns video URLs for destination flyover."""
+        key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
+        if not key or not address:
+            return _json({"error": "missing key or address"})
+        try:
+            import httpx
+            url = "https://aerialview.googleapis.com/v1/videos:lookupVideo"
+            async with httpx.AsyncClient(timeout=10) as client:
+                r = await client.get(url, params={"address": address, "key": key})
+                return _json(r.json())
+        except Exception as e:
+            return _json({"error": str(e)})
+
+    @app.get("/api/nav/streetview")
+    async def nav_streetview(lat: float = 0, lng: float = 0, heading: float = 0, width: int = 400, height: int = 220):
+        """Proxy Street View Static API image — keeps API key server-side."""
+        key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
+        if not key:
+            return Response(content=b"", media_type="image/jpeg")
+        try:
+            import httpx
+            url = "https://maps.googleapis.com/maps/api/streetview"
+            params = {
+                "size": str(width) + "x" + str(height),
+                "location": str(lat) + "," + str(lng),
+                "heading": str(int(heading)),
+                "fov": "80",
+                "pitch": "0",
+                "key": key
+            }
+            async with httpx.AsyncClient(timeout=10) as client:
+                r = await client.get(url, params=params)
+                return Response(content=r.content, media_type="image/jpeg")
+        except Exception as e:
+            return Response(content=b"", media_type="image/jpeg")
+
+    @app.get("/api/env/air-quality")
+    async def env_air_quality(lat: float = 30.0, lng: float = -97.0):
+        try:
+            result = await asyncio.to_thread(_nav.get_air_quality, lat, lng)
+            return _json(result)
+        except Exception as e:
+            return _json({"error": str(e)})
+
+    @app.get("/api/env/pollen")
+    async def env_pollen(lat: float = 30.0, lng: float = -97.0):
+        try:
+            result = await asyncio.to_thread(_nav.get_pollen, lat, lng)
+            return _json(result)
+        except Exception as e:
+            return _json({"error": str(e)})
+
     # -----------------------------------------------------------------------
     # Kasa Smart Home
     # -----------------------------------------------------------------------
