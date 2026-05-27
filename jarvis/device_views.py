@@ -2735,6 +2735,9 @@ def carplay_view() -> str:
         </button>
       </div>
 
+      <!-- POI status line -->
+      <div id="drive-poi-status" style="text-align:center;font-size:12px;color:rgba(255,255,255,0.45);min-height:16px;flex-shrink:0;"></div>
+
       <!-- End Route -->
       <button class="drive-btn drive-btn-end-route" onclick="driveNavCancel()">
         <span class="drive-btn-icon">&#11035;</span>
@@ -3430,6 +3433,15 @@ var POI_COLORS = {
   family:    '#2196F3',
   gas:       '#9E9E9E'
 };
+var POI_LABELS = {
+  food:'Food', starbucks:'Starbucks', parks:'Parks',
+  historic:'Historic', family:'Family', gas:'Gas'
+};
+
+function driveSetPoiStatus(msg) {
+  var el = document.getElementById('drive-poi-status');
+  if (el) el.textContent = msg;
+}
 
 function driveTogglePoi(cat) {
   var btn = document.getElementById('poi-btn-' + cat);
@@ -3437,24 +3449,28 @@ function driveTogglePoi(cat) {
   if (_drivePoiLoading[cat]) return;
 
   if (_drivePoiActive[cat]) {
-    // Hide markers
     var markers = _drivePoiMarkers[cat] || [];
     for (var i = 0; i < markers.length; i++) markers[i].setMap(null);
     _drivePoiActive[cat] = false;
     btn.classList.remove('active');
+    driveSetPoiStatus('');
     return;
   }
 
   if (_drivePois[cat]) {
-    // Already loaded — just re-show
     driveShowPoiMarkers(cat);
     return;
   }
 
-  // Need to load — call API
-  if (!_drivePolyline) return;
+  if (!_drivePolyline) {
+    driveSetPoiStatus('Start a route first');
+    setTimeout(function(){ driveSetPoiStatus(''); }, 2000);
+    return;
+  }
+
   _drivePoiLoading[cat] = true;
   btn.classList.add('loading');
+  driveSetPoiStatus('Searching for ' + POI_LABELS[cat] + '…');
 
   fetch('/api/nav/pois', {
     method: 'POST',
@@ -3470,11 +3486,8 @@ function driveTogglePoi(cat) {
     _drivePoiLoading[cat] = false;
     btn.classList.remove('loading');
     var pois = (d.pois && d.pois[cat]) ? d.pois[cat] : [];
-    // Merge NPS parks into parks category
     if (cat === 'parks' && d.nps_parks && d.nps_parks.length) {
-      for (var j = 0; j < d.nps_parks.length; j++) {
-        pois.push(d.nps_parks[j]);
-      }
+      for (var j = 0; j < d.nps_parks.length; j++) pois.push(d.nps_parks[j]);
     }
     _drivePois[cat] = pois;
     var badge = document.getElementById('poi-badge-' + cat);
@@ -3482,10 +3495,17 @@ function driveTogglePoi(cat) {
       badge.textContent = pois.length;
       badge.style.display = pois.length ? 'flex' : 'none';
     }
-    driveShowPoiMarkers(cat);
+    if (pois.length === 0) {
+      driveSetPoiStatus('No ' + POI_LABELS[cat] + ' found along route');
+      setTimeout(function(){ driveSetPoiStatus(''); }, 3000);
+    } else {
+      driveShowPoiMarkers(cat);
+    }
   }).catch(function() {
     _drivePoiLoading[cat] = false;
     btn.classList.remove('loading');
+    driveSetPoiStatus('Search failed — try again');
+    setTimeout(function(){ driveSetPoiStatus(''); }, 3000);
   });
 }
 
@@ -3497,34 +3517,40 @@ function driveShowPoiMarkers(cat) {
 
   var color = POI_COLORS[cat] || '#ffffff';
   var markers = [];
+  var bounds = new google.maps.LatLngBounds();
+
   for (var k = 0; k < pois.length; k++) {
     var p = pois[k];
     var lat = p.lat || (p.geometry && p.geometry.location && p.geometry.location.lat);
     var lng = p.lng || (p.geometry && p.geometry.location && p.geometry.location.lng);
     if (!lat || !lng) continue;
+    var pos = {lat: parseFloat(lat), lng: parseFloat(lng)};
+    bounds.extend(pos);
     var marker = new google.maps.Marker({
-      position: {lat: parseFloat(lat), lng: parseFloat(lng)},
+      position: pos,
       map: _driveNavMap,
       title: p.name || '',
       icon: {
         path: google.maps.SymbolPath.CIRCLE,
-        scale: 9,
+        scale: 11,
         fillColor: color,
-        fillOpacity: 0.95,
+        fillOpacity: 1,
         strokeColor: '#fff',
-        strokeWeight: 1.5
-      }
+        strokeWeight: 2
+      },
+      zIndex: 99
     });
-    (function(marker, poi) {
-      marker.addListener('click', function() {
-        var iw = new google.maps.InfoWindow({
-          content: '<div style="color:#000;font-size:13px;max-width:180px">' +
-                   '<strong>' + escHtml(poi.name || '') + '</strong>' +
-                   (poi.address ? '<br>' + escHtml(poi.address) : '') +
-                   (poi.rating ? '<br>&#9733; ' + poi.rating : '') +
+    (function(m, poi) {
+      m.addListener('click', function() {
+        var stars = poi.rating ? ' &nbsp;&#9733; ' + poi.rating : '';
+        var miles = poi.route_mile_marker ? ' &nbsp;&bull; mi ' + Math.round(poi.route_mile_marker) : '';
+        new google.maps.InfoWindow({
+          content: '<div style="color:#000;font-size:13px;min-width:160px;max-width:220px;line-height:1.4">' +
+                   '<strong style="font-size:14px">' + escHtml(poi.name || '') + '</strong>' +
+                   (poi.address ? '<div style="margin-top:3px;color:#555">' + escHtml(poi.address) + '</div>' : '') +
+                   '<div style="margin-top:4px;font-size:12px;color:#888">' + stars + miles + '</div>' +
                    '</div>'
-        });
-        iw.open(_driveNavMap, marker);
+        }).open(_driveNavMap, m);
       });
     })(marker, p);
     markers.push(marker);
@@ -3533,6 +3559,11 @@ function driveShowPoiMarkers(cat) {
   _drivePoiActive[cat] = true;
   var btn = document.getElementById('poi-btn-' + cat);
   if (btn) btn.classList.add('active');
+  driveSetPoiStatus(markers.length + ' ' + POI_LABELS[cat] + ' along your route — tap a pin for details');
+  // Fit map to show all markers
+  if (markers.length > 0 && !bounds.isEmpty()) {
+    _driveNavMap.fitBounds(bounds, {top:60, bottom:60, left:20, right:20});
+  }
 }
 
 function driveClearAllPois() {
