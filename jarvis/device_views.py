@@ -2430,13 +2430,39 @@ def carplay_view() -> str:
   line-height: 1.15;
 }
 .drive-guidance-dist {
-  font-size: 40px;
+  font-size: 36px;
   font-weight: 200;
   color: #fff;
   text-align: center;
   letter-spacing: -0.02em;
   line-height: 1;
-  padding: 4px 0;
+  padding: 2px 0;
+}
+/* Street view thumbnail */
+.drive-sv-wrap {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #111;
+  min-height: 90px;
+  flex-shrink: 0;
+}
+.drive-sv-img {
+  width: 100%;
+  display: block;
+  border-radius: 10px;
+  object-fit: cover;
+  height: 100px;
+}
+.drive-sv-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 0.05em;
 }
 .drive-guidance-divider {
   height: 1px;
@@ -2660,6 +2686,14 @@ def carplay_view() -> str:
           </div>
         </div>
         <div class="drive-guidance-dist" id="drive-guidance-dist">--</div>
+        <!-- Street view of upcoming turn -->
+        <div class="drive-sv-wrap" id="drive-sv-wrap" style="display:none">
+          <div class="drive-sv-placeholder" id="drive-sv-placeholder">STREET VIEW</div>
+          <img class="drive-sv-img" id="drive-sv-img" alt=""
+               onload="document.getElementById('drive-sv-placeholder').style.display='none';this.style.display='block';"
+               onerror="document.getElementById('drive-sv-wrap').style.display='none';"
+               style="display:none">
+        </div>
         <div class="drive-guidance-divider"></div>
         <div class="drive-guidance-eta-row">
           <span>ETA</span>
@@ -3294,6 +3328,32 @@ function driveUpdateGuidance(step, leg) {
   document.getElementById('drive-nav-hud-turn').textContent = action + (street ? ' · ' + street : '');
   document.getElementById('drive-nav-hud-dist').textContent = step.distance.text + ' · ETA ' + etaStr;
   hud.style.display = 'block';
+  // Street view of the end of this step (where the turn happens)
+  driveUpdateStreetView(step);
+}
+
+var SV_HEADING_MAP = {
+  'turn-right': 90, 'turn-sharp-right': 135, 'turn-slight-right': 45,
+  'turn-left': 270, 'turn-sharp-left': 225, 'turn-slight-left': 315,
+  'straight': 0, 'merge': 0, 'arrive': 0
+};
+
+function driveUpdateStreetView(step) {
+  var loc = step.end_location;
+  if (!loc) return;
+  var lat = (typeof loc.lat === 'function') ? loc.lat() : loc.lat;
+  var lng = (typeof loc.lng === 'function') ? loc.lng() : loc.lng;
+  if (!lat || !lng) return;
+  var heading = SV_HEADING_MAP[step.maneuver] !== undefined ? SV_HEADING_MAP[step.maneuver] : 0;
+  var wrap = document.getElementById('drive-sv-wrap');
+  var img  = document.getElementById('drive-sv-img');
+  var ph   = document.getElementById('drive-sv-placeholder');
+  if (!wrap || !img) return;
+  wrap.style.display = 'block';
+  img.style.display  = 'none';
+  ph.style.display   = 'flex';
+  img.src = '/api/nav/streetview?lat=' + lat + '&lng=' + lng +
+            '&heading=' + heading + '&width=600&height=200';
 }
 
 function driveSetNavState(active) {
