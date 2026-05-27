@@ -10290,6 +10290,40 @@ const CARD_REGISTRY = {{
       </div>`,
   }},
 
+  jarvis_costs: {{
+    id: 'jarvis_costs',
+    title: 'JARVIS Costs',
+    icon: '💸',
+    load: () => loadOverviewCosts(),
+    heroRender: () => `
+      <div class="card layout-card" id="lc-jarvis-costs" data-card="jarvis_costs"
+           style="min-height:200px;" onclick="cardInteract('jarvis_costs','click')">
+        <div class="card-hdr">
+          <span class="card-icon">💸</span>
+          <span class="card-title">JARVIS COSTS</span>
+          <span class="card-badge" id="jarvis-costs-badge">—</span>
+        </div>
+        <div class="card-body" id="jarvis-costs-content" style="padding:14px 18px;">
+          <div class="skel" style="height:10px;width:70%;margin-bottom:8px;"></div>
+          <div class="skel" style="height:10px;width:50%;"></div>
+        </div>
+      </div>`,
+    priorityRender: () => `
+      <div class="card card-tactical layout-card" id="lc-jarvis-costs" data-card="jarvis_costs"
+           onclick="cardInteract('jarvis_costs','click')">
+        <div class="card-hdr">
+          <span class="card-icon">💸</span>
+          <span class="card-title">JARVIS COSTS</span>
+          <span class="card-badge" id="jarvis-costs-badge">—</span>
+        </div>
+        <div class="card-body" id="jarvis-costs-content" style="padding:10px 14px;"></div>
+      </div>`,
+    ambientRender: () => `
+      <div class="ambient-tile" onclick="cardInteract('jarvis_costs','click')" data-card="jarvis_costs">
+        💸 Costs <span class="ambient-badge" id="jarvis-costs-badge">—</span>
+      </div>`,
+  }},
+
 }};
 
 // ---------------------------------------------------------------------------
@@ -12180,6 +12214,86 @@ async function loadOverviewMapsUsage() {{
       </div>
       <div style="border-top:1px solid rgba(255,255,255,0.07);padding-top:8px;">
         ${{rows}}
+      </div>`;
+  }} catch(e) {{
+    if (content) content.innerHTML = '<div style="font-size:11px;color:var(--text-3);">Unavailable</div>';
+  }}
+}}
+
+async function loadOverviewCosts() {{
+  const content = document.getElementById('jarvis-costs-content');
+  const badge   = document.getElementById('jarvis-costs-badge');
+  if (!content) return;
+  try {{
+    const res = await fetch('/api/costs/summary');
+    if (!res.ok) throw new Error('fetch failed');
+    const d = await res.json();
+
+    const monthTotal = (d.month_total || 0).toFixed(2);
+    const today      = (d.today_llm  || 0).toFixed(3);
+    const monthLLM   = (d.month_llm  || 0).toFixed(2);
+    const monthMaps  = (d.month_maps || 0).toFixed(2);
+
+    if (badge) badge.textContent = '$' + monthTotal + '/mo';
+
+    // Build per-model breakdown rows
+    const models = d.by_model || {{}};
+    const modelRows = Object.entries(models)
+      .sort((a,b) => (b[1].cost||0) - (a[1].cost||0))
+      .map(([name, info]) => {{
+        const cost  = (info.cost || 0).toFixed(3);
+        const calls = (info.calls || 0).toLocaleString();
+        const back  = info.backend === 'ollama'
+          ? '<span style="color:#4ade80;font-size:9px;margin-left:4px;">FREE</span>'
+          : '<span style="color:#FFD700;font-size:9px;margin-left:4px;">PAID</span>';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;
+                            padding:2px 0;font-size:11px;color:var(--text-2);">
+          <span style="display:flex;align-items:center;">
+            ${{escHtml(name)}}${{back}}
+          </span>
+          <span style="font-family:var(--font-mono);color:var(--text-3);">
+            ${{calls}} calls · $${{cost}}
+          </span>
+        </div>`;
+      }}).join('');
+
+    const daysLeft = (d.days_in_month || 30) - (d.days_elapsed || 0);
+    const projected = d.days_elapsed > 0
+      ? ((d.month_total / d.days_elapsed) * (d.days_in_month || 30)).toFixed(2)
+      : '—';
+
+    const tokens = d.month_tokens || {{}};
+    const tokStr = tokens.input
+      ? ((tokens.input + (tokens.output||0)) / 1000000).toFixed(2) + 'M tokens'
+      : '';
+
+    content.innerHTML = `
+      <!-- Today / Month headline -->
+      <div style="display:flex;gap:12px;margin-bottom:12px;">
+        <div style="flex:1;background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 10px;text-align:center;">
+          <div style="font-size:18px;font-weight:700;color:#00D4FF;font-family:var(--font-mono);">$${{today}}</div>
+          <div style="font-size:10px;color:var(--text-3);margin-top:2px;">today</div>
+        </div>
+        <div style="flex:1;background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 10px;text-align:center;">
+          <div style="font-size:18px;font-weight:700;color:#FFD700;font-family:var(--font-mono);">$${{monthLLM}}</div>
+          <div style="font-size:10px;color:var(--text-3);margin-top:2px;">LLM · ${{escHtml(d.month||'')}}</div>
+        </div>
+        <div style="flex:1;background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 10px;text-align:center;">
+          <div style="font-size:18px;font-weight:700;color:#a78bfa;font-family:var(--font-mono);">$${{monthMaps}}</div>
+          <div style="font-size:10px;color:var(--text-3);margin-top:2px;">Maps API</div>
+        </div>
+      </div>
+
+      <!-- Projection -->
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-3);
+                  margin-bottom:8px;padding:0 2px;">
+        <span>Projected: <strong style="color:var(--text-2);">$${{projected}}/mo</strong></span>
+        <span>${{daysLeft}} days left · ${{tokStr}}</span>
+      </div>
+
+      <!-- Per-model breakdown -->
+      <div style="border-top:1px solid rgba(255,255,255,0.07);padding-top:8px;">
+        ${{modelRows}}
       </div>`;
   }} catch(e) {{
     if (content) content.innerHTML = '<div style="font-size:11px;color:var(--text-3);">Unavailable</div>';
