@@ -2598,7 +2598,7 @@ def carplay_view() -> str:
   border-radius: 10px;
   overflow: hidden;
   background: #111;
-  min-height: 170px;
+  min-height: 155px;
   flex-shrink: 0;
 }
 .drive-sv-img {
@@ -2606,7 +2606,7 @@ def carplay_view() -> str:
   display: block;
   border-radius: 10px;
   object-fit: cover;
-  height: 185px;
+  height: 165px;
 }
 .drive-sv-placeholder {
   position: absolute;
@@ -3773,9 +3773,10 @@ function driveUpdateStreetView(step) {
   ph.style.display   = 'flex';
   // fov=55 → telephoto-style, shows road ahead not wide panoramic
   // pitch=5 → slight upward tilt, natural dashcam angle
+  // Street View Static API max size is 640px per dimension on standard keys
   img.src = '/api/nav/streetview?lat=' + lat + '&lng=' + lng +
             '&heading=' + Math.round(heading) +
-            '&width=800&height=300&fov=55&pitch=5';
+            '&width=600&height=240&fov=55&pitch=5';
 }
 
 function driveSetNavState(active) {
