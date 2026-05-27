@@ -83,6 +83,17 @@ def decode_polyline(encoded: str) -> list[tuple[float, float]]:
     return points
 
 
+def min_distance_to_route(
+    lat: float,
+    lng: float,
+    route_points: list[tuple[float, float]],
+) -> float:
+    """Return the minimum distance (miles) from (lat, lng) to any point on the route polyline."""
+    if not route_points:
+        return float("inf")
+    return min(haversine(lat, lng, rp[0], rp[1]) for rp in route_points)
+
+
 def sample_route_points(
     points: list[tuple[float, float]],
     interval_miles: float = 12,
@@ -193,6 +204,7 @@ class NavBridge:
         encoded_polyline: str,
         categories: list[str],
         total_miles: float,
+        parks_radius_miles: float = 25.0,
     ) -> dict[str, list[dict]]:
         """Sample the polyline every 12 miles and search for POIs per category.
 
@@ -229,10 +241,16 @@ class NavBridge:
         result: dict[str, list[dict]] = {cat: [] for cat in categories}
         seen: dict[str, set] = {cat: set() for cat in categories}
 
+        # Parks/historic use a larger radius based on user preference (capped at
+        # Google's 50 000 m maximum).  All other categories stay at ~1.5 miles.
+        _PARKS_CATS = {"parks", "historic"}
+        parks_radius_m = min(int(parks_radius_miles * 1609.34), 50_000)
+
         for idx, (slat, slng) in enumerate(samples):
             marker = mile_markers[idx] if idx < len(mile_markers) else round(total_miles, 1)
             for cat in categories:
-                pois = self.search_places_near(slat, slng, cat)
+                radius_m = parks_radius_m if cat in _PARKS_CATS else 2400
+                pois = self.search_places_near(slat, slng, cat, radius_m=radius_m)
                 for poi in pois:
                     pid = poi.get("place_id") or poi.get("name", "")
                     if pid and pid not in seen[cat]:
@@ -280,6 +298,58 @@ class NavBridge:
                 }
             )
         return parks
+
+    def search_nps_along_route(
+        self,
+        encoded_polyline: str,
+        states: list[str],
+        max_distance_miles: float = 25.0,
+    ) -> list[dict]:
+        """Return NPS parks/sites within ``max_distance_miles`` of the route.
+
+        Fetches all parks for the traversed states, then filters by minimum
+        distance from each park's coordinates to any point on the route polyline.
+        Each result includes ``distance_from_route`` and ``route_mile_marker``.
+        """
+        parks = self.search_nps_by_states(states)
+        if not parks:
+            return []
+
+        route_points = decode_polyline(encoded_polyline)
+        if not route_points:
+            return parks  # can't filter — return all
+
+        filtered = []
+        for park in parks:
+            try:
+                plat = float(park.get("latitude") or 0)
+                plng = float(park.get("longitude") or 0)
+            except (ValueError, TypeError):
+                continue
+            if plat == 0 and plng == 0:
+                continue
+
+            dist = min_distance_to_route(plat, plng, route_points)
+            if dist <= max_distance_miles:
+                # Find the closest route point and its mile marker
+                closest_idx = min(
+                    range(len(route_points)),
+                    key=lambda i: haversine(plat, plng, route_points[i][0], route_points[i][1]),
+                )
+                # Approximate mile marker for that route point
+                cumulative = 0.0
+                for i in range(1, closest_idx + 1):
+                    cumulative += haversine(
+                        route_points[i - 1][0], route_points[i - 1][1],
+                        route_points[i][0], route_points[i][1],
+                    )
+                park["distance_from_route"] = round(dist, 1)
+                park["route_mile_marker"] = round(cumulative, 1)
+                filtered.append(park)
+
+        # Sort by mile marker so they appear in route order
+        filtered.sort(key=lambda p: p.get("route_mile_marker", 0))
+        return filtered
 
     # ── Air Quality ──────────────────────────────────────────────────────────
 

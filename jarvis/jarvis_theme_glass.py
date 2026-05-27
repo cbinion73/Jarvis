@@ -5425,6 +5425,62 @@ body::after {{
     letter-spacing: 0.5px;
     margin-bottom: 6px;
 }}
+.nav-radius-row {{
+    padding: 8px 12px 4px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    margin-top: 4px;
+}}
+.nav-radius-slider {{
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(to right, #4CAF50 0%, #4CAF50 25%, rgba(255,255,255,0.15) 25%);
+    outline: none;
+    cursor: pointer;
+}}
+.nav-radius-slider::-webkit-slider-thumb {{
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #4CAF50;
+    border: 2px solid #fff;
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(76,175,80,0.6);
+}}
+.nav-radius-slider::-moz-range-thumb {{
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #4CAF50;
+    border: 2px solid #fff;
+    cursor: pointer;
+}}
+/* NPS park card in sidebar */
+.nav-nps-card {{
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    cursor: pointer;
+    transition: background 0.15s;
+}}
+.nav-nps-card:hover {{
+    background: rgba(255,255,255,0.04);
+}}
+.nav-nps-badge {{
+    font-size: 10px;
+    background: rgba(45,106,79,0.4);
+    color: #81C784;
+    border: 1px solid rgba(45,106,79,0.6);
+    border-radius: 4px;
+    padding: 1px 5px;
+    white-space: nowrap;
+}}
 /* ═══════════════════════════════════════════════════════════════
    END NAVIGATION CSS
 ═══════════════════════════════════════════════════════════════ */
@@ -7476,6 +7532,21 @@ body::after {{
           <button class="nav-poi-toggle active" data-cat="historic" onclick="navTogglePOI('historic')">&#127963; Historic</button>
           <button class="nav-poi-toggle active" data-cat="family" onclick="navTogglePOI('family')">&#11088; Family</button>
           <button class="nav-poi-toggle" data-cat="gas" onclick="navTogglePOI('gas')">&#9981; Gas</button>
+        </div>
+
+        <!-- Parks & Historic distance slider -->
+        <div class="nav-radius-row" id="nav-radius-row">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="font-size:11px; opacity:0.6; text-transform:uppercase; letter-spacing:0.5px;">&#127794; Parks &amp; Historic — search radius</span>
+            <span id="nav-parks-radius-label" style="font-size:13px; font-weight:700; color:#4CAF50;">25 mi</span>
+          </div>
+          <input type="range" id="nav-parks-radius" class="nav-radius-slider"
+            min="5" max="100" step="5" value="25"
+            oninput="navUpdateParksRadius(this.value)"
+            onchange="if(_navRouteData) loadNavPOIs(_navRouteData)">
+          <div style="display:flex; justify-content:space-between; font-size:10px; opacity:0.4; margin-top:2px;">
+            <span>5 mi</span><span>25 mi</span><span>50 mi</span><span>100 mi</span>
+          </div>
         </div>
 
         <div class="nav-summary-bar" id="nav-summary-bar" style="display:none">
@@ -17747,6 +17818,19 @@ var _navRouteData = null;
 var _navAlertTimer = null;
 var _navLastAnnouncedPOI = null;
 var _navGoogleMapsLoaded = false;
+var _navParksRadius = 25;
+
+function navUpdateParksRadius(val) {{
+    _navParksRadius = parseInt(val, 10);
+    var lbl = document.getElementById('nav-parks-radius-label');
+    if (lbl) lbl.textContent = _navParksRadius + ' mi';
+    // Update slider gradient fill
+    var slider = document.getElementById('nav-parks-radius');
+    if (slider) {{
+        var pct = ((_navParksRadius - 5) / 95 * 100).toFixed(1);
+        slider.style.background = 'linear-gradient(to right, #4CAF50 0%, #4CAF50 ' + pct + '%, rgba(255,255,255,0.15) ' + pct + '%)';
+    }}
+}}
 
 function initNavView() {{
     if (_navMap) return;
@@ -17901,7 +17985,8 @@ function loadNavPOIs(data) {{
             encoded_polyline: polyline,
             categories: cats,
             total_miles: totalMiles,
-            geocoded_waypoints: waypoints
+            geocoded_waypoints: waypoints,
+            parks_radius_miles: _navParksRadius
         }})
     }}).then(function(r) {{ return r.json(); }}).then(function(d) {{
         renderNavPOIs(d.pois || {{}}, d.nps_parks || []);
@@ -17944,26 +18029,90 @@ function renderNavPOIs(pois, npsParks) {{
         }});
     }});
 
+    // Add NPS parks as enriched POIs with map markers
     npsParks.forEach(function(park) {{
-        allPOIs.push({{name: park.fullName, category: 'parks', lat: parseFloat(park.latitude || 0), lng: parseFloat(park.longitude || 0)}});
+        var plat = parseFloat(park.latitude || 0);
+        var plng = parseFloat(park.longitude || 0);
+        var npsPoi = {{
+            name: park.fullName,
+            category: 'parks',
+            lat: plat,
+            lng: plng,
+            route_mile_marker: park.route_mile_marker || null,
+            distance_from_route: park.distance_from_route || null,
+            description: park.description || '',
+            url: park.url || '',
+            is_nps: true,
+            states: park.states || ''
+        }};
+        allPOIs.push(npsPoi);
+        if (!_navMap || !plat || !plng) return;
+        var marker = new google.maps.Marker({{
+            position: {{lat: plat, lng: plng}},
+            map: _navMap,
+            title: park.fullName,
+            icon: {{
+                path: google.maps.SymbolPath.CIRCLE,
+                fillColor: '#2D6A4F',
+                fillOpacity: 1.0,
+                strokeColor: '#81C784',
+                strokeWeight: 2,
+                scale: 12
+            }}
+        }});
+        var infoContent = '<div style="color:#000; max-width:260px">'
+            + '<strong>' + park.fullName + '</strong>'
+            + (park.distance_from_route ? '<br><em>' + park.distance_from_route + ' mi from route</em>' : '')
+            + (park.description ? '<br><span style="font-size:11px">' + park.description + '</span>' : '')
+            + (park.url ? '<br><a href="' + park.url + '" target="_blank">NPS Page &#8599;</a>' : '')
+            + '</div>';
+        var infoWindow = new google.maps.InfoWindow({{content: infoContent}});
+        marker.addListener('click', function() {{ infoWindow.open(_navMap, marker); }});
+        _navMarkers.push(marker);
     }});
 
     _navPOIs = allPOIs;
 
-    var html = '';
+    // ── Sidebar list — NPS section first, then regular POIs ──
+    var npsHtml = '';
+    var regularHtml = '';
     var sorted = allPOIs.slice().sort(function(a,b) {{ return (a.route_mile_marker||0) - (b.route_mile_marker||0); }});
+
     sorted.forEach(function(poi) {{
-        var e = emojis[poi.category] || '📍';
-        html += '<div class="nav-poi-card">'
-            + '<div style="font-size:20px">' + e + '</div>'
-            + '<div style="flex:1">'
-            + '<div style="font-weight:500">' + poi.name + '</div>'
-            + (poi.address ? '<div style="font-size:11px;opacity:0.6">' + poi.address + '</div>' : '')
-            + '</div>'
-            + (poi.route_mile_marker ? '<div class="nav-poi-distance-chip">mi ' + poi.route_mile_marker + '</div>' : '')
-            + '</div>';
+        if (poi.is_nps) {{
+            npsHtml += '<div class="nav-nps-card" onclick="if(poi.url)window.open(\'' + (poi.url||'') + '\',\'_blank\')">'
+                + '<div style="font-size:22px">&#127794;</div>'
+                + '<div style="flex:1">'
+                + '<div style="font-weight:600; font-size:13px">' + poi.name + '</div>'
+                + (poi.description ? '<div style="font-size:11px;opacity:0.6;margin-top:2px;line-height:1.3">' + poi.description.substring(0,120) + '&hellip;</div>' : '')
+                + '<div style="display:flex; gap:6px; margin-top:4px; flex-wrap:wrap;">'
+                + (poi.route_mile_marker ? '<span class="nav-nps-badge">mi ' + poi.route_mile_marker + '</span>' : '')
+                + (poi.distance_from_route ? '<span class="nav-nps-badge">&#8599; ' + poi.distance_from_route + ' mi off route</span>' : '')
+                + (poi.states ? '<span class="nav-nps-badge">' + poi.states + '</span>' : '')
+                + '</div>'
+                + '</div>'
+                + '</div>';
+        }} else {{
+            var e = emojis[poi.category] || '&#128205;';
+            regularHtml += '<div class="nav-poi-card">'
+                + '<div style="font-size:20px">' + e + '</div>'
+                + '<div style="flex:1">'
+                + '<div style="font-weight:500">' + poi.name + '</div>'
+                + (poi.address ? '<div style="font-size:11px;opacity:0.6">' + poi.address + '</div>' : '')
+                + '</div>'
+                + (poi.route_mile_marker ? '<div class="nav-poi-distance-chip">mi ' + poi.route_mile_marker + '</div>' : '')
+                + '</div>';
+        }}
     }});
-    document.getElementById('nav-pois-list').innerHTML = html || '<div style="padding:16px;opacity:0.5">No POIs found. Try enabling more categories.</div>';
+
+    var html = '';
+    if (npsHtml) {{
+        html += '<div class="nav-section-title" style="margin-top:12px;">&#127794; National Parks &amp; Historic Sites</div>' + npsHtml;
+    }}
+    if (regularHtml) {{
+        html += '<div class="nav-section-title" style="margin-top:12px;">Nearby Stops</div>' + regularHtml;
+    }}
+    document.getElementById('nav-pois-list').innerHTML = html || '<div style="padding:16px;opacity:0.5">No POIs found. Try enabling more categories or increasing the parks radius.</div>';
     document.getElementById('nav-pois-section').style.display = 'block';
 }}
 
