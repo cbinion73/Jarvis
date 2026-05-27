@@ -5993,6 +5993,19 @@ body::after {{
       <button class="alert-banner-dismiss" onclick="dismissAlertBanner()">✕</button>
     </div>
 
+    <!-- User Identity Bar (shown when non-Chris user is active) -->
+    <div id="overview-user-bar" style="display:none;margin-bottom:12px;padding:8px 14px;background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.18);border-radius:10px;align-items:center;gap:10px;font-size:12px;">
+      <span id="overview-user-avatar" style="font-size:20px;line-height:1;"></span>
+      <div style="flex:1;min-width:0;">
+        <div id="overview-user-name" style="font-weight:600;color:var(--text-1);"></div>
+        <div id="overview-user-role" style="font-size:10px;color:var(--text-3);"></div>
+      </div>
+      <button onclick="switchUser()" style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:var(--text-2);padding:4px 12px;font-size:11px;cursor:pointer;white-space:nowrap;">Switch User</button>
+    </div>
+
+    <!-- Family Presence Bar (who's online right now) -->
+    <div id="overview-family-bar" style="display:none;margin-bottom:12px;"></div>
+
     <!-- Stats Strip -->
     <div class="stats-strip">
       <div class="card stat-tile accent">
@@ -8668,6 +8681,20 @@ function applyUserProfile(profile) {{
 }}
 
 // Returns a Set of card IDs that the current user's profile has hidden
+/* ── User identity helpers ──────────────────────────────────────── */
+function getCurrentUserId() {{
+  return window.localStorage.getItem('jarvis-claimed-user-v1') || 'chris';
+}}
+function isChildUser() {{
+  const uid = getCurrentUserId();
+  return uid !== 'chris' && uid !== 'rebekah';
+}}
+function switchUser() {{
+  window.localStorage.removeItem('jarvis-claimed-user-v1');
+  window.sessionStorage.removeItem('jarvis-wau-skipped');
+  wauShow();
+}}
+
 function _getHiddenCards() {{
   const dash = (_userProfile && _userProfile.dashboard) || {{}};
   const hidden = new Set();
@@ -8676,6 +8703,11 @@ function _getHiddenCards() {{
   if (dash.show_dining     === false) hidden.add('dining');
   if (dash.show_publishing === false) hidden.add('publishing');
   if (dash.show_finance    === false) hidden.add('finance');
+  // Child-safe mode: non-adult users see only family/school-relevant cards
+  if (isChildUser()) {{
+    ['briefing','approvals','health','email','agents','catalyst',
+     'chronicle','jarvis_costs','maps_usage'].forEach(c => hidden.add(c));
+  }}
   return hidden;
 }}
 
@@ -8845,7 +8877,12 @@ async function wauSelect(userId) {{
       }}
       /* Store claimed user so we never prompt again on this browser */
       window.localStorage.setItem('jarvis-claimed-user-v1', userId);
-      setTimeout(wauHide, 1200);
+      setTimeout(() => {{
+        wauHide();
+        // Re-render overview to apply user-specific card filtering
+        if (typeof loadLayoutState === 'function') loadLayoutState();
+        if (typeof loadFamilyPresence === 'function') loadFamilyPresence();
+      }}, 1200);
     }} else {{
       if (status) {{ status.style.color = '#f87171'; status.textContent = d.detail || 'Something went wrong — try again.'; }}
       if (grid) grid.querySelectorAll('.wau-card').forEach(c => {{
@@ -10571,7 +10608,51 @@ async function loadLayoutState() {{
     applyAlertBanner(_layoutState.alerts || []);
     applyLayout(_layoutState.layout || {{}}, _layoutState.alerts || [], true);
     _fireLayoutLoaders(_layoutState.layout || {{}});
+    loadFamilyPresence();   // refresh who's online in the presence bar
   }} catch(e) {{ console.error('loadLayoutState failed', e); }}
+}}
+
+/* ── Family presence bar ────────────────────────────────────────── */
+async function loadFamilyPresence() {{
+  const bar = document.getElementById('overview-family-bar');
+  if (!bar) return;
+  try {{
+    const r = await fetch('/api/connected-devices');
+    const data = await r.json();
+    const devices = data.devices || [];
+    const now = Date.now();
+    const THRESHOLD = 10 * 60 * 1000; // 10 minutes = "online"
+
+    const FAMILY = {{
+      chris:   {{name:'Chris',   avatar:'👨‍💼'}},
+      rebekah: {{name:'Rebekah', avatar:'👩'}},
+      caleb:   {{name:'Caleb',   avatar:'👦'}},
+      anna:    {{name:'Anna',    avatar:'👧'}},
+    }};
+
+    const onlineUsers = new Set();
+    devices.forEach(d => {{
+      if (!d.owner_user_id || !d.last_seen_at) return;
+      const age = now - new Date(d.last_seen_at).getTime();
+      if (age < THRESHOLD) onlineUsers.add(d.owner_user_id);
+    }});
+
+    if (onlineUsers.size === 0) {{ bar.style.display = 'none'; return; }}
+
+    const chips = [...onlineUsers].map(uid => {{
+      const info = FAMILY[uid] || {{name: uid, avatar: '👤'}};
+      return `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:rgba(0,212,170,0.1);border:1px solid rgba(0,212,170,0.2);border-radius:20px;font-size:11px;color:var(--text-1);">
+        <span style="width:6px;height:6px;border-radius:50%;background:#00d4aa;flex-shrink:0;"></span>
+        ${{info.avatar}} ${{escHtml(info.name)}}
+      </span>`;
+    }}).join('');
+
+    bar.innerHTML = `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:10px;color:var(--text-3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Online Now</span>
+      ${{chips}}
+    </div>`;
+    bar.style.display = 'block';
+  }} catch(e) {{ bar.style.display = 'none'; }}
 }}
 
 function applyModeBar(state) {{
@@ -10601,6 +10682,23 @@ function applyModeBar(state) {{
   }}
   // Refresh overview greeting in case profile just loaded
   applyUserProfile(_userProfile);
+
+  // Show/hide user identity bar for non-Chris users
+  const _uid = getCurrentUserId();
+  const _userBar = document.getElementById('overview-user-bar');
+  if (_userBar) {{
+    if (_uid !== 'chris') {{
+      const _nameMap  = {{chris:'Chris', rebekah:'Rebekah', caleb:'Caleb', anna:'Anna'}};
+      const _emojiMap = {{chris:'👨‍💼', rebekah:'👩', caleb:'👦', anna:'👧'}};
+      const _roleMap  = {{caleb:'Child account · private data hidden', anna:'Child account · private data hidden', rebekah:'Family member'}};
+      document.getElementById('overview-user-avatar').textContent = _emojiMap[_uid] || '👤';
+      document.getElementById('overview-user-name').textContent   = _nameMap[_uid]  || _uid;
+      document.getElementById('overview-user-role').textContent   = _roleMap[_uid]  || '';
+      _userBar.style.display = 'flex';
+    }} else {{
+      _userBar.style.display = 'none';
+    }}
+  }}
 }}
 
 function applyLayout(layout, alerts, animate) {{
@@ -16663,33 +16761,56 @@ async function settingsBuildLocation() {{
 
 /* ── Family ────────────────────────────────────────────────── */
 async function settingsBuildFamily() {{
-  let identity = {{}};
-  try {{
-    const r = await fetch('/api/identity');
-    identity = await r.json();
-  }} catch(e) {{ identity = {{error: true}}; }}
+  const [identity, devData] = await Promise.all([
+    fetch('/api/identity').then(r => r.json()).catch(() => ({{error: true}})),
+    fetch('/api/connected-devices').then(r => r.json()).catch(() => ({{}})),
+  ]);
 
-  const members = identity.family_members || identity.users || [];
-  const rows = members.map(m => `
-    <div class="sset-row">
+  const members  = identity.members || identity.family_members || identity.users || [];
+  const allDevices = devData.devices || [];
+  const now = Date.now();
+  const ONLINE_MS = 10 * 60 * 1000; // 10 minutes
+
+  const EMOJI = {{chris:'👨‍💼', rebekah:'👩', caleb:'👦', anna:'👧'}};
+
+  const rows = members.map(m => {{
+    const uid = m.user_id || m.id || '';
+    const memberDevs = allDevices.filter(d => d.owner_user_id === uid);
+    const onlineDevs = memberDevs.filter(d => {{
+      if (!d.last_seen_at) return false;
+      return (now - new Date(d.last_seen_at).getTime()) < ONLINE_MS;
+    }});
+    const isOnline  = onlineDevs.length > 0;
+    const hasDev    = memberDevs.length > 0;
+    const activeDevice = onlineDevs[0] || memberDevs[0];
+    const devLabel  = activeDevice ? (activeDevice.label || activeDevice.device_name || '') : '';
+    const devSeen   = activeDevice && activeDevice.last_seen_at ? activeDevice.last_seen_at.slice(0,10) : '';
+
+    const badgeClass = isOnline ? 'sset-badge-green' : (hasDev ? 'sset-badge-grey' : 'sset-badge-grey');
+    const badgeLabel = isOnline ? '● Online' : (hasDev ? 'Offline' : 'No device');
+
+    return `<div class="sset-row" style="padding:10px 0;">
       <div class="sset-label">
-        <strong style="color:var(--text-1);">${{escHtml(m.display_name || m.name || m.id)}}</strong>
-        ${{m.tone ? `<span style="color:var(--text-3);font-size:11px;margin-left:6px;">${{escHtml(m.tone)}}</span>` : ''}}
-        ${{m.voice ? `<span style="color:var(--text-3);font-size:11px;margin-left:6px;">Voice: ${{escHtml(m.voice)}}</span>` : ''}}
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:16px;">${{EMOJI[uid] || '👤'}}</span>
+          <strong style="color:var(--text-1);">${{escHtml(m.display_name || m.name || uid)}}</strong>
+          ${{m.role ? `<span style="font-size:10px;color:var(--text-3);background:var(--surface-2);padding:1px 6px;border-radius:8px;">${{escHtml(m.role)}}</span>` : ''}}
+        </div>
+        ${{devLabel ? `<div style="color:var(--text-3);font-size:10px;margin-top:2px;margin-left:22px;">${{escHtml(devLabel)}}${{devSeen ? ' · ' + devSeen : ''}}</div>` : ''}}
+        ${{!hasDev ? `<div style="color:var(--text-3);font-size:10px;margin-top:2px;margin-left:22px;">No device claimed yet</div>` : ''}}
       </div>
-      <span class="sset-badge sset-badge-grey">${{escHtml(m.id || '?')}}</span>
-    </div>
-  `).join('') || `
-    <div class="sset-row"><div class="sset-label" style="color:var(--text-2);">chris</div><span class="sset-badge sset-badge-green">Active</span></div>
-    <div class="sset-row"><div class="sset-label" style="color:var(--text-2);">rebekah</div><span class="sset-badge sset-badge-grey">Roster</span></div>
-    <div class="sset-row"><div class="sset-label" style="color:var(--text-2);">caleb</div><span class="sset-badge sset-badge-grey">Roster</span></div>
-    <div class="sset-row"><div class="sset-label" style="color:var(--text-2);">anna</div><span class="sset-badge sset-badge-grey">Roster</span></div>
-  `;
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
+        <span class="sset-badge ${{badgeClass}}">${{badgeLabel}}</span>
+        ${{m.permissions ? `<span style="font-size:9px;color:var(--text-3);">${{escHtml(m.permissions)}}</span>` : ''}}
+      </div>
+    </div>`;
+  }}).join('') || `<div class="sset-row"><span style="color:var(--text-3);font-size:12px;">No family members configured.</span></div>`;
 
   return `
     <p class="sset-section-hdr">Family Roster</p>
     <div class="sset-card">${{rows}}</div>
-    ${{identity.error ? '<p style="font-size:11px;color:#f87171;">Could not load identity data.</p>' : ''}}
+    <p style="font-size:11px;color:var(--text-3);margin-top:8px;">🟢 Online = active in last 10 min &nbsp;·&nbsp; Device claimed = device registered to this person</p>
+    ${{identity.error ? '<p style="font-size:11px;color:#f87171;margin-top:8px;">Could not load identity data.</p>' : ''}}
   `;
 }}
 
@@ -17120,7 +17241,11 @@ async function settingsClaimDevice(ownerUserId) {{
     if (msg) msg.textContent = d.ok
       ? '✓ Claimed as ' + name
       : (d.detail || 'Error claiming device.');
-    if (d.ok) setTimeout(() => settingsLoadSection('devices'), 800);
+    if (d.ok) {{
+      /* Persist claimed identity so WAU overlay never shows again on this browser */
+      window.localStorage.setItem('jarvis-claimed-user-v1', ownerUserId);
+      setTimeout(() => settingsLoadSection('devices'), 800);
+    }}
   }} catch(e) {{
     if (msg) msg.textContent = 'Error: ' + e.message;
   }}
