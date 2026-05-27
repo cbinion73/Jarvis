@@ -504,6 +504,39 @@ body::after {{
   gap: 0;
 }}
 
+/* Hamburger button — hidden on desktop, visible on mobile */
+.nav-hamburger {{
+  display: none;
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 400;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(8,16,32,0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-1);
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+}}
+/* Drawer backdrop overlay */
+#nav-drawer-overlay {{
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}}
+
 .nav-wordmark {{
   font-family: var(--font-mono);
   font-size: 12px;
@@ -1191,6 +1224,52 @@ body::after {{
   gap: 16px;
   margin-bottom: 20px;
   min-height: 200px;
+}}
+/* ── Mobile nav drawer ── */
+@media (max-width: 768px) {{
+  .nav-hamburger {{ display: flex; }}
+
+  .nav-bar {{
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+    z-index: 300;
+    width: 220px;
+    box-shadow: none;
+  }}
+  .nav-bar.mobile-open {{
+    transform: translateX(0);
+    box-shadow: 4px 0 40px rgba(0,0,0,0.70);
+  }}
+  #nav-drawer-overlay.active {{ display: block; }}
+
+  .domain-strip {{ left: 0 !important; }}
+
+  .main {{
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    padding-top: 60px !important;   /* clear the hamburger button */
+  }}
+
+  /* Mode pills: scroll horizontally, don't wrap */
+  .overview-mode-bar {{
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }}
+  .overview-mode-bar::-webkit-scrollbar {{ display: none; }}
+  .mode-pill {{
+    flex-shrink: 0;
+    font-size: 10px;
+    padding: 6px 12px;
+    white-space: nowrap;
+  }}
+
+  /* Stats strip: 2-col on mobile */
+  .stats-strip {{ grid-template-columns: repeat(2,1fr) !important; }}
+
+  #nav-close-btn {{ display: block !important; }}
 }}
 @media(max-width: 768px) {{
   .overview-hero-zone {{ grid-template-columns: 1fr; }}
@@ -5825,8 +5904,16 @@ body::after {{
 <!-- ═══════════════════════════════════════════════════════════════════
      NAV BAR
 ══════════════════════════════════════════════════════════════════════ -->
+<!-- Mobile hamburger button -->
+<button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">☰</button>
+<!-- Mobile nav drawer backdrop -->
+<div id="nav-drawer-overlay" onclick="closeMobileNav()"></div>
+
 <nav class="nav-bar">
-  <span class="nav-wordmark">J·A·R·V·I·S</span>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 12px 16px;">
+    <span class="nav-wordmark" style="padding:0;border:none;">J·A·R·V·I·S</span>
+    <button onclick="closeMobileNav()" id="nav-close-btn" style="display:none;background:none;border:none;color:var(--text-2);font-size:18px;cursor:pointer;padding:4px;">✕</button>
+  </div>
 
   <div class="nav-tabs" id="nav-tabs">
     <button class="nav-tab" data-view="chat" onclick="switchView('chat')">
@@ -8695,6 +8782,32 @@ function switchUser() {{
   wauShow();
 }}
 
+function toggleMobileNav() {{
+  const nav = document.querySelector('.nav-bar');
+  const overlay = document.getElementById('nav-drawer-overlay');
+  const ham = document.getElementById('nav-hamburger');
+  if (!nav) return;
+  const isOpen = nav.classList.contains('mobile-open');
+  if (isOpen) {{
+    nav.classList.remove('mobile-open');
+    if (overlay) overlay.classList.remove('active');
+    if (ham) ham.textContent = '☰';
+  }} else {{
+    nav.classList.add('mobile-open');
+    if (overlay) overlay.classList.add('active');
+    if (ham) ham.textContent = '✕';
+  }}
+}}
+
+function closeMobileNav() {{
+  const nav = document.querySelector('.nav-bar');
+  const overlay = document.getElementById('nav-drawer-overlay');
+  const ham = document.getElementById('nav-hamburger');
+  if (nav) nav.classList.remove('mobile-open');
+  if (overlay) overlay.classList.remove('active');
+  if (ham) ham.textContent = '☰';
+}}
+
 function _getHiddenCards() {{
   const dash = (_userProfile && _userProfile.dashboard) || {{}};
   const hidden = new Set();
@@ -8980,6 +9093,7 @@ async function init() {{
    VIEW SWITCHING — CHROMATIC SHIFT LIVES HERE
 ═══════════════════════════════════════════════════════════════ */
 function switchView(name) {{
+  closeMobileNav();  // close drawer on mobile when navigating
   document.querySelectorAll('.view').forEach(v => {{
     v.style.display = 'none';
     v.classList.remove('active');
