@@ -7618,17 +7618,26 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             logger.warning("nav/nps failed: %s", exc)
             return _json({"error": str(exc)})
 
+    # In-memory cache: address → {uris, state}  (never stores video bytes)
+    _aerial_cache: dict = {}
+
     @app.get("/api/nav/aerial")
     async def nav_aerial(address: str = ""):
         """Proxy Aerial View API with polling for PROCESSING state.
 
-        The Aerial View API renders videos asynchronously.  The first call for
-        an address returns {"state":"PROCESSING"}.  We poll up to 8 times
-        (2 s apart, 16 s max) until the video is ready.
+        Results are cached in memory for the lifetime of the server so
+        repeated trips to the same destination skip the polling wait.
+        No video bytes are stored — only the signed URL strings.
         """
         key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
         if not key or not address:
             return _json({"error": "missing key or address"})
+
+        # Return cached result if available
+        cache_key = address.lower().strip()
+        if cache_key in _aerial_cache:
+            return _json(_aerial_cache[cache_key])
+
         try:
             import httpx
             import asyncio as _aio
@@ -7638,15 +7647,16 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                     r = await client.get(url, params={"address": address, "key": key})
                     data = r.json()
                     state = data.get("state", "")
-                    # Ready states: has videoUri or uris dict with MP4 keys
+                    # Ready: has videoUri or uris dict with MP4 keys
                     if data.get("videoUri") or (data.get("uris") and data["uris"].get("MP4_HIGH")):
+                        _aerial_cache[cache_key] = data  # cache for this session
                         return _json(data)
-                    # No coverage / permanent error
+                    # No coverage / permanent error — cache the miss too
                     if state not in ("PROCESSING", ""):
-                        return _json({"error": f"aerial not available: {state}", "state": state})
+                        _aerial_cache[cache_key] = {"error": f"aerial not available: {state}", "state": state}
+                        return _json(_aerial_cache[cache_key])
                     if attempt < 7:
                         await _aio.sleep(2)
-                # Timed out waiting for render
                 return _json({"error": "aerial processing timeout", "state": "PROCESSING"})
         except Exception as e:
             return _json({"error": str(e)})
