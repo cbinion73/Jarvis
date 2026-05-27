@@ -5524,6 +5524,10 @@ body::after {{
       <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
       Overview
     </button>
+    <button class="nav-tab" data-view="dining" onclick="switchView('dining')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 2v5a3 3 0 0 0 6 0V2M8 9v5M6 14h4"/></svg>
+      Dining
+    </button>
     <button class="nav-tab" data-view="forge" onclick="switchView('forge')">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v12M4 6l4-4 4 4M3 14h10"/></svg>
       Forge
@@ -5711,6 +5715,82 @@ body::after {{
     </div>
 
   </div>
+
+  <!-- ── DINING ─────────────────────────────────────────────────── -->
+  <div id="view-dining" class="view">
+    <div class="view-header">
+      <div class="view-title">DINING<div class="view-title-line"></div></div>
+      <div class="view-subtitle">Sam's picks · Nearby restaurants · Favorites</div>
+    </div>
+
+    <!-- Filter bar -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;align-items:center;">
+      <select id="dining-cuisine-filter" onchange="reloadDiningView()"
+        style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-hi);color:var(--text-1);font-size:12px;">
+        <option value="any">All Cuisines</option>
+        <option value="american">American</option>
+        <option value="mexican">Mexican</option>
+        <option value="italian">Italian</option>
+        <option value="chinese">Chinese</option>
+        <option value="japanese">Japanese / Sushi</option>
+        <option value="barbecue">BBQ</option>
+        <option value="breakfast">Breakfast</option>
+        <option value="pizza">Pizza</option>
+        <option value="burgers">Burgers</option>
+        <option value="seafood">Seafood</option>
+        <option value="steak">Steakhouse</option>
+        <option value="thai">Thai</option>
+        <option value="indian">Indian</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-2);cursor:pointer;">
+        <input type="checkbox" id="dining-open-now" onchange="reloadDiningView()" style="accent-color:var(--hue);">
+        Open now
+      </label>
+      <select id="dining-radius-filter" onchange="reloadDiningView()"
+        style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-hi);color:var(--text-1);font-size:12px;">
+        <option value="5">Within 5 mi</option>
+        <option value="10" selected>Within 10 mi</option>
+        <option value="20">Within 20 mi</option>
+      </select>
+      <select id="dining-rating-filter" onchange="reloadDiningView()"
+        style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-hi);color:var(--text-1);font-size:12px;">
+        <option value="3.5">3.5★+</option>
+        <option value="4.0" selected>4.0★+</option>
+        <option value="4.5">4.5★+</option>
+      </select>
+      <button class="btn-ghost" style="margin-left:auto;font-size:11px;" onclick="loadDiningFavorites()">❤ Favorites</button>
+    </div>
+
+    <!-- Sam recommendation strip -->
+    <div class="card" style="margin-bottom:18px;" id="dining-sam-strip">
+      <div class="card-inner">
+        <div class="card-header"><span class="card-icon">🦅</span><span class="card-title">SAM'S PICKS RIGHT NOW</span></div>
+        <div id="dining-sam-picks" style="padding:8px 0;">
+          <div class="skel" style="height:10px;width:60%;margin-bottom:6px;"></div>
+          <div class="skel" style="height:10px;width:40%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results grid -->
+    <div id="dining-results" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">
+    </div>
+
+    <!-- Favorites panel (hidden by default) -->
+    <div id="dining-favorites-panel" style="display:none;margin-top:20px;">
+      <div class="card"><div class="card-inner">
+        <div class="card-header"><span class="card-icon">❤</span><span class="card-title">SAVED FAVORITES</span></div>
+        <div id="dining-favorites-list" style="padding:8px 0;"></div>
+      </div></div>
+    </div>
+
+    <!-- Detail sheet (modal) -->
+    <div id="dining-detail-sheet" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center;"
+         onclick="if(event.target===this)closeDiningDetail()">
+      <div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:560px;max-height:80vh;overflow-y:auto;" id="dining-detail-inner">
+      </div>
+    </div>
+  </div><!-- #view-dining -->
 
   <!-- ── FORGE ──────────────────────────────────────────────── -->
   <!-- ── FORGE ─────────────────────────────────────────────────── -->
@@ -8275,6 +8355,7 @@ function loadViewData(name) {{
     case 'news':         loadNews(false); break;
     case 'home':         loadKasaDevices(); break;
     case 'navigate':     initNavView(); break;
+    case 'dining':       loadDiningView(); break;
   }}
 }}
 
@@ -16629,6 +16710,240 @@ async function submitSamOvCheckin(btn) {{
   }}
 }}
 
+/* ═══════════════════════════════════════════════════════════════════
+   DINING VIEW
+   ═══════════════════════════════════════════════════════════════════ */
+
+let _diningLoaded = false;
+
+function _diningStarColor(r) {{
+  if (r >= 4.5) return '#4ade80';
+  if (r >= 4.0) return '#facc15';
+  return '#fb923c';
+}}
+
+function _diningPriceLabel(p) {{
+  const map = {{'$':'Inexpensive','$$':'Moderate','$$$':'Pricey','$$$$':'Upscale'}};
+  return map[p] || '';
+}}
+
+function _diningRestaurantCard(p) {{
+  const starColor = _diningStarColor(p.rating || 0);
+  const openBadge = p.open_now === true
+    ? '<span style="font-size:10px;background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.3);border-radius:6px;padding:2px 7px;">OPEN</span>'
+    : p.open_now === false
+    ? '<span style="font-size:10px;background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.25);border-radius:6px;padding:2px 7px;">CLOSED</span>'
+    : '';
+  const mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(p.name + ' ' + p.address);
+  return `
+    <div class="card" style="cursor:pointer;" onclick="openDiningDetail('${{escHtml(p.place_id)}}','${{escHtml(p.name.replace(/'/g,"&#39;"))}}')">
+      <div class="card-inner" style="padding:16px;">
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:700;color:var(--text-1);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${{escHtml(p.name)}}</div>
+            <div style="font-size:11px;color:var(--text-3);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${{escHtml(p.address)}}</div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              ${{openBadge}}
+              <span style="font-size:11px;color:var(--text-3);">${{p.distance_mi}} mi away</span>
+              ${{p.price ? '<span style="font-size:11px;color:var(--text-3);">' + escHtml(p.price) + ' · ' + escHtml(_diningPriceLabel(p.price)) + '</span>' : ''}}
+            </div>
+          </div>
+          <div style="text-align:center;flex-shrink:0;">
+            <div style="font-size:22px;font-weight:800;color:${{starColor}};">${{p.rating || '—'}}</div>
+            <div style="font-size:10px;color:var(--text-3);">${{(p.review_count||0).toLocaleString()}} reviews</div>
+            <button onclick="event.stopPropagation();toggleDiningFav('${{escHtml(p.place_id)}}','${{escHtml(p.name.replace(/'/g,"&#39;"))}}','${{escHtml(p.address.replace(/'/g,"&#39;"))}}','${{p.rating}}')"
+              style="margin-top:6px;background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-3);"
+              id="fav-btn-${{p.place_id}}" title="Save favorite">♡</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}}
+
+async function loadDiningView() {{
+  if (_diningLoaded) return;
+  _diningLoaded = true;
+  await Promise.all([loadDiningSamPicks(), reloadDiningView()]);
+}}
+
+async function loadDiningSamPicks() {{
+  const el = document.getElementById('dining-sam-picks');
+  if (!el) return;
+  try {{
+    const d = await fetch('/api/dining/recommend?limit=3').then(r => r.json());
+    const picks = d.recommendations || [];
+    if (!picks.length) {{ el.innerHTML = '<span style="color:var(--text-3);font-size:12px;">No picks right now.</span>'; return; }}
+    el.innerHTML = picks.map(p => `
+      <div style="display:inline-flex;align-items:center;gap:8px;background:var(--surface-hi);border:1px solid var(--border);border-radius:10px;padding:8px 14px;margin:4px 8px 4px 0;cursor:pointer;"
+           onclick="openDiningDetail('${{escHtml(p.place_id)}}','${{escHtml(p.name.replace(/'/g,"&#39;"))}}')">
+        <span style="font-weight:600;font-size:13px;color:var(--text-1);">${{escHtml(p.name)}}</span>
+        <span style="font-size:12px;color:var(--hue);">${{p.rating}}★</span>
+        <span style="font-size:11px;color:var(--text-3);">${{p.distance_mi}} mi</span>
+      </div>`).join('');
+  }} catch(e) {{
+    if (el) el.innerHTML = '<span style="color:var(--text-3);font-size:12px;">Could not load Sam picks.</span>';
+  }}
+}}
+
+async function reloadDiningView() {{
+  const el = document.getElementById('dining-results');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:20px;text-align:center;">Loading restaurants…</div>';
+
+  const cuisine    = document.getElementById('dining-cuisine-filter')?.value || 'any';
+  const openNow    = document.getElementById('dining-open-now')?.checked || false;
+  const radius     = document.getElementById('dining-radius-filter')?.value || '10';
+  const minRating  = document.getElementById('dining-rating-filter')?.value || '4.0';
+
+  try {{
+    const params = new URLSearchParams({{cuisine, open_now: openNow, radius_miles: radius, min_rating: minRating, limit: 20}});
+    const d = await fetch('/api/dining/nearby?' + params).then(r => r.json());
+    const spots = d.restaurants || [];
+    if (!spots.length) {{
+      el.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:20px;text-align:center;">No restaurants found. Try relaxing the filters.</div>';
+      return;
+    }}
+    el.innerHTML = spots.map(p => _diningRestaurantCard(p)).join('');
+    // Mark existing favorites
+    loadDiningFavBtns();
+  }} catch(e) {{
+    el.innerHTML = '<div style="color:var(--red);font-size:13px;padding:20px;">Failed to load restaurants: ' + escHtml(e.message) + '</div>';
+  }}
+}}
+
+async function loadDiningFavBtns() {{
+  try {{
+    const d = await fetch('/api/dining/favorites').then(r => r.json());
+    const ids = new Set((d.favorites || []).map(f => f.place_id));
+    ids.forEach(id => {{
+      const btn = document.getElementById('fav-btn-' + id);
+      if (btn) {{ btn.textContent = '❤'; btn.style.color = '#f87171'; }}
+    }});
+  }} catch(e) {{}}
+}}
+
+async function toggleDiningFav(placeId, name, address, rating) {{
+  try {{
+    const d = await fetch('/api/dining/favorite', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{place_id: placeId, name, address, rating: parseFloat(rating)}})
+    }}).then(r => r.json());
+    const btn = document.getElementById('fav-btn-' + placeId);
+    if (btn) {{
+      btn.textContent = d.action === 'added' ? '❤' : '♡';
+      btn.style.color = d.action === 'added' ? '#f87171' : 'var(--text-3)';
+    }}
+    showToast(d.action === 'added' ? 'Saved to favorites' : 'Removed from favorites');
+  }} catch(e) {{ showToast('Could not update favorites'); }}
+}}
+
+async function loadDiningFavorites() {{
+  const panel = document.getElementById('dining-favorites-panel');
+  const list  = document.getElementById('dining-favorites-list');
+  if (!panel || !list) return;
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  if (panel.style.display === 'none') return;
+  try {{
+    const d = await fetch('/api/dining/favorites').then(r => r.json());
+    const favs = d.favorites || [];
+    if (!favs.length) {{ list.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:8px;">No favorites saved yet.</div>'; return; }}
+    list.innerHTML = favs.map(f => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;color:var(--text-1);">${{escHtml(f.name)}}</div>
+          <div style="font-size:11px;color:var(--text-3);">${{escHtml(f.address)}}</div>
+        </div>
+        <span style="color:var(--hue);font-size:13px;">${{f.rating || ''}}★</span>
+        <button onclick="toggleDiningFav('${{escHtml(f.place_id)}}','${{escHtml(f.name.replace(/'/g,"&#39;"))}}','${{escHtml(f.address.replace(/'/g,"&#39;"))}}','${{f.rating}}')"
+          style="background:none;border:none;cursor:pointer;color:#f87171;font-size:16px;">❤</button>
+      </div>`).join('');
+  }} catch(e) {{ list.innerHTML = '<div style="color:var(--red);font-size:13px;">Failed to load favorites.</div>'; }}
+}}
+
+async function openDiningDetail(placeId, name) {{
+  const sheet = document.getElementById('dining-detail-sheet');
+  const inner = document.getElementById('dining-detail-inner');
+  if (!sheet || !inner) return;
+  inner.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-3);">Loading ${{escHtml(name)}}…</div>`;
+  sheet.style.display = 'flex';
+  cardInteract('dining', 'expand');
+  try {{
+    const d = await fetch('/api/dining/details/' + encodeURIComponent(placeId)).then(r => r.json());
+    const hours = (d.opening_hours?.weekday_text || []).map(h => `<div style="font-size:12px;color:var(--text-2);">${{escHtml(h)}}</div>`).join('') || '<div style="font-size:12px;color:var(--text-3);">Hours unavailable</div>';
+    const mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((d.name || name) + ' ' + (d.formatted_address || ''));
+    inner.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+        <div>
+          <div style="font-size:20px;font-weight:800;color:var(--text-1);">${{escHtml(d.name || name)}}</div>
+          <div style="font-size:12px;color:var(--text-3);margin-top:3px;">${{escHtml(d.formatted_address || '')}}</div>
+        </div>
+        <button onclick="closeDiningDetail()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-3);">✕</button>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+        ${{d.rating ? '<span style="font-size:18px;font-weight:700;color:' + _diningStarColor(d.rating) + ';">' + d.rating + '★</span>' : ''}}
+        ${{d.user_ratings_total ? '<span style="font-size:12px;color:var(--text-3);">' + d.user_ratings_total.toLocaleString() + ' reviews</span>' : ''}}
+        ${{d.price_level ? '<span style="font-size:12px;color:var(--text-2);">' + '$'.repeat(d.price_level) + '</span>' : ''}}
+      </div>
+      ${{d.formatted_phone_number ? '<div style="margin-bottom:10px;"><a href="tel:' + escHtml(d.formatted_phone_number) + '" style="color:var(--hue);font-size:13px;">📞 ' + escHtml(d.formatted_phone_number) + '</a></div>' : ''}}
+      ${{d.website ? '<div style="margin-bottom:14px;"><a href="' + escHtml(d.website) + '" target="_blank" rel="noopener" style="color:var(--hue);font-size:13px;">🌐 Visit Website</a></div>' : ''}}
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-3);margin-bottom:6px;">Hours</div>
+        ${{hours}}
+      </div>
+      <div style="display:flex;gap:10px;">
+        <a href="${{mapsUrl}}" target="_blank" rel="noopener" class="btn-primary" style="text-decoration:none;font-size:12px;">📍 Open in Maps</a>
+        <button class="btn-ghost" style="font-size:12px;"
+          onclick="toggleDiningFav('${{escHtml(placeId)}}','${{escHtml((d.name||name).replace(/'/g,'&#39;'))}}','${{escHtml((d.formatted_address||'').replace(/'/g,'&#39;'))}}','${{d.rating}}')"
+          id="detail-fav-btn">♡ Save</button>
+      </div>`;
+  }} catch(e) {{
+    inner.innerHTML = `<div style="color:var(--red);padding:20px;">Could not load details: ${{escHtml(e.message)}}</div>
+      <button onclick="closeDiningDetail()" class="btn-ghost" style="margin:10px 0;">Close</button>`;
+  }}
+}}
+
+function closeDiningDetail() {{
+  const sheet = document.getElementById('dining-detail-sheet');
+  if (sheet) sheet.style.display = 'none';
+}}
+
+/* ─── DINING CARD ─────────────────────────────────────────────────── */
+async function loadDiningCard() {{
+  const el = document.getElementById('dining-ov-content');
+  if (!el) return;
+  try {{
+    const d = await fetch('/api/dining/recommend?limit=3').then(r => r.json());
+    const picks = d.recommendations || [];
+    if (!picks.length) {{
+      el.innerHTML = '<div style="color:var(--text-3);font-size:12px;padding:4px 0;">No picks right now.</div>';
+      return;
+    }}
+    const priceColor = p => p === '$$$$' ? '#f87171' : p === '$$$' ? '#fb923c' : '#4ade80';
+    const rows = picks.map(p => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:var(--text-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${{escHtml(p.name)}}</div>
+          <div style="font-size:11px;color:var(--text-3);">${{p.distance_mi}} mi &middot; ${{p.review_count}} reviews</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-size:14px;font-weight:700;color:var(--hue);">${{p.rating}}★</div>
+          <div style="font-size:10px;color:${{priceColor(p.price || '')}};">${{p.price || ''}}</div>
+        </div>
+      </div>`).join('');
+    el.innerHTML = `
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-3);margin-bottom:4px;">
+        Sam's ${{d.meal_type || 'dinner'}} picks
+      </div>
+      ${{rows}}
+      <div style="text-align:right;margin-top:8px;">
+        <button class="btn-ghost" style="font-size:10px;" onclick="switchView('dining')">More spots →</button>
+      </div>`;
+  }} catch(e) {{
+    if (el) el.innerHTML = '<div style="color:var(--text-3);font-size:12px;">Could not load dining picks.</div>';
+  }}
+}}
+
 /* ─── FISK FINANCIAL CARD ─────────────────────────────────────────── */
 async function loadFiskCard() {{
   const content = document.getElementById('fisk-ov-content');
@@ -18161,7 +18476,7 @@ function renderNavPOIs(pois, npsParks) {{
 
     sorted.forEach(function(poi) {{
         if (poi.is_nps) {{
-            npsHtml += '<div class="nav-nps-card" onclick="if(poi.url)window.open(\'' + (poi.url||'') + '\',\'_blank\')">'
+            npsHtml += '<div class="nav-nps-card" data-url="' + (poi.url||'') + '" onclick="navOpenNPS(this)">'
                 + '<div style="font-size:22px">&#127794;</div>'
                 + '<div style="flex:1">'
                 + '<div style="font-weight:600; font-size:13px">' + poi.name + '</div>'
@@ -18195,6 +18510,11 @@ function renderNavPOIs(pois, npsParks) {{
     }}
     document.getElementById('nav-pois-list').innerHTML = html || '<div style="padding:16px;opacity:0.5">No POIs found. Try enabling more categories or increasing the parks radius.</div>';
     document.getElementById('nav-pois-section').style.display = 'block';
+}}
+
+function navOpenNPS(el) {{
+    var url = el.getAttribute('data-url');
+    if (url) window.open(url, '_blank');
 }}
 
 function navTogglePOI(cat) {{
