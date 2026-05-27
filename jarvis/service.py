@@ -7684,6 +7684,30 @@ self.addEventListener('fetch', e => {
         """Return the Google Maps API key for frontend script loading."""
         return _json({"key": os.environ.get("GOOGLE_MAPS_API_KEY", "")})
 
+    @app.get("/api/maps/geocode")
+    async def api_maps_geocode(q: str = "") -> JSONResponse:
+        """Geocode an address string to lat/lon using Google Geocoding API."""
+        import urllib.request as _ureq
+        import urllib.parse as _uparse
+        import json as _jmod
+        maps_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
+        if not maps_key:
+            return _json({"error": "GOOGLE_MAPS_API_KEY not configured"})
+        if not q.strip():
+            return _json({"error": "No address provided"})
+        url = "https://maps.googleapis.com/maps/api/geocode/json?" + _uparse.urlencode({"address": q, "key": maps_key})
+        try:
+            import urllib.request as _ur2
+            with _ur2.urlopen(url, timeout=8) as resp:
+                data = _jmod.loads(resp.read())
+            results = data.get("results", [])
+            if not results:
+                return _json({"lat": None, "lon": None, "formatted": None})
+            loc = results[0]["geometry"]["location"]
+            return _json({"lat": loc["lat"], "lon": loc["lng"], "formatted": results[0].get("formatted_address", q)})
+        except Exception as exc:
+            return _json({"error": str(exc)})
+
     @app.get("/api/nav/home")
     async def nav_home() -> JSONResponse:
         """Return the saved home address from locations.json."""

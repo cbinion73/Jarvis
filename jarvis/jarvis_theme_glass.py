@@ -6853,6 +6853,45 @@ body::after {{
       </div>
     </div>
 
+    <!-- KDP Section -->
+    <div class="view-section" style="margin-top:24px;">
+      <div class="section-title-row">
+        <h2 class="section-title">KDP · AMAZON PUBLISHING</h2>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span id="kdp-view-status" style="font-size:11px;color:var(--text-3);">—</span>
+          <button class="card-action-btn" onclick="kdpViewSync()" id="kdp-sync-btn">↻ Sync</button>
+        </div>
+      </div>
+
+      <!-- Stats strip -->
+      <div class="stats-strip" id="kdp-stats-strip">
+        <div class="stat-tile"><div class="stat-value" id="kdp-stat-books">—</div><div class="stat-label">Books</div></div>
+        <div class="stat-tile"><div class="stat-value" id="kdp-stat-units">—</div><div class="stat-label">Units Sold</div></div>
+        <div class="stat-tile"><div class="stat-value" id="kdp-stat-kenp">—</div><div class="stat-label">KENP Reads</div></div>
+        <div class="stat-tile"><div class="stat-value" id="kdp-stat-royalties">—</div><div class="stat-label">Royalties</div></div>
+      </div>
+
+      <!-- Insights -->
+      <div id="kdp-insights" style="margin:16px 0;display:none;">
+        <div class="section-title-row"><h3 style="font-size:11px;font-family:var(--font-mono);text-transform:uppercase;color:var(--text-3);letter-spacing:.08em;">Insights</h3></div>
+        <div id="kdp-insights-list"></div>
+      </div>
+
+      <!-- Books table -->
+      <div id="kdp-books-section" style="display:none;">
+        <div class="section-title-row"><h3 style="font-size:11px;font-family:var(--font-mono);text-transform:uppercase;color:var(--text-3);letter-spacing:.08em;">Your Books</h3></div>
+        <div id="kdp-books-list"></div>
+      </div>
+
+      <!-- Not configured state -->
+      <div id="kdp-not-configured" style="text-align:center;padding:40px 20px;color:var(--text-3);">
+        <div style="font-size:32px;margin-bottom:12px;">📚</div>
+        <div style="font-size:14px;color:var(--text-2);margin-bottom:8px;">KDP not connected</div>
+        <div style="font-size:12px;margin-bottom:16px;">Add your Amazon credentials in Settings → Accounts → KDP</div>
+        <button class="card-action-btn" onclick="openSettings();settingsNavTo('accounts')">Open Settings</button>
+      </div>
+    </div>
+
   </div>
 
   <!-- ── WORKSHOP ───────────────────────────────────────────── -->
@@ -9097,6 +9136,103 @@ async function loadPublishing() {{
     renderPublishing(data);
   }} catch(e) {{ console.error('loadPublishing failed', e); }}
   loadLaunchPanel();
+  loadKdpView();
+}}
+
+// ── KDP / Amazon Publishing ────────────────────────────────────
+
+async function loadKdpView() {{
+  try {{
+    const [statusRes, booksRes, salesRes] = await Promise.all([
+      fetch('/api/kdp/status'),
+      fetch('/api/kdp/books'),
+      fetch('/api/kdp/sales')
+    ]);
+    const status = await statusRes.json();
+    const booksData = await booksRes.json();
+    const salesData = await salesRes.json();
+
+    const notConfigured = document.getElementById('kdp-not-configured');
+    const statsStrip = document.getElementById('kdp-stats-strip');
+    const insightsEl = document.getElementById('kdp-insights');
+    const booksSection = document.getElementById('kdp-books-section');
+    const statusEl = document.getElementById('kdp-view-status');
+
+    if (!status.configured || status.status === 'never_synced') {{
+      if (notConfigured) notConfigured.style.display = '';
+      if (statsStrip) statsStrip.style.display = 'none';
+      return;
+    }}
+
+    if (notConfigured) notConfigured.style.display = 'none';
+    if (statsStrip) statsStrip.style.display = '';
+
+    // Update status text
+    if (statusEl && status.last_synced_at) {{
+      const ago = Math.round((Date.now() - new Date(status.last_synced_at)) / 60000);
+      statusEl.textContent = 'Synced ' + (ago < 60 ? ago + 'm ago' : Math.round(ago/60) + 'h ago');
+    }}
+
+    // Stats
+    const books = booksData.books || [];
+    const latestSales = (salesData.history || []).slice(-1)[0] || {{}};
+    document.getElementById('kdp-stat-books').textContent = books.length || '—';
+    document.getElementById('kdp-stat-units').textContent = latestSales.units_sold ?? '—';
+    document.getElementById('kdp-stat-kenp').textContent = latestSales.kenp_pages_read != null
+      ? (latestSales.kenp_pages_read > 999 ? (latestSales.kenp_pages_read/1000).toFixed(1)+'K' : latestSales.kenp_pages_read)
+      : '—';
+    document.getElementById('kdp-stat-royalties').textContent = latestSales.royalties_usd != null
+      ? '$' + latestSales.royalties_usd.toFixed(2) : '—';
+
+    // Insights
+    const insights = booksData.insights || [];
+    if (insights.length && insightsEl) {{
+      insightsEl.style.display = '';
+      const colors = {{positive:'#4ade80', attention:'#fbbf24', info:'var(--text-2)'}};
+      document.getElementById('kdp-insights-list').innerHTML = insights.map(i => `
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:var(--surface-2);border-radius:10px;border:1px solid var(--border);margin-bottom:8px;">
+          <span style="color:${{colors[i.type]||'var(--text-2)'}};">${{i.type==='positive'?'↑':i.type==='attention'?'⚠':'ℹ'}}</span>
+          <div>
+            ${{i.book ? `<div style="font-size:11px;font-weight:600;color:var(--text-1);">${{escHtml(i.book)}}</div>` : ''}}
+            <div style="font-size:12px;color:var(--text-2);">${{escHtml(i.message)}}</div>
+          </div>
+        </div>
+      `).join('');
+    }}
+
+    // Books list
+    if (books.length && booksSection) {{
+      booksSection.style.display = '';
+      document.getElementById('kdp-books-list').innerHTML = books.map(b => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surface-2);border-radius:10px;border:1px solid var(--border);margin-bottom:8px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:var(--text-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${{escHtml(b.title || 'Untitled')}}</div>
+            <div style="font-size:11px;color:var(--text-3);font-family:var(--font-mono);">${{escHtml(b.asin || '')}} · ${{escHtml(b.status || '—')}}</div>
+          </div>
+          <span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:${{b.status==='Live'?'rgba(74,222,128,.15)':'rgba(255,255,255,.06)'}}; color:${{b.status==='Live'?'#4ade80':'var(--text-3)'}};">${{escHtml(b.status||'—')}}</span>
+        </div>
+      `).join('');
+    }}
+  }} catch(e) {{
+    console.error('KDP view error:', e);
+  }}
+}}
+
+async function kdpViewSync() {{
+  const btn = document.getElementById('kdp-sync-btn');
+  const statusEl = document.getElementById('kdp-view-status');
+  if (btn) btn.textContent = '⏳ Syncing…';
+  if (statusEl) statusEl.textContent = 'Syncing with KDP…';
+  try {{
+    const r = await fetch('/api/kdp/sync', {{method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: '{{}}'}});
+    const d = await r.json();
+    if (statusEl) statusEl.textContent = d.ok ? 'Sync complete' : ('Error: ' + (d.error || 'unknown'));
+    if (d.ok) loadKdpView();
+  }} catch(e) {{
+    if (statusEl) statusEl.textContent = 'Sync failed';
+  }} finally {{
+    if (btn) btn.textContent = '↻ Sync';
+  }}
 }}
 
 // ── Book Launch Panel ──────────────────────────────────────────
@@ -15320,7 +15456,7 @@ async function settingsLoadSection(section) {{
 
   try {{
     if (section === 'interface') {{ container.innerHTML = settingsBuildInterface(); }}
-    else if (section === 'accounts') {{ container.innerHTML = await settingsBuildAccounts(); }}
+    else if (section === 'accounts') {{ container.innerHTML = await settingsBuildAccounts(); setTimeout(kdpLoadStatus, 100); }}
     else if (section === 'voice')    {{ container.innerHTML = await settingsBuildVoice(); }}
     else if (section === 'location') {{ container.innerHTML = await settingsBuildLocation(); }}
     else if (section === 'family')   {{ container.innerHTML = await settingsBuildFamily(); }}
@@ -15433,7 +15569,73 @@ async function settingsBuildAccounts() {{
     <div class="sset-card">
       ${{personalRows}}
     </div>
+
+    <div class="sset-divider"></div>
+    <p class="sset-section-hdr">KDP / Amazon</p>
+    <div class="sset-card" id="kdp-settings-card">
+      <div id="kdp-settings-status" style="font-size:12px;color:var(--text-2);margin-bottom:12px;">Checking…</div>
+      <div class="sset-row">
+        <div class="sset-label">Amazon Email</div>
+        <input id="kdp-email" type="email" placeholder="your@amazon.com" class="sset-select" style="flex:1;">
+      </div>
+      <div class="sset-row">
+        <div class="sset-label">Password</div>
+        <input id="kdp-password" type="password" placeholder="Amazon password" class="sset-select" style="flex:1;">
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="sset-btn sset-btn-accent" onclick="kdpSaveCredentials()">Save Credentials</button>
+        <button class="sset-btn" onclick="kdpTriggerSync()">Sync Now</button>
+      </div>
+      <div id="kdp-settings-msg" class="sset-msg"></div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:8px;">Note: Requires Amazon account with KDP access. 2FA will require manual code entry on first sync.</div>
+    </div>
   `;
+}}
+
+// load KDP status into the settings card
+async function kdpLoadStatus() {{
+  try {{
+    const r = await fetch('/api/kdp/status');
+    const d = await r.json();
+    const el = document.getElementById('kdp-settings-status');
+    if (!el) return;
+    if (!d.configured) {{
+      el.innerHTML = '<span style="color:var(--text-3);">Not configured — enter credentials below.</span>';
+    }} else if (d.last_synced_at) {{
+      const ago = Math.round((Date.now() - new Date(d.last_synced_at)) / 60000);
+      el.innerHTML = `<span style="color:#4ade80;">✓ Configured</span> · ${{d.book_count || 0}} books · Last synced ${{ago < 60 ? ago + 'm ago' : Math.round(ago/60) + 'h ago'}}`;
+    }} else {{
+      el.innerHTML = '<span style="color:#fbbf24;">Credentials saved, never synced.</span>';
+    }}
+  }} catch(e) {{}}
+}}
+
+async function kdpSaveCredentials() {{
+  const email = document.getElementById('kdp-email')?.value.trim();
+  const password = document.getElementById('kdp-password')?.value;
+  const msg = document.getElementById('kdp-settings-msg');
+  if (!email || !password) {{ if (msg) msg.textContent = 'Enter both email and password.'; return; }}
+  try {{
+    const r = await fetch('/api/kdp/credentials', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{email, password}})
+    }});
+    const d = await r.json();
+    if (msg) msg.textContent = d.detail || (d.ok ? 'Credentials saved.' : 'Error saving.');
+    if (d.ok) {{ document.getElementById('kdp-email').value = ''; document.getElementById('kdp-password').value = ''; kdpLoadStatus(); }}
+  }} catch(e) {{ if (msg) msg.textContent = 'Error: ' + e.message; }}
+}}
+
+async function kdpTriggerSync() {{
+  const msg = document.getElementById('kdp-settings-msg');
+  if (msg) msg.textContent = '⏳ Syncing with KDP… this takes ~30 seconds.';
+  try {{
+    const r = await fetch('/api/kdp/sync', {{method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: '{{}}'}});
+    const d = await r.json();
+    if (msg) msg.textContent = d.ok ? `✓ Synced — ${{(d.books||[]).length}} books found.` : ('Error: ' + (d.error || d.detail || 'unknown'));
+    if (d.ok) kdpLoadStatus();
+  }} catch(e) {{ if (msg) msg.textContent = 'Error: ' + e.message; }}
 }}
 
 /* ── Voice ─────────────────────────────────────────────────── */
@@ -15529,11 +15731,24 @@ async function settingsBuildLocation() {{
         <input id="loc-new-label" type="text" placeholder="e.g. Home" class="sset-select" style="flex:1;">
       </div>
       <div class="sset-row">
-        <div class="sset-label">Coordinates</div>
+        <div class="sset-label">Address</div>
+        <input id="loc-new-address" type="text" placeholder="123 Main St" class="sset-select" style="flex:1;">
+      </div>
+      <div class="sset-row">
+        <div class="sset-label">City / State / ZIP</div>
         <div style="display:flex;gap:6px;flex:1;">
+          <input id="loc-new-city" type="text" placeholder="City" class="sset-select" style="flex:2;">
+          <input id="loc-new-state" type="text" placeholder="ST" class="sset-select" style="flex:1;max-width:60px;">
+          <input id="loc-new-zip" type="text" placeholder="ZIP" class="sset-select" style="flex:1;max-width:80px;">
+        </div>
+      </div>
+      <div class="sset-row">
+        <div class="sset-label">Coordinates</div>
+        <div style="display:flex;gap:6px;flex:1;align-items:center;">
           <input id="loc-new-lat" type="number" step="any" placeholder="Latitude" class="sset-select" style="flex:1;">
           <input id="loc-new-lon" type="number" step="any" placeholder="Longitude" class="sset-select" style="flex:1;">
-          <button class="sset-btn" onclick="settingsGeolocateNewLocation()" title="Use my current location">📍</button>
+          <button class="sset-btn" onclick="settingsGeocodeAddress()" title="Look up address">🔍</button>
+          <button class="sset-btn" onclick="settingsGeolocateNewLocation()" title="Use GPS">📍</button>
         </div>
       </div>
       <div class="sset-row">
@@ -15768,16 +15983,49 @@ function settingsGeolocateNewLocation() {{
   }}, err => {{ alert('Location denied: ' + err.message); }});
 }}
 
+async function settingsGeocodeAddress() {{
+  const address = document.getElementById('loc-new-address')?.value.trim();
+  const city    = document.getElementById('loc-new-city')?.value.trim();
+  const state   = document.getElementById('loc-new-state')?.value.trim();
+  const zip     = document.getElementById('loc-new-zip')?.value.trim();
+  const msg     = document.getElementById('settings-loc-add-msg');
+  const query   = [address, city, state, zip].filter(Boolean).join(', ');
+  if (!query) {{ if (msg) msg.textContent = 'Enter an address first.'; return; }}
+  if (msg) msg.textContent = 'Looking up address…';
+  try {{
+    const r = await fetch('/api/maps/geocode?q=' + encodeURIComponent(query));
+    const d = await r.json();
+    if (d.lat != null && d.lon != null) {{
+      document.getElementById('loc-new-lat').value = d.lat.toFixed(6);
+      document.getElementById('loc-new-lon').value = d.lon.toFixed(6);
+      if (msg) msg.textContent = '✓ Found: ' + (d.formatted || query);
+      // Auto-fill label if empty
+      const labelEl = document.getElementById('loc-new-label');
+      if (labelEl && !labelEl.value) labelEl.value = city || address || query;
+    }} else {{
+      if (msg) msg.textContent = 'Address not found. Try adding more detail.';
+    }}
+  }} catch(e) {{
+    if (msg) msg.textContent = 'Geocode error: ' + e.message;
+  }}
+}}
+
 async function settingsClaimDevice() {{
   const msg = document.getElementById('settings-device-msg');
+  const deviceId = window.localStorage.getItem('jarvis-shell-device-id-v1') || '';
+  if (!deviceId) {{ if (msg) msg.textContent = 'No device ID found — try refreshing the page first.'; return; }}
+  const name = navigator.userAgent.includes('iPhone') ? 'iPhone' :
+               navigator.userAgent.includes('iPad') ? 'iPad' :
+               navigator.userAgent.includes('Mac') ? 'Mac Browser' :
+               navigator.userAgent.includes('Android') ? 'Android' : 'Browser';
   try {{
-    const r = await fetch('/api/connected-devices/claim', {{
+    const r = await fetch('/api/identity/device', {{
       method: 'POST',
       headers: {{'Content-Type': 'application/json'}},
-      body: JSON.stringify({{owner: 'chris'}})
+      body: JSON.stringify({{device_id: deviceId, owner_user_id: 'chris', device_name: name, device_type: 'browser'}})
     }});
     const d = await r.json();
-    if (msg) msg.textContent = d.detail || (d.ok ? 'Device claimed.' : 'Error claiming device.');
+    if (msg) msg.textContent = d.ok ? 'Device claimed as ' + name + '.' : (d.detail || 'Error claiming device.');
     if (d.ok) settingsLoadSection('devices');
   }} catch(e) {{
     if (msg) msg.textContent = 'Error: ' + e.message;
