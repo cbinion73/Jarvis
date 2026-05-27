@@ -7497,6 +7497,25 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         """Return the Google Maps API key for frontend script loading."""
         return _json({"key": os.environ.get("GOOGLE_MAPS_API_KEY", "")})
 
+    @app.get("/api/nav/home")
+    async def nav_home() -> JSONResponse:
+        """Return the saved home address from locations.json."""
+        import json as _json_mod
+        try:
+            loc_path = Path("data/settings/locations.json")
+            data = _json_mod.loads(loc_path.read_text())
+            for loc in data.get("saved_locations", []):
+                if loc.get("id") == "household-home":
+                    return _json({
+                        "address": loc.get("address", ""),
+                        "label": loc.get("label", "Home"),
+                        "latitude": loc.get("latitude"),
+                        "longitude": loc.get("longitude"),
+                    })
+            return _json({"address": "", "label": "Home"})
+        except Exception as e:
+            return _json({"error": str(e)})
+
     @app.get("/api/nav/autocomplete")
     async def nav_autocomplete(q: str = "") -> JSONResponse:
         """Proxy to Google Places Autocomplete API."""

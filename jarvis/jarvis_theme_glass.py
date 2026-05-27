@@ -5484,6 +5484,22 @@ body::after {{
 @keyframes spin {{
     to {{ transform: rotate(360deg); }}
 }}
+.nav-home-btn {{
+    flex: 1;
+    padding: 6px 10px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    color: rgba(255,255,255,0.8);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}}
+.nav-home-btn:hover {{
+    background: rgba(255,255,255,0.13);
+    border-color: rgba(255,255,255,0.25);
+}}
 /* ═══════════════════════════════════════════════════════════════
    END NAVIGATION CSS
 ═══════════════════════════════════════════════════════════════ */
@@ -7516,6 +7532,10 @@ body::after {{
       <!-- SIDEBAR (desktop) -->
       <div class="nav-sidebar" id="nav-sidebar">
         <div class="nav-route-inputs">
+          <div style="display:flex; gap:6px; margin-bottom:6px;">
+            <button class="nav-home-btn" onclick="navSetHome()" title="Set origin to Home">&#127968; Home</button>
+            <button class="nav-home-btn" onclick="navUseCurrentLocation()" title="Use GPS location">&#128205; My Location</button>
+          </div>
           <div class="nav-input-row">
             <span style="color:#4CAF50">&#9679;</span>
             <input id="nav-origin" class="nav-input" placeholder="Starting point..." oninput="navAutocomplete('nav-origin', 'nav-origin-results')">
@@ -9465,6 +9485,39 @@ const CARD_REGISTRY = {{
     ambientRender: () => `
       <div class="ambient-tile" onclick="cardInteract('sam','navigate');switchView('health')" data-card="sam">
         🦅 Sam <span class="ambient-badge" id="sam-ov-streak-badge">—</span>
+      </div>`,
+  }},
+
+  dining: {{
+    id: 'dining', title: 'Dining', icon: '🍽️',
+    load: () => loadDiningCard(),
+    heroRender: () => `
+      <div class="card layout-card" id="lc-dining" data-card="dining"
+           style="min-height:200px;" onclick="cardInteract('dining','click')">
+        <div class="card-hdr">
+          <span class="card-icon">🍽️</span>
+          <span class="card-title">DINING</span>
+          <button class="btn-ghost" style="margin-left:auto;font-size:10px;"
+            onclick="event.stopPropagation();switchView('dining')">Explore →</button>
+        </div>
+        <div class="card-body" id="dining-ov-content" style="padding:14px 18px;">
+          <div class="skel" style="height:10px;width:70%;margin-bottom:8px;"></div>
+          <div class="skel" style="height:10px;width:55%;margin-bottom:8px;"></div>
+          <div class="skel" style="height:10px;width:65%;"></div>
+        </div>
+      </div>`,
+    priorityRender: () => `
+      <div class="card card-tactical layout-card" id="lc-dining" data-card="dining"
+           onclick="cardInteract('dining','click')">
+        <div class="card-hdr">
+          <span class="card-icon">🍽️</span>
+          <span class="card-title">DINING</span>
+        </div>
+        <div class="card-body" id="dining-ov-content" style="padding:10px 14px;"></div>
+      </div>`,
+    ambientRender: () => `
+      <div class="ambient-tile" onclick="cardInteract('dining','click');switchView('dining')" data-card="dining">
+        🍽️ Dining
       </div>`,
   }},
 
@@ -17826,6 +17879,23 @@ var _navAlertTimer = null;
 var _navLastAnnouncedPOI = null;
 var _navGoogleMapsLoaded = false;
 var _navParksRadius = 25;
+var _navHomeAddress = '8384 Riley Rd, Alexandria, KY 41001';
+
+function navSetHome() {{
+    var el = document.getElementById('nav-origin');
+    if (el) {{
+        el.value = _navHomeAddress;
+        document.getElementById('nav-origin-results').innerHTML = '';
+    }}
+}}
+
+function navUseCurrentLocation() {{
+    if (!navigator.geolocation) {{ showToast('Geolocation not available'); return; }}
+    navigator.geolocation.getCurrentPosition(function(pos) {{
+        var el = document.getElementById('nav-origin');
+        if (el) el.value = pos.coords.latitude.toFixed(6) + ',' + pos.coords.longitude.toFixed(6);
+    }}, function() {{ showToast('Could not get your location'); }});
+}}
 
 function navUpdateParksRadius(val) {{
     _navParksRadius = parseInt(val, 10);
@@ -17841,6 +17911,10 @@ function navUpdateParksRadius(val) {{
 
 function initNavView() {{
     if (_navMap) return;
+    // Load home address from server
+    fetch('/api/nav/home').then(function(r) {{ return r.json(); }}).then(function(d) {{
+        if (d.address) _navHomeAddress = d.address;
+    }});
     if (!_navGoogleMapsLoaded) {{
         loadGoogleMapsScript();
     }}
