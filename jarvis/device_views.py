@@ -3115,7 +3115,7 @@ function driveOnMapsReady() {
   ];
   _driveNavMap = new google.maps.Map(document.getElementById('drive-nav-map'), {
     center: {lat: 37.09, lng: -95.71},
-    zoom: 5,
+    zoom: 4,
     styles: darkStyles,
     disableDefaultUI: true,
     gestureHandling: 'greedy'
@@ -3212,11 +3212,18 @@ function driveNavRoute(origin, dest) {
         _driveDoRoute(new google.maps.LatLng(pos.coords.latitude, pos.coords.longitude), dest);
       },
       function() {
-        // Geolocation denied or timed out — route from map center if available
-        if (_driveNavMap) {
-          _driveDoRoute(_driveNavMap.getCenter(), dest);
+        // Geolocation denied or timed out — use home address if set, otherwise ask user
+        if (_driveNavHomeAddr) {
+          _driveDoRoute(_driveNavHomeAddr, dest);
         } else {
-          _driveDoRoute(dest, dest); // last resort: same place (Maps will show destination)
+          var goBtn = document.querySelector('.drive-nav-go');
+          if (goBtn) { goBtn.textContent = 'Allow Location'; setTimeout(function(){ goBtn.textContent='Go'; }, 3000); }
+          // Try once more with a browser prompt
+          navigator.geolocation.getCurrentPosition(
+            function(pos) { _driveDoRoute(new google.maps.LatLng(pos.coords.latitude, pos.coords.longitude), dest); },
+            function() { /* still nothing — user must grant location */ },
+            {timeout: 10000}
+          );
         }
       },
       {timeout: 5000, maximumAge: 30000, enableHighAccuracy: false}
