@@ -8458,6 +8458,24 @@ const DOMAIN_CLASS = {{
 let currentView    = 'overview';
 let ws             = null;
 let wsRetries      = 0;
+let _cfIdentity    = null;
+
+async function loadCfIdentity() {{
+  try {{
+    const r = await fetch('/api/identity/me');
+    _cfIdentity = await r.json();
+    // Update nav greeting if it exists
+    const nameEl = document.getElementById('nav-user-name');
+    if (nameEl && _cfIdentity.display_name) nameEl.textContent = _cfIdentity.display_name;
+    // Update page title greeting
+    const greetEl = document.getElementById('nav-greeting');
+    if (greetEl && _cfIdentity.display_name) {{
+      const hour = new Date().getHours();
+      const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+      greetEl.textContent = greeting + ', ' + _cfIdentity.display_name;
+    }}
+  }} catch(e) {{ _cfIdentity = {{user_id: 'chris', display_name: 'Chris'}}; }}
+}}
 let micActive      = false;
 let currentFilter  = 'all';
 let homeData       = {{}};
@@ -8493,7 +8511,8 @@ function _showDbg(label, msg) {{
   }}
 }}
 
-function init() {{
+async function init() {{
+  await loadCfIdentity();
   try {{
     switchView('overview');
   }} catch(e) {{ _showDbg('switchView', e); }}
@@ -15489,11 +15508,27 @@ function settingsBuildInterface() {{
       </div>
     </div>
     <div class="sset-divider"></div>
-    <p style="font-size:12px;color:var(--text-3);">
-      Welcome, {user_name} &nbsp;·&nbsp; JARVIS Glass — Adaptive Chromatic Interface<br>
+    <p style="font-size:12px;color:var(--text-3);margin:12px 0 4px;">
+      JARVIS Glass — Adaptive Chromatic Interface<br>
       Version 3.0 &nbsp;·&nbsp; S.H.I.E.L.D. Clearance Level 6
     </p>
+    <p style="font-size:12px;color:var(--text-3);margin:20px 0 4px;font-family:var(--font-mono);letter-spacing:0.04em;text-transform:uppercase;">Session</p>
+    <div style="font-size:12px;color:var(--text-2);display:flex;align-items:center;gap:8px;">
+      <span id="settings-cf-identity">Loading…</span>
+    </div>
   `;
+  // Populate CF identity after render
+  (async () => {{
+    try {{
+      const me = _cfIdentity || await fetch('/api/identity/me').then(r=>r.json());
+      const el = document.getElementById('settings-cf-identity');
+      if (el) {{
+        el.innerHTML = me.authenticated_via_cloudflare
+          ? `<span style="color:#4ade80;">✓</span> Signed in as <strong>${{me.display_name}}</strong> <span style="color:var(--text-3);">(${{me.email}})</span>`
+          : `<span style="color:var(--text-3);">Local session · </span><strong>${{me.display_name}}</strong>`;
+      }}
+    }} catch(e) {{}}
+  }})();
 }}
 
 /* ── Accounts ──────────────────────────────────────────────── */

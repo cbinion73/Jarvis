@@ -225,6 +225,25 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     location_settings = LocationSettingsStore(runtime.config)
     hub = EventHub()
     app = FastAPI(title="JARVIS Service", version="2.0")
+
+    from starlette.middleware.base import BaseHTTPMiddleware
+
+    class CloudflareIdentityMiddleware(BaseHTTPMiddleware):
+        CF_EMAIL_TO_USER = {
+            "cbinion73@gmail.com":     "chris",
+            "rbinion75@gmail.com":     "rebekah",
+            "caleb.binion@icloud.com": "caleb",
+            "anna.binion@icloud.com":  "anna",
+        }
+        async def dispatch(self, request, call_next):
+            email = request.headers.get("Cf-Access-Authenticated-User-Email", "").strip().lower()
+            user_id = self.CF_EMAIL_TO_USER.get(email, "chris")  # default to chris for local dev
+            request.state.cf_email = email
+            request.state.cf_user_id = user_id
+            return await call_next(request)
+
+    app.add_middleware(CloudflareIdentityMiddleware)
+
     shell_warmer_task: asyncio.Task | None = None
     _wi_worker_tasks: list[asyncio.Task] = []
     # Initialise Epic 7 voice pipeline (non-fatal if unavailable)
@@ -1721,6 +1740,25 @@ self.addEventListener('fetch', e => {
     @app.get("/api/identity")
     async def api_identity() -> JSONResponse:
         return _json(runtime.identity_overview())
+
+    @app.get("/api/identity/me")
+    async def api_identity_me(request: Request) -> JSONResponse:
+        """Return the current user based on Cloudflare Access headers."""
+        user_id = getattr(request.state, "cf_user_id", "chris")
+        email = getattr(request.state, "cf_email", "")
+
+        # Get identity details for this user
+        identity = runtime.identity_overview()
+        members = identity.get("members", [])
+        member = next((m for m in members if m.get("id") == user_id), None)
+
+        return _json({
+            "user_id": user_id,
+            "email": email,
+            "display_name": member.get("display_name", user_id.capitalize()) if member else user_id.capitalize(),
+            "authenticated_via_cloudflare": bool(email),
+            "member": member,
+        })
 
     @app.get("/api/connected-devices")
     async def api_connected_devices(request: Request, current_device_id: str = "") -> JSONResponse:
