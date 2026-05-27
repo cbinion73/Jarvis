@@ -21,6 +21,8 @@ from .runtime import JarvisRuntime
 from .settings import LocationSettingsStore, VoiceSettingsStore
 from .voice_audio import generate_tts_audio
 from .voice_ui import render_voice_shell
+from . import journey_store
+from .journey_store import log_event as journey_log
 
 try:
     from .jarvis_theme_nexus import render_nexus_shell as _render_nexus_shell
@@ -1759,6 +1761,8 @@ self.addEventListener('fetch', e => {
             pass
 
         date_str = _dt.now().strftime("%a, %b %-d")
+        # Journey: log brief received
+        journey_log(_current_actor(request), "brief_received", {})
         return _json({"actor": actor, "date": date_str, "sections": sections})
 
     @app.get("/api/first-light")
@@ -1864,6 +1868,15 @@ self.addEventListener('fetch', e => {
         """Return the current user based on Cloudflare Access headers."""
         user_id = getattr(request.state, "cf_user_id", "chris")
         email = getattr(request.state, "cf_email", "")
+
+        # Journey: log login at most once per hour per user
+        import time as _time
+        try:
+            last_login = journey_store.get_last_login_ts(user_id)
+            if _time.time() - last_login > 3600:
+                journey_log(user_id, "login", {})
+        except Exception:
+            pass
 
         # Get identity details for this user
         identity = runtime.identity_overview()
@@ -3888,12 +3901,13 @@ self.addEventListener('fetch', e => {
     # ── Adaptive Layout Engine ─────────────────────────────────────────────
 
     @app.get("/api/layout/state")
-    async def api_layout_state() -> JSONResponse:
+    async def api_layout_state(request: Request) -> JSONResponse:
         """Current mode, card layout, alerts, and learned weights."""
         import asyncio as _asyncio
         try:
             from .layout_engine import get_state_payload
-            payload = await _asyncio.to_thread(get_state_payload, runtime)
+            user_id = _current_actor(request)
+            payload = await _asyncio.to_thread(get_state_payload, runtime, user_id)
             return _json(payload)
         except Exception as exc:
             logger.warning("layout/state failed: %s", exc)
@@ -3945,6 +3959,20 @@ self.addEventListener('fetch', e => {
         if card_id:
             await _asyncio.to_thread(_log_interaction, card_id, mode, action)
         return _json({"ok": True})
+
+    # ── Journey Tracking (Phase 5) ─────────────────────────────────────────
+
+    @app.get("/api/journey")
+    async def api_get_journey(request: Request, days: int = 30) -> JSONResponse:
+        """Return recent journey events for the current user."""
+        user_id = _current_actor(request)
+        return _json({"events": await asyncio.to_thread(journey_store.get_journey, user_id, days)})
+
+    @app.get("/api/journey/stats")
+    async def api_journey_stats(request: Request, days: int = 30) -> JSONResponse:
+        """Return aggregated event counts for the current user."""
+        user_id = _current_actor(request)
+        return _json(await asyncio.to_thread(journey_store.get_stats, user_id, days))
 
     # ── Siri Bridge ────────────────────────────────────────────────────────
 
@@ -4539,11 +4567,16 @@ self.addEventListener('fetch', e => {
                     r["owner"] = owner
                     break
             _reminders_save(reminders)
+        # Journey: log reminder created
+        journey_log(owner, "reminder_created", {"text": text})
         return _json({"reminder": r})
 
     @app.post("/api/reminders/{reminder_id}/complete")
-    async def api_reminders_complete(reminder_id: str) -> JSONResponse:
+    async def api_reminders_complete(reminder_id: str, request: Request) -> JSONResponse:
         ok = complete_reminder(reminder_id)
+        # Journey: log reminder completed
+        if ok:
+            journey_log(_current_actor(request), "reminder_completed", {})
         return _json({"ok": ok})
 
     @app.delete("/api/reminders/{reminder_id}")
@@ -4589,16 +4622,19 @@ self.addEventListener('fetch', e => {
         if not title:
             return JSONResponse({"error": "title required"}, status_code=400)
         # Use payload actor if provided, otherwise default to the authenticated user
+        actor_id = payload.get("actor") or _current_actor(request)
         t = add_task(
             title=title,
             body=payload.get("body", ""),
             priority=payload.get("priority", "normal"),
             due=payload.get("due"),
-            actor=payload.get("actor") or _current_actor(request),
+            actor=actor_id,
             domain=payload.get("domain", "personal"),
             source=payload.get("source", "manual"),
             tags=payload.get("tags"),
         )
+        # Journey: log task created
+        journey_log(actor_id, "task_created", {"title": title})
         return _json({"task": t})
 
     @app.get("/api/tasks/{task_id}")
@@ -4616,13 +4652,24 @@ self.addEventListener('fetch', e => {
         return _json({"ok": True, "task": get_task(task_id)})
 
     @app.post("/api/tasks/{task_id}/complete")
-    async def api_tasks_complete(task_id: str) -> JSONResponse:
+    async def api_tasks_complete(task_id: str, request: Request) -> JSONResponse:
+        # Grab task title before completing (for journey payload)
+        existing = get_task(task_id)
         ok = complete_task(task_id)
+        # Journey: log task completed
+        if ok:
+            task_title = (existing or {}).get("title", "")
+            journey_log(_current_actor(request), "task_completed", {"title": task_title})
         return _json({"ok": ok})
 
     @app.delete("/api/tasks/{task_id}")
-    async def api_tasks_delete(task_id: str) -> JSONResponse:
+    async def api_tasks_delete(task_id: str, request: Request) -> JSONResponse:
+        existing = get_task(task_id)
         ok = delete_task(task_id)
+        # Journey: log task deleted
+        if ok:
+            task_title = (existing or {}).get("title", "")
+            journey_log(_current_actor(request), "task_deleted", {"title": task_title})
         return _json({"ok": ok})
 
     @app.post("/api/approvals/{request_id}")
@@ -4651,7 +4698,7 @@ self.addEventListener('fetch', e => {
         return _json({"pending": pending})
 
     @app.post("/api/approvals/{request_id}/approve")
-    async def api_approvals_approve(request_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
+    async def api_approvals_approve(request_id: str, request: Request, payload: dict[str, Any] = {}) -> JSONResponse:
         """Approve a pending request. Optionally supply approved_by in the body."""
         approved_by = str((payload or {}).get("approved_by", "chris"))
         # Try ApprovalQueue first (agent-submitted requests)
@@ -4660,15 +4707,17 @@ self.addEventListener('fetch', e => {
             from dataclasses import asdict as _asdict
             item = queue.approve(request_id, approved_by=approved_by)
             if item is not None:
+                journey_log(_current_actor(request), "approval_actioned", {})
                 return _json({"status": "approved", "request": _asdict(item)})
         # Fall back to ApprovalStore (runtime-submitted requests shown in the UI list)
         updated = runtime.approval_store.update_status(request_id, "approved")
         if updated is not None:
+            journey_log(_current_actor(request), "approval_actioned", {})
             return _json({"status": "approved", "request": updated})
         raise HTTPException(status_code=404, detail="Pending approval request not found")
 
     @app.post("/api/approvals/{request_id}/reject")
-    async def api_approvals_reject(request_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
+    async def api_approvals_reject(request_id: str, request: Request, payload: dict[str, Any] = {}) -> JSONResponse:
         """Reject a pending request. Supply reason in body: {"reason": str}."""
         reason = str((payload or {}).get("reason", ""))
         rejected_by = str((payload or {}).get("rejected_by", "chris"))
@@ -4677,28 +4726,31 @@ self.addEventListener('fetch', e => {
         if queue is not None:
             ok = queue.reject(request_id, reason=reason, rejected_by=rejected_by)
             if ok:
+                journey_log(_current_actor(request), "approval_actioned", {})
                 return _json({"status": "rejected", "request_id": request_id, "reason": reason})
         # Fall back to ApprovalStore (runtime-submitted requests shown in the UI list)
         updated = runtime.approval_store.update_status(request_id, "rejected")
         if updated is not None:
+            journey_log(_current_actor(request), "approval_actioned", {})
             return _json({"status": "rejected", "request_id": request_id, "reason": reason})
         raise HTTPException(status_code=404, detail="Pending approval request not found")
 
     @app.post("/api/approvals/{request_id}/cancel")
-    async def api_approvals_cancel(request_id: str) -> JSONResponse:
+    async def api_approvals_cancel(request_id: str, request: Request) -> JSONResponse:
         """Cancel a pending request."""
         # Try ApprovalQueue first
         queue = get_approval_queue()
         if queue is not None:
             ok = queue.cancel(request_id)
             if ok:
+                journey_log(_current_actor(request), "approval_actioned", {})
                 return _json({"status": "cancelled", "request_id": request_id})
         # Fall back to ApprovalStore
         updated = runtime.approval_store.update_status(request_id, "cancelled")
         if updated is not None:
+            journey_log(_current_actor(request), "approval_actioned", {})
             return _json({"status": "cancelled", "request_id": request_id})
         raise HTTPException(status_code=404, detail="Pending approval request not found")
-        return _json({"status": "cancelled", "request_id": request_id})
 
     @app.get("/api/approvals/history")
     async def api_approvals_history(
@@ -7021,6 +7073,8 @@ self.addEventListener('fetch', e => {
             str(body.get("domain", "passive-income")),
             list(body.get("tags", [])),
         )
+        # Journey: log idea captured
+        journey_log(_current_actor(request), "idea_captured", {})
         return _json({"idea": idea}, status_code=201)
 
     @app.post("/api/ideas/bulk-import")
@@ -7833,6 +7887,9 @@ self.addEventListener('fetch', e => {
                 logger.warning("chronicle quick-capture sync failed (continuing): %s", chronicle_exc)
 
             _chronicle_snapshot_reader.invalidate_cache()
+            # Journey: log chronicle entry
+            _summary = (entry.get("content") or entry.get("title") or "")[:80]
+            journey_log(_current_actor(request), "chronicle_entry", {"summary": _summary})
             return _json({"ok": True, "entry_id": entry["id"], "title": entry["title"],
                            "synced_to_chronicle": bool(chronicle_result)})
         except HTTPException:

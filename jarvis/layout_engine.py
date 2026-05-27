@@ -477,6 +477,54 @@ def compute_layout(
     return {"hero": hero, "priority": priority, "ambient": ambient}
 
 
+def get_layout_insights(user_id: str, mode: str, weights: dict) -> list[str]:
+    """
+    Return up to 3 plain-English insight strings derived from card weights.
+    Rule-based: compares weights across cards and modes. Never raises.
+    """
+    insights: list[str] = []
+    try:
+        if not weights:
+            return insights
+
+        # Find heaviest and lightest cards
+        sorted_cards = sorted(weights.items(), key=lambda x: x[1], reverse=True)
+
+        if sorted_cards:
+            top_card, top_weight = sorted_cards[0]
+            if top_weight >= 0.8:
+                label = top_card.replace("_", " ").title()
+                insights.append(f"{label} is your most-opened card this week")
+
+        if len(sorted_cards) >= 2:
+            bottom_card, bottom_weight = sorted_cards[-1]
+            if bottom_weight <= 0.2 and bottom_card not in ("briefing", "sam"):
+                label = bottom_card.replace("_", " ").title()
+                insights.append(f"{label} is rarely opened — consider moving it to ambient")
+
+        # Morning vs evening comparison: compare morning_brief weights vs daily_recap weights
+        try:
+            morning_weights = get_cached_weights("morning_brief")
+            recap_weights   = get_cached_weights("daily_recap")
+            for card in list(weights.keys())[:5]:
+                m = morning_weights.get(card, 0.5)
+                r = recap_weights.get(card, 0.5)
+                label = card.replace("_", " ").title()
+                if m > 0 and r > 0 and m / (r + 0.01) >= 2.5:
+                    insights.append(f"You check {label} more in the morning than evening")
+                    break
+                elif r > 0 and m > 0 and r / (m + 0.01) >= 2.5:
+                    insights.append(f"{label} gets more attention in the evening")
+                    break
+        except Exception:
+            pass
+
+    except Exception:
+        pass
+
+    return insights[:3]
+
+
 def _build_state_dict(state: dict, mode: str) -> dict:
     return {
         "mode":              mode,
@@ -490,7 +538,7 @@ def _build_state_dict(state: dict, mode: str) -> dict:
     }
 
 
-def get_state_payload(runtime) -> dict:
+def get_state_payload(runtime, user_id: str = "chris") -> dict:
     """
     Assemble the full payload for GET /api/layout/state.
     Called from an asyncio.to_thread so it can do blocking I/O.
@@ -500,6 +548,7 @@ def get_state_payload(runtime) -> dict:
     alerts  = get_alert_state(runtime)
     layout  = compute_layout(mode, weights, alerts)
     state   = _load_state()
+    insights = get_layout_insights(user_id, mode, weights)
 
     return {
         "mode":              mode,
@@ -509,6 +558,7 @@ def get_state_payload(runtime) -> dict:
         "alerts":            alerts,
         "card_weights":      weights,
         "layout":            layout,
+        "insights":          insights,
         "modes": {
             k: {"label": v["label"], "icon": v["icon"]}
             for k, v in MODES.items()
