@@ -135,6 +135,9 @@ try:
 except Exception:  # pragma: no cover
     _FAMILY_PROFILES_AVAILABLE = False
 
+# Chronicle API base — uses env var so it works on both Mac (localhost) and VPS (docker service)
+_CHRONICLE_API_BASE = os.environ.get("CHRONICLE_API_URL", "http://localhost:5174")
+
 try:
     from .llm_gateway import get_gateway as _get_gateway
     _LLM_GATEWAY_AVAILABLE = True
@@ -7330,7 +7333,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 }
             }).encode()
             req = _ureq.Request(
-                "http://localhost:5174/api/chronicle-sync/import",
+                f"{_CHRONICLE_API_BASE}/api/chronicle-sync/import",
                 data=payload,
                 headers={"Content-Type": "application/json"},
             )
@@ -7382,7 +7385,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 }
             }).encode()
             req = _ureq.Request(
-                "http://localhost:5174/api/chronicle-sync/import",
+                f"{_CHRONICLE_API_BASE}/api/chronicle-sync/import",
                 data=payload,
                 headers={"Content-Type": "application/json"},
             )
@@ -7477,7 +7480,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 }
             }).encode()
             req = _ureq.Request(
-                "http://localhost:5174/api/chronicle-sync/import",
+                f"{_CHRONICLE_API_BASE}/api/chronicle-sync/import",
                 data=payload,
                 headers={"Content-Type": "application/json"},
             )
@@ -7525,7 +7528,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             import urllib.request as _ureq
             payload = json.dumps(body).encode()
             req = _ureq.Request(
-                "http://localhost:5174/api/ai/chat",
+                f"{_CHRONICLE_API_BASE}/api/ai/chat",
                 data=payload,
                 headers={"Content-Type": "application/json"},
             )
