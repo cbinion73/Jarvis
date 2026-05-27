@@ -658,6 +658,96 @@ body::after {{
   background: transparent; cursor: pointer; color: var(--text-2);
   font-size: 16px; display: flex; align-items: center; justify-content: center;
 }}
+
+/* ── Who Are You — identity landing overlay ──────────────────────── */
+#wau-overlay {{
+  position: fixed; inset: 0; z-index: 9000;
+  background: rgba(5,10,20,0.82);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  display: flex; align-items: center; justify-content: center;
+  animation: modal-overlay-in 0.35s ease;
+}}
+#wau-overlay.hidden {{ display: none !important; animation: none; }}
+#wau-box {{
+  position: relative; overflow: hidden;
+  background: rgba(255,255,255,0.07);
+  backdrop-filter: blur(60px) saturate(220%) brightness(1.08);
+  -webkit-backdrop-filter: blur(60px) saturate(220%) brightness(1.08);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 28px; padding: 40px 36px 32px;
+  width: min(560px, 95vw);
+  box-shadow:
+    0  8px  24px rgba(0,0,0,0.45),
+    0 32px  80px rgba(0,0,0,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.55),
+    inset 1px 0 0 rgba(255,255,255,0.18);
+  animation: modal-in 0.42s cubic-bezier(0.34,1.56,0.64,1);
+  text-align: center;
+}}
+#wau-box::before {{
+  content: ''; position: absolute; inset: 0; border-radius: 27px;
+  pointer-events: none; z-index: 0;
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.04) 35%, transparent 60%);
+}}
+#wau-box > * {{ position: relative; z-index: 1; }}
+.wau-logo {{
+  font-size: 42px; line-height: 1; margin-bottom: 10px;
+}}
+.wau-title {{
+  font-size: 22px; font-weight: 700; color: var(--text-1);
+  letter-spacing: -0.02em; margin-bottom: 4px;
+}}
+.wau-subtitle {{
+  font-size: 13px; color: var(--text-3); margin-bottom: 28px;
+}}
+.wau-grid {{
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 14px; margin-bottom: 20px;
+}}
+.wau-card {{
+  background: rgba(255,255,255,0.06);
+  border: 1.5px solid rgba(255,255,255,0.12);
+  border-radius: 16px; padding: 20px 14px 18px;
+  cursor: pointer; transition: all 0.18s;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 8px;
+  position: relative; overflow: hidden;
+}}
+.wau-card:hover {{
+  background: rgba(0,212,255,0.10);
+  border-color: rgba(0,212,255,0.45);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,212,255,0.15);
+}}
+.wau-card:active {{ transform: translateY(0); }}
+.wau-card-avatar {{
+  font-size: 36px; line-height: 1;
+}}
+.wau-card-name {{
+  font-size: 15px; font-weight: 700; color: var(--text-1);
+}}
+.wau-card-role {{
+  font-size: 11px; color: var(--text-3); margin-top: -4px;
+}}
+.wau-card-badge {{
+  position: absolute; top: 10px; right: 10px;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+  padding: 2px 6px; border-radius: 4px;
+  background: rgba(0,212,255,0.15); color: #00D4FF;
+  border: 1px solid rgba(0,212,255,0.3);
+}}
+.wau-guest {{
+  font-size: 12px; color: var(--text-3); cursor: pointer;
+  padding: 6px; border-radius: 8px; transition: color 0.15s;
+  background: none; border: none; width: 100%;
+}}
+.wau-guest:hover {{ color: var(--text-2); }}
+.wau-status {{
+  font-size: 12px; color: var(--text-3); margin-top: 12px;
+  min-height: 16px; transition: color 0.2s;
+}}
 .weather-hero {{
   display: flex; align-items: center; gap: 20px; margin-bottom: 24px;
   padding: 20px;
@@ -8656,26 +8746,26 @@ function _showDbg(label, msg) {{
 }}
 
 function ensureDeviceId() {{
-  /* Generate a stable device ID on first visit and register with the server. */
+  /* Generate a stable device ID on first visit, register with server.
+     Returns a Promise that resolves to the session response (or null on error). */
   let did = window.localStorage.getItem('jarvis-shell-device-id-v1') || '';
   if (!did) {{
     did = ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
       (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
     window.localStorage.setItem('jarvis-shell-device-id-v1', did);
   }}
-  /* Register / heartbeat with the server */
   const fp = navigator.userAgent + '|' + navigator.language + '|' +
              screen.width + '|' + screen.height;
-  fetch('/api/identity/session', {{
+  return fetch('/api/identity/session', {{
     method: 'POST',
     headers: {{'Content-Type': 'application/json'}},
     body: JSON.stringify({{
-      device_id:    did,
-      fingerprint:  fp,
-      user_agent:   navigator.userAgent,
-      device_type:  /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'browser',
-      last_host:    window.location.host,
-      last_origin:  window.location.origin,
+      device_id:   did,
+      fingerprint: fp,
+      user_agent:  navigator.userAgent,
+      device_type: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'browser',
+      last_host:   window.location.host,
+      last_origin: window.location.origin,
     }})
   }})
   .then(r => r.ok ? r.json() : null)
@@ -8683,13 +8773,111 @@ function ensureDeviceId() {{
     if (d && d.device && d.device.device_id) {{
       window.localStorage.setItem('jarvis-shell-device-id-v1', d.device.device_id);
     }}
+    return d;
   }})
-  .catch(() => {{}});
-  return did;
+  .catch(() => null);
+}}
+
+/* ── Who Are You overlay ──────────────────────────────────────────── */
+
+function wauShow() {{
+  const ov = document.getElementById('wau-overlay');
+  if (ov) ov.classList.remove('hidden');
+}}
+
+function wauHide() {{
+  const ov = document.getElementById('wau-overlay');
+  if (ov) {{
+    ov.style.animation = 'modal-overlay-in 0.2s ease reverse forwards';
+    setTimeout(() => ov.classList.add('hidden'), 200);
+  }}
+}}
+
+async function wauSelect(userId) {{
+  const status = document.getElementById('wau-status');
+  const grid   = document.getElementById('wau-grid');
+  const sub    = document.getElementById('wau-subtitle');
+
+  /* Highlight chosen card */
+  if (grid) grid.querySelectorAll('.wau-card').forEach(c => {{
+    c.style.opacity = c.getAttribute('onclick') === "wauSelect('" + userId + "')" ? '1' : '0.35';
+    c.style.pointerEvents = 'none';
+  }});
+  if (sub)    sub.textContent  = 'Setting up your profile…';
+  if (status) status.textContent = '';
+
+  let deviceId = window.localStorage.getItem('jarvis-shell-device-id-v1') || '';
+  if (!deviceId) {{
+    /* shouldn't happen, but generate on the spot */
+    deviceId = ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+      (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+    window.localStorage.setItem('jarvis-shell-device-id-v1', deviceId);
+  }}
+
+  const nameMap = {{chris:"Chris's Mac", rebekah:"Rebekah's Device",
+                    caleb:"Caleb's Computer", anna:"Anna's Device"}};
+  const displayMap = {{chris:"Chris", rebekah:"Rebekah", caleb:"Caleb", anna:"Anna"}};
+  const greetMap   = {{chris:"Good to see you, Sir.",
+                       rebekah:"Welcome back, Ma'am.",
+                       caleb:"Hey Caleb! Ready to go?",
+                       anna:"Hi Anna! Welcome to JARVIS."}};
+  const deviceName = (nameMap[userId] || userId + "'s Device")
+    .replace("Mac", navigator.userAgent.includes('iPhone') ? 'iPhone'
+           : navigator.userAgent.includes('iPad') ? 'iPad'
+           : navigator.userAgent.includes('Mac') ? 'Mac' : 'Device');
+
+  try {{
+    const r = await fetch('/api/identity/device', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{
+        device_id:     deviceId,
+        owner_user_id: userId,
+        device_name:   deviceName,
+        device_type:   'browser'
+      }})
+    }});
+    const d = await r.json();
+    if (d.ok) {{
+      if (status) {{
+        status.style.color = '#00D4FF';
+        status.textContent = greetMap[userId] || 'Welcome!';
+      }}
+      /* Store claimed user so we never prompt again on this browser */
+      window.localStorage.setItem('jarvis-claimed-user-v1', userId);
+      setTimeout(wauHide, 1200);
+    }} else {{
+      if (status) {{ status.style.color = '#f87171'; status.textContent = d.detail || 'Something went wrong — try again.'; }}
+      if (grid) grid.querySelectorAll('.wau-card').forEach(c => {{
+        c.style.opacity = '1'; c.style.pointerEvents = '';
+      }});
+    }}
+  }} catch(e) {{
+    if (status) {{ status.style.color = '#f87171'; status.textContent = 'Network error — try again.'; }}
+    if (grid) grid.querySelectorAll('.wau-card').forEach(c => {{
+      c.style.opacity = '1'; c.style.pointerEvents = '';
+    }});
+  }}
+}}
+
+function wauGuest() {{
+  /* User doesn't want to identify — remember this choice for the session */
+  window.sessionStorage.setItem('jarvis-wau-skipped', '1');
+  wauHide();
 }}
 
 async function init() {{
-  ensureDeviceId();
+  /* Register device then decide whether to show the "Who are you?" overlay.
+     Show if: device has no claimed owner AND user hasn't skipped this session
+     AND localStorage has no remembered claimed user. */
+  const sessionData = await ensureDeviceId();
+  const alreadyClaimed  = window.localStorage.getItem('jarvis-claimed-user-v1');
+  const skippedThisSession = window.sessionStorage.getItem('jarvis-wau-skipped');
+  const serverClaimed   = sessionData && sessionData.device && sessionData.device.owner_user_id;
+  if (!alreadyClaimed && !skippedThisSession && !serverClaimed) {{
+    wauShow();
+  }}
+
   await loadCfIdentity();
   try {{
     switchView('overview');
@@ -20856,5 +21044,40 @@ function _navDarkMapStyles() {{
     <div id="kdp-2fa-msg" style="margin-top:12px;font-size:12px;color:rgba(255,255,200,0.6);min-height:16px;"></div>
   </div>
 </div>
+
+<!-- ═══ WHO ARE YOU — identity landing overlay ═══════════════════════ -->
+<div id="wau-overlay" class="hidden">
+  <div id="wau-box">
+    <div class="wau-logo">⬡</div>
+    <div class="wau-title">Welcome to JARVIS</div>
+    <div class="wau-subtitle" id="wau-subtitle">Who's using this device?</div>
+    <div class="wau-grid" id="wau-grid">
+      <div class="wau-card" onclick="wauSelect('chris')">
+        <div class="wau-card-avatar">👨</div>
+        <div class="wau-card-name">Chris</div>
+        <div class="wau-card-role">Director</div>
+        <div class="wau-card-badge">Admin</div>
+      </div>
+      <div class="wau-card" onclick="wauSelect('rebekah')">
+        <div class="wau-card-avatar">👩</div>
+        <div class="wau-card-name">Rebekah</div>
+        <div class="wau-card-role">Household</div>
+      </div>
+      <div class="wau-card" onclick="wauSelect('caleb')">
+        <div class="wau-card-avatar">👦</div>
+        <div class="wau-card-name">Caleb</div>
+        <div class="wau-card-role">6th Grade</div>
+      </div>
+      <div class="wau-card" onclick="wauSelect('anna')">
+        <div class="wau-card-avatar">👧</div>
+        <div class="wau-card-name">Anna</div>
+        <div class="wau-card-role">4th Grade</div>
+      </div>
+    </div>
+    <button class="wau-guest" onclick="wauGuest()">Just browsing — don't save</button>
+    <div class="wau-status" id="wau-status"></div>
+  </div>
+</div>
+
 </body>
 </html>"""
