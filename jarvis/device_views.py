@@ -3084,6 +3084,7 @@ function loadKasaScenes() {
 }
 loadKasaScenes();
 driveLoadStoredData();
+driveStartStateTracking();
 driveLoadMapsScript();
 
 // ---- TTS helper ----
@@ -3305,6 +3306,11 @@ var MANEUVER_ARROWS = {
 };
 
 var _drivePendingDest = '';   // queued destination if Maps not ready yet
+// ---- State-line crossing ----
+var _driveCurrentState = '';  // last known state (empty = not yet detected)
+var _driveStateWatchId = null;
+var _driveLastStateCheckAt = 0;
+var _driveGeocoder = null;
 var _driveCurrentDest = '';  // destination of active/last route
 var _driveMapsKey = '';       // cached Maps API key (reused for Roads API)
 var _driveRouteResult = null; // last route result (for fitBounds)
@@ -3425,6 +3431,46 @@ function driveMicForNav() {
     _driveMicRecognition = null;
   };
   _driveMicRecognition.start();
+}
+
+// ---- State-line crossing detection ----
+function driveCheckStateChange(lat, lng) {
+  // Rate-limit to once every 45 seconds — state lines don't move fast
+  var now = Date.now();
+  if (now - _driveLastStateCheckAt < 45000) return;
+  _driveLastStateCheckAt = now;
+  // Geocoder needs Maps API to be loaded
+  if (!window.google || !google.maps || !google.maps.Geocoder) return;
+  if (!_driveGeocoder) _driveGeocoder = new google.maps.Geocoder();
+  _driveGeocoder.geocode({location: {lat: lat, lng: lng}}, function(results, status) {
+    if (status !== 'OK' || !results || !results.length) return;
+    var stateName = '';
+    var comps = results[0].address_components;
+    for (var i = 0; i < comps.length; i++) {
+      if (comps[i].types.indexOf('administrative_area_level_1') >= 0) {
+        stateName = comps[i].long_name;
+        break;
+      }
+    }
+    if (!stateName) return;
+    if (_driveCurrentState && _driveCurrentState !== stateName) {
+      // Crossed into a new state — announce it
+      speak('Welcome to ' + stateName + ', Sir');
+    }
+    _driveCurrentState = stateName;
+  });
+}
+
+function driveStartStateTracking() {
+  // Passive watch — low accuracy, saves battery, runs whole time CarPlay is open
+  if (!navigator.geolocation || _driveStateWatchId !== null) return;
+  _driveStateWatchId = navigator.geolocation.watchPosition(
+    function(pos) {
+      driveCheckStateChange(pos.coords.latitude, pos.coords.longitude);
+    },
+    function() {},
+    {enableHighAccuracy: false, maximumAge: 60000, timeout: 30000}
+  );
 }
 
 function driveLoadMapsScript() {
@@ -3745,6 +3791,8 @@ function driveStartStepTracking() {
       _driveLastSpeedLimitAt = nowMs;
       driveFetchSpeedLimit(lat, lng);
     }
+    // State-line check — piggyback on high-accuracy nav watch
+    driveCheckStateChange(lat, lng);
     // Check if close enough to advance to next step (within ~80m)
     var nextStep = _driveNavSteps[_driveNavCurrentStep + 1];
     if (nextStep && nextStep.start_location) {
