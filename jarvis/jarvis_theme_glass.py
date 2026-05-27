@@ -18303,8 +18303,11 @@ function initNavView() {{
     }}
 }}
 
+var _navMapsKey = '';
+
 function loadGoogleMapsScript() {{
     fetch('/api/nav/maps-key').then(function(r) {{ return r.json(); }}).then(function(d) {{
+        _navMapsKey = d.key || '';
         var s = document.createElement('script');
         s.src = 'https://maps.googleapis.com/maps/api/js?key=' + d.key + '&libraries=places&callback=onGoogleMapsReady';
         s.async = true;
@@ -18688,110 +18691,156 @@ function _updateNavHUD() {{
 }}
 
 // ── AERIAL VIEW ──────────────────────────────────────────────────────────────
+// ── Aerial View — browser-side polling (URLs are signed for the browser's IP) ─
+function _aerialFallback(video, fallback, loadingEl) {{
+    if (window._aerialFallbackShown) return;
+    window._aerialFallbackShown = true;
+    if (window._aerialHls) {{ window._aerialHls.destroy(); window._aerialHls = null; }}
+    video.style.display = 'none';
+    if (loadingEl) loadingEl.style.display = 'none';
+    fallback.style.display = 'block';
+    var destLat = 0, destLng = 0;
+    if (_navRouteData && _navRouteData.routes && _navRouteData.routes[0]) {{
+        var legs = _navRouteData.routes[0].legs;
+        var lastLeg = legs[legs.length - 1];
+        destLat = lastLeg.end_location.lat;
+        destLng = lastLeg.end_location.lng;
+    }}
+    fallback.src = '/api/nav/streetview?lat=' + destLat + '&lng=' + destLng + '&heading=0&width=800&height=450';
+    fallback.onerror = function() {{
+        fallback.style.display = 'none';
+        if (loadingEl) {{
+            loadingEl.style.display = 'flex';
+            loadingEl.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.5)">&#127757; No aerial imagery available<br>for this destination</div>';
+        }}
+    }};
+}}
+
+function _aerialPlayVideo(d, video, fallback, loadingEl) {{
+    if (loadingEl) loadingEl.style.display = 'none';
+    // Extract landscape MP4 URL — browser-signed, CORS-enabled (acao=yes in URL)
+    var mp4High = (d.uris && d.uris.MP4_HIGH && d.uris.MP4_HIGH.landscapeUri) || '';
+    var mp4Med  = (d.uris && d.uris.MP4_MEDIUM && d.uris.MP4_MEDIUM.landscapeUri) || '';
+    var mp4Low  = (d.uris && d.uris.MP4_LOW && d.uris.MP4_LOW.landscapeUri) || '';
+    var hlsObj  = (d.uris && d.uris.HLS) || {{}};
+    var hlsUri  = (typeof hlsObj === 'string') ? hlsObj : (hlsObj.landscapeUri || hlsObj.portraitUri || '');
+    var videoUri = mp4High || mp4Med || mp4Low || d.videoUri || '';
+
+    if (!hlsUri && !videoUri) {{
+        _aerialFallback(video, fallback, loadingEl); return;
+    }}
+    video.style.display = 'block';
+    fallback.style.display = 'none';
+    // Safety net: if nothing plays after 15s, fall back to Street View
+    var _safetyTimer = setTimeout(function() {{
+        if (!window._aerialFallbackShown && (video.readyState === 0 || video.videoWidth === 0)) {{
+            _aerialFallback(video, fallback, loadingEl);
+        }}
+    }}, 15000);
+
+    function _onPlaySuccess() {{
+        window._aerialFallbackShown = true; // cancel safety net from showing fallback
+        clearTimeout(_safetyTimer);
+    }}
+
+    // Attempt 1: native HLS (Safari) or HLS.js with direct URL
+    if (hlsUri) {{
+        if (video.canPlayType('application/vnd.apple.mpegurl')) {{
+            // Safari: native HLS support — direct URL works
+            video.crossOrigin = 'anonymous';
+            video.src = hlsUri;
+            video.load();
+            video.play().then(_onPlaySuccess).catch(function() {{
+                video.muted = true;
+                video.play().then(_onPlaySuccess).catch(function() {{ _aerialFallback(video, fallback, loadingEl); }});
+            }});
+            return;
+        }}
+        if (window.Hls && Hls.isSupported()) {{
+            // Chrome/Firefox: use HLS.js with the direct URL (browser-signed → no 403)
+            if (window._aerialHls) window._aerialHls.destroy();
+            window._aerialHls = new Hls({{ maxBufferLength: 15, enableWorker: false, xhrSetup: function(xhr) {{ xhr.withCredentials = false; }} }});
+            window._aerialHls.loadSource(hlsUri);
+            window._aerialHls.attachMedia(video);
+            window._aerialHls.on(Hls.Events.MANIFEST_PARSED, function() {{
+                window._aerialFallbackShown = true;
+                clearTimeout(_safetyTimer);
+                video.muted = true; // ensure autoplay works
+                video.play().catch(function() {{ _aerialFallback(video, fallback, loadingEl); }});
+            }});
+            window._aerialHls.on(Hls.Events.ERROR, function(ev, data) {{
+                if (data.fatal) {{
+                    // HLS.js failed — fall through to MP4
+                    if (videoUri) {{
+                        window._aerialHls.destroy(); window._aerialHls = null;
+                        video.src = videoUri; video.crossOrigin = 'anonymous'; video.load();
+                        video.muted = true;
+                        video.play().then(_onPlaySuccess).catch(function() {{ _aerialFallback(video, fallback, loadingEl); }});
+                    }} else {{
+                        _aerialFallback(video, fallback, loadingEl);
+                    }}
+                }}
+            }});
+            return;
+        }}
+    }}
+    // Attempt 2: direct MP4 (works in all modern browsers, CORS via acao=yes)
+    if (videoUri) {{
+        video.crossOrigin = 'anonymous';
+        video.src = videoUri;
+        video.load();
+        video.muted = true;
+        video.play().then(_onPlaySuccess).catch(function() {{ _aerialFallback(video, fallback, loadingEl); }});
+        return;
+    }}
+    _aerialFallback(video, fallback, loadingEl);
+}}
+
 function showAerialView(destinationAddress) {{
     var modal = document.getElementById('nav-aerial-modal');
     var video = document.getElementById('nav-aerial-video');
     var fallback = document.getElementById('nav-aerial-fallback');
     var nameEl = document.getElementById('nav-aerial-dest-name');
     if (!modal) return;
-    // Show modal immediately with loading state
+    window._aerialFallbackShown = false;
     nameEl.textContent = destinationAddress;
     video.style.display = 'none';
     fallback.style.display = 'none';
     var loadingEl = document.getElementById('nav-aerial-loading');
     if (loadingEl) loadingEl.style.display = 'flex';
     modal.style.display = 'flex';
-    fetch('/api/nav/aerial?address=' + encodeURIComponent(destinationAddress))
-        .then(function(r) {{ return r.json(); }})
-        .then(function(d) {{
-            if (loadingEl) loadingEl.style.display = 'none';
-            // Prefer HLS for streaming (avoids CORS issues with direct MP4 URLs)
-            var hlsUri = d.uris && d.uris.HLS || '';
-            var videoUri = d.videoUri || (d.uris && d.uris.MP4_HIGH) || (d.uris && d.uris.MP4_MEDIUM) || '';
-            if (hlsUri || videoUri) {{
-                var _aerialFallbackShown = false;
-                function _showAerialFallback() {{
-                    if (_aerialFallbackShown) return;
-                    _aerialFallbackShown = true;
-                    if (window._aerialHls) {{ window._aerialHls.destroy(); window._aerialHls = null; }}
-                    video.style.display = 'none';
-                    fallback.style.display = 'block';
-                    var destLat = 0, destLng = 0;
-                    if (_navRouteData && _navRouteData.routes && _navRouteData.routes[0]) {{
-                        var legs = _navRouteData.routes[0].legs;
-                        var lastLeg = legs[legs.length - 1];
-                        destLat = lastLeg.end_location.lat;
-                        destLng = lastLeg.end_location.lng;
-                    }}
-                    fallback.src = '/api/nav/streetview?lat=' + destLat + '&lng=' + destLng + '&heading=0&width=800&height=450';
-                }}
-                video.style.display = 'block';
-                fallback.style.display = 'none';
-                if (hlsUri && window.Hls && Hls.isSupported()) {{
-                    // Use HLS.js — designed for streaming, no CORS issues
-                    if (window._aerialHls) {{ window._aerialHls.destroy(); }}
-                    window._aerialHls = new Hls({{
-                        maxBufferLength: 10,
-                        enableWorker: true
-                    }});
-                    window._aerialHls.loadSource(hlsUri);
-                    window._aerialHls.attachMedia(video);
-                    window._aerialHls.on(Hls.Events.MANIFEST_PARSED, function() {{
-                        video.play().catch(_showAerialFallback);
-                        _aerialFallbackShown = true; // HLS loaded — cancel MP4 fallback timer
-                    }});
-                    window._aerialHls.on(Hls.Events.ERROR, function(e, data) {{
-                        if (data.fatal) _showAerialFallback();
-                    }});
+
+    if (!_navMapsKey) {{
+        // Key not loaded yet — fall back to server proxy
+        fetch('/api/nav/aerial?address=' + encodeURIComponent(destinationAddress))
+            .then(function(r) {{ return r.json(); }})
+            .then(function(d) {{ _aerialPlayVideo(d, video, fallback, loadingEl); }})
+            .catch(function() {{ _aerialFallback(video, fallback, loadingEl); }});
+        return;
+    }}
+
+    // Call Aerial View API directly from the browser — URLs are signed for the client IP
+    var _aerialAttempt = 0;
+    function _pollAerialDirect() {{
+        fetch('https://aerialview.googleapis.com/v1/videos:lookupVideo?address='
+              + encodeURIComponent(destinationAddress) + '&key=' + _navMapsKey)
+            .then(function(r) {{ return r.json(); }})
+            .then(function(d) {{
+                var state = d.state || '';
+                var hasVideo = d.videoUri || (d.uris && (d.uris.MP4_HIGH || d.uris.MP4_MEDIUM || d.uris.MP4_LOW || d.uris.HLS));
+                if (hasVideo) {{
+                    _aerialPlayVideo(d, video, fallback, loadingEl);
+                }} else if (state === 'PROCESSING' && _aerialAttempt < 8) {{
+                    _aerialAttempt++;
+                    setTimeout(_pollAerialDirect, 2000);
                 }} else {{
-                    // Direct MP4 fallback (Safari supports HLS natively)
-                    video.onerror = _showAerialFallback;
-                    video.onloadeddata = function() {{ _aerialFallbackShown = true; }};
-                    video.src = hlsUri || videoUri;
-                    video.load();
-                    video.play().catch(_showAerialFallback);
+                    // No coverage or max attempts reached
+                    _aerialFallback(video, fallback, loadingEl);
                 }}
-                // Safety net: if still no video after 8s, show Street View
-                setTimeout(function() {{
-                    if (!_aerialFallbackShown && (video.readyState === 0 || video.videoWidth === 0)) {{
-                        _showAerialFallback();
-                    }}
-                }}, 8000);
-            }} else {{
-                // Fallback: Street View of destination using route end point coords
-                video.style.display = 'none';
-                fallback.style.display = 'block';
-                var destLat = 0, destLng = 0;
-                if (_navRouteData && _navRouteData.routes && _navRouteData.routes[0]) {{
-                    var legs = _navRouteData.routes[0].legs;
-                    var lastLeg = legs[legs.length - 1];
-                    destLat = lastLeg.end_location.lat;
-                    destLng = lastLeg.end_location.lng;
-                }}
-                fallback.src = '/api/nav/streetview?lat=' + destLat + '&lng=' + destLng + '&heading=0&width=800&height=450';
-                fallback.onerror = function() {{
-                    // If street view also has no coverage, show a message
-                    fallback.style.display = 'none';
-                    if (loadingEl) {{
-                        loadingEl.style.display = 'flex';
-                        loadingEl.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.5)">&#127757; No aerial imagery available<br>for this destination</div>';
-                    }}
-                }};
-            }}
-        }})
-        .catch(function(err) {{
-            if (loadingEl) loadingEl.style.display = 'none';
-            video.style.display = 'none';
-            fallback.style.display = 'block';
-            var destLat = 0, destLng = 0;
-            if (_navRouteData && _navRouteData.routes && _navRouteData.routes[0]) {{
-                var legs = _navRouteData.routes[0].legs;
-                var lastLeg = legs[legs.length - 1];
-                destLat = lastLeg.end_location.lat;
-                destLng = lastLeg.end_location.lng;
-            }}
-            fallback.src = '/api/nav/streetview?lat=' + destLat + '&lng=' + destLng + '&heading=0&width=800&height=450';
-        }});
+            }})
+            .catch(function() {{ _aerialFallback(video, fallback, loadingEl); }});
+    }}
+    _pollAerialDirect();
 }}
 
 function closeAerialModal() {{
