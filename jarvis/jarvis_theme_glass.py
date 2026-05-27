@@ -12157,7 +12157,7 @@ async function loadOverviewMapsUsage() {{
       return `<div style="display:flex;justify-content:space-between;align-items:center;
                           padding:2px 0;font-size:11px;color:var(--text-2);">
         <span>${{escHtml(name)}}</span>
-        <span style="font-family:var(--font-mono);color:var(--text-3);">${{reqs}} req · $${cost}</span>
+        <span style="font-family:var(--font-mono);color:var(--text-3);">${{reqs}} req · $${{cost}}</span>
       </div>`;
     }}).join('');
 
