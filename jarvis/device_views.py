@@ -2313,6 +2313,109 @@ def carplay_view() -> str:
   display: none;
   font-family: var(--font-sans);
 }
+/* Zoom +/- buttons overlay */
+.drive-map-zoom {
+  position: absolute;
+  top: 80px;
+  right: 12px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.drive-map-zoom-btn {
+  width: 42px;
+  height: 42px;
+  background: rgba(13,17,23,0.92);
+  border: 1px solid rgba(88,166,255,0.35);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 24px;
+  font-weight: 300;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  line-height: 1;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.drive-map-zoom-btn:active { background: rgba(88,166,255,0.2); }
+/* View-toggle controls (center + fit-route) — visible when nav active */
+.drive-map-view-btns {
+  position: absolute;
+  top: 178px;
+  right: 12px;
+  z-index: 10;
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+}
+.drive-map-ctrl-btn {
+  width: 42px;
+  height: 42px;
+  background: rgba(13,17,23,0.92);
+  border: 1px solid rgba(88,166,255,0.25);
+  color: rgba(255,255,255,0.85);
+  border-radius: 10px;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.drive-map-ctrl-btn:active { background: rgba(88,166,255,0.15); }
+/* Speed + speed-limit badge */
+.drive-speed-badge {
+  position: absolute;
+  bottom: 56px;
+  left: 12px;
+  z-index: 10;
+  background: rgba(13,17,23,0.92);
+  border: 1px solid rgba(88,166,255,0.3);
+  border-radius: 12px;
+  padding: 8px 12px;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  min-width: 64px;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.drive-speed-num {
+  font-size: 30px;
+  font-weight: 100;
+  color: #fff;
+  line-height: 1;
+}
+.drive-speed-unit-lbl {
+  font-size: 10px;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 5px;
+}
+.drive-speed-limit-box {
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding-top: 4px;
+  text-align: center;
+  width: 100%;
+}
+.drive-speed-limit-num {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+}
+.drive-speed-limit-lbl {
+  font-size: 8px;
+  color: rgba(255,255,255,0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
 /* Map not loaded fallback */
 .drive-map-loading {
   position: absolute;
@@ -2484,7 +2587,7 @@ def carplay_view() -> str:
   border-radius: 10px;
   overflow: hidden;
   background: #111;
-  min-height: 90px;
+  min-height: 150px;
   flex-shrink: 0;
 }
 .drive-sv-img {
@@ -2492,7 +2595,7 @@ def carplay_view() -> str:
   display: block;
   border-radius: 10px;
   object-fit: cover;
-  height: 100px;
+  height: 160px;
 }
 .drive-sv-placeholder {
   position: absolute;
@@ -2686,6 +2789,25 @@ def carplay_view() -> str:
       <!-- Cancel route -->
       <button class="drive-nav-cancel" id="drive-nav-cancel"
               onclick="driveNavCancel()">&#10005;</button>
+      <!-- Zoom +/- -->
+      <div class="drive-map-zoom">
+        <button class="drive-map-zoom-btn" onclick="driveZoom(1)">+</button>
+        <button class="drive-map-zoom-btn" onclick="driveZoom(-1)">&#8722;</button>
+      </div>
+      <!-- View toggles (nav active only) -->
+      <div class="drive-map-view-btns" id="drive-map-view-btns">
+        <button class="drive-map-ctrl-btn" onclick="driveCenterOnMe()" title="Center on me">&#128205;</button>
+        <button class="drive-map-ctrl-btn" onclick="driveFitRoute()" title="Full route">&#128506;</button>
+      </div>
+      <!-- Speed + speed-limit badge -->
+      <div class="drive-speed-badge" id="drive-speed-badge">
+        <div class="drive-speed-num" id="drive-speed-num">0</div>
+        <div class="drive-speed-unit-lbl">mph</div>
+        <div class="drive-speed-limit-box">
+          <div class="drive-speed-limit-num" id="drive-speed-limit-num">--</div>
+          <div class="drive-speed-limit-lbl">limit</div>
+        </div>
+      </div>
     </div>
     <div class="drive-sam-strip" id="drive-sam-strip">
       <div class="drive-sam-metric">
@@ -3150,8 +3272,11 @@ var MANEUVER_ARROWS = {
   'arrive':            '&#11088;'
 };
 
-var _drivePendingDest = '';  // queued destination if Maps not ready yet
-var _driveCurrentDest = ''; // destination of active/last route
+var _drivePendingDest = '';   // queued destination if Maps not ready yet
+var _driveCurrentDest = '';  // destination of active/last route
+var _driveMapsKey = '';       // cached Maps API key (reused for Roads API)
+var _driveRouteResult = null; // last route result (for fitBounds)
+var _driveLastSpeedLimitAt = 0; // timestamp of last speed-limit fetch
 var _driveHistory = [];     // recent destinations (localStorage)
 var _driveFavorites = {};   // starred destinations (localStorage)
 var _driveMicRecognition = null;
@@ -3277,6 +3402,7 @@ function driveLoadMapsScript() {
         '<div style="font-size:14px;padding:20px;text-align:center;color:rgba(255,100,100,0.8)">Maps API key not configured</div>';
       return;
     }
+    _driveMapsKey = d.key;
     var s = document.createElement('script');
     s.src = 'https://maps.googleapis.com/maps/api/js?key=' + d.key +
             '&loading=async&callback=driveOnMapsReady';
@@ -3446,11 +3572,17 @@ function _driveDoRoute(origin, dest) {
       return;
     }
     _driveNavRenderer.setDirections(result);
+    _driveRouteResult = result;
     _driveNavRouteLeg = result.routes[0].legs[0];
     _driveNavSteps = _driveNavRouteLeg.steps || [];
     _driveNavCurrentStep = 0;
     _driveCurrentDest = dest;
     driveUpdateFavBtn(dest);
+    // Show full route first, then zoom to user's location after 3s
+    if (_driveNavMap && result.routes[0].bounds) {
+      _driveNavMap.fitBounds(result.routes[0].bounds, {top: 60, bottom: 60, left: 20, right: 20});
+    }
+    setTimeout(function() { driveCenterOnMe(); }, 3000);
     // Capture polyline + mileage for POI searches
     // Maps JS API returns overview_polyline as a plain string;
     // the HTTP Directions API returns {points: "..."} — handle both
@@ -3541,6 +3673,16 @@ function driveSetNavState(active) {
   document.getElementById('drive-nav-cancel').style.display = active ? 'block' : 'none';
   document.getElementById('drive-nav-home-btn').style.display = active ? 'none' : (_driveNavHomeAddr ? 'flex' : 'none');
   document.getElementById('drive-nav-hud').style.display = active ? 'block' : 'none';
+  var speedBadge = document.getElementById('drive-speed-badge');
+  if (speedBadge) speedBadge.style.display = active ? 'flex' : 'none';
+  var viewBtns = document.getElementById('drive-map-view-btns');
+  if (viewBtns) viewBtns.style.display = active ? 'flex' : 'none';
+  if (!active) {
+    var speedEl = document.getElementById('drive-speed-num');
+    if (speedEl) speedEl.textContent = '0';
+    var limitEl = document.getElementById('drive-speed-limit-num');
+    if (limitEl) limitEl.textContent = '--';
+  }
 }
 
 function driveStartStepTracking() {
@@ -3559,6 +3701,18 @@ function driveStartStepTracking() {
         rotation: pos.coords.heading || 0
       });
     }
+    // Current speed
+    if (pos.coords.speed !== null && pos.coords.speed >= 0) {
+      var mph = Math.round(pos.coords.speed * 2.23694);
+      var speedEl = document.getElementById('drive-speed-num');
+      if (speedEl) speedEl.textContent = mph;
+    }
+    // Speed limit — rate-limited to once every 45s
+    var nowMs = Date.now();
+    if (nowMs - _driveLastSpeedLimitAt > 45000) {
+      _driveLastSpeedLimitAt = nowMs;
+      driveFetchSpeedLimit(lat, lng);
+    }
     // Check if close enough to advance to next step (within ~80m)
     var nextStep = _driveNavSteps[_driveNavCurrentStep + 1];
     if (nextStep && nextStep.start_location) {
@@ -3571,6 +3725,40 @@ function driveStartStepTracking() {
       }
     }
   }, function() {}, {enableHighAccuracy: true, maximumAge: 3000});
+}
+
+// ---- Map controls ----
+function driveZoom(delta) {
+  if (!_driveNavMap) return;
+  _driveNavMap.setZoom(_driveNavMap.getZoom() + delta);
+}
+
+function driveCenterOnMe() {
+  if (!_driveNavMap || !navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    _driveNavMap.panTo({lat: pos.coords.latitude, lng: pos.coords.longitude});
+    _driveNavMap.setZoom(15);
+  }, function() {}, {timeout: 5000, maximumAge: 15000});
+}
+
+function driveFitRoute() {
+  if (!_driveNavMap || !_driveRouteResult) return;
+  var bounds = _driveRouteResult.routes[0].bounds;
+  if (bounds) _driveNavMap.fitBounds(bounds, {top: 60, bottom: 60, left: 20, right: 20});
+}
+
+function driveFetchSpeedLimit(lat, lng) {
+  if (!_driveMapsKey) return;
+  fetch('https://roads.googleapis.com/v1/speedLimits?path=' + lat + ',' + lng + '&key=' + _driveMapsKey)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var el = document.getElementById('drive-speed-limit-num');
+      if (!el) return;
+      if (d.speedLimits && d.speedLimits.length > 0) {
+        var kmh = d.speedLimits[0].speedLimit;
+        el.textContent = Math.round(kmh * 0.621371);
+      }
+    }).catch(function() {});
 }
 
 function driveNavCancel() {
@@ -3588,6 +3776,7 @@ function driveNavCancel() {
   _drivePolyline = '';
   _driveTotalMiles = 0;
   _driveCurrentDest = '';
+  _driveRouteResult = null;
   driveUpdateFavBtn('');
   driveClearAllPois();
   driveSetNavState(false);
