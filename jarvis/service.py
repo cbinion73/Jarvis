@@ -886,6 +886,164 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             return _render_glass_shell(runtime, initial_packet=packet)
         return render_voice_shell(runtime, initial_packet=packet)
 
+    # ── CarPlay PWA ──────────────────────────────────────────────────────────
+    @app.get("/carplay", response_class=HTMLResponse)
+    async def carplay_device_view() -> str:
+        from .device_views import carplay_view
+        return carplay_view()
+
+    @app.get("/manifest.json")
+    async def pwa_manifest() -> JSONResponse:
+        return JSONResponse({
+            "name": "JARVIS Drive", "short_name": "JARVIS",
+            "description": "J.A.R.V.I.S. Navigation & In-Vehicle Command",
+            "start_url": "/carplay", "scope": "/",
+            "display": "fullscreen", "orientation": "landscape",
+            "background_color": "#0d1117", "theme_color": "#00D4FF",
+            "icons": [
+                {"src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+                {"src": "/assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+                {"src": "/assets/icons/icon-144.png", "sizes": "144x144", "type": "image/png"},
+            ],
+            "categories": ["navigation", "utilities"], "lang": "en-US"
+        })
+
+    @app.get("/sw.js")
+    async def service_worker() -> Response:
+        js = r"""
+const CACHE='jarvis-drive-v1',PRECACHE=['/carplay','/assets/icons/icon-192.png','/assets/icons/icon-512.png'];
+self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(PRECACHE)).then(()=>self.skipWaiting()));});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
+self.addEventListener('fetch',e=>{const u=e.request.url;if(u.includes('/api/')||u.includes('googleapis')||u.includes('/sse'))return;e.respondWith(fetch(e.request).then(r=>{if(r&&r.status===200&&e.request.method==='GET'){const c=r.clone();caches.open(CACHE).then(ca=>ca.put(e.request,c));}return r;}).catch(()=>caches.match(e.request)));});
+"""
+        return Response(content=js, media_type="application/javascript",
+                        headers={"Service-Worker-Allowed": "/"})
+
+    # ── Google Maps API usage ─────────────────────────────────────────────────
+    @app.get("/api/google/maps-usage")
+    async def google_maps_usage():
+        import json as _j
+        from datetime import datetime, timezone, timedelta
+        sa  = os.environ.get("GOOGLE_CLOUD_SA_KEY_PATH", "")
+        pid = os.environ.get("GOOGLE_CLOUD_PROJECT_ID", "")
+        if not sa or not pid:
+            return JSONResponse({"error": "not_configured"})
+        cache = Path("data/cache/maps_usage_cache.json")
+        try:
+            if cache.exists():
+                c = _j.loads(cache.read_text())
+                if (datetime.now(timezone.utc).timestamp() - c.get("_ts", 0)) / 3600 < 6:
+                    return JSONResponse(c)
+        except Exception:
+            pass
+        try:
+            from google.oauth2 import service_account
+            from google.auth.transport.requests import Request as _GR
+            import httpx as _hx
+            creds = service_account.Credentials.from_service_account_file(
+                sa, scopes=["https://www.googleapis.com/auth/monitoring.read"])
+            creds.refresh(_GR())
+            now   = datetime.now(timezone.utc)
+            start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            secs  = max(int((now - start).total_seconds()), 3600)
+            SVCS  = {
+                "maps-backend.googleapis.com":       ("Maps / Street View",    7.00),
+                "places-backend.googleapis.com":     ("Places / Autocomplete", 2.83),
+                "directions-backend.googleapis.com": ("Directions",            5.00),
+                "geocoding-backend.googleapis.com":  ("Geocoding",             5.00),
+                "roads.googleapis.com":              ("Roads API",            10.00),
+            }
+            usage = {}
+            async with _hx.AsyncClient(timeout=15) as client:
+                for svc, (label, price) in SVCS.items():
+                    r = await client.get(
+                        f"https://monitoring.googleapis.com/v3/projects/{pid}/timeSeries",
+                        headers={"Authorization": f"Bearer {creds.token}"},
+                        params={"filter": f'metric.type="serviceruntime.googleapis.com/api/request_count" AND resource.labels.service="{svc}"',
+                                "interval.startTime": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                "interval.endTime":   now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                "aggregation.alignmentPeriod": f"{secs}s",
+                                "aggregation.perSeriesAligner": "ALIGN_SUM"})
+                    total = sum(int(pt.get("value", {}).get("int64Value", 0) or
+                                   pt.get("value", {}).get("doubleValue", 0) or 0)
+                               for ts in r.json().get("timeSeries", [])
+                               for pt in ts.get("points", []))
+                    usage[label] = {"requests": total, "price_per_k": price}
+            days_total   = (start.replace(month=start.month % 12 + 1, day=1) - timedelta(days=1)).day
+            total_cost   = sum((v["requests"] / 1000) * v["price_per_k"] for v in usage.values())
+            projected    = round(total_cost * days_total / max(now.day, 1), 2)
+            result = {"month": now.strftime("%B %Y"), "project_id": pid, "usage": usage,
+                      "total_requests": sum(v["requests"] for v in usage.values()),
+                      "estimated_cost": round(total_cost, 2), "projected_cost": projected,
+                      "free_credit": 200.0, "remaining_credit": round(max(0.0, 200.0 - total_cost), 2),
+                      "pct_used": round(min(100, (total_cost / 200) * 100), 1),
+                      "days_elapsed": now.day, "days_in_month": days_total,
+                      "_ts": now.timestamp()}
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            cache.write_text(_j.dumps(result))
+            return JSONResponse(result)
+        except Exception as e:
+            return JSONResponse({"error": str(e)})
+
+    # ── Unified JARVIS cost summary ───────────────────────────────────────────
+    @app.get("/api/costs/summary")
+    async def costs_summary():
+        """Real-time JARVIS operating cost summary from llm_usage.jsonl + maps API."""
+        import json as _j
+        from datetime import datetime, timezone
+        now        = datetime.now(timezone.utc)
+        month_ts   = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp()
+        today_ts   = now.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+        log_path   = Path("data/logs/llm_usage.jsonl")
+        month_cost = 0.0;  today_cost  = 0.0;  alltime = 0.0
+        month_in   = 0;    month_out   = 0
+        by_model: dict = {}
+        by_backend: dict = {}
+        if log_path.exists():
+            for raw in log_path.read_text().splitlines():
+                try:
+                    d    = _j.loads(raw)
+                    ts   = float(d.get("ts", 0))
+                    cost = float(d.get("estimated_cost_usd") or 0)
+                    mdl  = d.get("model_used", "unknown")
+                    bk   = d.get("backend", "unknown")
+                    alltime += cost
+                    if ts >= month_ts:
+                        month_cost += cost
+                        month_in   += int(d.get("prompt_tokens") or 0)
+                        month_out  += int(d.get("completion_tokens") or 0)
+                        bm = by_model.setdefault(mdl, {"cost": 0.0, "calls": 0, "backend": bk})
+                        bm["cost"] += cost; bm["calls"] += 1
+                        bb = by_backend.setdefault(bk, {"cost": 0.0, "calls": 0})
+                        bb["cost"] += cost; bb["calls"] += 1
+                    if ts >= today_ts:
+                        today_cost += cost
+                except Exception:
+                    pass
+        # Grab cached maps cost (don't re-fetch — respect 6h cache)
+        maps_cost  = 0.0
+        maps_cache = Path("data/cache/maps_usage_cache.json")
+        if maps_cache.exists():
+            try:
+                mc = _j.loads(maps_cache.read_text())
+                maps_cost = float(mc.get("estimated_cost", 0))
+            except Exception:
+                pass
+        total_month = round(month_cost + maps_cost, 4)
+        return JSONResponse({
+            "month":         now.strftime("%B %Y"),
+            "today_llm":     round(today_cost, 4),
+            "month_llm":     round(month_cost, 4),
+            "month_maps":    round(maps_cost, 4),
+            "month_total":   total_month,
+            "alltime_llm":   round(alltime, 4),
+            "month_tokens":  {"input": month_in, "output": month_out},
+            "by_model":      by_model,
+            "by_backend":    by_backend,
+            "free_llm":      False,
+            "days_elapsed":  now.day,
+        })
+
     @app.get("/storm-dashboard")
     async def storm_dashboard() -> Response:
         storm_path = Path.cwd() / "artifacts" / "mockups" / "storm-weather-widget.html"
