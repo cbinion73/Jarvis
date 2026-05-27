@@ -17734,7 +17734,7 @@ function navAutocomplete(inputId, resultsId) {{
         .then(function(r) {{ return r.json(); }}).then(function(d) {{
             var html = '';
             (d.predictions || []).forEach(function(p) {{
-                html += '<div class="nav-autocomplete-item" onclick="navSelectPlace(\'' + inputId + '\',\'' + resultsId + '\',\'' + p.description.replace(/'/g,"\\'") + '\')">' + p.description + '</div>';
+                html += '<div class="nav-autocomplete-item" data-input="' + escHtml(inputId) + '" data-results="' + escHtml(resultsId) + '" data-desc="' + escHtml(p.description) + '" onclick="navSelectPlace(this.dataset.input,this.dataset.results,this.dataset.desc)">' + escHtml(p.description) + '</div>';
             }});
             document.getElementById(resultsId).innerHTML = html;
         }});

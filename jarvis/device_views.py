@@ -2057,401 +2057,605 @@ def carplay_view() -> str:
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <title>JARVIS CarPlay</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>JARVIS Drive</title>
   <style>
-""" + _DARK_VARS + _DESKTOP_LINK_CSS + """
-body {
-  display: flex;
-  flex-direction: column;
+""" + _DARK_VARS + """
+/* ===== Drive Mode Layout ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+.drive-body {
+  background: #000;
   height: 100dvh;
   overflow: hidden;
-  background: #000;
+  display: flex;
+  flex-direction: column;
   -webkit-tap-highlight-color: transparent;
+  font-family: var(--font-sans);
+  color: var(--text-1);
 }
 
-.desktop-link { top: 8px; right: 10px; font-size: 11px; }
-
-/* Calendar strip at top */
-.cal-strip {
-  display: flex;
-  gap: 10px;
-  padding: 14px 16px 10px;
+/* Header */
+.drive-header {
+  height: 64px;
+  flex-shrink: 0;
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 16px;
+}
+.drive-clock {
+  font-size: 42px;
+  font-weight: 200;
+  letter-spacing: -0.02em;
+  line-height: 1;
   flex-shrink: 0;
 }
-.cal-event-cp {
+.drive-date {
+  font-size: 16px;
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+.drive-event-chip {
   flex: 1;
+  min-width: 0;
+  background: rgba(88,166,255,0.12);
+  border: 1px solid var(--hue);
+  border-radius: 9999px;
+  font-size: 14px;
+  padding: 5px 14px;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-1);
+}
+.drive-header-spacer { flex: 1; }
+.drive-desktop-link {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--text-3);
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+.drive-desktop-link:active { background: var(--surface-hi); }
+
+/* Main two-column area */
+.drive-main {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+
+/* Left column 55% */
+.drive-left {
+  width: 55%;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 10px;
+  border-right: 1px solid var(--border);
+}
+
+/* Map placeholder */
+.drive-map {
+  flex: 1;
+  background: #0d1117;
+  border: 2px dashed rgba(255,255,255,0.1);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  gap: 12px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.drive-map:active { background: #111820; border-color: rgba(255,255,255,0.25); }
+.drive-map-icon { font-size: 48px; line-height: 1; }
+.drive-map-label { font-size: 18px; color: var(--text-2); }
+
+/* SAM health strip */
+.drive-sam-strip {
+  height: 52px;
+  flex-shrink: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 12px 16px;
-  min-height: 64px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-.cal-time-cp { font-size: 20px; font-weight: 800; color: var(--hue); }
-.cal-title-cp { font-size: 18px; font-weight: 600; color: var(--text-1); margin-top: 3px; line-height: 1.2; }
-
-/* Brief strip */
-.brief-strip {
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  min-height: 64px;
   display: flex;
   align-items: center;
+  padding: 0 16px;
+  gap: 24px;
 }
-.brief-headline-cp {
-  font-size: 18px;
-  font-weight: 500;
-  color: var(--text-1);
-  line-height: 1.4;
-}
-.brief-source-cp {
-  font-size: 12px;
-  color: var(--hue);
-  margin-bottom: 4px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-/* Panels */
-.cp-panels { flex: 1; overflow: hidden; position: relative; }
-.cp-panel { display: none; position: absolute; inset: 0; flex-direction: column; overflow: hidden; }
-.cp-panel.active { display: flex; }
-
-/* Chat panel */
-.cp-chat-thread {
-  flex: 1;
-  overflow-y: auto;
-  padding: 14px 16px;
+.drive-sam-metric {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  align-items: center;
 }
-.cp-msg { display: flex; }
-.cp-msg-user { justify-content: flex-end; }
-.cp-msg-assistant { justify-content: flex-start; }
-.cp-msg-bubble {
-  max-width: 80%;
-  padding: 14px 18px;
-  border-radius: 18px;
-  font-size: 20px;
-  line-height: 1.4;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-weight: 500;
-}
-.cp-msg-user .cp-msg-bubble { background: var(--hue); color: #000; border-bottom-right-radius: 5px; }
-.cp-msg-assistant .cp-msg-bubble { background: var(--surface-hi); color: var(--text-1); border-bottom-left-radius: 5px; }
-.cp-input-area {
-  padding: 12px 16px 14px;
+.drive-sam-val { font-size: 18px; font-weight: 700; color: var(--hue); }
+.drive-sam-lbl { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; }
+.drive-sam-divider { width: 1px; height: 28px; background: var(--border); flex-shrink: 0; }
+
+/* Right column 45% */
+.drive-right {
+  width: 45%;
   display: flex;
+  flex-direction: column;
+  padding: 12px;
   gap: 10px;
-  border-top: 1px solid var(--border);
 }
-.cp-input-area input[type=text] {
+
+/* Drive buttons */
+.drive-btn {
+  flex: 1;
+  width: 100%;
+  border: none;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  font-size: 22px;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 80px;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  font-family: var(--font-sans);
+  line-height: 1;
+}
+.drive-btn-icon { font-size: 28px; line-height: 1; }
+
+/* Voice button */
+.drive-btn-voice {
+  background: rgba(88,166,255,0.15);
+  border: 2px solid var(--hue);
+  color: var(--hue);
+}
+.drive-btn-voice:active { background: rgba(88,166,255,0.25); }
+.drive-btn-voice.listening {
+  background: rgba(88,166,255,0.30);
+  animation: pulse-listen 1s ease-in-out infinite;
+}
+
+/* Briefing button */
+.drive-btn-brief {
+  background: rgba(63,185,80,0.15);
+  border: 2px solid var(--green);
+  color: var(--green);
+}
+.drive-btn-brief:active { background: rgba(63,185,80,0.25); }
+.drive-btn-brief.playing { background: rgba(63,185,80,0.30); }
+
+/* Kasa buttons */
+.drive-btn-kasa {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  color: var(--text-1);
+}
+.drive-btn-kasa:active { background: var(--surface-hi); }
+.drive-btn-kasa.success {
+  border-color: var(--green);
+  color: var(--green);
+}
+.drive-btn-kasa.no-scene {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Fallback voice input row */
+.drive-voice-fallback {
+  display: none;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.drive-voice-fallback input {
   flex: 1;
   background: var(--surface-hi);
   color: var(--text-1);
-  border: 2px solid var(--border);
-  border-radius: 14px;
-  padding: 16px 20px;
-  font-size: 20px;
-  outline: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 16px;
   font-family: var(--font-sans);
-  min-height: 64px;
+  outline: none;
 }
-.cp-input-area input[type=text]:focus { border-color: var(--hue); }
-.cp-send-btn {
+.drive-voice-fallback input:focus { border-color: var(--hue); }
+.drive-voice-fallback button {
   background: var(--hue);
   color: #000;
   border: none;
-  border-radius: 14px;
-  padding: 16px 24px;
-  font-size: 20px;
-  font-weight: 800;
-  cursor: pointer;
-  min-height: 64px;
-  min-width: 90px;
-}
-.cp-send-btn:disabled { opacity: 0.4; cursor: default; }
-
-/* Navigate panel */
-.cp-navigate-placeholder {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  color: var(--text-3);
-}
-.cp-road-icon { font-size: 72px; }
-.cp-nav-title { font-size: 28px; font-weight: 700; color: var(--text-2); }
-.cp-nav-sub { font-size: 18px; color: var(--text-3); }
-
-/* Tasks panel */
-.cp-task-list { flex: 1; overflow-y: auto; padding: 14px 16px; }
-.cp-task-item {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 18px 20px;
-  margin-bottom: 12px;
-  cursor: pointer;
-  min-height: 72px;
-  transition: border-color 0.15s;
-}
-.cp-task-item:active { border-color: var(--hue); }
-.cp-task-check {
-  width: 28px; height: 28px;
-  border: 2px solid var(--border);
-  border-radius: 50%;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 10px;
+  padding: 10px 16px;
   font-size: 16px;
-  color: transparent;
-  transition: all 0.15s;
-}
-.cp-task-item.done .cp-task-check {
-  background: var(--green);
-  border-color: var(--green);
-  color: #000;
-}
-.cp-task-title-cp { font-size: 20px; font-weight: 600; color: var(--text-1); flex: 1; }
-.cp-task-item.done .cp-task-title-cp { text-decoration: line-through; color: var(--text-3); }
-.cp-priority-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
-.p-high { background: var(--red); }
-.p-medium { background: var(--amber); }
-.p-low { background: var(--green); }
-
-/* Tab bar */
-.cp-tab-bar {
-  display: flex;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  height: 72px;
-  flex-shrink: 0;
-}
-.cp-tab-btn {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  border: none;
-  background: none;
-  color: var(--text-3);
-  font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  min-height: 72px;
-  transition: color 0.15s;
-  letter-spacing: 0.03em;
+  font-family: var(--font-sans);
 }
-.cp-tab-icon { font-size: 26px; line-height: 1; }
-.cp-tab-btn.active { color: var(--hue); }
 
-.loading-msg { color: var(--text-3); font-size: 18px; text-align: center; padding: 40px; }
+@keyframes pulse-listen {
+  0%   { box-shadow: 0 0 0 0 rgba(88,166,255,0.5); }
+  50%  { box-shadow: 0 0 0 12px rgba(88,166,255,0); }
+  100% { box-shadow: 0 0 0 0 rgba(88,166,255,0); }
+}
   </style>
 </head>
-<body>
+<body class="drive-body">
 
-<a class="desktop-link" href="javascript:void(0)" onclick="window.location='http://'+window.location.hostname+':8787/'">&#8862; Desktop</a>
-
-<!-- Calendar strip -->
-<div class="cal-strip" id="cal-strip">
-  <div class="cal-event-cp"><div class="cal-time-cp" style="color:var(--text-3)">--:--</div><div class="cal-title-cp" style="color:var(--text-3)">Loading...</div></div>
-  <div class="cal-event-cp"><div class="cal-time-cp" style="color:var(--text-3)">--:--</div><div class="cal-title-cp" style="color:var(--text-3)">Loading...</div></div>
+<!-- Header -->
+<div class="drive-header">
+  <div class="drive-clock" id="drive-clock">--:--</div>
+  <div class="drive-date" id="drive-date">---</div>
+  <div class="drive-event-chip" id="drive-event-chip" style="display:none"></div>
+  <div class="drive-header-spacer"></div>
+  <a class="drive-desktop-link" href="javascript:void(0)"
+     onclick="window.location='http://'+window.location.hostname+':8787/'">&#8862; Desktop</a>
 </div>
 
-<!-- Brief headline -->
-<div class="brief-strip" id="brief-strip">
-  <div>
-    <div class="brief-source-cp" id="brief-source-cp">Brief</div>
-    <div class="brief-headline-cp" id="brief-headline-cp">Loading...</div>
-  </div>
-</div>
+<!-- Main area -->
+<div class="drive-main">
 
-<!-- Panels -->
-<div class="cp-panels">
-
-  <!-- Chat -->
-  <div class="cp-panel active" id="cp-panel-chat">
-    <div class="cp-chat-thread" id="cp-chat-thread"></div>
-    <div class="cp-input-area">
-      <input type="text" id="cp-chat-input" placeholder="Ask JARVIS..." autocomplete="off">
-      <button class="cp-send-btn" id="cp-send-btn">Send</button>
+  <!-- Left: Map + SAM strip -->
+  <div class="drive-left">
+    <div class="drive-map" id="drive-map" onclick="window.location='maps://'">
+      <div class="drive-map-icon">&#128739;</div>
+      <div class="drive-map-label">Tap to open Maps</div>
+    </div>
+    <div class="drive-sam-strip" id="drive-sam-strip">
+      <div class="drive-sam-metric">
+        <div class="drive-sam-val" id="sam-readiness">--</div>
+        <div class="drive-sam-lbl">Readiness</div>
+      </div>
+      <div class="drive-sam-divider"></div>
+      <div class="drive-sam-metric">
+        <div class="drive-sam-val" id="sam-hrv">--</div>
+        <div class="drive-sam-lbl">HRV ms</div>
+      </div>
+      <div class="drive-sam-divider"></div>
+      <div class="drive-sam-metric">
+        <div class="drive-sam-val" id="sam-sleep">--</div>
+        <div class="drive-sam-lbl">Sleep hr</div>
+      </div>
     </div>
   </div>
 
-  <!-- Navigate -->
-  <div class="cp-panel" id="cp-panel-navigate">
-    <div class="cp-navigate-placeholder">
-      <div class="cp-road-icon">&#128739;</div>
-      <div class="cp-nav-title">Navigation</div>
-      <div class="cp-nav-sub">Coming soon</div>
+  <!-- Right: Action buttons -->
+  <div class="drive-right">
+    <!-- Voice command button + optional text fallback -->
+    <button class="drive-btn drive-btn-voice" id="drive-btn-voice" onclick="handleVoiceCommand()">
+      <span class="drive-btn-icon">&#127897;</span>
+      <span id="drive-voice-label">Voice Command</span>
+    </button>
+    <div class="drive-voice-fallback" id="drive-voice-fallback">
+      <input type="text" id="drive-voice-input" placeholder="Type a command..." autocomplete="off">
+      <button onclick="submitTextCommand()">Go</button>
     </div>
+
+    <!-- SAM briefing button -->
+    <button class="drive-btn drive-btn-brief" id="drive-btn-brief" onclick="readSamBrief()">
+      <span class="drive-btn-icon">&#128203;</span>
+      <span id="drive-brief-label">SAM Briefing</span>
+    </button>
+
+    <!-- Arrive Home -->
+    <button class="drive-btn drive-btn-kasa no-scene" id="drive-btn-arrive"
+            onclick="triggerKasaScene(_arriveSceneId, this)">
+      <span class="drive-btn-icon">&#127968;</span>
+      <span id="drive-arrive-label">Arrive Home</span>
+    </button>
+
+    <!-- Leave Home -->
+    <button class="drive-btn drive-btn-kasa no-scene" id="drive-btn-leave"
+            onclick="triggerKasaScene(_leaveSceneId, this)">
+      <span class="drive-btn-icon">&#128663;</span>
+      <span id="drive-leave-label">Leave Home</span>
+    </button>
   </div>
 
-  <!-- Tasks -->
-  <div class="cp-panel" id="cp-panel-tasks">
-    <div class="cp-task-list" id="cp-task-list">
-      <div class="loading-msg">Loading tasks...</div>
-    </div>
-  </div>
-
-</div>
-
-<!-- Tab bar -->
-<div class="cp-tab-bar">
-  <button class="cp-tab-btn active" onclick="cpShowTab('chat',this)">
-    <span class="cp-tab-icon">&#128483;</span>Chat
-  </button>
-  <button class="cp-tab-btn" onclick="cpShowTab('navigate',this)">
-    <span class="cp-tab-icon">&#128506;</span>Navigate
-  </button>
-  <button class="cp-tab-btn" onclick="cpShowTab('tasks',this)">
-    <span class="cp-tab-icon">&#128203;</span>Tasks
-  </button>
 </div>
 
 <script>
+// ---- State ----
+var _driveConvId = '';
+var _kasaScenes = [];
+var _arriveSceneId = null;
+var _leaveSceneId = null;
+var _isSpeaking = false;
+var _samData = null;
+
+// ---- Utilities ----
 function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-function scrollBottom(el) { if (el) el.scrollTop = el.scrollHeight; }
-
-function cpShowTab(name, btn) {
-  document.querySelectorAll('.cp-panel').forEach(function(p){p.classList.remove('active');});
-  document.querySelectorAll('.cp-tab-btn').forEach(function(b){b.classList.remove('active');});
-  document.getElementById('cp-panel-' + name).classList.add('active');
-  btn.classList.add('active');
-  if (name === 'tasks' && !window._cpTasksLoaded) loadCpTasks();
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
-// Calendar
-fetch('/api/calendar/today').then(function(r){return r.json();}).then(function(d) {
-  var events = (d.events||[]).slice(0,2);
-  var strip = document.getElementById('cal-strip');
-  strip.innerHTML = '';
-  if (!events.length) {
-    strip.innerHTML = '<div class="cal-event-cp"><div class="cal-title-cp" style="color:var(--text-3)">No events today</div></div>';
+// ---- Clock ----
+function updateClock() {
+  var now = new Date();
+  var h = now.getHours();
+  var m = now.getMinutes();
+  var ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  var mm = m < 10 ? '0' + m : String(m);
+  document.getElementById('drive-clock').textContent = h + ':' + mm + ' ' + ampm;
+
+  var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('drive-date').textContent =
+    days[now.getDay()] + ', ' + months[now.getMonth()] + ' ' + now.getDate();
+}
+updateClock();
+setInterval(updateClock, 30000);
+
+// ---- Next event chip ----
+function loadNextEvent() {
+  fetch('/api/calendar/today').then(function(r) { return r.json(); }).then(function(d) {
+    var events = d.events || [];
+    var now = new Date();
+    var chip = document.getElementById('drive-event-chip');
+    var next = null;
+    for (var i = 0; i < events.length; i++) {
+      var ev = events[i];
+      var startStr = ev.start_iso || ev.start || '';
+      if (!startStr) continue;
+      var t = new Date(startStr);
+      if (isNaN(t.getTime())) continue;
+      if (t >= now) { next = {title: ev.title || '', time: t}; break; }
+    }
+    if (!next) { chip.style.display = 'none'; return; }
+    var diffMs = next.time - now;
+    var diffMin = Math.round(diffMs / 60000);
+    var label;
+    if (diffMin <= 0) {
+      label = escHtml(next.title) + ' now';
+    } else if (diffMin < 60) {
+      label = escHtml(next.title) + ' in ' + diffMin + 'm';
+    } else {
+      var hrs = Math.floor(diffMin / 60);
+      var mins = diffMin % 60;
+      label = escHtml(next.title) + ' in ' + hrs + 'h' + (mins ? ' ' + mins + 'm' : '');
+    }
+    chip.innerHTML = label;
+    chip.style.display = '';
+  }).catch(function() {
+    document.getElementById('drive-event-chip').style.display = 'none';
+  });
+}
+loadNextEvent();
+setInterval(loadNextEvent, 60000);
+
+// ---- SAM health strip ----
+function loadSamStrip() {
+  fetch('/api/health/sam/morning-checkin').then(function(r) { return r.json(); }).then(function(d) {
+    _samData = d;
+    var r = d.readiness_score || d.readiness || '--';
+    var hrv = d.hrv_ms || d.hrv || '--';
+    var sleep = d.sleep_hours || d.sleep || '--';
+    if (typeof r === 'number') r = Math.round(r) + '%';
+    if (typeof hrv === 'number') hrv = Math.round(hrv);
+    if (typeof sleep === 'number') sleep = sleep.toFixed(1);
+    document.getElementById('sam-readiness').textContent = r;
+    document.getElementById('sam-hrv').textContent = hrv;
+    document.getElementById('sam-sleep').textContent = sleep;
+  }).catch(function() {});
+}
+loadSamStrip();
+
+// ---- Kasa scenes ----
+function loadKasaScenes() {
+  fetch('/api/kasa/scenes').then(function(r) { return r.json(); }).then(function(d) {
+    _kasaScenes = d.scenes || d || [];
+    _arriveSceneId = null;
+    _leaveSceneId = null;
+    var arriveRe = /home|arrive/i;
+    var leaveRe = /leave|away|depart/i;
+    for (var i = 0; i < _kasaScenes.length; i++) {
+      var sc = _kasaScenes[i];
+      var name = sc.name || sc.scene_name || '';
+      if (!_arriveSceneId && arriveRe.test(name)) {
+        _arriveSceneId = sc.id || sc.scene_id || null;
+        document.getElementById('drive-arrive-label').textContent = name;
+        document.getElementById('drive-btn-arrive').classList.remove('no-scene');
+      }
+      if (!_leaveSceneId && leaveRe.test(name)) {
+        _leaveSceneId = sc.id || sc.scene_id || null;
+        document.getElementById('drive-leave-label').textContent = name;
+        document.getElementById('drive-btn-leave').classList.remove('no-scene');
+      }
+    }
+    if (!_arriveSceneId) document.getElementById('drive-arrive-label').textContent = 'No Scene Set';
+    if (!_leaveSceneId) document.getElementById('drive-leave-label').textContent = 'No Scene Set';
+  }).catch(function() {});
+}
+loadKasaScenes();
+
+// ---- TTS helper ----
+function speak(text, onEnd) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  _isSpeaking = true;
+  var utt = new SpeechSynthesisUtterance(text);
+  utt.rate = 0.95;
+  utt.onend = function() {
+    _isSpeaking = false;
+    if (onEnd) onEnd();
+  };
+  utt.onerror = function() {
+    _isSpeaking = false;
+    if (onEnd) onEnd();
+  };
+  window.speechSynthesis.speak(utt);
+}
+
+// ---- Voice Command ----
+function handleVoiceCommand() {
+  var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var btn = document.getElementById('drive-btn-voice');
+  var lbl = document.getElementById('drive-voice-label');
+
+  if (!SpeechRec) {
+    var fb = document.getElementById('drive-voice-fallback');
+    fb.style.display = fb.style.display === 'flex' ? 'none' : 'flex';
     return;
   }
-  events.forEach(function(ev) {
-    strip.innerHTML += '<div class="cal-event-cp">' +
-      '<div class="cal-time-cp">'+escHtml(ev.start||'')+'</div>' +
-      '<div class="cal-title-cp">'+escHtml(ev.title||'')+'</div>' +
-    '</div>';
+
+  if (btn.classList.contains('listening')) return;
+
+  var rec = new SpeechRec();
+  rec.lang = 'en-US';
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+
+  btn.classList.add('listening');
+  lbl.textContent = 'Listening…';
+
+  rec.onresult = function(e) {
+    var transcript = e.results[0][0].transcript;
+    btn.classList.remove('listening');
+    lbl.textContent = 'Processing…';
+    sendVoiceText(transcript, btn, lbl);
+  };
+
+  rec.onerror = function() {
+    btn.classList.remove('listening');
+    lbl.textContent = 'Voice Command';
+  };
+
+  rec.onend = function() {
+    if (btn.classList.contains('listening')) {
+      btn.classList.remove('listening');
+      lbl.textContent = 'Voice Command';
+    }
+  };
+
+  rec.start();
+}
+
+function submitTextCommand() {
+  var inp = document.getElementById('drive-voice-input');
+  var text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  var btn = document.getElementById('drive-btn-voice');
+  var lbl = document.getElementById('drive-voice-label');
+  lbl.textContent = 'Processing…';
+  sendVoiceText(text, btn, lbl);
+}
+
+function sendVoiceText(text, btn, lbl) {
+  fetch('/api/agent/stream', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({messages: [{role: 'user', content: text}], conversation_id: _driveConvId})
+  }).then(function(resp) {
+    var reader = resp.body.getReader();
+    var decoder = new TextDecoder();
+    var buf = '';
+    var fullText = '';
+    function pump() {
+      return reader.read().then(function(res) {
+        if (res.done) {
+          lbl.textContent = 'Voice Command';
+          if (fullText) {
+            speak(fullText, function() { lbl.textContent = 'Voice Command'; });
+          }
+          return;
+        }
+        buf += decoder.decode(res.value, {stream: true});
+        var lines = buf.split('\\n');
+        buf = lines.pop();
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i];
+          if (!line.startsWith('data: ')) continue;
+          var raw = line.slice(6).trim();
+          if (!raw || raw === '[DONE]') continue;
+          var pkt;
+          try { pkt = JSON.parse(raw); } catch(e2) { continue; }
+          if (pkt.type === 'text_delta') fullText += pkt.text;
+          if (pkt.type === 'done' && pkt.conversation_id) _driveConvId = pkt.conversation_id;
+        }
+        return pump();
+      });
+    }
+    return pump();
+  }).catch(function() {
+    lbl.textContent = 'Voice Command';
   });
-  // Pad if only 1
-  if (events.length === 1) strip.innerHTML += '<div class="cal-event-cp" style="border-style:dashed;"><div class="cal-title-cp" style="color:var(--text-3)">No more events</div></div>';
-}).catch(function(){
-  document.getElementById('cal-strip').innerHTML = '<div class="cal-event-cp"><div class="cal-title-cp" style="color:var(--text-3)">Calendar unavailable</div></div>';
-});
-
-// Brief
-fetch('/api/briefing').then(function(r){return r.json();}).then(function(d) {
-  var text = d.briefing || '';
-  if (!text) { document.getElementById('brief-headline-cp').textContent='No briefing available.'; return; }
-  var section = text.split(/\\n---+\\n/)[0];
-  var sourceMatch = section.match(/\\[([^\\]]+)\\]\\s*(.+?)\\n/);
-  var source = sourceMatch ? sourceMatch[1] : 'Brief';
-  var title = sourceMatch ? sourceMatch[2].trim() : section.split('\\n')[0].replace(/^#+\\s*/,'').trim();
-  document.getElementById('brief-source-cp').textContent = source;
-  document.getElementById('brief-headline-cp').textContent = title;
-}).catch(function(){document.getElementById('brief-headline-cp').textContent='Briefing unavailable.';});
-
-// Tasks
-function loadCpTasks() {
-  window._cpTasksLoaded = true;
-  fetch('/api/tasks').then(function(r){return r.json();}).then(function(d) {
-    var tasks = (d.tasks||[]).slice(0,3);
-    if (!tasks.length) { document.getElementById('cp-task-list').innerHTML='<div class="loading-msg">No tasks.</div>'; return; }
-    document.getElementById('cp-task-list').innerHTML = tasks.map(function(t) {
-      var pc = t.priority==='high'?'p-high':t.priority==='medium'?'p-medium':'p-low';
-      return '<div class="cp-task-item" id="cpt-'+escHtml(t.id||t.title)+'" onclick="toggleTask(this)">' +
-        '<div class="cp-task-check">&#10003;</div>' +
-        '<span class="cp-priority-dot '+pc+'"></span>' +
-        '<span class="cp-task-title-cp">'+escHtml(t.title||'')+'</span>' +
-      '</div>';
-    }).join('');
-  }).catch(function(){document.getElementById('cp-task-list').innerHTML='<div class="loading-msg">Could not load tasks.</div>';});
 }
 
-function toggleTask(el) {
-  el.classList.toggle('done');
+// ---- SAM Briefing ----
+function readSamBrief() {
+  var btn = document.getElementById('drive-btn-brief');
+  var lbl = document.getElementById('drive-brief-label');
+
+  if (btn.classList.contains('playing')) {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    btn.classList.remove('playing');
+    lbl.textContent = 'SAM Briefing';
+    _isSpeaking = false;
+    return;
+  }
+
+  btn.classList.add('playing');
+  lbl.textContent = 'Loading…';
+
+  fetch('/api/health/sam/morning-checkin').then(function(r) { return r.json(); }).then(function(d) {
+    var readiness = d.readiness_score || d.readiness || '?';
+    var hrv = d.hrv_ms || d.hrv || '?';
+    var sleep = d.sleep_hours || d.sleep || '?';
+    var focus = d.focus_primary || d.focus || '';
+    var greeting = d.greeting || d.message || '';
+
+    if (typeof readiness === 'number') readiness = Math.round(readiness);
+    if (typeof hrv === 'number') hrv = Math.round(hrv);
+    if (typeof sleep === 'number') sleep = sleep.toFixed(1);
+
+    var tts = 'Good morning. Your readiness is ' + readiness + ' percent. ' +
+              'HRV is ' + hrv + ' milliseconds. ' +
+              'Sleep: ' + sleep + ' hours.';
+    if (focus) tts += ' Focus: ' + focus + '.';
+    if (greeting) tts += ' ' + greeting;
+
+    lbl.textContent = 'Playing…';
+    speak(tts, function() {
+      btn.classList.remove('playing');
+      lbl.textContent = 'SAM Briefing';
+    });
+  }).catch(function() {
+    btn.classList.remove('playing');
+    lbl.textContent = 'SAM Briefing';
+  });
 }
 
-// CarPlay Chat SSE — simplified: no tool blocks shown, just text
-var _cpConvId = '';
-(function() {
-  var thread = document.getElementById('cp-chat-thread');
-  var input  = document.getElementById('cp-chat-input');
-  var btn    = document.getElementById('cp-send-btn');
-
-  function cpAppendMsg(role, text) {
-    var div = document.createElement('div');
-    div.className = 'cp-msg cp-msg-' + role;
-    var bub = document.createElement('div');
-    bub.className = 'cp-msg-bubble';
-    bub.textContent = text;
-    div.appendChild(bub);
-    thread.appendChild(div);
-    scrollBottom(thread);
-    return div;
-  }
-
-  function cpSend() {
-    var text = input.value.trim(); if (!text) return;
-    input.value = ''; input.disabled = true; btn.disabled = true;
-    cpAppendMsg('user', text);
-    fetch('/api/agent/stream', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({messages:[{role:'user',content:text}], conversation_id: _cpConvId})
-    }).then(function(resp) {
-      var reader = resp.body.getReader(); var decoder = new TextDecoder(); var buf = '';
-      var aDiv = null; var aBubble = null;
-      function pump() {
-        return reader.read().then(function(res) {
-          if (res.done) { input.disabled=false; btn.disabled=false; input.focus(); return; }
-          buf += decoder.decode(res.value, {stream:true});
-          var lines = buf.split('\\n'); buf = lines.pop();
-          lines.forEach(function(line) {
-            if (!line.startsWith('data: ')) return;
-            var raw = line.slice(6).trim(); if (!raw||raw==='[DONE]') return;
-            var pkt; try{pkt=JSON.parse(raw);}catch(e){return;}
-            if (pkt.type==='text_delta') {
-              if (!aDiv) { aDiv=cpAppendMsg('assistant',''); aBubble=aDiv.querySelector('.cp-msg-bubble'); }
-              aBubble.textContent += pkt.text; scrollBottom(thread);
-            } else if (pkt.type==='done') {
-              if (pkt.conversation_id) _cpConvId = pkt.conversation_id;
-              aDiv=null; aBubble=null;
-            }
-            // tool_call / approval_needed intentionally suppressed for CarPlay safety
-          });
-          return pump();
-        });
-      }
-      return pump();
-    }).catch(function(err) { cpAppendMsg('assistant','Error: '+err.message); input.disabled=false; btn.disabled=false; });
-  }
-
-  btn.addEventListener('click', cpSend);
-  input.addEventListener('keydown', function(e) { if(e.key==='Enter'){e.preventDefault();cpSend();} });
-})();
+// ---- Kasa scene trigger ----
+function triggerKasaScene(sceneId, btnEl) {
+  if (!sceneId) return;
+  if (btnEl.classList.contains('no-scene')) return;
+  fetch('/api/kasa/scene', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({scene_id: sceneId})
+  }).then(function() {
+    btnEl.classList.add('success');
+    var lblEl = btnEl.querySelector('span:last-child');
+    var orig = lblEl.textContent;
+    lblEl.textContent = '✓ Done';
+    setTimeout(function() {
+      btnEl.classList.remove('success');
+      lblEl.textContent = orig;
+    }, 2000);
+  }).catch(function() {});
+}
 </script>
 </body>
 </html>
