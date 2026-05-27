@@ -29,8 +29,28 @@ from .tools import TOOL_REGISTRY
 from .tools.base import ApprovalFlag, ToolResult
 
 # ── Model configuration ────────────────────────────────────────────────────
-AGENT_MODEL = os.environ.get("AGENT_MODEL", os.environ.get("OPENAI_MODEL", "gpt-4o"))
-MAX_TURNS   = int(os.environ.get("AGENT_MAX_TURNS", "30"))
+# Prefer local Ollama (internal LLM) when available; fall back to OpenAI.
+_OLLAMA_BASE    = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/") + "/v1"
+_OLLAMA_MODEL   = os.environ.get("AGENT_OLLAMA_MODEL", "qwen2.5:14b")
+_FALLBACK_MODEL = os.environ.get("AGENT_MODEL", os.environ.get("OPENAI_MODEL", "gpt-4o"))
+MAX_TURNS       = int(os.environ.get("AGENT_MAX_TURNS", "30"))
+
+
+def _make_client() -> tuple["AsyncOpenAI", str]:
+    """Return (AsyncOpenAI client, model_name) pointing at Ollama when available,
+    falling back to the configured cloud provider."""
+    import httpx as _httpx
+    try:
+        r = _httpx.get(f"{_OLLAMA_BASE.rstrip('/v1').rstrip('/')}/api/tags", timeout=1.5)
+        if r.status_code == 200:
+            return (
+                AsyncOpenAI(base_url=_OLLAMA_BASE, api_key="ollama"),
+                _OLLAMA_MODEL,
+            )
+    except Exception:
+        pass
+    # Ollama unavailable — use cloud provider
+    return AsyncOpenAI(), _FALLBACK_MODEL
 
 # ── Approval gate state (module-level, shared across requests) ─────────────
 _pending_approvals: dict[str, asyncio.Event] = {}
@@ -160,7 +180,7 @@ async def run_agent(
         StreamEvent with types: text_delta | tool_call | approval_needed |
                                 tool_skipped | tool_result | done | error | max_turns
     """
-    client = AsyncOpenAI()  # reads OPENAI_API_KEY from env
+    client, active_model = _make_client()
 
     # Build system message
     system_parts = [AGENT_SYSTEM_PROMPT]
@@ -184,7 +204,7 @@ async def run_agent(
             # ── Streaming API call ─────────────────────────────────────────
             try:
                 stream = await client.chat.completions.create(
-                    model=AGENT_MODEL,
+                    model=active_model,
                     messages=working_messages,
                     tools=OPENAI_TOOL_DEFINITIONS,
                     tool_choice="auto",
@@ -192,7 +212,7 @@ async def run_agent(
                     stream=True,
                 )
             except Exception as exc:
-                yield StreamEvent(type="error", data={"message": f"OpenAI API error: {exc}"})
+                yield StreamEvent(type="error", data={"message": f"LLM API error: {exc}"})
                 return
 
             async for chunk in stream:
@@ -234,6 +254,7 @@ async def run_agent(
                         "text": full_text,
                         "conversation_id": conversation_id,
                         "turns": turn + 1,
+                        "model": active_model,
                     },
                 )
                 return

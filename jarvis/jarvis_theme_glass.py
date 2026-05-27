@@ -12835,7 +12835,7 @@ async function sendCommand(text) {{
           /* Add meta */
           const meta = document.createElement('div');
           meta.className = 'msg-meta';
-          meta.textContent = 'claude-opus-4-5 · ' + new Date().toLocaleTimeString([], {{hour:'2-digit', minute:'2-digit'}});
+          meta.textContent = (evt.model || 'qwen2.5:14b') + ' · ' + new Date().toLocaleTimeString([], {{hour:'2-digit', minute:'2-digit'}});
           bodyWrap.appendChild(meta);
           /* Save assistant turn in history */
           _agentMessages.push({{ role: 'assistant', content: accText }});
