@@ -8052,7 +8052,9 @@ self.addEventListener('fetch', e => {
             return _json({"error": str(e)})
 
     @app.get("/api/nav/streetview")
-    async def nav_streetview(lat: float = 0, lng: float = 0, heading: float = 0, width: int = 400, height: int = 220):
+    async def nav_streetview(lat: float = 0, lng: float = 0, heading: float = 0,
+                             width: int = 400, height: int = 220,
+                             fov: int = 55, pitch: int = 5):
         """Proxy Street View Static API image — keeps API key server-side."""
         key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
         if not key:
@@ -8064,8 +8066,8 @@ self.addEventListener('fetch', e => {
                 "size": str(width) + "x" + str(height),
                 "location": str(lat) + "," + str(lng),
                 "heading": str(int(heading)),
-                "fov": "80",
-                "pitch": "0",
+                "fov": str(max(20, min(120, fov))),
+                "pitch": str(max(-90, min(90, pitch))),
                 "key": key
             }
             async with httpx.AsyncClient(timeout=10) as client:

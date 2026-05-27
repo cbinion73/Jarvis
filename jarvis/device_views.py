@@ -2598,7 +2598,7 @@ def carplay_view() -> str:
   border-radius: 10px;
   overflow: hidden;
   background: #111;
-  min-height: 150px;
+  min-height: 170px;
   flex-shrink: 0;
 }
 .drive-sv-img {
@@ -2606,7 +2606,7 @@ def carplay_view() -> str:
   display: block;
   border-radius: 10px;
   object-fit: cover;
-  height: 160px;
+  height: 185px;
 }
 .drive-sv-placeholder {
   position: absolute;
@@ -3736,11 +3736,16 @@ function driveUpdateGuidance(step, leg) {
   driveUpdateStreetView(step);
 }
 
-var SV_HEADING_MAP = {
-  'turn-right': 90, 'turn-sharp-right': 135, 'turn-slight-right': 45,
-  'turn-left': 270, 'turn-sharp-left': 225, 'turn-slight-left': 315,
-  'straight': 0, 'merge': 0, 'arrive': 0
-};
+// Compute true compass bearing (degrees) from point A → point B
+function driveBearing(lat1, lng1, lat2, lng2) {
+  var dLng = (lng2 - lng1) * Math.PI / 180;
+  var lat1r = lat1 * Math.PI / 180;
+  var lat2r = lat2 * Math.PI / 180;
+  var y = Math.sin(dLng) * Math.cos(lat2r);
+  var x = Math.cos(lat1r) * Math.sin(lat2r) -
+          Math.sin(lat1r) * Math.cos(lat2r) * Math.cos(dLng);
+  return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
+}
 
 function driveUpdateStreetView(step) {
   var loc = step.end_location;
@@ -3748,7 +3753,17 @@ function driveUpdateStreetView(step) {
   var lat = (typeof loc.lat === 'function') ? loc.lat() : loc.lat;
   var lng = (typeof loc.lng === 'function') ? loc.lng() : loc.lng;
   if (!lat || !lng) return;
-  var heading = SV_HEADING_MAP[step.maneuver] !== undefined ? SV_HEADING_MAP[step.maneuver] : 0;
+
+  // Compute actual direction of travel from step start → end
+  // This gives the real compass bearing the road runs, not a guess from maneuver type
+  var heading = 0;
+  var sl = step.start_location;
+  if (sl) {
+    var slat = (typeof sl.lat === 'function') ? sl.lat() : sl.lat;
+    var slng = (typeof sl.lng === 'function') ? sl.lng() : sl.lng;
+    if (slat && slng) heading = driveBearing(slat, slng, lat, lng);
+  }
+
   var wrap = document.getElementById('drive-sv-wrap');
   var img  = document.getElementById('drive-sv-img');
   var ph   = document.getElementById('drive-sv-placeholder');
@@ -3756,8 +3771,11 @@ function driveUpdateStreetView(step) {
   wrap.style.display = 'block';
   img.style.display  = 'none';
   ph.style.display   = 'flex';
+  // fov=55 → telephoto-style, shows road ahead not wide panoramic
+  // pitch=5 → slight upward tilt, natural dashcam angle
   img.src = '/api/nav/streetview?lat=' + lat + '&lng=' + lng +
-            '&heading=' + heading + '&width=600&height=200';
+            '&heading=' + Math.round(heading) +
+            '&width=800&height=300&fov=55&pitch=5';
 }
 
 function driveSetNavState(active) {
