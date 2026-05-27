@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Query, Request, UploadFile, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
@@ -21,8 +21,6 @@ from .runtime import JarvisRuntime
 from .settings import LocationSettingsStore, VoiceSettingsStore
 from .voice_audio import generate_tts_audio
 from .voice_ui import render_voice_shell
-from . import journey_store
-from .journey_store import log_event as journey_log
 
 try:
     from .jarvis_theme_nexus import render_nexus_shell as _render_nexus_shell
@@ -103,7 +101,6 @@ try:
     from .chronicle_bridge import (
         get_chronicle_bridge as _get_chronicle_bridge,
         get_disciple as _get_disciple,
-        ChronicleSnapshotReader,
     )
     _CHRONICLE_BRIDGE_AVAILABLE = True
 except Exception:  # pragma: no cover
@@ -136,9 +133,6 @@ try:
     _FAMILY_PROFILES_AVAILABLE = True
 except Exception:  # pragma: no cover
     _FAMILY_PROFILES_AVAILABLE = False
-
-# Chronicle API base — uses env var so it works on both Mac (localhost) and VPS (docker service)
-_CHRONICLE_API_BASE = os.environ.get("CHRONICLE_API_URL", "http://localhost:5174")
 
 try:
     from .llm_gateway import get_gateway as _get_gateway
@@ -227,27 +221,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     location_settings = LocationSettingsStore(runtime.config)
     hub = EventHub()
     app = FastAPI(title="JARVIS Service", version="2.0")
-
-    from starlette.middleware.base import BaseHTTPMiddleware
-
-    class CloudflareIdentityMiddleware(BaseHTTPMiddleware):
-        CF_EMAIL_TO_USER = {
-            "cbinion73@gmail.com":     "chris",
-            "rbinion75@gmail.com":     "rebekah",
-            "caleb.binion@icloud.com": "caleb",
-            "anna.binion@icloud.com":  "anna",
-        }
-        async def dispatch(self, request, call_next):
-            email = request.headers.get("Cf-Access-Authenticated-User-Email", "").strip().lower()
-            user_id = self.CF_EMAIL_TO_USER.get(email, "chris")  # default to chris for local dev
-            request.state.cf_email = email
-            request.state.cf_user_id = user_id
-            return await call_next(request)
-
-    app.add_middleware(CloudflareIdentityMiddleware)
-
     shell_warmer_task: asyncio.Task | None = None
-    _wi_worker_tasks: list[asyncio.Task] = []
     # Initialise Epic 7 voice pipeline (non-fatal if unavailable)
     if _VOICE_PIPELINE_AVAILABLE:
         try:
@@ -316,10 +290,6 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     def _base_url(request: Request) -> str:
         return str(request.base_url).rstrip("/")
 
-    def _current_actor(request: Request) -> str:
-        """Return the current user's actor ID from Cloudflare identity. Defaults to 'chris'."""
-        return getattr(request.state, "cf_user_id", "chris") or "chris"
-
     async def _broadcast_dashboard(event_name: str, *, include_dashboard: bool = True) -> None:
         payload: dict[str, Any] = {
             "type": event_name,
@@ -329,6 +299,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         if include_dashboard:
             payload["dashboard"] = runtime.dashboard_snapshot()
         await hub.broadcast(payload)
+
+    # Wire KDP scraper broadcast so it can push WebSocket events
+    from . import kdp_scraper as _kdp_scraper
+    _kdp_scraper.set_broadcast(hub.broadcast)
 
     def _json(payload: Any, status_code: int = 200) -> JSONResponse:
         return JSONResponse(
@@ -360,12 +334,6 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             await asyncio.sleep(interval_seconds)
 
     @app.on_event("startup")
-    async def _seed_user_profiles() -> None:
-        """Seed default profiles for all known family members at startup."""
-        from .user_profile import seed_default_profiles
-        await asyncio.to_thread(seed_default_profiles)
-
-    @app.on_event("startup")
     async def _start_mcp_server() -> None:
         """Start FastMCP on its own port (8788) to avoid lifespan/ASGI mount conflicts."""
         import logging as _mcp_log
@@ -389,22 +357,6 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         if not enabled or shell_warmer_task is not None:
             return
         shell_warmer_task = asyncio.create_task(_shell_state_warmer(), name="jarvis-shell-state-warmer")
-
-    @app.on_event("startup")
-    async def _start_ghostwritr_events() -> None:
-        """Start Ghostwritr event poller."""
-        import logging as _ev_log
-        _log = _ev_log.getLogger("jarvis.service")
-        bridge = _get_ghostwritr_bridge()
-        if bridge is None:
-            _log.info("GhostwritrEvents: bridge not available, skipping event poller")
-            return
-        try:
-            from .ghostwritr_events import run_event_loop as _run_events
-            asyncio.create_task(_run_events(bridge), name="jarvis-ghostwritr-events")
-            _log.info("GhostwritrEvents: event poller started")
-        except Exception as exc:
-            _log.warning("GhostwritrEvents: could not start event poller: %s", exc)
 
     @app.on_event("shutdown")
     async def _stop_shell_state_warmer() -> None:
@@ -431,109 +383,6 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             get_party_controller(runtime).stop()
         except Exception:
             pass
-
-    @app.on_event("startup")
-    async def _init_work_intelligence() -> None:
-        """Initialise CatalystDB schema and WorkIntelligenceEngine at startup."""
-        import logging as _wi_log
-        _log = _wi_log.getLogger("jarvis.service")
-        try:
-            from .catalyst_db import init_catalyst_db as _init_db
-            from .work_intelligence import init_work_intelligence as _init_wi
-            db = await asyncio.to_thread(_init_db)
-            _init_wi(db=db, user_id="chris")
-            _log.info("WorkIntelligence: CatalystDB + engine initialised")
-        except Exception as exc:
-            _log.warning("WorkIntelligence: startup init failed (non-fatal): %s", exc)
-
-    @app.on_event("startup")
-    async def _start_wi_workers() -> None:
-        """Start Work Intelligence background workers."""
-        nonlocal _wi_worker_tasks
-        import logging as _wi_log
-        _log = _wi_log.getLogger("jarvis.service")
-        try:
-            from .wi_workers import start_all_workers as _start_workers, should_run as _should_run
-            if not _should_run():
-                _log.info("WI workers disabled by env flag")
-                return
-
-            async def _broadcast_wi(event_name: str, payload: dict) -> None:
-                try:
-                    await _broadcast_dashboard(event_name, payload)
-                except Exception:
-                    pass
-
-            _wi_worker_tasks = await _start_workers(runtime, _broadcast_wi)
-            _log.info("WI workers: %d tasks started", len(_wi_worker_tasks))
-        except Exception as exc:
-            _log.warning("WI workers: startup failed (non-fatal): %s", exc)
-
-    @app.on_event("shutdown")
-    async def _stop_wi_workers() -> None:
-        """Stop all Work Intelligence background workers cleanly."""
-        nonlocal _wi_worker_tasks
-        if not _wi_worker_tasks:
-            return
-        try:
-            from .wi_workers import stop_all_workers as _stop_workers
-            await _stop_workers(_wi_worker_tasks)
-        except Exception:
-            pass
-        _wi_worker_tasks = []
-
-    # ── Adaptive Layout: alert monitor + weight-cache rebuild ─────────────
-
-    @app.on_event("startup")
-    async def _start_layout_background_tasks() -> None:
-        """
-        Two lightweight background loops for the Adaptive Overview:
-
-        1. Alert monitor (every 30 s) — compares get_alert_state() to the
-           previous snapshot; broadcasts layout.alert over WebSocket when
-           anything changes so the Overview banner updates in real-time.
-
-        2. Weight-cache rebuild (every 6 h + once at startup) — calls
-           rebuild_weights_cache() so GET /api/layout/state is always a
-           cheap single-file read rather than a 30-day log scan.
-        """
-        import logging as _ll
-        _log = _ll.getLogger("jarvis.layout")
-
-        async def _alert_monitor() -> None:
-            from .layout_engine import get_alert_state as _get_alerts
-            _prev_sig: str = ""
-            while True:
-                try:
-                    await asyncio.sleep(30)
-                    alerts = await asyncio.to_thread(_get_alerts, runtime)
-                    # Signature = sorted list of (card, level) pairs
-                    sig = str(sorted((a["card"], a["level"]) for a in alerts))
-                    if sig != _prev_sig:
-                        _prev_sig = sig
-                        await hub.broadcast({
-                            "type":    "layout.alert",
-                            "alerts":  alerts,
-                            "refresh": False,
-                        })
-                except asyncio.CancelledError:
-                    break
-                except Exception as exc:
-                    _log.debug("alert_monitor: %s", exc)
-
-        async def _weight_cache_rebuild() -> None:
-            from .layout_engine import rebuild_weights_cache as _rebuild
-            # Run once at startup, then every 6 hours
-            while True:
-                try:
-                    await asyncio.to_thread(_rebuild)
-                    _log.debug("layout weights cache rebuilt")
-                except Exception as exc:
-                    _log.debug("weight_cache_rebuild: %s", exc)
-                await asyncio.sleep(6 * 3600)
-
-        asyncio.create_task(_alert_monitor(),       name="layout-alert-monitor")
-        asyncio.create_task(_weight_cache_rebuild(), name="layout-weight-cache")
 
     def _summary_payload() -> dict[str, Any]:
         return {
@@ -1016,16 +865,6 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         packet: str = Query(default=""),
         theme: str = Query(default=""),
     ) -> str:
-        # iOS auto-detection — redirect to device-optimised views unless theme forced
-        ua = request.headers.get("user-agent", "")
-        if theme not in ("glass", "nexus"):
-            if "iPad" in ua:
-                from .device_views import tablet_view
-                return tablet_view()
-            if "iPhone" in ua or "iPod" in ua:
-                from .device_views import mobile_view
-                return mobile_view()
-
         # Glass is the default. Only an explicit ?theme=nexus query param overrides it.
         if theme == "nexus" and _NEXUS_THEME_AVAILABLE:
             return _render_nexus_shell(runtime, initial_packet=packet)
@@ -1046,200 +885,6 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         if _GLASS_THEME_AVAILABLE:
             return _render_glass_shell(runtime, initial_packet=packet)
         return render_voice_shell(runtime, initial_packet=packet)
-
-    # ── Device-specific views ────────────────────────────────────────────
-    @app.get("/mobile", response_class=HTMLResponse)
-    async def mobile_device_view() -> str:
-        from .device_views import mobile_view
-        return mobile_view()
-
-    @app.get("/tablet", response_class=HTMLResponse)
-    async def tablet_device_view() -> str:
-        from .device_views import tablet_view
-        return tablet_view()
-
-    @app.get("/tv", response_class=HTMLResponse)
-    async def tv_device_view() -> str:
-        from .device_views import tv_view
-        return tv_view()
-
-    @app.get("/show", response_class=HTMLResponse)
-    async def show_device_view() -> str:
-        from .device_views import show_view
-        return show_view()
-
-    @app.get("/watch", response_class=HTMLResponse)
-    async def watch_device_view() -> str:
-        from .device_views import watch_view
-        return watch_view()
-
-    @app.get("/carplay", response_class=HTMLResponse)
-    async def carplay_device_view() -> str:
-        from .device_views import carplay_view
-        return carplay_view()
-
-    @app.get("/api/google/maps-usage")
-    async def google_maps_usage():
-        """Query Cloud Monitoring API for Maps API usage and estimated costs this month."""
-        import json as _json_mod
-        from datetime import datetime, timezone, timedelta
-        from pathlib import Path as _Path
-
-        sa_key_path = os.environ.get("GOOGLE_CLOUD_SA_KEY_PATH", "")
-        project_id  = os.environ.get("GOOGLE_CLOUD_PROJECT_ID", "")
-        if not sa_key_path or not project_id:
-            return JSONResponse({"error": "not_configured",
-                                 "message": "Set GOOGLE_CLOUD_SA_KEY_PATH and GOOGLE_CLOUD_PROJECT_ID"})
-        # Cache result for 6 hours
-        cache_path = _Path("data/cache/maps_usage_cache.json")
-        try:
-            if cache_path.exists():
-                cached = _json_mod.loads(cache_path.read_text())
-                age_h = (datetime.now(timezone.utc).timestamp() - cached.get("_ts", 0)) / 3600
-                if age_h < 6:
-                    return JSONResponse(cached)
-        except Exception:
-            pass
-        try:
-            from google.oauth2 import service_account
-            from google.auth.transport.requests import Request as _GRequest
-            import httpx as _httpx
-
-            creds = service_account.Credentials.from_service_account_file(
-                sa_key_path,
-                scopes=["https://www.googleapis.com/auth/monitoring.read"]
-            )
-            creds.refresh(_GRequest())
-            token = creds.token
-
-            now   = datetime.now(timezone.utc)
-            start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-            secs  = max(int((now - start).total_seconds()), 3600)
-
-            SERVICES = {
-                "maps-backend.googleapis.com":      {"label": "Maps / Street View",   "price": 7.00},
-                "places-backend.googleapis.com":    {"label": "Places / Autocomplete","price": 2.83},
-                "directions-backend.googleapis.com":{"label": "Directions",            "price": 5.00},
-                "geocoding-backend.googleapis.com": {"label": "Geocoding",             "price": 5.00},
-                "roads.googleapis.com":             {"label": "Roads API",             "price": 10.00},
-            }
-
-            usage = {}
-            async with _httpx.AsyncClient(timeout=15) as client:
-                for svc, meta in SERVICES.items():
-                    filt = (
-                        f'metric.type="serviceruntime.googleapis.com/api/request_count"'
-                        f' AND resource.labels.service="{svc}"'
-                    )
-                    params = {
-                        "filter": filt,
-                        "interval.startTime": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                        "interval.endTime":   now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                        "aggregation.alignmentPeriod": f"{secs}s",
-                        "aggregation.perSeriesAligner": "ALIGN_SUM",
-                    }
-                    r = await client.get(
-                        f"https://monitoring.googleapis.com/v3/projects/{project_id}/timeSeries",
-                        headers={"Authorization": f"Bearer {token}"},
-                        params=params,
-                    )
-                    d = r.json()
-                    total = 0
-                    for ts in d.get("timeSeries", []):
-                        for pt in ts.get("points", []):
-                            v = pt.get("value", {})
-                            total += int(v.get("int64Value", 0) or v.get("doubleValue", 0) or 0)
-                    usage[meta["label"]] = {"requests": total, "price_per_k": meta["price"]}
-
-            total_requests = sum(v["requests"] for v in usage.values())
-            total_cost = sum((v["requests"] / 1000) * v["price_per_k"] for v in usage.values())
-            # Project to end of month
-            days_total = (start.replace(month=start.month % 12 + 1, day=1) - timedelta(days=1)).day
-            days_elapsed = max(now.day, 1)
-            projected = round(total_cost * days_total / days_elapsed, 2)
-
-            result = {
-                "month": now.strftime("%B %Y"),
-                "project_id": project_id,
-                "usage": usage,
-                "total_requests": total_requests,
-                "estimated_cost": round(total_cost, 2),
-                "projected_cost": projected,
-                "free_credit": 200.0,
-                "remaining_credit": round(max(0.0, 200.0 - total_cost), 2),
-                "pct_used": round(min(100, (total_cost / 200) * 100), 1),
-                "days_elapsed": days_elapsed,
-                "days_in_month": days_total,
-                "_ts": now.timestamp(),
-            }
-            cache_path.parent.mkdir(parents=True, exist_ok=True)
-            cache_path.write_text(_json_mod.dumps(result))
-            return JSONResponse(result)
-        except Exception as e:
-            return JSONResponse({"error": str(e)})
-
-    @app.get("/manifest.json")
-    async def pwa_manifest() -> JSONResponse:
-        return JSONResponse({
-            "name": "JARVIS Drive",
-            "short_name": "JARVIS",
-            "description": "J.A.R.V.I.S. Navigation & In-Vehicle Command",
-            "start_url": "/carplay",
-            "scope": "/",
-            "display": "fullscreen",
-            "orientation": "landscape",
-            "background_color": "#0d1117",
-            "theme_color": "#00D4FF",
-            "icons": [
-                {"src": "/assets/icons/icon-192.png",  "sizes": "192x192",  "type": "image/png", "purpose": "any maskable"},
-                {"src": "/assets/icons/icon-512.png",  "sizes": "512x512",  "type": "image/png", "purpose": "any maskable"},
-                {"src": "/assets/icons/icon-144.png",  "sizes": "144x144",  "type": "image/png"},
-                {"src": "/assets/icons/icon-96.png",   "sizes": "96x96",    "type": "image/png"},
-            ],
-            "categories": ["navigation", "utilities"],
-            "lang": "en-US"
-        })
-
-    @app.get("/sw.js")
-    async def service_worker() -> Response:
-        js = r"""
-const CACHE = 'jarvis-drive-v1';
-const PRECACHE = ['/carplay', '/assets/icons/icon-192.png', '/assets/icons/icon-512.png'];
-
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(PRECACHE)).then(() => self.skipWaiting())
-  );
-});
-
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener('fetch', e => {
-  const url = e.request.url;
-  // Always network-first for API, Maps, and SSE
-  if (url.includes('/api/') || url.includes('googleapis') || url.includes('/sse')) return;
-  e.respondWith(
-    fetch(e.request)
-      .then(resp => {
-        if (resp && resp.status === 200 && e.request.method === 'GET') {
-          const clone = resp.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-        }
-        return resp;
-      })
-      .catch(() => caches.match(e.request))
-  );
-});
-"""
-        return Response(content=js, media_type="application/javascript",
-                        headers={"Service-Worker-Allowed": "/"})
-    # ────────────────────────────────────────────────────────────────────
 
     @app.get("/storm-dashboard")
     async def storm_dashboard() -> Response:
@@ -1576,194 +1221,42 @@ self.addEventListener('fetch', e => {
         await _broadcast_dashboard("assistant-background.updated", include_dashboard=False)
         return _json(result)
 
-    @app.get("/api/news")
-    async def api_news(force: int = 0) -> JSONResponse:
-        """
-        Return structured news articles with OG hero images for the News view.
-        ?force=1  — bypass 30-minute server cache and re-fetch everything.
-        Cold start: ~15-20 s (RSS + parallel OG enrichment).
-        Warm (cached): < 1 ms.
-        """
+    @app.get("/api/briefing")
+    async def api_briefing(actor: str = "Chris") -> JSONResponse:
         from .rss_briefing import fetch_briefing_context
-        from datetime import datetime as _dt
-        import asyncio as _asyncio
+
+        # Fetch live RSS context in a background thread (non-blocking, 8s max)
         rss: dict = {}
         try:
-            rss = await _asyncio.wait_for(
-                _asyncio.to_thread(fetch_briefing_context, bool(force)),
-                timeout=30.0,
+            rss = await asyncio.wait_for(
+                asyncio.to_thread(fetch_briefing_context),
+                timeout=8.0,
             )
         except Exception:
-            pass
-        return _json({
-            "world":      rss.get("world", []),
-            "finance":    rss.get("finance", []),
-            "total":      rss.get("total_articles", 0),
-            "sources":    rss.get("sources_hit", []),
-            "fetched_at": _dt.utcnow().isoformat(),
-            "cached":     rss.get("cached", False),
-            "enriched":   rss.get("enriched", False),
-            "error":      rss.get("fetch_error", ""),
-        })
+            pass  # fall back to LLM-only brief
 
-    @app.get("/api/briefing")
-    async def api_briefing(request: Request, actor: str = "") -> JSONResponse:
-        # Use CF identity when no explicit actor override provided
-        if not actor:
-            actor = _current_actor(request).capitalize()
-        """Return a structured morning brief built entirely from real data — no fabricated content."""
-        from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+        # Build base briefing (morning_brief returns a plain string)
+        briefing: str = runtime.morning_brief(actor)
 
-        def _fmt_event(e: dict) -> dict:
-            start = e.get("start_time") or ""
-            title = e.get("title") or "(Untitled)"
-            cal   = e.get("calendar_name") or ""
-            day_str = time_str = ""
-            if start:
-                try:
-                    ev_dt = _dt.fromisoformat(str(start))
-                    if ev_dt.tzinfo is None:
-                        ev_dt = ev_dt.replace(tzinfo=_tz.utc)
-                    local_now = _dt.now(ev_dt.tzinfo)
-                    ev_date = ev_dt.date()
-                    today = local_now.date()
-                    if ev_date == today:
-                        day_str = "Today"
-                    elif ev_date == today + _td(days=1):
-                        day_str = "Tomorrow"
-                    else:
-                        day_str = ev_dt.strftime("%a %b %-d")
-                    # Only show a time if it's not midnight (Cozi stores untimed events as 00:00)
-                    if not e.get("all_day") and not (ev_dt.hour == 0 and ev_dt.minute == 0):
-                        hour = ev_dt.hour
-                        minute = ev_dt.minute
-                        ampm = "AM" if hour < 12 else "PM"
-                        hour12 = hour % 12 or 12
-                        time_str = f"{hour12}:{minute:02d} {ampm}" if minute else f"{hour12} {ampm}"
-                except Exception:
-                    day_str = str(start)[:10]
-            return {"title": title, "day": day_str, "time": time_str, "calendar": cal}
+        # Prepend live news context when RSS data is available
+        if rss.get("total_articles", 0) > 0:
+            parts: list[str] = ["## Live News Context"]
+            if rss.get("world_text"):
+                parts.append(rss["world_text"])
+            if rss.get("finance_text"):
+                parts.append(rss["finance_text"])
+            news_prefix = "\n\n".join(parts)
+            briefing = news_prefix + "\n\n---\n\n" + briefing
 
-        sections: list[dict] = []
-
-        # ── Calendar ──────────────────────────────────────────────────────────
-        try:
-            inbox = _get_unified_inbox()
-            if inbox:
-                events = await asyncio.to_thread(inbox.get_upcoming_events, 14)
-                if events:
-                    sections.append({
-                        "id": "calendar",
-                        "title": "Coming Up",
-                        "icon": "📅",
-                        "items": [_fmt_event(e) for e in events[:8]],
-                    })
-        except Exception:
-            pass
-
-        # ── Tasks & Email (from home dashboard) ───────────────────────────────
-        try:
-            home_db = _get_home_db()
-            if home_db:
-                dash = await asyncio.to_thread(home_db.get_dashboard_data)
-                tasks = dash.get("tasks", {})
-                overdue    = int(tasks.get("overdue", 0) or 0)
-                due_today  = int(tasks.get("due_today", 0) or 0)
-                due_week   = int(tasks.get("due_this_week", 0) or 0)
-                if overdue or due_today or due_week:
-                    sections.append({
-                        "id": "tasks",
-                        "title": "On Deck",
-                        "icon": "✓",
-                        "stats": {"overdue": overdue, "due_today": due_today, "due_week": due_week},
-                    })
-                email = dash.get("email", {})
-                gmail_unread   = int(email.get("gmail_unread", 0) or 0)
-                outlook_unread = int(email.get("outlook_unread", 0) or 0)
-                total_unread   = gmail_unread + outlook_unread
-                if total_unread:
-                    sections.append({
-                        "id": "email",
-                        "title": "Inbox",
-                        "icon": "📬",
-                        "stats": {"total": total_unread, "gmail": gmail_unread, "outlook": outlook_unread},
-                    })
-        except Exception:
-            pass
-
-        # ── Pending approvals ─────────────────────────────────────────────────
-        try:
-            approvals = runtime.list_pending_approvals()
-            if approvals:
-                sections.append({
-                    "id": "approvals",
-                    "title": "Needs You",
-                    "icon": "⚡",
-                    "count": len(approvals),
-                })
-        except Exception:
-            pass
-
-        # ── Strategic situation (AI — uses real calendar + approval data) ──────
-        try:
-            strategic = await asyncio.to_thread(runtime.daily_strategic_brief, actor)
-            if strategic:
-                sections.append({
-                    "id": "strategic",
-                    "title": "Situation",
-                    "icon": "🎯",
-                    "text": strategic,
-                })
-        except Exception:
-            pass
-
-        # ── Health ────────────────────────────────────────────────────────────
-        try:
-            from .health_agent import get_morning_summary as _health_summary
-            health_para = await asyncio.to_thread(_health_summary)
-            if health_para:
-                sections.append({
-                    "id": "health",
-                    "title": "Health",
-                    "icon": "♥",
-                    "text": health_para,
-                })
-        except Exception:
-            pass
-
-        # ── Dining — Sam's meal pick for the current time of day ──────────────
-        try:
-            from .dining import recommend_restaurants as _recommend_restaurants
-            from datetime import datetime as _dtm
-            _hour = _dtm.now().hour
-            if 5 <= _hour or _hour < 1:   # Waking hours (5am – 1am)
-                _rec = await asyncio.to_thread(_recommend_restaurants, None, 2)
-                _picks = _rec.get("recommendations") or []
-                if _picks:
-                    sections.append({
-                        "id": "dining",
-                        "title": "Sam's Picks",
-                        "icon": "🍽️",
-                        "meal_type": _rec.get("meal_type", ""),
-                        "items": [
-                            {
-                                "name": p.get("name", ""),
-                                "rating": p.get("rating"),
-                                "price": p.get("price", ""),
-                                "distance_mi": p.get("distance_mi"),
-                                "open_now": p.get("open_now"),
-                                "place_id": p.get("place_id", ""),
-                            }
-                            for p in _picks
-                        ],
-                    })
-        except Exception:
-            pass
-
-        date_str = _dt.now().strftime("%a, %b %-d")
-        # Journey: log brief received
-        journey_log(_current_actor(request), "brief_received", {})
-        return _json({"actor": actor, "date": date_str, "sections": sections})
+        return _json(
+            {
+                "actor": actor,
+                "briefing": briefing,
+                "rss_articles": rss.get("total_articles", 0),
+                "rss_sources": rss.get("sources_hit", []),
+                "live_news": rss.get("total_articles", 0) > 0,
+            }
+        )
 
     @app.get("/api/first-light")
     async def api_first_light(
@@ -1787,13 +1280,8 @@ self.addEventListener('fetch', e => {
         return _json(runtime.status())
 
     @app.get("/api/approvals")
-    async def api_approvals(request: Request) -> JSONResponse:
-        actor = _current_actor(request)
-        approvals = runtime.list_pending_approvals()
-        # Non-chris users see only their own approvals; chris sees all (admin)
-        if actor != "chris":
-            approvals = [a for a in approvals if a.get("actor_id", "chris") == actor]
-        return _json(approvals)
+    async def api_approvals() -> JSONResponse:
+        return _json(runtime.list_pending_approvals())
 
     @app.get("/api/activity")
     async def api_activity() -> JSONResponse:
@@ -1863,59 +1351,6 @@ self.addEventListener('fetch', e => {
     async def api_identity() -> JSONResponse:
         return _json(runtime.identity_overview())
 
-    @app.get("/api/identity/me")
-    async def api_identity_me(request: Request) -> JSONResponse:
-        """Return the current user based on Cloudflare Access headers."""
-        user_id = getattr(request.state, "cf_user_id", "chris")
-        email = getattr(request.state, "cf_email", "")
-
-        # Journey: log login at most once per hour per user
-        import time as _time
-        try:
-            last_login = journey_store.get_last_login_ts(user_id)
-            if _time.time() - last_login > 3600:
-                journey_log(user_id, "login", {})
-        except Exception:
-            pass
-
-        # Get identity details for this user
-        identity = runtime.identity_overview()
-        members = identity.get("members", [])
-        member = next((m for m in members if m.get("id") == user_id), None)
-
-        return _json({
-            "user_id": user_id,
-            "email": email,
-            "display_name": member.get("display_name", user_id.capitalize()) if member else user_id.capitalize(),
-            "authenticated_via_cloudflare": bool(email),
-            "member": member,
-        })
-
-    @app.get("/api/profile")
-    async def api_get_profile(request: Request) -> JSONResponse:
-        """Get the current user's profile."""
-        from .user_profile import load_profile
-        user_id = getattr(request.state, "cf_user_id", "chris")
-        return _json(await asyncio.to_thread(load_profile, user_id))
-
-    @app.post("/api/profile")
-    async def api_save_profile(request: Request, payload: dict[str, Any]) -> JSONResponse:
-        """Save settings to the current user's profile."""
-        from .user_profile import save_profile
-        user_id = getattr(request.state, "cf_user_id", "chris")
-        payload.pop("user_id", None)  # prevent user_id spoofing
-        updated = await asyncio.to_thread(save_profile, user_id, payload)
-        return _json({"ok": True, "profile": updated})
-
-    @app.get("/api/profile/{user_id}")
-    async def api_get_profile_by_id(request: Request, user_id: str) -> JSONResponse:
-        """Get a specific user's profile (admin only — requires chris identity)."""
-        from .user_profile import load_profile
-        requester = getattr(request.state, "cf_user_id", "chris")
-        if requester != "chris":
-            return _json({"error": "Not authorized"}, status_code=403)
-        return _json(await asyncio.to_thread(load_profile, user_id))
-
     @app.get("/api/connected-devices")
     async def api_connected_devices(request: Request, current_device_id: str = "") -> JSONResponse:
         return _json(
@@ -1981,15 +1416,11 @@ self.addEventListener('fetch', e => {
         return _json({"events": runtime.merged_calendar_events(limit=limit), "summary": runtime.merged_calendar_brief(limit=min(limit, 6))})
 
     @app.get("/api/strategic-brief")
-    async def api_strategic_brief(request: Request, actor: str = "") -> JSONResponse:
-        if not actor:
-            actor = _current_actor(request).capitalize()
+    async def api_strategic_brief(actor: str = "Chris") -> JSONResponse:
         return _json({"actor": actor, "brief": runtime.daily_strategic_brief(actor)})
 
     @app.get("/api/cross-domain-brief")
-    async def api_cross_domain_brief(request: Request, actor: str = "", topic: str = "") -> JSONResponse:
-        if not actor:
-            actor = _current_actor(request).capitalize()
+    async def api_cross_domain_brief(actor: str = "Chris", topic: str = "") -> JSONResponse:
         return _json({"actor": actor, "topic": topic, "brief": runtime.cross_domain_synthesis_brief(actor, topic)})
 
     @app.get("/api/wealth-leverage-summary")
@@ -2096,88 +1527,6 @@ self.addEventListener('fetch', e => {
     # Epic 13: Financial Intelligence endpoints (Fisk / Howard Stark / Daredevil)
     # ------------------------------------------------------------------
 
-    @app.get("/api/finance/accounts")
-    async def api_finance_accounts_list() -> JSONResponse:
-        """List all financial accounts."""
-        try:
-            from .financial_intelligence import get_finance
-            fi = get_finance()
-            if fi is None:
-                return _json([])
-            from dataclasses import asdict
-            accounts = [asdict(a) for a in await asyncio.to_thread(fi._store.load_accounts)]
-            return _json(accounts)
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.post("/api/finance/accounts")
-    async def api_finance_account_upsert(payload: dict[str, Any]) -> JSONResponse:
-        """Add or update a financial account. Required: name, account_type, balance."""
-        try:
-            import uuid as _uuid
-            from datetime import datetime as _dt, timezone as _tz
-            from .financial_intelligence import get_finance, Account
-            fi = get_finance()
-            if fi is None:
-                raise HTTPException(status_code=503, detail="Financial intelligence not initialised")
-            account = Account(
-                account_id=str(payload.get("account_id") or _uuid.uuid4()),
-                name=str(payload["name"]),
-                account_type=str(payload["account_type"]),
-                institution=str(payload.get("institution", "")),
-                balance=float(payload["balance"]),
-                currency=str(payload.get("currency", "USD")),
-                last_updated=_dt.now(_tz.utc).strftime("%Y-%m-%d"),
-                notes=str(payload.get("notes", "")),
-                is_manual=True,
-                hidden=bool(payload.get("hidden", False)),
-            )
-            await asyncio.to_thread(fi._store.upsert_account, account)
-            from dataclasses import asdict
-            return _json({"ok": True, "account": asdict(account)}, status_code=201)
-        except KeyError as exc:
-            raise HTTPException(status_code=400, detail=f"Missing field: {exc.args[0]}") from exc
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.delete("/api/finance/accounts/{account_id}")
-    async def api_finance_account_delete(account_id: str) -> JSONResponse:
-        """Remove a financial account."""
-        try:
-            from .financial_intelligence import get_finance
-            fi = get_finance()
-            if fi is None:
-                raise HTTPException(status_code=503, detail="Financial intelligence not initialised")
-            accounts = await asyncio.to_thread(fi._store.load_accounts)
-            filtered = [a for a in accounts if a.account_id != account_id]
-            if len(filtered) == len(accounts):
-                raise HTTPException(status_code=404, detail="Account not found")
-            await asyncio.to_thread(fi._store.save_accounts, filtered)
-            return _json({"ok": True, "deleted": account_id})
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.delete("/api/finance/passive-income/streams/{stream_id}")
-    async def api_finance_passive_income_delete(stream_id: str) -> JSONResponse:
-        """Remove a passive income stream."""
-        try:
-            from .financial_intelligence import get_finance
-            fi = get_finance()
-            if fi is None:
-                raise HTTPException(status_code=503, detail="Financial intelligence not initialised")
-            streams = await asyncio.to_thread(fi._store.load_streams)
-            filtered = [s for s in streams if s.stream_id != stream_id]
-            if len(filtered) == len(streams):
-                raise HTTPException(status_code=404, detail="Stream not found")
-            await asyncio.to_thread(fi._store.save_streams, filtered)
-            return _json({"ok": True, "deleted": stream_id})
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
     @app.get("/api/finance/snapshot")
     async def api_finance_snapshot() -> JSONResponse:
         """Fisk's wealth snapshot — net worth, cashflow, passive income, goals."""
@@ -2257,10 +1606,9 @@ self.addEventListener('fetch', e => {
 
     @app.post("/api/finance/passive-income/streams")
     async def api_finance_add_stream(payload: dict[str, Any]) -> JSONResponse:
-        """Add or update a passive income stream."""
+        """Add a passive income stream."""
         try:
             import uuid as _uuid
-            from dataclasses import asdict
             from .financial_intelligence import get_finance, PassiveIncomeStream
             fi = get_finance()
             if fi is None:
@@ -2279,14 +1627,8 @@ self.addEventListener('fetch', e => {
                 notes=str(payload.get("notes", "")),
                 growth_rate=float(payload.get("growth_rate", 0.0)),
             )
-            streams = await asyncio.to_thread(fi._store.load_streams)
-            idx = next((i for i, s in enumerate(streams) if s.stream_id == stream.stream_id), None)
-            if idx is not None:
-                streams[idx] = stream
-            else:
-                streams.append(stream)
-            await asyncio.to_thread(fi._store.save_streams, streams)
-            return _json({"ok": True, "stream": asdict(stream)}, status_code=201)
+            await asyncio.to_thread(fi.howard.add_stream, stream)
+            return _json({"ok": True, "stream_id": stream.stream_id})
         except HTTPException:
             raise
         except Exception as exc:
@@ -2419,39 +1761,6 @@ self.addEventListener('fetch', e => {
             return _json({"ok": True, "goal": _asdict(goal)})
         except HTTPException:
             raise
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.delete("/api/finance/goals/{goal_id}")
-    async def api_finance_goal_delete(goal_id: str) -> JSONResponse:
-        """Remove a financial goal."""
-        try:
-            from .financial_intelligence import get_finance
-            fi = get_finance()
-            if fi is None:
-                raise HTTPException(status_code=503, detail="Financial intelligence not initialised")
-            goals = await asyncio.to_thread(fi._store.load_goals)
-            filtered = [g for g in goals if g.goal_id != goal_id]
-            if len(filtered) == len(goals):
-                raise HTTPException(status_code=404, detail="Goal not found")
-            await asyncio.to_thread(fi._store.save_goals, filtered)
-            return _json({"ok": True, "deleted": goal_id})
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.get("/api/finance/passive-income/streams")
-    async def api_finance_streams_list() -> JSONResponse:
-        """List all passive income streams."""
-        try:
-            from dataclasses import asdict
-            from .financial_intelligence import get_finance
-            fi = get_finance()
-            if fi is None:
-                return _json([])
-            streams = await asyncio.to_thread(fi._store.load_streams)
-            return _json([asdict(s) for s in streams])
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -2597,156 +1906,6 @@ self.addEventListener('fetch', e => {
     async def api_agents() -> JSONResponse:
         return _json(runtime.background_agent_status())
 
-    # ------------------------------------------------------------------
-    # Universal Agent Roster  — merges ALL sources into one endpoint.
-    # The Agents tab reads this instead of a hardcoded JS array, so every
-    # agent built in JARVIS, Chronicle, Ghostwritr, Catalyst, or any
-    # future system automatically appears after registration.
-    # ------------------------------------------------------------------
-
-    @app.get("/api/agents/roster")
-    async def api_agents_roster() -> JSONResponse:
-        """
-        Unified roster from all sources:
-          1. data/agents/life_agents.json   — primary 53-agent roster
-          2. data/agents/external_agents.json — Chronicle/Ghostwritr/Catalyst/future
-          3. background_state.json          — overlays live status (awake → active)
-        """
-        from datetime import timezone
-        seen: set[str] = set()
-        roster: list[dict[str, Any]] = []
-
-        # ── 1. Life agents (authoritative) ─────────────────────────────
-        try:
-            life_data = runtime.life_agent_snapshot()
-            for agent in life_data.get("agents", []):
-                agent_id = (agent.get("agent_id") or "").strip()
-                if not agent_id or agent_id in seen:
-                    continue
-                seen.add(agent_id)
-                roster.append({
-                    "id":     agent_id,
-                    "name":   (agent.get("label") or agent_id).upper(),
-                    "title":  agent.get("title") or agent.get("role") or "",
-                    "domain": agent.get("domain") or "general",
-                    "tier":   agent.get("tier") or "execution",
-                    "status": "standby",
-                    "source": "jarvis",
-                    "purpose": agent.get("purpose") or "",
-                })
-        except Exception:
-            pass
-
-        # ── 2. External agents (Chronicle, Ghostwritr, Catalyst, …) ────
-        ext_path = Path("data/agents/external_agents.json")
-        if not ext_path.exists():
-            # Try relative to this file
-            ext_path = Path(__file__).parent.parent / "data" / "agents" / "external_agents.json"
-        try:
-            if ext_path.exists():
-                ext_data = json.loads(ext_path.read_text(encoding="utf-8"))
-                for agent in ext_data.get("agents", []):
-                    agent_id = (agent.get("agent_id") or "").strip()
-                    if not agent_id or agent_id in seen:
-                        continue
-                    seen.add(agent_id)
-                    roster.append({
-                        "id":     agent_id,
-                        "name":   (agent.get("name") or agent.get("label") or agent_id).upper(),
-                        "title":  agent.get("title") or "",
-                        "domain": agent.get("domain") or "general",
-                        "tier":   agent.get("tier") or "execution",
-                        "status": agent.get("status") or "standby",
-                        "source": agent.get("source") or "external",
-                        "purpose": agent.get("description") or "",
-                    })
-        except Exception:
-            pass
-
-        # ── 3. Overlay live status from background_state.json ──────────
-        try:
-            bg_path = Path("data/agents/background_state.json")
-            if not bg_path.exists():
-                bg_path = Path(__file__).parent.parent / "data" / "agents" / "background_state.json"
-            if bg_path.exists():
-                bg = json.loads(bg_path.read_text(encoding="utf-8"))
-                awake_ids = {
-                    a_id for a_id, info in bg.get("agents", {}).items()
-                    if (info.get("state") or "") == "awake"
-                }
-                for a in roster:
-                    if a["id"] in awake_ids:
-                        a["status"] = "active"
-        except Exception:
-            pass
-
-        return _json({
-            "agents": roster,
-            "count":  len(roster),
-            "sources": ["jarvis", "external"],
-        })
-
-    @app.post("/api/agents/register")
-    async def api_agents_register(payload: dict[str, Any]) -> JSONResponse:
-        """
-        Register or update an agent from any external system.
-
-        Required: agent_id
-        Recommended: name (or label), title, domain, source, description
-
-        On success broadcasts agent_roster_updated so the UI refreshes.
-        """
-        from datetime import timezone
-        agent_id = str(payload.get("agent_id") or "").strip()
-        if not agent_id:
-            raise HTTPException(status_code=400, detail="agent_id is required")
-
-        ext_path = Path(__file__).parent.parent / "data" / "agents" / "external_agents.json"
-        try:
-            if ext_path.exists():
-                data = json.loads(ext_path.read_text(encoding="utf-8"))
-            else:
-                data = {"agents": []}
-
-            existing_idx = {a["agent_id"]: i for i, a in enumerate(data["agents"])}
-            action = "updated" if agent_id in existing_idx else "registered"
-
-            record: dict[str, Any] = {
-                "agent_id":      agent_id,
-                "name":          str(payload.get("name") or payload.get("label") or agent_id).upper(),
-                "title":         str(payload.get("title") or ""),
-                "domain":        str(payload.get("domain") or "general"),
-                "tier":          str(payload.get("tier") or "execution"),
-                "status":        str(payload.get("status") or "standby"),
-                "source":        str(payload.get("source") or "external"),
-                "description":   str(payload.get("description") or ""),
-                "registered_at": __import__("datetime").datetime.now(
-                    __import__("datetime").timezone.utc
-                ).isoformat(),
-            }
-
-            if agent_id in existing_idx:
-                data["agents"][existing_idx[agent_id]] = record
-            else:
-                data["agents"].append(record)
-
-            ext_path.parent.mkdir(parents=True, exist_ok=True)
-            ext_path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-
-            # Broadcast so any open Agents tab refreshes immediately
-            try:
-                await asyncio.to_thread(
-                    _broadcast, {"type": "agent_roster_updated", "agent_id": agent_id, "action": action}
-                )
-            except Exception:
-                pass
-
-            return _json({"ok": True, "agent_id": agent_id, "action": action}, status_code=201)
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
     @app.get("/api/agent-registry")
     async def api_agent_registry() -> JSONResponse:
         return _json(runtime.agent_registry_snapshot())
@@ -2869,61 +2028,136 @@ self.addEventListener('fetch', e => {
         return _json(runtime.interface_router.system_manifest("catalyst"))
 
     # ------------------------------------------------------------------
-    # Epic 8: Catalyst Bridge endpoints — RETIRED (external app retired)
-    # Intelligence is now native: use /api/wi/* endpoints.
-    # /api/catalyst/extract-actions is kept (pure-Python, no external app).
-    # /api/catalyst/handoff, /run, /result kept (use runtime.interface_router).
+    # Epic 8: Catalyst Bridge endpoints (Mantis / bidirectional context)
     # ------------------------------------------------------------------
-
-    _CATALYST_BRIDGE_RETIRED_MSG = (
-        "The external Catalyst app integration has been retired. "
-        "Work intelligence is now native to JARVIS. Use /api/wi/* endpoints."
-    )
 
     @app.get("/api/catalyst/handoffs/pending")
     async def api_catalyst_handoffs_pending() -> JSONResponse:
-        raise HTTPException(status_code=410, detail=_CATALYST_BRIDGE_RETIRED_MSG)
+        """Return pending context packets waiting to be picked up by Catalyst."""
+        try:
+            from .catalyst_bridge import get_catalyst_bridge as _gcb
+            bridge = _gcb()
+            if bridge is None:
+                return _json({"pending": [], "count": 0})
+            pending = [ctx.to_dict() for ctx in bridge.get_pending_handoffs()]
+            return _json({"pending": pending, "count": len(pending)})
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.post("/api/catalyst/handoffs/{context_id}/sent")
     async def api_catalyst_handoff_mark_sent(context_id: str) -> JSONResponse:
-        raise HTTPException(status_code=410, detail=_CATALYST_BRIDGE_RETIRED_MSG)
+        """Catalyst calls this to acknowledge receipt of a handoff context."""
+        try:
+            from .catalyst_bridge import get_catalyst_bridge as _gcb
+            bridge = _gcb()
+            if bridge is None:
+                raise HTTPException(status_code=503, detail="Catalyst bridge not initialised")
+            bridge.mark_handoff_sent(context_id)
+            return _json({"ok": True, "context_id": context_id})
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.post("/api/catalyst/receive/completion")
     async def api_catalyst_receive_completion(payload: dict[str, Any]) -> JSONResponse:
-        """Retired: use /api/wi/tasks/{id}/complete instead."""
-        raise HTTPException(status_code=410, detail=_CATALYST_BRIDGE_RETIRED_MSG)
+        """Catalyst → JARVIS: a task/project has been marked complete."""
+        try:
+            from .catalyst_bridge import get_catalyst_bridge as _gcb
+            bridge = _gcb()
+            if bridge is None:
+                raise HTTPException(status_code=503, detail="Catalyst bridge not initialised")
+            bridge.receive_completion(payload)
+            return _json({"ok": True})
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.post("/api/catalyst/receive/project-update")
     async def api_catalyst_receive_project_update(payload: dict[str, Any]) -> JSONResponse:
-        """Retired: use /api/wi/projects instead."""
-        raise HTTPException(status_code=410, detail=_CATALYST_BRIDGE_RETIRED_MSG)
+        """Catalyst → JARVIS: project status update."""
+        try:
+            from .catalyst_bridge import get_catalyst_bridge as _gcb
+            bridge = _gcb()
+            if bridge is None:
+                raise HTTPException(status_code=503, detail="Catalyst bridge not initialised")
+            bridge.receive_project_update(payload)
+            return _json({"ok": True})
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.post("/api/catalyst/receive/signal")
     async def api_catalyst_receive_signal(payload: dict[str, Any]) -> JSONResponse:
-        """Retired: use POST /api/wi/signals instead."""
-        raise HTTPException(status_code=410, detail=_CATALYST_BRIDGE_RETIRED_MSG)
+        """Catalyst → JARVIS: a signal needing JARVIS intelligence."""
+        try:
+            from .catalyst_bridge import get_catalyst_bridge as _gcb
+            bridge = _gcb()
+            if bridge is None:
+                raise HTTPException(status_code=503, detail="Catalyst bridge not initialised")
+            bridge.receive_signal(payload)
+            return _json({"ok": True})
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.get("/api/catalyst/status")
     async def api_catalyst_mantis_status() -> JSONResponse:
-        """Retired: use GET /api/wi/workers/status instead."""
-        raise HTTPException(status_code=410, detail=_CATALYST_BRIDGE_RETIRED_MSG)
+        """Return Mantis workflow status for the Already Working zone."""
+        try:
+            from .catalyst_bridge import get_mantis as _gm
+            mantis = _gm()
+            if mantis is None:
+                return _json({"agent": "Mantis", "status": "not_initialised"})
+            return _json(mantis.get_workflow_status())
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.post("/api/catalyst/package/morning")
     async def api_catalyst_package_morning(payload: dict[str, Any]) -> JSONResponse:
-        """Retired: use POST /api/wi/briefing/generate instead."""
-        raise HTTPException(status_code=410, detail=_CATALYST_BRIDGE_RETIRED_MSG)
+        """Manually trigger a morning handoff package (bypasses scheduler)."""
+        try:
+            from .catalyst_bridge import get_mantis as _gm
+            mantis = _gm()
+            if mantis is None:
+                raise HTTPException(status_code=503, detail="Mantis not initialised")
+            briefing_packet = payload if payload else {}
+            ctx = mantis.on_morning_briefing_ready(briefing_packet)
+            if ctx is None:
+                raise HTTPException(status_code=500, detail="Could not package morning handoff")
+            return _json(ctx.to_dict(), status_code=201)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.post("/api/catalyst/package/meeting")
     async def api_catalyst_package_meeting(payload: dict[str, Any]) -> JSONResponse:
-        """Retired: use POST /api/wi/meeting/prep instead."""
-        raise HTTPException(status_code=410, detail=_CATALYST_BRIDGE_RETIRED_MSG)
+        """Package meeting prep context. Body: {"event": {...}, "minutes_until": 60}"""
+        try:
+            from .catalyst_bridge import get_mantis as _gm
+            mantis = _gm()
+            if mantis is None:
+                raise HTTPException(status_code=503, detail="Mantis not initialised")
+            event = payload.get("event", {})
+            if not event:
+                raise HTTPException(status_code=400, detail="'event' field is required")
+            minutes_until = int(payload.get("minutes_until", 60))
+            ctx = mantis.on_meeting_approaching(event, minutes_until=minutes_until)
+            if ctx is None:
+                raise HTTPException(status_code=500, detail="Could not package meeting prep")
+            return _json(ctx.to_dict(), status_code=201)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.post("/api/catalyst/extract-actions")
     async def api_catalyst_extract_actions(payload: dict[str, Any]) -> JSONResponse:
-        """Extract action items from conversation text using regex heuristics.
-        Body: {"text": str}
-        This endpoint is retained as it is pure-Python with no external app dependency.
-        """
+        """Extract action items from conversation text. Body: {"text": str}"""
         try:
             from .catalyst_bridge import extract_action_items as _extract
             text = str(payload.get("text", "")).strip()
@@ -2959,523 +2193,6 @@ self.addEventListener('fetch', e => {
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         return _json(result)
-
-    # ------------------------------------------------------------------
-    # Work Intelligence endpoints — JARVIS-native Catalyst intelligence
-    # All backed by catalyst_db.py + work_intelligence.py
-    # ------------------------------------------------------------------
-
-    def _get_wi():
-        """Return the WorkIntelligenceEngine singleton (lazy init fallback)."""
-        from .work_intelligence import get_work_intelligence
-        from .catalyst_db import get_catalyst_db
-        return get_work_intelligence(db=get_catalyst_db(), user_id="chris")
-
-    @app.get("/api/wi/summary")
-    async def api_wi_summary() -> JSONResponse:
-        """Work overview counts: active projects, open tasks, overdue commitments."""
-        try:
-            engine = _get_wi()
-            return _json(engine.get_work_summary())
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.get("/api/wi/projects")
-    async def api_wi_projects(status: str | None = None) -> JSONResponse:
-        """List projects. Optional ?status=active|at_risk|stalled|complete|archived"""
-        try:
-            from .catalyst_db import get_catalyst_db
-            db = get_catalyst_db()
-            return _json({"projects": db.list_projects("chris", status=status)})
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.post("/api/wi/projects")
-    async def api_wi_create_project(payload: dict[str, Any]) -> JSONResponse:
-        """
-        Create a project.
-        Body: {name, problem_statement?, source_signal_id?}
-        """
-        try:
-            from .catalyst_db import get_catalyst_db
-            db = get_catalyst_db()
-            name = str(payload.get("name", "")).strip()
-            if not name:
-                raise HTTPException(status_code=400, detail="'name' is required")
-            project = await asyncio.to_thread(
-                db.create_project,
-                "chris",
-                name,
-                problem_statement=payload.get("problem_statement"),
-                source_signal_id=payload.get("source_signal_id"),
-            )
-            return _json(project or {}, status_code=201)
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.get("/api/wi/tasks")
-    async def api_wi_tasks(project_id: str | None = None) -> JSONResponse:
-        """List open tasks. Optional ?project_id=<uuid>"""
-        try:
-            from .catalyst_db import get_catalyst_db
-            db = get_catalyst_db()
-            return _json({"tasks": db.list_open_tasks("chris", project_id=project_id)})
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.post("/api/wi/tasks")
-    async def api_wi_create_task(payload: dict[str, Any]) -> JSONResponse:
-        """
-        Create a task.
-        Body: {title, project_id?, priority?, due_date?, task_type?}
-        """
-        try:
-            from .catalyst_db import get_catalyst_db
-            db = get_catalyst_db()
-            title = str(payload.get("title", "")).strip()
-            if not title:
-                raise HTTPException(status_code=400, detail="'title' is required")
-            task = await asyncio.to_thread(
-                db.create_task,
-                "chris",
-                title,
-                project_id=payload.get("project_id"),
-                priority=str(payload.get("priority", "medium")),
-                due_date=payload.get("due_date"),
-                task_type=str(payload.get("task_type", "ad_hoc")),
-            )
-            return _json(task or {}, status_code=201)
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.post("/api/wi/tasks/{task_id}/complete")
-    async def api_wi_complete_task(task_id: str) -> JSONResponse:
-        """Mark a task complete."""
-        try:
-            from .catalyst_db import get_catalyst_db
-            db = get_catalyst_db()
-            ok = await asyncio.to_thread(db.complete_task, task_id)
-            return _json({"ok": ok, "task_id": task_id})
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.get("/api/wi/commitments")
-    async def api_wi_commitments() -> JSONResponse:
-        """List open commitments."""
-        try:
-            from .catalyst_db import get_catalyst_db
-            db = get_catalyst_db()
-            return _json({"commitments": db.list_open_commitments("chris")})
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.post("/api/wi/signals")
-    async def api_wi_ingest_signal(payload: dict[str, Any]) -> JSONResponse:
-        """
-        Ingest a raw signal and optionally run auto-classification.
-        Body: {signal_type, content, external_id?, source_metadata?, criticality?, classify?}
-        Triggers signal-classification workflow when classify=true and projects exist.
-        """
-        try:
-            from .catalyst_db import get_catalyst_db
-            db = get_catalyst_db()
-            signal_type = str(payload.get("signal_type", "quick_note")).strip()
-            content     = str(payload.get("content", "")).strip()
-            if not content:
-                raise HTTPException(status_code=400, detail="'content' is required")
-
-            signal = await asyncio.to_thread(
-                db.ingest_signal,
-                "chris",
-                signal_type,
-                content,
-                external_id=payload.get("external_id"),
-                source_metadata=payload.get("source_metadata"),
-                criticality=str(payload.get("criticality", "STANDARD")),
-            )
-
-            classification: dict[str, Any] = {}
-            if payload.get("classify") and signal:
-                projects = await asyncio.to_thread(db.list_projects, "chris")
-                engine   = _get_wi()
-                classification = await asyncio.to_thread(
-                    engine.signal_classification,
-                    content,
-                    signal_type,
-                    projects,
-                ) or {}
-                if classification.get("projectId") and signal:
-                    await asyncio.to_thread(
-                        db.classify_signal,
-                        signal["id"],
-                        "related_to_existing",
-                        classification["projectId"],
-                    )
-
-            return _json({"signal": signal, "classification": classification}, status_code=201)
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.post("/api/wi/email")
-    async def api_wi_triage_email(payload: dict[str, Any]) -> JSONResponse:
-        """
-        Triage an email: importance score + action extraction.
-        Body: {subject, body, sender}
-        Optionally ingests as a raw_signal when ingest=true.
-        """
-        try:
-            subject = str(payload.get("subject", "")).strip()
-            body    = str(payload.get("body", "")).strip()
-            sender  = str(payload.get("sender", "")).strip()
-            if not subject and not body:
-                raise HTTPException(status_code=400, detail="'subject' or 'body' is required")
-
-            engine = _get_wi()
-            result = await asyncio.to_thread(engine.email_triage, subject, body, sender)
-
-            if payload.get("ingest"):
-                from .catalyst_db import get_catalyst_db
-                db = get_catalyst_db()
-                await asyncio.to_thread(
-                    db.ingest_email_signal,
-                    "chris",
-                    payload.get("message_id", f"manual-{subject[:40]}"),
-                    subject,
-                    sender,
-                    body,
-                    received_at=payload.get("received_at"),
-                    conversation_id=payload.get("conversation_id"),
-                )
-
-            return _json(result or {})
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.post("/api/wi/meeting/extract")
-    async def api_wi_meeting_extract(payload: dict[str, Any]) -> JSONResponse:
-        """
-        Full meeting extraction: commitments, decisions, action items, risks, problem, stakeholders.
-        Body: {transcript, preference_rules?}
-        Optionally persists extracted items when persist=true.
-        """
-        try:
-            transcript = str(payload.get("transcript", "")).strip()
-            if not transcript:
-                raise HTTPException(status_code=400, detail="'transcript' is required")
-
-            engine = _get_wi()
-            pref_rules = payload.get("preference_rules") or []
-            result = await asyncio.to_thread(engine.meeting_extraction, transcript, pref_rules)
-
-            if payload.get("persist") and result:
-                from .catalyst_db import get_catalyst_db
-                db = get_catalyst_db()
-                signal = await asyncio.to_thread(
-                    db.ingest_signal, "chris", "meeting_transcript", transcript[:2000]
-                )
-                sig_id = signal["id"] if signal else None
-                if sig_id:
-                    for commitment in result.get("commitments", []):
-                        await asyncio.to_thread(
-                            db.create_commitment,
-                            "chris", sig_id,
-                            commitment.get("description", ""),
-                            responsible_party=commitment.get("responsibleParty"),
-                            due_date=commitment.get("dueDate"),
-                            confidence=float(commitment.get("confidenceScore", 0.7)),
-                        )
-                    for decision in result.get("decisions", []):
-                        await asyncio.to_thread(
-                            db.record_decision,
-                            "chris", sig_id,
-                            decision.get("description", ""),
-                            reasoning=decision.get("reasoning"),
-                            confidence=float(decision.get("confidenceScore", 0.7)),
-                        )
-
-            return _json(result or {})
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.post("/api/wi/meeting/prep")
-    async def api_wi_meeting_prep(payload: dict[str, Any]) -> JSONResponse:
-        """
-        Pre-meeting context brief.
-        Body: {meeting_title, open_commitments?, recent_signals?}
-        """
-        try:
-            title = str(payload.get("meeting_title", "")).strip()
-            if not title:
-                raise HTTPException(status_code=400, detail="'meeting_title' is required")
-            engine = _get_wi()
-            result = await asyncio.to_thread(
-                engine.pre_meeting_prep,
-                title,
-                [str(c) for c in (payload.get("open_commitments") or [])],
-                [str(s) for s in (payload.get("recent_signals") or [])],
-            )
-            return _json(result or {})
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.post("/api/wi/signal/classify")
-    async def api_wi_classify_signal(payload: dict[str, Any]) -> JSONResponse:
-        """
-        Classify a signal: route to project + criticality + ambiguity detection.
-        Body: {content, signal_type, projects?}
-        """
-        try:
-            content     = str(payload.get("content", "")).strip()
-            signal_type = str(payload.get("signal_type", "quick_note")).strip()
-            if not content:
-                raise HTTPException(status_code=400, detail="'content' is required")
-
-            projects = payload.get("projects")
-            if projects is None:
-                from .catalyst_db import get_catalyst_db
-                projects = await asyncio.to_thread(
-                    get_catalyst_db().list_projects, "chris"
-                )
-
-            engine = _get_wi()
-            result = await asyncio.to_thread(engine.signal_classification, content, signal_type, projects)
-            return _json(result or {})
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.post("/api/wi/briefing/generate")
-    async def api_wi_generate_briefing(payload: dict[str, Any]) -> JSONResponse:
-        """
-        Generate the ONE Recommendation from ranked signals.
-        Body: {signals, open_commitments?, overdue_count?, user_context?}
-        signals: [{id, type, content, dueDate?}]
-        """
-        try:
-            signals = list(payload.get("signals") or [])
-            if not signals:
-                # Auto-pull from DB if none provided
-                from .catalyst_db import get_catalyst_db
-                import datetime as _dt
-                today = _dt.date.today().isoformat()
-                db_signals = await asyncio.to_thread(
-                    get_catalyst_db().get_recent_signals, "chris", 30
-                )
-                signals = [
-                    {"id": s["id"], "type": s["signal_type"], "content": s["content"],
-                     "dueDate": None}
-                    for s in db_signals
-                ]
-            engine = _get_wi()
-            result = await asyncio.to_thread(
-                engine.briefing_generation,
-                signals,
-                int(payload.get("open_commitments", 0)),
-                int(payload.get("overdue_count", 0)),
-            )
-            return _json(result or {})
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.post("/api/wi/commitments/track")
-    async def api_wi_track_commitments(payload: dict[str, Any]) -> JSONResponse:
-        """
-        Monitor status of open commitments vs recent signals.
-        Body: {recent_signals?}  — commitments pulled from DB automatically.
-        """
-        try:
-            from .catalyst_db import get_catalyst_db
-            db = get_catalyst_db()
-            commitments = await asyncio.to_thread(db.list_open_commitments, "chris")
-            recent_signals = [str(s) for s in (payload.get("recent_signals") or [])]
-            if not recent_signals:
-                raw = await asyncio.to_thread(db.get_recent_signals, "chris", 10)
-                recent_signals = [s["content"][:200] for s in raw]
-
-            engine = _get_wi()
-            result = await asyncio.to_thread(engine.commitment_tracking, commitments, recent_signals)
-            return _json({"results": result or []})
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.post("/api/wi/draft")
-    async def api_wi_compose_draft(payload: dict[str, Any]) -> JSONResponse:
-        """
-        Compose a professional draft.
-        Body: {intent, context, recipient, tone?}
-        """
-        try:
-            intent    = str(payload.get("intent", "")).strip()
-            context   = str(payload.get("context", "")).strip()
-            recipient = str(payload.get("recipient", "")).strip()
-            if not intent:
-                raise HTTPException(status_code=400, detail="'intent' is required")
-            engine = _get_wi()
-            result = await asyncio.to_thread(
-                engine.draft_composition,
-                intent, context, recipient,
-                str(payload.get("tone", "professional")),
-            )
-            return _json(result or {})
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.post("/api/wi/surface")
-    async def api_wi_proactive_surface(payload: dict[str, Any]) -> JSONResponse:
-        """
-        Proactively surface high-value next actions.
-        Body: {open_commitments?, active_projects?}
-        Pulls from DB automatically when not provided.
-        """
-        try:
-            open_commitments = [str(c) for c in (payload.get("open_commitments") or [])]
-            active_projects  = [str(p) for p in (payload.get("active_projects") or [])]
-
-            if not open_commitments or not active_projects:
-                from .catalyst_db import get_catalyst_db
-                db = get_catalyst_db()
-                if not open_commitments:
-                    rows = await asyncio.to_thread(db.list_open_commitments, "chris")
-                    open_commitments = [r.get("description", "") for r in rows]
-                if not active_projects:
-                    rows = await asyncio.to_thread(db.list_projects, "chris", "active")
-                    active_projects = [r.get("name", "") for r in rows]
-
-            engine = _get_wi()
-            result = await asyncio.to_thread(engine.proactive_surfacing, open_commitments, active_projects)
-            return _json(result or {"suggestions": []})
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.post("/api/wi/plan/a3")
-    async def api_wi_plan_a3(payload: dict[str, Any]) -> JSONResponse:
-        """
-        Generate an A3 project brief from available context.
-        Body: {projectName, projectStatus?, problemStatement?, a3?, signals?, commitments?, existingTasks?}
-        """
-        try:
-            project_name = str(payload.get("projectName", payload.get("project_name", ""))).strip()
-            if not project_name:
-                raise HTTPException(status_code=400, detail="'projectName' is required")
-
-            # Auto-enrich from DB if project_id supplied
-            if payload.get("project_id"):
-                from .catalyst_db import get_catalyst_db
-                db = get_catalyst_db()
-                pid = str(payload["project_id"])
-                if not payload.get("signals"):
-                    signals = await asyncio.to_thread(db.get_recent_signals, "chris", 10)
-                    payload = {**payload, "signals": [
-                        {"content": s["content"], "signalType": s["signal_type"]}
-                        for s in signals
-                        if s.get("related_project_id") == pid
-                    ]}
-                if not payload.get("commitments"):
-                    commits = await asyncio.to_thread(db.list_open_commitments, "chris")
-                    payload = {**payload, "commitments": commits}
-
-            engine = _get_wi()
-            result = await asyncio.to_thread(engine.a3_project_brief, payload)
-            return _json(result or {})
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.post("/api/wi/plan/tactical")
-    async def api_wi_plan_tactical(payload: dict[str, Any]) -> JSONResponse:
-        """
-        Generate a tactical implementation plan.
-        Body: same shape as /api/wi/plan/a3
-        """
-        try:
-            project_name = str(payload.get("projectName", payload.get("project_name", ""))).strip()
-            if not project_name:
-                raise HTTPException(status_code=400, detail="'projectName' is required")
-            engine = _get_wi()
-            result = await asyncio.to_thread(engine.tactical_plan, payload)
-            return _json(result or {})
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.post("/api/wi/value/attribution")
-    async def api_wi_value_attribution(payload: dict[str, Any]) -> JSONResponse:
-        """
-        Quick value estimation across multiple projects.
-        Body: {projects: [{id, name, description, completedTasks, totalTasks}]}
-        Pulls active projects from DB when projects not supplied.
-        """
-        try:
-            projects = list(payload.get("projects") or [])
-            if not projects:
-                from .catalyst_db import get_catalyst_db
-                db = get_catalyst_db()
-                db_projects = await asyncio.to_thread(db.list_projects, "chris", "active")
-                projects = [
-                    {"id": p["id"], "name": p["name"],
-                     "description": p.get("problem_statement") or "", "completedTasks": 0, "totalTasks": 0}
-                    for p in db_projects
-                ]
-            engine = _get_wi()
-            result = await asyncio.to_thread(engine.value_attribution, projects)
-            return _json({"attributions": result or []})
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.post("/api/wi/value/impact")
-    async def api_wi_financial_impact(payload: dict[str, Any]) -> JSONResponse:
-        """
-        Full financial impact analysis (CFO-ready).
-        Body: {projectName, problemStatement?, a3?, signals?, memory?, preferenceRules?}
-        """
-        try:
-            project_name = str(payload.get("projectName", payload.get("project_name", ""))).strip()
-            if not project_name:
-                raise HTTPException(status_code=400, detail="'projectName' is required")
-            engine = _get_wi()
-            result = await asyncio.to_thread(engine.financial_impact, payload)
-            return _json(result or {})
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    @app.get("/api/wi/workers/status")
-    async def api_wi_workers_status() -> JSONResponse:
-        """Return status of all Work Intelligence background worker tasks."""
-        statuses = []
-        for task in _wi_worker_tasks:
-            statuses.append({
-                "name":    task.get_name(),
-                "done":    task.done(),
-                "cancelled": task.cancelled(),
-            })
-        return _json({
-            "workers": statuses,
-            "count": len(_wi_worker_tasks),
-            "all_running": all(not t.done() for t in _wi_worker_tasks) if _wi_worker_tasks else False,
-        })
-
-    # end Work Intelligence block
 
     @app.get("/api/google/account/{account_id}")
     async def api_google_account(account_id: str) -> JSONResponse:
@@ -3776,115 +2493,6 @@ self.addEventListener('fetch', e => {
         background_tasks.add_task(_broadcast_dashboard, "response.completed")
         return _json(result)
 
-    # ── Agentic streaming chat ─────────────────────────────────────────────
-    @app.post("/api/agent/stream")
-    async def api_agent_stream(payload: dict[str, Any]) -> StreamingResponse:
-        """
-        Agentic streaming endpoint. Returns Server-Sent Events.
-        Each event: data: {"type": "text_delta"|"tool_call"|"tool_result"|
-                                  "approval_needed"|"tool_skipped"|"done"|"error", ...}
-
-        Body: { "message": str, "conversation_id": str, "messages": [...] }
-        """
-        from .agent import run_agent, StreamEvent
-        from .context_builder import build_context
-        from .agent_memory import load_recent_summaries, load_facts, save_session_summary
-
-        user_message = str(payload.get("message", "")).strip()
-        conversation_id = str(payload.get("conversation_id", ""))
-        # Client may send full prior message list for multi-turn
-        prior_messages: list[dict] = list(payload.get("messages", []))
-
-        if not user_message:
-            async def _err():
-                yield 'data: {"type":"error","message":"No message provided"}\n\n'
-            return StreamingResponse(_err(), media_type="text/event-stream")
-
-        # Build full message list
-        messages: list[dict] = prior_messages + [{"role": "user", "content": user_message}]
-
-        # Build context (project state, services, git log)
-        try:
-            ctx = await build_context()
-        except Exception:
-            ctx = ""
-
-        # Prepend recent session summaries + facts
-        recent = load_recent_summaries(3)
-        facts  = load_facts()
-        extra_ctx = ""
-        if facts:
-            extra_ctx += f"\n\n=== PERSISTENT FACTS ===\n{facts}"
-        if recent:
-            extra_ctx += f"\n\n=== RECENT SESSION SUMMARIES ===\n{recent}"
-
-        system_context = ctx + extra_ctx
-
-        async def _stream():
-            full_response = ""
-            try:
-                async for event in run_agent(messages, system_context=system_context, conversation_id=conversation_id):
-                    if event.type == "text_delta":
-                        full_response += event.data.get("delta", "")
-                    yield event.to_sse()
-            except Exception as exc:
-                import json as _json_mod
-                yield f'data: {_json_mod.dumps({"type": "error", "message": str(exc)})}\n\n'
-            finally:
-                # Auto-save session summary in background
-                if full_response:
-                    try:
-                        save_session_summary(conversation_id, messages, full_response)
-                    except Exception:
-                        pass
-
-        return StreamingResponse(
-            _stream(),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "X-Accel-Buffering": "no",
-                "Connection": "keep-alive",
-            },
-        )
-
-    @app.post("/api/agent/approve")
-    async def api_agent_approve(payload: dict[str, Any]) -> JSONResponse:
-        """Resolve a pending approval gate (approve or decline)."""
-        from .agent import resolve_approval
-        approval_id = str(payload.get("approval_id", ""))
-        approved    = bool(payload.get("approved", False))
-        found = resolve_approval(approval_id, approved)
-        return _json({"ok": found, "approval_id": approval_id, "approved": approved})
-
-    @app.get("/api/agent/tools")
-    async def api_agent_tools() -> JSONResponse:
-        """List available agent tools."""
-        from .tools import TOOL_DEFINITIONS
-        return _json({"tools": TOOL_DEFINITIONS})
-
-    @app.post("/api/agent/restart-signal")
-    async def api_agent_restart_signal() -> JSONResponse:
-        """
-        Write a restart signal file. The bash tool can call this so the agent can
-        signal JARVIS to restart without killing its own process mid-response.
-        The UI polls /api/agent/restart-pending and re-launches when it sees the signal.
-        """
-        signal_path = Path.home() / ".jarvis" / "restart_requested"
-        signal_path.parent.mkdir(parents=True, exist_ok=True)
-        signal_path.touch()
-        return _json({"ok": True, "message": "Restart signal written. JARVIS will restart shortly."})
-
-    @app.get("/api/agent/restart-pending")
-    async def api_agent_restart_pending() -> JSONResponse:
-        """Poll endpoint — returns {pending: true} when a restart has been requested."""
-        signal_path = Path.home() / ".jarvis" / "restart_requested"
-        if signal_path.exists():
-            signal_path.unlink(missing_ok=True)
-            return _json({"pending": True})
-        return _json({"pending": False})
-    # ── End agentic streaming chat ─────────────────────────────────────────
-
     @app.post("/api/mode-transition")
     async def api_mode_transition(
         payload: dict[str, Any],
@@ -3897,185 +2505,6 @@ self.addEventListener('fetch', e => {
         )
         background_tasks.add_task(_broadcast_dashboard, "mode.updated")
         return _json(result)
-
-    # ── Adaptive Layout Engine ─────────────────────────────────────────────
-
-    @app.get("/api/layout/state")
-    async def api_layout_state(request: Request) -> JSONResponse:
-        """Current mode, card layout, alerts, and learned weights."""
-        import asyncio as _asyncio
-        try:
-            from .layout_engine import get_state_payload
-            user_id = _current_actor(request)
-            payload = await _asyncio.to_thread(get_state_payload, runtime, user_id)
-            return _json(payload)
-        except Exception as exc:
-            logger.warning("layout/state failed: %s", exc)
-            return _json({
-                "mode": "morning_brief",
-                "auto_mode": "morning_brief",
-                "manual_override": False,
-                "override_expires_at": None,
-                "alerts": [],
-                "card_weights": {},
-                "layout": {
-                    "hero": ["briefing", "calendar"],
-                    "priority": ["approvals", "health", "tasks", "reminders"],
-                    "ambient": ["email", "agents", "catalyst", "chronicle",
-                                "publishing", "forge", "vision", "idea_inbox"],
-                },
-                "modes": {
-                    "morning_brief": {"label": "Morning Brief", "icon": "🌅"},
-                    "lunch_brief":   {"label": "Lunch Brief",   "icon": "☀️"},
-                    "daily_recap":   {"label": "Daily Recap",   "icon": "🌙"},
-                },
-            })
-
-    @app.post("/api/layout/mode")
-    async def api_layout_set_mode(
-        payload: dict[str, Any],
-        background_tasks: BackgroundTasks,
-    ) -> JSONResponse:
-        """Set layout mode manually. body: {mode: str, manual?: bool}"""
-        import asyncio as _asyncio
-        from .layout_engine import set_mode as _set_mode
-        mode   = str(payload.get("mode", "")).strip()
-        manual = bool(payload.get("manual", True))
-        try:
-            result = await _asyncio.to_thread(_set_mode, mode, manual=manual)
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        background_tasks.add_task(_broadcast_dashboard, "layout.mode_changed")
-        return _json(result)
-
-    @app.post("/api/layout/interact")
-    async def api_layout_interact(payload: dict[str, Any]) -> JSONResponse:
-        """Log a card interaction for the learning system. Fire-and-forget."""
-        import asyncio as _asyncio
-        from .layout_engine import log_interaction as _log_interaction, get_current_mode
-        card_id = str(payload.get("card_id", "")).strip()
-        action  = str(payload.get("action",  "click")).strip()
-        mode    = str(payload.get("mode",    "")).strip() or get_current_mode()
-        if card_id:
-            await _asyncio.to_thread(_log_interaction, card_id, mode, action)
-        return _json({"ok": True})
-
-    # ── Journey Tracking (Phase 5) ─────────────────────────────────────────
-
-    @app.get("/api/journey")
-    async def api_get_journey(request: Request, days: int = 30) -> JSONResponse:
-        """Return recent journey events for the current user."""
-        user_id = _current_actor(request)
-        return _json({"events": await asyncio.to_thread(journey_store.get_journey, user_id, days)})
-
-    @app.get("/api/journey/stats")
-    async def api_journey_stats(request: Request, days: int = 30) -> JSONResponse:
-        """Return aggregated event counts for the current user."""
-        user_id = _current_actor(request)
-        return _json(await asyncio.to_thread(journey_store.get_stats, user_id, days))
-
-    # ── Siri Bridge ────────────────────────────────────────────────────────
-
-    @app.get("/siri", response_class=HTMLResponse)
-    async def siri_setup_page() -> str:
-        """Siri Shortcut setup guide — open on your iPhone."""
-        from .siri_bridge import siri_setup_page as _setup_page
-        return _setup_page()
-
-    @app.get("/api/siri/intent")
-    async def api_siri_intent(
-        name:  str = Query(default="status"),
-        param: str = Query(default=""),
-    ) -> JSONResponse:
-        """Handle a named Siri intent (dinner, brief, health, calendar, tasks, weather)."""
-        from .siri_bridge import handle_intent as _handle_intent
-        result = await _handle_intent(name, param, runtime)
-        return _json(result)
-
-    @app.get("/api/siri")
-    async def api_siri_query(q: str = Query(default="")) -> JSONResponse:
-        """Handle a free-form natural-language Siri query."""
-        from .siri_bridge import handle_query as _handle_query
-        result = await _handle_query(q, runtime)
-        return _json(result)
-
-    # ── Dining ─────────────────────────────────────────────────────────────
-
-    @app.get("/api/dining/nearby")
-    async def api_dining_nearby(
-        cuisine:      str   = Query(default="any"),
-        open_now:     bool  = Query(default=False),
-        min_rating:   float = Query(default=3.5),
-        radius_miles: float = Query(default=10.0),
-        limit:        int   = Query(default=10),
-    ) -> JSONResponse:
-        """Return nearby restaurants filtered by cuisine, rating, open status."""
-        import asyncio as _asyncio
-        from .dining import nearby_restaurants as _nearby
-        try:
-            results = await _asyncio.to_thread(
-                _nearby, cuisine, open_now, min_rating, radius_miles, limit
-            )
-            return _json({"restaurants": results, "count": len(results)})
-        except Exception as exc:
-            logger.warning("dining/nearby failed: %s", exc)
-            return _json({"restaurants": [], "count": 0, "error": str(exc)})
-
-    @app.get("/api/dining/recommend")
-    async def api_dining_recommend(limit: int = Query(default=3)) -> JSONResponse:
-        """Sam-aware curated picks based on health goals, food prefs, and time of day."""
-        import asyncio as _asyncio
-        from .dining import recommend_restaurants as _recommend
-        try:
-            result = await _asyncio.to_thread(_recommend, runtime, limit)
-            return _json(result)
-        except Exception as exc:
-            logger.warning("dining/recommend failed: %s", exc)
-            return _json({"error": str(exc), "recommendations": []})
-
-    @app.get("/api/dining/favorites")
-    async def api_dining_favorites() -> JSONResponse:
-        """Return saved favorite restaurants."""
-        import asyncio as _asyncio
-        from .dining import get_favorites as _get_favs
-        try:
-            favs = await _asyncio.to_thread(_get_favs)
-            return _json({"favorites": favs})
-        except Exception as exc:
-            return _json({"favorites": [], "error": str(exc)})
-
-    @app.post("/api/dining/favorite")
-    async def api_dining_toggle_favorite(payload: dict[str, Any]) -> JSONResponse:
-        """Toggle a restaurant in/out of favorites."""
-        import asyncio as _asyncio
-        from .dining import toggle_favorite as _toggle
-        place_id = str(payload.get("place_id", "")).strip()
-        if not place_id:
-            return _json({"error": "place_id required"}, status_code=400)
-        try:
-            result = await _asyncio.to_thread(
-                _toggle,
-                place_id,
-                str(payload.get("name", "")),
-                str(payload.get("address", "")),
-                payload.get("rating"),
-            )
-            return _json(result)
-        except Exception as exc:
-            return _json({"error": str(exc)}, status_code=500)
-
-    @app.get("/api/dining/details/{place_id}")
-    async def api_dining_details(place_id: str) -> JSONResponse:
-        """Return rich details for a single place (hours, phone, website)."""
-        import asyncio as _asyncio
-        from .dining import get_place_details as _details
-        try:
-            detail = await _asyncio.to_thread(_details, place_id)
-            return _json(detail)
-        except Exception as exc:
-            return _json({"error": str(exc)}, status_code=500)
-
-    # ── Design Review ──────────────────────────────────────────────────────
 
     @app.post("/api/design-review-state")
     async def api_save_design_review_state(
@@ -4179,10 +2608,6 @@ self.addEventListener('fetch', e => {
         subject_user_id = str(payload.get("subject_user_id", ""))
         status = str(payload.get("status", "suppressed"))
         return _json(runtime.update_personalization_insight_status(viewer, subject_user_id, insight_id, status))
-
-    @app.get("/api/google/client-secret")
-    async def api_google_client_secret_info() -> JSONResponse:
-        return _json(await asyncio.to_thread(runtime.google_get_client_secret_info))
 
     @app.post("/api/google/client-secret")
     async def api_google_client_secret(payload: dict[str, Any]) -> JSONResponse:
@@ -4536,19 +2961,15 @@ self.addEventListener('fetch', e => {
     from .reminders import (
         list_reminders, add_reminder, complete_reminder,
         delete_reminder, snooze_reminder, pending_reminders,
-        _load as _reminders_load, _save as _reminders_save, _lock as _reminders_lock,
     )
 
     @app.get("/api/reminders")
-    async def api_reminders_list(request: Request, include_done: bool = False) -> JSONResponse:
-        actor = _current_actor(request)
+    async def api_reminders_list(include_done: bool = False) -> JSONResponse:
         items = list_reminders() if include_done else pending_reminders()
-        # Scope: existing reminders without an owner belong to "chris" (backward compat)
-        items = [r for r in items if r.get("owner", "chris") == actor]
         return _json({"reminders": items, "total": len(items)})
 
     @app.post("/api/reminders")
-    async def api_reminders_add(request: Request, payload: dict[str, Any]) -> JSONResponse:
+    async def api_reminders_add(payload: dict[str, Any]) -> JSONResponse:
         text = (payload.get("text") or "").strip()
         if not text:
             return JSONResponse({"error": "text required"}, status_code=400)
@@ -4557,26 +2978,11 @@ self.addEventListener('fetch', e => {
             due_iso=payload.get("due"),
             priority=payload.get("priority", "normal"),
         )
-        # Inject owner field into the stored reminder
-        owner = payload.get("owner") or _current_actor(request)
-        with _reminders_lock:
-            reminders = _reminders_load()
-            for stored in reminders:
-                if stored.get("id") == r["id"]:
-                    stored["owner"] = owner
-                    r["owner"] = owner
-                    break
-            _reminders_save(reminders)
-        # Journey: log reminder created
-        journey_log(owner, "reminder_created", {"text": text})
         return _json({"reminder": r})
 
     @app.post("/api/reminders/{reminder_id}/complete")
-    async def api_reminders_complete(reminder_id: str, request: Request) -> JSONResponse:
+    async def api_reminders_complete(reminder_id: str) -> JSONResponse:
         ok = complete_reminder(reminder_id)
-        # Journey: log reminder completed
-        if ok:
-            journey_log(_current_actor(request), "reminder_completed", {})
         return _json({"ok": ok})
 
     @app.delete("/api/reminders/{reminder_id}")
@@ -4600,41 +3006,34 @@ self.addEventListener('fetch', e => {
 
     @app.get("/api/tasks")
     async def api_tasks_list(
-        request: Request,
         include_done: bool = False,
         actor: str | None = None,
         domain: str | None = None,
         priority: str | None = None,
     ) -> JSONResponse:
-        # If the caller didn't specify an actor, scope to the authenticated user
-        effective_actor = actor or _current_actor(request)
         items = list_tasks(
             include_done=include_done,
-            actor=effective_actor,
+            actor=actor or None,
             domain=domain or None,
             priority=priority or None,
         )
         return _json({"tasks": items, "total": len(items)})
 
     @app.post("/api/tasks")
-    async def api_tasks_add(request: Request, payload: dict[str, Any]) -> JSONResponse:
+    async def api_tasks_add(payload: dict[str, Any]) -> JSONResponse:
         title = (payload.get("title") or "").strip()
         if not title:
             return JSONResponse({"error": "title required"}, status_code=400)
-        # Use payload actor if provided, otherwise default to the authenticated user
-        actor_id = payload.get("actor") or _current_actor(request)
         t = add_task(
             title=title,
             body=payload.get("body", ""),
             priority=payload.get("priority", "normal"),
             due=payload.get("due"),
-            actor=actor_id,
+            actor=payload.get("actor", "chris"),
             domain=payload.get("domain", "personal"),
             source=payload.get("source", "manual"),
             tags=payload.get("tags"),
         )
-        # Journey: log task created
-        journey_log(actor_id, "task_created", {"title": title})
         return _json({"task": t})
 
     @app.get("/api/tasks/{task_id}")
@@ -4652,24 +3051,13 @@ self.addEventListener('fetch', e => {
         return _json({"ok": True, "task": get_task(task_id)})
 
     @app.post("/api/tasks/{task_id}/complete")
-    async def api_tasks_complete(task_id: str, request: Request) -> JSONResponse:
-        # Grab task title before completing (for journey payload)
-        existing = get_task(task_id)
+    async def api_tasks_complete(task_id: str) -> JSONResponse:
         ok = complete_task(task_id)
-        # Journey: log task completed
-        if ok:
-            task_title = (existing or {}).get("title", "")
-            journey_log(_current_actor(request), "task_completed", {"title": task_title})
         return _json({"ok": ok})
 
     @app.delete("/api/tasks/{task_id}")
-    async def api_tasks_delete(task_id: str, request: Request) -> JSONResponse:
-        existing = get_task(task_id)
+    async def api_tasks_delete(task_id: str) -> JSONResponse:
         ok = delete_task(task_id)
-        # Journey: log task deleted
-        if ok:
-            task_title = (existing or {}).get("title", "")
-            journey_log(_current_actor(request), "task_deleted", {"title": task_title})
         return _json({"ok": ok})
 
     @app.post("/api/approvals/{request_id}")
@@ -4684,21 +3072,15 @@ self.addEventListener('fetch', e => {
     # ------------------------------------------------------------------
 
     @app.get("/api/approvals/pending")
-    async def api_approvals_pending(request: Request, actor_id: str = Query(default="")) -> JSONResponse:
+    async def api_approvals_pending(actor_id: str = Query(default="chris")) -> JSONResponse:
         """Return pending approvals formatted for the Needs You zone in the UI."""
         guard = get_approval_guard()
         if guard is None:
             return _json({"pending": [], "error": "Approval system not initialised"})
-        # Use CF identity when no explicit actor_id provided
-        effective_actor_id = actor_id or _current_actor(request)
-        pending = guard.get_pending_for_ui(actor_id=effective_actor_id)
-        # Chris sees all approvals (admin); others see only their own
-        if effective_actor_id != "chris":
-            pending = [p for p in pending if p.get("actor_id", "chris") == effective_actor_id]
-        return _json({"pending": pending})
+        return _json({"pending": guard.get_pending_for_ui(actor_id=actor_id)})
 
     @app.post("/api/approvals/{request_id}/approve")
-    async def api_approvals_approve(request_id: str, request: Request, payload: dict[str, Any] = {}) -> JSONResponse:
+    async def api_approvals_approve(request_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
         """Approve a pending request. Optionally supply approved_by in the body."""
         approved_by = str((payload or {}).get("approved_by", "chris"))
         # Try ApprovalQueue first (agent-submitted requests)
@@ -4707,17 +3089,15 @@ self.addEventListener('fetch', e => {
             from dataclasses import asdict as _asdict
             item = queue.approve(request_id, approved_by=approved_by)
             if item is not None:
-                journey_log(_current_actor(request), "approval_actioned", {})
                 return _json({"status": "approved", "request": _asdict(item)})
         # Fall back to ApprovalStore (runtime-submitted requests shown in the UI list)
         updated = runtime.approval_store.update_status(request_id, "approved")
         if updated is not None:
-            journey_log(_current_actor(request), "approval_actioned", {})
             return _json({"status": "approved", "request": updated})
         raise HTTPException(status_code=404, detail="Pending approval request not found")
 
     @app.post("/api/approvals/{request_id}/reject")
-    async def api_approvals_reject(request_id: str, request: Request, payload: dict[str, Any] = {}) -> JSONResponse:
+    async def api_approvals_reject(request_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
         """Reject a pending request. Supply reason in body: {"reason": str}."""
         reason = str((payload or {}).get("reason", ""))
         rejected_by = str((payload or {}).get("rejected_by", "chris"))
@@ -4726,31 +3106,28 @@ self.addEventListener('fetch', e => {
         if queue is not None:
             ok = queue.reject(request_id, reason=reason, rejected_by=rejected_by)
             if ok:
-                journey_log(_current_actor(request), "approval_actioned", {})
                 return _json({"status": "rejected", "request_id": request_id, "reason": reason})
         # Fall back to ApprovalStore (runtime-submitted requests shown in the UI list)
         updated = runtime.approval_store.update_status(request_id, "rejected")
         if updated is not None:
-            journey_log(_current_actor(request), "approval_actioned", {})
             return _json({"status": "rejected", "request_id": request_id, "reason": reason})
         raise HTTPException(status_code=404, detail="Pending approval request not found")
 
     @app.post("/api/approvals/{request_id}/cancel")
-    async def api_approvals_cancel(request_id: str, request: Request) -> JSONResponse:
+    async def api_approvals_cancel(request_id: str) -> JSONResponse:
         """Cancel a pending request."""
         # Try ApprovalQueue first
         queue = get_approval_queue()
         if queue is not None:
             ok = queue.cancel(request_id)
             if ok:
-                journey_log(_current_actor(request), "approval_actioned", {})
                 return _json({"status": "cancelled", "request_id": request_id})
         # Fall back to ApprovalStore
         updated = runtime.approval_store.update_status(request_id, "cancelled")
         if updated is not None:
-            journey_log(_current_actor(request), "approval_actioned", {})
             return _json({"status": "cancelled", "request_id": request_id})
         raise HTTPException(status_code=404, detail="Pending approval request not found")
+        return _json({"status": "cancelled", "request_id": request_id})
 
     @app.get("/api/approvals/history")
     async def api_approvals_history(
@@ -4791,14 +3168,6 @@ self.addEventListener('fetch', e => {
             )
         except KeyError as exc:
             raise HTTPException(status_code=400, detail=f"Missing required field: {exc.args[0]}") from exc
-        # Immediately push a layout alert so the Overview banner updates without
-        # waiting for the 30-second alert-monitor poll.
-        try:
-            from .layout_engine import get_alert_state as _get_alert_state
-            _alerts = await asyncio.to_thread(_get_alert_state, runtime)
-            await hub.broadcast({"type": "layout.alert", "alerts": _alerts, "refresh": False})
-        except Exception:
-            pass
         return _json({"status": "submitted", "request_id": request_id}, status_code=201)
 
     @app.post("/api/approvals/{request_id}/execute")
@@ -5051,1335 +3420,6 @@ self.addEventListener('fetch', e => {
             return _json({"active_project": None, "error": str(exc)})
 
     # ------------------------------------------------------------------
-    # Book Launch Asset Generation (Ghostwritr → JARVIS pipeline)
-    # ------------------------------------------------------------------
-
-    @app.get("/api/publishing/launch/{slug}")
-    async def api_publishing_book_launch_get(slug: str) -> JSONResponse:
-        """Return stored launch assets for a book slug, or not_generated."""
-        from .book_launch import load_assets as _la
-        assets = await asyncio.to_thread(_la, slug)
-        if assets is None:
-            return _json({"slug": slug, "status": "not_generated", "assets": None})
-        return _json(assets)
-
-    @app.post("/api/publishing/launch/{slug}/generate")
-    async def api_publishing_book_launch_generate(
-        slug: str,
-        background_tasks: BackgroundTasks,
-        request: Request,
-    ) -> JSONResponse:
-        """Kick off launch asset generation in the background. Returns immediately."""
-        bridge = _get_ghostwritr_bridge()
-        gw = _get_gateway()
-        body = {}
-        try:
-            body = await request.json()
-        except Exception:
-            pass
-        force = bool(body.get("force", False))
-        trigger = str(body.get("trigger", "pre_launch"))
-
-        def _run() -> None:
-            from .book_launch import (
-                get_book_brief as _gbf,
-                generate_launch_assets as _gla,
-                load_assets as _la,
-            )
-            if not force and _la(slug) is not None:
-                logger.info("Launch assets already exist for %s; skipping (use force=true to regenerate)", slug)
-                return
-            brief = _gbf(bridge, slug) if bridge else None
-            if brief is None:
-                # Minimal brief from slug alone if bridge unavailable
-                from .book_launch import BookBrief
-                brief = BookBrief(slug=slug, title=slug.replace("-", " ").title(),
-                                  subtitle="", workflow_type="NONFICTION",
-                                  book_status="DRAFT", current_stage="")
-            _gla(brief, gw, trigger=trigger)
-
-        background_tasks.add_task(_run)
-        return _json({"status": "started", "slug": slug})
-
-    @app.get("/api/publishing/launch/{slug}/status")
-    async def api_publishing_book_launch_status(slug: str) -> JSONResponse:
-        """Check whether generation is warranted and whether assets exist."""
-        from .book_launch import check_launch_trigger as _clt, load_assets as _la
-        bridge = _get_ghostwritr_bridge()
-        trigger = None
-        if bridge:
-            trigger = await asyncio.to_thread(_clt, bridge, slug)
-        existing = await asyncio.to_thread(_la, slug)
-        return _json({
-            "slug":         slug,
-            "trigger":      trigger,
-            "has_assets":   existing is not None,
-            "generated_at": existing.get("generated_at") if existing else None,
-            "asset_status": existing.get("status") if existing else None,
-        })
-
-    @app.delete("/api/publishing/launch/{slug}")
-    async def api_publishing_book_launch_delete(slug: str) -> JSONResponse:
-        """Clear launch assets so they can be regenerated."""
-        assets_path = (
-            Path.home() / ".jarvis" / "publishing" / "launches" / slug / "assets.json"
-        )
-        if assets_path.exists():
-            assets_path.unlink()
-            return _json({"status": "cleared", "slug": slug})
-        return _json({"status": "not_found", "slug": slug})
-
-    @app.get("/api/publishing/launch-scan")
-    async def api_publishing_launch_scan() -> JSONResponse:
-        """Scan all active Ghostwritr books and return launch asset status for each."""
-        from .book_launch import check_launch_trigger as _clt, load_assets as _la
-        bridge = _get_ghostwritr_bridge()
-        if bridge is None:
-            return _json({"books": [], "bridge_available": False})
-
-        def _scan() -> list[dict]:
-            try:
-                books = bridge.list_active_books() if hasattr(bridge, "list_active_books") \
-                    else bridge._db.list_books() if (hasattr(bridge, "_db") and bridge._db) \
-                    else []
-            except Exception:
-                books = []
-            results = []
-            for book in books:
-                slug = book.get("slug") or book.get("id", "")
-                title = book.get("titleWorking") or book.get("title") or slug
-                existing = _la(slug)
-                trigger = _clt(bridge, slug)
-                results.append({
-                    "slug":         slug,
-                    "title":        title,
-                    "book_status":  book.get("status", ""),
-                    "has_assets":   existing is not None,
-                    "asset_status": existing.get("status") if existing else None,
-                    "trigger":      trigger,
-                    "generated_at": existing.get("generated_at") if existing else None,
-                })
-            return results
-
-        scan = await asyncio.to_thread(_scan)
-        return _json({"books": scan, "count": len(scan), "bridge_available": True})
-
-    # ------------------------------------------------------------------
-    # Ghostwritr Webhook — receives events pushed from Ghostwritr
-    # ------------------------------------------------------------------
-
-    @app.post("/api/webhooks/ghostwritr")
-    async def api_webhook_ghostwritr(request: Request) -> JSONResponse:
-        """Receive events from Ghostwritr and take JARVIS action."""
-        from .book_launch import check_launch_trigger as _clt
-        import logging as _wh_log_module
-        _wh_log = _wh_log_module.getLogger("jarvis.webhooks")
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"ok": False, "error": "Invalid JSON"}, status_code=400)
-
-        event_type = body.get("event_type", "")
-        slug = body.get("slug", "")
-        source = body.get("source", "unknown")
-        _wh_log.info("Ghostwritr webhook: %s / %s from %s", event_type, slug, source)
-
-        result: dict = {"ok": True, "event_type": event_type, "slug": slug, "actions": []}
-
-        if event_type == "trigger_launch" and slug:
-            force = bool(body.get("force", False))
-            trigger = body.get("trigger", "pre_launch")
-            try:
-                bridge = _get_ghostwritr_bridge()
-                from .book_launch import generate_launch_assets as _gen, get_book_brief as _brief
-                gw = _get_gateway()
-                async def _bg():
-                    try:
-                        brief = await asyncio.to_thread(_brief, bridge, slug)
-                        assets = await asyncio.to_thread(_gen, brief, gw, trigger)
-                        from .book_launch import save_assets as _sa
-                        _sa(slug, assets)
-                    except Exception as exc:
-                        _wh_log.error("Ghostwritr webhook launch bg failed: %s", exc)
-                asyncio.create_task(_bg(), name=f"launch-{slug}")
-                result["actions"].append(f"launch_pipeline_started:{slug}")
-                result["message"] = f"Launch pipeline started for '{slug}'"
-            except Exception as exc:
-                result["actions"].append(f"launch_error:{exc}")
-
-        elif event_type == "add_idea" and body.get("text"):
-            try:
-                from .ideas import add_idea as _ai
-                idea = await asyncio.to_thread(
-                    _ai,
-                    body.get("text", ""),
-                    source="ghostwritr",
-                    notes=body.get("notes", ""),
-                    domain=body.get("domain", "books"),
-                    tags=body.get("tags", []),
-                )
-                result["actions"].append(f"idea_added:{idea.get('id','')}")
-                result["message"] = f"Idea added: {idea.get('text','')}"
-            except Exception as exc:
-                result["actions"].append(f"idea_error:{exc}")
-
-        elif event_type == "stage_changed" and slug:
-            result["actions"].append(f"stage_change_logged:{slug}")
-            result["message"] = f"Stage change acknowledged for '{slug}'"
-
-        elif event_type == "post_production_committed" and slug and body.get("content"):
-            # Store Ghostwritr post-production artifact in JARVIS launch assets
-            stage = body.get("stage", "")
-            agent = body.get("agent", "")
-            content = body.get("content", "")
-            # Map stage key to JARVIS asset key
-            stage_to_asset = {
-                "LAUNCH_LISTING":  "marquee",
-                "PRESS_KIT":       "bureau",
-                "SOCIAL_CAMPAIGN": "dispatch",
-                "AUDIO_PREP":      "studio",
-                "COURSE_DESIGN":   "podium",
-                "SPEAKING_KIT":    "lectern",
-            }
-            asset_key = stage_to_asset.get(stage, stage.lower())
-            try:
-                from .book_launch import load_assets as _la, save_assets as _sa
-                existing = await asyncio.to_thread(_la, slug) or {}
-                # Ensure assets dict exists
-                if "assets" not in existing:
-                    existing["assets"] = {}
-                existing["assets"][asset_key] = content
-                existing["book_slug"] = slug
-                existing["title"] = body.get("title", slug)
-                if not existing.get("generated_at"):
-                    from datetime import datetime, timezone
-                    existing["generated_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-                if not existing.get("status"):
-                    existing["status"] = "partial"
-                await asyncio.to_thread(_sa, slug, existing)
-                result["actions"].append(f"post_production_stored:{asset_key}:{slug}")
-                result["message"] = f"{agent} ({stage}) artifact stored for '{slug}'"
-                _wh_log.info("Stored post-production artifact %s for %s", asset_key, slug)
-            except Exception as exc:
-                result["actions"].append(f"post_production_error:{exc}")
-                _wh_log.warning("Failed to store post-production artifact: %s", exc)
-
-        elif event_type == "create_task" and body.get("title"):
-            result["actions"].append("task_creation_not_yet_implemented")
-            result["message"] = "Task queue coming soon"
-
-        else:
-            result["message"] = f"Event '{event_type}' received and logged"
-
-        return _json(result)
-
-    # ── KDP ─────────────────────────────────────────────────────────────────────
-
-    @app.get("/api/kdp/status")
-    async def api_kdp_status() -> JSONResponse:
-        from .kdp_store import get_status
-        return _json(await asyncio.to_thread(get_status))
-
-    @app.post("/api/kdp/credentials")
-    async def api_kdp_credentials(request: Request) -> JSONResponse:
-        from .kdp_scraper import save_credentials
-        try:
-            payload = await request.json()
-        except Exception:
-            return JSONResponse({"ok": False, "detail": "Invalid JSON"}, status_code=400)
-        email = str(payload.get("email", "")).strip()
-        password = str(payload.get("password", "")).strip()
-        if not email or not password:
-            return _json({"ok": False, "detail": "Email and password required."})
-        await asyncio.to_thread(save_credentials, email, password)
-        return _json({"ok": True, "detail": "Credentials saved."})
-
-    @app.post("/api/kdp/sync")
-    async def api_kdp_sync() -> JSONResponse:
-        from .kdp_scraper import load_credentials, run_full_sync
-        from .kdp_store import save_sync_result
-        creds = await asyncio.to_thread(load_credentials)
-        if not creds:
-            return _json({"ok": False, "detail": "No KDP credentials saved. Add them in Settings first."})
-        result = await run_full_sync(creds["email"], creds["password"])
-        if result.get("ok"):
-            await asyncio.to_thread(save_sync_result, result)
-        return _json(result)
-
-    @app.get("/api/kdp/books")
-    async def api_kdp_books() -> JSONResponse:
-        from .kdp_store import load_books, generate_insights, load_sales_history
-        books = await asyncio.to_thread(load_books)
-        history = await asyncio.to_thread(load_sales_history)
-        insights = await asyncio.to_thread(generate_insights, books, history)
-        return _json({"books": books, "insights": insights})
-
-    @app.get("/api/kdp/sales")
-    async def api_kdp_sales() -> JSONResponse:
-        from .kdp_store import load_sales_history, load_sync_meta
-        history = await asyncio.to_thread(load_sales_history, 90)
-        meta = await asyncio.to_thread(load_sync_meta)
-        return _json({"history": history, "meta": meta})
-
-    @app.post("/api/kdp/report/upload")
-    async def api_kdp_report_upload(request: Request) -> JSONResponse:
-        from .kdp_store import parse_csv_report, save_sync_result
-        from datetime import datetime as _dt, timezone as _tz
-        try:
-            payload = await request.json()
-        except Exception:
-            return JSONResponse({"ok": False, "detail": "Invalid JSON"}, status_code=400)
-        csv_text = str(payload.get("csv", ""))
-        if not csv_text:
-            return _json({"ok": False, "detail": "No CSV content provided."})
-        rows = await asyncio.to_thread(parse_csv_report, csv_text)
-        result = {"ok": True, "books": [], "sales": {"csv_rows": rows}, "synced_at": _dt.now(_tz.utc).isoformat()}
-        await asyncio.to_thread(save_sync_result, result)
-        return _json({"ok": True, "rows_parsed": len(rows), "detail": f"Parsed {len(rows)} rows from CSV."})
-
-    # ------------------------------------------------------------------
-    # Health Bridge — Apple Health + Epic FHIR (Helen Cho)
-    # ------------------------------------------------------------------
-
-    @app.post("/api/health/ingest")
-    async def api_health_ingest(request: Request) -> JSONResponse:
-        """Apple Health data → SQLite daily_metrics.
-        Accepts two formats:
-          1. Health Auto Export: {"data": {"metrics": [{"name": "step_count", "data": [...]}]}}
-          2. Flat: {"steps": 9000, "resting_hr": 58, ...}
-        """
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"ok": False, "error": "Invalid JSON"}, status_code=400)
-        try:
-            from .health_db import upsert_daily_metrics, log_sync as _ls
-            from datetime import date as _date
-
-            # ── Health Auto Export format ──────────────────────────────────
-            # Also handles non-metric HAE payloads (ecg, workouts, etc.) gracefully
-            _hae_data = body.get("data", {}) if isinstance(body.get("data"), dict) else {}
-            if "data" in body and "metrics" in _hae_data:
-                metrics_raw = body["data"]["metrics"]
-
-                # ── Health Auto Export: full metric name → DB column map ──────
-                # Covers all clinically relevant Apple Health data types.
-                # BP and glucose are routed to their own tables (see below).
-                _NAME_MAP = {
-                    # Activity
-                    "step_count":                       "steps",
-                    "active_energy_burned":             "active_cal",
-                    "apple_exercise_time":              "exercise_min",
-                    "exercise_time":                    "exercise_min",
-                    "apple_stand_hour":                 "stand_hours",
-                    "stand_hours":                      "stand_hours",
-                    "flights_climbed":                  "flights_climbed",
-                    "distance_walking_running":         "distance_km",
-                    "cycling_distance":                 "distance_km",  # fallback if no walk/run
-                    # Heart & vitals
-                    "resting_heart_rate":               "resting_hr",
-                    "heart_rate":                       "heart_rate_avg",
-                    "walking_heart_rate_average":       "walking_hr_avg",
-                    "heart_rate_variability_sdnn":      "hrv",
-                    "blood_oxygen_saturation":          "blood_oxygen",
-                    "respiratory_rate":                 "respiratory_rate",
-                    # Body composition
-                    "body_mass":                        "weight",
-                    "body_fat_percentage":              "body_fat_pct",
-                    "lean_body_mass":                   "lean_body_mass_kg",
-                    # Fitness
-                    "vo2_max":                          "vo2_max",
-                    # Mind
-                    "mindful_minutes":                  "mindful_min",
-                    "mindfulness":                      "mindful_min",
-                    # Nutrition (Apple Health dietary logs)
-                    "dietary_protein":                  "dietary_protein_g",
-                    "dietary_carbohydrates":            "dietary_carbs_g",
-                    "dietary_fat_total":                "dietary_fat_g",
-                    "dietary_energy_consumed":          "dietary_calories",
-                    "dietary_fiber":                    "dietary_fiber_g",
-                    "dietary_sugar":                    "dietary_sugar_g",
-                    "dietary_sodium":                   "dietary_sodium_mg",
-                    "water":                            "water_ml",
-                    "dietary_water":                    "water_ml",
-                    "caffeine":                         "caffeine_mg",
-                }
-
-                # Metrics that sum (not latest) — steps, calories, etc.
-                _SUM_COLS = {"steps", "active_cal", "exercise_min", "flights_climbed",
-                             "mindful_min", "dietary_protein_g", "dietary_carbs_g",
-                             "dietary_fat_g", "dietary_calories", "dietary_fiber_g",
-                             "dietary_sugar_g", "dietary_sodium_mg", "water_ml",
-                             "caffeine_mg"}
-
-                # Accumulate parsed values, BP components, and glucose readings
-                parsed: dict = {"source": "apple_health", "date": _date.today().isoformat()}
-                bp_systolic: float | None = None
-                bp_diastolic: float | None = None
-                bp_reading_date: str = _date.today().isoformat()
-                glucose_readings_to_store: list[dict] = []
-
-                for m in metrics_raw:
-                    name     = m.get("name", "")
-                    data_pts = m.get("data", [])
-                    if not data_pts:
-                        continue
-
-                    # ── Blood pressure → bp_readings table ─────────────────
-                    if name == "blood_pressure_systolic":
-                        qtys = [p["qty"] for p in data_pts if "qty" in p]
-                        if qtys:
-                            bp_systolic = round(qtys[-1])
-                            # Try to get actual reading date from data point
-                            last_pt = data_pts[-1]
-                            if "date" in last_pt:
-                                try:
-                                    from datetime import datetime as _dt
-                                    bp_reading_date = _dt.fromisoformat(
-                                        last_pt["date"].split(" ")[0]
-                                    ).date().isoformat()
-                                except Exception:
-                                    pass
-                        continue
-
-                    if name == "blood_pressure_diastolic":
-                        qtys = [p["qty"] for p in data_pts if "qty" in p]
-                        if qtys:
-                            bp_diastolic = round(qtys[-1])
-                        continue
-
-                    # ── Blood glucose → glucose_readings table ──────────────
-                    if name == "blood_glucose":
-                        for pt in data_pts:
-                            qty = pt.get("qty")
-                            if qty is None:
-                                continue
-                            reading_time = pt.get("date", _date.today().isoformat())
-                            # HAE sends mg/dL by default; some locales send mmol/L
-                            units = m.get("units", "mg/dL")
-                            glucose_mgdl = round(qty) if "mg" in units else round(qty * 18.0)
-                            glucose_readings_to_store.append({
-                                "reading_time": reading_time,
-                                "source":       "apple_health",
-                                "glucose_mgdl": glucose_mgdl,
-                                "trend":        pt.get("trend"),
-                                "status":       "manual" if pt.get("wasUserEntered") else "auto",
-                            })
-                        continue
-
-                    # ── Sleep stages: parse deep/REM from sleep_analysis ───
-                    if name == "sleep_analysis":
-                        # Health Auto Export (Watch Ultra 3+) sends Title Case values.
-                        # Older HAE / HealthKit internal uses camelCase. Support both.
-                        _DEEP_VALS  = {"asleepDeep", "inBedDeep", "Deep"}
-                        _REM_VALS   = {"asleepREM",  "inBedREM",  "REM"}
-                        _SLEEP_VALS = {"asleep", "inBed", "asleepCore", "asleepDeep",
-                                       "asleepREM", "Core", "Deep", "REM", "Asleep", ""}
-
-                        # Parse segments with real timestamps so multi-night exports
-                        # land on the correct date (not blindly "today").
-                        from datetime import datetime as _dt
-                        segments = []
-                        for p in data_pts:
-                            if "qty" not in p:
-                                continue
-                            try:
-                                start_str = (p.get("startDate") or p.get("start")
-                                             or p.get("date", ""))
-                                end_str   = p.get("endDate") or p.get("end", "")
-                                if not start_str:
-                                    continue
-                                start_dt = _dt.fromisoformat(start_str)
-                                end_dt   = _dt.fromisoformat(end_str) if end_str else start_dt
-                                segments.append({
-                                    "start": start_dt, "end": end_dt,
-                                    "value": p.get("value", ""), "qty": p["qty"],
-                                })
-                            except Exception:
-                                continue
-                        if not segments:
-                            continue
-                        segments.sort(key=lambda s: s["start"])
-
-                        # Split into sessions: gap > 4 hours between segments = new night
-                        sessions: list[list] = []
-                        cur: list = [segments[0]]
-                        for seg in segments[1:]:
-                            gap_h = (seg["start"] - cur[-1]["end"]).total_seconds() / 3600
-                            if gap_h > 4:
-                                sessions.append(cur)
-                                cur = [seg]
-                            else:
-                                cur.append(seg)
-                        sessions.append(cur)
-
-                        # Compute totals per session and assign to wake-up date
-                        sleep_by_date: dict = {}
-                        for sess in sessions:
-                            wake_date = sess[-1]["end"].date().isoformat()
-                            total = sum(s["qty"] for s in sess if s["value"] in _SLEEP_VALS)
-                            deep  = sum(s["qty"] for s in sess if s["value"] in _DEEP_VALS)
-                            rem   = sum(s["qty"] for s in sess if s["value"] in _REM_VALS)
-                            if total > 0:
-                                sleep_by_date[wake_date] = {
-                                    "sleep_hours": round(total, 2),
-                                    "sleep_deep":  round(deep, 2) if deep else None,
-                                    "sleep_rem":   round(rem,  2) if rem  else None,
-                                }
-
-                        # Most-recent session → goes into main parsed dict
-                        if sleep_by_date:
-                            most_recent = max(sleep_by_date)
-                            best = sleep_by_date[most_recent]
-                            parsed["date"] = most_recent
-                            if best.get("sleep_hours"):
-                                parsed["sleep_hours"] = best["sleep_hours"]
-                            if best.get("sleep_deep"):
-                                parsed["sleep_deep"] = best["sleep_deep"]
-                            if best.get("sleep_rem"):
-                                parsed["sleep_rem"] = best["sleep_rem"]
-
-                            # Older sessions → upsert directly to their own dates
-                            from .health_db import upsert_daily_metrics as _upsert_sleep
-                            from .health_bridge import ingest as _hb_ingest_sleep
-                            for d_str, d_data in sleep_by_date.items():
-                                if d_str == most_recent:
-                                    continue
-                                hist = {"source": "apple_health", "date": d_str}
-                                hist.update({k: v for k, v in d_data.items() if v is not None})
-                                try:
-                                    await asyncio.to_thread(_upsert_sleep, hist)
-                                except Exception:
-                                    pass
-                                # Mirror to JSON store for readiness/briefing
-                                try:
-                                    bridge_data = {k: v for k, v in d_data.items() if v is not None}
-                                    await asyncio.to_thread(_hb_ingest_sleep, "apple_health", bridge_data, d_str)
-                                except Exception:
-                                    pass
-                        continue
-
-                    # ── Standard metric → daily_metrics column ──────────────
-                    col = _NAME_MAP.get(name)
-                    if not col:
-                        continue
-                    qtys = [p["qty"] for p in data_pts if "qty" in p]
-                    if not qtys:
-                        continue
-
-                    # distance: HAE sends km or miles depending on locale
-                    if col == "distance_km":
-                        units = m.get("units", "km")
-                        val = sum(qtys) if len(qtys) > 1 else qtys[-1]
-                        if "mi" in units.lower():
-                            val = val * 1.60934  # convert miles → km
-                        parsed[col] = round(val, 2)
-                    elif col in _SUM_COLS:
-                        parsed[col] = round(sum(qtys), 2)
-                    else:
-                        parsed[col] = round(qtys[-1], 4)
-
-                # ── Write to DB ─────────────────────────────────────────────
-                stored_fields = list(parsed.keys())
-
-                # daily_metrics (wearables + nutrition)
-                await upsert_daily_metrics(parsed)
-
-                # ── Also mirror into health_bridge JSON store ──────────────
-                # health_bridge.get_latest() reads daily JSON files for readiness
-                # scoring, briefing, and Sam Wilson. Keep both stores in sync.
-                try:
-                    from .health_bridge import ingest as _hb_ingest
-                    bridge_metrics = {k: v for k, v in parsed.items()
-                                      if k not in ("source", "date", "updated_at")}
-                    await asyncio.to_thread(
-                        _hb_ingest, "apple_health", bridge_metrics, parsed.get("date")
-                    )
-                    # Mirror historical sleep sessions to their own JSON dates too
-                    if "sleep_by_date" in dir():  # only if sleep was parsed
-                        pass  # already handled per-date in the sleep block above
-                except Exception as _hb_exc:
-                    logger.debug("health_bridge mirror failed: %s", _hb_exc)
-
-                # ── Real-time health anomaly alert ─────────────────────────
-                # If the newly ingested data triggers any anomaly, immediately
-                # broadcast layout.alert so the Overview banner updates without
-                # waiting for the 30-second background poll.
-                try:
-                    from .health_agent import flag_anomalies as _flag_anomalies
-                    from .layout_engine import get_alert_state as _get_alert_state
-                    _anomalies = await asyncio.to_thread(_flag_anomalies)
-                    if _anomalies:
-                        _alerts = await asyncio.to_thread(_get_alert_state, runtime)
-                        await hub.broadcast({
-                            "type":    "layout.alert",
-                            "alerts":  _alerts,
-                            "refresh": False,
-                        })
-                        logger.info(
-                            "health ingest: %d anomaly/anomalies detected, layout.alert broadcast",
-                            len(_anomalies),
-                        )
-                except Exception as _alert_exc:
-                    logger.debug("health anomaly alert: %s", _alert_exc)
-
-                # bp_readings (only if we have both systolic and diastolic)
-                if bp_systolic is not None and bp_diastolic is not None:
-                    from .health_db import upsert_bp_reading as _ubp
-                    await _ubp({
-                        "reading_date": bp_reading_date,
-                        "source":       "apple_health",
-                        "systolic":     bp_systolic,
-                        "diastolic":    bp_diastolic,
-                    })
-                    stored_fields.append(f"bp:{bp_systolic}/{bp_diastolic}")
-
-                # glucose_readings
-                if glucose_readings_to_store:
-                    from .health_db import upsert_glucose_reading as _ugluc
-                    for gr in glucose_readings_to_store:
-                        await _ugluc(gr)
-                    stored_fields.append(f"glucose:{len(glucose_readings_to_store)}_readings")
-
-                await _ls("apple_health", "success",
-                          f"Health Auto Export: {stored_fields}")
-                return _json({"ok": True, "format": "health_auto_export",
-                              "date": parsed["date"], "fields": stored_fields})
-
-            # ── Health Auto Export non-metric payload (ecg, workouts, etc.) ──
-            elif "data" in body and isinstance(_hae_data, dict) and _hae_data:
-                results: dict = {"ok": True, "format": "hae_other",
-                                 "keys": list(_hae_data.keys())}
-
-                # ── ECG data (KardiaMobile via Apple Health) ──────────────
-                if "ecg" in _hae_data:
-                    from .health_db import upsert_ecg_reading as _uecg
-                    import json as _json_mod
-                    ecg_list = _hae_data["ecg"]
-                    stored = []
-                    for rec in ecg_list:
-                        start = rec.get("start", "")
-                        end   = rec.get("end", "")
-                        # Compute duration in seconds
-                        dur_sec = None
-                        try:
-                            from datetime import datetime as _dt
-                            _fmt = "%Y-%m-%d %H:%M:%S %z"
-                            s = _dt.strptime(start.strip(), _fmt)
-                            e = _dt.strptime(end.strip(), _fmt)
-                            dur_sec = (e - s).total_seconds()
-                        except Exception:
-                            pass
-                        vms = rec.get("voltageMeasurements", [])
-                        await _uecg({
-                            "reading_date":  start,
-                            "source":        "kardia",
-                            "classification": rec.get("classification"),
-                            "avg_heart_rate": rec.get("averageHeartRate"),
-                            "sampling_freq":  rec.get("samplingFrequency"),
-                            "sample_count":   rec.get("numberOfVoltageMeasurements"),
-                            "duration_sec":   dur_sec,
-                            "voltage_json":   _json_mod.dumps(vms),
-                            "raw_json":       _json_mod.dumps(rec),
-                        })
-                        stored.append({
-                            "date":           start,
-                            "classification": rec.get("classification"),
-                            "hr":             rec.get("averageHeartRate"),
-                            "samples":        rec.get("numberOfVoltageMeasurements"),
-                        })
-                    await _ls("apple_health", "success",
-                              f"ECG: {len(stored)} reading(s) stored")
-                    results["ecg"] = stored
-                    results["format"] = "ecg"
-
-                return _json(results)
-
-            # ── Flat / manual Shortcuts format ────────────────────────────
-            else:
-                _FLAT_FIELDS = {"steps", "resting_hr", "hrv", "active_cal",
-                                "blood_oxygen", "weight", "sleep_hours",
-                                "exercise_min", "stand_hours", "date", "source"}
-                if not any(k in _FLAT_FIELDS for k in body):
-                    await _ls("apple_health", "info",
-                              f"Unrecognized payload shape; skipping upsert. keys={list(body.keys())[:8]}")
-                    return _json({"ok": True, "format": "unknown", "skipped": True})
-                await upsert_daily_metrics(body)
-                await _ls("apple_health", "success",
-                          f"Flat ingest: {len(body)} fields")
-                return _json({"ok": True, "format": "flat",
-                              "date": body.get("date"), "source": body.get("source")})
-
-        except Exception as exc:
-            return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
-
-    @app.get("/api/health/latest")
-    async def api_health_latest() -> JSONResponse:
-        from .health_db import get_latest_metrics
-        from .health_bridge import compute_readiness as _cr
-        from .health_agent import _merged_snapshot as _ms
-        snap = await asyncio.to_thread(_ms)
-        if snap is None:
-            rows = await get_latest_metrics(1)
-            snap = rows[0] if rows else None
-        if snap is None:
-            return _json({"has_data": False,
-                          "message": "No health data yet. Set up Apple Shortcuts."})
-        readiness = await asyncio.to_thread(_cr, snap)
-        return _json({"has_data": True, "snapshot": snap, "readiness": readiness})
-
-    @app.get("/api/health/summary")
-    async def api_health_summary() -> JSONResponse:
-        from .health_db import get_today_metrics, get_latest_metrics
-        from .health_bridge import compute_readiness as _cr, get_morning_summary as _gms
-        snap = await get_today_metrics() or (await get_latest_metrics(1) or [None])[0]
-        has_data = snap is not None
-        readiness = await asyncio.to_thread(_cr, snap) if has_data else {}
-        metrics = {
-            "steps":        snap.get("steps"),
-            "resting_hr":   snap.get("resting_hr"),
-            "hrv":          snap.get("hrv"),
-            "sleep_hours":  snap.get("sleep_hours"),
-            "sleep_deep_hours": snap.get("sleep_deep"),
-            "blood_oxygen": snap.get("blood_oxygen"),
-            "active_calories": snap.get("active_cal"),
-            "exercise_minutes": snap.get("exercise_min"),
-            "weight":       snap.get("weight"),
-        } if has_data else {}
-        anomalies: list = []
-        if has_data:
-            m = metrics
-            if m.get("resting_hr") and m["resting_hr"] > 90:
-                anomalies.append({"metric": "resting_hr", "value": m["resting_hr"], "note": "Elevated resting HR"})
-            if m.get("blood_oxygen") and m["blood_oxygen"] < 95:
-                anomalies.append({"metric": "blood_oxygen", "value": m["blood_oxygen"], "note": "Low blood oxygen"})
-            if m.get("hrv") and m["hrv"] < 20:
-                anomalies.append({"metric": "hrv", "value": m["hrv"], "note": "Low HRV"})
-            if m.get("sleep_hours") and m["sleep_hours"] < 5:
-                anomalies.append({"metric": "sleep", "value": m["sleep_hours"], "note": "Short sleep"})
-        return _json({
-            "has_data": has_data,
-            "readiness": readiness,
-            "metrics": metrics,
-            "anomalies": anomalies,
-            "date": snap.get("date") if has_data else None,
-        })
-
-    @app.get("/api/health/trends")
-    async def api_health_trends(metric: str = "hrv", days: int = 30) -> JSONResponse:
-        from .health_db import get_latest_metrics
-        rows = await get_latest_metrics(days)
-        series = [{"date": r["date"], "value": r.get(metric)} for r in rows
-                  if r.get(metric) is not None]
-        return _json({"metric": metric, "days": days, "series": series})
-
-    @app.get("/api/health/history")
-    async def api_health_history(days: int = 30) -> JSONResponse:
-        from .health_db import get_latest_metrics
-        return _json({"days": days, "history": await get_latest_metrics(days)})
-
-    # ------------------------------------------------------------------
-    # MyChart — Playwright sync + DB-backed records
-    # ------------------------------------------------------------------
-
-    @app.post("/api/health/mychart/sync")
-    async def api_mychart_sync(background_tasks: BackgroundTasks,
-                               request: Request) -> JSONResponse:
-        """
-        Trigger a full MyChart sync via Playwright.
-        If the browser profile has no saved session it will open a visible
-        Chromium window so the user can log in; subsequent syncs are headless.
-        """
-        from .mychart_sync import run_sync, get_sync_state
-        state = get_sync_state()
-        if state["running"]:
-            return _json({"ok": False, "error": "Sync already running",
-                          "state": state})
-        body = {}
-        try:
-            body = await request.json()
-        except Exception:
-            pass
-        headless = body.get("headless", False)
-        background_tasks.add_task(run_sync, headless)
-        return _json({"ok": True, "message": "Sync started", "headless": headless})
-
-    @app.get("/api/health/mychart/sync-status")
-    async def api_mychart_sync_status() -> JSONResponse:
-        from .mychart_sync import get_sync_state
-        return _json(get_sync_state())
-
-    @app.post("/api/health/mychart/store")
-    async def api_mychart_store(request: Request) -> JSONResponse:
-        """Legacy endpoint — store a single page (used by manual flow)."""
-        from .health_db import upsert_mychart_page
-        body     = await request.json()
-        page_key = body.get("page_key", "unknown")
-        content  = body.get("content", "")
-        page_type = body.get("page_type", "text")
-        await upsert_mychart_page(page_key, page_type, content)
-        return _json({"ok": True, "page_key": page_key})
-
-    @app.get("/api/health/mychart/summary")
-    async def api_mychart_summary() -> JSONResponse:
-        from .health_db import get_mychart_pages, get_health_summary
-        pages = await get_mychart_pages()
-        summary = await get_health_summary()
-        return _json({
-            "last_updated":  summary.get("mychart_last_sync"),
-            "pages_scraped": [p["page_key"] for p in pages],
-            "records": {
-                p["page_key"]: {
-                    "scraped_at":     p["synced_at"],
-                    "has_content":    bool(p.get("content") or p.get("preview")),
-                    "content_preview": (p.get("content") or p.get("preview") or "")[:200],
-                }
-                for p in pages
-            },
-        })
-
-    @app.get("/api/health/mychart/records")
-    async def api_mychart_records(page: str = "") -> JSONResponse:
-        from .health_db import get_mychart_page, get_mychart_pages
-        if page:
-            rec = await get_mychart_page(page)
-            return _json({"page": page, "data": rec})
-        return _json({"pages": await get_mychart_pages()})
-
-    @app.delete("/api/health/mychart/records")
-    async def api_mychart_clear() -> JSONResponse:
-        from .health_db import _get_db
-        async with _get_db() as db:
-            await db.execute("DELETE FROM mychart_pages")
-            await db.execute("DELETE FROM test_results")
-            await db.execute("DELETE FROM medications")
-            await db.execute("DELETE FROM conditions")
-            await db.execute("DELETE FROM visits")
-            await db.commit()
-        return _json({"ok": True, "message": "MyChart records cleared from DB"})
-
-    @app.get("/api/health/db/summary")
-    async def api_health_db_summary() -> JSONResponse:
-        """Full structured summary from the SQLite health DB."""
-        from .health_db import get_health_summary
-        return _json(await get_health_summary())
-
-    # ── Helen Cho — AI Health Intelligence ───────────────────────────
-    @app.get("/api/health/helen/analysis")
-    async def api_helen_analysis() -> JSONResponse:
-        """Return cached Helen Cho health analysis (runs LLM if no cache)."""
-        from .health_intelligence import run_analysis, get_cached_analysis
-        cached = get_cached_analysis()
-        if cached and not cached.get("error"):
-            return _json(cached)
-        # No cache — trigger async analysis and return placeholder
-        asyncio.create_task(run_analysis(force_refresh=False))
-        return _json({"status": "generating", "message": "Helen is analysing your records…"})
-
-    @app.post("/api/health/helen/refresh")
-    async def api_helen_refresh() -> JSONResponse:
-        """Force a fresh LLM analysis of all health data."""
-        from .health_intelligence import run_analysis
-        result = await run_analysis(force_refresh=True)
-        return _json(result)
-
-    # ── Longevity Council ─────────────────────────────────────────────
-
-    @app.get("/api/health/council")
-    async def api_council_get() -> JSONResponse:
-        """Return cached Longevity Council report. Triggers analysis if no cache."""
-        from .longevity_council import get_cached_council, run_council
-        from .health_intelligence import _build_health_context_v2, _build_lab_trends
-        from .health_db import get_health_summary, get_today_metrics, get_latest_metrics
-        cached = get_cached_council()
-        if cached and not cached.get("_error"):
-            return _json(cached)
-        # No cache — kick off async and return placeholder
-        async def _run_council():
-            try:
-                summary, trends = await asyncio.gather(get_health_summary(), _build_lab_trends())
-                snap = await get_today_metrics() or (await get_latest_metrics(1) or [None])[0]
-                metrics = None
-                if snap:
-                    metrics = {k: snap.get(k) for k in
-                               ("steps", "resting_hr", "hrv", "sleep_hours", "blood_oxygen",
-                                "active_cal", "exercise_min", "weight") if snap.get(k) is not None}
-                ctx = await _build_health_context_v2(summary, metrics, trends)
-                await run_council(ctx, force_refresh=True)
-            except Exception as exc:
-                import logging
-                logging.getLogger(__name__).error("Council run failed: %s", exc)
-        asyncio.create_task(_run_council())
-        return _json({"status": "generating",
-                      "message": "The Longevity Council is assembling. Check back in ~2 minutes."})
-
-    @app.post("/api/health/council/refresh")
-    async def api_council_refresh(request: Request) -> JSONResponse:
-        """Force a fresh council analysis (all 13 specialists). Takes ~60-90s."""
-        from .longevity_council import run_council
-        from .health_intelligence import _build_health_context_v2, _build_lab_trends
-        from .health_db import get_health_summary, get_today_metrics, get_latest_metrics
-        body = {}
-        try:
-            body = await request.json()
-        except Exception:
-            pass
-        members = body.get("members")  # optional list of agent_ids to run
-        summary, trends = await asyncio.gather(get_health_summary(), _build_lab_trends())
-        snap = await get_today_metrics() or (await get_latest_metrics(1) or [None])[0]
-        metrics = None
-        if snap:
-            metrics = {k: snap.get(k) for k in
-                       ("steps", "resting_hr", "hrv", "sleep_hours", "blood_oxygen",
-                        "active_cal", "exercise_min", "weight") if snap.get(k) is not None}
-        ctx = await _build_health_context_v2(summary, metrics, trends)
-        result = await run_council(ctx, force_refresh=True, members=members)
-        return _json(result)
-
-    # ── Dexcom G7 CGM ─────────────────────────────────────────────────
-
-    @app.get("/api/health/dexcom/status")
-    async def api_dexcom_status() -> JSONResponse:
-        from .dexcom_sync import get_connection_status, get_current_reading
-        from .health_db import get_glucose_stats
-        status = get_connection_status()
-        if status.get("connected"):
-            status["current"]   = await get_current_reading()
-            status["stats_24h"] = await get_glucose_stats(24)
-            status["stats_7d"]  = await get_glucose_stats(168)
-        return _json(status)
-
-    @app.get("/api/health/dexcom/connect")
-    async def api_dexcom_connect(request: Request) -> RedirectResponse:
-        from .dexcom_sync import build_auth_url
-        base = str(request.base_url).rstrip("/")
-        redirect_uri = f"{base}/api/health/dexcom/callback"
-        url = build_auth_url(redirect_uri)
-        return RedirectResponse(url)
-
-    @app.get("/api/health/dexcom/callback")
-    async def api_dexcom_callback(
-        request: Request,
-        code: str | None = None,
-        error: str | None = None,
-        state: str | None = None,
-    ) -> RedirectResponse:
-        import logging as _dex_log
-        _log = _dex_log.getLogger("jarvis.dexcom")
-        from .dexcom_sync import exchange_code
-        if error:
-            _log.error("Dexcom OAuth error: %s", error)
-            return RedirectResponse(f"/?dexcom=error&detail={error}")
-        if not code:
-            return RedirectResponse("/?dexcom=missing_code")
-        base = str(request.base_url).rstrip("/")
-        redirect_uri = f"{base}/api/health/dexcom/callback"
-        try:
-            await exchange_code(code, redirect_uri)
-            return RedirectResponse("/?dexcom=connected")
-        except Exception as exc:
-            _log.error("Dexcom callback exchange failed: %s", exc)
-            return JSONResponse(
-                {"error": "Token exchange failed", "detail": str(exc)},
-                status_code=400,
-            )
-
-    @app.post("/api/health/dexcom/sync")
-    async def api_dexcom_sync(request: Request) -> JSONResponse:
-        from .dexcom_sync import sync_egvs
-        body = {}
-        try:
-            body = await request.json()
-        except Exception:
-            pass
-        hours_back = int(body.get("hours_back", 24))
-        result = await sync_egvs(hours_back=hours_back)
-        return _json(result)
-
-    @app.get("/api/health/dexcom/current")
-    async def api_dexcom_current() -> JSONResponse:
-        from .dexcom_sync import get_current_reading, sync_egvs
-        reading = await get_current_reading()
-        if not reading or reading.get("stale"):
-            await sync_egvs(hours_back=3)
-            reading = await get_current_reading()
-        return _json(reading or {"error": "No glucose data available"})
-
-    @app.get("/api/health/dexcom/history")
-    async def api_dexcom_history(hours: int = 24) -> JSONResponse:
-        from .health_db import get_glucose_readings, get_glucose_stats
-        readings = await get_glucose_readings(hours=hours)
-        stats    = await get_glucose_stats(hours=hours)
-        return _json({"readings": readings, "stats": stats, "hours": hours})
-
-    @app.get("/api/health/council/roster")
-    async def api_council_roster() -> JSONResponse:
-        """Return the Longevity Council member roster."""
-        from .longevity_council import get_council_roster
-        return _json({"council": get_council_roster()})
-
-    @app.get("/api/health/council/{agent_id}")
-    async def api_council_member(agent_id: str) -> JSONResponse:
-        """Return a single council member's latest report."""
-        from .longevity_council import get_cached_council
-        cached = get_cached_council()
-        if not cached:
-            return JSONResponse({"error": "No council report available"}, status_code=404)
-        # Oracle is stored as _oracle
-        if agent_id == "the-oracle":
-            report = cached.get("_oracle")
-        else:
-            report = cached.get(agent_id)
-        if not report:
-            return JSONResponse({"error": f"No report for {agent_id}"}, status_code=404)
-        return _json(report)
-
-    # ── EHI export ingest ─────────────────────────────────────────────
-    @app.post("/api/health/ehi/ingest")
-    async def api_ehi_ingest(request: Request, background_tasks: BackgroundTasks) -> JSONResponse:
-        """Ingest a pre-extracted Epic EHI export directory into the health DB."""
-        from .ehi_ingest import ingest_all
-        body = {}
-        try:
-            body = await request.json()
-        except Exception:
-            pass
-        record_dir = body.get("record_dir", "/tmp/health_record")
-        async def _run():
-            try:
-                await ingest_all(record_dir)
-            except Exception as exc:
-                import logging
-                logging.getLogger(__name__).error("EHI ingest failed: %s", exc)
-        background_tasks.add_task(_run)
-        return _json({"ok": True, "message": f"EHI ingestion started from {record_dir}"})
-
-    # ── Phase 3: Medication Sentinel (Sherlock Holmes Protocol) ───────
-    @app.get("/api/health/medication/list")
-    async def api_medication_list() -> JSONResponse:
-        """Current medication list from health DB (cleaned, deduplicated)."""
-        from .medication_sentinel import get_medication_list
-        meds = await get_medication_list()
-        return _json({"medications": meds, "count": len(meds)})
-
-    @app.get("/api/health/medication/safety")
-    async def api_medication_safety() -> JSONResponse:
-        """Quick safety check — interactions + duplicate therapy flags."""
-        from .medication_sentinel import get_medication_list, check_interactions, check_duplicate_therapy
-        meds = await get_medication_list()
-        interactions = await check_interactions(meds)
-        duplicates = await check_duplicate_therapy(meds)
-        serious = [i for i in interactions if i.get("severity") == "Potentially serious"]
-        return _json({
-            "medication_count": len(meds),
-            "interactions": interactions,
-            "interaction_count": len(interactions),
-            "serious_count": len(serious),
-            "duplicate_therapy_concerns": duplicates,
-            "oracle_risk": "O-MONITOR" if serious else "O-CLEAR",
-        })
-
-    @app.post("/api/health/medication/sentinel")
-    async def api_medication_sentinel(request: Request) -> JSONResponse:
-        """Full Sherlock Holmes medication sentinel review."""
-        from .medication_sentinel import run_sentinel_review
-        body: dict = {}
-        try:
-            body = await request.json()
-        except Exception:
-            pass
-        result = await run_sentinel_review(
-            new_medications=body.get("new_medications"),
-            stopped_medications=body.get("stopped_medications"),
-            reported_symptoms=body.get("reported_symptoms", ""),
-            context=body.get("context", ""),
-        )
-        return _json(result)
-
-    # ── Phase 3: Lab Review Engine (Data Agent Protocol) ─────────────
-    @app.get("/api/health/labs/review")
-    async def api_labs_full_review() -> JSONResponse:
-        """Full panel-by-panel lab review across all clinical domains."""
-        from .lab_review import run_full_lab_review
-        return _json(await run_full_lab_review())
-
-    @app.get("/api/health/labs/summary")
-    async def api_labs_summary() -> JSONResponse:
-        """Quick summary of latest labs — flags and overall status."""
-        from .lab_review import run_full_lab_review
-        full = await run_full_lab_review()
-        return _json({
-            "overall_summary": full["overall_summary"],
-            "critical_flags": full["critical_flags"],
-            "trending_toward_abnormal": full["trending_toward_abnormal"],
-            "missing_labs": full["missing_labs"],
-            "top_clinical_questions": full["top_clinical_questions"],
-            "date_reviewed": full["date_reviewed"],
-        })
-
-    @app.get("/api/health/labs/abnormal")
-    async def api_labs_abnormal() -> JSONResponse:
-        """Abnormal results with clinical context."""
-        from .lab_review import run_full_lab_review
-        full = await run_full_lab_review()
-        flags = full.get("critical_flags", [])
-        return _json({
-            "abnormal_count": len(flags),
-            "flags": flags,
-            "date_reviewed": full["date_reviewed"],
-        })
-
-    @app.get("/api/health/labs/trending")
-    async def api_labs_trending() -> JSONResponse:
-        """Tests trending toward abnormal with trajectory analysis."""
-        from .lab_review import get_trending_labs
-        trends = await get_trending_labs()
-        return _json({"trending": trends, "count": len(trends)})
-
-    # ── Phase 3: Doctor Prep Engine (Hermione Granger Protocol) ──────
-    @app.get("/api/health/doctor-prep/questions")
-    async def api_doctor_prep_questions() -> JSONResponse:
-        """Standing priority questions for the Nov 13, 2026 visit with Dr. Wenk."""
-        from .doctor_prep import get_standing_priority_questions
-        questions = await get_standing_priority_questions()
-        return _json({"questions": questions, "count": len(questions), "next_visit": "2026-11-13"})
-
-    @app.post("/api/health/doctor-prep/brief")
-    async def api_doctor_prep_brief(request: Request) -> JSONResponse:
-        """Generate a one-page visit brief (LLM-powered with structured fallback)."""
-        from .doctor_prep import generate_visit_brief
-        body: dict = {}
-        try:
-            body = await request.json()
-        except Exception:
-            pass
-        result = await generate_visit_brief(
-            visit_type=body.get("visit_type", "chronic_follow_up"),
-            main_concern=body.get("main_concern", ""),
-            goals_for_visit=body.get("goals_for_visit", ""),
-        )
-        return _json(result)
-
-    @app.post("/api/health/doctor-prep/portal-msg")
-    async def api_doctor_prep_portal_msg(request: Request) -> JSONResponse:
-        """Generate a portal message to Dr. Wenk."""
-        from .doctor_prep import generate_portal_message
-        body: dict = {}
-        try:
-            body = await request.json()
-        except Exception:
-            pass
-        if not body.get("subject") or not body.get("concern"):
-            return JSONResponse({"error": "subject and concern are required"}, status_code=400)
-        result = await generate_portal_message(
-            subject=body["subject"],
-            concern=body["concern"],
-            relevant_data=body.get("relevant_data", ""),
-        )
-        return _json(result)
-
-    @app.post("/api/health/doctor-prep/post-visit")
-    async def api_doctor_prep_post_visit(request: Request) -> JSONResponse:
-        """Translate post-visit clinician instructions into plain-English action items."""
-        from .doctor_prep import translate_post_visit
-        body: dict = {}
-        try:
-            body = await request.json()
-        except Exception:
-            pass
-        if not body.get("clinician_said"):
-            return JSONResponse({"error": "clinician_said is required"}, status_code=400)
-        result = await translate_post_visit(
-            clinician_said=body["clinician_said"],
-            diagnosis=body.get("diagnosis", ""),
-            medications=body.get("medications", ""),
-            tests_ordered=body.get("tests_ordered", ""),
-            follow_up=body.get("follow_up", ""),
-        )
-        return _json(result)
-
-    # ── ECG readings ──────────────────────────────────────────────────
-    @app.get("/api/health/ecg")
-    async def api_ecg_list() -> JSONResponse:
-        from .health_db import get_ecg_readings
-        return _json({"readings": await get_ecg_readings(20)})
-
-    @app.get("/api/health/ecg/{ecg_id}")
-    async def api_ecg_waveform(ecg_id: int) -> JSONResponse:
-        from .health_db import get_ecg_waveform
-        rec = await get_ecg_waveform(ecg_id)
-        if not rec:
-            return JSONResponse({"error": "Not found"}, status_code=404)
-        return _json(rec)
-
-    # ── Blood pressure ────────────────────────────────────────────────
-    @app.get("/api/health/bp")
-    async def api_bp_list() -> JSONResponse:
-        from .health_db import get_bp_readings, get_latest_bp
-        return _json({
-            "latest":  await get_latest_bp(),
-            "history": await get_bp_readings(30),
-        })
-
-    @app.post("/api/health/bp/ingest")
-    async def api_bp_ingest(request: Request) -> JSONResponse:
-        """Manual BP reading ingest — accepts flat {systolic, diastolic, pulse, date}."""
-        from .health_db import upsert_bp_reading, log_sync as _ls2
-        try:
-            body = await request.json()
-            if not body.get("systolic") or not body.get("diastolic"):
-                return JSONResponse({"ok": False, "error": "systolic and diastolic required"}, status_code=400)
-            body.setdefault("source", "manual")
-            body.setdefault("reading_date", __import__("datetime").datetime.utcnow().isoformat())
-            await upsert_bp_reading(body)
-            await _ls2("bp_manual", "success", f"{body['systolic']}/{body['diastolic']}")
-            return _json({"ok": True})
-        except Exception as exc:
-            return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
-
-    # ── Omron Connect OAuth ───────────────────────────────────────────
-    @app.get("/api/health/omron/status")
-    async def api_omron_status() -> JSONResponse:
-        from .omron_sync import get_connection_status
-        return _json(get_connection_status())
-
-    @app.get("/api/health/omron/connect")
-    async def api_omron_connect(request: Request):
-        """Redirect user to Omron authorization page."""
-        from fastapi.responses import RedirectResponse
-        from .omron_sync import build_auth_url
-        try:
-            base = str(request.base_url).rstrip("/")
-            redirect_uri = f"{base}/api/health/omron/callback"
-            url = build_auth_url(redirect_uri)
-            return RedirectResponse(url)
-        except ValueError as exc:
-            return JSONResponse({"error": str(exc)}, status_code=503)
-
-    @app.get("/api/health/omron/callback")
-    async def api_omron_callback(request: Request, code: str = "", error: str = ""):
-        """Omron OAuth callback — exchanges code for tokens then redirects home."""
-        from fastapi.responses import RedirectResponse
-        from .omron_sync import exchange_code
-        if error:
-            return JSONResponse({"error": error}, status_code=400)
-        if not code:
-            return JSONResponse({"error": "No code received"}, status_code=400)
-        base = str(request.base_url).rstrip("/")
-        redirect_uri = f"{base}/api/health/omron/callback"
-        tokens = await exchange_code(code, redirect_uri)
-        # Persist redirect_uri so refresh flow can reuse it
-        from .omron_sync import _load_tokens, _save_tokens
-        t = _load_tokens()
-        t["redirect_uri"] = redirect_uri
-        _save_tokens(t)
-        return RedirectResponse("/?omron=connected")
-
-    @app.post("/api/health/omron/sync")
-    async def api_omron_sync(request: Request,
-                             background_tasks: BackgroundTasks) -> JSONResponse:
-        from .omron_sync import sync_bp
-        body = {}
-        try:
-            body = await request.json()
-        except Exception:
-            pass
-        days_back = int(body.get("days_back", 90))
-        background_tasks.add_task(sync_bp, days_back)
-        return _json({"ok": True, "message": f"Omron sync started (last {days_back} days)"})
-
-    @app.get("/api/health/omron/notification")
-    async def api_omron_notification_verify() -> JSONResponse:
-        """GET handler for Omron developer portal URL validation."""
-        return JSONResponse({"ok": True, "service": "JARVIS Omron Notification Endpoint"})
-
-    @app.get("/api/health/omron/logo.png")
-    async def api_omron_logo() -> Response:
-        """Simple SVG logo served as image/svg+xml for Omron registration."""
-        svg = (
-            '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">'
-            '<rect width="200" height="200" rx="40" fill="#1a1f2e"/>'
-            '<text x="100" y="115" font-family="Arial" font-size="72" font-weight="bold" '
-            'fill="#4f8ef7" text-anchor="middle">J</text>'
-            '<text x="100" y="160" font-family="Arial" font-size="18" fill="#8899aa" text-anchor="middle">JARVIS</text>'
-            '</svg>'
-        )
-        return Response(content=svg, media_type="image/svg+xml")
-
-    @app.post("/api/health/omron/notification")
-    async def api_omron_notification(request: Request,
-                                     background_tasks: BackgroundTasks) -> JSONResponse:
-        """
-        Webhook endpoint for Omron push notifications.
-        Omron POSTs here whenever the user uploads new data.
-        Must return HTTP 200.  Triggers an automatic sync in background.
-        """
-        from .omron_sync import handle_notification
-        try:
-            payload = await request.json()
-        except Exception:
-            payload = {}
-        background_tasks.add_task(handle_notification, payload)
-        return JSONResponse({"ok": True}, status_code=200)
-
-    @app.post("/api/health/omron/revoke")
-    async def api_omron_revoke() -> JSONResponse:
-        """Revoke Omron consent and clear stored tokens."""
-        from .omron_sync import revoke
-        ok = await revoke()
-        return _json({"ok": ok, "message": "Consent revoked" if ok else "Nothing to revoke"})
-
-    # ------------------------------------------------------------------
-    # Daily Stewardship Engine
-    # ------------------------------------------------------------------
-
-    @app.post("/api/health/stewardship/morning")
-    async def api_stewardship_morning(request: Request) -> JSONResponse:
-        """Run morning stewardship check-in. Returns day card with day type + Three Moves."""
-        from .daily_stewardship import run_morning_checkin
-        try:
-            body = await request.json()
-        except Exception:
-            body = {}
-        context = str(body.get("context", "")).strip()
-        day_card = await run_morning_checkin(context=context)
-        return _json(day_card)
-
-    @app.get("/api/health/stewardship/today")
-    async def api_stewardship_today() -> JSONResponse:
-        """Return cached day card for today. 404 if no check-in has been run yet."""
-        from .daily_stewardship import get_cached_day_card
-        card = get_cached_day_card()
-        if card is None:
-            return JSONResponse(
-                {"error": "No day card for today. Run POST /api/health/stewardship/morning first."},
-                status_code=404,
-            )
-        return _json(card)
-
-    @app.post("/api/health/stewardship/evening")
-    async def api_stewardship_evening(request: Request) -> JSONResponse:
-        """Run evening review. Body: {wins, struggles, energy (1-10)}."""
-        from .daily_stewardship import run_evening_review
-        try:
-            body = await request.json()
-        except Exception:
-            body = {}
-        review = await run_evening_review(
-            wins=str(body.get("wins", "")).strip(),
-            struggles=str(body.get("struggles", "")).strip(),
-            energy=int(body["energy"]) if body.get("energy") is not None else None,
-        )
-        return _json(review)
-
-    @app.get("/api/health/stewardship/history")
-    async def api_stewardship_history(days: int = 7) -> JSONResponse:
-        """Return last N days of morning check-ins from the decision log."""
-        from .daily_stewardship import get_stewardship_history
-        history = await get_stewardship_history(days=days)
-        return _json({"days": days, "count": len(history), "history": history})
-
-    # ------------------------------------------------------------------
     # LLM Gateway — must be registered BEFORE the legacy catch-all below
     # ------------------------------------------------------------------
 
@@ -6390,12 +3430,6 @@ self.addEventListener('fetch', e => {
             return JSONResponse({"error": "LLM gateway not initialised", "available": False}, status_code=503)
         status = await asyncio.to_thread(gw.get_status)
         return JSONResponse({"available": True, **status})
-
-    @app.get("/api/gateway/usage")
-    async def api_gateway_usage(hours: int = 24) -> JSONResponse:
-        """Token usage and estimated cost summary for the past N hours."""
-        from .llm_gateway import usage_summary
-        return _json(usage_summary(hours=hours))
 
     @app.post("/api/gateway/test")
     async def api_gateway_test(request: Request) -> JSONResponse:
@@ -7073,176 +4107,7 @@ self.addEventListener('fetch', e => {
             str(body.get("domain", "passive-income")),
             list(body.get("tags", [])),
         )
-        # Journey: log idea captured
-        journey_log(_current_actor(request), "idea_captured", {})
         return _json({"idea": idea}, status_code=201)
-
-    @app.post("/api/ideas/bulk-import")
-    async def api_ideas_bulk_import(
-        file: UploadFile = File(None),
-        domain: str = Form("passive-income"),
-        tags: str = Form(""),          # comma-separated
-        source: str = Form("import"),
-    ) -> JSONResponse:
-        """
-        Import multiple ideas from a .docx, .txt, or .json file.
-
-        Smart .docx mode: detects title/citation lines and pairs each with the
-        following description paragraph, saving it as the idea's notes field.
-        Year headers and category labels are extracted as auto-tags.
-
-        Plain text / .txt: one idea per non-empty line (no description pairing).
-        JSON: array of strings, or array of {text, notes} objects.
-
-        Returns {imported, skipped, ideas[]}.
-        """
-        import re as _re
-        from .ideas import add_idea as _add_idea
-
-        if file is None or not file.filename:
-            raise HTTPException(status_code=400, detail="No file provided")
-
-        raw_bytes = await file.read()
-        fname = (file.filename or "").lower()
-        base_tags = [t.strip() for t in tags.split(",") if t.strip()]
-
-        # Each entry: {"text": str, "notes": str, "tags": list[str]}
-        entries: list[dict] = []
-
-        # ── parse by file type ───────────────────────────────────────────
-        if fname.endswith(".docx"):
-            try:
-                import io
-                from docx import Document  # python-docx
-
-                doc = Document(io.BytesIO(raw_bytes))
-                paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
-            except Exception as exc:
-                raise HTTPException(status_code=422, detail=f"Could not parse .docx: {exc}")
-
-            # Heuristics ─────────────────────────────────────────────────────
-            # A paragraph is a YEAR HEADER if it's just a 4-digit year (2024–2040).
-            # A paragraph is a CATEGORY HEADER if it's short (≤80 chars), no period,
-            #   looks like a label (e.g. "Leadership", "Christian Formation (CF)").
-            # A paragraph is a TITLE/CITATION if it's reasonably short (≤300 chars)
-            #   AND it does NOT start with common description phrases like "This book",
-            #   "This work", "Designed as", "Focused on", etc.
-            # A paragraph is a DESCRIPTION if it's longer than the title or starts
-            #   with those description phrases.
-            _year_re  = _re.compile(r'^\d{4}$')
-            _desc_starts = (
-                "this book", "this work", "this volume", "this formation",
-                "this capstone", "this revised", "this final", "this applied",
-                "this practical", "this culminating", "designed as", "designed for",
-                "focused on", "focusing on", "reframing", "intended for",
-            )
-
-            def _is_year(p: str) -> bool:
-                return bool(_year_re.match(p))
-
-            def _is_category(p: str) -> bool:
-                # Short, no trailing period after meaningful text, no year in parens
-                return (
-                    len(p) <= 80
-                    and not _re.search(r'\(\d{4}\)', p)
-                    and not p.lower().startswith(_desc_starts)
-                )
-
-            def _is_description(p: str) -> bool:
-                return p.lower().startswith(_desc_starts) or len(p) > 300
-
-            current_year = ""
-            current_category = ""
-            i = 0
-            while i < len(paragraphs):
-                para = paragraphs[i]
-                next_para = paragraphs[i + 1] if i + 1 < len(paragraphs) else ""
-
-                # ── Year header (e.g. "2026") ─────────────────────────────
-                if _is_year(para):
-                    current_year = para
-                    i += 1
-                    continue
-
-                # ── Orphaned / leading description — skip ─────────────────
-                if _is_description(para):
-                    i += 1
-                    continue
-
-                # ── Category header vs. title ─────────────────────────────
-                # A paragraph is a CATEGORY HEADER when it is short AND the
-                # next paragraph is NOT a description (i.e. nothing follows it
-                # that would pair with it as notes).
-                is_short_label = (
-                    len(para) <= 80
-                    and not _re.search(r'\(\d{4}\)', para)   # no year-in-parens
-                    and not para.endswith('.')                 # not a sentence
-                )
-                if is_short_label and not _is_description(next_para):
-                    current_category = para
-                    i += 1
-                    continue
-
-                # ── Title (with optional paired description) ──────────────
-                auto_tags = list(base_tags)
-                if current_year:
-                    auto_tags.append(current_year)
-                if current_category:
-                    auto_tags.append(current_category)
-
-                if next_para and _is_description(next_para):
-                    entries.append({"text": para, "notes": next_para, "tags": auto_tags})
-                    i += 2  # consume title + description together
-                else:
-                    entries.append({"text": para, "notes": "", "tags": auto_tags})
-                    i += 1
-
-        elif fname.endswith(".json"):
-            try:
-                data = json.loads(raw_bytes.decode("utf-8", errors="replace"))
-                if isinstance(data, list):
-                    for item in data:
-                        if isinstance(item, dict):
-                            t = str(item.get("text", item.get("title", ""))).strip()
-                            n = str(item.get("notes", item.get("description", ""))).strip()
-                            if t:
-                                entries.append({"text": t, "notes": n, "tags": list(base_tags)})
-                        elif str(item).strip():
-                            entries.append({"text": str(item).strip(), "notes": "", "tags": list(base_tags)})
-                else:
-                    raise HTTPException(status_code=422, detail="JSON must be an array")
-            except json.JSONDecodeError as exc:
-                raise HTTPException(status_code=422, detail=f"Invalid JSON: {exc}")
-
-        else:
-            # Plain text / .txt / .md — one idea per non-empty line
-            text = raw_bytes.decode("utf-8", errors="replace")
-            for ln in text.splitlines():
-                ln = ln.strip().lstrip("-•*·▪‣⁃").strip()
-                if ln:
-                    entries.append({"text": ln, "notes": "", "tags": list(base_tags)})
-
-        # ── deduplicate and create ────────────────────────────────────────
-        imported: list[dict] = []
-        skipped = 0
-        seen: set[str] = set()
-        for entry in entries:
-            key = entry["text"].lower()[:120]
-            if key in seen or len(entry["text"]) < 3:
-                skipped += 1
-                continue
-            seen.add(key)
-            idea = await asyncio.to_thread(
-                _add_idea,
-                entry["text"],
-                source,
-                entry["notes"],
-                domain,
-                entry["tags"],
-            )
-            imported.append(idea)
-
-        return _json({"imported": len(imported), "skipped": skipped, "ideas": imported}, status_code=201)
 
     @app.post("/api/ideas/{idea_id}/queue")
     async def api_ideas_queue(idea_id: str) -> JSONResponse:
@@ -7580,13 +4445,11 @@ self.addEventListener('fetch', e => {
         return _json({"ok": True})
 
     @app.get("/api/chronicle/morning-context")
-    async def api_chronicle_morning_context(request: Request, actor: str = "") -> JSONResponse:
+    async def api_chronicle_morning_context(actor: str = "chris") -> JSONResponse:
         """Spiritual context packet for the morning briefing."""
         bridge = _get_chronicle_bridge()
         if bridge is None:
             raise HTTPException(status_code=503, detail="ChronicleBridge not initialised")
-        if not actor:
-            actor = _current_actor(request)
         ctx = await asyncio.to_thread(bridge.get_morning_spiritual_context, actor)
         return _json(ctx)
 
@@ -7653,750 +4516,6 @@ self.addEventListener('fetch', e => {
             "insights": [i.to_dict() for i in insights],
             "count": len(insights),
         })
-
-    # Chronicle snapshot reader (singleton)
-    _chronicle_snapshot_reader = ChronicleSnapshotReader()
-
-    @app.get("/api/chronicle/recent")
-    async def api_chronicle_recent(limit: int = 20) -> JSONResponse:
-        """Return Chronicle dashboard data from the latest snapshot."""
-        try:
-            data = await asyncio.to_thread(_chronicle_snapshot_reader.get_dashboard)
-            return _json(data)
-        except Exception as exc:
-            logger.warning("chronicle/recent failed: %s", exc)
-            return _json({"ok": False, "entries": [], "total": 0, "tags": [],
-                          "prayer_items": [], "active_prayers": 0, "answered_prayers": 0,
-                          "formation_rhythms": [], "owned_books": [], "chronicle_available": False})
-
-    @app.get("/api/chronicle/search")
-    async def api_chronicle_search(q: str = "") -> JSONResponse:
-        """Search Chronicle entries."""
-        try:
-            results = await asyncio.to_thread(_chronicle_snapshot_reader.search_entries, q)
-            tags: dict[str, int] = {}
-            for e in results:
-                for t in e.get("themes", []):
-                    tags[t] = tags.get(t, 0) + 1
-            return _json({
-                "ok": True,
-                "entries": results,
-                "total": len(results),
-                "tags": sorted(tags.keys(), key=lambda t: -tags[t]),
-                "prayer_items": [],
-                "active_prayers": 0,
-                "answered_prayers": 0,
-                "formation_rhythms": [],
-                "owned_books": [],
-                "chronicle_available": True,
-            })
-        except Exception as exc:
-            logger.warning("chronicle/search failed: %s", exc)
-            return _json({"ok": False, "entries": [], "total": 0, "tags": []})
-
-    @app.post("/api/chronicle/write-entry")
-    async def api_chronicle_write_entry(request: Request) -> JSONResponse:
-        """Add a new entry to Chronicle and save a new snapshot."""
-        try:
-            from datetime import datetime, timezone
-            body = await request.json()
-            entry = body.get("entry", {})
-            if not entry or not entry.get("id"):
-                raise HTTPException(status_code=400, detail="entry.id is required")
-
-            # Load latest snapshot state
-            state = await asyncio.to_thread(_chronicle_snapshot_reader._load)
-            if not state:
-                raise HTTPException(status_code=503, detail="Chronicle snapshot not available")
-
-            # Prepend entry
-            entries = list(state.get("chronicleEntries", []))
-            # Remove any existing entry with same id (idempotent)
-            entries = [e for e in entries if e.get("id") != entry["id"]]
-            entries.insert(0, entry)
-            state["chronicleEntries"] = entries
-
-            # POST snapshot to Chronicle
-            import urllib.request as _ureq
-            import time as _time
-            snap_id = f"jarvis-{int(_time.time())}"
-            payload = json.dumps({
-                "snapshot": {
-                    "id": snap_id,
-                    "createdAt": datetime.now(timezone.utc).isoformat(),
-                    "appState": state,
-                }
-            }).encode()
-            req = _ureq.Request(
-                f"{_CHRONICLE_API_BASE}/api/chronicle-sync/import",
-                data=payload,
-                headers={"Content-Type": "application/json"},
-            )
-            with _ureq.urlopen(req, timeout=10) as resp:
-                result = json.loads(resp.read())
-
-            _chronicle_snapshot_reader.invalidate_cache()
-            return _json({"ok": True, "snapshot_id": snap_id, "entry_count": result.get("snapshot", {}).get("chronicleEntryCount", 0)})
-        except HTTPException:
-            raise
-        except Exception as exc:
-            logger.warning("chronicle/write-entry failed: %s", exc)
-            raise HTTPException(status_code=500, detail=str(exc))
-
-    @app.post("/api/chronicle/update-prayer")
-    async def api_chronicle_update_prayer(request: Request) -> JSONResponse:
-        """Update a prayer item (mark prayed, mark answered) and save snapshot."""
-        try:
-            from datetime import datetime, timezone
-            body = await request.json()
-            prayer_id = body.get("id")
-            if not prayer_id:
-                raise HTTPException(status_code=400, detail="id is required")
-
-            state = await asyncio.to_thread(_chronicle_snapshot_reader._load)
-            if not state:
-                raise HTTPException(status_code=503, detail="Chronicle snapshot not available")
-
-            prayers = list(state.get("prayerItems", []))
-            updated = False
-            for i, p in enumerate(prayers):
-                if p.get("id") == prayer_id:
-                    prayers[i] = {**p, **{k: v for k, v in body.items() if k != "id"}}
-                    updated = True
-                    break
-            if not updated:
-                raise HTTPException(status_code=404, detail=f"Prayer {prayer_id} not found")
-
-            state["prayerItems"] = prayers
-
-            import urllib.request as _ureq
-            import time as _time
-            snap_id = f"jarvis-prayer-{int(_time.time())}"
-            payload = json.dumps({
-                "snapshot": {
-                    "id": snap_id,
-                    "createdAt": datetime.now(timezone.utc).isoformat(),
-                    "appState": state,
-                }
-            }).encode()
-            req = _ureq.Request(
-                f"{_CHRONICLE_API_BASE}/api/chronicle-sync/import",
-                data=payload,
-                headers={"Content-Type": "application/json"},
-            )
-            with _ureq.urlopen(req, timeout=10) as resp:
-                json.loads(resp.read())
-
-            _chronicle_snapshot_reader.invalidate_cache()
-            return _json({"ok": True, "prayer_id": prayer_id})
-        except HTTPException:
-            raise
-        except Exception as exc:
-            logger.warning("chronicle/update-prayer failed: %s", exc)
-            raise HTTPException(status_code=500, detail=str(exc))
-
-    # ── Faith Agents ──────────────────────────────────────────────────────────
-
-    @app.get("/api/faith/agents")
-    async def api_faith_agents() -> JSONResponse:
-        """Return the faith agent roster (no system prompts)."""
-        from .faith_agents import get_agents
-        return _json({"agents": get_agents()})
-
-    @app.post("/api/faith/chat")
-    async def api_faith_chat(request: Request) -> JSONResponse:
-        """Chat with a named faith agent. Body: {agent_id, messages, passage?}"""
-        try:
-            from .faith_agents import chat as faith_chat
-            body = await request.json()
-            agent_id = body.get("agent_id", "")
-            messages = body.get("messages", [])
-            passage = body.get("passage", "")
-            if not agent_id or not messages:
-                raise HTTPException(status_code=400, detail="agent_id and messages required")
-            reply = await faith_chat(agent_id, messages, runtime, passage=passage)
-            return _json({"ok": True, "reply": reply})
-        except HTTPException:
-            raise
-        except Exception as exc:
-            logger.warning("faith/chat failed: %s", exc)
-            raise HTTPException(status_code=500, detail=str(exc))
-
-    @app.get("/api/faith/daily-word")
-    async def api_faith_daily_word() -> JSONResponse:
-        """Return today's rotating daily word from a faith agent."""
-        try:
-            from .faith_agents import daily_word
-            word = await daily_word(runtime)
-            return _json(word)
-        except Exception as exc:
-            logger.warning("faith/daily-word failed: %s", exc)
-            return _json({"ok": False, "error": str(exc)})
-
-    # ── Chronicle Phase 3–4 ───────────────────────────────────────────────────
-
-    @app.post("/api/chronicle/quick-capture")
-    async def api_chronicle_quick_capture(request: Request) -> JSONResponse:
-        """
-        One-shot capture: {type, content, passage?}
-        Generates entry, writes to Chronicle snapshot, returns entry id.
-        type ∈ gratitude | prayer | note | milestone | reflection | insight | study
-        """
-        try:
-            from datetime import datetime, timezone
-            body = await request.json()
-            entry_type = body.get("type", "note")
-            content = body.get("content", "").strip()
-            passage = body.get("passage", "").strip()
-            if not content:
-                raise HTTPException(status_code=400, detail="content is required")
-
-            # Build entry
-            entry = await asyncio.to_thread(
-                _chronicle_snapshot_reader.quick_capture, entry_type, content, passage
-            )
-
-            # Load state, prepend entry, POST to Chronicle
-            import urllib.request as _ureq, time as _time, json as _json
-            state = await asyncio.to_thread(_chronicle_snapshot_reader._load)
-            if not state:
-                raise HTTPException(status_code=503, detail="Chronicle snapshot not available")
-
-            entries = [e for e in list(state.get("chronicleEntries", [])) if e.get("id") != entry["id"]]
-            entries.insert(0, entry)
-            state["chronicleEntries"] = entries
-
-            snap_id = f"jarvis-qc-{int(_time.time())}"
-            payload = _json.dumps({
-                "snapshot": {
-                    "id": snap_id,
-                    "createdAt": datetime.now(timezone.utc).isoformat(),
-                    "appState": state,
-                }
-            }).encode()
-            req = _ureq.Request(
-                f"{_CHRONICLE_API_BASE}/api/chronicle-sync/import",
-                data=payload,
-                headers={"Content-Type": "application/json"},
-            )
-            chronicle_result = {}
-            try:
-                with _ureq.urlopen(req, timeout=8) as resp:
-                    chronicle_result = json.loads(resp.read())
-            except Exception as chronicle_exc:
-                logger.warning("chronicle quick-capture sync failed (continuing): %s", chronicle_exc)
-
-            _chronicle_snapshot_reader.invalidate_cache()
-            # Journey: log chronicle entry
-            _summary = (entry.get("content") or entry.get("title") or "")[:80]
-            journey_log(_current_actor(request), "chronicle_entry", {"summary": _summary})
-            return _json({"ok": True, "entry_id": entry["id"], "title": entry["title"],
-                           "synced_to_chronicle": bool(chronicle_result)})
-        except HTTPException:
-            raise
-        except Exception as exc:
-            logger.warning("chronicle/quick-capture failed: %s", exc)
-            raise HTTPException(status_code=500, detail=str(exc))
-
-    @app.get("/api/chronicle/context")
-    async def api_chronicle_context() -> JSONResponse:
-        """Return compact spiritual context: study, prayers, rhythm, themes."""
-        try:
-            ctx = await asyncio.to_thread(_chronicle_snapshot_reader.get_context)
-            return _json(ctx)
-        except Exception as exc:
-            logger.warning("chronicle/context failed: %s", exc)
-            return _json({"ok": False, "error": str(exc)})
-
-    @app.get("/api/chronicle/patterns")
-    async def api_chronicle_patterns() -> JSONResponse:
-        """Return 30-day pattern analysis: themes, type breakdown, prayer arcs, streak."""
-        try:
-            patterns = await asyncio.to_thread(_chronicle_snapshot_reader.get_patterns)
-            return _json(patterns)
-        except Exception as exc:
-            logger.warning("chronicle/patterns failed: %s", exc)
-            return _json({"ok": False, "error": str(exc)})
-
-    @app.post("/api/chronicle/ai-chat")
-    async def api_chronicle_ai_chat(request: Request) -> JSONResponse:
-        """Proxy AI chat to Chronicle's /api/ai/chat endpoint."""
-        try:
-            body = await request.json()
-            import urllib.request as _ureq
-            payload = json.dumps(body).encode()
-            req = _ureq.Request(
-                f"{_CHRONICLE_API_BASE}/api/ai/chat",
-                data=payload,
-                headers={"Content-Type": "application/json"},
-            )
-            with _ureq.urlopen(req, timeout=30) as resp:
-                result = json.loads(resp.read())
-            return _json(result)
-        except Exception as exc:
-            logger.warning("chronicle/ai-chat failed: %s", exc)
-            return _json({"reply": f"Chronicle AI is unavailable: {exc}"})
-
-    # -----------------------------------------------------------------------
-    # Navigation (Google Maps + NPS)
-    # -----------------------------------------------------------------------
-    from .nav_bridge import NavBridge as _NavBridge
-
-    _nav = _NavBridge(
-        maps_api_key=os.environ.get("GOOGLE_MAPS_API_KEY", ""),
-        nps_api_key=os.environ.get("NPS_API_KEY", ""),
-    )
-
-    @app.get("/api/nav/maps-key")
-    async def nav_maps_key() -> JSONResponse:
-        """Return the Google Maps API key for frontend script loading."""
-        return _json({"key": os.environ.get("GOOGLE_MAPS_API_KEY", "")})
-
-    @app.get("/api/maps/geocode")
-    async def api_maps_geocode(q: str = "") -> JSONResponse:
-        """Geocode an address string to lat/lon using Google Geocoding API."""
-        import urllib.request as _ureq
-        import urllib.parse as _uparse
-        import json as _jmod
-        maps_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
-        if not maps_key:
-            return _json({"error": "GOOGLE_MAPS_API_KEY not configured"})
-        if not q.strip():
-            return _json({"error": "No address provided"})
-        url = "https://maps.googleapis.com/maps/api/geocode/json?" + _uparse.urlencode({"address": q, "key": maps_key})
-        try:
-            import urllib.request as _ur2
-            with _ur2.urlopen(url, timeout=8) as resp:
-                data = _jmod.loads(resp.read())
-            results = data.get("results", [])
-            if not results:
-                return _json({"lat": None, "lon": None, "formatted": None})
-            loc = results[0]["geometry"]["location"]
-            return _json({"lat": loc["lat"], "lon": loc["lng"], "formatted": results[0].get("formatted_address", q)})
-        except Exception as exc:
-            return _json({"error": str(exc)})
-
-    @app.get("/api/nav/home")
-    async def nav_home() -> JSONResponse:
-        """Return the saved home address from locations.json."""
-        import json as _json_mod
-        try:
-            loc_path = Path("data/settings/locations.json")
-            data = _json_mod.loads(loc_path.read_text())
-            for loc in data.get("saved_locations", []):
-                if loc.get("id") == "household-home":
-                    return _json({
-                        "address": loc.get("address", ""),
-                        "label": loc.get("label", "Home"),
-                        "latitude": loc.get("latitude"),
-                        "longitude": loc.get("longitude"),
-                    })
-            return _json({"address": "", "label": "Home"})
-        except Exception as e:
-            return _json({"error": str(e)})
-
-    @app.get("/api/nav/autocomplete")
-    async def nav_autocomplete(q: str = "") -> JSONResponse:
-        """Proxy to Google Places Autocomplete API."""
-        maps_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
-        if not maps_key:
-            return _json({"error": "GOOGLE_MAPS_API_KEY not configured"})
-        if not q:
-            return _json({"predictions": []})
-        try:
-            import urllib.request as _nav_ureq
-            import urllib.parse as _nav_uparse
-            import json as _nav_json
-            url = (
-                "https://maps.googleapis.com/maps/api/place/autocomplete/json?"
-                + _nav_uparse.urlencode({"input": q, "key": maps_key})
-            )
-            with _nav_ureq.urlopen(url, timeout=8) as resp:
-                data = _nav_json.loads(resp.read())
-            predictions = [
-                {"place_id": p.get("place_id", ""), "description": p.get("description", "")}
-                for p in data.get("predictions", [])
-            ]
-            return _json({"predictions": predictions})
-        except Exception as exc:
-            logger.warning("nav/autocomplete failed: %s", exc)
-            return _json({"error": str(exc)})
-
-    @app.post("/api/nav/route")
-    async def nav_route(request: Request) -> JSONResponse:
-        """Proxy to Google Directions API."""
-        maps_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
-        if not maps_key:
-            return _json({"error": "GOOGLE_MAPS_API_KEY not configured"})
-        try:
-            body = await request.json()
-            origin = body.get("origin", "")
-            destination = body.get("destination", "")
-            if not origin or not destination:
-                return _json({"error": "origin and destination required"})
-            import urllib.request as _nav_ureq
-            import urllib.parse as _nav_uparse
-            import json as _nav_json
-            url = (
-                "https://maps.googleapis.com/maps/api/directions/json?"
-                + _nav_uparse.urlencode({
-                    "origin": origin,
-                    "destination": destination,
-                    "key": maps_key,
-                })
-            )
-            with _nav_ureq.urlopen(url, timeout=15) as resp:
-                data = _nav_json.loads(resp.read())
-            return _json(data)
-        except Exception as exc:
-            logger.warning("nav/route failed: %s", exc)
-            return _json({"error": str(exc)})
-
-    @app.post("/api/nav/pois")
-    async def nav_pois(request: Request) -> JSONResponse:
-        """Search for POIs along a route and NPS parks for states on route."""
-        try:
-            body = await request.json()
-            encoded_polyline = body.get("encoded_polyline", "")
-            categories = body.get("categories", ["food", "starbucks", "parks", "historic", "family"])
-            total_miles = float(body.get("total_miles", 0))
-            geocoded_waypoints = body.get("geocoded_waypoints", [])
-            parks_radius_miles = float(body.get("parks_radius_miles", 25.0))
-            if not encoded_polyline:
-                return _json({"pois": {}, "nps_parks": []})
-            pois = await asyncio.to_thread(
-                _nav.search_pois_along_route,
-                encoded_polyline,
-                categories,
-                total_miles,
-                parks_radius_miles,
-            )
-            states = await asyncio.to_thread(
-                _nav.extract_states_from_route,
-                geocoded_waypoints,
-            )
-            nps_parks = await asyncio.to_thread(
-                _nav.search_nps_along_route,
-                encoded_polyline,
-                states,
-                parks_radius_miles,
-            )
-            return _json({"pois": pois, "nps_parks": nps_parks})
-        except Exception as exc:
-            logger.warning("nav/pois failed: %s", exc)
-            return _json({"error": str(exc)})
-
-    @app.get("/api/nav/nps")
-    async def nav_nps(states: str = "") -> JSONResponse:
-        """Return NPS parks for given comma-separated state codes."""
-        try:
-            state_list = [s.strip() for s in states.split(",") if s.strip()]
-            parks = await asyncio.to_thread(_nav.search_nps_by_states, state_list)
-            return _json({"parks": parks})
-        except Exception as exc:
-            logger.warning("nav/nps failed: %s", exc)
-            return _json({"error": str(exc)})
-
-    # In-memory cache: address → {uris, state}  (never stores video bytes)
-    _aerial_cache: dict = {}
-
-    @app.get("/api/nav/aerial-hls/manifest.m3u8")
-    async def aerial_hls_manifest(address: str = ""):
-        """Proxy the Aerial View HLS manifest and rewrite segment URLs to same-origin.
-
-        This eliminates CORS issues — the browser sees all URLs as localhost.
-        """
-        import httpx, urllib.parse as _up
-        key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
-        if not key or not address:
-            return Response(content=b"", media_type="application/vnd.apple.mpegurl")
-        # Get the HLS URL (use cache if available)
-        cache_key = address.lower().strip()
-        data = _aerial_cache.get(cache_key)
-        if not data or not (data.get("uris") or {}).get("HLS"):
-            # Fetch fresh
-            try:
-                async with httpx.AsyncClient(timeout=15) as client:
-                    r = await client.get(
-                        "https://aerialview.googleapis.com/v1/videos:lookupVideo",
-                        params={"address": address, "key": key}
-                    )
-                    data = r.json()
-                    if data.get("uris", {}).get("HLS"):
-                        _aerial_cache[cache_key] = data
-            except Exception:
-                return Response(content=b"", media_type="application/vnd.apple.mpegurl")
-        # HLS value is a dict: {"landscapeUri": "...", "portraitUri": "..."}
-        hls_obj = (data.get("uris") or {}).get("HLS", "")
-        if isinstance(hls_obj, dict):
-            hls_url = hls_obj.get("landscapeUri") or hls_obj.get("portraitUri") or ""
-        else:
-            hls_url = str(hls_obj) if hls_obj else ""
-        if not hls_url:
-            return Response(content=b"", media_type="application/vnd.apple.mpegurl")
-        try:
-            async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-                r = await client.get(hls_url)
-                manifest = r.text
-            # Rewrite absolute segment URLs → /api/nav/aerial-hls/seg?url=ENCODED
-            lines = []
-            for line in manifest.splitlines():
-                stripped = line.strip()
-                if stripped and not stripped.startswith("#"):
-                    # It's a segment URL — rewrite it
-                    encoded = _up.quote(stripped, safe="")
-                    lines.append(f"/api/nav/aerial-hls/seg?url={encoded}")
-                else:
-                    lines.append(line)
-            proxied = "\n".join(lines)
-            return Response(
-                content=proxied.encode(),
-                media_type="application/vnd.apple.mpegurl",
-                headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"},
-            )
-        except Exception as e:
-            return Response(content=b"", media_type="application/vnd.apple.mpegurl")
-
-    @app.get("/api/nav/aerial-hls/seg")
-    async def aerial_hls_seg(url: str = ""):
-        """Proxy a single HLS segment or sub-manifest from Google — same-origin delivery.
-
-        Google Aerial View returns a *variant* playlist whose stream lines are
-        sub-manifest URLs (not .ts segments).  HLS.js fetches each line; if the
-        response is another m3u8 (media playlist) we must rewrite its segment URLs
-        through this same proxy so the browser never makes a cross-origin request.
-        """
-        import httpx, urllib.parse as _up
-        if not url:
-            return Response(content=b"", media_type="video/mp2t")
-        try:
-            decoded = _up.unquote(url)
-            async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
-                r = await client.get(decoded)
-                content_type = r.headers.get("content-type", "").lower()
-                # Detect sub-manifest: content-type contains mpegurl OR URL ends in .m3u8
-                is_manifest = (
-                    "mpegurl" in content_type
-                    or decoded.split("?")[0].lower().endswith(".m3u8")
-                )
-                if is_manifest:
-                    # Rewrite every non-comment, non-empty line to route through our proxy
-                    lines = []
-                    for line in r.text.splitlines():
-                        stripped = line.strip()
-                        if stripped and not stripped.startswith("#"):
-                            # Resolve relative URLs against the base URL of this manifest
-                            if stripped.startswith("http://") or stripped.startswith("https://"):
-                                seg_url = stripped
-                            else:
-                                base = decoded.rsplit("/", 1)[0]
-                                seg_url = base + "/" + stripped
-                            encoded = _up.quote(seg_url, safe="")
-                            lines.append(f"/api/nav/aerial-hls/seg?url={encoded}")
-                        else:
-                            lines.append(line)
-                    return Response(
-                        content="\n".join(lines).encode(),
-                        media_type="application/vnd.apple.mpegurl",
-                        headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"},
-                    )
-                else:
-                    # Binary segment (.ts / fMP4 etc.)
-                    return Response(
-                        content=r.content,
-                        media_type=content_type or "video/mp2t",
-                        headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "max-age=3600"},
-                    )
-        except Exception:
-            return Response(content=b"", media_type="video/mp2t")
-
-    @app.get("/api/nav/aerial")
-    async def nav_aerial(address: str = ""):
-        """Proxy Aerial View API with polling for PROCESSING state.
-
-        Results are cached in memory for the lifetime of the server so
-        repeated trips to the same destination skip the polling wait.
-        No video bytes are stored — only the signed URL strings.
-        """
-        key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
-        if not key or not address:
-            return _json({"error": "missing key or address"})
-
-        # Return cached result if available
-        cache_key = address.lower().strip()
-        if cache_key in _aerial_cache:
-            return _json(_aerial_cache[cache_key])
-
-        try:
-            import httpx
-            import asyncio as _aio
-            url = "https://aerialview.googleapis.com/v1/videos:lookupVideo"
-            async with httpx.AsyncClient(timeout=15) as client:
-                for attempt in range(8):
-                    r = await client.get(url, params={"address": address, "key": key})
-                    data = r.json()
-                    state = data.get("state", "")
-                    # Ready: has videoUri or uris dict with MP4 keys
-                    if data.get("videoUri") or (data.get("uris") and data["uris"].get("MP4_HIGH")):
-                        _aerial_cache[cache_key] = data  # cache for this session
-                        return _json(data)
-                    # No coverage / permanent error — cache the miss too
-                    if state not in ("PROCESSING", ""):
-                        _aerial_cache[cache_key] = {"error": f"aerial not available: {state}", "state": state}
-                        return _json(_aerial_cache[cache_key])
-                    if attempt < 7:
-                        await _aio.sleep(2)
-                return _json({"error": "aerial processing timeout", "state": "PROCESSING"})
-        except Exception as e:
-            return _json({"error": str(e)})
-
-    @app.get("/api/nav/streetview")
-    async def nav_streetview(lat: float = 0, lng: float = 0, heading: float = 0,
-                             width: int = 400, height: int = 220,
-                             fov: int = 55, pitch: int = 5):
-        """Proxy Street View Static API image — keeps API key server-side."""
-        key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
-        if not key:
-            return Response(content=b"", media_type="image/jpeg")
-        try:
-            import httpx
-            url = "https://maps.googleapis.com/maps/api/streetview"
-            params = {
-                "size": str(width) + "x" + str(height),
-                "location": str(lat) + "," + str(lng),
-                "heading": str(int(heading)),
-                "fov": str(max(20, min(120, fov))),
-                "pitch": str(max(-90, min(90, pitch))),
-                "key": key
-            }
-            async with httpx.AsyncClient(timeout=10) as client:
-                r = await client.get(url, params=params)
-                return Response(content=r.content, media_type="image/jpeg")
-        except Exception as e:
-            return Response(content=b"", media_type="image/jpeg")
-
-    @app.get("/api/env/air-quality")
-    async def env_air_quality(lat: float = 30.0, lng: float = -97.0):
-        try:
-            result = await asyncio.to_thread(_nav.get_air_quality, lat, lng)
-            return _json(result)
-        except Exception as e:
-            return _json({"error": str(e)})
-
-    @app.get("/api/env/pollen")
-    async def env_pollen(lat: float = 30.0, lng: float = -97.0):
-        try:
-            result = await asyncio.to_thread(_nav.get_pollen, lat, lng)
-            return _json(result)
-        except Exception as e:
-            return _json({"error": str(e)})
-
-    # -----------------------------------------------------------------------
-    # Kasa Smart Home
-    # -----------------------------------------------------------------------
-    from .kasa_bridge import KasaBridge as _KasaBridge
-
-    _kasa = _KasaBridge(
-        username=os.environ.get("KASA_USERNAME", ""),
-        password=os.environ.get("KASA_PASSWORD", ""),
-    )
-
-    @app.get("/api/kasa/devices")
-    async def api_kasa_devices(refresh: bool = False) -> JSONResponse:
-        """Discover and return all Kasa smart devices with current state."""
-        try:
-            data = await asyncio.to_thread(_kasa.get_devices, refresh)
-            return _json(data)
-        except Exception as exc:
-            logger.warning("kasa/devices failed: %s", exc)
-            return _json({"kasa_available": False, "devices": [], "rooms": {}, "total": 0, "on_count": 0, "scenes": []})
-
-    @app.post("/api/kasa/toggle")
-    async def api_kasa_toggle(request: Request) -> JSONResponse:
-        """Toggle a device on or off. Body: {ip_or_alias: str}"""
-        try:
-            body = await request.json()
-            ip_or_alias = body.get("ip_or_alias", "")
-            if not ip_or_alias:
-                return _json({"ok": False, "error": "ip_or_alias required"})
-            result = await asyncio.to_thread(_kasa.toggle_device, ip_or_alias)
-            return _json(result)
-        except Exception as exc:
-            logger.warning("kasa/toggle failed: %s", exc)
-            return _json({"ok": False, "error": str(exc)})
-
-    @app.post("/api/kasa/set")
-    async def api_kasa_set(request: Request) -> JSONResponse:
-        """Set device state/brightness/color_temp. Body: {ip_or_alias, state?, brightness?, color_temp?}"""
-        try:
-            body = await request.json()
-            ip_or_alias = body.get("ip_or_alias", "")
-            if not ip_or_alias:
-                return _json({"ok": False, "error": "ip_or_alias required"})
-            state = body.get("state")          # bool or None
-            brightness = body.get("brightness")  # 1–100 or None
-            color_temp = body.get("color_temp")  # 2500–6500 or None
-            result = await asyncio.to_thread(
-                _kasa.set_device, ip_or_alias,
-                state=state, brightness=brightness, color_temp=color_temp,
-            )
-            return _json(result)
-        except Exception as exc:
-            logger.warning("kasa/set failed: %s", exc)
-            return _json({"ok": False, "error": str(exc)})
-
-    @app.post("/api/kasa/scene")
-    async def api_kasa_scene(request: Request) -> JSONResponse:
-        """Run a scene by ID. Body: {scene_id: str}"""
-        try:
-            body = await request.json()
-            scene_id = body.get("scene_id", "")
-            if not scene_id:
-                return _json({"ok": False, "error": "scene_id required"})
-            result = await asyncio.to_thread(_kasa.run_scene, scene_id)
-            return _json(result)
-        except Exception as exc:
-            logger.warning("kasa/scene failed: %s", exc)
-            return _json({"ok": False, "error": str(exc)})
-
-    @app.get("/api/kasa/scenes")
-    async def api_kasa_scenes() -> JSONResponse:
-        """Return all configured scenes."""
-        try:
-            return _json({"scenes": _kasa.get_scenes()})
-        except Exception as exc:
-            return _json({"scenes": []})
-
-    # Serve HLS segments statically
-    _hls_dir = Path("data/camera_hls")
-    _hls_dir.mkdir(parents=True, exist_ok=True)
-    app.mount("/camera_hls", StaticFiles(directory=str(_hls_dir)), name="camera_hls")
-
-    @app.post("/api/kasa/stream/start")
-    async def api_kasa_stream_start(request: Request) -> JSONResponse:
-        """Start HLS stream for a camera. Body: {ip: str, camera_id: str}"""
-        try:
-            body = await request.json()
-            ip = body.get("ip", "")
-            camera_id = body.get("camera_id", ip.replace(".", "_"))
-            if not ip:
-                return _json({"ok": False, "error": "ip required"})
-            result = await asyncio.to_thread(_kasa.start_hls_stream, ip, camera_id)
-            return _json(result)
-        except Exception as exc:
-            logger.warning("kasa/stream/start failed: %s", exc)
-            return _json({"ok": False, "error": str(exc)})
-
-    @app.post("/api/kasa/stream/stop")
-    async def api_kasa_stream_stop(request: Request) -> JSONResponse:
-        """Stop HLS stream. Body: {camera_id: str}"""
-        try:
-            body = await request.json()
-            camera_id = body.get("camera_id", "")
-            await asyncio.to_thread(_kasa.stop_hls_stream, camera_id)
-            return _json({"ok": True})
-        except Exception as exc:
-            return _json({"ok": False, "error": str(exc)})
 
     # -----------------------------------------------------------------------
     # Epic 10: Family Profiles & Household Modes
@@ -10013,17 +6132,7 @@ self.addEventListener('fetch', e => {
         request: Request,
         background_tasks: BackgroundTasks,
     ) -> JSONResponse:
-        """Trigger TRELLIS (preferred) or Shap-E (fallback) reconstruction.
-
-        Body: {
-          project_id,
-          image_filename?,   # explicit upload filename; auto-detected if omitted
-          prompt?,           # text prompt for Shap-E text-mode fallback
-          pipeline_type?,    # "512" | "1024" | "1024_cascade"  (default "512")
-          texture_size?,     # 512 | 1024 | 2048  (default 1024)
-          seed?,             # int  (default 42)
-        }
-        """
+        """Trigger Shap-E reconstruction (async). Body: {project_id, image_filename?, prompt?}"""
         support = _forge_support_or_503()
         body = await request.json()
         project_id = str(body.get("project_id", "")).strip()
@@ -10037,1367 +6146,38 @@ self.addEventListener('fetch', e => {
 
         image_filename = str(body.get("image_filename", "")).strip()
         prompt = str(body.get("prompt", "")).strip()
-        pipeline_type = str(body.get("pipeline_type", "512")).strip()
-        texture_size = int(body.get("texture_size", 1024))
-        seed = int(body.get("seed", 42))
 
-        # ── Auto-detect best image ──────────────────────────────────────────
-        uploads_dir = await asyncio.to_thread(store.uploads_dir, project_id)
         image_path = ""
-
         if image_filename:
+            uploads_dir = await asyncio.to_thread(store.uploads_dir, project_id)
             candidate = uploads_dir / image_filename
             if candidate.exists():
                 image_path = str(candidate)
 
-        if not image_path:
-            # Prefer 'front' capture frame, then any captured frame, then any photo upload
-            _photo_exts = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".tiff", ".bmp"}
-            sessions = project.get("capture_sessions", [])
-            # Look through all sessions for a front frame first, then any frame
-            for preferred_view in ("front", ""):
-                for session in reversed(sessions):
-                    for frame in (session.get("frames") or []):
-                        if preferred_view and frame.get("view_type") != preferred_view:
-                            continue
-                        fname = frame.get("filename", "")
-                        candidate = uploads_dir / fname
-                        if candidate.exists() and candidate.suffix.lower() in _photo_exts:
-                            image_path = str(candidate)
-                            break
-                    if image_path:
-                        break
-                if image_path:
-                    break
-
-        if not image_path:
-            # Last resort: any photo file in uploads/
-            try:
-                _photo_exts = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".tiff", ".bmp"}
-                for f in sorted(uploads_dir.iterdir()):
-                    if f.suffix.lower() in _photo_exts:
-                        image_path = str(f)
-                        break
-            except Exception:
-                pass
-
-        # ── Launch background reconstruction ───────────────────────────────
-        _trellis_venv = (
-            Path(__file__).parent.parent
-            / "vendor" / "trellis-mac" / ".venv" / "bin" / "python"
-        )
-        use_trellis = _trellis_venv.exists() and bool(image_path)
-
+        # Run Shap-E in background (it can be slow)
         async def _run_reconstruct():
-            if use_trellis:
-                result = await asyncio.to_thread(
-                    support.reconstruct_trellis,
-                    project_id, image_path,
-                    seed, pipeline_type, texture_size,
+            try:
+                await asyncio.to_thread(
+                    support.reconstruct_shape_e, project_id, image_path, prompt
                 )
-                if not result.get("ok"):
-                    # TRELLIS failed — log and fall back to Shap-E
-                    await asyncio.to_thread(
-                        store.log_event, project_id,
-                        "trellis_fallback",
-                        f"TRELLIS failed ({result.get('error','?')}); trying Shap-E",
-                    )
-                    try:
-                        await asyncio.to_thread(
-                            support.reconstruct_shape_e, project_id, image_path, prompt
-                        )
-                    except Exception as _exc:
-                        await asyncio.to_thread(
-                            store.log_event, project_id, "reconstruct_error", str(_exc)
-                        )
-            else:
-                # No TRELLIS venv (or no image) — use Shap-E
-                try:
-                    await asyncio.to_thread(
-                        support.reconstruct_shape_e, project_id, image_path, prompt
-                    )
-                except Exception as _exc:
-                    await asyncio.to_thread(
-                        store.log_event, project_id, "reconstruct_error", str(_exc)
-                    )
+            except Exception as _exc:
+                await asyncio.to_thread(
+                    store.log_event, project_id, "reconstruct_error", str(_exc)
+                )
 
         background_tasks.add_task(_run_reconstruct)
-        method = "trellis" if use_trellis else "shap_e"
         await asyncio.to_thread(
             store.set_status, project_id, "modeling",
-            f"{method} reconstruction started",
+            "Shap-E reconstruction started"
         )
         return _json({
             "ok": True,
             "status": "modeling",
-            "method": method,
-            "image": Path(image_path).name if image_path else None,
-            "pipeline_type": pipeline_type if use_trellis else None,
-            "message": (
-                f"TRELLIS reconstruction started (image: {Path(image_path).name}, pipeline: {pipeline_type})."
-                if use_trellis else
-                "Shap-E reconstruction started in background."
-            ),
+            "message": "Shap-E reconstruction started in background.",
             "project_id": project_id,
         })
 
-    # ── WoW Model Bridge ──────────────────────────────────────────────────────
-
-    @app.get("/api/forge/wow/status")
-    async def api_wow_status() -> JSONResponse:
-        """WoW bridge health — export folder, wow install, blender, model count."""
-        from .wow_forge import get_status as _wow_status
-        return _json(await asyncio.to_thread(_wow_status))
-
-    @app.get("/api/forge/wow/models")
-    async def api_wow_models(search: str = "") -> JSONResponse:
-        """List GLB/OBJ files available in the wow.export watch folder."""
-        from .wow_forge import list_available_models
-        return _json({"models": await asyncio.to_thread(list_available_models, search)})
-
-    @app.post("/api/forge/wow/import")
-    async def api_wow_import(request: Request) -> JSONResponse:
-        """Copy a model from the watch folder into a Forge project."""
-        body = await request.json()
-        filename   = str(body.get("filename",   "")).strip()
-        project_id = str(body.get("project_id", "")).strip()
-        if not filename or not project_id:
-            raise HTTPException(status_code=400, detail="filename and project_id are required")
-        store = _forge_store_or_503()
-        from .wow_forge import import_model_to_forge
-        result = await asyncio.to_thread(import_model_to_forge, filename, store, project_id)
-        if not result.get("ok"):
-            raise HTTPException(status_code=400, detail=result.get("error", "Import failed"))
-        return _json(result)
-
-    @app.get("/api/forge/wow/config")
-    async def api_wow_get_config() -> JSONResponse:
-        from .wow_forge import load_config as _wc
-        return _json(await asyncio.to_thread(_wc))
-
-    @app.post("/api/forge/wow/config")
-    async def api_wow_set_config(request: Request) -> JSONResponse:
-        from .wow_forge import save_config as _wsc
-        body = await request.json()
-        result = await asyncio.to_thread(_wsc, body)
-        return _json({"ok": True, **result})
-
-    # ── Forge Convert — format conversion, repair, scale, WoW tools ───────────
-
-    @app.post("/api/forge/convert/format")
-    async def api_forge_convert_format(
-        project_id: str = Form(...),
-        target_format: str = Form(...),
-        file: UploadFile = File(None),
-        source_filename: str = Form(None),
-    ) -> JSONResponse:
-        """Convert an uploaded or existing project file to a new 3D format."""
-        store = _forge_store_or_503()
-        project = await asyncio.to_thread(store.get_project, project_id)
-        if project is None:
-            raise HTTPException(status_code=404, detail="Forge project not found")
-
-        uploads_dir = await asyncio.to_thread(store.uploads_dir, project_id)
-
-        if file is not None and file.filename:
-            safe_name = re.sub(r"[^A-Za-z0-9._-]+", "-", file.filename).strip("-._") or "upload"
-            src_path = uploads_dir / safe_name
-            src_path.write_bytes(await file.read())
-        elif source_filename:
-            src_path = uploads_dir / Path(source_filename).name
-            if not src_path.exists():
-                raise HTTPException(status_code=404, detail=f"File not found in project: {source_filename}")
-        else:
-            raise HTTPException(status_code=400, detail="Provide a file upload or source_filename")
-
-        from .forge_convert import convert_format as _cf
-        result = await asyncio.to_thread(_cf, src_path, target_format, uploads_dir)
-        if not result.get("ok"):
-            raise HTTPException(status_code=422, detail=result.get("error", "Conversion failed"))
-
-        await asyncio.to_thread(
-            store.add_source_file, project_id, result["filename"], "3d_model", result["size_bytes"]
-        )
-        result["download_url"] = f"/api/forge/projects/{project_id}/file/{result['filename']}"
-        return _json(result)
-
-    @app.post("/api/forge/convert/repair")
-    async def api_forge_convert_repair(request: Request) -> JSONResponse:
-        """Run mesh repair (fix normals, fill holes, fix winding) on a project file."""
-        store = _forge_store_or_503()
-        body = await request.json()
-        project_id      = str(body.get("project_id", "")).strip()
-        source_filename = str(body.get("source_filename", "")).strip()
-        if not project_id or not source_filename:
-            raise HTTPException(status_code=400, detail="project_id and source_filename are required")
-
-        project = await asyncio.to_thread(store.get_project, project_id)
-        if project is None:
-            raise HTTPException(status_code=404, detail="Forge project not found")
-
-        uploads_dir = await asyncio.to_thread(store.uploads_dir, project_id)
-        src_path = uploads_dir / Path(source_filename).name
-        if not src_path.exists():
-            raise HTTPException(status_code=404, detail=f"File not found: {source_filename}")
-
-        from .forge_convert import repair_mesh as _rm
-        result = await asyncio.to_thread(
-            _rm,
-            src_path,
-            uploads_dir,
-            fix_normals=bool(body.get("fix_normals", True)),
-            fill_holes=bool(body.get("fill_holes", True)),
-            fix_winding=bool(body.get("fix_winding", True)),
-        )
-        if not result.get("ok"):
-            raise HTTPException(status_code=422, detail=result.get("error", "Repair failed"))
-
-        await asyncio.to_thread(
-            store.add_source_file, project_id, result["filename"], "3d_model", result["size_bytes"]
-        )
-        result["download_url"] = f"/api/forge/projects/{project_id}/file/{result['filename']}"
-        return _json(result)
-
-    @app.post("/api/forge/convert/scale")
-    async def api_forge_convert_scale(request: Request) -> JSONResponse:
-        """Rescale, normalize bounding box, or center a project mesh."""
-        store = _forge_store_or_503()
-        body = await request.json()
-        project_id      = str(body.get("project_id", "")).strip()
-        source_filename = str(body.get("source_filename", "")).strip()
-        operation       = str(body.get("operation", "rescale")).strip()
-        if not project_id or not source_filename:
-            raise HTTPException(status_code=400, detail="project_id and source_filename are required")
-
-        project = await asyncio.to_thread(store.get_project, project_id)
-        if project is None:
-            raise HTTPException(status_code=404, detail="Forge project not found")
-
-        uploads_dir = await asyncio.to_thread(store.uploads_dir, project_id)
-        src_path = uploads_dir / Path(source_filename).name
-        if not src_path.exists():
-            raise HTTPException(status_code=404, detail=f"File not found: {source_filename}")
-
-        from .forge_convert import scale_mesh as _sm
-        result = await asyncio.to_thread(
-            _sm,
-            src_path,
-            uploads_dir,
-            operation=operation,
-            target_size=float(body.get("target_size", 100.0)),
-            target_unit=str(body.get("target_unit", "mm")),
-            current_unit=str(body.get("current_unit", "mm")),
-        )
-        if not result.get("ok"):
-            raise HTTPException(status_code=422, detail=result.get("error", "Scale operation failed"))
-
-        await asyncio.to_thread(
-            store.add_source_file, project_id, result["filename"], "3d_model", result["size_bytes"]
-        )
-        result["download_url"] = f"/api/forge/projects/{project_id}/file/{result['filename']}"
-        return _json(result)
-
-    @app.get("/api/forge/convert/blender-check")
-    async def api_forge_convert_blender_check() -> JSONResponse:
-        """Check whether Blender and the WoW Blender Studio addon are installed."""
-        from .forge_convert import check_blender_setup as _cbs
-        result = await asyncio.to_thread(_cbs)
-        return _json(result)
-
     # ── End Forge ──────────────────────────────────────────────────────────────
-
-    # ==========================================================================
-    # PHASE 6 — Risk Equations (Evidence-based clinical calculators)
-    # ==========================================================================
-
-    @app.get("/api/health/risk/profile")
-    async def api_risk_profile() -> JSONResponse:
-        """Full composite risk profile: ASCVD, CKD trajectory, HRV, bariatric modifier."""
-        try:
-            from .risk_equations import run_full_risk_profile
-        except ImportError:
-            from risk_equations import run_full_risk_profile
-        return _json(await asyncio.to_thread(run_full_risk_profile))
-
-    @app.post("/api/health/risk/ascvd")
-    async def api_risk_ascvd(request: Request) -> JSONResponse:
-        """Calculate 10-year ASCVD risk. Body: {age, sex, race, total_cholesterol, hdl, systolic_bp, bp_treated, diabetes, smoker}"""
-        try:
-            from .risk_equations import calculate_ascvd_10yr, ASCVDInput
-        except ImportError:
-            from risk_equations import calculate_ascvd_10yr, ASCVDInput
-        import dataclasses
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        inputs = ASCVDInput(
-            age=int(body.get("age", 52)),
-            sex=body.get("sex", "male"),
-            race=body.get("race", "white"),
-            total_cholesterol_mgdl=float(body.get("total_cholesterol", 217)),
-            hdl_cholesterol_mgdl=float(body.get("hdl", 39)),
-            systolic_bp_mmhg=float(body.get("systolic_bp", 140)),
-            bp_treated=bool(body.get("bp_treated", True)),
-            diabetes=bool(body.get("diabetes", True)),
-            smoker=bool(body.get("smoker", False)),
-        )
-        result = await asyncio.to_thread(calculate_ascvd_10yr, inputs)
-        return _json(dataclasses.asdict(result))
-
-    @app.get("/api/health/risk/egfr")
-    async def api_risk_egfr() -> JSONResponse:
-        """Calculate eGFR using CKD-EPI 2021 from stored creatinine."""
-        try:
-            from .risk_equations import calculate_egfr_ckd_epi_2021, eGFRInput
-        except ImportError:
-            from risk_equations import calculate_egfr_ckd_epi_2021, eGFRInput
-        import dataclasses
-        # Chris's known creatinine May 2026
-        inputs = eGFRInput(serum_creatinine_mgdl=1.03, age=52, sex="male")
-        result = await asyncio.to_thread(calculate_egfr_ckd_epi_2021, inputs)
-        return _json(dataclasses.asdict(result))
-
-    @app.get("/api/health/risk/ckd-trajectory")
-    async def api_risk_ckd_trajectory() -> JSONResponse:
-        """Project Chris's eGFR decline trajectory over 5 years."""
-        try:
-            from .risk_equations import calculate_ckd_trajectory, CKDTrajectoryInput
-        except ImportError:
-            from risk_equations import calculate_ckd_trajectory, CKDTrajectoryInput
-        import dataclasses
-        inputs = CKDTrajectoryInput(
-            current_egfr=87.0, age=52, diabetes=True, hypertension=True,
-            a1c_pct=7.3, systolic_bp_mmhg=140.0, on_ace_arb=True, on_sglt2i=False,
-        )
-        result = await asyncio.to_thread(calculate_ckd_trajectory, inputs)
-        return _json(dataclasses.asdict(result))
-
-    @app.get("/api/health/risk/hrv")
-    async def api_risk_hrv() -> JSONResponse:
-        """Stratify cardiovascular mortality risk from current HRV."""
-        try:
-            from .risk_equations import calculate_hrv_risk, HRVRiskInput
-        except ImportError:
-            from risk_equations import calculate_hrv_risk, HRVRiskInput
-        import dataclasses
-        inputs = HRVRiskInput(sdnn_ms=45.0, age=52)
-        result = await asyncio.to_thread(calculate_hrv_risk, inputs)
-        return _json(dataclasses.asdict(result))
-
-    # ==========================================================================
-    # PHASE 6 — Digital Twin
-    # ==========================================================================
-
-    @app.get("/api/health/twin/state")
-    async def api_twin_state() -> JSONResponse:
-        """Return the full digital twin state (calibrated trajectories, predictions)."""
-        try:
-            from .digital_twin import get_twin_state
-        except ImportError:
-            from digital_twin import get_twin_state
-        return _json(await asyncio.to_thread(get_twin_state))
-
-    @app.get("/api/health/twin/project")
-    async def api_twin_project(months: int = 12) -> JSONResponse:
-        """Project all metrics forward N months. Returns list of TwinProjection objects."""
-        import dataclasses
-        try:
-            from .digital_twin import run_twin_projection
-        except ImportError:
-            from digital_twin import run_twin_projection
-        projections = await asyncio.to_thread(run_twin_projection, months)
-        out = [dataclasses.asdict(p) if dataclasses.is_dataclass(p) else p for p in projections]
-        return _json({"projections": out, "timeframe_months": months})
-
-    @app.post("/api/health/twin/simulate")
-    async def api_twin_simulate(request: Request) -> JSONResponse:
-        """Simulate interventions and return before/after projections. Body: {interventions: [str], timeframe_months?: int}"""
-        import dataclasses
-        try:
-            from .digital_twin import simulate_interventions
-        except ImportError:
-            from digital_twin import simulate_interventions
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        interventions = body.get("interventions", [])
-        months = int(body.get("timeframe_months", 12))
-        result = await asyncio.to_thread(simulate_interventions, interventions, months)
-        def _normalize(obj):
-            if dataclasses.is_dataclass(obj):
-                return dataclasses.asdict(obj)
-            if isinstance(obj, list):
-                return [_normalize(i) for i in obj]
-            if isinstance(obj, dict):
-                return {k: _normalize(v) for k, v in obj.items()}
-            return obj
-        return _json(_normalize(result))
-
-    @app.get("/api/health/twin/ldl-showdown")
-    async def api_twin_ldl_showdown() -> JSONResponse:
-        """Run the 4-strategy LDL showdown: status quo, ezetimibe, ezetimibe+bempedoic, PCSK9i."""
-        try:
-            from .digital_twin import run_ldl_showdown
-        except ImportError:
-            from digital_twin import run_ldl_showdown
-        return _json(await asyncio.to_thread(run_ldl_showdown))
-
-    @app.get("/api/health/twin/calibrate")
-    async def api_twin_calibrate() -> JSONResponse:
-        """Re-calibrate the digital twin from latest data. Returns calibration summary."""
-        try:
-            from .twin_calibrator import run_calibration
-        except ImportError:
-            from twin_calibrator import run_calibration
-        return _json(await asyncio.to_thread(run_calibration))
-
-    @app.get("/api/health/twin/predictions")
-    async def api_twin_predictions() -> JSONResponse:
-        """Return all predictions and their accuracy scores."""
-        try:
-            from .digital_twin import score_predictions
-        except ImportError:
-            from digital_twin import score_predictions
-        return _json({"predictions": await asyncio.to_thread(score_predictions)})
-
-    @app.post("/api/health/twin/predict")
-    async def api_twin_predict(request: Request) -> JSONResponse:
-        """Record a new prediction checkpoint. Body: {metric: str, months: int, interventions?: [str]}"""
-        import dataclasses
-        try:
-            from .digital_twin import run_twin_projection, record_prediction
-        except ImportError:
-            from digital_twin import run_twin_projection, record_prediction
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        metric = body.get("metric", "")
-        months = int(body.get("months", 6))
-        interventions = body.get("interventions", [])
-        projections = await asyncio.to_thread(run_twin_projection, months)
-        target = next((p for p in projections if (dataclasses.asdict(p) if dataclasses.is_dataclass(p) else p).get("metric") == metric), None)
-        if not target:
-            return JSONResponse({"error": f"Metric '{metric}' not found"}, status_code=404)
-        pred_id = await asyncio.to_thread(record_prediction, target, interventions)
-        return _json({"prediction_id": pred_id, "metric": metric, "months": months})
-
-    # ==========================================================================
-    # Health POST routes — registered BEFORE the legacy catch-all so they
-    # win route matching (Starlette matches in registration order).
-    # ==========================================================================
-
-    # Phase 4 — Symptom Triage
-    @app.post("/api/health/symptom/triage")
-    async def _pre_api_symptom_triage(request: Request) -> JSONResponse:
-        """Full symptom triage: Oracle gate + specialist routing + structured report."""
-        try:
-            from .symptom_triage import run_triage
-        except ImportError:
-            from symptom_triage import run_triage
-        try:
-            body = await request.json()
-        except Exception:
-            body = {}
-        result = await run_triage(
-            symptoms=str(body.get("symptoms", "")),
-            duration=str(body.get("duration", "")),
-            severity=body.get("severity"),
-            associated_symptoms=str(body.get("associated_symptoms", "")),
-            context=str(body.get("context", "")),
-        )
-        return _json(result)
-
-    # Phase 4 — Quarterly Review
-    @app.post("/api/health/quarterly/review")
-    async def _pre_api_quarterly_review(request: Request) -> JSONResponse:
-        """Run full 90-day quarterly review (LLM-intensive). May take 30-60s."""
-        try:
-            from .quarterly_review import run_quarterly_review
-        except ImportError:
-            from quarterly_review import run_quarterly_review
-        try:
-            body = await request.json()
-        except Exception:
-            body = {}
-        result = await run_quarterly_review(
-            review_period_days=int(body.get("review_period_days", 90)),
-            major_life_context=str(body.get("major_life_context", "")),
-            additional_context=str(body.get("additional_context", "")),
-        )
-        return _json(result)
-
-    # Phase 4 — Quarterly Objectives (POST)
-    @app.post("/api/health/quarterly/objectives")
-    async def _pre_api_quarterly_objectives_set(request: Request) -> JSONResponse:
-        """Set new 90-day objectives. Body: {objectives: [...]}"""
-        try:
-            from .quarterly_review import set_objectives
-        except ImportError:
-            from quarterly_review import set_objectives
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        objectives = body.get("objectives", [])
-        if not isinstance(objectives, list):
-            return JSONResponse({"error": "objectives must be a list"}, status_code=400)
-        result = await set_objectives(objectives)
-        status_code = 201 if result.get("ok") else 400
-        return JSONResponse(result, status_code=status_code)
-
-    # Phase 5A — Data Import Pipeline (POST routes)
-    @app.post("/api/health/import/labs")
-    async def _pre_api_import_labs(request: Request) -> JSONResponse:
-        """Import labs from a CSV file path. Body: {filepath: string}"""
-        try:
-            from .health_importer import import_labs_csv
-        except ImportError:
-            from health_importer import import_labs_csv
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        filepath = body.get("filepath", "")
-        if not filepath:
-            return JSONResponse({"error": "filepath required"}, status_code=400)
-        return _json(await asyncio.to_thread(import_labs_csv, filepath))
-
-    @app.post("/api/health/import/vitals")
-    async def _pre_api_import_vitals(request: Request) -> JSONResponse:
-        """Import vitals from a CSV file path. Body: {filepath: string}"""
-        try:
-            from .health_importer import import_vitals_csv
-        except ImportError:
-            from health_importer import import_vitals_csv
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        filepath = body.get("filepath", "")
-        if not filepath:
-            return JSONResponse({"error": "filepath required"}, status_code=400)
-        return _json(await asyncio.to_thread(import_vitals_csv, filepath))
-
-    @app.post("/api/health/import/cgm")
-    async def _pre_api_import_cgm(request: Request) -> JSONResponse:
-        """Import CGM data from Dexcom CSV export. Body: {filepath: string, source?: string}"""
-        try:
-            from .health_importer import import_cgm_csv
-        except ImportError:
-            from health_importer import import_cgm_csv
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        filepath = body.get("filepath", "")
-        source = body.get("source", "dexcom")
-        if not filepath:
-            return JSONResponse({"error": "filepath required"}, status_code=400)
-        return _json(await asyncio.to_thread(import_cgm_csv, filepath, source))
-
-    @app.post("/api/health/import/garmin")
-    async def _pre_api_import_garmin(request: Request) -> JSONResponse:
-        """Import Garmin Connect daily CSV export. Body: {filepath: string}"""
-        try:
-            from .health_importer import import_garmin_csv
-        except ImportError:
-            from health_importer import import_garmin_csv
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        filepath = body.get("filepath", "")
-        if not filepath:
-            return JSONResponse({"error": "filepath required"}, status_code=400)
-        return _json(await asyncio.to_thread(import_garmin_csv, filepath))
-
-    @app.post("/api/health/import/apple-health")
-    async def _pre_api_import_apple_health(request: Request) -> JSONResponse:
-        """Import Apple Health export.xml. Body: {filepath: string}"""
-        try:
-            from .health_importer import import_apple_health_xml
-        except ImportError:
-            from health_importer import import_apple_health_xml
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        filepath = body.get("filepath", "")
-        if not filepath:
-            return JSONResponse({"error": "filepath required"}, status_code=400)
-        return _json(await asyncio.to_thread(import_apple_health_xml, filepath))
-
-    # Phase 5D — Scenario Modeling Engine (POST routes)
-    @app.post("/api/health/scenario/run")
-    async def _pre_api_scenario_run(request: Request) -> JSONResponse:
-        """Run a custom what-if scenario. Body: {scenario_name, changes: [{change_type, description, parameters}], timeframe_months?, notes?}"""
-        import dataclasses
-        try:
-            from .scenario_engine import ScenarioInput, ScenarioChange, run_scenario_llm, save_scenario
-        except ImportError:
-            from scenario_engine import ScenarioInput, ScenarioChange, run_scenario_llm, save_scenario
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        changes = [ScenarioChange(**c) for c in body.get("changes", [])]
-        scenario = ScenarioInput(
-            scenario_name=body.get("scenario_name", "Custom scenario"),
-            changes=changes,
-            timeframe_months=body.get("timeframe_months", 12),
-            notes=body.get("notes", ""),
-        )
-        result = await run_scenario_llm(scenario)
-        await asyncio.to_thread(save_scenario, result)
-        out = dataclasses.asdict(result) if dataclasses.is_dataclass(result) else (result if isinstance(result, dict) else result.__dict__)
-        return _json(out)
-
-    @app.post("/api/health/scenario/quick")
-    async def _pre_api_scenario_quick(request: Request) -> JSONResponse:
-        """Run a pre-built quick scenario. Body: {change_type: string, timeframe_months?: int}"""
-        import dataclasses
-        try:
-            from .scenario_engine import run_quick_scenario, save_scenario
-        except ImportError:
-            from scenario_engine import run_quick_scenario, save_scenario
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        change_type = body.get("change_type", "")
-        if not change_type:
-            return JSONResponse({"error": "change_type required"}, status_code=400)
-        timeframe_months = body.get("timeframe_months", 12)
-        result = await run_quick_scenario(change_type, timeframe_months=timeframe_months)
-        await asyncio.to_thread(save_scenario, result)
-        out = dataclasses.asdict(result) if dataclasses.is_dataclass(result) else (result if isinstance(result, dict) else result.__dict__)
-        return _json(out)
-
-    @app.post("/api/health/scenario/compare")
-    async def _pre_api_scenario_compare(request: Request) -> JSONResponse:
-        """Compare multiple scenarios side by side. Body: {scenarios: [{scenario_name, changes, timeframe_months}]}"""
-        import dataclasses
-        try:
-            from .scenario_engine import ScenarioInput, ScenarioChange, compare_scenarios
-        except ImportError:
-            from scenario_engine import ScenarioInput, ScenarioChange, compare_scenarios
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        scenarios = []
-        for s in body.get("scenarios", []):
-            changes = [ScenarioChange(**c) for c in s.get("changes", [])]
-            scenarios.append(ScenarioInput(
-                scenario_name=s.get("scenario_name", "Scenario"),
-                changes=changes,
-                timeframe_months=s.get("timeframe_months", 12),
-            ))
-        result = await compare_scenarios(scenarios)
-        # compare_scenarios returns a plain dict, but normalize any nested dataclasses
-        def _normalize(obj):
-            if dataclasses.is_dataclass(obj):
-                return dataclasses.asdict(obj)
-            if isinstance(obj, list):
-                return [_normalize(i) for i in obj]
-            if isinstance(obj, dict):
-                return {k: _normalize(v) for k, v in obj.items()}
-            return obj
-        return _json(_normalize(result))
-
-    # Phase 5 — Council Refresh (POST) — ensure it also wins over catch-all
-    @app.post("/api/health/council/refresh")
-    async def _pre_api_health_council_refresh(request: Request) -> JSONResponse:
-        """Re-run the full 19-agent Longevity Council and return fresh results."""
-        try:
-            from .longevity_council import run_council
-        except ImportError:
-            from longevity_council import run_council
-        return _json(await run_council())
-
-    # ==========================================================================
-    # Phase 7A — Autonomous Daily Steward (health_scheduler.py)
-    # ==========================================================================
-
-    @app.get("/api/health/schedule/status")
-    async def _api_schedule_status() -> JSONResponse:
-        """Return schedule config, last_runs, and computed next_runs."""
-        try:
-            from .health_scheduler import get_schedule_status
-        except ImportError:
-            from health_scheduler import get_schedule_status
-        return _json(await asyncio.to_thread(get_schedule_status))
-
-    @app.get("/api/health/schedule/morning-brief")
-    async def _api_get_morning_brief() -> JSONResponse:
-        """Return cached morning brief (stale=True if >12h old)."""
-        try:
-            from .health_scheduler import get_morning_brief
-        except ImportError:
-            from health_scheduler import get_morning_brief
-        return _json(await asyncio.to_thread(get_morning_brief))
-
-    @app.post("/api/health/schedule/morning-brief")
-    async def _pre_api_run_morning_brief(request: Request) -> JSONResponse:
-        """Run full morning brief pipeline and return result."""
-        try:
-            from .health_scheduler import run_morning_brief
-        except ImportError:
-            from health_scheduler import run_morning_brief
-        return _json(await run_morning_brief())
-
-    @app.post("/api/health/schedule/council")
-    async def _pre_api_run_weekly_council(request: Request) -> JSONResponse:
-        """Run the full 19-agent weekly council on demand."""
-        try:
-            from .health_scheduler import run_weekly_council
-        except ImportError:
-            from health_scheduler import run_weekly_council
-        return _json(await run_weekly_council())
-
-    @app.post("/api/health/schedule/closed-loop")
-    async def _pre_api_closed_loop_update(request: Request) -> JSONResponse:
-        """Trigger closed-loop update (recalibrate twin, re-run drift, score predictions)."""
-        try:
-            from .health_scheduler import run_closed_loop_update
-        except ImportError:
-            from health_scheduler import run_closed_loop_update
-        try:
-            body = await request.json()
-        except Exception:
-            body = {}
-        trigger = str(body.get("trigger", "manual"))
-        data = body.get("data", {})
-        return _json(await run_closed_loop_update(trigger=trigger, data=data))
-
-    @app.post("/api/health/schedule/score-predictions")
-    async def _pre_api_score_predictions(request: Request) -> JSONResponse:
-        """Score overdue twin predictions against current health state."""
-        try:
-            from .health_scheduler import run_prediction_scorer
-        except ImportError:
-            from health_scheduler import run_prediction_scorer
-        return _json(await run_prediction_scorer())
-
-    @app.get("/api/health/schedule/appointment-alerts")
-    async def _api_appointment_alerts() -> JSONResponse:
-        """Check for upcoming appointments within 7 days (urgent=True within 72h)."""
-        try:
-            from .health_scheduler import check_pre_appointment_alerts
-        except ImportError:
-            from health_scheduler import check_pre_appointment_alerts
-        return _json(await asyncio.to_thread(check_pre_appointment_alerts))
-
-    # ==========================================================================
-    # Phase 7B — Nutrition & Metabolic Intelligence (nutrition_engine.py)
-    # ==========================================================================
-
-    @app.get("/api/health/nutrition/protein-target")
-    async def _api_nutrition_protein_target() -> JSONResponse:
-        """Return post-bariatric protein target and current intake gap."""
-        try:
-            from .nutrition_engine import get_protein_target
-        except ImportError:
-            from nutrition_engine import get_protein_target
-        return _json(await asyncio.to_thread(get_protein_target))
-
-    @app.get("/api/health/nutrition/micronutrients")
-    async def _api_nutrition_micronutrients() -> JSONResponse:
-        """Return post-bariatric micronutrient assessment (B12, iron, Ca, Vit D)."""
-        try:
-            from .nutrition_engine import assess_bariatric_micronutrients
-            from dataclasses import asdict
-        except ImportError:
-            from nutrition_engine import assess_bariatric_micronutrients
-            from dataclasses import asdict
-        result = await asyncio.to_thread(assess_bariatric_micronutrients)
-        return _json(asdict(result) if hasattr(result, "__dataclass_fields__") else result)
-
-    @app.get("/api/health/nutrition/glp1-timing")
-    async def _api_nutrition_glp1_timing() -> JSONResponse:
-        """Return semaglutide injection day meal timing windows and food guidance."""
-        try:
-            from .nutrition_engine import get_glp1_meal_timing
-            from dataclasses import asdict
-        except ImportError:
-            from nutrition_engine import get_glp1_meal_timing
-            from dataclasses import asdict
-        result = await asyncio.to_thread(get_glp1_meal_timing)
-        return _json(asdict(result) if hasattr(result, "__dataclass_fields__") else result)
-
-    @app.get("/api/health/nutrition/meal-plan")
-    async def _api_nutrition_meal_plan(days: int = 7) -> JSONResponse:
-        """Return N-day post-bariatric + GLP-1 meal plan framework."""
-        try:
-            from .nutrition_engine import get_post_bariatric_meal_plan
-        except ImportError:
-            from nutrition_engine import get_post_bariatric_meal_plan
-        return _json(await asyncio.to_thread(get_post_bariatric_meal_plan, days))
-
-    @app.get("/api/health/nutrition/7day-summary")
-    async def _api_nutrition_7day_summary() -> JSONResponse:
-        """Return 7-day nutrition log summary with protein adequacy stats."""
-        try:
-            from .nutrition_engine import get_nutrition_7day_summary
-        except ImportError:
-            from nutrition_engine import get_nutrition_7day_summary
-        return _json(await asyncio.to_thread(get_nutrition_7day_summary))
-
-    @app.post("/api/health/nutrition/log-meal")
-    async def _pre_api_nutrition_log_meal(request: Request) -> JSONResponse:
-        """Log a meal entry to the nutrition JSONL log."""
-        try:
-            from .nutrition_engine import log_meal
-        except ImportError:
-            from nutrition_engine import log_meal
-        try:
-            body = await request.json()
-        except Exception:
-            body = {}
-        result = await asyncio.to_thread(
-            log_meal,
-            meal_name=str(body.get("meal_name", "")),
-            protein_g=float(body.get("protein_g", 0)),
-            carbs_g=body.get("carbs_g"),
-            fat_g=body.get("fat_g"),
-            calories=body.get("calories"),
-            notes=body.get("notes", ""),
-        )
-        return _json(result)
-
-    @app.get("/api/health/nutrition/recommendations")
-    async def _api_nutrition_recommendations() -> JSONResponse:
-        """Return prioritized nutrition recommendations based on current status."""
-        try:
-            from .nutrition_engine import get_nutrition_recommendations
-        except ImportError:
-            from nutrition_engine import get_nutrition_recommendations
-        return _json({"recommendations": await asyncio.to_thread(get_nutrition_recommendations)})
-
-    # ==========================================================================
-    # Phase 7C — Sleep Architecture & OSA Intelligence (sleep_intelligence.py)
-    # ==========================================================================
-
-    @app.get("/api/health/sleep/osa-risk")
-    async def _api_sleep_osa_risk() -> JSONResponse:
-        """Return STOP-BANG extended OSA risk score with patient-specific factors."""
-        try:
-            from .sleep_intelligence import calculate_osa_risk_score
-            from dataclasses import asdict
-        except ImportError:
-            from sleep_intelligence import calculate_osa_risk_score
-            from dataclasses import asdict
-        result = await asyncio.to_thread(calculate_osa_risk_score)
-        return _json(asdict(result) if hasattr(result, "__dataclass_fields__") else result)
-
-    @app.get("/api/health/sleep/cpap-case")
-    async def _api_sleep_cpap_case() -> JSONResponse:
-        """Return quantified CPAP readiness case with CVD, BP, and HRV projections."""
-        try:
-            from .sleep_intelligence import build_cpap_readiness_case
-            from dataclasses import asdict
-        except ImportError:
-            from sleep_intelligence import build_cpap_readiness_case
-            from dataclasses import asdict
-        result = await asyncio.to_thread(build_cpap_readiness_case)
-        return _json(asdict(result) if hasattr(result, "__dataclass_fields__") else result)
-
-    @app.get("/api/health/sleep/debt")
-    async def _api_sleep_debt() -> JSONResponse:
-        """Return sleep debt analysis and quality assessment given OSA context."""
-        try:
-            from .sleep_intelligence import analyze_sleep_debt
-            from dataclasses import asdict
-        except ImportError:
-            from sleep_intelligence import analyze_sleep_debt
-            from dataclasses import asdict
-        result = await asyncio.to_thread(analyze_sleep_debt)
-        return _json(asdict(result) if hasattr(result, "__dataclass_fields__") else result)
-
-    @app.get("/api/health/sleep/referral")
-    async def _api_sleep_referral() -> JSONResponse:
-        """Return clinical sleep medicine referral document."""
-        try:
-            from .sleep_intelligence import generate_sleep_medicine_referral
-        except ImportError:
-            from sleep_intelligence import generate_sleep_medicine_referral
-        return _json(await asyncio.to_thread(generate_sleep_medicine_referral))
-
-    @app.get("/api/health/sleep/cpap-effect")
-    async def _api_sleep_cpap_effect() -> JSONResponse:
-        """Return 3-month CPAP effect projection on BP, HRV, A1c, and CVD risk."""
-        try:
-            from .sleep_intelligence import assess_cpap_effect_on_metrics
-            from dataclasses import asdict
-        except ImportError:
-            from sleep_intelligence import assess_cpap_effect_on_metrics
-            from dataclasses import asdict
-        result = await asyncio.to_thread(assess_cpap_effect_on_metrics)
-        return _json(asdict(result) if hasattr(result, "__dataclass_fields__") else result)
-
-    # ==========================================================================
-    # Phase 7D — Appointment Intelligence (appointment_engine.py)
-    # ==========================================================================
-
-    @app.get("/api/health/appointments")
-    async def _api_get_appointments() -> JSONResponse:
-        """Return all stored appointments."""
-        try:
-            from .appointment_engine import get_appointments
-            from dataclasses import asdict
-        except ImportError:
-            from appointment_engine import get_appointments
-            from dataclasses import asdict
-        apts = await asyncio.to_thread(get_appointments)
-        return _json([asdict(a) for a in apts])
-
-    @app.get("/api/health/appointments/upcoming")
-    async def _api_get_upcoming_appointments(days_ahead: int = 30) -> JSONResponse:
-        """Return appointments within the next N days with urgency tags."""
-        try:
-            from .appointment_engine import get_upcoming_appointments
-        except ImportError:
-            from appointment_engine import get_upcoming_appointments
-        return _json(await asyncio.to_thread(get_upcoming_appointments, days_ahead))
-
-    @app.get("/api/health/appointments/history")
-    async def _api_get_appointment_history() -> JSONResponse:
-        """Return past appointments that have recorded outcomes."""
-        try:
-            from .appointment_engine import get_appointment_history
-        except ImportError:
-            from appointment_engine import get_appointment_history
-        return _json(await asyncio.to_thread(get_appointment_history))
-
-    @app.get("/api/health/appointments/{appointment_id}/prep")
-    async def _api_get_visit_prep_packet(appointment_id: str) -> JSONResponse:
-        """Return structured visit prep packet for the given appointment."""
-        try:
-            from .appointment_engine import generate_visit_prep_packet
-            from dataclasses import asdict
-        except ImportError:
-            from appointment_engine import generate_visit_prep_packet
-            from dataclasses import asdict
-        try:
-            packet = await asyncio.to_thread(generate_visit_prep_packet, appointment_id)
-            return _json(asdict(packet))
-        except ValueError as exc:
-            return JSONResponse({"error": str(exc)}, status_code=404)
-
-    @app.get("/api/health/appointments/{appointment_id}/prep/text")
-    async def _api_get_visit_prep_text(appointment_id: str) -> JSONResponse:
-        """Return print-ready plain-text visit prep packet."""
-        try:
-            from .appointment_engine import generate_visit_prep_packet, format_visit_prep_as_text
-        except ImportError:
-            from appointment_engine import generate_visit_prep_packet, format_visit_prep_as_text
-        try:
-            packet = await asyncio.to_thread(generate_visit_prep_packet, appointment_id)
-            text = await asyncio.to_thread(format_visit_prep_as_text, packet)
-            return _json({"appointment_id": appointment_id, "text": text})
-        except ValueError as exc:
-            return JSONResponse({"error": str(exc)}, status_code=404)
-
-    @app.post("/api/health/appointments/{appointment_id}/outcome")
-    async def _pre_api_record_appointment_outcome(
-        appointment_id: str, request: Request
-    ) -> JSONResponse:
-        """Record the outcome of a completed appointment visit."""
-        try:
-            from .appointment_engine import record_appointment_outcome, AppointmentOutcome
-        except ImportError:
-            from appointment_engine import record_appointment_outcome, AppointmentOutcome
-        try:
-            body = await request.json()
-        except Exception:
-            body = {}
-        outcome = AppointmentOutcome(
-            appointment_id=appointment_id,
-            visit_date=str(body.get("visit_date", "")),
-            provider=str(body.get("provider", "")),
-            summary=str(body.get("summary", "")),
-            medications_changed=body.get("medications_changed", []),
-            labs_ordered=body.get("labs_ordered", []),
-            referrals_made=body.get("referrals_made", []),
-            follow_up_date=body.get("follow_up_date"),
-            notes=str(body.get("notes", "")),
-        )
-        return _json(await asyncio.to_thread(record_appointment_outcome, appointment_id, outcome))
-
-    @app.get("/api/health/appointments/wenk-prep")
-    async def _api_wenk_prep_packet() -> JSONResponse:
-        """Shortcut: return the Dr. Wenk Nov 13, 2026 visit prep packet."""
-        try:
-            from .appointment_engine import get_appointments, generate_visit_prep_packet
-            from dataclasses import asdict
-        except ImportError:
-            from appointment_engine import get_appointments, generate_visit_prep_packet
-            from dataclasses import asdict
-        apts = await asyncio.to_thread(get_appointments)
-        wenk_apt = next((a for a in apts if "wenk" in a.provider.lower()), None)
-        if wenk_apt is None:
-            return JSONResponse({"error": "Dr. Wenk appointment not found"}, status_code=404)
-        packet = await asyncio.to_thread(generate_visit_prep_packet, wenk_apt.id)
-        return _json(asdict(packet))
-
-    @app.get("/api/health/appointments/wenk-prep/text")
-    async def _api_wenk_prep_text() -> JSONResponse:
-        """Shortcut: return Dr. Wenk prep packet as print-ready plain text."""
-        try:
-            from .appointment_engine import get_appointments, generate_visit_prep_packet, format_visit_prep_as_text
-        except ImportError:
-            from appointment_engine import get_appointments, generate_visit_prep_packet, format_visit_prep_as_text
-        apts = await asyncio.to_thread(get_appointments)
-        wenk_apt = next((a for a in apts if "wenk" in a.provider.lower()), None)
-        if wenk_apt is None:
-            return JSONResponse({"error": "Dr. Wenk appointment not found"}, status_code=404)
-        packet = await asyncio.to_thread(generate_visit_prep_packet, wenk_apt.id)
-        text = await asyncio.to_thread(format_visit_prep_as_text, packet)
-        return _json({"text": text})
-
-    # ==========================================================================
-    # Phase 7E — Longevity Calculator (longevity_calculator.py)
-    # ==========================================================================
-
-    @app.get("/api/health/longevity/estimate")
-    async def _api_longevity_estimate() -> JSONResponse:
-        """Return full longevity estimate with risk adjustments and projections."""
-        from dataclasses import asdict
-        try:
-            try:
-                from .longevity_calculator import calculate_life_expectancy
-            except ImportError:
-                from longevity_calculator import calculate_life_expectancy
-            result = await asyncio.to_thread(calculate_life_expectancy)
-            return _json(asdict(result))
-        except Exception as exc:
-            return JSONResponse({"error": str(exc)}, status_code=500)
-
-    @app.get("/api/health/longevity/trajectory")
-    async def _api_longevity_trajectory() -> JSONResponse:
-        """Return historical life-expectancy trajectory data points."""
-        try:
-            try:
-                from .longevity_calculator import get_trajectory_history
-            except ImportError:
-                from longevity_calculator import get_trajectory_history
-            return _json(await asyncio.to_thread(get_trajectory_history))
-        except Exception as exc:
-            return JSONResponse({"error": str(exc)}, status_code=500)
-
-    @app.get("/api/health/longevity/card")
-    async def _api_longevity_card():
-        """Return self-contained HTML longevity projection card with SVG chart."""
-        from fastapi.responses import HTMLResponse
-        try:
-            try:
-                from .longevity_calculator import get_longevity_card_html
-            except ImportError:
-                from longevity_calculator import get_longevity_card_html
-            html = await asyncio.to_thread(get_longevity_card_html)
-            return HTMLResponse(content=html)
-        except Exception as exc:
-            return HTMLResponse(content=f"<pre>Error: {exc}</pre>", status_code=500)
-
-    # ── Sam Wilson — Health & Fitness Coach ───────────────────────────
-
-    @app.get("/api/health/sam/daily")
-    async def api_sam_daily() -> JSONResponse:
-        """Get Sam Wilson's daily health protocol for today."""
-        from .sam_wilson import generate_daily_protocol, get_streak
-        try:
-            from .health_agent import get_health_metrics as _metrics
-            metrics = await asyncio.to_thread(_metrics)
-        except Exception:
-            metrics = {}
-        try:
-            protocol = await generate_daily_protocol(runtime.openai_client, metrics)
-            streak = await asyncio.to_thread(get_streak)
-            return _json({"protocol": protocol, "streak": streak})
-        except Exception as exc:
-            return _json({"error": str(exc)}, status_code=500)
-
-    @app.post("/api/health/sam/checkin")
-    async def api_sam_checkin(request: Request) -> JSONResponse:
-        """Log today's completed protocol items."""
-        from .sam_wilson import log_adherence, get_streak
-        data = await request.json()
-        items = data.get("completed", [])
-        notes = data.get("notes", "")
-        await asyncio.to_thread(log_adherence, items, notes)
-        streak = await asyncio.to_thread(get_streak)
-        return _json({"ok": True, "streak": streak})
-
-    @app.post("/api/health/sam/chat")
-    async def api_sam_chat(request: Request) -> JSONResponse:
-        """Chat with Sam Wilson about health and fitness.
-        Supports mode: 'chat' | 'food' | 'interview', plus interview_step and food_date."""
-        from .sam_wilson import chat_with_sam
-        data = await request.json()
-        message        = str(data.get("message", "")).strip()
-        history        = data.get("history", [])
-        mode           = str(data.get("mode", "chat"))
-        interview_step = int(data.get("interview_step", 0))
-        food_date      = data.get("food_date") or None
-        try:
-            from .health_agent import get_health_metrics as _metrics
-            metrics = await asyncio.to_thread(_metrics)
-        except Exception:
-            metrics = {}
-        if not message:
-            return _json({"error": "message required"}, status_code=400)
-        result = await chat_with_sam(
-            message, history, metrics, runtime.openai_client,
-            mode=mode, interview_step=interview_step, food_date=food_date,
-        )
-        return _json(result)
-
-    @app.get("/api/health/sam/food-log")
-    async def api_sam_food_log_get(date: str | None = None) -> JSONResponse:
-        """Return food log summary for a given date (defaults to today).
-        Pass ?date=2026-05-25 to get a specific day."""
-        from .sam_wilson import get_today_food_log
-        summary = await asyncio.to_thread(get_today_food_log, date or None)
-        return _json(summary)
-
-    @app.get("/api/health/sam/food-preferences")
-    async def api_sam_food_prefs_get() -> JSONResponse:
-        """Return Sam's stored food preferences for Chris."""
-        from .sam_wilson import get_food_preferences
-        prefs = await asyncio.to_thread(get_food_preferences)
-        return _json(prefs)
-
-    @app.post("/api/health/sam/diet-interview")
-    async def api_sam_diet_interview(request: Request) -> JSONResponse:
-        """Drive the diet interview one step at a time.
-        Body: {step: int, answer: str}. Returns {step, question, done, prefs}."""
-        from .sam_wilson import run_diet_interview
-        data   = await request.json()
-        step   = int(data.get("step", 0))
-        answer = str(data.get("answer", "")).strip()
-        result = await run_diet_interview(step, answer, runtime.openai_client)
-        return _json(result)
-
-    @app.get("/api/health/sam/morning-checkin")
-    async def api_sam_morning_checkin() -> JSONResponse:
-        """Sam's morning check-in — greeting, today's focus, current metrics."""
-        from .sam_wilson import get_morning_checkin
-        try:
-            from .health_agent import get_health_metrics as _metrics
-            metrics = await asyncio.to_thread(_metrics)
-        except Exception:
-            metrics = {}
-        data = await get_morning_checkin(metrics)
-        return _json(data)
-
-    @app.post("/api/health/sam/evening-checkin")
-    async def api_sam_evening_checkin(request: Request) -> JSONResponse:
-        """Submit evening adherence and receive Sam's coaching response."""
-        from .sam_wilson import submit_evening_checkin
-        data      = await request.json()
-        completed = data.get("completed", [])
-        notes     = data.get("notes", "")
-        try:
-            from .health_agent import get_health_metrics as _metrics
-            metrics = await asyncio.to_thread(_metrics)
-        except Exception:
-            metrics = {}
-        result = await submit_evening_checkin(
-            completed, notes, metrics, runtime.openai_client
-        )
-        return _json(result)
-
-    @app.post("/api/health/sam/evaluate")
-    async def api_sam_evaluate(request: Request) -> JSONResponse:
-        """Sam evaluates Chris's free-text day description and maps it to the
-        6 protocol checklist items. Returns {completed, reply, adherence_pct, reasoning}."""
-        from .sam_wilson import evaluate_day_narrative
-        data      = await request.json()
-        narrative = str(data.get("narrative", "")).strip()
-        if not narrative:
-            return _json({"completed": [], "reply": "Tell me what you did today, brother.", "adherence_pct": 0})
-        try:
-            from .health_agent import get_health_metrics as _metrics
-            metrics = await asyncio.to_thread(_metrics)
-        except Exception:
-            metrics = {}
-        result = await evaluate_day_narrative(narrative, metrics, runtime.openai_client)
-        return _json(result)
-
-    @app.get("/api/health/sam/history")
-    async def api_sam_history(days: int = 30) -> JSONResponse:
-        """Return adherence history for the last N days, most-recent first.
-        Each record: {date, completed[], notes, adherence_pct}.
-        When a date has multiple records (re-submissions) the latest wins."""
-        log_path = Path("data/logs/sam_adherence.jsonl")
-        records: dict[str, dict] = {}
-        if log_path.exists():
-            for line in log_path.read_text().splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    rec = json.loads(line)
-                    d = rec.get("date", "")
-                    if d:
-                        records[d] = rec  # last record per date wins
-                except Exception:
-                    continue
-        TOTAL_ITEMS = 6
-        result = []
-        for date_str, rec in sorted(records.items(), reverse=True)[:days]:
-            completed = rec.get("completed", [])
-            result.append({
-                "date": date_str,
-                "completed": completed,
-                "notes": rec.get("notes", ""),
-                "adherence_pct": round(len(completed) / TOTAL_ITEMS * 100),
-                "timestamp": rec.get("timestamp", ""),
-            })
-        return _json(result)
-
-    @app.post("/api/health/sam/history")
-    async def api_sam_history_upsert(request: Request) -> JSONResponse:
-        """Upsert a historical adherence record for a given date.
-        Body: {date, completed[], notes}. Rewrites the matching line in the JSONL."""
-        data      = await request.json()
-        date_str  = str(data.get("date", "")).strip()
-        completed = list(data.get("completed", []))
-        notes     = str(data.get("notes", ""))
-        if not date_str:
-            raise HTTPException(status_code=400, detail="date is required")
-        log_path = Path("data/logs/sam_adherence.jsonl")
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        # Read all existing lines
-        existing: list[str] = []
-        if log_path.exists():
-            existing = [l for l in log_path.read_text().splitlines() if l.strip()]
-        # Remove any previous records for this date
-        kept = [l for l in existing if json.loads(l).get("date") != date_str]
-        # Append the new record
-        from datetime import datetime as _dt, timezone as _tz
-        new_rec = {
-            "date": date_str,
-            "timestamp": _dt.now(_tz.utc).isoformat(),
-            "completed": completed,
-            "notes": notes,
-        }
-        kept.append(json.dumps(new_rec))
-        log_path.write_text("\n".join(kept) + "\n")
-        TOTAL_ITEMS = 6
-        return _json({
-            "ok": True,
-            "date": date_str,
-            "adherence_pct": round(len(completed) / TOTAL_ITEMS * 100),
-        })
-
-    @app.post("/api/health/sam/journal")
-    async def api_sam_journal(request: Request) -> JSONResponse:
-        """Process a daily health journal entry with Sam."""
-        from .sam_wilson import process_journal_entry
-        data      = await request.json()
-        narrative = str(data.get("message", "")).strip()
-        history   = data.get("history", [])
-        date_str  = data.get("date") or None
-        if not narrative:
-            return _json({"error": "narrative required"}, status_code=400)
-        try:
-            from .health_agent import get_health_metrics as _metrics
-            metrics = await asyncio.to_thread(_metrics)
-        except Exception:
-            metrics = {}
-        result = await process_journal_entry(narrative, history, date_str, metrics, runtime.openai_client)
-        return _json(result)
-
-    @app.get("/api/health/score")
-    async def api_health_score_get(date: str | None = None) -> JSONResponse:
-        from .health_score import compute_daily_score
-        from datetime import date as _date
-        d = date or _date.today().isoformat()
-        result = await asyncio.to_thread(compute_daily_score, d)
-        return _json(result)
-
-    @app.get("/api/health/score/history")
-    async def api_health_score_history(days: int = 30) -> JSONResponse:
-        from .health_score import get_score_history
-        result = await asyncio.to_thread(get_score_history, days)
-        return _json(result)
-
-    @app.get("/api/health/sam/journal")
-    async def api_sam_journal_get(days: int = 7) -> JSONResponse:
-        """Return last N daily journal entries, most-recent first."""
-        journal_path = Path("data/logs/sam_daily_journal.jsonl")
-        records: list[dict] = []
-        if journal_path.exists():
-            for line in journal_path.read_text().splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    records.append(json.loads(line))
-                except Exception:
-                    continue
-        records.sort(key=lambda r: r.get("date", ""), reverse=True)
-        return _json(records[:days])
-
-    # ── Health chat — direct conversation with a council member ───────
-
-    @app.get("/api/health/chat/doctors")
-    async def api_health_chat_doctors() -> JSONResponse:
-        """List available doctors for health chat."""
-        try:
-            from .longevity_council import COUNCIL_MEMBERS
-        except ImportError:
-            from jarvis.longevity_council import COUNCIL_MEMBERS
-
-        helen = {
-            "agent_id": "helen-cho",
-            "name": "Helen Cho",
-            "title": "Chief Medical Intelligence Officer",
-            "domain": "Medical Intelligence",
-            "icon": "🧬",
-        }
-        doctors = [helen] + [
-            {
-                "agent_id": m.agent_id,
-                "name": m.label,
-                "title": m.title,
-                "domain": getattr(m, "domain", ""),
-                "icon": getattr(m, "icon", "⚕️"),
-            }
-            for m in COUNCIL_MEMBERS
-            if m.agent_id != "the-oracle"  # Oracle is emergency-only
-        ]
-        return _json({"doctors": doctors})
-
-    @app.post("/api/health/chat")
-    async def api_health_chat(request: Request) -> JSONResponse:
-        """Chat with a Longevity Council member or Helen Cho."""
-        try:
-            body = await request.json()
-            doctor_id = body.get("doctor", "helen-cho")
-            message = body.get("message", "").strip()
-            history = body.get("history", [])
-            if not message:
-                return JSONResponse({"error": "message required"}, status_code=400)
-
-            try:
-                from .longevity_council import chat_with_doctor
-            except ImportError:
-                from jarvis.longevity_council import chat_with_doctor
-
-            result = await chat_with_doctor(
-                doctor_id=doctor_id,
-                message=message,
-                history=history,
-            )
-            return _json(result)
-        except Exception as exc:
-            log.error("health chat error: %s", exc)
-            return JSONResponse({"error": str(exc)}, status_code=500)
 
     # ------------------------------------------------------------------
     # Legacy catch-all (MUST be last — any specific POST route defined
@@ -11502,343 +6282,96 @@ self.addEventListener('fetch', e => {
 
         raise HTTPException(status_code=404, detail="Not found")
 
-    # ==========================================================================
-    # Phase 4: Longitudinal Health Intelligence (Binder v1.5)
-    # ==========================================================================
+    # ── KDP ─────────────────────────────────────────────────────────────────────
 
-    # ------------------------------------------------------------------
-    # Symptom Triage — Oracle-First Protocol (Binder §09)
-    # ------------------------------------------------------------------
+    @app.get("/api/kdp/status")
+    async def api_kdp_status() -> JSONResponse:
+        from .kdp_store import get_status
+        return _json(await asyncio.to_thread(get_status))
 
-    @app.post("/api/health/symptom/triage")
-    async def api_symptom_triage(request: Request) -> JSONResponse:
-        """Full symptom triage: Oracle gate + specialist routing + structured report."""
+    @app.post("/api/kdp/credentials")
+    async def api_kdp_credentials(request: Request) -> JSONResponse:
+        from .kdp_scraper import save_credentials
         try:
-            from .symptom_triage import run_triage
-        except ImportError:
-            from symptom_triage import run_triage
-        try:
-            body = await request.json()
+            payload = await request.json()
         except Exception:
-            body = {}
-        result = await run_triage(
-            symptoms=str(body.get("symptoms", "")),
-            duration=str(body.get("duration", "")),
-            severity=body.get("severity"),
-            associated_symptoms=str(body.get("associated_symptoms", "")),
-            context=str(body.get("context", "")),
-        )
-        return _json(result)
+            return JSONResponse({"ok": False, "detail": "Invalid JSON"}, status_code=400)
+        email = str(payload.get("email", "")).strip()
+        password = str(payload.get("password", "")).strip()
+        if not email or not password:
+            return _json({"ok": False, "detail": "Email and password required."})
+        await asyncio.to_thread(save_credentials, email, password)
+        return _json({"ok": True, "detail": "Credentials saved."})
 
-    @app.get("/api/health/symptom/redflags")
-    async def api_symptom_redflags() -> JSONResponse:
-        """Chris's personalized red flag symptom list."""
+    @app.post("/api/kdp/sync")
+    async def api_kdp_sync() -> JSONResponse:
+        from .kdp_scraper import load_credentials, run_full_sync, get_sync_status
+        from .kdp_store import save_sync_result
+
+        # Don't start a second sync if one is already running
+        status = get_sync_status()
+        if status in ("running", "needs_2fa"):
+            return _json({"ok": False, "detail": f"Sync already in progress (status: {status})"})
+
+        creds = await asyncio.to_thread(load_credentials)
+        if not creds:
+            return _json({"ok": False, "detail": "No KDP credentials saved. Add them in Settings first."})
+
+        async def _run():
+            result = await run_full_sync(creds["email"], creds["password"])
+            if result.get("ok"):
+                await asyncio.to_thread(save_sync_result, result)
+
+        asyncio.create_task(_run())
+        return _json({"ok": True, "started": True, "detail": "KDP sync started in background."})
+
+    @app.post("/api/kdp/2fa-code")
+    async def api_kdp_2fa_code(request: Request) -> JSONResponse:
+        from .kdp_scraper import submit_2fa_code, get_sync_status
+        body = await request.json()
+        code = str(body.get("code", "")).strip()
+        if not code:
+            return _json({"ok": False, "detail": "No code provided"})
+        if get_sync_status() != "needs_2fa":
+            return _json({"ok": False, "detail": "Not currently waiting for 2FA"})
+        await submit_2fa_code(code)
+        return _json({"ok": True})
+
+    @app.get("/api/kdp/sync-status")
+    async def api_kdp_sync_status() -> JSONResponse:
+        from .kdp_scraper import get_sync_status
+        return _json({"status": get_sync_status()})
+
+    @app.get("/api/kdp/books")
+    async def api_kdp_books() -> JSONResponse:
+        from .kdp_store import load_books, generate_insights, load_sales_history
+        books = await asyncio.to_thread(load_books)
+        history = await asyncio.to_thread(load_sales_history)
+        insights = await asyncio.to_thread(generate_insights, books, history)
+        return _json({"books": books, "insights": insights})
+
+    @app.get("/api/kdp/sales")
+    async def api_kdp_sales() -> JSONResponse:
+        from .kdp_store import load_sales_history, load_sync_meta
+        history = await asyncio.to_thread(load_sales_history, 90)
+        meta = await asyncio.to_thread(load_sync_meta)
+        return _json({"history": history, "meta": meta})
+
+    @app.post("/api/kdp/report/upload")
+    async def api_kdp_report_upload(request: Request) -> JSONResponse:
+        from .kdp_store import parse_csv_report, save_sync_result
+        from datetime import datetime as _dt, timezone as _tz
         try:
-            from .symptom_triage import get_red_flags_for_patient
-        except ImportError:
-            from symptom_triage import get_red_flags_for_patient
-        return _json(get_red_flags_for_patient())
-
-    # ------------------------------------------------------------------
-    # Predictive Drift Detection — Heimdall Protocol (Binder §21)
-    # ------------------------------------------------------------------
-
-    @app.get("/api/health/drift/scan")
-    async def api_drift_scan() -> JSONResponse:
-        """Full drift scan: signals, cluster evaluation, baseline deviations, alerts."""
-        try:
-            from .drift_detection import run_drift_scan
-        except ImportError:
-            from drift_detection import run_drift_scan
-        return _json(await run_drift_scan())
-
-    @app.get("/api/health/drift/clusters")
-    async def api_drift_clusters() -> JSONResponse:
-        """Evaluate all 5 drift clusters against current signals."""
-        try:
-            from .drift_detection import scan_all_clusters, get_current_signals
-        except ImportError:
-            from drift_detection import scan_all_clusters, get_current_signals
-        signals = await get_current_signals()
-        clusters = await scan_all_clusters(signals)
-        active = [c for c in clusters if c["active"]]
-        return _json({
-            "clusters": clusters,
-            "active_count": len(active),
-            "total_count": len(clusters),
-            "signals_loaded": list(signals.keys()),
-        })
-
-    @app.get("/api/health/drift/baseline")
-    async def api_drift_baseline() -> JSONResponse:
-        """Chris's personal baseline metrics with current deviations."""
-        try:
-            from .drift_detection import get_baseline_deviations, get_current_signals, _CHRIS_BASELINES
-        except ImportError:
-            from drift_detection import get_baseline_deviations, get_current_signals, _CHRIS_BASELINES
-        signals = await get_current_signals()
-        deviations = await get_baseline_deviations(signals)
-        return _json({
-            "baselines": _CHRIS_BASELINES,
-            "current_deviations": deviations,
-            "significant_count": sum(1 for d in deviations if d.get("significant")),
-        })
-
-    # ------------------------------------------------------------------
-    # Quarterly Longevity Council Review (Binder §13)
-    # ------------------------------------------------------------------
-
-    @app.post("/api/health/quarterly/review")
-    async def api_quarterly_review(request: Request) -> JSONResponse:
-        """Run full 90-day quarterly review (LLM-intensive). May take 30-60s."""
-        try:
-            from .quarterly_review import run_quarterly_review
-        except ImportError:
-            from quarterly_review import run_quarterly_review
-        try:
-            body = await request.json()
+            payload = await request.json()
         except Exception:
-            body = {}
-        result = await run_quarterly_review(
-            review_period_days=int(body.get("review_period_days", 90)),
-            major_life_context=str(body.get("major_life_context", "")),
-            additional_context=str(body.get("additional_context", "")),
-        )
-        return _json(result)
-
-    @app.get("/api/health/quarterly/objectives")
-    async def api_quarterly_objectives_get() -> JSONResponse:
-        """Return current 90-day objectives."""
-        try:
-            from .quarterly_review import get_current_objectives
-        except ImportError:
-            from quarterly_review import get_current_objectives
-        objectives = await get_current_objectives()
-        return _json({"objectives": objectives, "count": len(objectives)})
-
-    @app.post("/api/health/quarterly/objectives")
-    async def api_quarterly_objectives_set(request: Request) -> JSONResponse:
-        """Set new 90-day objectives. Body: {objectives: [...]}"""
-        try:
-            from .quarterly_review import set_objectives
-        except ImportError:
-            from quarterly_review import set_objectives
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        objectives = body.get("objectives", [])
-        if not isinstance(objectives, list):
-            return JSONResponse({"error": "objectives must be a list"}, status_code=400)
-        result = await set_objectives(objectives)
-        status_code = 201 if result.get("ok") else 400
-        return JSONResponse(result, status_code=status_code)
-
-    @app.get("/api/health/quarterly/doctor-packet")
-    async def api_quarterly_doctor_packet() -> JSONResponse:
-        """Generate quarterly doctor discussion packet for Nov 13 visit with Dr. Wenk."""
-        try:
-            from .quarterly_review import generate_doctor_packet
-        except ImportError:
-            from quarterly_review import generate_doctor_packet
-        return _json(await generate_doctor_packet())
-
-    # -------------------------------------------------------------------------
-    # PHASE 5B — Baseline Completeness Score
-    # -------------------------------------------------------------------------
-
-    @app.get("/api/health/completeness")
-    async def api_health_completeness() -> JSONResponse:
-        """Return the 100-point Baseline Completeness Score across 8 domains."""
-        try:
-            from .health_completeness import run_completeness_check
-        except ImportError:
-            from health_completeness import run_completeness_check
-        return _json(await asyncio.to_thread(run_completeness_check))
-
-    # -------------------------------------------------------------------------
-    # PHASE 5A — Data Import Pipeline
-    # -------------------------------------------------------------------------
-
-    @app.post("/api/health/import/labs")
-    async def api_import_labs(request: Request) -> JSONResponse:
-        """Import labs from a CSV file path. Body: {filepath: string}"""
-        try:
-            from .health_importer import import_labs_csv
-        except ImportError:
-            from health_importer import import_labs_csv
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        filepath = body.get("filepath", "")
-        if not filepath:
-            return JSONResponse({"error": "filepath required"}, status_code=400)
-        return _json(await asyncio.to_thread(import_labs_csv, filepath))
-
-    @app.post("/api/health/import/vitals")
-    async def api_import_vitals(request: Request) -> JSONResponse:
-        """Import vitals from a CSV file path. Body: {filepath: string}"""
-        try:
-            from .health_importer import import_vitals_csv
-        except ImportError:
-            from health_importer import import_vitals_csv
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        filepath = body.get("filepath", "")
-        if not filepath:
-            return JSONResponse({"error": "filepath required"}, status_code=400)
-        return _json(await asyncio.to_thread(import_vitals_csv, filepath))
-
-    @app.post("/api/health/import/cgm")
-    async def api_import_cgm(request: Request) -> JSONResponse:
-        """Import CGM data from Dexcom CSV export. Body: {filepath: string, source?: string}"""
-        try:
-            from .health_importer import import_cgm_csv
-        except ImportError:
-            from health_importer import import_cgm_csv
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        filepath = body.get("filepath", "")
-        source = body.get("source", "dexcom")
-        if not filepath:
-            return JSONResponse({"error": "filepath required"}, status_code=400)
-        return _json(await asyncio.to_thread(import_cgm_csv, filepath, source))
-
-    @app.post("/api/health/import/garmin")
-    async def api_import_garmin(request: Request) -> JSONResponse:
-        """Import Garmin Connect daily CSV export. Body: {filepath: string}"""
-        try:
-            from .health_importer import import_garmin_csv
-        except ImportError:
-            from health_importer import import_garmin_csv
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        filepath = body.get("filepath", "")
-        if not filepath:
-            return JSONResponse({"error": "filepath required"}, status_code=400)
-        return _json(await asyncio.to_thread(import_garmin_csv, filepath))
-
-    @app.post("/api/health/import/apple-health")
-    async def api_import_apple_health(request: Request) -> JSONResponse:
-        """Import Apple Health export.xml. Body: {filepath: string}"""
-        try:
-            from .health_importer import import_apple_health_xml
-        except ImportError:
-            from health_importer import import_apple_health_xml
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        filepath = body.get("filepath", "")
-        if not filepath:
-            return JSONResponse({"error": "filepath required"}, status_code=400)
-        return _json(await asyncio.to_thread(import_apple_health_xml, filepath))
-
-    @app.get("/api/health/import/history")
-    async def api_import_history() -> JSONResponse:
-        """Return the last 50 data import events."""
-        try:
-            from .health_importer import get_import_history
-        except ImportError:
-            from health_importer import get_import_history
-        return _json({"history": await asyncio.to_thread(get_import_history)})
-
-    # -------------------------------------------------------------------------
-    # PHASE 5D — Scenario Modeling Engine
-    # -------------------------------------------------------------------------
-
-    @app.post("/api/health/scenario/run")
-    async def api_scenario_run(request: Request) -> JSONResponse:
-        """Run a custom what-if scenario. Body: {scenario_name, changes: [{change_type, description, parameters}], timeframe_months?, notes?}"""
-        try:
-            from .scenario_engine import ScenarioInput, ScenarioChange, run_scenario_llm, save_scenario
-        except ImportError:
-            from scenario_engine import ScenarioInput, ScenarioChange, run_scenario_llm, save_scenario
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        changes = [ScenarioChange(**c) for c in body.get("changes", [])]
-        scenario = ScenarioInput(
-            scenario_name=body.get("scenario_name", "Custom scenario"),
-            changes=changes,
-            timeframe_months=body.get("timeframe_months", 12),
-            notes=body.get("notes", ""),
-        )
-        result = await run_scenario_llm(scenario)
-        await asyncio.to_thread(save_scenario, result)
-        return _json(result.__dict__ if hasattr(result, "__dict__") else result)
-
-    @app.post("/api/health/scenario/quick")
-    async def api_scenario_quick(request: Request) -> JSONResponse:
-        """Run a pre-built quick scenario. Body: {change_type: string, timeframe_months?: int}"""
-        try:
-            from .scenario_engine import run_quick_scenario, save_scenario
-        except ImportError:
-            from scenario_engine import run_quick_scenario, save_scenario
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        change_type = body.get("change_type", "")
-        if not change_type:
-            return JSONResponse({"error": "change_type required"}, status_code=400)
-        timeframe_months = body.get("timeframe_months", 12)
-        result = await run_quick_scenario(change_type, timeframe_months=timeframe_months)
-        await asyncio.to_thread(save_scenario, result)
-        return _json(result.__dict__ if hasattr(result, "__dict__") else result)
-
-    @app.post("/api/health/scenario/compare")
-    async def api_scenario_compare(request: Request) -> JSONResponse:
-        """Compare multiple scenarios side by side. Body: {scenarios: [{scenario_name, changes, timeframe_months}]}"""
-        try:
-            from .scenario_engine import ScenarioInput, ScenarioChange, compare_scenarios
-        except ImportError:
-            from scenario_engine import ScenarioInput, ScenarioChange, compare_scenarios
-        try:
-            body = await request.json()
-        except Exception:
-            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-        scenarios = []
-        for s in body.get("scenarios", []):
-            changes = [ScenarioChange(**c) for c in s.get("changes", [])]
-            scenarios.append(ScenarioInput(
-                scenario_name=s.get("scenario_name", "Scenario"),
-                changes=changes,
-                timeframe_months=s.get("timeframe_months", 12),
-            ))
-        return _json(await compare_scenarios(scenarios))
-
-    @app.get("/api/health/scenario/history")
-    async def api_scenario_history() -> JSONResponse:
-        """Return all previously run scenarios."""
-        try:
-            from .scenario_engine import get_saved_scenarios
-        except ImportError:
-            from scenario_engine import get_saved_scenarios
-        return _json({"scenarios": await asyncio.to_thread(get_saved_scenarios)})
-
-    # -------------------------------------------------------------------------
-    # PHASE 5C — Health Dashboard UI
-    # -------------------------------------------------------------------------
-
-    @app.get("/health-dashboard")
-    @app.get("/health-dashboard/")
-    async def health_dashboard() -> "HTMLResponse":
-        """Serve the JARVIS Health Dashboard UI."""
-        from fastapi.responses import HTMLResponse
-        try:
-            from .health_dashboard import get_dashboard_html
-        except ImportError:
-            from health_dashboard import get_dashboard_html
-        return HTMLResponse(content=get_dashboard_html())
+            return JSONResponse({"ok": False, "detail": "Invalid JSON"}, status_code=400)
+        csv_text = str(payload.get("csv", ""))
+        if not csv_text:
+            return _json({"ok": False, "detail": "No CSV content provided."})
+        rows = await asyncio.to_thread(parse_csv_report, csv_text)
+        result = {"ok": True, "books": [], "sales": {"csv_rows": rows}, "synced_at": _dt.now(_tz.utc).isoformat()}
+        await asyncio.to_thread(save_sync_result, result)
+        return _json({"ok": True, "rows_parsed": len(rows), "detail": f"Parsed {len(rows)} rows from CSV."})
 
     return app
 
