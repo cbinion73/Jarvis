@@ -3289,8 +3289,12 @@ function _driveDoRoute(origin, dest) {
     _driveNavSteps = _driveNavRouteLeg.steps || [];
     _driveNavCurrentStep = 0;
     // Capture polyline + mileage for POI searches
+    // Maps JS API returns overview_polyline as a plain string;
+    // the HTTP Directions API returns {points: "..."} — handle both
     var route = result.routes[0];
-    _drivePolyline = (route.overview_polyline && route.overview_polyline.points) ? route.overview_polyline.points : '';
+    var rawPoly = route.overview_polyline;
+    _drivePolyline = (typeof rawPoly === 'string') ? rawPoly
+                   : (rawPoly && rawPoly.points) ? rawPoly.points : '';
     _driveTotalMiles = _driveNavRouteLeg.distance ? _driveNavRouteLeg.distance.value / 1609.34 : 0;
     _driveGeoWaypoints = result.geocoded_waypoints || [];
     driveClearAllPois();
