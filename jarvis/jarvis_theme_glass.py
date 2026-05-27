@@ -4128,9 +4128,203 @@ body::after {{
   padding: 28px 28px 24px;
   animation: modal-in 0.38s cubic-bezier(0.34,1.56,0.64,1);
 }}
-#settings-modal {{
-  max-height: 88vh;
+/* Full-screen settings panel — replaces old #settings-modal small modal */
+#settings-overlay {{
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: modal-overlay-in 0.22s ease;
+}}
+#settings-overlay.hidden {{ display: none; animation: none; }}
+
+#settings-panel {{
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 860px;
+  height: min(88vh, 680px);
+  background: var(--surface-1, rgba(20,24,34,0.97));
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.4);
+  animation: modal-in 0.3s cubic-bezier(0.34,1.4,0.64,1);
+}}
+
+#settings-topbar {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}}
+#settings-topbar-title {{
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -0.01em;
+}}
+
+#settings-body {{
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}}
+
+#settings-nav {{
+  width: 190px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  padding: 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   overflow-y: auto;
+}}
+.settings-nav-pill {{
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  transition: background 0.15s, color 0.15s;
+}}
+.settings-nav-pill:hover {{ background: rgba(255,255,255,0.06); color: var(--text-1); }}
+.settings-nav-pill.active {{
+  background: var(--accent, var(--hue));
+  color: #fff;
+}}
+.settings-nav-pill .snp-icon {{ font-size: 15px; width: 18px; text-align: center; }}
+.settings-nav-section-label {{
+  font-size: 10px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 10px 12px 4px;
+}}
+
+#settings-content {{
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+}}
+
+/* section-level header */
+.sset-section-hdr {{
+  font-size: 11px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin: 0 0 12px;
+}}
+.sset-divider {{ height: 1px; background: var(--border); margin: 22px 0; }}
+.sset-card {{
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+}}
+.sset-row {{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}}
+.sset-row:last-child {{ margin-bottom: 0; }}
+.sset-label {{ font-size: 12px; color: var(--text-2); flex: 1; }}
+.sset-badge {{
+  font-size: 10px;
+  font-family: var(--font-mono);
+  padding: 2px 7px;
+  border-radius: 99px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}}
+.sset-badge-green {{ background: rgba(74,222,128,0.15); color: #4ade80; border: 1px solid rgba(74,222,128,0.3); }}
+.sset-badge-grey  {{ background: rgba(255,255,255,0.06); color: var(--text-3); border: 1px solid var(--border); }}
+.sset-badge-amber {{ background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }}
+.sset-btn {{
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.06);
+  color: var(--text-2);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}}
+.sset-btn:hover {{ background: rgba(255,255,255,0.12); color: var(--text-1); }}
+.sset-btn-accent {{
+  border-color: var(--accent, var(--hue));
+  color: var(--accent, var(--hue));
+  background: transparent;
+}}
+.sset-btn-accent:hover {{ background: rgba(var(--hue-rgb),0.12); color: var(--accent, var(--hue)); }}
+.sset-textarea {{
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--surface-2, rgba(255,255,255,0.04));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--text-1);
+  font-family: var(--font-mono);
+  resize: vertical;
+  outline: none;
+  margin-bottom: 8px;
+}}
+.sset-msg {{
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 6px;
+  min-height: 16px;
+}}
+.sset-select {{
+  background: var(--surface-2, rgba(255,255,255,0.06));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text-1);
+  outline: none;
+  cursor: pointer;
+}}
+
+/* Mobile: collapse nav to top tabs */
+@media (max-width: 600px) {{
+  #settings-panel {{ height: 100dvh; max-width: 100%; border-radius: 0; }}
+  #settings-body {{ flex-direction: column; }}
+  #settings-nav {{
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 8px 8px 0;
+    gap: 2px;
+  }}
+  .settings-nav-pill {{ white-space: nowrap; padding: 8px 12px; border-radius: 8px 8px 0 0; }}
+  .settings-nav-section-label {{ display: none; }}
 }}
 .modal::before {{
   content: '';
@@ -7770,50 +7964,52 @@ body::after {{
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     SETTINGS MODAL
+     SETTINGS — FULL-SCREEN OVERLAY
 ══════════════════════════════════════════════════════════════════════ -->
-<div class="modal-overlay hidden" id="settings-overlay" onclick="closeSettingsIfOuter(event)">
-  <div class="modal" id="settings-modal">
-    <div class="modal-header">
-      <div class="modal-title">Settings &amp; Theme</div>
-      <button class="modal-close" onclick="closeSettings()">✕</button>
+<div class="hidden" id="settings-overlay" onclick="closeSettingsIfOuter(event)">
+  <div id="settings-panel">
+
+    <!-- Top bar -->
+    <div id="settings-topbar">
+      <div id="settings-topbar-title">Settings</div>
+      <button class="modal-close" onclick="closeSettings()" style="width:32px;height:32px;">✕</button>
     </div>
 
-    <p style="font-size:12px;color:var(--text-3);margin-bottom:18px;font-family:var(--font-mono);letter-spacing:0.04em;text-transform:uppercase;">Interface Theme</p>
-    <div class="theme-cards">
-      <div class="theme-card" onclick="setTheme('classic')">
-        <div class="theme-preview theme-preview-classic"></div>
-        <div class="theme-name">Classic</div>
-        <div class="theme-desc">Dark navy · Arc blue</div>
-      </div>
-      <div class="theme-card" onclick="setTheme('nexus')">
-        <div class="theme-preview theme-preview-nexus"></div>
-        <div class="theme-name">Nexus</div>
-        <div class="theme-desc">Obsidian · Violet</div>
-      </div>
-      <div class="theme-card current" onclick="setTheme('glass')">
-        <div class="theme-preview theme-preview-glass"></div>
-        <div class="theme-name">Glass</div>
-        <div class="theme-desc">Surgical · Adaptive</div>
-      </div>
-    </div>
+    <div id="settings-body">
 
-    <!-- Google Workspace -->
-    <p style="font-size:12px;color:var(--text-3);margin:24px 0 10px;font-family:var(--font-mono);letter-spacing:0.04em;text-transform:uppercase;">Google Workspace</p>
-    <div id="settings-google-status-row" style="font-size:12px;color:var(--text-2);margin-bottom:10px;">
-      Checking…
-    </div>
-    <textarea id="settings-google-json" rows="4" placeholder='Paste your Google OAuth client JSON here (download from Google Cloud Console → Credentials → your Web client → Download JSON)' style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--text-1);font-family:var(--font-mono);resize:vertical;outline:none;margin-bottom:8px;"></textarea>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button onclick="settingsSaveGoogleJson()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:12px;cursor:pointer;">Save Client JSON</button>
-      <button id="settings-google-connect-btn" onclick="settingsConnectGoogle()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);font-size:12px;cursor:pointer;">Connect Google Account</button>
-    </div>
-    <div id="settings-google-msg" style="font-size:11px;color:var(--text-3);margin-top:6px;min-height:16px;"></div>
+      <!-- Left nav -->
+      <nav id="settings-nav">
+        <div class="settings-nav-section-label">Display</div>
+        <button class="settings-nav-pill active" data-section="interface" onclick="settingsNavTo('interface')">
+          <span class="snp-icon">⬡</span> Interface
+        </button>
+        <div class="settings-nav-section-label">Connectivity</div>
+        <button class="settings-nav-pill" data-section="accounts" onclick="settingsNavTo('accounts')">
+          <span class="snp-icon">◈</span> Accounts
+        </button>
+        <button class="settings-nav-pill" data-section="voice" onclick="settingsNavTo('voice')">
+          <span class="snp-icon">◉</span> Voice
+        </button>
+        <div class="settings-nav-section-label">Context</div>
+        <button class="settings-nav-pill" data-section="location" onclick="settingsNavTo('location')">
+          <span class="snp-icon">◎</span> Location
+        </button>
+        <button class="settings-nav-pill" data-section="family" onclick="settingsNavTo('family')">
+          <span class="snp-icon">◈</span> Family
+        </button>
+        <button class="settings-nav-pill" data-section="devices" onclick="settingsNavTo('devices')">
+          <span class="snp-icon">⬡</span> Devices
+        </button>
+      </nav>
 
-    <p style="font-size:12px;color:var(--text-3);margin:20px 0 10px;font-family:var(--font-mono);letter-spacing:0.04em;text-transform:uppercase;">Welcome, {user_name}</p>
-    <p style="font-size:12px;color:var(--text-2);">JARVIS Glass — Adaptive Chromatic Interface<br>Version 3.0 · S.H.I.E.L.D. Clearance Level 6</p>
-  </div>
-</div>
+      <!-- Right content area — populated by settingsLoadSection() -->
+      <div id="settings-content">
+        <div id="settings-section-content"></div>
+      </div>
+
+    </div><!-- /#settings-body -->
+  </div><!-- /#settings-panel -->
+</div><!-- /#settings-overlay -->
 
 <!-- Sam Wilson adherence history modal -->
 <div class="sam-hist-overlay hidden" id="sam-hist-overlay" onclick="closeSamHistory(event)">
@@ -15089,8 +15285,10 @@ function showToast(msg, type) {{
 }}
 
 /* ═══════════════════════════════════════════════════════════════
-   SETTINGS MODAL
+   SETTINGS — FULL-SCREEN OVERLAY
 ═══════════════════════════════════════════════════════════════ */
+let _settingsSection = 'interface';
+
 function closeSettings() {{
   const ov = document.getElementById('settings-overlay');
   if (ov) ov.classList.add('hidden');
@@ -15100,29 +15298,305 @@ function closeSettingsIfOuter(e) {{
   if (e.target === document.getElementById('settings-overlay')) closeSettings();
 }}
 
-async function openSettings() {{
+function openSettings() {{
   const ov = document.getElementById('settings-overlay');
   if (ov) ov.classList.remove('hidden');
-  // load google status
+  settingsNavTo(_settingsSection);
+}}
+
+function settingsNavTo(section) {{
+  _settingsSection = section;
+  // update pill active states
+  document.querySelectorAll('.settings-nav-pill').forEach(p => {{
+    p.classList.toggle('active', p.dataset.section === section);
+  }});
+  settingsLoadSection(section);
+}}
+
+async function settingsLoadSection(section) {{
+  const container = document.getElementById('settings-section-content');
+  if (!container) return;
+  container.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:20px 0;">Loading…</div>';
+
   try {{
-    const r = await fetch('/api/google/client-secret');
-    const d = await r.json();
-    const row = document.getElementById('settings-google-status-row');
-    const btn = document.getElementById('settings-google-connect-btn');
-    if (row) {{
-      if (d.present) {{
-        row.innerHTML = '<span style="color:#4ade80;">✓ Client JSON saved</span> · Type: ' + (d.client_type || '?') + ' · ID: …' + (d.client_id_tail || '?');
-        if (btn) {{ btn.textContent = 'Connect Google Account'; btn.style.color = 'var(--accent)'; btn.style.borderColor = 'var(--accent)'; }}
-      }} else {{
-        row.innerHTML = '<span style="color:var(--text-3);">No client JSON saved yet.</span>';
-      }}
-    }}
-  }} catch(e) {{
-    const row = document.getElementById('settings-google-status-row');
-    if (row) row.textContent = 'Could not load Google status.';
+    if (section === 'interface') {{ container.innerHTML = settingsBuildInterface(); }}
+    else if (section === 'accounts') {{ container.innerHTML = await settingsBuildAccounts(); }}
+    else if (section === 'voice')    {{ container.innerHTML = await settingsBuildVoice(); }}
+    else if (section === 'location') {{ container.innerHTML = await settingsBuildLocation(); }}
+    else if (section === 'family')   {{ container.innerHTML = await settingsBuildFamily(); }}
+    else if (section === 'devices')  {{ container.innerHTML = await settingsBuildDevices(); }}
+    else {{ container.innerHTML = '<p style="color:var(--text-3);">Unknown section.</p>'; }}
+  }} catch(err) {{
+    container.innerHTML = '<p style="color:#f87171;font-size:12px;">Error loading section: ' + escHtml(err.message) + '</p>';
   }}
 }}
 
+/* ── Interface ─────────────────────────────────────────────── */
+function settingsBuildInterface() {{
+  return `
+    <p class="sset-section-hdr">Interface Theme</p>
+    <div class="theme-cards" style="margin-bottom:20px;">
+      <div class="theme-card" onclick="setTheme('classic')">
+        <div class="theme-preview theme-preview-classic"></div>
+        <div class="theme-name">Classic</div>
+        <div class="theme-desc">Dark navy · Arc blue</div>
+      </div>
+      <div class="theme-card" onclick="setTheme('nexus')">
+        <div class="theme-preview theme-preview-nexus"></div>
+        <div class="theme-name">Nexus</div>
+        <div class="theme-desc">Obsidian · Violet</div>
+      </div>
+      <div class="theme-card current" onclick="setTheme('glass')">
+        <div class="theme-preview theme-preview-glass"></div>
+        <div class="theme-name">Glass</div>
+        <div class="theme-desc">Surgical · Adaptive</div>
+      </div>
+    </div>
+    <div class="sset-divider"></div>
+    <p style="font-size:12px;color:var(--text-3);">
+      Welcome, {user_name} &nbsp;·&nbsp; JARVIS Glass — Adaptive Chromatic Interface<br>
+      Version 3.0 &nbsp;·&nbsp; S.H.I.E.L.D. Clearance Level 6
+    </p>
+  `;
+}}
+
+/* ── Accounts ──────────────────────────────────────────────── */
+async function settingsBuildAccounts() {{
+  // Fetch data in parallel
+  let googleStatus = {{}}, accounts = [];
+  try {{
+    const r = await fetch('/api/google/client-secret');
+    googleStatus = await r.json();
+  }} catch(e) {{ googleStatus = {{error: true}}; }}
+  try {{
+    const r = await fetch('/api/accounts');
+    const d = await r.json();
+    accounts = d.accounts || [];
+  }} catch(e) {{}}
+
+  // Google status badge
+  const gPresent = googleStatus.present;
+  const gBadge = gPresent
+    ? `<span class="sset-badge sset-badge-green">✓ JSON saved</span>`
+    : `<span class="sset-badge sset-badge-grey">Not configured</span>`;
+  const gDetail = gPresent
+    ? `Type: ${{escHtml(googleStatus.client_type || '?')}} · ID: …${{escHtml(googleStatus.client_id_tail || '?')}}`
+    : 'No client JSON saved yet.';
+
+  // Personal accounts list
+  const personalRows = accounts.map(a => {{
+    const isConnected = a.status === 'connected' || a.auth_status === 'connected';
+    const badge = isConnected
+      ? `<span class="sset-badge sset-badge-green">Connected</span>`
+      : `<span class="sset-badge sset-badge-grey">Planned</span>`;
+    const connectBtn = isConnected
+      ? ''
+      : `<button class="sset-btn sset-btn-accent" onclick="settingsConnectAccount('${{escHtml(a.account_id)}}')">Connect</button>`;
+    return `<div class="sset-row">
+      <div class="sset-label">
+        <strong style="color:var(--text-1);">${{escHtml(a.display_name || a.name || a.account_id)}}</strong>
+        <span style="color:var(--text-3);margin-left:6px;font-size:10px;font-family:var(--font-mono);">${{escHtml(a.provider || '')}}</span>
+      </div>
+      ${{badge}} ${{connectBtn}}
+    </div>`;
+  }}).join('') || '<p style="font-size:12px;color:var(--text-3);">No accounts found.</p>';
+
+  return `
+    <p class="sset-section-hdr">Google Workspace</p>
+    <div class="sset-card">
+      <div class="sset-row">
+        <div class="sset-label">${{gDetail}}</div>
+        ${{gBadge}}
+      </div>
+      <textarea id="settings-google-json" class="sset-textarea" rows="4"
+        placeholder="Paste your Google OAuth client JSON here (Google Cloud Console → Credentials → your Web client → Download JSON)"></textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="sset-btn sset-btn-accent" onclick="settingsSaveGoogleJson()">Save Client JSON</button>
+        <button id="settings-google-connect-btn" class="sset-btn" onclick="settingsConnectGoogle()">Connect Google Account</button>
+      </div>
+      <div id="settings-google-msg" class="sset-msg"></div>
+    </div>
+
+    <div class="sset-divider"></div>
+    <p class="sset-section-hdr">Microsoft / Outlook</p>
+    <div class="sset-card">
+      <div class="sset-row">
+        <div class="sset-label">Configure via <code style="font-family:var(--font-mono);font-size:11px;">.env</code>:
+          JARVIS_MICROSOFT_CLIENT_ID, JARVIS_MICROSOFT_CLIENT_SECRET, JARVIS_MICROSOFT_TENANT_ID</div>
+      </div>
+      <button class="sset-btn" onclick="settingsConnectOutlook()">Connect Outlook</button>
+      <div id="settings-outlook-msg" class="sset-msg"></div>
+    </div>
+
+    <div class="sset-divider"></div>
+    <p class="sset-section-hdr">Personal Accounts</p>
+    <div class="sset-card">
+      ${{personalRows}}
+    </div>
+  `;
+}}
+
+/* ── Voice ─────────────────────────────────────────────────── */
+async function settingsBuildVoice() {{
+  let opts = {{}};
+  try {{
+    const r = await fetch('/api/voice-options');
+    opts = await r.json();
+  }} catch(e) {{ opts = {{error: true}}; }}
+
+  const providers = opts.providers || [];
+  const providerOptions = providers.map(p =>
+    `<option value="${{escHtml(p.id)}}">${{escHtml(p.name)}} — ${{p.ready ? '✓ Ready' : '✗ Not ready'}}</option>`
+  ).join('') || '<option value="">No providers available</option>';
+
+  const voices = opts.voices || [];
+  const voiceOptions = voices.map(v =>
+    `<option value="${{escHtml(v.id)}}">${{escHtml(v.name)}}</option>`
+  ).join('') || '<option value="">No voices available</option>';
+
+  return `
+    <p class="sset-section-hdr">Voice Settings</p>
+    <div class="sset-card">
+      <div class="sset-row">
+        <div class="sset-label">Provider</div>
+        <select id="voice-provider" class="sset-select">${{providerOptions}}</select>
+      </div>
+      <div class="sset-row">
+        <div class="sset-label">Voice / Model</div>
+        <select id="voice-model" class="sset-select">${{voiceOptions}}</select>
+      </div>
+      <div style="margin-top:10px;">
+        <button class="sset-btn sset-btn-accent" onclick="settingsSaveVoice()">Save Voice Settings</button>
+      </div>
+      <div id="settings-voice-msg" class="sset-msg"></div>
+    </div>
+    ${{opts.error ? '<p style="font-size:11px;color:#f87171;">Could not load voice options from /api/voice-options</p>' : ''}}
+  `;
+}}
+
+/* ── Location ──────────────────────────────────────────────── */
+async function settingsBuildLocation() {{
+  let locData = {{}};
+  try {{
+    const r = await fetch('/api/location-settings');
+    locData = await r.json();
+  }} catch(e) {{ locData = {{error: true}}; }}
+
+  const locs = locData.locations || [];
+  const locRows = locs.map(l => `
+    <div class="sset-row">
+      <div class="sset-label">
+        <strong style="color:var(--text-1);">${{escHtml(l.label || 'Unnamed')}}</strong>
+        <span style="color:var(--text-3);font-size:10px;font-family:var(--font-mono);display:block;">
+          ${{l.lat != null ? l.lat.toFixed(4) : '?'}}, ${{l.lon != null ? l.lon.toFixed(4) : '?'}}
+          ${{l.notes ? ' · ' + escHtml(l.notes) : ''}}
+        </span>
+      </div>
+    </div>
+  `).join('') || '<p style="font-size:12px;color:var(--text-3);">No saved locations.</p>';
+
+  return `
+    <p class="sset-section-hdr">Location</p>
+    <div class="sset-card">
+      ${{locRows}}
+      <div style="margin-top:10px;">
+        <button class="sset-btn" onclick="settingsUseCurrentLocation()">Use My Current Location</button>
+      </div>
+      <div id="settings-loc-msg" class="sset-msg"></div>
+    </div>
+
+    <div class="sset-divider"></div>
+    <p class="sset-section-hdr">Add Location</p>
+    <div class="sset-card">
+      <div class="sset-row">
+        <div class="sset-label">Label</div>
+        <input id="loc-new-label" type="text" placeholder="e.g. Home" class="sset-select" style="flex:1;">
+      </div>
+      <div class="sset-row">
+        <div class="sset-label">Notes</div>
+        <input id="loc-new-notes" type="text" placeholder="Optional notes" class="sset-select" style="flex:1;">
+      </div>
+      <button class="sset-btn sset-btn-accent" onclick="settingsSaveLocation()" style="margin-top:6px;">Save Location</button>
+      <div id="settings-loc-add-msg" class="sset-msg"></div>
+    </div>
+  `;
+}}
+
+/* ── Family ────────────────────────────────────────────────── */
+async function settingsBuildFamily() {{
+  let identity = {{}};
+  try {{
+    const r = await fetch('/api/identity');
+    identity = await r.json();
+  }} catch(e) {{ identity = {{error: true}}; }}
+
+  const members = identity.family_members || identity.users || [];
+  const rows = members.map(m => `
+    <div class="sset-row">
+      <div class="sset-label">
+        <strong style="color:var(--text-1);">${{escHtml(m.display_name || m.name || m.id)}}</strong>
+        ${{m.tone ? `<span style="color:var(--text-3);font-size:11px;margin-left:6px;">${{escHtml(m.tone)}}</span>` : ''}}
+        ${{m.voice ? `<span style="color:var(--text-3);font-size:11px;margin-left:6px;">Voice: ${{escHtml(m.voice)}}</span>` : ''}}
+      </div>
+      <span class="sset-badge sset-badge-grey">${{escHtml(m.id || '?')}}</span>
+    </div>
+  `).join('') || `
+    <div class="sset-row"><div class="sset-label" style="color:var(--text-2);">chris</div><span class="sset-badge sset-badge-green">Active</span></div>
+    <div class="sset-row"><div class="sset-label" style="color:var(--text-2);">rebekah</div><span class="sset-badge sset-badge-grey">Roster</span></div>
+    <div class="sset-row"><div class="sset-label" style="color:var(--text-2);">caleb</div><span class="sset-badge sset-badge-grey">Roster</span></div>
+    <div class="sset-row"><div class="sset-label" style="color:var(--text-2);">anna</div><span class="sset-badge sset-badge-grey">Roster</span></div>
+  `;
+
+  return `
+    <p class="sset-section-hdr">Family Roster</p>
+    <div class="sset-card">${{rows}}</div>
+    ${{identity.error ? '<p style="font-size:11px;color:#f87171;">Could not load identity data.</p>' : ''}}
+  `;
+}}
+
+/* ── Devices ───────────────────────────────────────────────── */
+async function settingsBuildDevices() {{
+  let devData = {{}};
+  try {{
+    const r = await fetch('/api/connected-devices?current_device_id=');
+    devData = await r.json();
+  }} catch(e) {{ devData = {{error: true}}; }}
+
+  const devices = devData.devices || [];
+  const currentId = devData.current_device_id || '';
+  const deviceRows = devices.map(d => {{
+    const isCurrent = d.device_id === currentId;
+    const badge = isCurrent
+      ? `<span class="sset-badge sset-badge-amber">This device</span>`
+      : `<span class="sset-badge sset-badge-grey">${{escHtml(d.owner || 'Unknown')}}</span>`;
+    return `<div class="sset-row">
+      <div class="sset-label">
+        <strong style="color:var(--text-1);">${{escHtml(d.device_name || d.device_id || 'Unknown')}}</strong>
+        ${{d.last_seen ? `<span style="color:var(--text-3);font-size:10px;display:block;">Last seen: ${{escHtml(d.last_seen)}}</span>` : ''}}
+      </div>
+      ${{badge}}
+    </div>`;
+  }}).join('') || '<p style="font-size:12px;color:var(--text-3);">No devices found.</p>';
+
+  const isClaimed = devices.some(d => d.device_id === currentId && d.owner);
+
+  return `
+    <p class="sset-section-hdr">Connected Devices</p>
+    <div class="sset-card">
+      ${{deviceRows}}
+    </div>
+    ${{!isClaimed ? `
+    <div class="sset-divider"></div>
+    <div class="sset-card">
+      <p style="font-size:12px;color:var(--text-2);margin-bottom:10px;">This device is not claimed.</p>
+      <button class="sset-btn sset-btn-accent" onclick="settingsClaimDevice()">Claim This Device</button>
+      <div id="settings-device-msg" class="sset-msg"></div>
+    </div>` : ''}}
+    ${{devData.error ? '<p style="font-size:11px;color:#f87171;">Could not load device data.</p>' : ''}}
+  `;
+}}
+
+/* ── Action helpers ────────────────────────────────────────── */
 async function settingsSaveGoogleJson() {{
   const ta = document.getElementById('settings-google-json');
   const msg = document.getElementById('settings-google-msg');
@@ -15136,7 +15610,7 @@ async function settingsSaveGoogleJson() {{
     }});
     const d = await r.json();
     if (msg) msg.textContent = d.detail || (d.ok ? 'Saved!' : 'Error saving.');
-    if (d.ok) {{ ta.value = ''; openSettings(); }}
+    if (d.ok) {{ settingsLoadSection('accounts'); }}
   }} catch(e) {{
     if (msg) msg.textContent = 'Network error: ' + e.message;
   }}
@@ -15149,10 +15623,103 @@ async function settingsConnectGoogle() {{
     const data = await r.json();
     const acct = (data.accounts || []).find(a => a.provider === 'google' && a.owner_user_id === 'chris')
                  || (data.accounts || []).find(a => a.provider === 'google');
-    if (!acct) {{ if (msg) msg.textContent = 'No Google account found. Add one in the Accounts section.'; return; }}
-    const connectUrl = '/accounts/' + acct.account_id + '/connect';
-    window.open(connectUrl, '_blank');
+    if (!acct) {{ if (msg) msg.textContent = 'No Google account found.'; return; }}
+    window.open('/accounts/' + acct.account_id + '/connect', '_blank');
     if (msg) msg.textContent = 'Google login opened in a new tab.';
+  }} catch(e) {{
+    if (msg) msg.textContent = 'Error: ' + e.message;
+  }}
+}}
+
+async function settingsConnectOutlook() {{
+  const msg = document.getElementById('settings-outlook-msg');
+  try {{
+    const r = await fetch('/api/accounts');
+    const data = await r.json();
+    const acct = (data.accounts || []).find(a => a.provider === 'outlook' || a.provider === 'microsoft');
+    if (!acct) {{
+      if (msg) msg.textContent = 'No Outlook account configured. Set JARVIS_MICROSOFT_* env vars first.';
+      return;
+    }}
+    window.open('/accounts/' + acct.account_id + '/connect', '_blank');
+    if (msg) msg.textContent = 'Outlook login opened in a new tab.';
+  }} catch(e) {{
+    if (msg) msg.textContent = 'Error: ' + e.message;
+  }}
+}}
+
+async function settingsConnectAccount(accountId) {{
+  window.open('/accounts/' + accountId + '/connect', '_blank');
+}}
+
+async function settingsSaveVoice() {{
+  const msg = document.getElementById('settings-voice-msg');
+  const provider = document.getElementById('voice-provider')?.value;
+  const model = document.getElementById('voice-model')?.value;
+  try {{
+    const r = await fetch('/api/voice-settings', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{provider, model}})
+    }});
+    const d = await r.json();
+    if (msg) msg.textContent = d.detail || (d.ok ? 'Voice settings saved.' : 'Error saving.');
+  }} catch(e) {{
+    if (msg) msg.textContent = 'Error: ' + e.message;
+  }}
+}}
+
+function settingsUseCurrentLocation() {{
+  const msg = document.getElementById('settings-loc-msg');
+  if (!navigator.geolocation) {{ if (msg) msg.textContent = 'Geolocation not available.'; return; }}
+  if (msg) msg.textContent = 'Requesting location…';
+  navigator.geolocation.getCurrentPosition(async pos => {{
+    const lat = pos.coords.latitude, lon = pos.coords.longitude;
+    try {{
+      const r = await fetch('/api/location-settings', {{
+        method: 'POST',
+        headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify({{label: 'Current Location', lat, lon}})
+      }});
+      const d = await r.json();
+      if (msg) msg.textContent = d.detail || (d.ok ? `Saved: ${{lat.toFixed(4)}}, ${{lon.toFixed(4)}}` : 'Error saving.');
+      if (d.ok) settingsLoadSection('location');
+    }} catch(e) {{ if (msg) msg.textContent = 'Error: ' + e.message; }}
+  }}, err => {{
+    if (msg) msg.textContent = 'Location denied: ' + err.message;
+  }});
+}}
+
+async function settingsSaveLocation() {{
+  const label = document.getElementById('loc-new-label')?.value.trim();
+  const notes = document.getElementById('loc-new-notes')?.value.trim();
+  const msg = document.getElementById('settings-loc-add-msg');
+  if (!label) {{ if (msg) msg.textContent = 'Enter a label first.'; return; }}
+  try {{
+    const r = await fetch('/api/location-settings', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{label, notes}})
+    }});
+    const d = await r.json();
+    if (msg) msg.textContent = d.detail || (d.ok ? 'Location saved.' : 'Error saving.');
+    if (d.ok) settingsLoadSection('location');
+  }} catch(e) {{
+    if (msg) msg.textContent = 'Error: ' + e.message;
+  }}
+}}
+
+async function settingsClaimDevice() {{
+  const msg = document.getElementById('settings-device-msg');
+  try {{
+    const r = await fetch('/api/connected-devices/claim', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{owner: 'chris'}})
+    }});
+    const d = await r.json();
+    if (msg) msg.textContent = d.detail || (d.ok ? 'Device claimed.' : 'Error claiming device.');
+    if (d.ok) settingsLoadSection('devices');
   }} catch(e) {{
     if (msg) msg.textContent = 'Error: ' + e.message;
   }}
