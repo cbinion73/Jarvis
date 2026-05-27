@@ -15,7 +15,7 @@ services:
     environment:
       CHRONICLE_SNAPSHOT_DIR: /chronicle-snapshots
       CHRONICLE_API_URL: http://chronicle:5174
-      GHOSTWRITR_API_URL: http://ghostwritr:3000
+      GHOSTWRITR_BASE_URL: http://ghostwritr:3000
     networks:
       - internal
 
