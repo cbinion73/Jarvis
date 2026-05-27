@@ -4128,6 +4128,10 @@ body::after {{
   padding: 28px 28px 24px;
   animation: modal-in 0.38s cubic-bezier(0.34,1.56,0.64,1);
 }}
+#settings-modal {{
+  max-height: 88vh;
+  overflow-y: auto;
+}}
 .modal::before {{
   content: '';
   position: absolute;
