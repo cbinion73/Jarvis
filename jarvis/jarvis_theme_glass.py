@@ -5848,6 +5848,7 @@ body::after {{
         <div class="view-title-line"></div>
       </div>
       <div class="view-subtitle" id="overview-subtitle">Tactical Command Dashboard · S.H.I.E.L.D. Priority View</div>
+      <div id="overview-greeting" style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:4px;letter-spacing:0.05em;"></div>
     </div>
 
     <!-- Mode Bar -->
@@ -8500,6 +8501,30 @@ function applyUserProfile(profile) {{
       window.location.href = window.location.pathname + '?_theme_applied=1';
     }}
   }}
+  // Update overview greeting
+  const greetEl = document.getElementById('overview-greeting');
+  if (greetEl) {{
+    const name = profile.greeting_name || (_cfIdentity && _cfIdentity.display_name) || '';
+    if (name) {{
+      const hour = new Date().getHours();
+      const salute = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+      greetEl.textContent = salute + ', ' + name + '.';
+    }} else {{
+      greetEl.textContent = '';
+    }}
+  }}
+}}
+
+// Returns a Set of card IDs that the current user's profile has hidden
+function _getHiddenCards() {{
+  const dash = (_userProfile && _userProfile.dashboard) || {{}};
+  const hidden = new Set();
+  if (dash.show_health     === false) hidden.add('health');
+  if (dash.show_chronicle  === false) hidden.add('chronicle');
+  if (dash.show_dining     === false) hidden.add('dining');
+  if (dash.show_publishing === false) hidden.add('publishing');
+  if (dash.show_finance    === false) hidden.add('finance');
+  return hidden;
 }}
 
 async function profileSaveSettings() {{
@@ -10109,11 +10134,14 @@ function applyModeBar(state) {{
     const label = modeInfo.label || mode;
     sub.textContent = icon + ' ' + label + (state.manual_override ? ' · Manual Override' : ' · Auto Mode');
   }}
+  // Refresh overview greeting in case profile just loaded
+  applyUserProfile(_userProfile);
 }}
 
 function applyLayout(layout, alerts, animate) {{
   const alertedMap = {{}};
   (alerts || []).forEach(a => {{ alertedMap[a.card] = a.level; }});
+  const hidden = _getHiddenCards();
 
   // FLIP Phase 1: snapshot current card positions before re-render
   const oldRects = {{}};
@@ -10129,6 +10157,7 @@ function applyLayout(layout, alerts, animate) {{
     if (!zone) return;
     zone.innerHTML = '';
     (cards || []).forEach(cardId => {{
+      if (hidden.has(cardId)) return;   // ← per-person dashboard filter
       const reg = CARD_REGISTRY[cardId];
       if (!reg) return;
       const tmp = document.createElement('div');
