@@ -8686,8 +8686,8 @@ function getCurrentUserId() {{
   return window.localStorage.getItem('jarvis-claimed-user-v1') || 'chris';
 }}
 function isChildUser() {{
-  const uid = getCurrentUserId();
-  return uid !== 'chris' && uid !== 'rebekah';
+  // All family members are treated as adults — no content filtering
+  return false;
 }}
 function switchUser() {{
   window.localStorage.removeItem('jarvis-claimed-user-v1');
@@ -10690,7 +10690,7 @@ function applyModeBar(state) {{
     if (_uid !== 'chris') {{
       const _nameMap  = {{chris:'Chris', rebekah:'Rebekah', caleb:'Caleb', anna:'Anna'}};
       const _emojiMap = {{chris:'👨‍💼', rebekah:'👩', caleb:'👦', anna:'👧'}};
-      const _roleMap  = {{caleb:'Child account · private data hidden', anna:'Child account · private data hidden', rebekah:'Family member'}};
+      const _roleMap  = {{caleb:'Family member', anna:'Family member', rebekah:'Family member'}};
       document.getElementById('overview-user-avatar').textContent = _emojiMap[_uid] || '👤';
       document.getElementById('overview-user-name').textContent   = _nameMap[_uid]  || _uid;
       document.getElementById('overview-user-role').textContent   = _roleMap[_uid]  || '';
@@ -16801,7 +16801,7 @@ async function settingsBuildFamily() {{
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
         <span class="sset-badge ${{badgeClass}}">${{badgeLabel}}</span>
-        ${{m.permissions ? `<span style="font-size:9px;color:var(--text-3);">${{escHtml(m.permissions)}}</span>` : ''}}
+        ${{(m.permissions && m.permissions !== 'child') ? `<span style="font-size:9px;color:var(--text-3);">${{escHtml(m.permissions)}}</span>` : ''}}
       </div>
     </div>`;
   }}).join('') || `<div class="sset-row"><span style="color:var(--text-3);font-size:12px;">No family members configured.</span></div>`;
