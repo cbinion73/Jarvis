@@ -18639,9 +18639,35 @@ function showAerialView(destinationAddress) {{
             if (loadingEl) loadingEl.style.display = 'none';
             var videoUri = d.videoUri || (d.uris && d.uris.MP4_HIGH) || (d.uris && d.uris.MP4_MEDIUM) || '';
             if (videoUri) {{
+                // Wire up error + black-screen timeout before setting src
+                var _aerialFallbackShown = false;
+                function _showAerialFallback() {{
+                    if (_aerialFallbackShown) return;
+                    _aerialFallbackShown = true;
+                    video.style.display = 'none';
+                    fallback.style.display = 'block';
+                    var destLat = 0, destLng = 0;
+                    if (_navRouteData && _navRouteData.routes && _navRouteData.routes[0]) {{
+                        var legs = _navRouteData.routes[0].legs;
+                        var lastLeg = legs[legs.length - 1];
+                        destLat = lastLeg.end_location.lat;
+                        destLng = lastLeg.end_location.lng;
+                    }}
+                    fallback.src = '/api/nav/streetview?lat=' + destLat + '&lng=' + destLng + '&heading=0&width=800&height=450';
+                }}
+                video.onerror = _showAerialFallback;
+                video.onloadeddata = function() {{ _aerialFallbackShown = true; }}; // cancel timeout
                 video.src = videoUri;
                 video.style.display = 'block';
                 fallback.style.display = 'none';
+                video.load();
+                video.play().catch(function() {{ _showAerialFallback(); }});
+                // If video is still black after 6 seconds, fall back to Street View
+                setTimeout(function() {{
+                    if (!_aerialFallbackShown && (video.readyState === 0 || video.videoWidth === 0)) {{
+                        _showAerialFallback();
+                    }}
+                }}, 6000);
             }} else {{
                 // Fallback: Street View of destination using route end point coords
                 video.style.display = 'none';
@@ -18666,10 +18692,16 @@ function showAerialView(destinationAddress) {{
         }})
         .catch(function(err) {{
             if (loadingEl) loadingEl.style.display = 'none';
-            // Don't hide modal — show fallback Street View instead
             video.style.display = 'none';
             fallback.style.display = 'block';
-            fallback.src = '/api/nav/streetview?lat=0&lng=0&heading=0&width=800&height=450';
+            var destLat = 0, destLng = 0;
+            if (_navRouteData && _navRouteData.routes && _navRouteData.routes[0]) {{
+                var legs = _navRouteData.routes[0].legs;
+                var lastLeg = legs[legs.length - 1];
+                destLat = lastLeg.end_location.lat;
+                destLng = lastLeg.end_location.lng;
+            }}
+            fallback.src = '/api/nav/streetview?lat=' + destLat + '&lng=' + destLng + '&heading=0&width=800&height=450';
         }});
 }}
 
