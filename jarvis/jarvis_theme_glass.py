@@ -8099,6 +8099,9 @@ body::after {{
         <button class="settings-nav-pill" data-section="devices" onclick="settingsNavTo('devices')">
           <span class="snp-icon">⬡</span> Devices
         </button>
+        <button class="settings-nav-pill" data-section="costs" onclick="settingsNavTo('costs')">
+          <span class="snp-icon">💸</span> Costs
+        </button>
       </nav>
 
       <!-- Right content area — populated by settingsLoadSection() -->
@@ -15989,6 +15992,7 @@ async function settingsLoadSection(section) {{
     else if (section === 'location') {{ container.innerHTML = await settingsBuildLocation(); }}
     else if (section === 'family')   {{ container.innerHTML = await settingsBuildFamily(); }}
     else if (section === 'devices')  {{ container.innerHTML = await settingsBuildDevices(); }}
+    else if (section === 'costs')    {{ container.innerHTML = await settingsBuildCosts(); }}
     else {{ container.innerHTML = '<p style="color:var(--text-3);">Unknown section.</p>'; }}
   }} catch(err) {{
     container.innerHTML = '<p style="color:#f87171;font-size:12px;">Error loading section: ' + escHtml(err.message) + '</p>';
@@ -16513,6 +16517,165 @@ async function settingsBuildDevices() {{
       <div id="settings-prune-msg" class="sset-msg"></div>
     </div>
     ${{devData.error ? '<p style="font-size:11px;color:#f87171;">Could not load device data.</p>' : ''}}
+  `;
+}}
+
+/* ── Costs ─────────────────────────────────────────────────── */
+async function settingsBuildCosts() {{
+  let d = {{}};
+  let mapsD = {{}};
+  try {{
+    const r = await fetch('/api/costs/summary');
+    d = await r.json();
+  }} catch(e) {{ d = {{error: true}}; }}
+  try {{
+    const r2 = await fetch('/api/google/maps-usage');
+    mapsD = await r2.json();
+  }} catch(e) {{}}
+
+  if (d.error) return `<p style="font-size:12px;color:#f87171;">Could not load cost data.</p>`;
+
+  const netTotal   = (d.net_total    || 0).toFixed(2);
+  const today      = (d.today_llm    || 0).toFixed(3);
+  const monthLLM   = (d.month_llm    || 0).toFixed(2);
+  const mapsGross  = (d.month_maps   || 0).toFixed(2);
+  const mapsNet    = (d.month_maps_net || 0).toFixed(2);
+  const credit     = (d.maps_free_credit || 200).toFixed(0);
+  const remaining  = (d.maps_remaining  || 200).toFixed(2);
+  const mapsPct    = d.maps_pct_used || 0;
+  const daysLeft   = (d.days_in_month || 30) - (d.days_elapsed || 0);
+  const projected  = d.days_elapsed > 0
+    ? ((d.net_total / d.days_elapsed) * (d.days_in_month || 30)).toFixed(2)
+    : '—';
+  const tokens     = d.month_tokens || {{}};
+  const tokIn      = (tokens.input  || 0).toLocaleString();
+  const tokOut     = (tokens.output || 0).toLocaleString();
+  const alltime    = (d.alltime_llm || 0).toFixed(2);
+
+  // Build model rows
+  const models = d.by_model || {{}};
+  const modelRows = Object.entries(models)
+    .sort((a,b) => (b[1].cost||0) - (a[1].cost||0))
+    .map(([name, info]) => {{
+      const cost  = (info.cost  || 0).toFixed(4);
+      const calls = (info.calls || 0).toLocaleString();
+      const isFree = info.backend === 'ollama' || info.backend === 'groq';
+      const tag = isFree
+        ? `<span class="sset-badge sset-badge-green">FREE</span>`
+        : `<span class="sset-badge sset-badge-amber">PAID</span>`;
+      return `<div class="sset-row">
+        <div class="sset-label">
+          <strong style="color:var(--text-1);">${{escHtml(name)}}</strong>
+          <span style="color:var(--text-3);font-size:10px;display:block;">${{escHtml(info.backend||'')}} · ${{calls}} calls this month</span>
+        </div>
+        <div style="text-align:right;">
+          ${{tag}}
+          <div style="font-size:12px;font-family:var(--font-mono);color:var(--text-2);margin-top:3px;">$${{cost}}</div>
+        </div>
+      </div>`;
+    }}).join('') || '<p style="font-size:12px;color:var(--text-3);">No calls this month.</p>';
+
+  // Maps API breakdown
+  const mapsBarW = Math.min(100, mapsPct);
+  const mapsBarClr = mapsPct > 80 ? '#f87171' : mapsPct > 50 ? '#FFD700' : '#4ade80';
+  const mapsApiRows = Object.entries(mapsD.usage || {{}}).map(([name, info]) => {{
+    const cost = ((info.requests / 1000) * info.price_per_k).toFixed(4);
+    return `<div class="sset-row">
+      <div class="sset-label">
+        <strong style="color:var(--text-1);">${{escHtml(name)}}</strong>
+        <span style="color:var(--text-3);font-size:10px;display:block;">${{info.requests.toLocaleString()}} requests</span>
+      </div>
+      <div style="font-size:12px;font-family:var(--font-mono);color:var(--text-2);">$${{cost}}</div>
+    </div>`;
+  }}).join('') || '<p style="font-size:12px;color:var(--text-3);">No Maps API usage data (cache may be stale).</p>';
+
+  return `
+    <!-- Net cost hero -->
+    <div style="background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.2);
+                border-radius:12px;padding:16px 20px;margin-bottom:16px;
+                display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;
+                    letter-spacing:0.08em;margin-bottom:4px;">Net cost this month</div>
+        <div style="font-size:32px;font-weight:700;color:#00D4FF;
+                    font-family:var(--font-mono);line-height:1;">$${{netTotal}}</div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:4px;">
+          after Google's $${{credit}}/mo Maps credit
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:10px;color:var(--text-3);">today</div>
+        <div style="font-size:18px;font-weight:600;color:#00D4FF;font-family:var(--font-mono);">$${{today}}</div>
+        <div style="font-size:10px;color:var(--text-3);margin-top:6px;">projected</div>
+        <div style="font-size:16px;font-weight:600;color:var(--text-2);font-family:var(--font-mono);">$${{projected}}/mo</div>
+        <div style="font-size:10px;color:var(--text-3);margin-top:4px;">
+          ${{daysLeft}} days remaining · all-time $${{alltime}}
+        </div>
+      </div>
+    </div>
+
+    <!-- LLM section -->
+    <p class="sset-section-hdr">AI Models (LLM)</p>
+    <div class="sset-card">
+      <div class="sset-row" style="margin-bottom:8px;">
+        <div class="sset-label">This month</div>
+        <div style="font-size:14px;font-weight:700;color:#FFD700;font-family:var(--font-mono);">$${{monthLLM}}</div>
+      </div>
+      <div class="sset-row">
+        <div class="sset-label" style="font-size:11px;color:var(--text-3);">Tokens processed</div>
+        <div style="font-size:11px;color:var(--text-3);font-family:var(--font-mono);">${{tokIn}} in · ${{tokOut}} out</div>
+      </div>
+    </div>
+
+    <p class="sset-section-hdr" style="margin-top:16px;">Model Breakdown</p>
+    <div class="sset-card">
+      ${{modelRows}}
+    </div>
+
+    <!-- Google Maps section -->
+    <p class="sset-section-hdr" style="margin-top:16px;">Google Maps API</p>
+    <div class="sset-card">
+      <div class="sset-row">
+        <div class="sset-label">Gross usage</div>
+        <div style="font-size:13px;font-family:var(--font-mono);color:var(--text-2);">$${{mapsGross}}</div>
+      </div>
+      <div class="sset-row">
+        <div class="sset-label">Free credit applied</div>
+        <div style="font-size:13px;font-family:var(--font-mono);color:#4ade80;">-$${{credit}}.00</div>
+      </div>
+      <div class="sset-row">
+        <div class="sset-label"><strong>Net owed</strong></div>
+        <div style="font-size:14px;font-weight:700;font-family:var(--font-mono);
+                    color:${{mapsNet==='0.00'?'#4ade80':'#f87171'}};">
+          ${{mapsNet === '0.00' ? 'FREE' : '$$'+mapsNet}}
+        </div>
+      </div>
+      <!-- Credit bar -->
+      <div style="margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;font-size:10px;
+                    color:var(--text-3);margin-bottom:4px;">
+          <span>$${{mapsGross}} used of $${{credit}} credit</span>
+          <span style="color:${{mapsBarClr}};">${{mapsPct}}%</span>
+        </div>
+        <div style="height:5px;border-radius:3px;background:rgba(255,255,255,0.08);overflow:hidden;">
+          <div style="height:100%;width:${{mapsBarW}}%;background:${{mapsBarClr}};
+                      border-radius:3px;transition:width 0.6s;"></div>
+        </div>
+        <div style="font-size:10px;color:var(--text-3);margin-top:3px;">
+          $${{remaining}} credit remaining this month
+        </div>
+      </div>
+    </div>
+
+    <p class="sset-section-hdr" style="margin-top:16px;">Maps API Breakdown</p>
+    <div class="sset-card">
+      ${{mapsApiRows}}
+    </div>
+
+    <div class="sset-divider"></div>
+    <p style="font-size:11px;color:var(--text-3);text-align:center;padding:4px 0;">
+      Data refreshes when you re-open this tab · Maps API cached for 6 hours
+    </p>
   `;
 }}
 
