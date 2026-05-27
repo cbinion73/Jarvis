@@ -8655,7 +8655,41 @@ function _showDbg(label, msg) {{
   }}
 }}
 
+function ensureDeviceId() {{
+  /* Generate a stable device ID on first visit and register with the server. */
+  let did = window.localStorage.getItem('jarvis-shell-device-id-v1') || '';
+  if (!did) {{
+    did = ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+      (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+    window.localStorage.setItem('jarvis-shell-device-id-v1', did);
+  }}
+  /* Register / heartbeat with the server */
+  const fp = navigator.userAgent + '|' + navigator.language + '|' +
+             screen.width + '|' + screen.height;
+  fetch('/api/identity/session', {{
+    method: 'POST',
+    headers: {{'Content-Type': 'application/json'}},
+    body: JSON.stringify({{
+      device_id:    did,
+      fingerprint:  fp,
+      user_agent:   navigator.userAgent,
+      device_type:  /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'browser',
+      last_host:    window.location.host,
+      last_origin:  window.location.origin,
+    }})
+  }})
+  .then(r => r.ok ? r.json() : null)
+  .then(d => {{
+    if (d && d.device && d.device.device_id) {{
+      window.localStorage.setItem('jarvis-shell-device-id-v1', d.device.device_id);
+    }}
+  }})
+  .catch(() => {{}});
+  return did;
+}}
+
 async function init() {{
+  ensureDeviceId();
   await loadCfIdentity();
   try {{
     switchView('overview');
@@ -16847,23 +16881,55 @@ async function settingsGeocodeAddress() {{
   }}
 }}
 
-async function settingsClaimDevice() {{
+async function settingsClaimDevice(ownerUserId) {{
   const msg = document.getElementById('settings-device-msg');
-  const deviceId = window.localStorage.getItem('jarvis-shell-device-id-v1') || '';
-  if (!deviceId) {{ if (msg) msg.textContent = 'No device ID found — try refreshing the page first.'; return; }}
-  const name = navigator.userAgent.includes('iPhone') ? 'iPhone' :
-               navigator.userAgent.includes('iPad') ? 'iPad' :
-               navigator.userAgent.includes('Mac') ? 'Mac Browser' :
-               navigator.userAgent.includes('Android') ? 'Android' : 'Browser';
+
+  /* Step 1 — if no owner chosen yet, show a family picker */
+  if (!ownerUserId) {{
+    if (msg) msg.innerHTML = `
+      <div style="margin-top:10px;">
+        <div style="font-size:12px;color:var(--text-2);margin-bottom:8px;">Who is using this device?</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          <button class="sset-btn sset-btn-accent" onclick="settingsClaimDevice('chris')">Chris</button>
+          <button class="sset-btn sset-btn-accent" onclick="settingsClaimDevice('rebekah')">Rebekah</button>
+          <button class="sset-btn sset-btn-accent" onclick="settingsClaimDevice('caleb')">Caleb</button>
+          <button class="sset-btn sset-btn-accent" onclick="settingsClaimDevice('anna')">Anna</button>
+        </div>
+      </div>`;
+    return;
+  }}
+
+  /* Step 2 — ensure we have a device ID (generate one if missing) */
+  let deviceId = window.localStorage.getItem('jarvis-shell-device-id-v1') || '';
+  if (!deviceId) {{
+    deviceId = ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+      (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+    window.localStorage.setItem('jarvis-shell-device-id-v1', deviceId);
+  }}
+
+  const name = navigator.userAgent.includes('iPhone') ? ownerUserId + "'s iPhone" :
+               navigator.userAgent.includes('iPad')  ? ownerUserId + "'s iPad"   :
+               navigator.userAgent.includes('Mac')   ? ownerUserId + "'s Mac"    :
+               navigator.userAgent.includes('Android') ? ownerUserId + "'s Phone" :
+               ownerUserId + "'s Browser";
+
   try {{
+    if (msg) msg.textContent = 'Claiming…';
     const r = await fetch('/api/identity/device', {{
       method: 'POST',
       headers: {{'Content-Type': 'application/json'}},
-      body: JSON.stringify({{device_id: deviceId, owner_user_id: 'chris', device_name: name, device_type: 'browser'}})
+      body: JSON.stringify({{
+        device_id:     deviceId,
+        owner_user_id: ownerUserId,
+        device_name:   name,
+        device_type:   'browser'
+      }})
     }});
     const d = await r.json();
-    if (msg) msg.textContent = d.ok ? 'Device claimed as ' + name + '.' : (d.detail || 'Error claiming device.');
-    if (d.ok) settingsLoadSection('devices');
+    if (msg) msg.textContent = d.ok
+      ? '✓ Claimed as ' + name
+      : (d.detail || 'Error claiming device.');
+    if (d.ok) setTimeout(() => settingsLoadSection('devices'), 800);
   }} catch(e) {{
     if (msg) msg.textContent = 'Error: ' + e.message;
   }}
