@@ -2143,23 +2143,158 @@ def carplay_view() -> str:
   border-right: 1px solid var(--border);
 }
 
-/* Map placeholder */
-.drive-map {
+/* Map container */
+.drive-map-container {
   flex: 1;
-  background: #0d1117;
-  border: 2px dashed rgba(255,255,255,0.1);
+  position: relative;
   border-radius: 16px;
+  overflow: hidden;
+  min-height: 0;
+  background: #0d1117;
+}
+#drive-nav-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+/* Search bar overlay */
+.drive-nav-bar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 10;
   display: flex;
-  flex-direction: column;
+  gap: 8px;
+  background: rgba(13,17,23,0.92);
+  border: 1px solid rgba(88,166,255,0.35);
+  border-radius: 12px;
+  padding: 6px 10px;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.drive-nav-input {
+  flex: 1;
+  background: transparent;
+  color: #fff;
+  border: none;
+  outline: none;
+  font-size: 18px;
+  font-family: var(--font-sans);
+}
+.drive-nav-input::placeholder { color: rgba(255,255,255,0.4); }
+.drive-nav-go {
+  background: var(--hue);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: var(--font-sans);
+}
+/* Autocomplete dropdown */
+.drive-nav-autocomplete {
+  position: absolute;
+  top: 70px;
+  left: 12px;
+  right: 12px;
+  z-index: 11;
+  background: rgba(13,17,23,0.97);
+  border: 1px solid rgba(88,166,255,0.25);
+  border-radius: 12px;
+  overflow: hidden;
+  display: none;
+}
+.drive-nav-ac-item {
+  padding: 14px 16px;
+  font-size: 16px;
+  color: #fff;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  cursor: pointer;
+}
+.drive-nav-ac-item:last-child { border-bottom: none; }
+.drive-nav-ac-item:active { background: rgba(88,166,255,0.15); }
+/* Home quick-nav button */
+.drive-nav-home-btn {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 10;
+  background: rgba(13,17,23,0.92);
+  border: 1px solid rgba(88,166,255,0.35);
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  font-family: var(--font-sans);
+}
+.drive-nav-home-btn:active { background: rgba(88,166,255,0.2); }
+/* Turn instruction HUD */
+.drive-nav-hud {
+  position: absolute;
+  bottom: 12px;
+  left: 130px;
+  right: 60px;
+  z-index: 10;
+  background: rgba(13,17,23,0.92);
+  border: 1px solid rgba(88,166,255,0.35);
+  border-radius: 12px;
+  padding: 8px 14px;
+  display: none;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.drive-nav-hud-turn {
+  font-size: 15px;
+  font-weight: 700;
+  color: #00D4FF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.drive-nav-hud-dist { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+/* Cancel route button */
+.drive-nav-cancel {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  z-index: 12;
+  background: rgba(180,40,40,0.9);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 14px;
+  cursor: pointer;
+  display: none;
+  font-family: var(--font-sans);
+}
+/* Map not loaded fallback */
+.drive-map-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  flex-direction: column;
   gap: 12px;
-  transition: background 0.15s, border-color 0.15s;
+  color: rgba(255,255,255,0.3);
+  font-size: 15px;
+  pointer-events: none;
 }
-.drive-map:active { background: #111820; border-color: rgba(255,255,255,0.25); }
-.drive-map-icon { font-size: 48px; line-height: 1; }
-.drive-map-label { font-size: 18px; color: var(--text-2); }
+.drive-map-loading-icon { font-size: 40px; }
 
 /* SAM health strip */
 .drive-sam-strip {
@@ -2303,9 +2438,36 @@ def carplay_view() -> str:
 
   <!-- Left: Map + SAM strip -->
   <div class="drive-left">
-    <div class="drive-map" id="drive-map" onclick="window.location='maps://'">
-      <div class="drive-map-icon">&#128739;</div>
-      <div class="drive-map-label">Tap to open Maps</div>
+    <div class="drive-map-container" id="drive-map-container">
+      <div id="drive-nav-map"></div>
+      <!-- Loading fallback (shown until Maps API ready) -->
+      <div class="drive-map-loading" id="drive-map-loading">
+        <div class="drive-map-loading-icon">&#128739;</div>
+        <div>Loading map&hellip;</div>
+      </div>
+      <!-- Destination search bar -->
+      <div class="drive-nav-bar">
+        <input class="drive-nav-input" id="drive-nav-dest"
+               placeholder="Where to?" autocomplete="off"
+               oninput="driveNavAutocomplete(this.value)"
+               onkeydown="if(event.key==='Enter'){driveNavGo();}">
+        <button class="drive-nav-go" onclick="driveNavGo()">Go</button>
+      </div>
+      <!-- Autocomplete results -->
+      <div class="drive-nav-autocomplete" id="drive-nav-ac"></div>
+      <!-- Home quick-nav -->
+      <button class="drive-nav-home-btn" id="drive-nav-home-btn"
+              onclick="driveNavHome()" style="display:none">
+        &#127968; Home
+      </button>
+      <!-- Turn-by-turn HUD -->
+      <div class="drive-nav-hud" id="drive-nav-hud">
+        <div class="drive-nav-hud-turn" id="drive-nav-hud-turn">--</div>
+        <div class="drive-nav-hud-dist" id="drive-nav-hud-dist">--</div>
+      </div>
+      <!-- Cancel route -->
+      <button class="drive-nav-cancel" id="drive-nav-cancel"
+              onclick="driveNavCancel()">&#10005;</button>
     </div>
     <div class="drive-sam-strip" id="drive-sam-strip">
       <div class="drive-sam-metric">
@@ -2478,6 +2640,7 @@ function loadKasaScenes() {
   }).catch(function() {});
 }
 loadKasaScenes();
+driveLoadMapsScript();
 
 // ---- TTS helper ----
 function speak(text, onEnd) {
@@ -2552,7 +2715,31 @@ function submitTextCommand() {
   sendVoiceText(text, btn, lbl);
 }
 
+function driveCheckNavIntent(text) {
+  var lower = text.toLowerCase();
+  var patterns = [
+    /^navigate to (.+)$/i,
+    /^take me to (.+)$/i,
+    /^directions to (.+)$/i,
+    /^go to (.+)$/i,
+    /^drive to (.+)$/i
+  ];
+  for (var i = 0; i < patterns.length; i++) {
+    var m = lower.match(patterns[i]);
+    if (m) return m[1].trim();
+  }
+  return null;
+}
+
 function sendVoiceText(text, btn, lbl) {
+  var navDest = driveCheckNavIntent(text);
+  if (navDest) {
+    btn.classList.remove('listening');
+    lbl.textContent = 'Voice Command';
+    document.getElementById('drive-nav-dest').value = navDest;
+    driveNavGo();
+    return;
+  }
   fetch('/api/agent/stream', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -2635,6 +2822,163 @@ function readSamBrief() {
     btn.classList.remove('playing');
     lbl.textContent = 'SAM Briefing';
   });
+}
+
+// ---- Navigation ----
+var _driveNavMap = null;
+var _driveNavMapsLoaded = false;
+var _driveNavRenderer = null;
+var _driveNavDirectionsService = null;
+var _driveNavUserMarker = null;
+var _driveNavAcTimer = null;
+var _driveNavHomeAddr = '';
+
+function driveLoadMapsScript() {
+  fetch('/api/nav/maps-key').then(function(r) { return r.json(); }).then(function(d) {
+    if (!d.key) return;
+    var s = document.createElement('script');
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + d.key + '&callback=driveOnMapsReady';
+    s.async = true;
+    document.head.appendChild(s);
+  }).catch(function() {});
+}
+
+function driveOnMapsReady() {
+  _driveNavMapsLoaded = true;
+  var loading = document.getElementById('drive-map-loading');
+  if (loading) loading.style.display = 'none';
+  var darkStyles = [
+    {elementType:'geometry', stylers:[{color:'#1a1a2e'}]},
+    {elementType:'labels.text.fill', stylers:[{color:'#9e9e9e'}]},
+    {elementType:'labels.text.stroke', stylers:[{color:'#212121'}]},
+    {elementType:'labels.icon', stylers:[{visibility:'off'}]},
+    {featureType:'road', elementType:'geometry', stylers:[{color:'#2c2c2c'}]},
+    {featureType:'road.arterial', elementType:'labels.text.fill', stylers:[{color:'#757575'}]},
+    {featureType:'road.highway', elementType:'geometry', stylers:[{color:'#3c3c3c'}]},
+    {featureType:'road.highway', elementType:'labels.text.fill', stylers:[{color:'#ffffff'}]},
+    {featureType:'water', elementType:'geometry', stylers:[{color:'#000000'}]},
+    {featureType:'poi', elementType:'geometry', stylers:[{color:'#181818'}]},
+    {featureType:'transit', elementType:'geometry', stylers:[{color:'#2f3948'}]},
+    {featureType:'landscape', elementType:'geometry', stylers:[{color:'#0d1117'}]}
+  ];
+  _driveNavMap = new google.maps.Map(document.getElementById('drive-nav-map'), {
+    center: {lat: 37.09, lng: -95.71},
+    zoom: 5,
+    styles: darkStyles,
+    disableDefaultUI: true,
+    gestureHandling: 'greedy'
+  });
+  _driveNavRenderer = new google.maps.DirectionsRenderer({
+    map: _driveNavMap,
+    suppressMarkers: false,
+    polylineOptions: {strokeColor: '#00D4FF', strokeWeight: 5}
+  });
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      var ll = {lat: pos.coords.latitude, lng: pos.coords.longitude};
+      _driveNavMap.setCenter(ll);
+      _driveNavMap.setZoom(14);
+      _driveNavUserMarker = new google.maps.Marker({
+        position: ll, map: _driveNavMap,
+        icon: {
+          path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+          scale: 6, fillColor: '#00D4FF', fillOpacity: 1,
+          strokeColor: '#fff', strokeWeight: 2,
+          rotation: pos.coords.heading || 0
+        }, title: 'You'
+      });
+    }, function() {});
+  }
+  fetch('/api/nav/home').then(function(r) { return r.json(); }).then(function(d) {
+    _driveNavHomeAddr = d.home_address || d.address || '';
+    if (_driveNavHomeAddr) {
+      var btn = document.getElementById('drive-nav-home-btn');
+      if (btn) btn.style.display = 'flex';
+    }
+  }).catch(function() {});
+}
+
+function driveNavAutocomplete(val) {
+  clearTimeout(_driveNavAcTimer);
+  var ac = document.getElementById('drive-nav-ac');
+  if (!val || val.length < 3) { ac.style.display = 'none'; return; }
+  _driveNavAcTimer = setTimeout(function() {
+    fetch('/api/nav/autocomplete?q=' + encodeURIComponent(val))
+      .then(function(r) { return r.json(); }).then(function(d) {
+        var preds = d.predictions || [];
+        if (!preds.length) { ac.style.display = 'none'; return; }
+        var html = '';
+        for (var i = 0; i < Math.min(preds.length, 4); i++) {
+          html += '<div class="drive-nav-ac-item" data-desc="' + escHtml(preds[i].description) +
+                  '" onclick="driveNavSelect(this.dataset.desc)">' +
+                  escHtml(preds[i].description) + '</div>';
+        }
+        ac.innerHTML = html;
+        ac.style.display = 'block';
+      }).catch(function() { ac.style.display = 'none'; });
+  }, 280);
+}
+
+function driveNavSelect(desc) {
+  document.getElementById('drive-nav-dest').value = desc;
+  document.getElementById('drive-nav-ac').style.display = 'none';
+  driveNavGo();
+}
+
+function driveNavGo() {
+  var dest = document.getElementById('drive-nav-dest').value.trim();
+  if (!dest) return;
+  document.getElementById('drive-nav-ac').style.display = 'none';
+  if (!_driveNavMapsLoaded) { window.location = 'maps://?daddr=' + encodeURIComponent(dest); return; }
+  driveNavRoute('My Location', dest);
+}
+
+function driveNavHome() {
+  if (!_driveNavHomeAddr) return;
+  document.getElementById('drive-nav-dest').value = _driveNavHomeAddr;
+  driveNavRoute('My Location', _driveNavHomeAddr);
+}
+
+function driveNavRoute(origin, dest) {
+  if (!_driveNavMapsLoaded) { window.location = 'maps://?daddr=' + encodeURIComponent(dest); return; }
+  if (!_driveNavDirectionsService) _driveNavDirectionsService = new google.maps.DirectionsService();
+  if (origin === 'My Location' && navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      _driveDoRoute(new google.maps.LatLng(pos.coords.latitude, pos.coords.longitude), dest);
+    }, function() { _driveDoRoute(origin, dest); });
+  } else {
+    _driveDoRoute(origin, dest);
+  }
+}
+
+function _driveDoRoute(origin, dest) {
+  _driveNavDirectionsService.route({
+    origin: origin, destination: dest,
+    travelMode: google.maps.TravelMode.DRIVING
+  }, function(result, status) {
+    if (status !== 'OK') return;
+    _driveNavRenderer.setDirections(result);
+    var leg = result.routes[0].legs[0];
+    var hud = document.getElementById('drive-nav-hud');
+    var turnEl = document.getElementById('drive-nav-hud-turn');
+    var distEl = document.getElementById('drive-nav-hud-dist');
+    if (leg.steps && leg.steps.length) {
+      turnEl.textContent = leg.steps[0].instructions.replace(/<[^>]+>/g, '');
+      distEl.textContent = leg.steps[0].distance.text + ' · ' + leg.duration.text + ' total';
+    }
+    hud.style.display = 'block';
+    document.getElementById('drive-nav-cancel').style.display = 'block';
+    document.getElementById('drive-nav-home-btn').style.display = 'none';
+  });
+}
+
+function driveNavCancel() {
+  if (_driveNavRenderer) _driveNavRenderer.setMap(null);
+  if (_driveNavRenderer && _driveNavMap) { _driveNavRenderer.setMap(_driveNavMap); }
+  document.getElementById('drive-nav-hud').style.display = 'none';
+  document.getElementById('drive-nav-cancel').style.display = 'none';
+  document.getElementById('drive-nav-dest').value = '';
+  if (_driveNavHomeAddr) document.getElementById('drive-nav-home-btn').style.display = 'flex';
 }
 
 // ---- Kasa scene trigger ----
