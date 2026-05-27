@@ -56,6 +56,7 @@ MODES: dict[str, dict] = {
             "forge":      "ambient",
             "vision":     "ambient",
             "idea_inbox": "ambient",
+            "maps_usage": "ambient",
         },
     },
     "lunch_brief": {
@@ -80,6 +81,7 @@ MODES: dict[str, dict] = {
             "forge":      "ambient",
             "vision":     "ambient",
             "idea_inbox": "ambient",
+            "maps_usage": "ambient",
         },
     },
     "daily_recap": {
@@ -104,6 +106,7 @@ MODES: dict[str, dict] = {
             "forge":      "ambient",
             "vision":     "ambient",
             "idea_inbox": "ambient",
+            "maps_usage": "ambient",
         },
     },
 }
