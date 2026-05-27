@@ -2462,9 +2462,62 @@ def carplay_view() -> str:
   border: 2px solid rgba(180,40,40,0.6);
   color: #ff7070;
   flex: 0 0 auto !important;
-  min-height: 64px !important;
+  min-height: 60px !important;
 }
 .drive-btn-end-route:active { background: rgba(180,40,40,0.35); }
+
+/* POI button grid */
+.drive-poi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 7px;
+  flex-shrink: 0;
+}
+.drive-poi-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text-2);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 4px;
+  min-height: 58px;
+  font-family: var(--font-sans);
+  position: relative;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.drive-poi-btn:active { background: var(--surface-hi); }
+.drive-poi-btn.active {
+  border-color: var(--hue);
+  background: rgba(88,166,255,0.12);
+  color: var(--hue);
+}
+.drive-poi-btn.loading { opacity: 0.6; }
+.drive-poi-icon { font-size: 22px; line-height: 1; }
+.drive-poi-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1; }
+.drive-poi-badge {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  background: var(--hue);
+  color: #000;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 9999px;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  display: none;
+}
+
 /* Wrapper groups for idle vs nav state */
 #drive-idle-btns {
   display: flex;
@@ -2614,6 +2667,40 @@ def carplay_view() -> str:
           <span id="drive-guidance-remain">--</span>
         </div>
       </div>
+      <!-- POI quick-search grid -->
+      <div class="drive-poi-grid" id="drive-poi-grid">
+        <button class="drive-poi-btn" id="poi-btn-food"      onclick="driveTogglePoi('food')">
+          <span class="drive-poi-icon">&#127828;</span>
+          <span class="drive-poi-label">Food</span>
+          <span class="drive-poi-badge" id="poi-badge-food"></span>
+        </button>
+        <button class="drive-poi-btn" id="poi-btn-starbucks" onclick="driveTogglePoi('starbucks')">
+          <span class="drive-poi-icon">&#9749;</span>
+          <span class="drive-poi-label">Starbucks</span>
+          <span class="drive-poi-badge" id="poi-badge-starbucks"></span>
+        </button>
+        <button class="drive-poi-btn" id="poi-btn-parks"     onclick="driveTogglePoi('parks')">
+          <span class="drive-poi-icon">&#127794;</span>
+          <span class="drive-poi-label">Parks</span>
+          <span class="drive-poi-badge" id="poi-badge-parks"></span>
+        </button>
+        <button class="drive-poi-btn" id="poi-btn-historic"  onclick="driveTogglePoi('historic')">
+          <span class="drive-poi-icon">&#127963;</span>
+          <span class="drive-poi-label">Historic</span>
+          <span class="drive-poi-badge" id="poi-badge-historic"></span>
+        </button>
+        <button class="drive-poi-btn" id="poi-btn-family"    onclick="driveTogglePoi('family')">
+          <span class="drive-poi-icon">&#11088;</span>
+          <span class="drive-poi-label">Family</span>
+          <span class="drive-poi-badge" id="poi-badge-family"></span>
+        </button>
+        <button class="drive-poi-btn" id="poi-btn-gas"       onclick="driveTogglePoi('gas')">
+          <span class="drive-poi-icon">&#9981;</span>
+          <span class="drive-poi-label">Gas</span>
+          <span class="drive-poi-badge" id="poi-badge-gas"></span>
+        </button>
+      </div>
+
       <!-- End Route -->
       <button class="drive-btn drive-btn-end-route" onclick="driveNavCancel()">
         <span class="drive-btn-icon">&#11035;</span>
@@ -3109,6 +3196,12 @@ function _driveDoRoute(origin, dest) {
     _driveNavRouteLeg = result.routes[0].legs[0];
     _driveNavSteps = _driveNavRouteLeg.steps || [];
     _driveNavCurrentStep = 0;
+    // Capture polyline + mileage for POI searches
+    var route = result.routes[0];
+    _drivePolyline = (route.overview_polyline && route.overview_polyline.points) ? route.overview_polyline.points : '';
+    _driveTotalMiles = _driveNavRouteLeg.distance ? _driveNavRouteLeg.distance.value / 1609.34 : 0;
+    _driveGeoWaypoints = result.geocoded_waypoints || [];
+    driveClearAllPois();
     driveUpdateGuidance(_driveNavSteps[0], _driveNavRouteLeg);
     driveSetNavState(true);
     driveStartStepTracking();
@@ -3201,8 +3294,149 @@ function driveNavCancel() {
   _driveNavSteps = [];
   _driveNavCurrentStep = 0;
   _driveNavRouteLeg = null;
+  _drivePolyline = '';
+  _driveTotalMiles = 0;
+  driveClearAllPois();
   driveSetNavState(false);
   document.getElementById('drive-nav-dest').value = '';
+}
+
+// ---- POI along route ----
+var _drivePolyline = '';
+var _driveTotalMiles = 0;
+var _driveGeoWaypoints = [];
+var _drivePois = {};      // cat -> [{name,lat,lng,address,rating}, ...]
+var _drivePoiMarkers = {}; // cat -> [google.maps.Marker, ...]
+var _drivePoiActive = {}; // cat -> bool
+var _drivePoiLoading = {}; // cat -> bool
+
+var POI_COLORS = {
+  food:      '#FF5722',
+  starbucks: '#00704A',
+  parks:     '#4CAF50',
+  historic:  '#FF9800',
+  family:    '#2196F3',
+  gas:       '#9E9E9E'
+};
+
+function driveTogglePoi(cat) {
+  var btn = document.getElementById('poi-btn-' + cat);
+  if (!btn || !_driveNavMapsLoaded) return;
+  if (_drivePoiLoading[cat]) return;
+
+  if (_drivePoiActive[cat]) {
+    // Hide markers
+    var markers = _drivePoiMarkers[cat] || [];
+    for (var i = 0; i < markers.length; i++) markers[i].setMap(null);
+    _drivePoiActive[cat] = false;
+    btn.classList.remove('active');
+    return;
+  }
+
+  if (_drivePois[cat]) {
+    // Already loaded — just re-show
+    driveShowPoiMarkers(cat);
+    return;
+  }
+
+  // Need to load — call API
+  if (!_drivePolyline) return;
+  _drivePoiLoading[cat] = true;
+  btn.classList.add('loading');
+
+  fetch('/api/nav/pois', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      encoded_polyline: _drivePolyline,
+      categories: [cat],
+      total_miles: _driveTotalMiles,
+      geocoded_waypoints: _driveGeoWaypoints,
+      parks_radius_miles: 25
+    })
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    _drivePoiLoading[cat] = false;
+    btn.classList.remove('loading');
+    var pois = (d.pois && d.pois[cat]) ? d.pois[cat] : [];
+    // Merge NPS parks into parks category
+    if (cat === 'parks' && d.nps_parks && d.nps_parks.length) {
+      for (var j = 0; j < d.nps_parks.length; j++) {
+        pois.push(d.nps_parks[j]);
+      }
+    }
+    _drivePois[cat] = pois;
+    var badge = document.getElementById('poi-badge-' + cat);
+    if (badge) {
+      badge.textContent = pois.length;
+      badge.style.display = pois.length ? 'flex' : 'none';
+    }
+    driveShowPoiMarkers(cat);
+  }).catch(function() {
+    _drivePoiLoading[cat] = false;
+    btn.classList.remove('loading');
+  });
+}
+
+function driveShowPoiMarkers(cat) {
+  if (!_driveNavMap) return;
+  var pois = _drivePois[cat] || [];
+  var existing = _drivePoiMarkers[cat] || [];
+  for (var i = 0; i < existing.length; i++) existing[i].setMap(null);
+
+  var color = POI_COLORS[cat] || '#ffffff';
+  var markers = [];
+  for (var k = 0; k < pois.length; k++) {
+    var p = pois[k];
+    var lat = p.lat || (p.geometry && p.geometry.location && p.geometry.location.lat);
+    var lng = p.lng || (p.geometry && p.geometry.location && p.geometry.location.lng);
+    if (!lat || !lng) continue;
+    var marker = new google.maps.Marker({
+      position: {lat: parseFloat(lat), lng: parseFloat(lng)},
+      map: _driveNavMap,
+      title: p.name || '',
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 9,
+        fillColor: color,
+        fillOpacity: 0.95,
+        strokeColor: '#fff',
+        strokeWeight: 1.5
+      }
+    });
+    (function(marker, poi) {
+      marker.addListener('click', function() {
+        var iw = new google.maps.InfoWindow({
+          content: '<div style="color:#000;font-size:13px;max-width:180px">' +
+                   '<strong>' + escHtml(poi.name || '') + '</strong>' +
+                   (poi.address ? '<br>' + escHtml(poi.address) : '') +
+                   (poi.rating ? '<br>&#9733; ' + poi.rating : '') +
+                   '</div>'
+        });
+        iw.open(_driveNavMap, marker);
+      });
+    })(marker, p);
+    markers.push(marker);
+  }
+  _drivePoiMarkers[cat] = markers;
+  _drivePoiActive[cat] = true;
+  var btn = document.getElementById('poi-btn-' + cat);
+  if (btn) btn.classList.add('active');
+}
+
+function driveClearAllPois() {
+  var cats = ['food','starbucks','parks','historic','family','gas'];
+  for (var i = 0; i < cats.length; i++) {
+    var cat = cats[i];
+    var markers = _drivePoiMarkers[cat] || [];
+    for (var j = 0; j < markers.length; j++) markers[j].setMap(null);
+    _drivePoiMarkers[cat] = [];
+    _drivePoiActive[cat] = false;
+    _drivePois[cat] = null;
+    var btn = document.getElementById('poi-btn-' + cat);
+    if (btn) { btn.classList.remove('active', 'loading'); }
+    var badge = document.getElementById('poi-badge-' + cat);
+    if (badge) badge.style.display = 'none';
+  }
 }
 
 // ---- Kasa scene trigger ----
