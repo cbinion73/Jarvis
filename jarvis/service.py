@@ -5012,6 +5012,70 @@ self.addEventListener('fetch', e => {
 
         return _json(result)
 
+    # ── KDP ─────────────────────────────────────────────────────────────────────
+
+    @app.get("/api/kdp/status")
+    async def api_kdp_status() -> JSONResponse:
+        from .kdp_store import get_status
+        return _json(await asyncio.to_thread(get_status))
+
+    @app.post("/api/kdp/credentials")
+    async def api_kdp_credentials(request: Request) -> JSONResponse:
+        from .kdp_scraper import save_credentials
+        try:
+            payload = await request.json()
+        except Exception:
+            return JSONResponse({"ok": False, "detail": "Invalid JSON"}, status_code=400)
+        email = str(payload.get("email", "")).strip()
+        password = str(payload.get("password", "")).strip()
+        if not email or not password:
+            return _json({"ok": False, "detail": "Email and password required."})
+        await asyncio.to_thread(save_credentials, email, password)
+        return _json({"ok": True, "detail": "Credentials saved."})
+
+    @app.post("/api/kdp/sync")
+    async def api_kdp_sync() -> JSONResponse:
+        from .kdp_scraper import load_credentials, run_full_sync
+        from .kdp_store import save_sync_result
+        creds = await asyncio.to_thread(load_credentials)
+        if not creds:
+            return _json({"ok": False, "detail": "No KDP credentials saved. Add them in Settings first."})
+        result = await run_full_sync(creds["email"], creds["password"])
+        if result.get("ok"):
+            await asyncio.to_thread(save_sync_result, result)
+        return _json(result)
+
+    @app.get("/api/kdp/books")
+    async def api_kdp_books() -> JSONResponse:
+        from .kdp_store import load_books, generate_insights, load_sales_history
+        books = await asyncio.to_thread(load_books)
+        history = await asyncio.to_thread(load_sales_history)
+        insights = await asyncio.to_thread(generate_insights, books, history)
+        return _json({"books": books, "insights": insights})
+
+    @app.get("/api/kdp/sales")
+    async def api_kdp_sales() -> JSONResponse:
+        from .kdp_store import load_sales_history, load_sync_meta
+        history = await asyncio.to_thread(load_sales_history, 90)
+        meta = await asyncio.to_thread(load_sync_meta)
+        return _json({"history": history, "meta": meta})
+
+    @app.post("/api/kdp/report/upload")
+    async def api_kdp_report_upload(request: Request) -> JSONResponse:
+        from .kdp_store import parse_csv_report, save_sync_result
+        from datetime import datetime as _dt, timezone as _tz
+        try:
+            payload = await request.json()
+        except Exception:
+            return JSONResponse({"ok": False, "detail": "Invalid JSON"}, status_code=400)
+        csv_text = str(payload.get("csv", ""))
+        if not csv_text:
+            return _json({"ok": False, "detail": "No CSV content provided."})
+        rows = await asyncio.to_thread(parse_csv_report, csv_text)
+        result = {"ok": True, "books": [], "sales": {"csv_rows": rows}, "synced_at": _dt.now(_tz.utc).isoformat()}
+        await asyncio.to_thread(save_sync_result, result)
+        return _json({"ok": True, "rows_parsed": len(rows), "detail": f"Parsed {len(rows)} rows from CSV."})
+
     # ------------------------------------------------------------------
     # Health Bridge — Apple Health + Epic FHIR (Helen Cho)
     # ------------------------------------------------------------------

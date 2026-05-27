@@ -15438,28 +15438,32 @@ async function settingsBuildAccounts() {{
 
 /* ── Voice ─────────────────────────────────────────────────── */
 async function settingsBuildVoice() {{
-  let opts = {{}};
+  let opts = {{}}, current = {{}};
   try {{
-    const r = await fetch('/api/voice-options');
-    opts = await r.json();
-  }} catch(e) {{ opts = {{error: true}}; }}
+    const [r1, r2] = await Promise.all([fetch('/api/voice-options'), fetch('/api/voice-settings')]);
+    opts = await r1.json();
+    current = await r2.json();
+  }} catch(e) {{ opts = {{}}; }}
 
   const providers = opts.providers || [];
+  const currentProvider = current.provider || 'elevenlabs';
+  const currentVoice = current.voice_id || current.voice || '';
+
   const providerOptions = providers.map(p =>
-    `<option value="${{escHtml(p.id)}}">${{escHtml(p.name)}} — ${{p.ready ? '✓ Ready' : '✗ Not ready'}}</option>`
+    `<option value="${{p.id}}" ${{p.id === currentProvider ? 'selected' : ''}}>${{p.label || p.id}}</option>`
   ).join('') || '<option value="">No providers available</option>';
 
-  const voices = opts.voices || [];
-  const voiceOptions = voices.map(v =>
-    `<option value="${{escHtml(v.id)}}">${{escHtml(v.name)}}</option>`
-  ).join('') || '<option value="">No voices available</option>';
+  const voiceList = opts[currentProvider] || [];
+  const voiceOptions = voiceList.length
+    ? voiceList.map(v => `<option value="${{v.id}}" ${{v.id === currentVoice ? 'selected' : ''}}>${{v.label || v.id}}</option>`).join('')
+    : '<option value="">No voices for this provider</option>';
 
   return `
     <p class="sset-section-hdr">Voice Settings</p>
     <div class="sset-card">
       <div class="sset-row">
         <div class="sset-label">Provider</div>
-        <select id="voice-provider" class="sset-select">${{providerOptions}}</select>
+        <select id="voice-provider" class="sset-select" onchange="settingsRefreshVoiceList(this.value)">${{providerOptions}}</select>
       </div>
       <div class="sset-row">
         <div class="sset-label">Voice / Model</div>
@@ -15470,8 +15474,20 @@ async function settingsBuildVoice() {{
       </div>
       <div id="settings-voice-msg" class="sset-msg"></div>
     </div>
-    ${{opts.error ? '<p style="font-size:11px;color:#f87171;">Could not load voice options from /api/voice-options</p>' : ''}}
   `;
+}}
+
+async function settingsRefreshVoiceList(provider) {{
+  try {{
+    const r = await fetch('/api/voice-options');
+    const opts = await r.json();
+    const voiceList = opts[provider] || [];
+    const sel = document.getElementById('voice-model');
+    if (!sel) return;
+    sel.innerHTML = voiceList.length
+      ? voiceList.map(v => `<option value="${{v.id}}">${{v.label || v.id}}</option>`).join('')
+      : '<option value="">No voices for this provider</option>';
+  }} catch(e) {{}}
 }}
 
 /* ── Location ──────────────────────────────────────────────── */
