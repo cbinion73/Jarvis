@@ -3967,6 +3967,10 @@ self.addEventListener('fetch', e => {
         status = str(payload.get("status", "suppressed"))
         return _json(runtime.update_personalization_insight_status(viewer, subject_user_id, insight_id, status))
 
+    @app.get("/api/google/client-secret")
+    async def api_google_client_secret_info() -> JSONResponse:
+        return _json(await asyncio.to_thread(runtime.google_get_client_secret_info))
+
     @app.post("/api/google/client-secret")
     async def api_google_client_secret(payload: dict[str, Any]) -> JSONResponse:
         return _json(runtime.google_save_client_secret(str(payload.get("client_secret_json", ""))))

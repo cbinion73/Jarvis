@@ -7794,6 +7794,18 @@ body::after {{
       </div>
     </div>
 
+    <!-- Google Workspace -->
+    <p style="font-size:12px;color:var(--text-3);margin:24px 0 10px;font-family:var(--font-mono);letter-spacing:0.04em;text-transform:uppercase;">Google Workspace</p>
+    <div id="settings-google-status-row" style="font-size:12px;color:var(--text-2);margin-bottom:10px;">
+      Checking…
+    </div>
+    <textarea id="settings-google-json" rows="4" placeholder='Paste your Google OAuth client JSON here (download from Google Cloud Console → Credentials → your Web client → Download JSON)' style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--text-1);font-family:var(--font-mono);resize:vertical;outline:none;margin-bottom:8px;"></textarea>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button onclick="settingsSaveGoogleJson()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:12px;cursor:pointer;">Save Client JSON</button>
+      <button id="settings-google-connect-btn" onclick="settingsConnectGoogle()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);font-size:12px;cursor:pointer;">Connect Google Account</button>
+    </div>
+    <div id="settings-google-msg" style="font-size:11px;color:var(--text-3);margin-top:6px;min-height:16px;"></div>
+
     <p style="font-size:12px;color:var(--text-3);margin:20px 0 10px;font-family:var(--font-mono);letter-spacing:0.04em;text-transform:uppercase;">Welcome, {user_name}</p>
     <p style="font-size:12px;color:var(--text-2);">JARVIS Glass — Adaptive Chromatic Interface<br>Version 3.0 · S.H.I.E.L.D. Clearance Level 6</p>
   </div>
@@ -15075,11 +15087,6 @@ function showToast(msg, type) {{
 /* ═══════════════════════════════════════════════════════════════
    SETTINGS MODAL
 ═══════════════════════════════════════════════════════════════ */
-function openSettings() {{
-  const ov = document.getElementById('settings-overlay');
-  if (ov) ov.classList.remove('hidden');
-}}
-
 function closeSettings() {{
   const ov = document.getElementById('settings-overlay');
   if (ov) ov.classList.add('hidden');
@@ -15087,6 +15094,65 @@ function closeSettings() {{
 
 function closeSettingsIfOuter(e) {{
   if (e.target === document.getElementById('settings-overlay')) closeSettings();
+}}
+
+async function openSettings() {{
+  const ov = document.getElementById('settings-overlay');
+  if (ov) ov.classList.remove('hidden');
+  // load google status
+  try {{
+    const r = await fetch('/api/google/client-secret');
+    const d = await r.json();
+    const row = document.getElementById('settings-google-status-row');
+    const btn = document.getElementById('settings-google-connect-btn');
+    if (row) {{
+      if (d.present) {{
+        row.innerHTML = '<span style="color:#4ade80;">✓ Client JSON saved</span> · Type: ' + (d.client_type || '?') + ' · ID: …' + (d.client_id_tail || '?');
+        if (btn) {{ btn.textContent = 'Connect Google Account'; btn.style.color = 'var(--accent)'; btn.style.borderColor = 'var(--accent)'; }}
+      }} else {{
+        row.innerHTML = '<span style="color:var(--text-3);">No client JSON saved yet.</span>';
+      }}
+    }}
+  }} catch(e) {{
+    const row = document.getElementById('settings-google-status-row');
+    if (row) row.textContent = 'Could not load Google status.';
+  }}
+}}
+
+async function settingsSaveGoogleJson() {{
+  const ta = document.getElementById('settings-google-json');
+  const msg = document.getElementById('settings-google-msg');
+  const raw = (ta?.value || '').trim();
+  if (!raw) {{ if (msg) msg.textContent = 'Paste the JSON first.'; return; }}
+  try {{
+    const r = await fetch('/api/google/client-secret', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{client_secret_json: raw}})
+    }});
+    const d = await r.json();
+    if (msg) msg.textContent = d.detail || (d.ok ? 'Saved!' : 'Error saving.');
+    if (d.ok) {{ ta.value = ''; openSettings(); }}
+  }} catch(e) {{
+    if (msg) msg.textContent = 'Network error: ' + e.message;
+  }}
+}}
+
+async function settingsConnectGoogle() {{
+  const msg = document.getElementById('settings-google-msg');
+  try {{
+    const r = await fetch('/api/accounts');
+    const accounts = await r.json();
+    const personal = (accounts.accounts || []).find(a => a.type === 'personal');
+    const accountId = personal?.id;
+    if (!accountId) {{ if (msg) msg.textContent = 'No personal account found.'; return; }}
+    const r2 = await fetch('/api/accounts/' + accountId + '/connect', {{method: 'POST', headers: {{'Content-Type':'application/json'}}, body: JSON.stringify({{provider:'google'}})}});
+    const d2 = await r2.json();
+    if (d2.url) {{ window.open(d2.url, '_blank'); if (msg) msg.textContent = 'Google login opened in new tab.'; }}
+    else {{ if (msg) msg.textContent = d2.detail || 'Could not start Google login.'; }}
+  }} catch(e) {{
+    if (msg) msg.textContent = 'Error: ' + e.message;
+  }}
 }}
 
 function setTheme(theme) {{
