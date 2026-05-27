@@ -982,6 +982,16 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         packet: str = Query(default=""),
         theme: str = Query(default=""),
     ) -> str:
+        # iOS auto-detection — redirect to device-optimised views unless theme forced
+        ua = request.headers.get("user-agent", "")
+        if theme not in ("glass", "nexus"):
+            if "iPad" in ua:
+                from .device_views import tablet_view
+                return tablet_view()
+            if "iPhone" in ua or "iPod" in ua:
+                from .device_views import mobile_view
+                return mobile_view()
+
         # Glass is the default. Only an explicit ?theme=nexus query param overrides it.
         if theme == "nexus" and _NEXUS_THEME_AVAILABLE:
             return _render_nexus_shell(runtime, initial_packet=packet)
@@ -7395,6 +7405,116 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         except Exception as exc:
             logger.warning("chronicle/ai-chat failed: %s", exc)
             return _json({"reply": f"Chronicle AI is unavailable: {exc}"})
+
+    # -----------------------------------------------------------------------
+    # Navigation (Google Maps + NPS)
+    # -----------------------------------------------------------------------
+    from .nav_bridge import NavBridge as _NavBridge
+
+    _nav = _NavBridge(
+        maps_api_key=os.environ.get("GOOGLE_MAPS_API_KEY", ""),
+        nps_api_key=os.environ.get("NPS_API_KEY", ""),
+    )
+
+    @app.get("/api/nav/maps-key")
+    async def nav_maps_key() -> JSONResponse:
+        """Return the Google Maps API key for frontend script loading."""
+        return _json({"key": os.environ.get("GOOGLE_MAPS_API_KEY", "")})
+
+    @app.get("/api/nav/autocomplete")
+    async def nav_autocomplete(q: str = "") -> JSONResponse:
+        """Proxy to Google Places Autocomplete API."""
+        maps_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
+        if not maps_key:
+            return _json({"error": "GOOGLE_MAPS_API_KEY not configured"})
+        if not q:
+            return _json({"predictions": []})
+        try:
+            import urllib.request as _nav_ureq
+            import urllib.parse as _nav_uparse
+            import json as _nav_json
+            url = (
+                "https://maps.googleapis.com/maps/api/place/autocomplete/json?"
+                + _nav_uparse.urlencode({"input": q, "key": maps_key})
+            )
+            with _nav_ureq.urlopen(url, timeout=8) as resp:
+                data = _nav_json.loads(resp.read())
+            predictions = [
+                {"place_id": p.get("place_id", ""), "description": p.get("description", "")}
+                for p in data.get("predictions", [])
+            ]
+            return _json({"predictions": predictions})
+        except Exception as exc:
+            logger.warning("nav/autocomplete failed: %s", exc)
+            return _json({"error": str(exc)})
+
+    @app.post("/api/nav/route")
+    async def nav_route(request: Request) -> JSONResponse:
+        """Proxy to Google Directions API."""
+        maps_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
+        if not maps_key:
+            return _json({"error": "GOOGLE_MAPS_API_KEY not configured"})
+        try:
+            body = await request.json()
+            origin = body.get("origin", "")
+            destination = body.get("destination", "")
+            if not origin or not destination:
+                return _json({"error": "origin and destination required"})
+            import urllib.request as _nav_ureq
+            import urllib.parse as _nav_uparse
+            import json as _nav_json
+            url = (
+                "https://maps.googleapis.com/maps/api/directions/json?"
+                + _nav_uparse.urlencode({
+                    "origin": origin,
+                    "destination": destination,
+                    "key": maps_key,
+                })
+            )
+            with _nav_ureq.urlopen(url, timeout=15) as resp:
+                data = _nav_json.loads(resp.read())
+            return _json(data)
+        except Exception as exc:
+            logger.warning("nav/route failed: %s", exc)
+            return _json({"error": str(exc)})
+
+    @app.post("/api/nav/pois")
+    async def nav_pois(request: Request) -> JSONResponse:
+        """Search for POIs along a route and NPS parks for states on route."""
+        try:
+            body = await request.json()
+            encoded_polyline = body.get("encoded_polyline", "")
+            categories = body.get("categories", ["food", "starbucks", "parks", "historic", "family"])
+            total_miles = float(body.get("total_miles", 0))
+            geocoded_waypoints = body.get("geocoded_waypoints", [])
+            if not encoded_polyline:
+                return _json({"pois": {}, "nps_parks": []})
+            pois = await asyncio.to_thread(
+                _nav.search_pois_along_route,
+                encoded_polyline,
+                categories,
+                total_miles,
+            )
+            states = await asyncio.to_thread(
+                _nav.extract_states_from_route,
+                geocoded_waypoints,
+            )
+            nps_parks = await asyncio.to_thread(_nav.search_nps_by_states, states)
+            return _json({"pois": pois, "nps_parks": nps_parks})
+        except Exception as exc:
+            logger.warning("nav/pois failed: %s", exc)
+            return _json({"error": str(exc)})
+
+    @app.get("/api/nav/nps")
+    async def nav_nps(states: str = "") -> JSONResponse:
+        """Return NPS parks for given comma-separated state codes."""
+        try:
+            state_list = [s.strip() for s in states.split(",") if s.strip()]
+            parks = await asyncio.to_thread(_nav.search_nps_by_states, state_list)
+            return _json({"parks": parks})
+        except Exception as exc:
+            logger.warning("nav/nps failed: %s", exc)
+            return _json({"error": str(exc)})
 
     # -----------------------------------------------------------------------
     # Kasa Smart Home

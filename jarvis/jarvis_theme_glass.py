@@ -5102,6 +5102,316 @@ body::after {{
 .wi-surface-title {{ font-size:12px; color:var(--text-1); font-weight:500; }}
 .wi-surface-reason {{ font-size:11px; color:var(--text-3); margin-top:2px; }}
 
+/* ═══════════════════════════════════════════════════════════════
+   NAVIGATION / WAZE
+═══════════════════════════════════════════════════════════════ */
+.nav-container {{
+  display: flex;
+  flex-direction: row;
+  height: calc(100vh - 120px);
+  overflow: hidden;
+}}
+.nav-sidebar {{
+  width: 380px;
+  min-width: 320px;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}}
+.nav-map-pane {{
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}}
+#nav-map {{
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  background: #1a1a2e;
+}}
+.nav-route-inputs {{
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}}
+.nav-input-row {{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}}
+.nav-input {{
+  flex: 1;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-1);
+  padding: 8px 12px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}}
+.nav-input:focus {{
+  border-color: var(--accent);
+}}
+.nav-autocomplete-results {{
+  position: absolute;
+  top: 100%;
+  left: 24px;
+  right: 0;
+  background: #1e2030;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+}}
+.nav-autocomplete-item {{
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-1);
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}}
+.nav-autocomplete-item:hover {{
+  background: rgba(255,255,255,0.08);
+}}
+.nav-swap-btn {{
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  color: var(--text-1);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}}
+.nav-swap-btn:hover {{
+  background: rgba(255,255,255,0.15);
+}}
+.nav-go-btn {{
+  flex: 1;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  color: #000;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}}
+.nav-go-btn:hover {{
+  opacity: 0.85;
+}}
+.nav-poi-toggles {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}}
+.nav-poi-toggle {{
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-2);
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}}
+.nav-poi-toggle.active[data-cat="food"] {{ background: rgba(255,107,53,0.25); border-color: #FF6B35; color: #FF6B35; }}
+.nav-poi-toggle.active[data-cat="starbucks"] {{ background: rgba(0,112,74,0.25); border-color: #00704A; color: #00704A; }}
+.nav-poi-toggle.active[data-cat="parks"] {{ background: rgba(45,106,79,0.25); border-color: #2D6A4F; color: #2D6A4F; }}
+.nav-poi-toggle.active[data-cat="historic"] {{ background: rgba(201,168,76,0.25); border-color: #C9A84C; color: #C9A84C; }}
+.nav-poi-toggle.active[data-cat="family"] {{ background: rgba(123,45,139,0.25); border-color: #7B2D8B; color: #7B2D8B; }}
+.nav-poi-toggle.active[data-cat="gas"] {{ background: rgba(33,150,243,0.25); border-color: #2196F3; color: #2196F3; }}
+.nav-summary-bar {{
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}}
+.nav-stat {{
+  flex: 1;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}}
+.nav-stat span {{
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-1);
+}}
+.nav-stat label {{
+  font-size: 10px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}}
+.nav-section-title {{
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 10px 16px 4px;
+}}
+.nav-turn-card {{
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}}
+.nav-turn-icon {{
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0,212,255,0.15);
+  border: 1px solid rgba(0,212,255,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  color: var(--accent);
+}}
+.nav-poi-card {{
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}}
+.nav-poi-distance-chip {{
+  background: rgba(0,212,255,0.12);
+  border: 1px solid rgba(0,212,255,0.25);
+  border-radius: 12px;
+  font-size: 10px;
+  color: var(--accent);
+  padding: 2px 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}}
+/* Mobile HUD */
+.nav-hud {{
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  background: rgba(15,20,40,0.92);
+  backdrop-filter: blur(8px);
+  padding: 16px 20px;
+  z-index: 200;
+}}
+.nav-hud-turn {{
+  font-size: 40px;
+  line-height: 1;
+  color: var(--accent);
+  min-width: 48px;
+  text-align: center;
+}}
+.nav-hud-distance {{
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-1);
+  line-height: 1;
+}}
+.nav-hud-instruction {{
+  font-size: 14px;
+  color: var(--text-2);
+  margin-top: 4px;
+}}
+.nav-eta-strip {{
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(15,20,40,0.9);
+  padding: 10px 20px;
+  font-size: 13px;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  z-index: 200;
+}}
+.nav-poi-alert {{
+  position: absolute;
+  bottom: 80px; left: 16px; right: 16px;
+  background: rgba(20,25,45,0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 300;
+  transform: translateY(160px);
+  transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}}
+.nav-poi-alert.visible {{
+  transform: translateY(0);
+}}
+.nav-voice-btn {{
+  position: absolute;
+  top: 12px; right: 12px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 40px; height: 40px;
+  font-size: 18px;
+  cursor: pointer;
+  z-index: 250;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}}
+.nav-start-btn, .nav-stop-btn {{
+  position: absolute;
+  bottom: 56px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: #000;
+  font-weight: 700;
+  font-size: 14px;
+  border: none;
+  border-radius: 24px;
+  padding: 12px 32px;
+  cursor: pointer;
+  z-index: 250;
+  white-space: nowrap;
+}}
+.nav-stop-btn {{
+  background: #ef4444;
+  color: #fff;
+}}
+@media (max-width: 768px) {{
+  .nav-sidebar {{
+    display: none;
+  }}
+  .nav-map-pane {{
+    width: 100%;
+  }}
+}}
+/* ═══════════════════════════════════════════════════════════════
+   END NAVIGATION CSS
+═══════════════════════════════════════════════════════════════ */
+
   </style>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
 </head>
@@ -5181,6 +5491,10 @@ body::after {{
     <button class="nav-tab" data-view="home" onclick="switchView('home')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       Home
+    </button>
+    <button class="nav-tab" data-view="navigate" onclick="switchView('navigate')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+      Navigate
     </button>
   </div>
 
@@ -7104,6 +7418,82 @@ body::after {{
     </div>
   </div>
 
+  <!-- ── NAVIGATE ─────────────────────────────────────────── -->
+  <div id="view-navigate" class="view" style="display:none; padding:0">
+    <div class="nav-container">
+      <!-- SIDEBAR (desktop) -->
+      <div class="nav-sidebar" id="nav-sidebar">
+        <div class="nav-route-inputs">
+          <div class="nav-input-row">
+            <span style="color:#4CAF50">&#9679;</span>
+            <input id="nav-origin" class="nav-input" placeholder="Starting point..." oninput="navAutocomplete('nav-origin', 'nav-origin-results')">
+            <div id="nav-origin-results" class="nav-autocomplete-results"></div>
+          </div>
+          <div class="nav-input-row">
+            <span style="color:#F44336">&#9679;</span>
+            <input id="nav-dest" class="nav-input" placeholder="Destination..." oninput="navAutocomplete('nav-dest', 'nav-dest-results')">
+            <div id="nav-dest-results" class="nav-autocomplete-results"></div>
+          </div>
+          <div style="display:flex; gap:8px">
+            <button class="nav-swap-btn" onclick="navSwapInputs()">&#8645;</button>
+            <button class="nav-go-btn" onclick="navGetRoute()">Get Route</button>
+          </div>
+        </div>
+
+        <div class="nav-poi-toggles" id="nav-poi-toggles">
+          <button class="nav-poi-toggle active" data-cat="food" onclick="navTogglePOI('food')">&#127828; Food</button>
+          <button class="nav-poi-toggle active" data-cat="starbucks" onclick="navTogglePOI('starbucks')">&#9749; Starbucks</button>
+          <button class="nav-poi-toggle active" data-cat="parks" onclick="navTogglePOI('parks')">&#127794; Nat&apos;l Parks</button>
+          <button class="nav-poi-toggle active" data-cat="historic" onclick="navTogglePOI('historic')">&#127963; Historic</button>
+          <button class="nav-poi-toggle active" data-cat="family" onclick="navTogglePOI('family')">&#11088; Family</button>
+          <button class="nav-poi-toggle" data-cat="gas" onclick="navTogglePOI('gas')">&#9981; Gas</button>
+        </div>
+
+        <div class="nav-summary-bar" id="nav-summary-bar" style="display:none">
+          <div class="nav-stat"><span id="nav-dist">--</span><label>Distance</label></div>
+          <div class="nav-stat"><span id="nav-time">--</span><label>Drive Time</label></div>
+          <div class="nav-stat"><span id="nav-eta">--</span><label>ETA</label></div>
+        </div>
+
+        <div id="nav-turns-section" style="display:none">
+          <div class="nav-section-title">Turn by Turn</div>
+          <div id="nav-turns-list"></div>
+        </div>
+
+        <div id="nav-pois-section" style="display:none">
+          <div class="nav-section-title">Along Your Route</div>
+          <div id="nav-pois-list"></div>
+        </div>
+      </div>
+
+      <!-- MAP PANE -->
+      <div class="nav-map-pane">
+        <div id="nav-map"></div>
+        <!-- Mobile HUD (hidden on desktop) -->
+        <div class="nav-hud" id="nav-hud" style="display:none">
+          <div style="display:flex; align-items:center; gap:16px">
+            <div id="nav-hud-arrow" class="nav-hud-turn">&#8593;</div>
+            <div>
+              <div class="nav-hud-distance" id="nav-hud-dist">--</div>
+              <div class="nav-hud-instruction" id="nav-hud-instr">Calculating...</div>
+            </div>
+          </div>
+        </div>
+        <div class="nav-eta-strip" id="nav-eta-strip" style="display:none">
+          <span id="nav-hud-eta">--</span> arrival &middot; <span id="nav-hud-remain">--</span> remaining
+        </div>
+        <div class="nav-poi-alert" id="nav-poi-alert">
+          <span id="nav-poi-alert-icon">&#127828;</span>
+          <div id="nav-poi-alert-text">Starbucks in 0.8 miles</div>
+          <button onclick="dismissNavAlert()" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:16px;margin-left:auto;">&#10005;</button>
+        </div>
+        <button class="nav-voice-btn" id="nav-voice-btn" onclick="navToggleVoice()" title="Toggle voice">&#128266;</button>
+        <button class="nav-start-btn" id="nav-start-btn" onclick="startNavigation()" style="display:none">&#9654; Start Navigation</button>
+        <button class="nav-stop-btn" id="nav-stop-btn" onclick="stopNavigation()" style="display:none">&#9632; Stop</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── NEWS ──────────────────────────────────────────────── -->
   <div id="view-news" class="view" style="display:none;">
     <div class="view-header">
@@ -7748,6 +8138,7 @@ function loadViewData(name) {{
     case 'catalyst':     loadWorkIntelligence(); break;
     case 'news':         loadNews(false); break;
     case 'home':         loadKasaDevices(); break;
+    case 'navigate':     initNavView(); break;
   }}
 }}
 
@@ -17277,6 +17668,405 @@ function renderScoreSparkline(history) {{
 
 /* ── Boot ── */
 document.addEventListener('DOMContentLoaded', init);
+
+/* ═══════════════════════════════════════════════════════════════
+   NAVIGATION / WAZE
+═══════════════════════════════════════════════════════════════ */
+var _navMap = null;
+var _navDirectionsRenderer = null;
+var _navDirectionsService = null;
+var _navMarkers = [];
+var _navPOIMarkers = {{}};
+var _navWatchId = null;
+var _navSteps = [];
+var _navCurrentStepIdx = 0;
+var _navPOIs = [];
+var _navVoiceOn = true;
+var _navActivePOICategories = new Set(['food','starbucks','parks','historic','family']);
+var _navUserMarker = null;
+var _navRouteData = null;
+var _navAlertTimer = null;
+var _navLastAnnouncedPOI = null;
+var _navGoogleMapsLoaded = false;
+
+function initNavView() {{
+    if (_navMap) return;
+    if (!_navGoogleMapsLoaded) {{
+        loadGoogleMapsScript();
+    }}
+}}
+
+function loadGoogleMapsScript() {{
+    fetch('/api/nav/maps-key').then(function(r) {{ return r.json(); }}).then(function(d) {{
+        var s = document.createElement('script');
+        s.src = 'https://maps.googleapis.com/maps/api/js?key=' + d.key + '&libraries=places&callback=onGoogleMapsReady';
+        s.async = true;
+        document.head.appendChild(s);
+    }});
+}}
+
+function onGoogleMapsReady() {{
+    _navGoogleMapsLoaded = true;
+    _navMap = new google.maps.Map(document.getElementById('nav-map'), {{
+        center: {{lat: 37.09, lng: -95.71}},
+        zoom: 5,
+        styles: _navDarkMapStyles(),
+        disableDefaultUI: false,
+        zoomControl: true
+    }});
+    _navDirectionsRenderer = new google.maps.DirectionsRenderer({{
+        map: _navMap,
+        suppressMarkers: false,
+        polylineOptions: {{strokeColor: '#00D4FF', strokeWeight: 5}}
+    }});
+    if (navigator.geolocation) {{
+        navigator.geolocation.getCurrentPosition(function(pos) {{
+            _navMap.setCenter({{lat: pos.coords.latitude, lng: pos.coords.longitude}});
+            _navMap.setZoom(12);
+        }});
+    }}
+}}
+
+function navAutocomplete(inputId, resultsId) {{
+    var val = document.getElementById(inputId).value;
+    if (val.length < 3) {{ document.getElementById(resultsId).innerHTML = ''; return; }}
+    fetch('/api/nav/autocomplete?q=' + encodeURIComponent(val))
+        .then(function(r) {{ return r.json(); }}).then(function(d) {{
+            var html = '';
+            (d.predictions || []).forEach(function(p) {{
+                html += '<div class="nav-autocomplete-item" onclick="navSelectPlace(\'' + inputId + '\',\'' + resultsId + '\',\'' + p.description.replace(/'/g,"\\'") + '\')">' + p.description + '</div>';
+            }});
+            document.getElementById(resultsId).innerHTML = html;
+        }});
+}}
+
+function navSelectPlace(inputId, resultsId, desc) {{
+    document.getElementById(inputId).value = desc;
+    document.getElementById(resultsId).innerHTML = '';
+}}
+
+function navSwapInputs() {{
+    var o = document.getElementById('nav-origin').value;
+    var d = document.getElementById('nav-dest').value;
+    document.getElementById('nav-origin').value = d;
+    document.getElementById('nav-dest').value = o;
+}}
+
+function navGetRoute() {{
+    var origin = document.getElementById('nav-origin').value;
+    var dest = document.getElementById('nav-dest').value;
+    if (!origin || !dest) {{ showToast('Enter origin and destination'); return; }}
+    showToast('Getting route...');
+    fetch('/api/nav/route', {{
+        method: 'POST',
+        headers: {{'Content-Type':'application/json'}},
+        body: JSON.stringify({{origin: origin, destination: dest}})
+    }}).then(function(r) {{ return r.json(); }}).then(function(data) {{
+        if (data.error || !data.routes || !data.routes.length) {{
+            showToast('Route not found'); return;
+        }}
+        _navRouteData = data;
+        renderNavRoute(data);
+        loadNavPOIs(data);
+    }});
+}}
+
+function renderNavRoute(data) {{
+    var route = data.routes[0];
+    var leg = route.legs[0];
+    _navSteps = leg.steps;
+    _navCurrentStepIdx = 0;
+
+    if (_navDirectionsRenderer) {{
+        var request = {{
+            origin: document.getElementById('nav-origin').value,
+            destination: document.getElementById('nav-dest').value,
+            travelMode: google.maps.TravelMode.DRIVING
+        }};
+        if (!_navDirectionsService) _navDirectionsService = new google.maps.DirectionsService();
+        _navDirectionsService.route(request, function(result, status) {{
+            if (status === 'OK') _navDirectionsRenderer.setDirections(result);
+        }});
+    }}
+
+    document.getElementById('nav-dist').textContent = leg.distance.text;
+    document.getElementById('nav-time').textContent = leg.duration.text;
+    var eta = new Date(Date.now() + leg.duration.value * 1000);
+    document.getElementById('nav-eta').textContent = eta.toLocaleTimeString([], {{hour:'2-digit',minute:'2-digit'}});
+    document.getElementById('nav-summary-bar').style.display = 'flex';
+
+    var html = '';
+    leg.steps.forEach(function(step, i) {{
+        var instr = step.html_instructions.replace(/<[^>]+>/g,' ').trim();
+        var arrow = _navStepArrow(step.maneuver || '');
+        html += '<div class="nav-turn-card">'
+            + '<div class="nav-turn-icon">' + arrow + '</div>'
+            + '<div><div style="font-weight:500">' + instr + '</div>'
+            + '<div style="font-size:11px;opacity:0.6">' + step.distance.text + '</div></div>'
+            + '</div>';
+    }});
+    document.getElementById('nav-turns-list').innerHTML = html;
+    document.getElementById('nav-turns-section').style.display = 'block';
+    document.getElementById('nav-start-btn').style.display = 'block';
+}}
+
+function _navStepArrow(maneuver) {{
+    var map = {{
+        'turn-left':'←', 'turn-right':'→',
+        'turn-slight-left':'↖', 'turn-slight-right':'↗',
+        'turn-sharp-left':'↰', 'turn-sharp-right':'↱',
+        'uturn-left':'↩', 'uturn-right':'↪',
+        'ramp-left':'↖', 'ramp-right':'↗',
+        'merge':'↑', 'fork-left':'↖', 'fork-right':'↗',
+        'ferry':'⛴', 'roundabout-left':'↺', 'roundabout-right':'↻',
+        '':'↑'
+    }};
+    return map[maneuver] || '↑';
+}}
+
+function loadNavPOIs(data) {{
+    var route = data.routes[0];
+    var polyline = route.overview_polyline.points;
+    var totalMiles = route.legs.reduce(function(sum, l) {{ return sum + l.distance.value; }}, 0) / 1609.34;
+    var cats = Array.from(_navActivePOICategories);
+    var waypoints = data.geocoded_waypoints || [];
+    fetch('/api/nav/pois', {{
+        method: 'POST',
+        headers: {{'Content-Type':'application/json'}},
+        body: JSON.stringify({{
+            encoded_polyline: polyline,
+            categories: cats,
+            total_miles: totalMiles,
+            geocoded_waypoints: waypoints
+        }})
+    }}).then(function(r) {{ return r.json(); }}).then(function(d) {{
+        renderNavPOIs(d.pois || {{}}, d.nps_parks || []);
+    }});
+}}
+
+function renderNavPOIs(pois, npsParks) {{
+    _navMarkers.forEach(function(m) {{ m.setMap(null); }});
+    _navMarkers = [];
+
+    var colors = {{food:'#FF6B35',starbucks:'#00704A',parks:'#2D6A4F',historic:'#C9A84C',family:'#7B2D8B',gas:'#2196F3'}};
+    var emojis = {{food:'🍔',starbucks:'☕',parks:'🌲',historic:'🏛',family:'⭐',gas:'⛽'}};
+    var allPOIs = [];
+
+    Object.keys(pois).forEach(function(cat) {{
+        if (!_navActivePOICategories.has(cat)) return;
+        (pois[cat] || []).forEach(function(poi) {{
+            allPOIs.push(Object.assign({{}}, poi, {{category: cat}}));
+            if (!_navMap) return;
+            var marker = new google.maps.Marker({{
+                position: {{lat: poi.lat, lng: poi.lng}},
+                map: _navMap,
+                title: poi.name,
+                icon: {{
+                    path: google.maps.SymbolPath.CIRCLE,
+                    fillColor: colors[cat] || '#888',
+                    fillOpacity: 0.9,
+                    strokeColor: '#fff',
+                    strokeWeight: 2,
+                    scale: 10
+                }}
+            }});
+            var infoContent = '<div style="color:#000"><strong>' + poi.name + '</strong>'
+                + (poi.rating ? '<br>⭐ ' + poi.rating : '')
+                + (poi.address ? '<br>' + poi.address : '')
+                + '<br><em>~' + (poi.route_mile_marker || '?') + ' mi mark</em></div>';
+            var infoWindow = new google.maps.InfoWindow({{content: infoContent}});
+            marker.addListener('click', function() {{ infoWindow.open(_navMap, marker); }});
+            _navMarkers.push(marker);
+        }});
+    }});
+
+    npsParks.forEach(function(park) {{
+        allPOIs.push({{name: park.fullName, category: 'parks', lat: parseFloat(park.latitude || 0), lng: parseFloat(park.longitude || 0)}});
+    }});
+
+    _navPOIs = allPOIs;
+
+    var html = '';
+    var sorted = allPOIs.slice().sort(function(a,b) {{ return (a.route_mile_marker||0) - (b.route_mile_marker||0); }});
+    sorted.forEach(function(poi) {{
+        var e = emojis[poi.category] || '📍';
+        html += '<div class="nav-poi-card">'
+            + '<div style="font-size:20px">' + e + '</div>'
+            + '<div style="flex:1">'
+            + '<div style="font-weight:500">' + poi.name + '</div>'
+            + (poi.address ? '<div style="font-size:11px;opacity:0.6">' + poi.address + '</div>' : '')
+            + '</div>'
+            + (poi.route_mile_marker ? '<div class="nav-poi-distance-chip">mi ' + poi.route_mile_marker + '</div>' : '')
+            + '</div>';
+    }});
+    document.getElementById('nav-pois-list').innerHTML = html || '<div style="padding:16px;opacity:0.5">No POIs found. Try enabling more categories.</div>';
+    document.getElementById('nav-pois-section').style.display = 'block';
+}}
+
+function navTogglePOI(cat) {{
+    var btn = document.querySelector('.nav-poi-toggle[data-cat="' + cat + '"]');
+    if (_navActivePOICategories.has(cat)) {{
+        _navActivePOICategories.delete(cat);
+        if (btn) btn.classList.remove('active');
+    }} else {{
+        _navActivePOICategories.add(cat);
+        if (btn) btn.classList.add('active');
+    }}
+    if (_navRouteData) loadNavPOIs(_navRouteData);
+}}
+
+function startNavigation() {{
+    if (!navigator.geolocation) {{ showToast('Geolocation not available'); return; }}
+    document.getElementById('nav-start-btn').style.display = 'none';
+    document.getElementById('nav-stop-btn').style.display = 'block';
+    document.getElementById('nav-hud').style.display = 'block';
+    document.getElementById('nav-eta-strip').style.display = 'flex';
+    _navCurrentStepIdx = 0;
+    _updateNavHUD();
+    _navWatchId = navigator.geolocation.watchPosition(_navGPSUpdate, function(e) {{
+        showToast('GPS error: ' + e.message);
+    }}, {{enableHighAccuracy: true, maximumAge: 2000, timeout: 10000}});
+    if (_navVoiceOn && _navSteps.length) {{
+        var first = _navSteps[0].html_instructions.replace(/<[^>]+>/g,' ').trim();
+        _navSpeak('Starting navigation. ' + first);
+    }}
+}}
+
+function stopNavigation() {{
+    if (_navWatchId !== null) {{ navigator.geolocation.clearWatch(_navWatchId); _navWatchId = null; }}
+    document.getElementById('nav-hud').style.display = 'none';
+    document.getElementById('nav-eta-strip').style.display = 'none';
+    document.getElementById('nav-stop-btn').style.display = 'none';
+    document.getElementById('nav-start-btn').style.display = 'block';
+    if (_navUserMarker) {{ _navUserMarker.setMap(null); _navUserMarker = null; }}
+}}
+
+function _navGPSUpdate(pos) {{
+    var lat = pos.coords.latitude, lng = pos.coords.longitude;
+    if (_navMap) {{
+        _navMap.setCenter({{lat: lat, lng: lng}});
+        if (_navMap.getZoom() < 15) _navMap.setZoom(15);
+        if (!_navUserMarker) {{
+            _navUserMarker = new google.maps.Marker({{
+                position: {{lat: lat, lng: lng}},
+                map: _navMap,
+                icon: {{path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 6, fillColor: '#00D4FF', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2, rotation: pos.coords.heading || 0}}
+            }});
+        }} else {{
+            _navUserMarker.setPosition({{lat: lat, lng: lng}});
+            if (pos.coords.heading) {{
+                _navUserMarker.setIcon(Object.assign({{}}, _navUserMarker.getIcon(), {{rotation: pos.coords.heading}}));
+            }}
+        }}
+    }}
+    if (_navSteps.length && _navCurrentStepIdx < _navSteps.length) {{
+        var step = _navSteps[_navCurrentStepIdx];
+        var stepLat = step.end_location.lat, stepLng = step.end_location.lng;
+        var dist = _navHaversineJS(lat, lng, stepLat, stepLng);
+        if (dist < 0.05) {{
+            _navCurrentStepIdx++;
+            if (_navCurrentStepIdx < _navSteps.length) {{
+                _updateNavHUD();
+                if (_navVoiceOn) {{
+                    var nextStep = _navSteps[_navCurrentStepIdx];
+                    var instr = nextStep.html_instructions.replace(/<[^>]+>/g,' ').trim();
+                    _navSpeak('In ' + nextStep.distance.text + ', ' + instr);
+                }}
+            }} else {{
+                _navSpeak('You have arrived at your destination.');
+                stopNavigation();
+            }}
+        }} else if (dist < 0.3 && _navCurrentStepIdx < _navSteps.length - 1) {{
+            document.getElementById('nav-hud-dist').textContent = (dist * 5280).toFixed(0) + ' ft';
+        }}
+    }}
+    _navCheckPOIAlert(lat, lng);
+}}
+
+function _updateNavHUD() {{
+    if (_navCurrentStepIdx >= _navSteps.length) return;
+    var step = _navSteps[_navCurrentStepIdx];
+    var instr = step.html_instructions.replace(/<[^>]+>/g,' ').trim();
+    var arrow = _navStepArrow(step.maneuver || '');
+    document.getElementById('nav-hud-arrow').textContent = arrow;
+    document.getElementById('nav-hud-dist').textContent = step.distance.text;
+    document.getElementById('nav-hud-instr').textContent = instr;
+    var remDist = 0, remTime = 0;
+    for (var i = _navCurrentStepIdx; i < _navSteps.length; i++) {{
+        remDist += _navSteps[i].distance.value;
+        remTime += _navSteps[i].duration.value;
+    }}
+    var remMiles = (remDist / 1609.34).toFixed(1) + ' mi';
+    var etaDate = new Date(Date.now() + remTime * 1000);
+    var etaStr = etaDate.toLocaleTimeString([], {{hour:'2-digit',minute:'2-digit'}});
+    document.getElementById('nav-hud-eta').textContent = etaStr;
+    document.getElementById('nav-hud-remain').textContent = remMiles;
+}}
+
+function _navCheckPOIAlert(lat, lng) {{
+    var alert = document.getElementById('nav-poi-alert');
+    var nearby = _navPOIs.filter(function(p) {{
+        if (!p.lat || !p.lng) return false;
+        return _navHaversineJS(lat, lng, p.lat, p.lng) < 1.0;
+    }});
+    if (!nearby.length) return;
+    var closest = nearby.sort(function(a,b) {{
+        return _navHaversineJS(lat, lng, a.lat, a.lng) - _navHaversineJS(lat, lng, b.lat, b.lng);
+    }})[0];
+    if (_navLastAnnouncedPOI === closest.name) return;
+    _navLastAnnouncedPOI = closest.name;
+    var dist = _navHaversineJS(lat, lng, closest.lat, closest.lng).toFixed(1);
+    var emojiMap = {{food:'🍔',starbucks:'☕',parks:'🌲',historic:'🏛',family:'⭐',gas:'⛽'}};
+    var em = emojiMap[closest.category] || '📍';
+    document.getElementById('nav-poi-alert-icon').textContent = em;
+    document.getElementById('nav-poi-alert-text').textContent = closest.name + ' in ' + dist + ' miles';
+    alert.classList.add('visible');
+    if (_navVoiceOn) _navSpeak(closest.name + ' in ' + dist + ' miles');
+    if (_navAlertTimer) clearTimeout(_navAlertTimer);
+    _navAlertTimer = setTimeout(dismissNavAlert, 8000);
+}}
+
+function dismissNavAlert() {{
+    document.getElementById('nav-poi-alert').classList.remove('visible');
+    _navLastAnnouncedPOI = null;
+}}
+
+function navToggleVoice() {{
+    _navVoiceOn = !_navVoiceOn;
+    document.getElementById('nav-voice-btn').textContent = _navVoiceOn ? '🔊' : '🔇';
+    showToast(_navVoiceOn ? 'Voice on' : 'Voice off');
+}}
+
+function _navSpeak(text) {{
+    if (!_navVoiceOn || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    var utt = new SpeechSynthesisUtterance(text);
+    utt.rate = 1.0;
+    utt.pitch = 1.0;
+    window.speechSynthesis.speak(utt);
+}}
+
+function _navHaversineJS(lat1, lon1, lat2, lon2) {{
+    var R = 3958.8;
+    var dLat = (lat2-lat1)*Math.PI/180;
+    var dLon = (lon2-lon1)*Math.PI/180;
+    var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+        Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}}
+
+function _navDarkMapStyles() {{
+    return [
+        {{elementType:'geometry',stylers:[{{color:'#1a1a2e'}}]}},
+        {{elementType:'labels.text.fill',stylers:[{{color:'#8ec3b0'}}]}},
+        {{elementType:'labels.text.stroke',stylers:[{{color:'#1a3646'}}]}},
+        {{featureType:'road',elementType:'geometry',stylers:[{{color:'#304a7d'}}]}},
+        {{featureType:'road.highway',elementType:'geometry',stylers:[{{color:'#2c6291'}}]}},
+        {{featureType:'water',elementType:'geometry',stylers:[{{color:'#0e3d54'}}]}},
+        {{featureType:'poi.park',elementType:'geometry',stylers:[{{color:'#023e1f'}}]}}
+    ];
+}}
+/* ═══ END NAVIGATION ═══ */
 </script>
 </body>
 </html>"""
