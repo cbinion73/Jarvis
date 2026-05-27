@@ -5481,6 +5481,9 @@ body::after {{
     padding: 1px 5px;
     white-space: nowrap;
 }}
+@keyframes spin {{
+    to {{ transform: rotate(360deg); }}
+}}
 /* ═══════════════════════════════════════════════════════════════
    END NAVIGATION CSS
 ═══════════════════════════════════════════════════════════════ */
@@ -7498,7 +7501,11 @@ body::after {{
       <div id="nav-aerial-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.92); z-index:9999; flex-direction:column; align-items:center; justify-content:center;">
         <div style="position:relative; width:min(800px,95vw);">
           <div id="nav-aerial-dest-name" style="color:#fff; font-size:22px; font-weight:700; margin-bottom:12px; text-align:center;"></div>
-          <video id="nav-aerial-video" autoplay loop muted playsinline style="width:100%; border-radius:16px; box-shadow:0 0 60px rgba(0,212,255,0.3);"></video>
+          <div id="nav-aerial-loading" style="display:flex; align-items:center; justify-content:center; min-height:240px; flex-direction:column; gap:16px;">
+            <div style="width:48px; height:48px; border:3px solid rgba(0,212,255,0.2); border-top-color:#00D4FF; border-radius:50%; animation:spin 1s linear infinite;"></div>
+            <div style="color:rgba(255,255,255,0.5); font-size:14px;">&#127916; Preparing aerial view&hellip;</div>
+          </div>
+          <video id="nav-aerial-video" autoplay loop muted playsinline style="display:none; width:100%; border-radius:16px; box-shadow:0 0 60px rgba(0,212,255,0.3);"></video>
           <img id="nav-aerial-fallback" style="display:none; width:100%; border-radius:16px;" alt="Destination">
           <div style="display:flex; gap:12px; margin-top:16px; justify-content:center;">
             <button onclick="startNavigation(); closeAerialModal();" style="padding:12px 32px; background:#00D4FF; color:#000; border:none; border-radius:8px; font-size:16px; font-weight:700; cursor:pointer;">&#9654; Start Navigation</button>
@@ -18225,23 +18232,51 @@ function showAerialView(destinationAddress) {{
     var fallback = document.getElementById('nav-aerial-fallback');
     var nameEl = document.getElementById('nav-aerial-dest-name');
     if (!modal) return;
+    // Show modal immediately with loading state
     nameEl.textContent = destinationAddress;
+    video.style.display = 'none';
+    fallback.style.display = 'none';
+    var loadingEl = document.getElementById('nav-aerial-loading');
+    if (loadingEl) loadingEl.style.display = 'flex';
     modal.style.display = 'flex';
     fetch('/api/nav/aerial?address=' + encodeURIComponent(destinationAddress))
         .then(function(r) {{ return r.json(); }})
         .then(function(d) {{
+            if (loadingEl) loadingEl.style.display = 'none';
             var videoUri = d.videoUri || (d.uris && d.uris.MP4_HIGH) || (d.uris && d.uris.MP4_MEDIUM) || '';
             if (videoUri) {{
                 video.src = videoUri;
                 video.style.display = 'block';
                 fallback.style.display = 'none';
             }} else {{
+                // Fallback: Street View of destination using route end point coords
                 video.style.display = 'none';
                 fallback.style.display = 'block';
-                fallback.src = '/api/nav/streetview?lat=0&lng=0&heading=0&width=800&height=450';
+                var destLat = 0, destLng = 0;
+                if (_navRouteData && _navRouteData.routes && _navRouteData.routes[0]) {{
+                    var legs = _navRouteData.routes[0].legs;
+                    var lastLeg = legs[legs.length - 1];
+                    destLat = lastLeg.end_location.lat;
+                    destLng = lastLeg.end_location.lng;
+                }}
+                fallback.src = '/api/nav/streetview?lat=' + destLat + '&lng=' + destLng + '&heading=0&width=800&height=450';
+                fallback.onerror = function() {{
+                    // If street view also has no coverage, show a message
+                    fallback.style.display = 'none';
+                    if (loadingEl) {{
+                        loadingEl.style.display = 'flex';
+                        loadingEl.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.5)">&#127757; No aerial imagery available<br>for this destination</div>';
+                    }}
+                }};
             }}
         }})
-        .catch(function() {{ modal.style.display = 'none'; }});
+        .catch(function(err) {{
+            if (loadingEl) loadingEl.style.display = 'none';
+            // Don't hide modal — show fallback Street View instead
+            video.style.display = 'none';
+            fallback.style.display = 'block';
+            fallback.src = '/api/nav/streetview?lat=0&lng=0&heading=0&width=800&height=450';
+        }});
 }}
 
 function closeAerialModal() {{
