@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import threading
 import time
@@ -391,8 +392,17 @@ class ChronicleSnapshotReader:
     """
     Reads the latest Chronicle snapshot from the ChronicleService data directory.
     Caches for 5 minutes. Thread-safe.
+
+    Path resolution order:
+      1. CHRONICLE_SNAPSHOT_DIR env var  (VPS / Docker volume mount)
+      2. Mac default: ~/Library/Application Support/ChronicleService/…
     """
-    SNAPSHOT_DIR = Path.home() / "Library" / "Application Support" / "ChronicleService" / "app" / "data" / "sync-snapshots"
+    _env_dir = os.environ.get("CHRONICLE_SNAPSHOT_DIR")
+    SNAPSHOT_DIR = (
+        Path(_env_dir)
+        if _env_dir
+        else Path.home() / "Library" / "Application Support" / "ChronicleService" / "app" / "data" / "sync-snapshots"
+    )
     CACHE_TTL = 300  # seconds
 
     def __init__(self) -> None:
