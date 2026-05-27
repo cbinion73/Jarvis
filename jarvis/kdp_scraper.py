@@ -5,6 +5,7 @@ re-login on every sync.
 """
 from __future__ import annotations
 
+import asyncio as _asyncio
 import json
 import logging
 from datetime import datetime, timezone
@@ -12,6 +13,40 @@ from pathlib import Path
 from typing import Any
 
 log = logging.getLogger("jarvis.kdp_scraper")
+
+# ---------------------------------------------------------------------------
+# Module-level sync state + 2FA coordination
+# ---------------------------------------------------------------------------
+
+_sync_status: str = "idle"          # idle | running | needs_2fa | done | error
+_2fa_future: "_asyncio.Future | None" = None
+_broadcast_fn = None                 # set by service.py at startup
+
+
+def set_broadcast(fn) -> None:
+    """Called by service.py to wire up the WebSocket broadcast function."""
+    global _broadcast_fn
+    _broadcast_fn = fn
+
+
+def _broadcast(payload: dict) -> None:
+    """Fire-and-forget broadcast if wired."""
+    try:
+        if _broadcast_fn:
+            _broadcast_fn(payload)
+    except Exception:
+        pass
+
+
+def get_sync_status() -> str:
+    return _sync_status
+
+
+async def submit_2fa_code(code: str) -> None:
+    """Called by the API endpoint when the user submits their OTP."""
+    global _2fa_future
+    if _2fa_future and not _2fa_future.done():
+        _2fa_future.set_result(code.strip())
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -97,8 +132,9 @@ async def login(page: Any, email: str, password: str) -> bool:
     """
     Navigate to KDP signin and complete the Amazon multi-step login flow.
     Returns True on success, False on failure.
-    Handles 2FA detection: returns False (unsupported).
+    Handles 2FA: pauses and waits for user to supply OTP via WebSocket.
     """
+    global _sync_status, _2fa_future
     try:
         await page.goto(
             "https://kdp.amazon.com/en_US/signin",
@@ -127,11 +163,42 @@ async def login(page: Any, email: str, password: str) -> bool:
             log.warning("KDP login: email step failed: %s", exc)
             return False
 
-        # Detect 2FA / OTP page
+        # Detect 2FA / OTP page (after email step)
         url = page.url
         if "ap/mfa" in url or "ap/cvf" in url or "ap/challenge" in url:
-            log.warning("KDP login: 2FA / OTP page detected — not supported")
-            return False
+            log.warning("KDP login: 2FA / OTP page detected after email step")
+            _sync_status = "needs_2fa"
+            loop = _asyncio.get_event_loop()
+            _2fa_future = loop.create_future()
+            _broadcast({"type": "kdp.2fa_required", "message": "Amazon needs a verification code to continue."})
+            try:
+                code = await _asyncio.wait_for(_asyncio.shield(_2fa_future), timeout=300)
+            except _asyncio.TimeoutError:
+                log.warning("KDP 2FA: timed out waiting for user code")
+                return False
+
+            # Enter OTP code
+            try:
+                for sel in ["#auth-mfa-otpcode", "#otp-field", "input[name='otpCode']", "input[type='text']"]:
+                    try:
+                        otp_field = page.locator(sel)
+                        await otp_field.wait_for(state="visible", timeout=3_000)
+                        await otp_field.fill(code)
+                        break
+                    except Exception:
+                        continue
+                submit_btn = page.locator("input[type='submit'], button[type='submit'], #auth-signin-button")
+                await submit_btn.first.click()
+                await page.wait_for_load_state("domcontentloaded", timeout=20_000)
+            except Exception as exc:
+                log.warning("KDP 2FA: could not enter code: %s", exc)
+                return False
+
+            # Re-check URL after 2FA submit
+            url = page.url
+            if "ap/mfa" in url or "ap/cvf" in url or "ap/challenge" in url:
+                log.warning("KDP login: still on 2FA page after code entry")
+                return False
 
         # ── Step 2: Enter password ───────────────────────────────────────
         try:
@@ -146,11 +213,42 @@ async def login(page: Any, email: str, password: str) -> bool:
             log.warning("KDP login: password step failed: %s", exc)
             return False
 
-        # Post-login: check for 2FA again
+        # Post-login: check for 2FA again (after password step)
         url = page.url
         if "ap/mfa" in url or "ap/cvf" in url or "ap/challenge" in url:
-            log.warning("KDP login: 2FA required after password — not supported")
-            return False
+            log.warning("KDP login: 2FA required after password step")
+            _sync_status = "needs_2fa"
+            loop = _asyncio.get_event_loop()
+            _2fa_future = loop.create_future()
+            _broadcast({"type": "kdp.2fa_required", "message": "Amazon needs a verification code to continue."})
+            try:
+                code = await _asyncio.wait_for(_asyncio.shield(_2fa_future), timeout=300)
+            except _asyncio.TimeoutError:
+                log.warning("KDP 2FA: timed out waiting for user code")
+                return False
+
+            # Enter OTP code
+            try:
+                for sel in ["#auth-mfa-otpcode", "#otp-field", "input[name='otpCode']", "input[type='text']"]:
+                    try:
+                        otp_field = page.locator(sel)
+                        await otp_field.wait_for(state="visible", timeout=3_000)
+                        await otp_field.fill(code)
+                        break
+                    except Exception:
+                        continue
+                submit_btn = page.locator("input[type='submit'], button[type='submit'], #auth-signin-button")
+                await submit_btn.first.click()
+                await page.wait_for_load_state("domcontentloaded", timeout=20_000)
+            except Exception as exc:
+                log.warning("KDP 2FA: could not enter code: %s", exc)
+                return False
+
+            # Re-check URL after 2FA submit
+            url = page.url
+            if "ap/mfa" in url or "ap/cvf" in url or "ap/challenge" in url:
+                log.warning("KDP login: still on 2FA page after code entry")
+                return False
 
         # Check if we landed on KDP
         if "kdp.amazon.com" in url and "amazon.com/ap" not in url:
@@ -470,10 +568,15 @@ async def run_full_sync(email: str, password: str) -> dict:
     Returns {"ok": True, "books": [...], "sales": {...}, "synced_at": ISO}
          or {"ok": False, "error": "..."}
     """
+    global _sync_status
+    _sync_status = "running"
+
     try:
         from playwright.async_api import async_playwright
     except ImportError:
         log.error("KDP: playwright not installed — run: pip install playwright")
+        _sync_status = "error"
+        _broadcast({"type": "kdp.sync_complete", "ok": False, "error": "playwright_not_installed"})
         return {"ok": False, "error": "playwright_not_installed"}
 
     try:
@@ -514,6 +617,8 @@ async def run_full_sync(email: str, password: str) -> dict:
                 success = await login(page, email, password)
                 if not success:
                     await browser.close()
+                    _sync_status = "error"
+                    _broadcast({"type": "kdp.sync_complete", "ok": False, "error": "login_failed"})
                     return {"ok": False, "error": "login_failed"}
                 logged_in = True
                 await save_cookies(context)
@@ -542,13 +647,18 @@ async def run_full_sync(email: str, password: str) -> dict:
 
             await browser.close()
 
-            return {
+            result = {
                 "ok": True,
                 "books": detail_books,
                 "sales": sales,
                 "synced_at": datetime.now(timezone.utc).isoformat(),
             }
+            _sync_status = "done"
+            _broadcast({"type": "kdp.sync_complete", "ok": True})
+            return result
 
     except Exception as exc:
         log.error("KDP run_full_sync failed: %s", exc, exc_info=True)
+        _sync_status = "error"
+        _broadcast({"type": "kdp.sync_complete", "ok": False, "error": str(exc)})
         return {"ok": False, "error": str(exc)}
