@@ -1,6 +1,8 @@
 import SwiftUI
 import JarvisKit
 
+// MARK: - NeedsView  "Alert Center"
+
 struct NeedsView: View {
 
     @ObservedObject var viewModel: NeedsViewModel
@@ -24,9 +26,7 @@ struct NeedsView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        Task { await viewModel.refresh() }
-                    } label: {
+                    Button { Task { await viewModel.refresh() } } label: {
                         Image(systemName: "arrow.clockwise")
                     }
                     .glassEffect(in: Circle())
@@ -48,12 +48,9 @@ struct NeedsView: View {
 
     private var loadingView: some View {
         VStack(spacing: 16) {
-            ProgressView()
-                .tint(.cyan)
-                .scaleEffect(1.4)
+            ProgressView().tint(.red).scaleEffect(1.4)
             Text("Checking for requests…")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(.caption).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -63,8 +60,28 @@ struct NeedsView: View {
     private var itemList: some View {
         ScrollView {
             VStack(spacing: 12) {
+                // Waiting count banner
+                HStack(spacing: 10) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundStyle(.red)
+                        .font(.title3)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("\(viewModel.items.count) WAITING")
+                            .font(.system(size: 11, weight: .black))
+                            .tracking(1.2)
+                            .foregroundStyle(.red)
+                        Text("Decisions required from you")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .glassEffect(in: RoundedRectangle(cornerRadius: 12))
+
                 ForEach(viewModel.items) { item in
-                    NeedsItemCard(item: item) {
+                    AlertItemCard(item: item) {
                         Task { await viewModel.approve(item: item) }
                     }
                 }
@@ -74,14 +91,19 @@ struct NeedsView: View {
         }
     }
 
-    // MARK: - Empty state
+    // MARK: - Empty
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 56))
-                .foregroundStyle(.green)
-            Text("All clear")
+        VStack(spacing: 20) {
+            ZStack {
+                Circle()
+                    .fill(Color.green.opacity(0.1))
+                    .frame(width: 90, height: 90)
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 52))
+                    .foregroundStyle(.green)
+            }
+            Text("All Clear")
                 .font(.title2.bold())
                 .foregroundStyle(.white)
             Text("No approvals or decisions waiting.")
@@ -95,74 +117,88 @@ struct NeedsView: View {
     }
 }
 
-// MARK: - NeedsItemCard
+// MARK: - Alert item card
 
-private struct NeedsItemCard: View {
-    let item: NeedsItem
+private struct AlertItemCard: View {
+    let item:      NeedsItem
     let onApprove: () -> Void
 
     @State private var confirming = false
 
     var riskColor: Color {
-        switch item.risk {
-        case "high":   return .red
-        case "medium": return .orange
-        default:       return .yellow
-        }
+        switch item.risk { case "high": .red; case "medium": .orange; default: .yellow }
     }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-
-            // Header row
-            HStack(alignment: .firstTextBaseline) {
-                Label(item.risk.capitalized, systemImage: riskIcon)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(riskColor)
-                Spacer()
-                Text(item.agent)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-
-            // Body text
-            Text(item.text)
-                .font(.subheadline)
-                .foregroundStyle(.white)
-                .fixedSize(horizontal: false, vertical: true)
-
-            // Expiry
-            if let exp = item.expiresIn {
-                Label(exp, systemImage: "clock")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-
-            // Approve button
-            Button(action: { confirming = true }) {
-                Label("Approve", systemImage: "checkmark.shield.fill")
-                    .frame(maxWidth: .infinity)
-                    .font(.subheadline.weight(.semibold))
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.green)
-            .confirmationDialog("Approve this request?", isPresented: $confirming, titleVisibility: .visible) {
-                Button("Approve", role: .none, action: onApprove)
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text(item.text)
-            }
-        }
-        .padding(16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    var riskBorderWidth: CGFloat {
+        switch item.risk { case "high": 4; case "medium": 3; default: 2 }
     }
 
-    private var riskIcon: String {
+    var riskIcon: String {
         switch item.risk {
         case "high":   return "exclamationmark.triangle.fill"
         case "medium": return "exclamationmark.circle.fill"
         default:       return "info.circle.fill"
         }
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            // Left risk strip
+            RoundedRectangle(cornerRadius: 2)
+                .fill(riskColor)
+                .frame(width: riskBorderWidth)
+                .padding(.vertical, 1)
+
+            VStack(alignment: .leading, spacing: 12) {
+                // Header
+                HStack(alignment: .firstTextBaseline) {
+                    Label(item.risk.capitalized, systemImage: riskIcon)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(riskColor)
+                    Spacer()
+                    Text(item.agent)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+
+                // Body
+                Text(item.text)
+                    .font(.subheadline)
+                    .foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let exp = item.expiresIn {
+                    Label(exp, systemImage: "clock")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+
+                // Approve action
+                Button(action: { confirming = true }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.shield.fill")
+                        Text("Approve")
+                            .fontWeight(.semibold)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .font(.subheadline)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+                .confirmationDialog("Approve this request?", isPresented: $confirming, titleVisibility: .visible) {
+                    Button("Approve", role: .none, action: onApprove)
+                    Button("Cancel", role: .cancel) {}
+                } message: { Text(item.text) }
+            }
+            .padding(14)
+        }
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+        // Very subtle risk-colored background tint for high items
+        .background(
+            item.risk == "high"
+                ? riskColor.opacity(0.04).clipShape(RoundedRectangle(cornerRadius: 16))
+                : nil
+        )
     }
 }
 

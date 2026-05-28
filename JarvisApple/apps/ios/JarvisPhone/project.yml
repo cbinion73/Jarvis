@@ -19,7 +19,7 @@ targets:
   JarvisPhone:
     type: application
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: JarvisPhone
     resources:
@@ -60,8 +60,27 @@ targets:
           - remote-notification
           - location
           - processing
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
     entitlements:
       path: JarvisPhone/JarvisPhone.entitlements
+      properties:
+        com.apple.developer.weatherkit: true
+        com.apple.developer.homekit: true
+        com.apple.developer.siri: true
+        com.apple.security.application-groups:
+          - group.com.binion.jarvisphone
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
+        aps-environment: production
     dependencies:
       - package: JarvisApple
         product: JarvisKit
@@ -94,7 +113,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.binion.jarvisphone
-        DEVELOPMENT_TEAM: ""
+        DEVELOPMENT_TEAM: "LGNJ56Y22G"
         INFOPLIST_FILE: JarvisPhone/Info.plist
         CODE_SIGN_ENTITLEMENTS: JarvisPhone/JarvisPhone.entitlements
         SWIFT_VERSION: "6.0"
@@ -107,13 +126,14 @@ targets:
   JarvisWidgetExtension:
     type: app-extension
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: JarvisWidgetExtension
     info:
       path: JarvisWidgetExtension/Info.plist
       properties:
         CFBundleName: JARVIS Widgets
+        CFBundleDisplayName: JARVIS Widgets
         CFBundleShortVersionString: "1.0"
         CFBundleVersion: "1"
         NSExtension:
@@ -125,7 +145,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.binion.jarvisphone.widgets
-        DEVELOPMENT_TEAM: ""
+        DEVELOPMENT_TEAM: "LGNJ56Y22G"
         SWIFT_VERSION: "6.0"
         CODE_SIGN_ENTITLEMENTS: JarvisWidgetExtension/JarvisWidgetExtension.entitlements
 
@@ -135,13 +155,14 @@ targets:
   JarvisNotificationContent:
     type: app-extension
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: JarvisNotificationContent
     info:
       path: JarvisNotificationContent/Info.plist
       properties:
         CFBundleName: JARVIS Notification
+        CFBundleDisplayName: JARVIS Notification
         CFBundleShortVersionString: "1.0"
         CFBundleVersion: "1"
         NSExtension:
@@ -154,7 +175,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.binion.jarvisphone.notification-content
-        DEVELOPMENT_TEAM: ""
+        DEVELOPMENT_TEAM: "LGNJ56Y22G"
         SWIFT_VERSION: "6.0"
 
   # ─────────────────────────────────────────────
@@ -163,7 +184,7 @@ targets:
   JarvisWatch:
     type: application
     platform: watchOS
-    deploymentTarget: "12.0"
+    deploymentTarget: "26.0"
     sources:
       - path: JarvisWatch
     info:
@@ -182,7 +203,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.binion.jarvisphone.watchkitapp
-        DEVELOPMENT_TEAM: ""
+        DEVELOPMENT_TEAM: "LGNJ56Y22G"
         SWIFT_VERSION: "6.0"
         TARGETED_DEVICE_FAMILY: "4"
 
@@ -192,7 +213,7 @@ targets:
   JarvisWatchComplication:
     type: app-extension
     platform: watchOS
-    deploymentTarget: "12.0"
+    deploymentTarget: "26.0"
     sources:
       - path: JarvisWatchComplication
     info:
@@ -206,7 +227,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.binion.jarvisphone.watchkitapp.complication
-        DEVELOPMENT_TEAM: ""
+        DEVELOPMENT_TEAM: "LGNJ56Y22G"
         SWIFT_VERSION: "6.0"
 
 schemes:

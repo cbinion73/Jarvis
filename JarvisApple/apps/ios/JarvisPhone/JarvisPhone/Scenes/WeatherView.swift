@@ -1,10 +1,14 @@
 import SwiftUI
 import WeatherKit
 
+// MARK: - WeatherView  "The Observatory"
+
 struct WeatherView: View {
 
-    @StateObject private var wx   = WeatherManager.shared
-    @StateObject private var loc  = WeatherLocationProvider.shared
+    @StateObject private var wx  = WeatherManager.shared
+    @StateObject private var loc = WeatherLocationProvider.shared
+
+    private let sky = Color(red: 0.4, green: 0.75, blue: 1.0)
 
     var body: some View {
         NavigationStack {
@@ -49,7 +53,10 @@ struct WeatherView: View {
 
     private var loadingView: some View {
         VStack(spacing: 16) {
-            ProgressView().tint(.cyan).scaleEffect(1.4)
+            Image(systemName: "cloud.sun.fill")
+                .font(.system(size: 40))
+                .foregroundStyle(sky.opacity(0.4))
+                .symbolEffect(.pulse)
             Text("Fetching weather…")
                 .font(.caption).foregroundStyle(.secondary)
         }
@@ -65,10 +72,9 @@ struct WeatherView: View {
             Text("Location needed")
                 .font(.headline).foregroundStyle(.white)
             Text("Allow location access so JARVIS can fetch live weather.")
-                .font(.caption).foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+                .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
             Button("Allow Location") { loc.requestAndFetch() }
-                .buttonStyle(.borderedProminent).tint(.cyan)
+                .buttonStyle(.borderedProminent).tint(sky)
         }
         .padding(24)
         .glassEffect(in: RoundedRectangle(cornerRadius: 20))
@@ -83,55 +89,68 @@ struct WeatherView: View {
         ScrollView {
             VStack(spacing: 14) {
 
-                // ── Condition banner image ──────────────────────
+                // ── Hero image — taller, cinematic ─────────────────
                 WeatherManager.conditionImage(cur.visualKey)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 180)
+                    .frame(height: 240)
                     .clipped()
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .overlay(
+                        // Gradient overlay so text is always legible
+                        LinearGradient(
+                            colors: [.clear, .black.opacity(0.7)],
+                            startPoint: UnitPoint(x: 0.5, y: 0.25),
+                            endPoint: .bottom
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                    )
                     .overlay(alignment: .bottomLeading) {
-                        // Hero temp + condition on top of the image
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: 0) {
                             Text(cur.tempString)
-                                .font(.system(size: 52, weight: .bold))
+                                .font(.system(size: 68, weight: .bold))
                                 .foregroundStyle(.white)
-                                .shadow(radius: 4)
+                                .shadow(radius: 2)
                             Text(cur.condition)
-                                .font(.subheadline.weight(.medium))
+                                .font(.title3.weight(.semibold))
                                 .foregroundStyle(.white.opacity(0.9))
-                                .shadow(radius: 4)
                             Text(cur.feelsLikeString)
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.75))
+                                .font(.subheadline)
+                                .foregroundStyle(.white.opacity(0.65))
                         }
-                        .padding(14)
+                        .padding(18)
                     }
 
-                // ── Stats grid ────────────────────────────────
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3),
-                          spacing: 10) {
-                    StatTile(icon: "humidity.fill",           label: "Humidity",    value: cur.humidityString,    color: .cyan)
-                    StatTile(icon: "wind",                    label: "Wind",        value: cur.wind,              color: .white)
-                    StatTile(icon: "eye.fill",                label: "Visibility",  value: cur.visibilityString,  color: .blue)
-                    StatTile(icon: "sun.max.fill",            label: "UV Index",    value: cur.uvString,          color: .yellow)
-                    StatTile(icon: "thermometer.medium",      label: "Feels Like",  value: cur.feelsLikeString,   color: .orange)
-                    StatTile(icon: "gauge.with.dots.needle.bottom.50percent",
-                                                              label: "Pressure",    value: cur.pressureString,    color: .purple)
+                // ── Stats grid — colored icon backgrounds ──────────
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3),
+                    spacing: 10
+                ) {
+                    ObsTile(icon: "humidity.fill",          label: "Humidity",   value: cur.humidityString,   color: sky)
+                    ObsTile(icon: "wind",                   label: "Wind",       value: cur.wind,             color: .white)
+                    ObsTile(icon: "eye.fill",               label: "Visibility", value: cur.visibilityString, color: .blue)
+                    ObsTile(icon: "sun.max.fill",           label: "UV Index",   value: cur.uvString,         color: .yellow)
+                    ObsTile(icon: "thermometer.medium",     label: "Feels Like", value: cur.feelsLikeString,  color: .orange)
+                    ObsTile(icon: "gauge.with.dots.needle.bottom.50percent",
+                                                            label: "Pressure",   value: cur.pressureString,   color: .purple)
                 }
 
-                // ── Hourly scroll ──────────────────────────────
+                // ── Hourly ─────────────────────────────────────────
                 if !wx.hourly.isEmpty {
                     VStack(alignment: .leading, spacing: 10) {
-                        Label("Hourly", systemImage: "clock.fill")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.7))
+                        HStack(spacing: 6) {
+                            Image(systemName: "clock.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(sky)
+                            Text("HOURLY")
+                                .font(.system(size: 10, weight: .bold))
+                                .tracking(1.0)
+                                .foregroundStyle(sky.opacity(0.85))
+                        }
                         ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 10) {
-                                ForEach(wx.hourly) { h in
-                                    HourlyTile(hour: h)
-                                }
+                            HStack(spacing: 8) {
+                                ForEach(wx.hourly) { h in ObsHourTile(hour: h, sky: sky) }
                             }
                         }
                     }
@@ -139,17 +158,23 @@ struct WeatherView: View {
                     .glassEffect(in: RoundedRectangle(cornerRadius: 16))
                 }
 
-                // ── 7-day forecast ─────────────────────────────
+                // ── 7-day forecast ─────────────────────────────────
                 if !wx.forecast.isEmpty {
                     VStack(alignment: .leading, spacing: 10) {
-                        Label("7-Day Forecast", systemImage: "calendar")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.7))
+                        HStack(spacing: 6) {
+                            Image(systemName: "calendar")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(sky)
+                            Text("7-DAY")
+                                .font(.system(size: 10, weight: .bold))
+                                .tracking(1.0)
+                                .foregroundStyle(sky.opacity(0.85))
+                        }
                         VStack(spacing: 0) {
                             ForEach(Array(wx.forecast.enumerated()), id: \.element.id) { idx, day in
-                                ForecastRow(day: day)
+                                ObsForecastRow(day: day, sky: sky)
                                 if idx < wx.forecast.count - 1 {
-                                    Divider().opacity(0.25)
+                                    Divider().opacity(0.18)
                                 }
                             }
                         }
@@ -158,8 +183,15 @@ struct WeatherView: View {
                     .glassEffect(in: RoundedRectangle(cornerRadius: 16))
                 }
 
-                // ── Apple Weather attribution (required by WeatherKit TOS) ──
-                WeatherAttributionView()
+                // ── Apple attribution (legally required by WeatherKit TOS) ──
+                HStack(spacing: 6) {
+                    Image(systemName: "apple.logo")
+                        .font(.caption2).foregroundStyle(.secondary)
+                    Text("Weather data provided by Apple Weather")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.bottom, 8)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
@@ -167,19 +199,24 @@ struct WeatherView: View {
     }
 }
 
-// MARK: - Stat tile
+// MARK: - Observatory stat tile
 
-private struct StatTile: View {
+private struct ObsTile: View {
     let icon:  String
     let label: String
     let value: String
     let color: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Image(systemName: icon)
-                .font(.caption)
-                .foregroundStyle(color)
+        VStack(alignment: .leading, spacing: 7) {
+            // Colored icon pill
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 11))
+                    .foregroundStyle(color)
+                    .frame(width: 20, height: 20)
+                    .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+            }
             Text(value)
                 .font(.subheadline.bold())
                 .foregroundStyle(.white)
@@ -197,30 +234,40 @@ private struct StatTile: View {
 
 // MARK: - Hourly tile
 
-private struct HourlyTile: View {
+private struct ObsHourTile: View {
     let hour: HourForecastSnapshot
+    let sky: Color
+
+    var tempColor: Color {
+        // Cool (< 40°F) → blue, warm (> 80°F) → orange, neutral in between
+        let temp = Double(hour.tempString.filter { $0.isNumber || $0 == "-" }) ?? 65
+        if temp < 45 { return Color(red: 0.5, green: 0.7, blue: 1.0) }
+        if temp > 80 { return Color(red: 1.0, green: 0.5, blue: 0.2) }
+        return .white
+    }
 
     var body: some View {
-        VStack(spacing: 6) {
-            Text(hour.time)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-            // Tiny condition icon from asset
+        VStack(spacing: 5) {
+            Text(hour.time).font(.caption2).foregroundStyle(.secondary)
+
             WeatherManager.conditionImage(
                 WeatherManager.visualKey(condition: .clear, isDaylight: hour.isDaylight)
             )
             .resizable()
             .aspectRatio(contentMode: .fill)
-            .frame(width: 32, height: 20)
+            .frame(width: 30, height: 20)
             .clipped()
             .clipShape(RoundedRectangle(cornerRadius: 4))
+
             Text(hour.tempString)
-                .font(.subheadline.bold())
-                .foregroundStyle(.white)
+                .font(.subheadline.bold().monospacedDigit())
+                .foregroundStyle(tempColor)
+
             if hour.precipChance > 10 {
                 Text(String(format: "%.0f%%", hour.precipChance))
-                    .font(.caption2)
-                    .foregroundStyle(.cyan)
+                    .font(.caption2).foregroundStyle(sky)
+            } else {
+                Color.clear.frame(height: 12)
             }
         }
         .padding(.vertical, 8)
@@ -231,67 +278,47 @@ private struct HourlyTile: View {
 
 // MARK: - Forecast row
 
-private struct ForecastRow: View {
+private struct ObsForecastRow: View {
     let day: DayForecastSnapshot
+    let sky: Color
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             Text(day.name)
                 .font(.subheadline)
                 .foregroundStyle(.white)
                 .frame(width: 38, alignment: .leading)
 
             WeatherManager.conditionImage(day.visualKey)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(width: 36, height: 24)
-                .clipped()
-                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .resizable().aspectRatio(contentMode: .fill)
+                .frame(width: 32, height: 22)
+                .clipped().clipShape(RoundedRectangle(cornerRadius: 4))
 
             Text(day.condition)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+                .font(.caption).foregroundStyle(.secondary).lineLimit(1)
 
             Spacer()
 
             if day.precipChance > 10 {
                 Text(day.precipString)
-                    .font(.caption2)
-                    .foregroundStyle(.cyan)
-                    .frame(width: 30, alignment: .trailing)
+                    .font(.caption2).foregroundStyle(sky).frame(width: 30, alignment: .trailing)
             } else {
                 Spacer().frame(width: 30)
             }
 
-            Text(day.lowString)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .frame(width: 30, alignment: .trailing)
-
-            Text(day.highString)
-                .font(.subheadline.bold())
-                .foregroundStyle(.white)
-                .frame(width: 30, alignment: .trailing)
+            // Temp range bar
+            HStack(spacing: 4) {
+                Text(day.lowString)
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .frame(width: 30, alignment: .trailing)
+                Text(day.highString)
+                    .font(.subheadline.bold().monospacedDigit())
+                    .foregroundStyle(.white)
+                    .frame(width: 30, alignment: .trailing)
+            }
         }
-        .padding(.vertical, 8)
-    }
-}
-
-// MARK: - Apple attribution (legally required by WeatherKit TOS)
-
-private struct WeatherAttributionView: View {
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "apple.logo")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-            Text("Weather data provided by Apple Weather")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.bottom, 8)
+        .padding(.vertical, 9)
     }
 }
 

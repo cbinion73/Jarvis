@@ -62,17 +62,26 @@ final class SoundAnalysisManager: NSObject, ObservableObject {
             observer  = obs
             analyzer  = streamAnalyzer
 
-            inputNode.installTap(onBus: 0, bufferSize: 8192, format: format) { [weak self] buffer, time in
-                self?.analysisQueue.async {
-                    self?.analyzer?.analyze(buffer, atAudioFramePosition: time.sampleTime)
-                }
-            }
+            Self.installAudioTap(on: inputNode, queue: analysisQueue, analyzer: streamAnalyzer)
 
             try audioEngine.start()
             isListening = true
 
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    // nonisolated so the AVAudio real-time tap callback fires without @MainActor isolation check
+    private nonisolated static func installAudioTap(
+        on inputNode: AVAudioInputNode,
+        queue: DispatchQueue,
+        analyzer: SNAudioStreamAnalyzer
+    ) {
+        inputNode.installTap(onBus: 0, bufferSize: 8192, format: inputNode.outputFormat(forBus: 0)) { buffer, time in
+            queue.async {
+                analyzer.analyze(buffer, atAudioFramePosition: time.sampleTime)
+            }
         }
     }
 
