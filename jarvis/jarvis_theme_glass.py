@@ -9390,7 +9390,7 @@ function _kasaDeviceCard(d) {{
   const uid = 'kd-' + (d.ip || d.alias).replace(/[^a-zA-Z0-9]/g, '_');
 
   if (d.device_type === 'camera') {{
-    const cameraId = (d.ip || '').replace(/\./g, '_');
+    const cameraId = (d.ip || '').replace(/\\./g, '_');
     return '<div class="kasa-device-card kasa-camera-card" id="' + uid + '">'
       + '<div class="kasa-device-top">'
       + '<span class="kasa-device-icon">📷</span>'
@@ -11291,8 +11291,8 @@ function faithRenderMessages() {{
 
 function faithMarkdownToHtml(md) {{
   return md
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>')
+    .replace(/\\*(.+?)\\*/g, '<em>$1</em>')
     .replace(/^#{{1,3}} (.+)$/gm, '<strong>$1</strong>')
     .replace(/\\n{{2,}}/g, '</p><p>')
     .replace(/\\n/g, '<br>')
@@ -14390,13 +14390,13 @@ function chrMarkdownToHtml(md) {{
   // Minimal markdown: **bold**, ### headings, bullets
   return md
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-    .replace(/^###\s+(.+)$/gm,'<h3>$1</h3>')
-    .replace(/^##\s+(.+)$/gm,'<h3>$1</h3>')
-    .replace(/^#\s+(.+)$/gm,'<h3>$1</h3>')
-    .replace(/^\*\s+(.+)$/gm,'<li>$1</li>')
-    .replace(/^-\s+(.+)$/gm,'<li>$1</li>')
-    .replace(/(<li>.*<\/li>\\n?)+/g, s => '<ul>'+s+'</ul>')
+    .replace(/\\*\\*(.+?)\\*\\*/g,'<strong>$1</strong>')
+    .replace(/^###\\s+(.+)$/gm,'<h3>$1</h3>')
+    .replace(/^##\\s+(.+)$/gm,'<h3>$1</h3>')
+    .replace(/^#\\s+(.+)$/gm,'<h3>$1</h3>')
+    .replace(/^\\*\\s+(.+)$/gm,'<li>$1</li>')
+    .replace(/^-\\s+(.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\\/li>\\n?)+/g, s => '<ul>'+s+'</ul>')
     .replace(/\\n\\n+/g,'</p><p>')
     .replace(/^(?!<[hul])(.+)$/gm,'$1')
     .replace(/\\n/g,'<br>');
@@ -17458,11 +17458,11 @@ function fmtLocalTime(utcStr, {{dateOnly=false, short=false}}={{}}) {{
     // Normalise: add Z if no timezone info and no offset present
     let s = String(utcStr).trim();
     // "2026-05-20 02:35:33 -0400"  →  "2026-05-20T02:35:33-04:00"
-    s = s.replace(/^(\d{{4}}-\d{{2}}-\d{{2}}) (\d{{2}}:\d{{2}}:\d{{2}}) ([+-]\d{{2}}):?(\d{{2}})$/, '$1T$2$3:$4');
+    s = s.replace(/^(\\d{{4}}-\\d{{2}}-\\d{{2}}) (\\d{{2}}:\\d{{2}}:\\d{{2}}) ([+-]\\d{{2}}):?(\\d{{2}})$/, '$1T$2$3:$4');
     // "2026-05-20 19:03:28" (space, no tz) → treat as UTC
-    if (/^\d{{4}}-\d{{2}}-\d{{2}} \d{{2}}:\d{{2}}:\d{{2}}$/.test(s)) s = s.replace(' ', 'T') + 'Z';
+    if (/^\\d{{4}}-\\d{{2}}-\\d{{2}} \\d{{2}}:\\d{{2}}:\\d{{2}}$/.test(s)) s = s.replace(' ', 'T') + 'Z';
     // "2026-05-20T19:03:28" (T, no tz) → treat as UTC
-    if (/^\d{{4}}-\d{{2}}-\d{{2}}T\d{{2}}:\d{{2}}:\d{{2}}$/.test(s)) s += 'Z';
+    if (/^\\d{{4}}-\\d{{2}}-\\d{{2}}T\\d{{2}}:\\d{{2}}:\\d{{2}}$/.test(s)) s += 'Z';
     const d = new Date(s);
     if (isNaN(d)) return utcStr;
     if (dateOnly) {{

@@ -92,7 +92,7 @@ final class GeofenceManager: NSObject, ObservableObject {
 
 // MARK: - CLLocationManagerDelegate
 
-extension GeofenceManager: @preconcurrency CLLocationManagerDelegate {
+extension GeofenceManager: CLLocationManagerDelegate {
 
     nonisolated func locationManager(_ manager: CLLocationManager,
                                      didEnterRegion region: CLRegion) {

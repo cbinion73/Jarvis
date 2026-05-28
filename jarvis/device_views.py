@@ -3696,17 +3696,17 @@ function driveUpdateGuidance(step, leg) {
   if (!step) return;
   // Replace block-level tags with space first so words don't concatenate
   var instr = step.instructions
-    .replace(/<\/(div|p|li|br)[^>]*>/gi, ' ')
-    .replace(/<(br|div|p|li)[^>]*\/?>/gi, ' ')
+    .replace(/<\\/(div|p|li|br)[^>]*>/gi, ' ')
+    .replace(/<(br|div|p|li)[^>]*\\/?>/gi, ' ')
     .replace(/<[^>]+>/g, '')
-    .replace(/\s+/g, ' ')
+    .replace(/\\s+/g, ' ')
     .trim();
   var maneuver = step.maneuver || 'straight';
   var arrow = MANEUVER_ARROWS[maneuver] || '&#8593;';
   // Split instruction: "Turn left onto Oak Street" → action="Turn left", street="Oak Street"
   var action = instr;
   var street = '';
-  var ontoMatch = instr.match(/^(.+?)\s+(?:onto|on|toward|to)\s+(.+)$/i);
+  var ontoMatch = instr.match(/^(.+?)\\s+(?:onto|on|toward|to)\\s+(.+)$/i);
   if (ontoMatch) { action = ontoMatch[1]; street = ontoMatch[2]; }
   // Compute ETA
   var now = new Date();
