@@ -102,7 +102,7 @@ _STANDING_PRIORITY_QUESTIONS: list[dict] = [
 # LLM helper
 # ---------------------------------------------------------------------------
 
-async def _llm_generate(system_prompt: str, user_prompt: str) -> str | None:
+async def _llm_generate(system_prompt: str, user_prompt: str, max_tokens: int = 1500) -> str | None:
     """Call the LLM gateway. Returns text or None on failure."""
     try:
         from .llm_gateway import get_gateway, LLMMessage
@@ -121,6 +121,7 @@ async def _llm_generate(system_prompt: str, user_prompt: str) -> str | None:
             task_type="clinical",
             agent_id="hermione-granger",
             force_model="gpt-4o",
+            max_tokens=max_tokens,
             temperature=0.3,
         )
         if response.error:
@@ -329,7 +330,7 @@ Respond with JSON:
   "estimated_word_count": 0
 }}"""
 
-    raw = await _llm_generate(system_prompt, user_prompt)
+    raw = await _llm_generate(system_prompt, user_prompt, max_tokens=600)
 
     if raw:
         try:

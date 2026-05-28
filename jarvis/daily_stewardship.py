@@ -280,6 +280,7 @@ Return ONLY a JSON array of exactly 3 move objects."""
             ],
             task_type="standard",
             agent_id="daily-stewardship",
+            max_tokens=600,
             temperature=0.3,
         )
 
