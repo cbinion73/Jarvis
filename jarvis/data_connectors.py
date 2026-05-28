@@ -865,6 +865,10 @@ class WeatherConnector:
             return self.DEFAULT_LON
 
     def _is_configured(self) -> bool:
+        # Prefer WeatherKit (free) when the Apple key is present
+        from pathlib import Path
+        if Path("data/settings/apns_key.p8").exists() and Path("data/settings/apns_config.json").exists():
+            return True
         return bool(self._api_key)
 
     def _mock_current(self) -> dict:
@@ -889,11 +893,23 @@ class WeatherConnector:
             return cached
 
         if not self._is_configured():
-            logger.warning("WeatherConnector: OPENWEATHER_API_KEY not set, returning mock data")
+            logger.warning("WeatherConnector: no weather API configured, returning mock data")
             result = self._mock_current()
             _cache.set(cache_key, result, self.TTL)
             return result
 
+        # ── WeatherKit (preferred, free) ─────────────────────────────────────
+        from pathlib import Path as _Path
+        if _Path("data/settings/apns_key.p8").exists():
+            try:
+                from jarvis import weatherkit_client as _wk
+                result = _wk.get_current(self._lat, self._lon)
+                _cache.set(cache_key, result, self.TTL)
+                return result
+            except Exception as _exc:
+                logger.warning("WeatherKit get_current failed: %s — falling back to OWM", _exc)
+
+        # ── OpenWeatherMap (fallback) ─────────────────────────────────────────
         params = urlencode({
             "lat": self._lat,
             "lon": self._lon,
@@ -953,7 +969,6 @@ class WeatherConnector:
             return cached
 
         if not self._is_configured():
-            # Mock forecast
             result = {
                 "hourly": [
                     {"hour": f"{h:02d}:00", "temp_f": 72.0 + h * 0.5, "condition": "Partly Cloudy", "icon": "⛅"}
@@ -967,6 +982,20 @@ class WeatherConnector:
             _cache.set(cache_key, result, self.TTL)
             return result
 
+        # ── WeatherKit (preferred, free) ─────────────────────────────────────
+        from pathlib import Path as _Path
+        if _Path("data/settings/apns_key.p8").exists():
+            try:
+                from jarvis import weatherkit_client as _wk
+                result = _wk.get_forecast(self._lat, self._lon, days=7)
+                # Normalise hourly list to match OWM consumer expectations
+                result.setdefault("hourly", result.pop("hourly", []))
+                _cache.set(cache_key, result, self.TTL)
+                return result
+            except Exception as _exc:
+                logger.warning("WeatherKit get_forecast failed: %s — falling back to OWM", _exc)
+
+        # ── OpenWeatherMap (fallback) ─────────────────────────────────────────
         params = urlencode({
             "lat": self._lat,
             "lon": self._lon,

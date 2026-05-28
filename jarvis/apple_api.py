@@ -218,6 +218,24 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
     """Register all /api/apple/* routes onto *app*."""
 
     # ------------------------------------------------------------------
+    # POST /api/apple/device/register  — store APNs device token
+    # ------------------------------------------------------------------
+    @app.post("/api/apple/device/register")
+    async def apple_device_register(payload: dict):
+        """Store an APNs device token for push notification delivery."""
+        actor_id = str(payload.get("actor_id") or "chris").strip()
+        token    = str(payload.get("token")    or "").strip()
+        platform = str(payload.get("platform") or "ios").strip()
+        if not token:
+            raise HTTPException(status_code=400, detail="token is required")
+        try:
+            from .apns_sender import register_device_token
+            register_device_token(actor_id, token, platform)
+        except Exception as exc:
+            logger.warning("device_register: %s", exc)
+        return _ok({"registered": True})
+
+    # ------------------------------------------------------------------
     # GET /api/apple/briefing
     # ------------------------------------------------------------------
     @app.get("/api/apple/briefing")
@@ -256,15 +274,20 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 logger.warning("apple_briefing: chamber_home_snapshot failed: %s", exc)
                 packet = {}
 
-        # Normalise into the Apple briefing shape
+        # Normalise into the Apple briefing shape expected by Swift BriefingModels
+        raw_briefing  = packet.get("briefing_items")  or packet.get("feed",        [])
+        raw_working   = packet.get("working_items")   or packet.get("in_progress", [])
+        raw_needs     = packet.get("needs_items")     or packet.get("needs_you",   [])
+        raw_drift     = packet.get("drift_items")     or packet.get("drift",       [])
+
         data = {
-            "briefing_items": packet.get("briefing_items") or packet.get("feed", []),
-            "working_items": packet.get("working_items") or packet.get("in_progress", []),
-            "needs_items": packet.get("needs_items") or packet.get("needs_you", []),
-            "drift_items": packet.get("drift_items") or packet.get("drift", []),
-            "greeting": packet.get("greeting") or greeting,
-            "mode": packet.get("mode") or mode,
-            "generated_at": packet.get("generated_at") or _ts(),
+            "briefing_items": [_normalise_briefing_item(i) for i in raw_briefing  if isinstance(i, dict)],
+            "working_items":  [_normalise_working_item(i)  for i in raw_working   if isinstance(i, dict)],
+            "needs_items":    [_normalise_needs_item(i)    for i in raw_needs     if isinstance(i, dict)],
+            "drift_items":    [_normalise_drift_item(i)    for i in raw_drift     if isinstance(i, dict)],
+            "greeting":       packet.get("greeting") or greeting,
+            "mode":           packet.get("mode")     or mode,
+            "generated_at":   packet.get("generated_at") or _ts(),
         }
         return _ok(data)
 
@@ -576,12 +599,171 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         except Exception:
             item_dict = dict(item) if hasattr(item, "__dict__") else {}
 
+        # Push a confirmation to the approver's phone
+        try:
+            from .apns_sender import send_push
+            title_text = item_dict.get("title") or "Request"
+            import asyncio
+            asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: send_push(
+                    approved_by,
+                    title="✅ Approved",
+                    body=str(title_text)[:100],
+                    category="approval",
+                )
+            )
+        except Exception:
+            pass
+
         return _ok({"status": "approved", "request": item_dict})
+
+    # ── EventKit: Calendar ────────────────────────────────────────────────────
+
+    @app.post("/api/apple/calendar")
+    async def apple_calendar(payload: dict):
+        """Receives Calendar events from EventKit on the iPhone.
+        Writes to data/apple/calendar_events.json for the runtime to consume."""
+        events = payload.get("events", [])
+        out_path = Path("data/apple/calendar_events.json")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(json.dumps({
+            "events": events,
+            "count":  len(events),
+            "source": "eventkit",
+            "synced_at": _ts(),
+        }, indent=2))
+        logger.info("EventKit calendar: stored %d events", len(events))
+        return _ok({"stored": len(events)})
+
+    # ── EventKit: Reminders ───────────────────────────────────────────────────
+
+    @app.post("/api/apple/reminders")
+    async def apple_reminders(payload: dict):
+        """Receives Reminders from EventKit on the iPhone.
+        Writes to data/apple/reminders.json."""
+        reminders = payload.get("reminders", [])
+        out_path = Path("data/apple/reminders.json")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(json.dumps({
+            "reminders": reminders,
+            "count":     len(reminders),
+            "source":    "eventkit",
+            "synced_at": _ts(),
+        }, indent=2))
+        logger.info("EventKit reminders: stored %d items", len(reminders))
+        return _ok({"stored": len(reminders)})
+
+    # ── MusicKit: Now Playing ─────────────────────────────────────────────────
+
+    @app.post("/api/apple/now-playing")
+    async def apple_now_playing(payload: dict):
+        """Receives Now Playing info from MediaPlayer on the iPhone."""
+        out_path = Path("data/apple/now_playing.json")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(json.dumps({
+            **{k: v for k, v in payload.items() if k != "artwork_b64"},
+            "updated_at": _ts(),
+        }, indent=2))
+        # Persist artwork separately as a JPEG
+        if artwork_b64 := payload.get("artwork_b64"):
+            import base64
+            artwork_path = Path("data/apple/now_playing_artwork.jpg")
+            try:
+                artwork_path.write_bytes(base64.b64decode(artwork_b64))
+            except Exception:
+                pass
+        # Broadcast to web UI via SSE
+        try:
+            from .service import broadcast_event
+            broadcast_event("apple.now_playing", {
+                "title":  payload.get("title"),
+                "artist": payload.get("artist"),
+                "album":  payload.get("album"),
+                "playing": payload.get("is_playing"),
+            })
+        except Exception:
+            pass
+        return _ok({"stored": True})
+
+    # ── TTS via iOS (replaces ElevenLabs) ────────────────────────────────────
+
+    @app.post("/api/apple/speak")
+    async def apple_speak_push(payload: dict):
+        """Push a 'speak this text' silent notification to the user's iPhone.
+        The iOS app speaks it using AVSpeechSynthesizer (free, on-device)."""
+        text   = str(payload.get("text") or "").strip()
+        actor  = str(payload.get("actor") or "chris")
+        if not text:
+            return _ok({"sent": False, "reason": "empty text"})
+        try:
+            from .apns_sender import send_push
+            send_push(
+                actor,
+                title="",
+                body=text,
+                category="speak",
+                extra={"speak": text},
+                content_available=True,
+            )
+            return _ok({"sent": True, "chars": len(text)})
+        except Exception as exc:
+            return _ok({"sent": False, "reason": str(exc)})
 
 
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
+def _normalise_briefing_item(raw: dict) -> dict:
+    """Convert any internal feed-item shape → Swift BriefingItem fields."""
+    kind = str(raw.get("kind") or raw.get("priority") or "normal").lower()
+    priority = "high" if kind in ("priority", "high", "urgent", "critical") else "normal"
+    return {
+        "id":        str(raw.get("id") or uuid.uuid4()),
+        "text":      str(raw.get("text") or raw.get("title") or ""),
+        "sub":       raw.get("sub") or raw.get("body") or None,
+        "priority":  priority,
+        "agent":     str(raw.get("agent") or raw.get("source") or "JARVIS"),
+        "timestamp": str(raw.get("timestamp") or raw.get("ts") or _ts()),
+    }
+
+
+def _normalise_working_item(raw: dict) -> dict:
+    """Convert any internal working-item shape → Swift WorkingItem fields."""
+    return {
+        "id":        str(raw.get("id") or uuid.uuid4()),
+        "agent":     str(raw.get("agent") or raw.get("source") or raw.get("title") or "JARVIS"),
+        "action":    str(raw.get("action") or raw.get("body") or raw.get("text") or "Working…"),
+        "timestamp": str(raw.get("timestamp") or raw.get("ts") or _ts()),
+    }
+
+
+def _normalise_needs_item(raw: dict) -> dict:
+    """Convert any internal needs-item shape → Swift NeedsItem fields."""
+    risk = str(raw.get("risk") or raw.get("risk_tier") or raw.get("kind") or "medium").lower()
+    if risk not in ("low", "medium", "high"):
+        risk = "medium"
+    return {
+        "id":         str(raw.get("id") or raw.get("request_id") or uuid.uuid4()),
+        "text":       _truncate(str(raw.get("text") or raw.get("title") or ""), 80),
+        "agent":      str(raw.get("agent") or raw.get("requester") or "JARVIS"),
+        "risk":       risk,
+        "expires_in": raw.get("expires_in"),
+    }
+
+
+def _normalise_drift_item(raw: dict) -> dict:
+    """Convert any internal drift-item shape → Swift DriftItem fields."""
+    kind = str(raw.get("severity") or raw.get("kind") or "gentle").lower()
+    severity = kind if kind in ("gentle", "moderate", "significant") else "gentle"
+    return {
+        "id":       str(raw.get("id") or uuid.uuid4()),
+        "text":     str(raw.get("text") or raw.get("title") or ""),
+        "severity": severity,
+        "agent":    str(raw.get("agent") or raw.get("source") or "JARVIS"),
+    }
+
 
 def _truncate(text: str, max_len: int) -> str:
     return text if len(text) <= max_len else text[: max_len - 1] + "…"
