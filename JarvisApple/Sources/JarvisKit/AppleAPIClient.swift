@@ -173,6 +173,45 @@ public final class AppleAPIClient: Sendable {
 
     // MARK: - Notifications
 
+    // MARK: - Catalyst
+
+    public func fetchCatalyst() async throws -> CatalystOverview {
+        try await get("/api/apple/catalyst")
+    }
+
+    // MARK: - Chronicle
+
+    public func fetchChronicle() async throws -> ChronicleOverview {
+        try await get("/api/apple/chronicle")
+    }
+
+    @discardableResult
+    public func captureChronicle(_ capture: ChronicleCapture) async throws -> Bool {
+        struct Result: Decodable { let captured: Bool }
+        let r: Result = try await post("/api/apple/chronicle/capture", body: capture)
+        return r.captured
+    }
+
+    // MARK: - Faith
+
+    public func fetchFaith(actor: String = "chris") async throws -> FaithOverview {
+        try await get("/api/apple/faith?actor=\(actor)")
+    }
+
+    // MARK: - Publishing
+
+    public func fetchPublishing() async throws -> PublishOverview {
+        try await get("/api/apple/publishing")
+    }
+
+    // MARK: - Huddle
+
+    public func fetchHuddle() async throws -> HuddleOverview {
+        try await get("/api/apple/huddle")
+    }
+
+    // MARK: - Notifications
+
     /// Pull pending server-side notifications and clear them.
     public func fetchPendingNotifications() async throws -> [PendingNotification] {
         struct NotificationsWrapper: Decodable {

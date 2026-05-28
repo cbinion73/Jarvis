@@ -24,6 +24,7 @@ POST /api/apple/approvals/{id}/approve      One-tap approval from Watch / Phone
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import uuid
@@ -709,6 +710,273 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             return _ok({"sent": True, "chars": len(text)})
         except Exception as exc:
             return _ok({"sent": False, "reason": str(exc)})
+
+
+# ── Catalyst overview ────────────────────────────────────────────────────────
+
+    @app.get("/api/apple/catalyst")
+    async def apple_catalyst():
+        """Lightweight Catalyst workspace overview for the iPhone Catalyst tab."""
+        try:
+            data_root = Path("data/catalyst")
+            # Work lifecycle — active / in-review items
+            wl_path = data_root / "work_lifecycle.json"
+            wl_raw = json.loads(wl_path.read_text()) if wl_path.exists() else {}
+            wl_items = list(wl_raw.values()) if isinstance(wl_raw, dict) else wl_raw
+            active_work = [
+                {
+                    "work_id":  str(i.get("work_id") or ""),
+                    "title":    _truncate(str(i.get("title") or ""), 60),
+                    "domain":   str(i.get("domain") or ""),
+                    "stage":    str(i.get("current_stage") or i.get("status") or ""),
+                    "updated":  str(i.get("updated_at") or i.get("created_at") or ""),
+                }
+                for i in wl_items
+                if str(i.get("status") or "").lower() not in ("done", "archived", "cancelled")
+            ][:10]
+
+            # Recent signals
+            sig_path = data_root / "signals.json"
+            sig_raw = json.loads(sig_path.read_text()) if sig_path.exists() else {}
+            sig_items = list(sig_raw.values()) if isinstance(sig_raw, dict) else sig_raw
+            signals = [
+                {
+                    "signal_id": str(s.get("signal_id") or ""),
+                    "title":     _truncate(str(s.get("title") or s.get("content") or ""), 60),
+                    "source":    str(s.get("source") or ""),
+                    "tags":      s.get("tags") or [],
+                    "timestamp": str(s.get("timestamp") or ""),
+                }
+                for s in (sig_items[-8:] if sig_items else [])
+            ]
+
+            # Pipeline portfolio summary
+            pipeline_path = data_root / "pipeline_state.json"
+            portfolio = {}
+            if pipeline_path.exists():
+                ps = json.loads(pipeline_path.read_text())
+                portfolio = ps.get("portfolio") or {}
+
+            return _ok({
+                "active_work": active_work,
+                "signals":     signals,
+                "portfolio":   portfolio,
+                "updated_at":  _ts(),
+            })
+        except Exception as exc:
+            logger.exception("apple_catalyst failed: %s", exc)
+            return _ok({"active_work": [], "signals": [], "portfolio": {}, "updated_at": _ts()})
+
+    # ── Chronicle overview ────────────────────────────────────────────────────
+
+    @app.get("/api/apple/chronicle")
+    async def apple_chronicle(actor: str = "chris"):
+        """Recent Chronicle entries and insights for the iPhone Chronicle tab."""
+        try:
+            entries_path = Path("data/chronicle/entries.jsonl")
+            raw_entries = []
+            if entries_path.exists():
+                for line in entries_path.read_text().splitlines():
+                    line = line.strip()
+                    if line:
+                        try:
+                            raw_entries.append(json.loads(line))
+                        except Exception:
+                            pass
+
+            entries = [
+                {
+                    "id":         str(e.get("entry_id") or e.get("id") or uuid.uuid4()),
+                    "type":       str(e.get("entry_type") or e.get("theme") or "reflection"),
+                    "title":      _truncate(str(e.get("title") or e.get("theme") or "Reflection"), 50),
+                    "body":       _truncate(str(e.get("body") or e.get("note") or e.get("reflection") or ""), 200),
+                    "scripture":  e.get("scripture_ref") or None,
+                    "timestamp":  str(e.get("created_at") or e.get("timestamp") or ""),
+                }
+                for e in reversed(raw_entries)
+                if e.get("actor") in (actor, None, "")
+            ][:12]
+
+            return _ok({"entries": entries, "updated_at": _ts()})
+        except Exception as exc:
+            logger.exception("apple_chronicle failed: %s", exc)
+            return _ok({"entries": [], "updated_at": _ts()})
+
+    @app.post("/api/apple/chronicle/capture")
+    async def apple_chronicle_capture(payload: dict):
+        """Capture a quick reflection or prayer from the phone."""
+        try:
+            entry_type = str(payload.get("type") or "reflection")
+            note       = str(payload.get("note") or "").strip()
+            actor      = str(payload.get("actor_id") or "chris")
+            if not note:
+                return _ok({"captured": False, "reason": "empty"})
+            entry = {
+                "entry_id":   str(uuid.uuid4()),
+                "entry_type": entry_type,
+                "title":      note[:50],
+                "body":       note,
+                "note":       note,
+                "actor":      actor,
+                "timestamp":  _ts(),
+                "created_at": _ts(),
+                "source":     "apple_phone",
+            }
+            entries_path = Path("data/chronicle/entries.jsonl")
+            entries_path.parent.mkdir(parents=True, exist_ok=True)
+            with entries_path.open("a") as f:
+                f.write(json.dumps(entry) + "\n")
+            return _ok({"captured": True, "entry_id": entry["entry_id"]})
+        except Exception as exc:
+            return _ok({"captured": False, "reason": str(exc)})
+
+    # ── Faith daily word ──────────────────────────────────────────────────────
+
+    @app.get("/api/apple/faith")
+    async def apple_faith(actor: str = "chris"):
+        """Daily word and faith formation context for the iPhone Faith tab."""
+        try:
+            fw_path = Path("data/settings/faith_daily_word.json")
+            fw = {}
+            if fw_path.exists():
+                fw = json.loads(fw_path.read_text())
+
+            # Morning spiritual context from chronicle bridge
+            morning_context = {}
+            try:
+                from .chronicle_bridge import get_morning_context
+                morning_context = await asyncio.to_thread(get_morning_context, actor)
+            except Exception:
+                pass
+
+            return _ok({
+                "daily_word": {
+                    "agent":      str(fw.get("agent_name") or "JARVIS"),
+                    "agent_title": str(fw.get("agent_title") or ""),
+                    "word":       str(fw.get("word") or ""),
+                    "passage":    str(fw.get("passage") or ""),
+                    "domain":     str(fw.get("domain") or ""),
+                    "generated_at": str(fw.get("generated_at") or ""),
+                },
+                "morning_context": morning_context,
+                "updated_at": _ts(),
+            })
+        except Exception as exc:
+            logger.exception("apple_faith failed: %s", exc)
+            return _ok({"daily_word": {"agent": "JARVIS", "word": "", "passage": "", "domain": "", "agent_title": "", "generated_at": ""}, "morning_context": {}, "updated_at": _ts()})
+
+    # ── Publishing dashboard ──────────────────────────────────────────────────
+
+    @app.get("/api/apple/publishing")
+    async def apple_publishing():
+        """Publishing overview for the iPhone Publish tab."""
+        try:
+            pub_root = Path.home() / ".jarvis" / "publishing"
+
+            # Projects
+            proj_path = pub_root / "projects.json"
+            proj_raw  = json.loads(proj_path.read_text()) if proj_path.exists() else {}
+            proj_list = list(proj_raw.values()) if isinstance(proj_raw, dict) else proj_raw
+            projects  = [
+                {
+                    "project_id": str(p.get("project_id") or ""),
+                    "title":      str(p.get("title") or ""),
+                    "type":       str(p.get("project_type") or ""),
+                    "status":     str(p.get("status") or ""),
+                    "platform":   str(p.get("platform") or ""),
+                    "url":        p.get("url") or None,
+                }
+                for p in proj_list
+                if str(p.get("status") or "") != "archived"
+            ][:8]
+
+            # Revenue streams total
+            rev_path = pub_root / "revenue_streams.json"
+            rev_raw  = json.loads(rev_path.read_text()) if rev_path.exists() else {}
+            rev_list = list(rev_raw.values()) if isinstance(rev_raw, dict) else rev_raw
+            active_rev  = [s for s in rev_list if s.get("active")]
+            monthly_est = sum(float(s.get("monthly_estimate") or 0) for s in active_rev)
+            revenue_summary = {
+                "monthly_estimate": round(monthly_est, 2),
+                "stream_count":     len(active_rev),
+                "streams": [
+                    {
+                        "stream_id":   str(s.get("stream_id") or ""),
+                        "type":        str(s.get("stream_type") or ""),
+                        "source":      str(s.get("source") or ""),
+                        "monthly_est": float(s.get("monthly_estimate") or 0),
+                    }
+                    for s in active_rev[:5]
+                ],
+            }
+
+            # Upcoming calendar items
+            cal_path  = pub_root / "content_calendar.jsonl"
+            cal_items = []
+            if cal_path.exists():
+                for line in cal_path.read_text().splitlines():
+                    if line.strip():
+                        try:
+                            cal_items.append(json.loads(line))
+                        except Exception:
+                            pass
+            upcoming = [
+                {
+                    "item_id":      str(c.get("item_id") or ""),
+                    "title":        _truncate(str(c.get("title") or ""), 50),
+                    "content_type": str(c.get("content_type") or ""),
+                    "platform":     str(c.get("platform") or ""),
+                    "planned_date": str(c.get("planned_date") or ""),
+                    "status":       str(c.get("status") or ""),
+                }
+                for c in cal_items
+                if str(c.get("status") or "") not in ("published", "archived")
+            ][-6:]
+
+            return _ok({
+                "projects":        projects,
+                "revenue_summary": revenue_summary,
+                "upcoming":        upcoming,
+                "updated_at":      _ts(),
+            })
+        except Exception as exc:
+            logger.exception("apple_publishing failed: %s", exc)
+            return _ok({"projects": [], "revenue_summary": {"monthly_estimate": 0.0, "stream_count": 0, "streams": []}, "upcoming": [], "updated_at": _ts()})
+
+    # ── Huddle ────────────────────────────────────────────────────────────────
+
+    @app.get("/api/apple/huddle")
+    async def apple_huddle():
+        """Agent standup huddle for the iPhone Huddle tab."""
+        try:
+            from .standup import collect_all_standups
+            from dataclasses import asdict
+            huddle = await asyncio.to_thread(
+                collect_all_standups,
+                None,
+                runtime,
+                False,
+            )
+            h = asdict(huddle)
+            # Flatten to phone-friendly shape
+            reports = []
+            for r in (h.get("agent_reports") or []):
+                reports.append({
+                    "agent_id":   str(r.get("agent_id") or ""),
+                    "agent_name": str(r.get("agent_name") or r.get("agent_id") or ""),
+                    "status":     str(r.get("status") or "ok"),
+                    "summary":    _truncate(str(r.get("summary") or r.get("headline") or ""), 80),
+                    "blockers":   [str(b)[:60] for b in (r.get("blockers") or [])[:2]],
+                })
+            return _ok({
+                "reports":    reports[:15],
+                "blockers":   [str(b)[:80] for b in (h.get("blockers") or [])[:5]],
+                "highlights": [str(hl)[:80] for hl in (h.get("highlights") or [])[:5]],
+                "updated_at": _ts(),
+            })
+        except Exception as exc:
+            logger.exception("apple_huddle failed: %s", exc)
+            return _ok({"reports": [], "blockers": [], "highlights": [], "updated_at": _ts()})
 
 
 # ---------------------------------------------------------------------------
