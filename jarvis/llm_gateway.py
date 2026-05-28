@@ -20,8 +20,134 @@ import urllib.error
 import urllib.request
 from collections import deque
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 _log = logging.getLogger("jarvis.llm_gateway")
+
+# ---------------------------------------------------------------------------
+# Usage / cost tracking
+# ---------------------------------------------------------------------------
+
+_USAGE_LOG_PATH = Path(__file__).parent.parent / "data" / "logs" / "llm_usage.jsonl"
+_usage_write_lock = threading.Lock()
+
+# Approximate cost per 1M tokens (input, output) in USD — update as pricing changes.
+# Ollama / local = free.  Groq free tier = $0.  Paid tiers listed below.
+_TOKEN_COST_PER_1M: dict[str, tuple[float, float]] = {
+    "gpt-5.5":           (75.00, 300.00),
+    "gpt-5.5-thinking":  (75.00, 300.00),
+    "gpt-5.4":           ( 2.50,  10.00),
+    "gpt-5.4-thinking":  ( 2.50,  10.00),
+    "gpt-5.4-mini":      ( 0.15,   0.60),
+    "gpt-4o":            ( 2.50,  10.00),
+    "gpt-4o-mini":       ( 0.15,   0.60),
+    # Groq free tier — $0 (rate-limited but no charge)
+    "llama-3.3-70b":     ( 0.0,    0.0),
+    "llama-3.1-8b":      ( 0.0,    0.0),
+    "openai/gpt-oss":    ( 0.0,    0.0),
+}
+
+
+def _estimate_cost_usd(model: str, prompt_tokens: int, completion_tokens: int) -> float:
+    """Estimate USD cost for one call. Returns 0.0 for free/local models."""
+    for prefix, (inp_rate, out_rate) in _TOKEN_COST_PER_1M.items():
+        if model.startswith(prefix) or prefix in model:
+            return round(
+                (prompt_tokens * inp_rate + completion_tokens * out_rate) / 1_000_000, 8
+            )
+    return 0.0
+
+
+def _record_usage(entry: dict) -> None:
+    """Append one usage record to llm_usage.jsonl. Thread-safe. Never raises."""
+    try:
+        _USAGE_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        line = json.dumps(entry, separators=(",", ":")) + "\n"
+        with _usage_write_lock:
+            with _USAGE_LOG_PATH.open("a", encoding="utf-8") as fh:
+                fh.write(line)
+    except Exception as exc:
+        _log.debug("Usage tracking write failed: %s", exc)
+
+
+def usage_summary(hours: int = 24) -> dict:
+    """
+    Return token and cost totals for the past N hours from llm_usage.jsonl.
+
+    Returns::
+
+        {
+          "window_hours": 24,
+          "total_calls": 47,
+          "paid_calls": 3,
+          "prompt_tokens": 12450,
+          "completion_tokens": 3201,
+          "total_tokens": 15651,
+          "estimated_cost_usd": 0.0034,
+          "by_model":   { "<model>":   { calls, prompt_tokens, completion_tokens, cost_usd } },
+          "by_backend": { "<backend>": { calls, prompt_tokens, completion_tokens, cost_usd } },
+        }
+    """
+    cutoff_ts = (datetime.now(timezone.utc) - timedelta(hours=hours)).timestamp()
+
+    result: dict = {
+        "window_hours": hours,
+        "total_calls": 0,
+        "paid_calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "estimated_cost_usd": 0.0,
+        "by_model": {},
+        "by_backend": {},
+    }
+
+    if not _USAGE_LOG_PATH.exists():
+        return result
+
+    try:
+        with _usage_write_lock:
+            lines = _USAGE_LOG_PATH.read_text(encoding="utf-8").splitlines()
+    except Exception:
+        return result
+
+    for raw in lines:
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            rec = json.loads(raw)
+        except Exception:
+            continue
+        if rec.get("ts", 0) < cutoff_ts:
+            continue
+
+        pt      = int(rec.get("prompt_tokens", 0))
+        ct      = int(rec.get("completion_tokens", 0))
+        model   = rec.get("model_used", "unknown")
+        backend = rec.get("backend", "unknown")
+        cost    = float(rec.get("estimated_cost_usd", 0.0))
+
+        result["total_calls"] += 1
+        if backend in ("openai", "groq") and (pt + ct) > 0:
+            result["paid_calls"] += 1
+        result["prompt_tokens"]    += pt
+        result["completion_tokens"] += ct
+        result["total_tokens"]      += pt + ct
+        result["estimated_cost_usd"] += cost
+
+        for bucket_key, bucket_val in ((model, "by_model"), (backend, "by_backend")):
+            b = result[bucket_val].setdefault(bucket_key, {
+                "calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "cost_usd": 0.0,
+            })
+            b["calls"]             += 1
+            b["prompt_tokens"]     += pt
+            b["completion_tokens"] += ct
+            b["cost_usd"]          += cost
+
+    result["estimated_cost_usd"] = round(result["estimated_cost_usd"], 6)
+    return result
 
 # ---------------------------------------------------------------------------
 # Model configuration (all overridable via env vars)
@@ -809,6 +935,7 @@ class LLMGateway:
     def _log_call(self, entry: dict) -> None:
         with self._lock:
             self._call_log.append(entry)
+        _record_usage(entry)
 
     # ------------------------------------------------------------------
     # Public API
@@ -976,6 +1103,11 @@ class LLMGateway:
             "model_used": response.model_used,
             "backend": response.backend,
             "latency_ms": total_ms,
+            "prompt_tokens": response.prompt_tokens,
+            "completion_tokens": response.completion_tokens,
+            "estimated_cost_usd": _estimate_cost_usd(
+                response.model_used, response.prompt_tokens, response.completion_tokens
+            ),
             "confidence": response.confidence,
             "escalated": response.escalated,
             "error": response.error,
