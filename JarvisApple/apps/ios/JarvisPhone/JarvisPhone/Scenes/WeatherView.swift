@@ -5,8 +5,9 @@ import WeatherKit
 
 struct WeatherView: View {
 
-    @StateObject private var wx  = WeatherManager.shared
-    @StateObject private var loc = WeatherLocationProvider.shared
+    // Singletons — use @ObservedObject so SwiftUI doesn't take duplicate ownership.
+    @ObservedObject private var wx  = WeatherManager.shared
+    @ObservedObject private var loc = WeatherLocationProvider.shared
 
     private let sky = Color(red: 0.4, green: 0.75, blue: 1.0)
 
@@ -16,12 +17,19 @@ struct WeatherView: View {
                 Color.black.ignoresSafeArea()
 
                 Group {
-                    if wx.isLoading && wx.current == nil {
-                        loadingView
-                    } else if let cur = wx.current {
+                    if let cur = wx.current {
+                        // ── Have data — show it (even while a background refresh runs)
                         weatherContent(cur)
+                    } else if wx.isLoading {
+                        // ── Weather fetch in progress
+                        loadingView
+                    } else if loc.authorizationStatus == .denied
+                           || loc.authorizationStatus == .restricted {
+                        // ── User explicitly denied permission
+                        deniedState
                     } else {
-                        emptyState
+                        // ── Authorized but waiting for first GPS fix
+                        locatingView
                     }
                 }
             }
@@ -46,7 +54,14 @@ struct WeatherView: View {
             guard let l = newLoc else { return }
             Task { await wx.load(location: l) }
         }
-        .onAppear { loc.requestAndFetch() }
+        .onAppear {
+            loc.requestAndFetch()
+            // If a cached location was restored before this view appeared,
+            // onChange won't fire — load weather immediately in that case.
+            if let l = loc.location, wx.current == nil {
+                Task { await wx.load(location: l) }
+            }
+        }
     }
 
     // MARK: - Loading
@@ -63,18 +78,41 @@ struct WeatherView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: - Empty / no location
+    // MARK: - Waiting for GPS fix (permission already granted)
 
-    private var emptyState: some View {
+    private var locatingView: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "location.circle.fill")
+                .font(.system(size: 48)).foregroundStyle(sky.opacity(0.6))
+                .symbolEffect(.pulse)
+            Text("Finding your location…")
+                .font(.headline).foregroundStyle(.white)
+            Text("JARVIS has location access. Getting a fix…")
+                .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+        }
+        .padding(24)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20))
+        .padding(.horizontal, 32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear { loc.requestAndFetch() }
+    }
+
+    // MARK: - Location permission denied
+
+    private var deniedState: some View {
         VStack(spacing: 16) {
             Image(systemName: "location.slash.fill")
                 .font(.system(size: 44)).foregroundStyle(.secondary)
-            Text("Location needed")
+            Text("Location access denied")
                 .font(.headline).foregroundStyle(.white)
-            Text("Allow location access so JARVIS can fetch live weather.")
+            Text("Enable Location for JARVIS in Settings → Privacy → Location Services.")
                 .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
-            Button("Allow Location") { loc.requestAndFetch() }
-                .buttonStyle(.borderedProminent).tint(sky)
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            .buttonStyle(.borderedProminent).tint(sky)
         }
         .padding(24)
         .glassEffect(in: RoundedRectangle(cornerRadius: 20))

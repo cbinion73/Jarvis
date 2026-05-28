@@ -1,0 +1,1355 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		045D4AEDE2F3239D9A7C12BB /* NeedsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF4BE2ABF5181A605107A7BD /* NeedsView.swift */; };
+		06EE5FFDE321A3EC1838B4AD /* WatchSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 844C358E3E56D54D62952B63 /* WatchSessionManager.swift */; };
+		1B26FD5F219640CE315A3C77 /* BriefingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF2265679288F822CF489305 /* BriefingView.swift */; };
+		1C6DC0B679CC9DC6CBB604A0 /* ForgeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F1019401B17E04901CB4559 /* ForgeViewModel.swift */; };
+		1CB1D2CC0D3B3A08BB966FE7 /* VoiceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0AC009F0011D3717B1D27C7 /* VoiceViewModel.swift */; };
+		233579BD8E5E90AA96F3CB7E /* NaturalLanguage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 43AD7D5E3DF4F099CA580C45 /* NaturalLanguage.framework */; };
+		2658A2C44E9AF925ED901B52 /* partly_cloudy_day.png in Resources */ = {isa = PBXBuildFile; fileRef = 8EB55C1105617283FFC8A98A /* partly_cloudy_day.png */; };
+		2CD6B643BFAE88CEB131192C /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8098D590298DA67F108CA3C3 /* WatchConnectivity.framework */; };
+		2D35ECB85D74B1E4259C6ADC /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AB29859B5957C62F9CB6BD0 /* HomeView.swift */; };
+		3079C65892C927B0F35AFB61 /* HuddleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B1B664E04F8690B4CE7D411 /* HuddleView.swift */; };
+		32F28D909556A615D84D9CF5 /* JarvisWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C6E2F0606656753F6C8FBA4 /* JarvisWidgetBundle.swift */; };
+		331D870A7143AAF79399B1D2 /* JarvisKitHealth in Frameworks */ = {isa = PBXBuildFile; productRef = AF910F446E529BC5DDF82E77 /* JarvisKitHealth */; };
+		37618CAB2DC132961CD8E2B1 /* JarvisLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5375A939CEFC06AD3754F1BE /* JarvisLiveActivityWidget.swift */; };
+		3A9646526BE4CEB30344134B /* JarvisKitIntents in Frameworks */ = {isa = PBXBuildFile; productRef = 4D9D4ED47CABCA4B7D98D283 /* JarvisKitIntents */; };
+		3D6B767DA8150BF9ECABBDF4 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CCF798750B7DD34F2010522 /* SettingsView.swift */; };
+		3E32B8FAD8534F8DE5E95BD4 /* VoiceCommandView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28F6D0BE1AF932D913A56AEC /* VoiceCommandView.swift */; };
+		3EA255DA2C6CAEB31707C7C4 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE892FC1CD21485A2DBCC1F2 /* LiveActivityManager.swift */; };
+		3ECB78A0387BF98A770BEFB9 /* WeatherLocationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE7CEC16E95CD0AB01A45BEF /* WeatherLocationProvider.swift */; };
+		3F75D026ADA7EB549C2E8D27 /* moon_first_quarter.png in Resources */ = {isa = PBXBuildFile; fileRef = B76553F6745FF1142108372A /* moon_first_quarter.png */; };
+		3FE3913E81DA49FCB95B4753 /* FocusFilterIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABAD93AE6FCA3F84052359A7 /* FocusFilterIntent.swift */; };
+		409F3C25B5A37036501647D3 /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD489909181A4FB75FD3AC7F /* RootTabView.swift */; };
+		461F0795E724B042E3AD855E /* SpeechRecognitionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44553CB18769E850690CFD56 /* SpeechRecognitionManager.swift */; };
+		462F1C401EA9D11924146B4B /* HealthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9A5DD0A6B10715AD959074C /* HealthViewModel.swift */; };
+		46ECC3B5B7F3D895E77BAAFE /* EventKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5F56405F5A94EC627EC480B9 /* EventKit.framework */; };
+		48CE3D1BFFFB7D5FB46B24D4 /* ActivityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E6AD6211B99E78F20503F8B4 /* ActivityKit.framework */; };
+		505D9BD847377368EC78AAB4 /* MediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4D0E17E863DBE57B43D23CBF /* MediaPlayer.framework */; };
+		514228A8B92FFD3BFBB3B53E /* JarvisKit in Frameworks */ = {isa = PBXBuildFile; productRef = F3B8959CB30CA95BE0686EFB /* JarvisKit */; };
+		532A5BA3BBB069A2E47EC9B6 /* moon_waning_crescent.png in Resources */ = {isa = PBXBuildFile; fileRef = 1A9A3A35514DA4590BE755BE /* moon_waning_crescent.png */; };
+		560DAB77CA3ADE63E37D14A3 /* HealthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5286205D130739A90967DFDE /* HealthView.swift */; };
+		5F58D46000B231BE803273B3 /* moon_full.png in Resources */ = {isa = PBXBuildFile; fileRef = 013BDBB952EE56276AE6215F /* moon_full.png */; };
+		5FF2A244521F5ED493F13FFC /* JarvisCarPlayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE05E5EAF918FDA761F4BC5A /* JarvisCarPlayController.swift */; };
+		60419C5F1DC5E8AF4032836D /* heavy_rain.png in Resources */ = {isa = PBXBuildFile; fileRef = 7472203F32B2E53D290279BD /* heavy_rain.png */; };
+		67FE2E84A717164E027E28CE /* SoundAnalysis.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7178E8468E214D780E78F931 /* SoundAnalysis.framework */; };
+		699EF97A7ACDE7B36D6A3616 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2B4EF63A06E0158B42DA18A5 /* Vision.framework */; };
+		6AB8581F3BA6685F47FDF4F6 /* blizzard.png in Resources */ = {isa = PBXBuildFile; fileRef = 27ED981D835B3A0BA03337FA /* blizzard.png */; };
+		7281A5FC7BE45CCAC6A24CF3 /* VoiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E0815F6908612054AAFECB4 /* VoiceView.swift */; };
+		73057BFF62FAC187279F8430 /* JarvisWatchHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBE8CA29D7B6725C94117328 /* JarvisWatchHomeView.swift */; };
+		733C81BA09CA628057072C13 /* UncheckedSendable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82F72F298812021F4258F820 /* UncheckedSendable.swift */; };
+		796E2E077DEB129BC94BF245 /* JarvisWatchComplication.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 682F9EBDFEEE2DE543EE5ED5 /* JarvisWatchComplication.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		7E11A6AB5FDA0148C4B93868 /* SpeechManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20766693877E33B9D516E7FC /* SpeechManager.swift */; };
+		8209FDB6F795AD8AE88C0DA0 /* WatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BDECFB317C1152FC81CED79 /* WatchApp.swift */; };
+		86ECD8C0069967039D402514 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8098D590298DA67F108CA3C3 /* WatchConnectivity.framework */; };
+		86FB17078A0D3FDB950213F3 /* WeatherKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D90BE825B5FD4654261E77C3 /* WeatherKit.framework */; };
+		883A67B47395E515A1E1255B /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 08FBC1F9DCA40D3A249E9068 /* HealthKit.framework */; };
+		8D83CB3DBCFD2ED2DAA720A7 /* JarvisHomeWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B976CB898F961023DF82C62 /* JarvisHomeWidgets.swift */; };
+		8FF60677CCD243DE067552C0 /* ComplicationBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 640961EA19A5B0669489061C /* ComplicationBundle.swift */; };
+		91E90E883274EA1D8E3A3EDC /* JarvisControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2518040DC5FF616802E9779 /* JarvisControls.swift */; };
+		96753AB57B62C6B0C564F659 /* JarvisNotifications in Frameworks */ = {isa = PBXBuildFile; productRef = 05A2FD26A7A285CD3A043926 /* JarvisNotifications */; };
+		96ED35A50D65E807D1AC97F2 /* PublishView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB786A7F6A1AE659D5387B9C /* PublishView.swift */; };
+		981FA2956A09016ACF687D0B /* BriefingWatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E34FDA7DA47F0C693A6163B /* BriefingWatchView.swift */; };
+		9B2A68D4965837A49A6A297B /* NeedsWatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A52492BD671CDED1A6E464A1 /* NeedsWatchView.swift */; };
+		9E88796A73D2A8A968C925D0 /* FaithView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F0BA094AF2DF811AF58B066 /* FaithView.swift */; };
+		A2BF3F50C05DA944864E98BB /* ActivityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E6AD6211B99E78F20503F8B4 /* ActivityKit.framework */; };
+		A748705D549F65343A83A410 /* ComplicationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A276924AE31D3CE4BEA46F29 /* ComplicationProvider.swift */; };
+		AAAA6C902098B3BD60D88EB5 /* moon_last_quarter.png in Resources */ = {isa = PBXBuildFile; fileRef = F38E8C347D8A0DE4C424EA1D /* moon_last_quarter.png */; };
+		AAD61C82C19901FB678CE260 /* light_snow.png in Resources */ = {isa = PBXBuildFile; fileRef = F6702C72F8D7E37CA105F08C /* light_snow.png */; };
+		AFD83C23C57C4F77BF7B012D /* moon_waxing_gibbous.png in Resources */ = {isa = PBXBuildFile; fileRef = 426873E2FD76A370535A0257 /* moon_waxing_gibbous.png */; };
+		B0FD71F9B732B2B24767866A /* JarvisWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CF1AC908D75668E954920A59 /* JarvisWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B148ADDAEB8506F320C49C11 /* WatchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7437EC7F9DFA95EEA7E10834 /* WatchViewModel.swift */; };
+		B4C7C108B7D8E331AA3E9645 /* JarvisWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 55DBF2E2BDEA0A07C3661C17 /* JarvisWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B704558F8BC7BB0763918561 /* VisionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2AE3568EAD3D62334295A3 /* VisionManager.swift */; };
+		BB2441AAA79E673202341389 /* NeedsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84FD3D870787C12AF8D571D3 /* NeedsViewModel.swift */; };
+		BBCB03511C32DD1751120141 /* NowPlayingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 747405F29F20AD6C7FE1A1D2 /* NowPlayingManager.swift */; };
+		BC22C19B2E6276978CDD1700 /* NavigateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20516ACFB863FF0FC5C5677F /* NavigateView.swift */; };
+		BD334414A00BCA906F73F6AC /* SharedDataWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82DEB73DC7CCB61280FBC69D /* SharedDataWriter.swift */; };
+		BD87E07D478C27439CCAD2A2 /* CarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A91C6BC43072643CCB9ED2B /* CarPlaySceneDelegate.swift */; };
+		BDEC63A3A6FB6EF070B348B9 /* HomeKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A371975D2054594606ACF19 /* HomeKitManager.swift */; };
+		BF05159C917498D7D7D5269A /* ComplicationViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBF7279EEA0C1123AE533FE1 /* ComplicationViews.swift */; };
+		BF501F141139B56EC203B59D /* BriefingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9EE486BE9297FE3527EC48D /* BriefingViewModel.swift */; };
+		C52B57078947B39E05F49BF9 /* WeatherWatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BC5427F1CF94F348CC6018 /* WeatherWatchView.swift */; };
+		C546E4A3CA7B53C8723F8378 /* GeofenceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63285586C6F4FF4996FCF8CC /* GeofenceManager.swift */; };
+		C72D55B41BB79D96BA5725FB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FBF772443E35780063339DE2 /* Assets.xcassets */; };
+		C7F6BFF1EC2637E81DA4EA1B /* clear_day.png in Resources */ = {isa = PBXBuildFile; fileRef = 822FA20382134D88CD42403B /* clear_day.png */; };
+		C87AE690A7358FD674242FCC /* clear_night_no_moon.png in Resources */ = {isa = PBXBuildFile; fileRef = 38608068C35F0EB0C4ECA50B /* clear_night_no_moon.png */; };
+		CA81426E435AB49388832A0A /* JarvisKit in Frameworks */ = {isa = PBXBuildFile; productRef = A692D86C8BE488E363FB4578 /* JarvisKit */; };
+		CB204619B9F992B90FEFBB39 /* moon_waning_gibbous.png in Resources */ = {isa = PBXBuildFile; fileRef = D2D6A1F64011E23935B17BC5 /* moon_waning_gibbous.png */; };
+		CCC243F3827069B2A41DC0B4 /* CoreML.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DAFDE3D9AFB94F7F9C8A9C53 /* CoreML.framework */; };
+		CDDBAF7C1B450B57302D1091 /* heavy_snow.png in Resources */ = {isa = PBXBuildFile; fileRef = 2A597EA5208574C2AF2DFBA2 /* heavy_snow.png */; };
+		D07BEB7A7B2390DAD5027A9B /* moon_waxing_crescent.png in Resources */ = {isa = PBXBuildFile; fileRef = 3FE3D081CE3E29E4F2204F85 /* moon_waxing_crescent.png */; };
+		D203D2C53A9CB7C9BD50626A /* WeatherManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43279C85CB5574D0DEAFC530 /* WeatherManager.swift */; };
+		D3316AEE0D9F14AF0A031CA5 /* JarvisNotificationContent.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 4C06DDE8A06958935D4112C2 /* JarvisNotificationContent.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D550729DD0E9055667913B5A /* ForgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AA93829BF86F08731907770 /* ForgeView.swift */; };
+		D6045CD65CCE483A291AB689 /* Speech.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E0875A72D52A5DC6437A8778 /* Speech.framework */; };
+		DD5F7524D3793DECD8FDC201 /* ChronicleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A231483EE062CD1DE074F11 /* ChronicleView.swift */; };
+		DE4A9FC006F76E3CC7813784 /* SoundAnalysisManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 851EA2876DA2435ADB60E809 /* SoundAnalysisManager.swift */; };
+		DF1D0A91DA409A2579576322 /* SharedData.swift in Sources */ = {isa = PBXBuildFile; fileRef = C98FE02DAE887D662BDB68A0 /* SharedData.swift */; };
+		DF482CA6A3F8A3F39FABAA9C /* tornado.png in Resources */ = {isa = PBXBuildFile; fileRef = 76D175E8347DFE874580DF52 /* tornado.png */; };
+		E493AB98DEF2CB584A0DB80E /* SharedData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F85497FD3C658B2D3DABB92 /* SharedData.swift */; };
+		EA46FB8CD3B80CDC4D060531 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB524D1740BF43DD1890A849 /* App.swift */; };
+		EA937EAB64493D42B86D1CE2 /* thunderstorm.png in Resources */ = {isa = PBXBuildFile; fileRef = A7954B37FC91B029145D1AD8 /* thunderstorm.png */; };
+		EB7A0C37708875C467931B8D /* BriefMeIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = B43DBEEE34C3E2DB8434C5B3 /* BriefMeIntent.swift */; };
+		ECB35DE06A3FDFC3D2102748 /* WeatherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D55EEF0BA663A70292B8BD4A /* WeatherView.swift */; };
+		EE046834BA5590FA9D15196A /* moon_new.png in Resources */ = {isa = PBXBuildFile; fileRef = 5BE2F6AAE2B8C31703423F68 /* moon_new.png */; };
+		EE09B6CC0ABA9B7A4A26096C /* CatalystView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 380580D39B88EAE681F65996 /* CatalystView.swift */; };
+		EE484A9E113DB5364023819A /* EventKitSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA8699CBBA68919F7D5C810F /* EventKitSyncManager.swift */; };
+		EF8E3C59957F24E9A5C4992C /* HealthSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B05E84545D25E6FAB299105B /* HealthSyncManager.swift */; };
+		F1CF35883DF9DC2E08C93F23 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7384CB403D533D47253823C /* AppDelegate.swift */; };
+		F4842F1A50386B84FE38D00E /* HomeKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9342EA2D637098AB49D37A48 /* HomeKit.framework */; };
+		F5DCCECBF701A9D0FFCE19A3 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC9CBEEF4CA4F2779DE5CA3 /* SceneDelegate.swift */; };
+		F72E786C7B913ECD4D6DD9AA /* WiFiPresenceMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83D82FA2D75ABDB249DB129F /* WiFiPresenceMonitor.swift */; };
+		FE2FFA3FAB348DE263E1EBDB /* NotificationViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A3EA41ACF467B10BDC8C402 /* NotificationViewController.swift */; };
+		FEF20724EE34279D0467A5F4 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6340654381E365105FF7FE83 /* CoreLocation.framework */; };
+		FF7B60C8094107652A86BC16 /* light_rain.png in Resources */ = {isa = PBXBuildFile; fileRef = 3D1ED3E3E84E582C300F5352 /* light_rain.png */; };
+		FFC38607D281A06F9AC25B5C /* NetworkExtension.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0217EBDCC510C20F4F5BD191 /* NetworkExtension.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		9EB24AB4E3A53DC175F1A038 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A9DF947FC5EBFB7BC84205EA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 56FB21DFDFE12057687235E5;
+			remoteInfo = JarvisNotificationContent;
+		};
+		B551FB74C20E36CA4BF77B4B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A9DF947FC5EBFB7BC84205EA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = ACE332AF983A239DAC60B4E4;
+			remoteInfo = JarvisWatchComplication;
+		};
+		CE5E59EFAE03C46C119B0A33 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A9DF947FC5EBFB7BC84205EA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2249B78CAC17317F135BBBE7;
+			remoteInfo = JarvisWidgetExtension;
+		};
+		E1DC3DF2CB79D47ECF643F71 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A9DF947FC5EBFB7BC84205EA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3FC743E44DD05111C69AAC7A;
+			remoteInfo = JarvisWatch;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		59ADBB082658B269FA906C48 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				B4C7C108B7D8E331AA3E9645 /* JarvisWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DCBA90B0F3E0D505B742DEB1 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				B0FD71F9B732B2B24767866A /* JarvisWidgetExtension.appex in Embed Foundation Extensions */,
+				D3316AEE0D9F14AF0A031CA5 /* JarvisNotificationContent.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E28D45133D5AEA9F3EFD3BB0 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				796E2E077DEB129BC94BF245 /* JarvisWatchComplication.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		013BDBB952EE56276AE6215F /* moon_full.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = moon_full.png; sourceTree = "<group>"; };
+		0217EBDCC510C20F4F5BD191 /* NetworkExtension.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = NetworkExtension.framework; path = System/Library/Frameworks/NetworkExtension.framework; sourceTree = SDKROOT; };
+		08FBC1F9DCA40D3A249E9068 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
+		0AA93829BF86F08731907770 /* ForgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgeView.swift; sourceTree = "<group>"; };
+		0E2AE3568EAD3D62334295A3 /* VisionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionManager.swift; sourceTree = "<group>"; };
+		15617866500E317861AA8093 /* JarvisPhone.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JarvisPhone.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A371975D2054594606ACF19 /* HomeKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeKitManager.swift; sourceTree = "<group>"; };
+		1A9A3A35514DA4590BE755BE /* moon_waning_crescent.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = moon_waning_crescent.png; sourceTree = "<group>"; };
+		1F1019401B17E04901CB4559 /* ForgeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgeViewModel.swift; sourceTree = "<group>"; };
+		20516ACFB863FF0FC5C5677F /* NavigateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigateView.swift; sourceTree = "<group>"; };
+		20766693877E33B9D516E7FC /* SpeechManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechManager.swift; sourceTree = "<group>"; };
+		2612D3ACFC93A21ECB577C8D /* JarvisApple */ = {isa = PBXFileReference; lastKnownFileType = folder; name = JarvisApple; path = ../../..; sourceTree = SOURCE_ROOT; };
+		27ED981D835B3A0BA03337FA /* blizzard.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = blizzard.png; sourceTree = "<group>"; };
+		28F6D0BE1AF932D913A56AEC /* VoiceCommandView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceCommandView.swift; sourceTree = "<group>"; };
+		2A597EA5208574C2AF2DFBA2 /* heavy_snow.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = heavy_snow.png; sourceTree = "<group>"; };
+		2B1B664E04F8690B4CE7D411 /* HuddleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HuddleView.swift; sourceTree = "<group>"; };
+		2B4EF63A06E0158B42DA18A5 /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Vision.framework; path = System/Library/Frameworks/Vision.framework; sourceTree = SDKROOT; };
+		2E460BF23424AAED5A473F62 /* JarvisWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = JarvisWidgetExtension.entitlements; sourceTree = "<group>"; };
+		2F85497FD3C658B2D3DABB92 /* SharedData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedData.swift; sourceTree = "<group>"; };
+		380580D39B88EAE681F65996 /* CatalystView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalystView.swift; sourceTree = "<group>"; };
+		38608068C35F0EB0C4ECA50B /* clear_night_no_moon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = clear_night_no_moon.png; sourceTree = "<group>"; };
+		3A3EA41ACF467B10BDC8C402 /* NotificationViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationViewController.swift; sourceTree = "<group>"; };
+		3AB29859B5957C62F9CB6BD0 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		3D1ED3E3E84E582C300F5352 /* light_rain.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = light_rain.png; sourceTree = "<group>"; };
+		3FE3D081CE3E29E4F2204F85 /* moon_waxing_crescent.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = moon_waxing_crescent.png; sourceTree = "<group>"; };
+		426873E2FD76A370535A0257 /* moon_waxing_gibbous.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = moon_waxing_gibbous.png; sourceTree = "<group>"; };
+		43279C85CB5574D0DEAFC530 /* WeatherManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherManager.swift; sourceTree = "<group>"; };
+		43AD7D5E3DF4F099CA580C45 /* NaturalLanguage.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = NaturalLanguage.framework; path = System/Library/Frameworks/NaturalLanguage.framework; sourceTree = SDKROOT; };
+		44553CB18769E850690CFD56 /* SpeechRecognitionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechRecognitionManager.swift; sourceTree = "<group>"; };
+		4A91C6BC43072643CCB9ED2B /* CarPlaySceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlaySceneDelegate.swift; sourceTree = "<group>"; };
+		4BDECFB317C1152FC81CED79 /* WatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchApp.swift; sourceTree = "<group>"; };
+		4C06DDE8A06958935D4112C2 /* JarvisNotificationContent.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = JarvisNotificationContent.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		4D0E17E863DBE57B43D23CBF /* MediaPlayer.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaPlayer.framework; path = System/Library/Frameworks/MediaPlayer.framework; sourceTree = SDKROOT; };
+		4EC9CBEEF4CA4F2779DE5CA3 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		5286205D130739A90967DFDE /* HealthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthView.swift; sourceTree = "<group>"; };
+		5375A939CEFC06AD3754F1BE /* JarvisLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JarvisLiveActivityWidget.swift; sourceTree = "<group>"; };
+		55DBF2E2BDEA0A07C3661C17 /* JarvisWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JarvisWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		56BC5427F1CF94F348CC6018 /* WeatherWatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherWatchView.swift; sourceTree = "<group>"; };
+		5A231483EE062CD1DE074F11 /* ChronicleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChronicleView.swift; sourceTree = "<group>"; };
+		5BE2F6AAE2B8C31703423F68 /* moon_new.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = moon_new.png; sourceTree = "<group>"; };
+		5F56405F5A94EC627EC480B9 /* EventKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = EventKit.framework; path = System/Library/Frameworks/EventKit.framework; sourceTree = SDKROOT; };
+		63285586C6F4FF4996FCF8CC /* GeofenceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeofenceManager.swift; sourceTree = "<group>"; };
+		6340654381E365105FF7FE83 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
+		640961EA19A5B0669489061C /* ComplicationBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComplicationBundle.swift; sourceTree = "<group>"; };
+		682F9EBDFEEE2DE543EE5ED5 /* JarvisWatchComplication.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = JarvisWatchComplication.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		6E0815F6908612054AAFECB4 /* VoiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceView.swift; sourceTree = "<group>"; };
+		7178E8468E214D780E78F931 /* SoundAnalysis.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SoundAnalysis.framework; path = System/Library/Frameworks/SoundAnalysis.framework; sourceTree = SDKROOT; };
+		7437EC7F9DFA95EEA7E10834 /* WatchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchViewModel.swift; sourceTree = "<group>"; };
+		7472203F32B2E53D290279BD /* heavy_rain.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = heavy_rain.png; sourceTree = "<group>"; };
+		747405F29F20AD6C7FE1A1D2 /* NowPlayingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingManager.swift; sourceTree = "<group>"; };
+		76D175E8347DFE874580DF52 /* tornado.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = tornado.png; sourceTree = "<group>"; };
+		7FCCC8EE21586A88C0818D17 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		8098D590298DA67F108CA3C3 /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = System/Library/Frameworks/WatchConnectivity.framework; sourceTree = SDKROOT; };
+		822FA20382134D88CD42403B /* clear_day.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = clear_day.png; sourceTree = "<group>"; };
+		82DEB73DC7CCB61280FBC69D /* SharedDataWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedDataWriter.swift; sourceTree = "<group>"; };
+		82F72F298812021F4258F820 /* UncheckedSendable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UncheckedSendable.swift; sourceTree = "<group>"; };
+		83D82FA2D75ABDB249DB129F /* WiFiPresenceMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WiFiPresenceMonitor.swift; sourceTree = "<group>"; };
+		844C358E3E56D54D62952B63 /* WatchSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionManager.swift; sourceTree = "<group>"; };
+		84FD3D870787C12AF8D571D3 /* NeedsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeedsViewModel.swift; sourceTree = "<group>"; };
+		851EA2876DA2435ADB60E809 /* SoundAnalysisManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundAnalysisManager.swift; sourceTree = "<group>"; };
+		8B976CB898F961023DF82C62 /* JarvisHomeWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JarvisHomeWidgets.swift; sourceTree = "<group>"; };
+		8C6E2F0606656753F6C8FBA4 /* JarvisWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JarvisWidgetBundle.swift; sourceTree = "<group>"; };
+		8E07AD64B2529DF2C7539B22 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		8EB55C1105617283FFC8A98A /* partly_cloudy_day.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = partly_cloudy_day.png; sourceTree = "<group>"; };
+		8F0BA094AF2DF811AF58B066 /* FaithView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaithView.swift; sourceTree = "<group>"; };
+		9342EA2D637098AB49D37A48 /* HomeKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HomeKit.framework; path = System/Library/Frameworks/HomeKit.framework; sourceTree = SDKROOT; };
+		9CCF798750B7DD34F2010522 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		9E34FDA7DA47F0C693A6163B /* BriefingWatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BriefingWatchView.swift; sourceTree = "<group>"; };
+		A276924AE31D3CE4BEA46F29 /* ComplicationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComplicationProvider.swift; sourceTree = "<group>"; };
+		A52492BD671CDED1A6E464A1 /* NeedsWatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeedsWatchView.swift; sourceTree = "<group>"; };
+		A7954B37FC91B029145D1AD8 /* thunderstorm.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = thunderstorm.png; sourceTree = "<group>"; };
+		A9A5DD0A6B10715AD959074C /* HealthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthViewModel.swift; sourceTree = "<group>"; };
+		AA8699CBBA68919F7D5C810F /* EventKitSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventKitSyncManager.swift; sourceTree = "<group>"; };
+		ABAD93AE6FCA3F84052359A7 /* FocusFilterIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusFilterIntent.swift; sourceTree = "<group>"; };
+		AE05E5EAF918FDA761F4BC5A /* JarvisCarPlayController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JarvisCarPlayController.swift; sourceTree = "<group>"; };
+		B05E84545D25E6FAB299105B /* HealthSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthSyncManager.swift; sourceTree = "<group>"; };
+		B2518040DC5FF616802E9779 /* JarvisControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JarvisControls.swift; sourceTree = "<group>"; };
+		B43DBEEE34C3E2DB8434C5B3 /* BriefMeIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BriefMeIntent.swift; sourceTree = "<group>"; };
+		B76553F6745FF1142108372A /* moon_first_quarter.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = moon_first_quarter.png; sourceTree = "<group>"; };
+		BAF8B5428F5C07973A75D53B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		BBF7279EEA0C1123AE533FE1 /* ComplicationViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComplicationViews.swift; sourceTree = "<group>"; };
+		BE7CEC16E95CD0AB01A45BEF /* WeatherLocationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherLocationProvider.swift; sourceTree = "<group>"; };
+		BE892FC1CD21485A2DBCC1F2 /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
+		C0C1DB46EEB8E2795217E295 /* JarvisPhone.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = JarvisPhone.entitlements; sourceTree = "<group>"; };
+		C98FE02DAE887D662BDB68A0 /* SharedData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedData.swift; sourceTree = "<group>"; };
+		C9EE486BE9297FE3527EC48D /* BriefingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BriefingViewModel.swift; sourceTree = "<group>"; };
+		CB786A7F6A1AE659D5387B9C /* PublishView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublishView.swift; sourceTree = "<group>"; };
+		CF1AC908D75668E954920A59 /* JarvisWidgetExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = JarvisWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		D2D6A1F64011E23935B17BC5 /* moon_waning_gibbous.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = moon_waning_gibbous.png; sourceTree = "<group>"; };
+		D55EEF0BA663A70292B8BD4A /* WeatherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherView.swift; sourceTree = "<group>"; };
+		D797F0CE92835A3A475BB18F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		D90BE825B5FD4654261E77C3 /* WeatherKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WeatherKit.framework; path = System/Library/Frameworks/WeatherKit.framework; sourceTree = SDKROOT; };
+		D9F97E41496C66406F99331E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		DAFDE3D9AFB94F7F9C8A9C53 /* CoreML.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreML.framework; path = System/Library/Frameworks/CoreML.framework; sourceTree = SDKROOT; };
+		DD489909181A4FB75FD3AC7F /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
+		DF2265679288F822CF489305 /* BriefingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BriefingView.swift; sourceTree = "<group>"; };
+		DF4BE2ABF5181A605107A7BD /* NeedsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeedsView.swift; sourceTree = "<group>"; };
+		E0875A72D52A5DC6437A8778 /* Speech.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Speech.framework; path = System/Library/Frameworks/Speech.framework; sourceTree = SDKROOT; };
+		E6AD6211B99E78F20503F8B4 /* ActivityKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ActivityKit.framework; path = System/Library/Frameworks/ActivityKit.framework; sourceTree = SDKROOT; };
+		EBE8CA29D7B6725C94117328 /* JarvisWatchHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JarvisWatchHomeView.swift; sourceTree = "<group>"; };
+		F0AC009F0011D3717B1D27C7 /* VoiceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceViewModel.swift; sourceTree = "<group>"; };
+		F38E8C347D8A0DE4C424EA1D /* moon_last_quarter.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = moon_last_quarter.png; sourceTree = "<group>"; };
+		F6702C72F8D7E37CA105F08C /* light_snow.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = light_snow.png; sourceTree = "<group>"; };
+		F7384CB403D533D47253823C /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		FB524D1740BF43DD1890A849 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		FBF772443E35780063339DE2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1F516D6833540EB5ACED6DF2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				514228A8B92FFD3BFBB3B53E /* JarvisKit in Frameworks */,
+				48CE3D1BFFFB7D5FB46B24D4 /* ActivityKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A84DE426011DA24E3D4E48A1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				86ECD8C0069967039D402514 /* WatchConnectivity.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D482E8111E58E5CEFC3211E9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CA81426E435AB49388832A0A /* JarvisKit in Frameworks */,
+				331D870A7143AAF79399B1D2 /* JarvisKitHealth in Frameworks */,
+				3A9646526BE4CEB30344134B /* JarvisKitIntents in Frameworks */,
+				96753AB57B62C6B0C564F659 /* JarvisNotifications in Frameworks */,
+				FFC38607D281A06F9AC25B5C /* NetworkExtension.framework in Frameworks */,
+				FEF20724EE34279D0467A5F4 /* CoreLocation.framework in Frameworks */,
+				883A67B47395E515A1E1255B /* HealthKit.framework in Frameworks */,
+				2CD6B643BFAE88CEB131192C /* WatchConnectivity.framework in Frameworks */,
+				86FB17078A0D3FDB950213F3 /* WeatherKit.framework in Frameworks */,
+				46ECC3B5B7F3D895E77BAAFE /* EventKit.framework in Frameworks */,
+				505D9BD847377368EC78AAB4 /* MediaPlayer.framework in Frameworks */,
+				D6045CD65CCE483A291AB689 /* Speech.framework in Frameworks */,
+				F4842F1A50386B84FE38D00E /* HomeKit.framework in Frameworks */,
+				699EF97A7ACDE7B36D6A3616 /* Vision.framework in Frameworks */,
+				67FE2E84A717164E027E28CE /* SoundAnalysis.framework in Frameworks */,
+				CCC243F3827069B2A41DC0B4 /* CoreML.framework in Frameworks */,
+				233579BD8E5E90AA96F3CB7E /* NaturalLanguage.framework in Frameworks */,
+				A2BF3F50C05DA944864E98BB /* ActivityKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		07D8BF672B5BF44C0342F89C /* JarvisPhone */ = {
+			isa = PBXGroup;
+			children = (
+				67F8E6151030C760375CC37D /* CarPlay */,
+				545059C403D463267EA06190 /* EventSync */,
+				7B8C087EABEED7D62035D84B /* Extensions */,
+				4E75C6CD549025E69F028BA7 /* Health */,
+				793AB41F522929943A80AD7B /* HomeKit */,
+				F56A54E145645A2F5C8EAA97 /* Intents */,
+				E337601171041361BCDC8F30 /* LiveActivity */,
+				10A2F9BC2412DBB4807BCBCF /* Music */,
+				67DA5F9B9CB61B1340E5FB43 /* Presence */,
+				F38514F3F8C6DF54801BDB44 /* Resources */,
+				0ACA91E7E4D7515C6714F441 /* Scenes */,
+				BCD755AE4300528AE2554EBF /* Sound */,
+				82988F839F8BA52FF4854170 /* Speech */,
+				C2AA05682503E607B5BE429F /* ViewModels */,
+				BD1391782B949652230E7CEB /* Vision */,
+				7DACA80E24E41355081E9B55 /* Watch */,
+				5D7792AC401055ED70363B47 /* Weather */,
+				FB524D1740BF43DD1890A849 /* App.swift */,
+				F7384CB403D533D47253823C /* AppDelegate.swift */,
+				D797F0CE92835A3A475BB18F /* Info.plist */,
+				C0C1DB46EEB8E2795217E295 /* JarvisPhone.entitlements */,
+				DD489909181A4FB75FD3AC7F /* RootTabView.swift */,
+				4EC9CBEEF4CA4F2779DE5CA3 /* SceneDelegate.swift */,
+			);
+			path = JarvisPhone;
+			sourceTree = "<group>";
+		};
+		0ACA91E7E4D7515C6714F441 /* Scenes */ = {
+			isa = PBXGroup;
+			children = (
+				DF2265679288F822CF489305 /* BriefingView.swift */,
+				380580D39B88EAE681F65996 /* CatalystView.swift */,
+				5A231483EE062CD1DE074F11 /* ChronicleView.swift */,
+				8F0BA094AF2DF811AF58B066 /* FaithView.swift */,
+				0AA93829BF86F08731907770 /* ForgeView.swift */,
+				5286205D130739A90967DFDE /* HealthView.swift */,
+				3AB29859B5957C62F9CB6BD0 /* HomeView.swift */,
+				2B1B664E04F8690B4CE7D411 /* HuddleView.swift */,
+				20516ACFB863FF0FC5C5677F /* NavigateView.swift */,
+				DF4BE2ABF5181A605107A7BD /* NeedsView.swift */,
+				CB786A7F6A1AE659D5387B9C /* PublishView.swift */,
+				9CCF798750B7DD34F2010522 /* SettingsView.swift */,
+				6E0815F6908612054AAFECB4 /* VoiceView.swift */,
+				D55EEF0BA663A70292B8BD4A /* WeatherView.swift */,
+			);
+			path = Scenes;
+			sourceTree = "<group>";
+		};
+		10A2F9BC2412DBB4807BCBCF /* Music */ = {
+			isa = PBXGroup;
+			children = (
+				747405F29F20AD6C7FE1A1D2 /* NowPlayingManager.swift */,
+			);
+			path = Music;
+			sourceTree = "<group>";
+		};
+		17423A55BCF9D7147BBC3F06 /* JarvisWatch */ = {
+			isa = PBXGroup;
+			children = (
+				48FBA631ED58AC0D97F8A285 /* Views */,
+				7FCCC8EE21586A88C0818D17 /* Info.plist */,
+				4BDECFB317C1152FC81CED79 /* WatchApp.swift */,
+				7437EC7F9DFA95EEA7E10834 /* WatchViewModel.swift */,
+			);
+			path = JarvisWatch;
+			sourceTree = "<group>";
+		};
+		39E7F6D39C28774C607FDE9A /* JarvisWidgetExtension */ = {
+			isa = PBXGroup;
+			children = (
+				D9F97E41496C66406F99331E /* Info.plist */,
+				B2518040DC5FF616802E9779 /* JarvisControls.swift */,
+				8B976CB898F961023DF82C62 /* JarvisHomeWidgets.swift */,
+				5375A939CEFC06AD3754F1BE /* JarvisLiveActivityWidget.swift */,
+				8C6E2F0606656753F6C8FBA4 /* JarvisWidgetBundle.swift */,
+				2E460BF23424AAED5A473F62 /* JarvisWidgetExtension.entitlements */,
+				C98FE02DAE887D662BDB68A0 /* SharedData.swift */,
+			);
+			path = JarvisWidgetExtension;
+			sourceTree = "<group>";
+		};
+		4847F70784AAB5E50B6E2BAA /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				2612D3ACFC93A21ECB577C8D /* JarvisApple */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		48FBA631ED58AC0D97F8A285 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				9E34FDA7DA47F0C693A6163B /* BriefingWatchView.swift */,
+				EBE8CA29D7B6725C94117328 /* JarvisWatchHomeView.swift */,
+				A52492BD671CDED1A6E464A1 /* NeedsWatchView.swift */,
+				28F6D0BE1AF932D913A56AEC /* VoiceCommandView.swift */,
+				56BC5427F1CF94F348CC6018 /* WeatherWatchView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		4E75C6CD549025E69F028BA7 /* Health */ = {
+			isa = PBXGroup;
+			children = (
+				B05E84545D25E6FAB299105B /* HealthSyncManager.swift */,
+			);
+			path = Health;
+			sourceTree = "<group>";
+		};
+		545059C403D463267EA06190 /* EventSync */ = {
+			isa = PBXGroup;
+			children = (
+				AA8699CBBA68919F7D5C810F /* EventKitSyncManager.swift */,
+			);
+			path = EventSync;
+			sourceTree = "<group>";
+		};
+		5D7792AC401055ED70363B47 /* Weather */ = {
+			isa = PBXGroup;
+			children = (
+				BE7CEC16E95CD0AB01A45BEF /* WeatherLocationProvider.swift */,
+				43279C85CB5574D0DEAFC530 /* WeatherManager.swift */,
+			);
+			path = Weather;
+			sourceTree = "<group>";
+		};
+		6332BED125ABD77FF8EB8DC3 /* JarvisNotificationContent */ = {
+			isa = PBXGroup;
+			children = (
+				BAF8B5428F5C07973A75D53B /* Info.plist */,
+				3A3EA41ACF467B10BDC8C402 /* NotificationViewController.swift */,
+			);
+			path = JarvisNotificationContent;
+			sourceTree = "<group>";
+		};
+		67DA5F9B9CB61B1340E5FB43 /* Presence */ = {
+			isa = PBXGroup;
+			children = (
+				63285586C6F4FF4996FCF8CC /* GeofenceManager.swift */,
+				83D82FA2D75ABDB249DB129F /* WiFiPresenceMonitor.swift */,
+			);
+			path = Presence;
+			sourceTree = "<group>";
+		};
+		67F8E6151030C760375CC37D /* CarPlay */ = {
+			isa = PBXGroup;
+			children = (
+				4A91C6BC43072643CCB9ED2B /* CarPlaySceneDelegate.swift */,
+				AE05E5EAF918FDA761F4BC5A /* JarvisCarPlayController.swift */,
+			);
+			path = CarPlay;
+			sourceTree = "<group>";
+		};
+		6D050D029EB725D03061FF61 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4C06DDE8A06958935D4112C2 /* JarvisNotificationContent.appex */,
+				15617866500E317861AA8093 /* JarvisPhone.app */,
+				55DBF2E2BDEA0A07C3661C17 /* JarvisWatch.app */,
+				682F9EBDFEEE2DE543EE5ED5 /* JarvisWatchComplication.appex */,
+				CF1AC908D75668E954920A59 /* JarvisWidgetExtension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		793AB41F522929943A80AD7B /* HomeKit */ = {
+			isa = PBXGroup;
+			children = (
+				1A371975D2054594606ACF19 /* HomeKitManager.swift */,
+			);
+			path = HomeKit;
+			sourceTree = "<group>";
+		};
+		7AFF4731B846B7AEB044928D = {
+			isa = PBXGroup;
+			children = (
+				6332BED125ABD77FF8EB8DC3 /* JarvisNotificationContent */,
+				07D8BF672B5BF44C0342F89C /* JarvisPhone */,
+				17423A55BCF9D7147BBC3F06 /* JarvisWatch */,
+				E25147905B7091A99C6597EC /* JarvisWatchComplication */,
+				39E7F6D39C28774C607FDE9A /* JarvisWidgetExtension */,
+				4847F70784AAB5E50B6E2BAA /* Packages */,
+				BC6329ED43478FAF5BC19753 /* Frameworks */,
+				6D050D029EB725D03061FF61 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		7B8C087EABEED7D62035D84B /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				82F72F298812021F4258F820 /* UncheckedSendable.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		7DACA80E24E41355081E9B55 /* Watch */ = {
+			isa = PBXGroup;
+			children = (
+				844C358E3E56D54D62952B63 /* WatchSessionManager.swift */,
+			);
+			path = Watch;
+			sourceTree = "<group>";
+		};
+		82988F839F8BA52FF4854170 /* Speech */ = {
+			isa = PBXGroup;
+			children = (
+				20766693877E33B9D516E7FC /* SpeechManager.swift */,
+				44553CB18769E850690CFD56 /* SpeechRecognitionManager.swift */,
+			);
+			path = Speech;
+			sourceTree = "<group>";
+		};
+		BC6329ED43478FAF5BC19753 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				E6AD6211B99E78F20503F8B4 /* ActivityKit.framework */,
+				6340654381E365105FF7FE83 /* CoreLocation.framework */,
+				DAFDE3D9AFB94F7F9C8A9C53 /* CoreML.framework */,
+				5F56405F5A94EC627EC480B9 /* EventKit.framework */,
+				08FBC1F9DCA40D3A249E9068 /* HealthKit.framework */,
+				9342EA2D637098AB49D37A48 /* HomeKit.framework */,
+				4D0E17E863DBE57B43D23CBF /* MediaPlayer.framework */,
+				43AD7D5E3DF4F099CA580C45 /* NaturalLanguage.framework */,
+				0217EBDCC510C20F4F5BD191 /* NetworkExtension.framework */,
+				7178E8468E214D780E78F931 /* SoundAnalysis.framework */,
+				E0875A72D52A5DC6437A8778 /* Speech.framework */,
+				2B4EF63A06E0158B42DA18A5 /* Vision.framework */,
+				8098D590298DA67F108CA3C3 /* WatchConnectivity.framework */,
+				D90BE825B5FD4654261E77C3 /* WeatherKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		BCD755AE4300528AE2554EBF /* Sound */ = {
+			isa = PBXGroup;
+			children = (
+				851EA2876DA2435ADB60E809 /* SoundAnalysisManager.swift */,
+			);
+			path = Sound;
+			sourceTree = "<group>";
+		};
+		BD1391782B949652230E7CEB /* Vision */ = {
+			isa = PBXGroup;
+			children = (
+				0E2AE3568EAD3D62334295A3 /* VisionManager.swift */,
+			);
+			path = Vision;
+			sourceTree = "<group>";
+		};
+		C2AA05682503E607B5BE429F /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				C9EE486BE9297FE3527EC48D /* BriefingViewModel.swift */,
+				1F1019401B17E04901CB4559 /* ForgeViewModel.swift */,
+				A9A5DD0A6B10715AD959074C /* HealthViewModel.swift */,
+				84FD3D870787C12AF8D571D3 /* NeedsViewModel.swift */,
+				F0AC009F0011D3717B1D27C7 /* VoiceViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		E25147905B7091A99C6597EC /* JarvisWatchComplication */ = {
+			isa = PBXGroup;
+			children = (
+				640961EA19A5B0669489061C /* ComplicationBundle.swift */,
+				A276924AE31D3CE4BEA46F29 /* ComplicationProvider.swift */,
+				BBF7279EEA0C1123AE533FE1 /* ComplicationViews.swift */,
+				8E07AD64B2529DF2C7539B22 /* Info.plist */,
+			);
+			path = JarvisWatchComplication;
+			sourceTree = "<group>";
+		};
+		E337601171041361BCDC8F30 /* LiveActivity */ = {
+			isa = PBXGroup;
+			children = (
+				BE892FC1CD21485A2DBCC1F2 /* LiveActivityManager.swift */,
+				2F85497FD3C658B2D3DABB92 /* SharedData.swift */,
+				82DEB73DC7CCB61280FBC69D /* SharedDataWriter.swift */,
+			);
+			path = LiveActivity;
+			sourceTree = "<group>";
+		};
+		F38514F3F8C6DF54801BDB44 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				FBF772443E35780063339DE2 /* Assets.xcassets */,
+				27ED981D835B3A0BA03337FA /* blizzard.png */,
+				822FA20382134D88CD42403B /* clear_day.png */,
+				38608068C35F0EB0C4ECA50B /* clear_night_no_moon.png */,
+				7472203F32B2E53D290279BD /* heavy_rain.png */,
+				2A597EA5208574C2AF2DFBA2 /* heavy_snow.png */,
+				3D1ED3E3E84E582C300F5352 /* light_rain.png */,
+				F6702C72F8D7E37CA105F08C /* light_snow.png */,
+				B76553F6745FF1142108372A /* moon_first_quarter.png */,
+				013BDBB952EE56276AE6215F /* moon_full.png */,
+				F38E8C347D8A0DE4C424EA1D /* moon_last_quarter.png */,
+				5BE2F6AAE2B8C31703423F68 /* moon_new.png */,
+				1A9A3A35514DA4590BE755BE /* moon_waning_crescent.png */,
+				D2D6A1F64011E23935B17BC5 /* moon_waning_gibbous.png */,
+				3FE3D081CE3E29E4F2204F85 /* moon_waxing_crescent.png */,
+				426873E2FD76A370535A0257 /* moon_waxing_gibbous.png */,
+				8EB55C1105617283FFC8A98A /* partly_cloudy_day.png */,
+				A7954B37FC91B029145D1AD8 /* thunderstorm.png */,
+				76D175E8347DFE874580DF52 /* tornado.png */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		F56A54E145645A2F5C8EAA97 /* Intents */ = {
+			isa = PBXGroup;
+			children = (
+				B43DBEEE34C3E2DB8434C5B3 /* BriefMeIntent.swift */,
+				ABAD93AE6FCA3F84052359A7 /* FocusFilterIntent.swift */,
+			);
+			path = Intents;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		2249B78CAC17317F135BBBE7 /* JarvisWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F64CCB2BCC7A7B3EFC784C3E /* Build configuration list for PBXNativeTarget "JarvisWidgetExtension" */;
+			buildPhases = (
+				CEE8AEDACC7813BF1D02B54F /* Sources */,
+				1F516D6833540EB5ACED6DF2 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JarvisWidgetExtension;
+			packageProductDependencies = (
+				F3B8959CB30CA95BE0686EFB /* JarvisKit */,
+			);
+			productName = JarvisWidgetExtension;
+			productReference = CF1AC908D75668E954920A59 /* JarvisWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		3FC743E44DD05111C69AAC7A /* JarvisWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C4E24B7B01DA22201111B92B /* Build configuration list for PBXNativeTarget "JarvisWatch" */;
+			buildPhases = (
+				5DBA5BBE560A16712A895687 /* Sources */,
+				A84DE426011DA24E3D4E48A1 /* Frameworks */,
+				E28D45133D5AEA9F3EFD3BB0 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6DCEAA5ABA1DA3AF0811CAD0 /* PBXTargetDependency */,
+			);
+			name = JarvisWatch;
+			packageProductDependencies = (
+			);
+			productName = JarvisWatch;
+			productReference = 55DBF2E2BDEA0A07C3661C17 /* JarvisWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
+		56FB21DFDFE12057687235E5 /* JarvisNotificationContent */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4799786A9010BCDA08BB931A /* Build configuration list for PBXNativeTarget "JarvisNotificationContent" */;
+			buildPhases = (
+				122D506EB030EB784C2762A4 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JarvisNotificationContent;
+			packageProductDependencies = (
+			);
+			productName = JarvisNotificationContent;
+			productReference = 4C06DDE8A06958935D4112C2 /* JarvisNotificationContent.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		9173FBF2A8FD3EBE1C0B791A /* JarvisPhone */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BFBA35F9B93CC06342058A7D /* Build configuration list for PBXNativeTarget "JarvisPhone" */;
+			buildPhases = (
+				7EC6F870B614AED4040C01E5 /* Sources */,
+				DB875AAD528DE7E0913E9F81 /* Resources */,
+				D482E8111E58E5CEFC3211E9 /* Frameworks */,
+				DCBA90B0F3E0D505B742DEB1 /* Embed Foundation Extensions */,
+				59ADBB082658B269FA906C48 /* Embed Watch Content */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				4766B6703B98D6717FFA14F6 /* PBXTargetDependency */,
+				155C744D6B5179EA2697AC5D /* PBXTargetDependency */,
+				EB7EFD6B6660625AD5056D71 /* PBXTargetDependency */,
+			);
+			name = JarvisPhone;
+			packageProductDependencies = (
+				A692D86C8BE488E363FB4578 /* JarvisKit */,
+				AF910F446E529BC5DDF82E77 /* JarvisKitHealth */,
+				4D9D4ED47CABCA4B7D98D283 /* JarvisKitIntents */,
+				05A2FD26A7A285CD3A043926 /* JarvisNotifications */,
+			);
+			productName = JarvisPhone;
+			productReference = 15617866500E317861AA8093 /* JarvisPhone.app */;
+			productType = "com.apple.product-type.application";
+		};
+		ACE332AF983A239DAC60B4E4 /* JarvisWatchComplication */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0C58CC5B04A38239E0A3A985 /* Build configuration list for PBXNativeTarget "JarvisWatchComplication" */;
+			buildPhases = (
+				E9D99FD96880A855237B4C13 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JarvisWatchComplication;
+			packageProductDependencies = (
+			);
+			productName = JarvisWatchComplication;
+			productReference = 682F9EBDFEEE2DE543EE5ED5 /* JarvisWatchComplication.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A9DF947FC5EBFB7BC84205EA /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1620;
+				TargetAttributes = {
+					2249B78CAC17317F135BBBE7 = {
+						DevelopmentTeam = LGNJ56Y22G;
+					};
+					3FC743E44DD05111C69AAC7A = {
+						DevelopmentTeam = LGNJ56Y22G;
+					};
+					56FB21DFDFE12057687235E5 = {
+						DevelopmentTeam = LGNJ56Y22G;
+					};
+					9173FBF2A8FD3EBE1C0B791A = {
+						DevelopmentTeam = LGNJ56Y22G;
+					};
+					ACE332AF983A239DAC60B4E4 = {
+						DevelopmentTeam = LGNJ56Y22G;
+					};
+				};
+			};
+			buildConfigurationList = 5E5154A7E064AB9C02423E58 /* Build configuration list for PBXProject "JarvisPhone" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 7AFF4731B846B7AEB044928D;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				3E0AF100248DE8A646CCE1E6 /* XCLocalSwiftPackageReference "../../.." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 6D050D029EB725D03061FF61 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				56FB21DFDFE12057687235E5 /* JarvisNotificationContent */,
+				9173FBF2A8FD3EBE1C0B791A /* JarvisPhone */,
+				3FC743E44DD05111C69AAC7A /* JarvisWatch */,
+				ACE332AF983A239DAC60B4E4 /* JarvisWatchComplication */,
+				2249B78CAC17317F135BBBE7 /* JarvisWidgetExtension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		DB875AAD528DE7E0913E9F81 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C72D55B41BB79D96BA5725FB /* Assets.xcassets in Resources */,
+				6AB8581F3BA6685F47FDF4F6 /* blizzard.png in Resources */,
+				C7F6BFF1EC2637E81DA4EA1B /* clear_day.png in Resources */,
+				C87AE690A7358FD674242FCC /* clear_night_no_moon.png in Resources */,
+				60419C5F1DC5E8AF4032836D /* heavy_rain.png in Resources */,
+				CDDBAF7C1B450B57302D1091 /* heavy_snow.png in Resources */,
+				FF7B60C8094107652A86BC16 /* light_rain.png in Resources */,
+				AAD61C82C19901FB678CE260 /* light_snow.png in Resources */,
+				3F75D026ADA7EB549C2E8D27 /* moon_first_quarter.png in Resources */,
+				5F58D46000B231BE803273B3 /* moon_full.png in Resources */,
+				AAAA6C902098B3BD60D88EB5 /* moon_last_quarter.png in Resources */,
+				EE046834BA5590FA9D15196A /* moon_new.png in Resources */,
+				532A5BA3BBB069A2E47EC9B6 /* moon_waning_crescent.png in Resources */,
+				CB204619B9F992B90FEFBB39 /* moon_waning_gibbous.png in Resources */,
+				D07BEB7A7B2390DAD5027A9B /* moon_waxing_crescent.png in Resources */,
+				AFD83C23C57C4F77BF7B012D /* moon_waxing_gibbous.png in Resources */,
+				2658A2C44E9AF925ED901B52 /* partly_cloudy_day.png in Resources */,
+				EA937EAB64493D42B86D1CE2 /* thunderstorm.png in Resources */,
+				DF482CA6A3F8A3F39FABAA9C /* tornado.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		122D506EB030EB784C2762A4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FE2FFA3FAB348DE263E1EBDB /* NotificationViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5DBA5BBE560A16712A895687 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				981FA2956A09016ACF687D0B /* BriefingWatchView.swift in Sources */,
+				73057BFF62FAC187279F8430 /* JarvisWatchHomeView.swift in Sources */,
+				9B2A68D4965837A49A6A297B /* NeedsWatchView.swift in Sources */,
+				3E32B8FAD8534F8DE5E95BD4 /* VoiceCommandView.swift in Sources */,
+				8209FDB6F795AD8AE88C0DA0 /* WatchApp.swift in Sources */,
+				B148ADDAEB8506F320C49C11 /* WatchViewModel.swift in Sources */,
+				C52B57078947B39E05F49BF9 /* WeatherWatchView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7EC6F870B614AED4040C01E5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EA46FB8CD3B80CDC4D060531 /* App.swift in Sources */,
+				F1CF35883DF9DC2E08C93F23 /* AppDelegate.swift in Sources */,
+				EB7A0C37708875C467931B8D /* BriefMeIntent.swift in Sources */,
+				1B26FD5F219640CE315A3C77 /* BriefingView.swift in Sources */,
+				BF501F141139B56EC203B59D /* BriefingViewModel.swift in Sources */,
+				BD87E07D478C27439CCAD2A2 /* CarPlaySceneDelegate.swift in Sources */,
+				EE09B6CC0ABA9B7A4A26096C /* CatalystView.swift in Sources */,
+				DD5F7524D3793DECD8FDC201 /* ChronicleView.swift in Sources */,
+				EE484A9E113DB5364023819A /* EventKitSyncManager.swift in Sources */,
+				9E88796A73D2A8A968C925D0 /* FaithView.swift in Sources */,
+				3FE3913E81DA49FCB95B4753 /* FocusFilterIntent.swift in Sources */,
+				D550729DD0E9055667913B5A /* ForgeView.swift in Sources */,
+				1C6DC0B679CC9DC6CBB604A0 /* ForgeViewModel.swift in Sources */,
+				C546E4A3CA7B53C8723F8378 /* GeofenceManager.swift in Sources */,
+				EF8E3C59957F24E9A5C4992C /* HealthSyncManager.swift in Sources */,
+				560DAB77CA3ADE63E37D14A3 /* HealthView.swift in Sources */,
+				462F1C401EA9D11924146B4B /* HealthViewModel.swift in Sources */,
+				BDEC63A3A6FB6EF070B348B9 /* HomeKitManager.swift in Sources */,
+				2D35ECB85D74B1E4259C6ADC /* HomeView.swift in Sources */,
+				3079C65892C927B0F35AFB61 /* HuddleView.swift in Sources */,
+				5FF2A244521F5ED493F13FFC /* JarvisCarPlayController.swift in Sources */,
+				3EA255DA2C6CAEB31707C7C4 /* LiveActivityManager.swift in Sources */,
+				BC22C19B2E6276978CDD1700 /* NavigateView.swift in Sources */,
+				045D4AEDE2F3239D9A7C12BB /* NeedsView.swift in Sources */,
+				BB2441AAA79E673202341389 /* NeedsViewModel.swift in Sources */,
+				BBCB03511C32DD1751120141 /* NowPlayingManager.swift in Sources */,
+				96ED35A50D65E807D1AC97F2 /* PublishView.swift in Sources */,
+				409F3C25B5A37036501647D3 /* RootTabView.swift in Sources */,
+				F5DCCECBF701A9D0FFCE19A3 /* SceneDelegate.swift in Sources */,
+				3D6B767DA8150BF9ECABBDF4 /* SettingsView.swift in Sources */,
+				E493AB98DEF2CB584A0DB80E /* SharedData.swift in Sources */,
+				BD334414A00BCA906F73F6AC /* SharedDataWriter.swift in Sources */,
+				DE4A9FC006F76E3CC7813784 /* SoundAnalysisManager.swift in Sources */,
+				7E11A6AB5FDA0148C4B93868 /* SpeechManager.swift in Sources */,
+				461F0795E724B042E3AD855E /* SpeechRecognitionManager.swift in Sources */,
+				733C81BA09CA628057072C13 /* UncheckedSendable.swift in Sources */,
+				B704558F8BC7BB0763918561 /* VisionManager.swift in Sources */,
+				7281A5FC7BE45CCAC6A24CF3 /* VoiceView.swift in Sources */,
+				1CB1D2CC0D3B3A08BB966FE7 /* VoiceViewModel.swift in Sources */,
+				06EE5FFDE321A3EC1838B4AD /* WatchSessionManager.swift in Sources */,
+				3ECB78A0387BF98A770BEFB9 /* WeatherLocationProvider.swift in Sources */,
+				D203D2C53A9CB7C9BD50626A /* WeatherManager.swift in Sources */,
+				ECB35DE06A3FDFC3D2102748 /* WeatherView.swift in Sources */,
+				F72E786C7B913ECD4D6DD9AA /* WiFiPresenceMonitor.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CEE8AEDACC7813BF1D02B54F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				91E90E883274EA1D8E3A3EDC /* JarvisControls.swift in Sources */,
+				8D83CB3DBCFD2ED2DAA720A7 /* JarvisHomeWidgets.swift in Sources */,
+				37618CAB2DC132961CD8E2B1 /* JarvisLiveActivityWidget.swift in Sources */,
+				32F28D909556A615D84D9CF5 /* JarvisWidgetBundle.swift in Sources */,
+				DF1D0A91DA409A2579576322 /* SharedData.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E9D99FD96880A855237B4C13 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8FF60677CCD243DE067552C0 /* ComplicationBundle.swift in Sources */,
+				A748705D549F65343A83A410 /* ComplicationProvider.swift in Sources */,
+				BF05159C917498D7D7D5269A /* ComplicationViews.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		155C744D6B5179EA2697AC5D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2249B78CAC17317F135BBBE7 /* JarvisWidgetExtension */;
+			targetProxy = CE5E59EFAE03C46C119B0A33 /* PBXContainerItemProxy */;
+		};
+		4766B6703B98D6717FFA14F6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3FC743E44DD05111C69AAC7A /* JarvisWatch */;
+			targetProxy = E1DC3DF2CB79D47ECF643F71 /* PBXContainerItemProxy */;
+		};
+		6DCEAA5ABA1DA3AF0811CAD0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = ACE332AF983A239DAC60B4E4 /* JarvisWatchComplication */;
+			targetProxy = B551FB74C20E36CA4BF77B4B /* PBXContainerItemProxy */;
+		};
+		EB7EFD6B6660625AD5056D71 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 56FB21DFDFE12057687235E5 /* JarvisNotificationContent */;
+			targetProxy = 9EB24AB4E3A53DC175F1A038 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0D0EF0459BFF3F2D5A0A9884 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		2F1E8F02E91E57AA0021BE54 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = JarvisWidgetExtension/JarvisWidgetExtension.entitlements;
+				DEVELOPMENT_TEAM = LGNJ56Y22G;
+				INFOPLIST_FILE = JarvisWidgetExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.binion.jarvisphone.widgets;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		4649C3DB788F6E1B7AE0DB50 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEVELOPMENT_TEAM = LGNJ56Y22G;
+				INFOPLIST_FILE = JarvisWatchComplication/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.binion.jarvisphone.watchkitapp.complication;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
+		66DC4B3F8F71205F015AF565 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				DEVELOPMENT_TEAM = LGNJ56Y22G;
+				INFOPLIST_FILE = JarvisWatch/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.binion.jarvisphone.watchkitapp;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		6E3D3115CAA1187B76062E9C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = JarvisPhone/JarvisPhone.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = LGNJ56Y22G;
+				INFOPLIST_FILE = JarvisPhone/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.binion.jarvisphone;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		7F6E9DEF3FF7E3CE6B494657 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		855DDBE799E3E5317536C982 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = JarvisWidgetExtension/JarvisWidgetExtension.entitlements;
+				DEVELOPMENT_TEAM = LGNJ56Y22G;
+				INFOPLIST_FILE = JarvisWidgetExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.binion.jarvisphone.widgets;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A27161A649C427366B67D321 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				DEVELOPMENT_TEAM = LGNJ56Y22G;
+				INFOPLIST_FILE = JarvisWatch/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.binion.jarvisphone.watchkitapp;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
+		C654C4C3CC2303CCA8FB1214 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEVELOPMENT_TEAM = LGNJ56Y22G;
+				INFOPLIST_FILE = JarvisNotificationContent/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.binion.jarvisphone.notification-content";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		DAC853FB2679A35DFE601AC5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEVELOPMENT_TEAM = LGNJ56Y22G;
+				INFOPLIST_FILE = JarvisNotificationContent/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.binion.jarvisphone.notification-content";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		EA59F32A827949328F18C327 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEVELOPMENT_TEAM = LGNJ56Y22G;
+				INFOPLIST_FILE = JarvisWatchComplication/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.binion.jarvisphone.watchkitapp.complication;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		F51317B217E491224317A8EB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = JarvisPhone/JarvisPhone.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = LGNJ56Y22G;
+				INFOPLIST_FILE = JarvisPhone/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.binion.jarvisphone;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0C58CC5B04A38239E0A3A985 /* Build configuration list for PBXNativeTarget "JarvisWatchComplication" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EA59F32A827949328F18C327 /* Debug */,
+				4649C3DB788F6E1B7AE0DB50 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		4799786A9010BCDA08BB931A /* Build configuration list for PBXNativeTarget "JarvisNotificationContent" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C654C4C3CC2303CCA8FB1214 /* Debug */,
+				DAC853FB2679A35DFE601AC5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5E5154A7E064AB9C02423E58 /* Build configuration list for PBXProject "JarvisPhone" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0D0EF0459BFF3F2D5A0A9884 /* Debug */,
+				7F6E9DEF3FF7E3CE6B494657 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		BFBA35F9B93CC06342058A7D /* Build configuration list for PBXNativeTarget "JarvisPhone" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F51317B217E491224317A8EB /* Debug */,
+				6E3D3115CAA1187B76062E9C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C4E24B7B01DA22201111B92B /* Build configuration list for PBXNativeTarget "JarvisWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				66DC4B3F8F71205F015AF565 /* Debug */,
+				A27161A649C427366B67D321 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F64CCB2BCC7A7B3EFC784C3E /* Build configuration list for PBXNativeTarget "JarvisWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				855DDBE799E3E5317536C982 /* Debug */,
+				2F1E8F02E91E57AA0021BE54 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		3E0AF100248DE8A646CCE1E6 /* XCLocalSwiftPackageReference "../../.." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../..;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		05A2FD26A7A285CD3A043926 /* JarvisNotifications */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = JarvisNotifications;
+		};
+		4D9D4ED47CABCA4B7D98D283 /* JarvisKitIntents */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = JarvisKitIntents;
+		};
+		A692D86C8BE488E363FB4578 /* JarvisKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = JarvisKit;
+		};
+		AF910F446E529BC5DDF82E77 /* JarvisKitHealth */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = JarvisKitHealth;
+		};
+		F3B8959CB30CA95BE0686EFB /* JarvisKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = JarvisKit;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = A9DF947FC5EBFB7BC84205EA /* Project object */;
+}

@@ -58,6 +58,13 @@ public final class AppleAPIClient: Sendable {
         return try await post("/api/apple/speak", body: Body(text: text, actor_id: actorId))
     }
 
+    /// Fire-and-forget voice command relay from Watch. Ignores response body.
+    public func sendVoiceCommand(_ text: String, actor: String = "chris") async throws {
+        struct Body: Encodable { let text: String; let actor: String }
+        struct Ack: Decodable {}
+        let _: Ack = try await post("/api/apple/speak", body: Body(text: text, actor: actor))
+    }
+
     /// Fetch the current voice greeting (for app launch or wake-word).
     public func fetchGreeting(actor: String = "chris") async throws -> VoiceGreeting {
         try await get("/api/apple/voice/greeting?actor=\(actor)")
@@ -208,6 +215,26 @@ public final class AppleAPIClient: Sendable {
 
     public func fetchHuddle() async throws -> HuddleOverview {
         try await get("/api/apple/huddle")
+    }
+
+    // MARK: - Forge
+
+    public func fetchForgeModels() async throws -> [ForgeModelRecord] {
+        struct Wrapper: Decodable { let models: [ForgeModelRecord] }
+        let w: Wrapper = try await get("/api/apple/forge")
+        return w.models
+    }
+
+    @discardableResult
+    public func saveForgeModel(_ model: ForgeModelRecord) async throws -> Bool {
+        struct Result: Decodable { let saved: Bool }
+        let r: Result = try await post("/api/apple/forge/save", body: model)
+        return r.saved
+    }
+
+    /// Submit captured photos to JARVIS for server-side photogrammetry.
+    public func submitForgeJob(_ job: ForgeJobPayload) async throws -> ForgeJobResult {
+        try await post("/api/apple/forge/submit", body: job)
     }
 
     // MARK: - Notifications
