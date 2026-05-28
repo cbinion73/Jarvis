@@ -4,10 +4,10 @@ import PackageDescription
 let package = Package(
     name: "JarvisApple",
     platforms: [
-        .iOS(.v18),
-        .macOS(.v15),
-        .tvOS(.v18),
-        .watchOS(.v11),
+        .iOS(.v26),
+        .macOS(.v26),
+        .tvOS(.v26),
+        .watchOS(.v12),
     ],
     products: [
         .library(name: "JarvisKit", targets: ["JarvisKit"]),

@@ -103,6 +103,32 @@ public final class AppleAPIClient: Sendable {
         try await post("/api/apple/home/command", body: command)
     }
 
+    // MARK: - Device token
+
+    /// Register an APNs device token so the server can send push notifications.
+    @discardableResult
+    public func registerDeviceToken(
+        _ token: String,
+        actorId: String = "chris",
+        platform: String = "ios"
+    ) async -> Bool {
+        struct Body: Encodable {
+            let actor_id: String
+            let token: String
+            let platform: String
+        }
+        struct Result: Decodable { let registered: Bool }
+        do {
+            let result: Result = try await post(
+                "/api/apple/device/register",
+                body: Body(actor_id: actorId, token: token, platform: platform)
+            )
+            return result.registered
+        } catch {
+            return false
+        }
+    }
+
     // MARK: - Approvals
 
     /// Approve a pending request from the Watch or Phone (one-tap).
