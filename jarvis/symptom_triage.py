@@ -324,6 +324,7 @@ Produce a structured triage report. Respond ONLY with valid JSON matching this s
             task_type="critical",
             agent_id="symptom-triage",
             force_model="gpt-4o",
+            max_tokens=1500,
             temperature=0.2,
         )
 

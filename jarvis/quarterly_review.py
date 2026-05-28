@@ -290,6 +290,7 @@ Respond ONLY with valid JSON matching this exact schema:
             task_type="critical",
             agent_id="quarterly-review",
             force_model="gpt-4o",
+            max_tokens=4000,
             temperature=0.3,
         )
 

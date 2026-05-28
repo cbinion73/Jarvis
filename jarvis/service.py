@@ -300,10 +300,6 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["dashboard"] = runtime.dashboard_snapshot()
         await hub.broadcast(payload)
 
-    # Wire KDP scraper broadcast so it can push WebSocket events
-    from . import kdp_scraper as _kdp_scraper
-    _kdp_scraper.set_broadcast(hub.broadcast)
-
     def _json(payload: Any, status_code: int = 200) -> JSONResponse:
         return JSONResponse(
             payload,
@@ -885,173 +881,6 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         if _GLASS_THEME_AVAILABLE:
             return _render_glass_shell(runtime, initial_packet=packet)
         return render_voice_shell(runtime, initial_packet=packet)
-
-    # ── CarPlay PWA ──────────────────────────────────────────────────────────
-    @app.get("/carplay", response_class=HTMLResponse)
-    async def carplay_device_view() -> str:
-        from .device_views import carplay_view
-        return carplay_view()
-
-    @app.get("/manifest.json")
-    async def pwa_manifest() -> JSONResponse:
-        return JSONResponse({
-            "name": "JARVIS Drive", "short_name": "JARVIS",
-            "description": "J.A.R.V.I.S. Navigation & In-Vehicle Command",
-            "start_url": "/carplay", "scope": "/",
-            "display": "fullscreen", "orientation": "landscape",
-            "background_color": "#0d1117", "theme_color": "#00D4FF",
-            "icons": [
-                {"src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
-                {"src": "/assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
-                {"src": "/assets/icons/icon-144.png", "sizes": "144x144", "type": "image/png"},
-            ],
-            "categories": ["navigation", "utilities"], "lang": "en-US"
-        })
-
-    @app.get("/sw.js")
-    async def service_worker() -> Response:
-        js = r"""
-const CACHE='jarvis-drive-v1',PRECACHE=['/carplay','/assets/icons/icon-192.png','/assets/icons/icon-512.png'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(PRECACHE)).then(()=>self.skipWaiting()));});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
-self.addEventListener('fetch',e=>{const u=e.request.url;if(u.includes('/api/')||u.includes('googleapis')||u.includes('/sse'))return;e.respondWith(fetch(e.request).then(r=>{if(r&&r.status===200&&e.request.method==='GET'){const c=r.clone();caches.open(CACHE).then(ca=>ca.put(e.request,c));}return r;}).catch(()=>caches.match(e.request)));});
-"""
-        return Response(content=js, media_type="application/javascript",
-                        headers={"Service-Worker-Allowed": "/"})
-
-    # ── Google Maps API usage ─────────────────────────────────────────────────
-    @app.get("/api/google/maps-usage")
-    async def google_maps_usage():
-        import json as _j
-        from datetime import datetime, timezone, timedelta
-        sa  = os.environ.get("GOOGLE_CLOUD_SA_KEY_PATH", "")
-        pid = os.environ.get("GOOGLE_CLOUD_PROJECT_ID", "")
-        if not sa or not pid:
-            return JSONResponse({"error": "not_configured"})
-        cache = Path("data/cache/maps_usage_cache.json")
-        try:
-            if cache.exists():
-                c = _j.loads(cache.read_text())
-                if (datetime.now(timezone.utc).timestamp() - c.get("_ts", 0)) / 3600 < 6:
-                    return JSONResponse(c)
-        except Exception:
-            pass
-        try:
-            from google.oauth2 import service_account
-            from google.auth.transport.requests import Request as _GR
-            import httpx as _hx
-            creds = service_account.Credentials.from_service_account_file(
-                sa, scopes=["https://www.googleapis.com/auth/monitoring.read"])
-            creds.refresh(_GR())
-            now   = datetime.now(timezone.utc)
-            start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-            secs  = max(int((now - start).total_seconds()), 3600)
-            SVCS  = {
-                "maps-backend.googleapis.com":       ("Maps / Street View",    7.00),
-                "places-backend.googleapis.com":     ("Places / Autocomplete", 2.83),
-                "directions-backend.googleapis.com": ("Directions",            5.00),
-                "geocoding-backend.googleapis.com":  ("Geocoding",             5.00),
-                "roads.googleapis.com":              ("Roads API",            10.00),
-            }
-            usage = {}
-            async with _hx.AsyncClient(timeout=15) as client:
-                for svc, (label, price) in SVCS.items():
-                    r = await client.get(
-                        f"https://monitoring.googleapis.com/v3/projects/{pid}/timeSeries",
-                        headers={"Authorization": f"Bearer {creds.token}"},
-                        params={"filter": f'metric.type="serviceruntime.googleapis.com/api/request_count" AND resource.labels.service="{svc}"',
-                                "interval.startTime": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                "interval.endTime":   now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                "aggregation.alignmentPeriod": f"{secs}s",
-                                "aggregation.perSeriesAligner": "ALIGN_SUM"})
-                    total = sum(int(pt.get("value", {}).get("int64Value", 0) or
-                                   pt.get("value", {}).get("doubleValue", 0) or 0)
-                               for ts in r.json().get("timeSeries", [])
-                               for pt in ts.get("points", []))
-                    usage[label] = {"requests": total, "price_per_k": price}
-            days_total   = (start.replace(month=start.month % 12 + 1, day=1) - timedelta(days=1)).day
-            total_cost   = sum((v["requests"] / 1000) * v["price_per_k"] for v in usage.values())
-            projected    = round(total_cost * days_total / max(now.day, 1), 2)
-            result = {"month": now.strftime("%B %Y"), "project_id": pid, "usage": usage,
-                      "total_requests": sum(v["requests"] for v in usage.values()),
-                      "estimated_cost": round(total_cost, 2), "projected_cost": projected,
-                      "free_credit": 200.0, "remaining_credit": round(max(0.0, 200.0 - total_cost), 2),
-                      "pct_used": round(min(100, (total_cost / 200) * 100), 1),
-                      "days_elapsed": now.day, "days_in_month": days_total,
-                      "_ts": now.timestamp()}
-            cache.parent.mkdir(parents=True, exist_ok=True)
-            cache.write_text(_j.dumps(result))
-            return JSONResponse(result)
-        except Exception as e:
-            return JSONResponse({"error": str(e)})
-
-    # ── Unified JARVIS cost summary ───────────────────────────────────────────
-    @app.get("/api/costs/summary")
-    async def costs_summary():
-        """Real-time JARVIS operating cost summary from llm_usage.jsonl + maps API."""
-        import json as _j
-        from datetime import datetime, timezone
-        now        = datetime.now(timezone.utc)
-        month_ts   = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp()
-        today_ts   = now.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
-        log_path   = Path("data/logs/llm_usage.jsonl")
-        month_cost = 0.0;  today_cost  = 0.0;  alltime = 0.0
-        month_in   = 0;    month_out   = 0
-        by_model: dict = {}
-        by_backend: dict = {}
-        if log_path.exists():
-            for raw in log_path.read_text().splitlines():
-                try:
-                    d    = _j.loads(raw)
-                    ts   = float(d.get("ts", 0))
-                    cost = float(d.get("estimated_cost_usd") or 0)
-                    mdl  = d.get("model_used", "unknown")
-                    bk   = d.get("backend", "unknown")
-                    alltime += cost
-                    if ts >= month_ts:
-                        month_cost += cost
-                        month_in   += int(d.get("prompt_tokens") or 0)
-                        month_out  += int(d.get("completion_tokens") or 0)
-                        bm = by_model.setdefault(mdl, {"cost": 0.0, "calls": 0, "backend": bk})
-                        bm["cost"] += cost; bm["calls"] += 1
-                        bb = by_backend.setdefault(bk, {"cost": 0.0, "calls": 0})
-                        bb["cost"] += cost; bb["calls"] += 1
-                    if ts >= today_ts:
-                        today_cost += cost
-                except Exception:
-                    pass
-        # Grab cached maps cost (don't re-fetch — respect 6h cache)
-        maps_cost        = 0.0
-        maps_free_credit = 200.0   # Google gives $200/mo free
-        maps_cache = Path("data/cache/maps_usage_cache.json")
-        if maps_cache.exists():
-            try:
-                mc = _j.loads(maps_cache.read_text())
-                maps_cost = float(mc.get("estimated_cost", 0))
-            except Exception:
-                pass
-        maps_net       = max(0.0, maps_cost - maps_free_credit)   # what you actually owe after credit
-        maps_remaining = max(0.0, maps_free_credit - maps_cost)   # credit still available
-        maps_pct       = round(min(100.0, (maps_cost / maps_free_credit) * 100), 1)
-        net_total      = round(month_cost + maps_net, 4)          # true out-of-pocket this month
-        return JSONResponse({
-            "month":              now.strftime("%B %Y"),
-            "today_llm":          round(today_cost, 4),
-            "month_llm":          round(month_cost, 4),
-            "month_maps":         round(maps_cost, 4),
-            "month_maps_net":     round(maps_net, 4),
-            "maps_free_credit":   maps_free_credit,
-            "maps_remaining":     round(maps_remaining, 2),
-            "maps_pct_used":      maps_pct,
-            "net_total":          net_total,
-            "month_total":        round(month_cost + maps_cost, 4),  # gross (kept for compat)
-            "alltime_llm":        round(alltime, 4),
-            "month_tokens":       {"input": month_in, "output": month_out},
-            "by_model":           by_model,
-            "by_backend":         by_backend,
-            "free_llm":           False,
-            "days_elapsed":       now.day,
-        })
 
     @app.get("/storm-dashboard")
     async def storm_dashboard() -> Response:
@@ -2659,53 +2488,6 @@ self.addEventListener('fetch',e=>{const u=e.request.url;if(u.includes('/api/')||
         )
         background_tasks.add_task(_broadcast_dashboard, "response.completed")
         return _json(result)
-
-    # ── Adaptive Layout Engine ────────────────────────────────────────────────
-    @app.get("/api/layout/state")
-    async def api_layout_state() -> JSONResponse:
-        """Full layout payload: mode, overrides, alerts, card weights, zone assignments."""
-        try:
-            from .layout_engine import get_state_payload
-            payload = await asyncio.to_thread(get_state_payload, runtime)
-            return JSONResponse(payload)
-        except Exception as exc:
-            _log.warning("layout/state error: %s", exc)
-            return JSONResponse({"mode": "morning_brief", "auto_mode": "morning_brief",
-                                 "manual_override": False, "override_expires_at": None,
-                                 "alerts": [], "card_weights": {}, "modes": {},
-                                 "layout": {"hero": ["sam", "briefing"],
-                                            "priority": ["calendar", "approvals", "health"],
-                                            "ambient": []}})
-
-    @app.post("/api/layout/mode")
-    async def api_layout_set_mode(
-        payload: dict[str, Any],
-        background_tasks: BackgroundTasks,
-    ) -> JSONResponse:
-        """Manually override the active layout mode."""
-        mode = str(payload.get("mode", "morning_brief"))
-        try:
-            from .layout_engine import set_mode
-            result = await asyncio.to_thread(set_mode, mode, manual=True)
-            background_tasks.add_task(_broadcast_dashboard, "layout.mode_changed")
-            return JSONResponse(result)
-        except Exception as exc:
-            _log.warning("layout/mode error: %s", exc)
-            return JSONResponse({"error": str(exc)}, status_code=500)
-
-    @app.post("/api/layout/interact")
-    async def api_layout_interact(payload: dict[str, Any]) -> JSONResponse:
-        """Log a card interaction (click/expand/navigate/dismiss) for learning."""
-        card_id = str(payload.get("card_id", ""))
-        mode    = str(payload.get("mode", ""))
-        action  = str(payload.get("action", "click"))
-        if card_id:
-            try:
-                from .layout_engine import log_interaction
-                await asyncio.to_thread(log_interaction, card_id, mode, action)
-            except Exception as exc:
-                _log.debug("layout/interact log error: %s", exc)
-        return JSONResponse({"ok": True})
 
     @app.post("/api/mode-transition")
     async def api_mode_transition(
@@ -6496,96 +6278,142 @@ self.addEventListener('fetch',e=>{const u=e.request.url;if(u.includes('/api/')||
 
         raise HTTPException(status_code=404, detail="Not found")
 
-    # ── KDP ─────────────────────────────────────────────────────────────────────
+    # ------------------------------------------------------------------
+    # Phase 4: Symptom Triage Engine (Oracle-First Protocol)
+    # ------------------------------------------------------------------
 
-    @app.get("/api/kdp/status")
-    async def api_kdp_status() -> JSONResponse:
-        from .kdp_store import get_status
-        return _json(await asyncio.to_thread(get_status))
-
-    @app.post("/api/kdp/credentials")
-    async def api_kdp_credentials(request: Request) -> JSONResponse:
-        from .kdp_scraper import save_credentials
+    @app.post("/api/health/symptom/triage")
+    async def api_symptom_triage(request: Request) -> JSONResponse:
+        """Full symptom triage: Oracle gate + specialist routing + structured report."""
         try:
-            payload = await request.json()
-        except Exception:
-            return JSONResponse({"ok": False, "detail": "Invalid JSON"}, status_code=400)
-        email = str(payload.get("email", "")).strip()
-        password = str(payload.get("password", "")).strip()
-        if not email or not password:
-            return _json({"ok": False, "detail": "Email and password required."})
-        await asyncio.to_thread(save_credentials, email, password)
-        return _json({"ok": True, "detail": "Credentials saved."})
-
-    @app.post("/api/kdp/sync")
-    async def api_kdp_sync() -> JSONResponse:
-        from .kdp_scraper import load_credentials, run_full_sync, get_sync_status
-        from .kdp_store import save_sync_result
-
-        # Don't start a second sync if one is already running
-        status = get_sync_status()
-        if status in ("running", "needs_2fa"):
-            return _json({"ok": False, "detail": f"Sync already in progress (status: {status})"})
-
-        creds = await asyncio.to_thread(load_credentials)
-        if not creds:
-            return _json({"ok": False, "detail": "No KDP credentials saved. Add them in Settings first."})
-
-        async def _run():
-            result = await run_full_sync(creds["email"], creds["password"])
-            if result.get("ok"):
-                await asyncio.to_thread(save_sync_result, result)
-
-        asyncio.create_task(_run())
-        return _json({"ok": True, "started": True, "detail": "KDP sync started in background."})
-
-    @app.post("/api/kdp/2fa-code")
-    async def api_kdp_2fa_code(request: Request) -> JSONResponse:
-        from .kdp_scraper import submit_2fa_code, get_sync_status
-        body = await request.json()
-        code = str(body.get("code", "")).strip()
-        if not code:
-            return _json({"ok": False, "detail": "No code provided"})
-        if get_sync_status() != "needs_2fa":
-            return _json({"ok": False, "detail": "Not currently waiting for 2FA"})
-        await submit_2fa_code(code)
-        return _json({"ok": True})
-
-    @app.get("/api/kdp/sync-status")
-    async def api_kdp_sync_status() -> JSONResponse:
-        from .kdp_scraper import get_sync_status
-        return _json({"status": get_sync_status()})
-
-    @app.get("/api/kdp/books")
-    async def api_kdp_books() -> JSONResponse:
-        from .kdp_store import load_books, generate_insights, load_sales_history
-        books = await asyncio.to_thread(load_books)
-        history = await asyncio.to_thread(load_sales_history)
-        insights = await asyncio.to_thread(generate_insights, books, history)
-        return _json({"books": books, "insights": insights})
-
-    @app.get("/api/kdp/sales")
-    async def api_kdp_sales() -> JSONResponse:
-        from .kdp_store import load_sales_history, load_sync_meta
-        history = await asyncio.to_thread(load_sales_history, 90)
-        meta = await asyncio.to_thread(load_sync_meta)
-        return _json({"history": history, "meta": meta})
-
-    @app.post("/api/kdp/report/upload")
-    async def api_kdp_report_upload(request: Request) -> JSONResponse:
-        from .kdp_store import parse_csv_report, save_sync_result
-        from datetime import datetime as _dt, timezone as _tz
+            from .symptom_triage import run_triage
+        except ImportError:
+            from symptom_triage import run_triage
         try:
-            payload = await request.json()
+            body = await request.json()
         except Exception:
-            return JSONResponse({"ok": False, "detail": "Invalid JSON"}, status_code=400)
-        csv_text = str(payload.get("csv", ""))
-        if not csv_text:
-            return _json({"ok": False, "detail": "No CSV content provided."})
-        rows = await asyncio.to_thread(parse_csv_report, csv_text)
-        result = {"ok": True, "books": [], "sales": {"csv_rows": rows}, "synced_at": _dt.now(_tz.utc).isoformat()}
-        await asyncio.to_thread(save_sync_result, result)
-        return _json({"ok": True, "rows_parsed": len(rows), "detail": f"Parsed {len(rows)} rows from CSV."})
+            body = {}
+        result = await run_triage(
+            symptoms=str(body.get("symptoms", "")),
+            duration=str(body.get("duration", "")),
+            severity=body.get("severity"),
+            associated_symptoms=str(body.get("associated_symptoms", "")),
+            context=str(body.get("context", "")),
+        )
+        return _json(result)
+
+    @app.get("/api/health/symptom/redflags")
+    async def api_symptom_redflags() -> JSONResponse:
+        """Chris's personalized red flag symptom list."""
+        try:
+            from .symptom_triage import get_red_flags_for_patient
+        except ImportError:
+            from symptom_triage import get_red_flags_for_patient
+        return _json(get_red_flags_for_patient())
+
+    # ------------------------------------------------------------------
+    # Phase 4: Predictive Drift Detection (Heimdall Protocol)
+    # ------------------------------------------------------------------
+
+    @app.get("/api/health/drift/scan")
+    async def api_drift_scan() -> JSONResponse:
+        """Full drift scan: signals, cluster evaluation, baseline deviations, alerts."""
+        try:
+            from .drift_detection import run_drift_scan
+        except ImportError:
+            from drift_detection import run_drift_scan
+        return _json(await run_drift_scan())
+
+    @app.get("/api/health/drift/clusters")
+    async def api_drift_clusters() -> JSONResponse:
+        """Evaluate all 5 drift clusters against current signals."""
+        try:
+            from .drift_detection import scan_all_clusters, get_current_signals
+        except ImportError:
+            from drift_detection import scan_all_clusters, get_current_signals
+        signals = await get_current_signals()
+        clusters = await scan_all_clusters(signals)
+        active = [c for c in clusters if c["active"]]
+        return _json({
+            "clusters": clusters,
+            "active_count": len(active),
+            "total_count": len(clusters),
+            "signals_loaded": list(signals.keys()),
+        })
+
+    @app.get("/api/health/drift/baseline")
+    async def api_drift_baseline() -> JSONResponse:
+        """Chris's personal baseline metrics with current deviations."""
+        try:
+            from .drift_detection import get_baseline_deviations, get_current_signals, _CHRIS_BASELINES
+        except ImportError:
+            from drift_detection import get_baseline_deviations, get_current_signals, _CHRIS_BASELINES
+        signals = await get_current_signals()
+        deviations = await get_baseline_deviations(signals)
+        return _json({
+            "baselines": _CHRIS_BASELINES,
+            "current_deviations": deviations,
+            "significant_count": sum(1 for d in deviations if d["significant"]),
+        })
+
+    # ------------------------------------------------------------------
+    # Phase 4: Quarterly Longevity Council Review
+    # ------------------------------------------------------------------
+
+    @app.post("/api/health/quarterly/review")
+    async def api_quarterly_review(request: Request) -> JSONResponse:
+        """Run full 90-day quarterly review (LLM-intensive). May take 30-60s."""
+        try:
+            from .quarterly_review import run_quarterly_review
+        except ImportError:
+            from quarterly_review import run_quarterly_review
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        result = await run_quarterly_review(
+            review_period_days=int(body.get("review_period_days", 90)),
+            major_life_context=str(body.get("major_life_context", "")),
+            additional_context=str(body.get("additional_context", "")),
+        )
+        return _json(result)
+
+    @app.get("/api/health/quarterly/objectives")
+    async def api_quarterly_objectives_get() -> JSONResponse:
+        """Return current 90-day objectives."""
+        try:
+            from .quarterly_review import get_current_objectives
+        except ImportError:
+            from quarterly_review import get_current_objectives
+        objectives = await get_current_objectives()
+        return _json({"objectives": objectives, "count": len(objectives)})
+
+    @app.post("/api/health/quarterly/objectives")
+    async def api_quarterly_objectives_set(request: Request) -> JSONResponse:
+        """Set new 90-day objectives. Body: {objectives: [...]}"""
+        try:
+            from .quarterly_review import set_objectives
+        except ImportError:
+            from quarterly_review import set_objectives
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        objectives = body.get("objectives", [])
+        if not isinstance(objectives, list):
+            return JSONResponse({"error": "objectives must be a list"}, status_code=400)
+        result = await set_objectives(objectives)
+        status_code = 201 if result.get("ok") else 400
+        return JSONResponse(result, status_code=status_code)
+
+    @app.get("/api/health/quarterly/doctor-packet")
+    async def api_quarterly_doctor_packet() -> JSONResponse:
+        """Generate quarterly doctor discussion packet for Nov 13 visit with Dr. Wenk."""
+        try:
+            from .quarterly_review import generate_doctor_packet
+        except ImportError:
+            from quarterly_review import generate_doctor_packet
+        return _json(await generate_doctor_packet())
 
     return app
 

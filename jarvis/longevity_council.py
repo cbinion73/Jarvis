@@ -133,164 +133,6 @@ def health_state_summary() -> str:
         lines.append(f"\nOPEN CLINICAL QUESTIONS: {len(open_q)} items (e.g. {open_q[0] if open_q else 'none'})")
 
     lines.append("=== END HEALTH STATE PACKAGE ===")
-
-    # ── Live daily data (last 7 days) ────────────────────────────────────────
-    try:
-        daily_lines = _build_daily_context(days=7)
-        if daily_lines:
-            lines.append("\n" + daily_lines)
-    except Exception as exc:
-        log.warning("health_state_summary: daily context failed: %s", exc)
-
-    return "\n".join(lines)
-
-
-def _build_daily_context(days: int = 7) -> str:
-    """
-    Pull recent journal, nutrition, sleep, and adherence logs and return a
-    compact text block suitable for injection into council context.
-
-    Data sources:
-        data/logs/sam_daily_journal.jsonl   — exercise, mood, sleep, water
-        ~/.jarvis/health/nutrition_log.jsonl — daily macros
-        ~/.jarvis/health/sleep_log.jsonl     — structured sleep entries
-        data/logs/sam_adherence.jsonl        — protocol adherence
-    """
-    from datetime import date, timedelta
-    import json
-    from pathlib import Path
-
-    cutoff = (date.today() - timedelta(days=days)).isoformat()
-
-    # ── Helpers ──────────────────────────────────────────────────────────────
-    def _read_jsonl(path: Path) -> list[dict]:
-        if not path.exists():
-            return []
-        rows = []
-        try:
-            for line in path.read_text().splitlines():
-                line = line.strip()
-                if line:
-                    try:
-                        rows.append(json.loads(line))
-                    except Exception:
-                        pass
-        except Exception:
-            pass
-        return rows
-
-    # ── Load sources ─────────────────────────────────────────────────────────
-    journal_path   = Path("data/logs/sam_daily_journal.jsonl")
-    nutrition_path = Path.home() / ".jarvis" / "health" / "nutrition_log.jsonl"
-    sleep_path     = Path.home() / ".jarvis" / "health" / "sleep_log.jsonl"
-    adherence_path = Path("data/logs/sam_adherence.jsonl")
-
-    journals   = {r["date"]: r for r in _read_jsonl(journal_path)   if r.get("date", "") >= cutoff}
-    nutritions = {r["date"]: r for r in _read_jsonl(nutrition_path) if r.get("date", "") >= cutoff}
-    sleeps     = {r["date"]: r for r in _read_jsonl(sleep_path)     if r.get("date", "") >= cutoff}
-    adherences = {r["date"]: r for r in _read_jsonl(adherence_path) if r.get("date", "") >= cutoff}
-
-    all_dates = sorted(
-        set(journals) | set(nutritions) | set(sleeps) | set(adherences),
-        reverse=True
-    )[:days]
-
-    if not all_dates:
-        return ""
-
-    lines = ["=== DAILY HEALTH LOG (last 7 days — live from journals) ==="]
-
-    for d in sorted(all_dates):
-        lines.append(f"\n── {d} ──")
-
-        # Nutrition
-        nut = nutritions.get(d)
-        if nut:
-            meals = nut.get("meals", [])
-            names = [m.get("name", "?") for m in meals if isinstance(m, dict)]
-            # Sum macros from meals list (totals may not be pre-stored)
-            tot_cal = nut.get("total_calories") or sum(m.get("calories", 0) for m in meals if isinstance(m, dict))
-            tot_p   = nut.get("total_protein_g") or sum(m.get("protein_g", 0) for m in meals if isinstance(m, dict))
-            tot_c   = nut.get("total_carbs_g") or sum(m.get("carb_g", 0) for m in meals if isinstance(m, dict))
-            tot_f   = nut.get("total_fat_g") or sum(m.get("fat_g", 0) for m in meals if isinstance(m, dict))
-            lines.append(
-                f"  Nutrition: {round(tot_cal)} kcal | "
-                f"P {round(tot_p, 1)}g / "
-                f"C {round(tot_c, 1)}g / "
-                f"F {round(tot_f, 1)}g"
-            )
-            if names:
-                lines.append(f"  Meals: {', '.join(names[:6])}" + (" …" if len(names) > 6 else ""))
-
-        # Sleep (structured log preferred; fall back to journal extract)
-        slp = sleeps.get(d)
-        jrn = journals.get(d)
-        if slp:
-            lines.append(
-                f"  Sleep: {slp.get('total_hours', '?')}h | quality {slp.get('sleep_quality', '?')}/10"
-                + (f" | HRV {slp.get('hrv_morning')}ms" if slp.get('hrv_morning') else "")
-                + (f" | SpO2 min {slp.get('spo2_min')}%" if slp.get('spo2_min') else "")
-                + (f" | {slp.get('notes', '')}" if slp.get('notes') else "")
-            )
-        elif jrn:
-            ext = jrn.get("extracted", {})
-            sq  = ext.get("sleep_quality")
-            if sq:
-                lines.append(f"  Sleep quality (self-report): {sq}")
-
-        # Exercise
-        if jrn:
-            ext = jrn.get("extracted", {})
-            exercises = ext.get("exercise", [])
-            if exercises:
-                ex_strs = []
-                for ex in exercises:
-                    if isinstance(ex, dict):
-                        dur  = ex.get("duration_min", "")
-                        typ  = ex.get("type", "activity")
-                        note = ex.get("notes", "")
-                        ex_strs.append(f"{typ}" + (f" {dur}min" if dur else "") + (f" ({note})" if note else ""))
-                if ex_strs:
-                    lines.append(f"  Exercise: {'; '.join(ex_strs)}")
-
-            # Water
-            water = ext.get("water_oz")
-            if water:
-                lines.append(f"  Water: {water} oz")
-
-            # Mood / mental health
-            mood   = ext.get("mood")
-            stress = ext.get("stress_level")
-            energy = ext.get("energy_level")
-            mental = ext.get("mental_notes")
-            parts  = []
-            if mood:   parts.append(f"mood={mood}")
-            if stress: parts.append(f"stress={stress}/10")
-            if energy: parts.append(f"energy={energy}/10")
-            if parts:
-                lines.append(f"  Mental: {', '.join(parts)}" + (f" — {mental}" if mental else ""))
-
-            # Physical symptoms
-            syms = ext.get("physical_symptoms", [])
-            if syms:
-                lines.append(f"  Symptoms: {', '.join(syms)}")
-
-            # Wins / challenges
-            wins = ext.get("wins", [])
-            if wins:
-                lines.append(f"  Wins: {'; '.join(wins[:3])}" + (" …" if len(wins) > 3 else ""))
-            challenges = ext.get("challenges", [])
-            if challenges:
-                lines.append(f"  Challenges: {'; '.join(challenges[:3])}" + (" …" if len(challenges) > 3 else ""))
-
-        # Adherence
-        adh = adherences.get(d)
-        if adh:
-            completed = adh.get("completed", [])
-            if completed:
-                lines.append(f"  Protocol adherence: {', '.join(completed)}")
-
-    lines.append("\n=== END DAILY LOG ===")
     return "\n".join(lines)
 
 
@@ -327,9 +169,6 @@ class CouncilMember:
             return {"error": "LLM gateway unavailable", "agent_id": self.agent_id}
 
         try:
-            # Background health-record analysis: use local qwen2.5:14b (free).
-            # The gateway's escalation ladder (local → Groq → OpenAI) still applies
-            # if confidence is low, so quality is preserved without defaulting to paid cloud.
             response = await asyncio.to_thread(
                 gw.complete,
                 messages=[
@@ -338,8 +177,10 @@ class CouncilMember:
                         f"Review this patient's complete health record and deliver your specialist "
                         f"assessment. Respond ONLY with valid JSON.\n\n{health_context}"),
                 ],
-                task_type="reason",
+                task_type="critical",
                 agent_id=self.agent_id,
+                force_model="gpt-4o",
+                max_tokens=2000,
                 temperature=0.2,
             )
         except Exception as exc:
@@ -357,18 +198,14 @@ class CouncilMember:
         try:
             result = json.loads(raw)
         except json.JSONDecodeError:
-            # Try extracting the outermost JSON object
             m = re.search(r"\{.*\}", raw, re.DOTALL)
             if m:
                 try:
                     result = json.loads(m.group(0))
                 except Exception:
-                    # Last resort: log full raw for debugging, return truncated snippet
-                    log.error("%s full raw response (%d chars): %s", self.label, len(raw), raw[:2000])
-                    return {"error": "JSON parse failed", "raw": raw[:2000], "agent_id": self.agent_id}
+                    return {"error": "JSON parse failed", "raw": raw[:500], "agent_id": self.agent_id}
             else:
-                log.error("%s no JSON object found in response (%d chars): %s", self.label, len(raw), raw[:2000])
-                return {"error": "No JSON in response", "raw": raw[:2000], "agent_id": self.agent_id}
+                return {"error": "No JSON in response", "raw": raw[:500], "agent_id": self.agent_id}
 
         result["_agent_id"]  = self.agent_id
         result["_label"]     = self.label
@@ -1793,133 +1630,6 @@ COUNCIL_MEMBERS: list[CouncilMember] = [
     HEIMDALL,
     SHURI,
 ]
-
-
-# ---------------------------------------------------------------------------
-# Direct chat with a council member
-# ---------------------------------------------------------------------------
-
-_HELEN_CHO_SYSTEM_PROMPT = """You are Helen Cho — Chief Medical Intelligence Officer and orchestrator of the Longevity Council. You have complete access to the patient's medical history, lab trends, medications, and risk profile. You synthesize intelligence across cardiology, endocrinology, sleep medicine, nutrition, and longevity science. You are warm but precise, evidence-based, and speak directly to Chris as his personal physician-level advisor. You are not a replacement for his doctors but augment their thinking with the latest research."""
-
-_DEFAULT_HEALTH_CONTEXT = """Patient: Chris Binion, 52yo male.
-Active conditions: T2DM (A1c 7.3%), Hypertension (BP on 4 meds), Obesity BMI 35.7 (post-bariatric sleeve 2020), Statin myopathy, Hypercorticism, CKD Stage 2 (eGFR 87).
-CRITICAL SAFETY: Never recommend statins — statin myopathy on record. K+ monitoring required (ARB + spironolactone, K+ was 5.4 Mar 2025, now 4.5).
-Medications: Olmesartan 40mg, Spironolactone 25mg, Amlodipine 10mg, Semaglutide 1mg weekly, Ezetimibe pending Dr. Wenk discussion.
-Recent labs: A1c 7.3% (Apr 2026, target <7.0), LDL 156 mg/dL (Apr 2026, target <100), eGFR 87, K+ 4.5.
-Next appointment: Dr. Wenk (primary care) Nov 13, 2026."""
-
-
-async def chat_with_doctor(
-    doctor_id: str,
-    message: str,
-    history: list[dict] | None = None,
-    health_context: str | None = None,
-) -> dict:
-    """
-    Single-turn (or multi-turn) chat with a specific council member or Helen Cho.
-
-    Args:
-        doctor_id: agent_id of the council member, or "helen-cho" for Helen
-        message: The user's message
-        history: Optional list of {"role": "user"|"assistant", "content": "..."} prior turns
-        health_context: Optional health context string; if None, uses the default summary
-
-    Returns:
-        {"reply": str, "doctor_id": str, "doctor_name": str, "doctor_title": str}
-    """
-    try:
-        from .llm_gateway import get_gateway, LLMMessage
-    except ImportError:
-        from llm_gateway import get_gateway, LLMMessage
-
-    # Resolve doctor
-    member: CouncilMember | None = None
-    if doctor_id == "helen-cho":
-        doctor_name = "Helen Cho"
-        doctor_title = "Chief Medical Intelligence Officer"
-        base_system_prompt = _HELEN_CHO_SYSTEM_PROMPT
-    else:
-        for m in COUNCIL_MEMBERS:
-            if m.agent_id == doctor_id:
-                member = m
-                break
-        if member is None:
-            # Fall back to Helen Cho if unknown id
-            doctor_name = "Helen Cho"
-            doctor_title = "Chief Medical Intelligence Officer"
-            base_system_prompt = _HELEN_CHO_SYSTEM_PROMPT
-        else:
-            doctor_name = member.label
-            doctor_title = member.title
-            base_system_prompt = member.system_prompt
-
-    ctx = health_context if health_context is not None else (health_state_summary() or _DEFAULT_HEALTH_CONTEXT)
-
-    system_prompt = (
-        f"{base_system_prompt}\n\n"
-        f"=== PATIENT HEALTH CONTEXT ===\n"
-        f"{ctx}\n"
-        f"================================\n\n"
-        f"You are speaking directly with the patient, Chris. Respond conversationally in 2-4 paragraphs. "
-        f"Be direct, specific to his actual data, and in character. "
-        f"Do NOT output JSON — output natural conversational prose."
-    )
-
-    gw = get_gateway()
-    if gw is None:
-        return {
-            "error": "LLM gateway unavailable",
-            "doctor_id": doctor_id,
-            "doctor_name": doctor_name,
-            "doctor_title": doctor_title,
-        }
-
-    messages: list[LLMMessage] = [LLMMessage("system", system_prompt)]
-
-    for turn in (history or []):
-        role = turn.get("role", "user")
-        content = turn.get("content", "")
-        if role in ("user", "assistant") and content:
-            messages.append(LLMMessage(role, content))
-
-    messages.append(LLMMessage("user", message))
-
-    try:
-        # Active conversation with a health agent: use Groq llama-3.3-70b (free tier,
-        # 70B parameter model — strong enough for specialist medical dialogue).
-        # Falls back to OpenAI automatically if Groq is unavailable.
-        response = await asyncio.to_thread(
-            gw.complete,
-            messages=messages,
-            task_type="converse",
-            agent_id=doctor_id,
-            force_model="llama-3.3-70b-versatile",
-            temperature=0.7,
-        )
-    except Exception as exc:
-        log.error("chat_with_doctor (%s) LLM call failed: %s", doctor_id, exc)
-        return {
-            "error": str(exc),
-            "doctor_id": doctor_id,
-            "doctor_name": doctor_name,
-            "doctor_title": doctor_title,
-        }
-
-    if response.error:
-        log.error("chat_with_doctor (%s) LLM error: %s", doctor_id, response.error)
-        return {
-            "error": response.error,
-            "doctor_id": doctor_id,
-            "doctor_name": doctor_name,
-            "doctor_title": doctor_title,
-        }
-
-    return {
-        "reply": response.text.strip(),
-        "doctor_id": doctor_id,
-        "doctor_name": doctor_name,
-        "doctor_title": doctor_title,
-    }
 
 
 # ---------------------------------------------------------------------------
