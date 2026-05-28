@@ -5,7 +5,7 @@ import UserNotificationsUI
 /// Custom notification UI for JARVIS approval requests.
 /// Shown when user swipes down on an approval push notification.
 /// Displays the full request text + Approve/Deny buttons inline.
-final class NotificationViewController: UIViewController, UNNotificationContentExtension {
+final class NotificationViewController: UIViewController, @preconcurrency UNNotificationContentExtension {
 
     // MARK: - UI
 

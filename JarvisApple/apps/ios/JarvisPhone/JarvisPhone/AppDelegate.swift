@@ -63,7 +63,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 
     private func requestNotificationPermission() {
         UNUserNotificationCenter.current().requestAuthorization(
-            options: [.alert, .badge, .sound, .criticalAlert]
+            options: [.alert, .badge, .sound]
         ) { granted, _ in
             if granted {
                 DispatchQueue.main.async {
@@ -111,7 +111,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 
 // MARK: - UNUserNotificationCenterDelegate
 
-extension AppDelegate: UNUserNotificationCenterDelegate {
+extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
 
     /// Show notifications even when app is in foreground
     func userNotificationCenter(

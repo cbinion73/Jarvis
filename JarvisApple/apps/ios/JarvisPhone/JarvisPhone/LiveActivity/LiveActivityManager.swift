@@ -1,4 +1,6 @@
 import ActivityKit
+import Combine
+import Foundation
 import JarvisKit
 
 /// Starts, updates, and ends the JARVIS Live Activity (Dynamic Island + Lock Screen).
@@ -11,7 +13,7 @@ final class LiveActivityManager: ObservableObject {
 
     private var activity: Activity<JarvisActivityAttributes>?
 
-    private override init() {
+    private init() {
         // Adopt any already-running activity on cold start
         activity = Activity<JarvisActivityAttributes>.activities.first
         isActive = activity != nil
@@ -25,7 +27,7 @@ final class LiveActivityManager: ObservableObject {
 
         let attrs   = JarvisActivityAttributes(actorName: actor)
         let state   = JarvisActivityAttributes.ContentState()
-        let content = ActivityContent(state: state, staleDate: .now + 3600)
+        let content = ActivityContent(state: state, staleDate: Date(timeIntervalSinceNow: 3600))
 
         do {
             activity = try Activity.request(
@@ -42,8 +44,9 @@ final class LiveActivityManager: ObservableObject {
     // MARK: - Update
 
     func update(agentName: String = "", action: String, needsCount: Int = 0,
-                mode: String = "morning_brief", statusLine: String = "") {
+                mode: String = "morning_brief", statusLine: String = "") async {
         guard let activity else { return }
+        let safe  = UncheckedSendable(activity)
         let state = JarvisActivityAttributes.ContentState(
             agentName:  agentName,
             action:     action,
@@ -51,31 +54,31 @@ final class LiveActivityManager: ObservableObject {
             mode:       mode,
             statusLine: statusLine.isEmpty ? action : statusLine
         )
-        Task {
-            await activity.update(ActivityContent(state: state, staleDate: .now + 3600))
-        }
+        await safe.value.update(ActivityContent(state: state, staleDate: Date(timeIntervalSinceNow: 3600)))
     }
 
     /// Convenience: update from a BriefingPacket
     func updateFromBriefing(mode: String, needsCount: Int) {
-        update(
-            action:     needsCount > 0 ? "\(needsCount) item\(needsCount == 1 ? "" : "s") need your attention" : "Briefing ready",
-            needsCount: needsCount,
-            mode:       mode
-        )
+        Task {
+            await update(
+                action:     needsCount > 0 ? "\(needsCount) item\(needsCount == 1 ? "" : "s") need your attention" : "Briefing ready",
+                needsCount: needsCount,
+                mode:       mode
+            )
+        }
     }
 
     // MARK: - End
 
-    func end() {
-        Task {
-            let state = JarvisActivityAttributes.ContentState(action: "Session ended")
-            await activity?.end(
-                ActivityContent(state: state, staleDate: .now),
-                dismissalPolicy: .after(.now + 5)
-            )
-            activity = nil
-            isActive = false
-        }
+    func end() async {
+        guard let activity else { return }
+        let safe  = UncheckedSendable(activity)
+        let state = JarvisActivityAttributes.ContentState(action: "Session ended")
+        await safe.value.end(
+            ActivityContent(state: state, staleDate: Date.now),
+            dismissalPolicy: .after(Date(timeIntervalSinceNow: 5))
+        )
+        self.activity = nil
+        isActive = false
     }
 }

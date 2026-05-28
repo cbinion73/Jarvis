@@ -1,4 +1,4 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 import PackageDescription
 
 let package = Package(
@@ -7,7 +7,7 @@ let package = Package(
         .iOS(.v26),
         .macOS(.v26),
         .tvOS(.v26),
-        .watchOS(.v12),
+        .watchOS(.v26),
     ],
     products: [
         .library(name: "JarvisKit", targets: ["JarvisKit"]),

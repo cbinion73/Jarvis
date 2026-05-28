@@ -1,7 +1,8 @@
 import SwiftUI
+import WatchKit
 
 /// Compact weather display for Apple Watch.
-/// Data is pushed from the iPhone via WatchConnectivity (WatchViewModel.weatherPayload).
+/// Data is pushed from the iPhone via WatchConnectivity.
 struct WeatherWatchView: View {
 
     @EnvironmentObject var vm: WatchViewModel
@@ -10,35 +11,42 @@ struct WeatherWatchView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
 
-                // ── Condition banner ──────────────────────────
-                if let key = vm.weatherVisualKey {
-                    weatherBanner(key)
-                }
+                // ── Condition icon + temp ─────────────────────────
+                HStack(alignment: .center, spacing: 10) {
+                    Image(systemName: weatherIcon(vm.weatherVisualKey ?? "cloudy"))
+                        .font(.system(size: 36, weight: .medium))
+                        .foregroundStyle(weatherColor(vm.weatherVisualKey ?? "cloudy"))
+                        .symbolRenderingMode(.multicolor)
 
-                // ── Temp + condition ──────────────────────────
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(vm.weatherTemp)
-                        .font(.system(size: 36, weight: .bold))
-                        .foregroundStyle(.white)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(vm.weatherCondition)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(vm.weatherTemp)
+                            .font(.system(size: 34, weight: .bold).monospacedDigit())
+                            .foregroundStyle(.white)
+                        Text(vm.weatherCondition.isEmpty ? "—" : vm.weatherCondition)
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.85))
-                        Text(vm.weatherFeelsLike)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.8))
+                        if !vm.weatherFeelsLike.isEmpty {
+                            Text("Feels \(vm.weatherFeelsLike)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                // ── Mini stats ────────────────────────────────────
+                HStack(spacing: 10) {
+                    if !vm.weatherHumidity.isEmpty {
+                        MiniWeatherStat(icon: "humidity.fill",  value: vm.weatherHumidity, color: .cyan)
+                    }
+                    if !vm.weatherWind.isEmpty {
+                        MiniWeatherStat(icon: "wind",            value: vm.weatherWind,     color: .white.opacity(0.8))
                     }
                 }
 
-                // ── Mini stats ────────────────────────────────
-                HStack(spacing: 8) {
-                    MiniStat(icon: "humidity.fill", value: vm.weatherHumidity, color: .cyan)
-                    MiniStat(icon: "wind",          value: vm.weatherWind,     color: .white)
-                }
-
-                // ── 3-day forecast ────────────────────────────
+                // ── 3-day forecast ────────────────────────────────
                 if !vm.weatherForecast.isEmpty {
-                    Divider().opacity(0.3)
+                    Divider().opacity(0.25)
                     HStack(spacing: 0) {
                         ForEach(vm.weatherForecast.prefix(3), id: \.self) { item in
                             WatchForecastCell(item: item)
@@ -52,39 +60,28 @@ struct WeatherWatchView: View {
         .navigationTitle("Weather")
         .navigationBarTitleDisplayMode(.inline)
     }
-
-    @ViewBuilder
-    private func weatherBanner(_ key: String) -> some View {
-        if let url  = Bundle.main.url(forResource: key, withExtension: "png"),
-           let data = try? Data(contentsOf: url),
-           let img  = UIImage(data: data) {
-            Image(uiImage: img)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(maxWidth: .infinity)
-                .frame(height: 70)
-                .clipped()
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-        }
-    }
 }
 
-// MARK: - Mini stat chip
+// MARK: - Mini stat
 
-private struct MiniStat: View {
+private struct MiniWeatherStat: View {
     let icon:  String
     let value: String
     let color: Color
 
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: icon).font(.caption2).foregroundStyle(color)
-            Text(value).font(.caption2).foregroundStyle(.white.opacity(0.85))
+            Image(systemName: icon)
+                .font(.caption2)
+                .foregroundStyle(color)
+            Text(value)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.85))
         }
     }
 }
 
-// MARK: - 3-day forecast cell
+// MARK: - Forecast cell
 
 private struct WatchForecastCell: View {
     let item: [String: String]
@@ -94,6 +91,12 @@ private struct WatchForecastCell: View {
             Text(item["name"] ?? "—")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+            if let key = item["condition"] {
+                Image(systemName: weatherIcon(key))
+                    .font(.caption2)
+                    .foregroundStyle(weatherColor(key))
+                    .symbolRenderingMode(.multicolor)
+            }
             Text(item["high"] ?? "—")
                 .font(.caption.bold())
                 .foregroundStyle(.white)
@@ -102,5 +105,22 @@ private struct WatchForecastCell: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - Visual key → color accent
+
+func weatherColor(_ key: String) -> Color {
+    switch key {
+    case "clear_day", "hot":            return .yellow
+    case "clear_night":                 return .indigo
+    case "partly_cloudy_day":           return .orange
+    case "partly_cloudy_night":         return .purple
+    case "thunderstorm":                return .yellow
+    case "snow", "blizzard", "cold":    return .cyan
+    case "rain", "heavy_rain", "sleet": return .blue
+    case "hail":                        return .teal
+    case "windy", "tornado":            return .mint
+    default:                            return .gray
     }
 }

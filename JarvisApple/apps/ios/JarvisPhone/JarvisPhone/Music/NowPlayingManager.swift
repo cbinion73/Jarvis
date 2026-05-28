@@ -21,7 +21,7 @@ final class NowPlayingManager: ObservableObject {
     private let player = MPMusicPlayerController.systemMusicPlayer
     private var pushDebounceTask: Task<Void, Never>?
 
-    private override init() {
+    private init() {
         setupNotifications()
         refresh()
     }

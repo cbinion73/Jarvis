@@ -1,4 +1,4 @@
-import EventKit
+@preconcurrency import EventKit
 import JarvisKit
 
 /// Reads Calendar events and Reminders directly from the device (all calendars —
@@ -18,7 +18,7 @@ final class EventKitSyncManager: ObservableObject {
 
     private let store = EKEventStore()
 
-    private override init() {
+    private init() {
         calendarStatus  = EKEventStore.authorizationStatus(for: .event)
         remindersStatus = EKEventStore.authorizationStatus(for: .reminder)
     }
@@ -91,29 +91,41 @@ final class EventKitSyncManager: ObservableObject {
             withDueDateStarting: nil, ending: nil, calendars: nil
         )
 
-        let reminders: [EKReminder] = await withCheckedContinuation { continuation in
+        // Extract Sendable data inside the callback before crossing async boundary
+        struct ReminderData: Sendable {
+            let id: String, title: String, list: String
+            let priority: Int, completed: Bool, due: String?, notes: String?
+        }
+
+        let extracted: [ReminderData] = await withUnsafeContinuation { continuation in
             store.fetchReminders(matching: predicate) { items in
-                continuation.resume(returning: items ?? [])
+                let data = (items ?? []).prefix(50).map { r in
+                    ReminderData(
+                        id:        r.calendarItemIdentifier,
+                        title:     r.title ?? "",
+                        list:      r.calendar?.title ?? "",
+                        priority:  r.priority,
+                        completed: r.isCompleted,
+                        due:       r.dueDateComponents?.date.map { ISO8601DateFormatter().string(from: $0) },
+                        notes:     r.notes
+                    )
+                }
+                continuation.resume(returning: data)
             }
         }
 
-        let payload: [[String: Any]] = reminders.prefix(50).map { r in
+        let payload: [[String: Any]] = extracted.map { r in
             var dict: [String: Any] = [
-                "id":       r.calendarItemIdentifier,
-                "title":    r.title ?? "",
-                "list":     r.calendar?.title ?? "",
-                "priority": r.priority,
-                "completed": r.isCompleted,
+                "id": r.id, "title": r.title, "list": r.list,
+                "priority": r.priority, "completed": r.completed,
             ]
-            if let due = r.dueDateComponents?.date {
-                dict["due"] = ISO8601DateFormatter().string(from: due)
-            }
+            if let due = r.due { dict["due"] = due }
             if let notes = r.notes { dict["notes"] = notes }
             return dict
         }
 
         await push(path: "/api/apple/reminders", payload: ["reminders": payload, "source": "eventkit"])
-        lastReminderCount = reminders.count
+        lastReminderCount = extracted.count
     }
 
     // MARK: - HTTP push

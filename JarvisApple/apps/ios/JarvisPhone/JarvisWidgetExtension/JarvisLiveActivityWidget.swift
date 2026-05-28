@@ -128,15 +128,6 @@ private struct LockScreenLiveActivityView: View {
 
 // MARK: - Helpers
 
-private func modeIcon(_ mode: String) -> String {
-    switch mode {
-    case "morning_brief": return "sun.horizon.fill"
-    case "lunch_brief":   return "sun.max.fill"
-    case "daily_recap":   return "moon.stars.fill"
-    default:              return "j.circle.fill"
-    }
-}
-
 private func modeName(_ mode: String) -> String {
     switch mode {
     case "morning_brief": return "Morning"

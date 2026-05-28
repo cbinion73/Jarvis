@@ -1,5 +1,6 @@
 import Foundation
 import WatchConnectivity
+import WatchKit
 import WidgetKit
 
 /// Receives briefing and needs data from the paired iPhone via WatchConnectivity.
@@ -44,6 +45,34 @@ final class WatchViewModel: NSObject, ObservableObject {
         guard WCSession.isSupported() else { return }
         WCSession.default.delegate = self
         WCSession.default.activate()
+    }
+
+    // MARK: - Haptic helper
+
+    /// Buzz the wrist if there are pending needs on first load.
+    func playHapticIfNeeded() {
+        if needsCount > 0 {
+            WKInterfaceDevice.current().play(.notification)
+        }
+    }
+
+    // MARK: - Voice command (relay through iPhone → JARVIS server)
+
+    func sendVoiceCommand(_ text: String, completion: @escaping () -> Void = {}) {
+        guard WCSession.default.activationState == .activated,
+              WCSession.default.isReachable else {
+            completion()
+            return
+        }
+        WCSession.default.sendMessage(
+            ["voice_command": text],
+            replyHandler: { _ in
+                Task { @MainActor in completion() }
+            },
+            errorHandler: { _ in
+                Task { @MainActor in completion() }
+            }
+        )
     }
 
     // MARK: - Refresh (request from iPhone)
