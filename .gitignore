@@ -5,19 +5,66 @@ __pycache__/
 *.pyc
 .DS_Store
 *.log
+
+# ── Credentials & secrets ────────────────────────────────────────────────────
 config/google_client_secret.json
 config/openviking/
+config/cobalt-list-385701-8a97dbcce1b5.json   # GCP service-account key
+
+# OAuth tokens
 data/google/
 data/openviking/
-
-# OAuth tokens and credentials — never commit
 data/microsoft_graph/
 
-# Large binary voice models — store outside repo or use Git LFS
+# APNs — private signing key and config with key_id/team_id
+data/settings/apns_key.p8
+data/settings/apns_config.json
+
+# CloudflareConfig contains live CF-Access service token credentials
+CloudflareConfig.swift
+
+# ── Runtime data — changes every server tick, not source ────────────────────
+data/agents/
+data/cache/
+data/conversations/
+data/camera_hls/
+data/forge/jobs/          # uploaded photos — can be large
+data/system/worktrees/
+
+# Runtime logs (*.jsonl files live here)
+data/logs/
+
+# Operational queues and live workstream state
+data/workstreams/
+
+# Live weather / security advisories fetched at runtime
+data/weather/
+data/security/
+
+# Family activity history and trust runtime state
+data/family/mode_history.jsonl
+data/trust/trust_zones.json
+
+# Settings generated or updated at runtime
+data/settings/adaptation_profiles.json
+data/settings/assistant_core.json
+data/settings/faith_daily_word.json
+data/settings/identity.json
+data/settings/sam_protocol_today.json
+data/settings/profiles/
+data/settings/layout_weights_cache.json
+data/workshop/model_forge/
+
+# ── Xcode / Swift build artifacts ───────────────────────────────────────────
+JarvisApple/.build/
+JarvisApple/.swiftpm/xcode/xcuserdata/
+*.xcuserstate
+
+# ── Large binary voice models (use Git LFS or store outside repo) ────────────
 *.onnx
 assets/piper/voices/
 
-# Vendor ML repos — large weights and compiled binaries excluded
+# ── Vendor ML repos — large weights and compiled binaries ───────────────────
 vendor/stable-fast-3d/.venv/
 vendor/trellis-mac/.venv/
 vendor/trellis-mac/deps/
@@ -25,4 +72,3 @@ vendor/trellis-mac/TRELLIS.2/
 vendor/**/*.so
 vendor/**/*.dylib
 vendor/**/__pycache__/
-CloudflareConfig.swift
