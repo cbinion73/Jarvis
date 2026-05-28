@@ -303,6 +303,9 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         except Exception:
             status = {}
 
+        if not isinstance(status, dict):
+            status = {}
+
         # Attempt to read pending-approval count
         needs_count = 0
         try:
@@ -977,6 +980,91 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         except Exception as exc:
             logger.exception("apple_huddle failed: %s", exc)
             return _ok({"reports": [], "blockers": [], "highlights": [], "updated_at": _ts()})
+
+    # ── Forge 3-D models ──────────────────────────────────────────────────────
+
+    _FORGE_DB = Path("data/forge/models.jsonl")
+
+    @app.get("/api/apple/forge")
+    async def apple_forge():
+        """Return saved photogrammetry model records for the Forge tab."""
+        try:
+            records = []
+            if _FORGE_DB.exists():
+                for line in _FORGE_DB.read_text().splitlines():
+                    line = line.strip()
+                    if line:
+                        try:
+                            records.append(json.loads(line))
+                        except Exception:
+                            pass
+            return _ok({"models": list(reversed(records[-20:]))})
+        except Exception as exc:
+            logger.exception("apple_forge failed: %s", exc)
+            return _ok({"models": []})
+
+    @app.post("/api/apple/forge/submit")
+    async def apple_forge_submit(payload: dict):
+        """Receive photos from the phone and queue a photogrammetry job."""
+        try:
+            import base64
+            job_id   = str(uuid.uuid4())
+            name     = str(payload.get("name") or "Model")
+            photos   = payload.get("photos") or []
+            job_dir  = Path(f"data/forge/jobs/{job_id}")
+            job_dir.mkdir(parents=True, exist_ok=True)
+
+            # Write photos to disk
+            saved = 0
+            for photo in photos:
+                try:
+                    data     = base64.b64decode(photo["data"])
+                    filename = photo.get("filename") or f"photo_{photo.get('index',saved):04d}.jpg"
+                    (job_dir / filename).write_bytes(data)
+                    saved += 1
+                except Exception:
+                    pass
+
+            # Write job manifest
+            manifest = {
+                "job_id":      job_id,
+                "name":        name,
+                "photo_count": saved,
+                "status":      "queued",
+                "created_at":  _ts(),
+                "job_dir":     str(job_dir),
+            }
+            (job_dir / "manifest.json").write_text(json.dumps(manifest))
+
+            # Append to global job queue
+            queue_path = Path("data/forge/queue.jsonl")
+            queue_path.parent.mkdir(parents=True, exist_ok=True)
+            with queue_path.open("a") as f:
+                f.write(json.dumps(manifest) + "\n")
+
+            return _ok({"queued": True, "job_id": job_id, "photo_count": saved})
+        except Exception as exc:
+            logger.exception("apple_forge_submit failed: %s", exc)
+            return _ok({"queued": False, "job_id": "", "reason": str(exc)})
+
+    @app.post("/api/apple/forge/save")
+    async def apple_forge_save(payload: dict):
+        """Persist a completed forge model record from the phone."""
+        try:
+            record = {
+                "id":          str(payload.get("id") or uuid.uuid4()),
+                "name":        str(payload.get("name") or "Model"),
+                "photo_count": int(payload.get("photo_count") or payload.get("photoCount") or 0),
+                "created_at":  str(payload.get("created_at") or payload.get("createdAt") or _ts()),
+                "usdz_path":   payload.get("usdz_path") or payload.get("usdzPath"),
+                "saved_at":    _ts(),
+            }
+            _FORGE_DB.parent.mkdir(parents=True, exist_ok=True)
+            with _FORGE_DB.open("a") as f:
+                f.write(json.dumps(record) + "\n")
+            return _ok({"saved": True, "id": record["id"]})
+        except Exception as exc:
+            return _ok({"saved": False, "reason": str(exc)})
 
 
 # ---------------------------------------------------------------------------

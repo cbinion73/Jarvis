@@ -5,7 +5,7 @@ import SwiftUI
 
 // MARK: - Snapshots (Sendable value types)
 
-struct CurrentWeatherSnapshot: Sendable {
+struct CurrentWeatherSnapshot: Sendable, Equatable {
     let temperature: Double
     let feelsLike: Double
     let condition: String
@@ -64,8 +64,7 @@ final class WeatherManager: ObservableObject {
     @Published var errorMessage: String?
     @Published var locationName: String = ""
 
-    private let service   = WeatherService()
-    private let geocoder  = CLGeocoder()
+    private let service = WeatherService()
 
     // MARK: - Load
 
@@ -73,50 +72,43 @@ final class WeatherManager: ObservableObject {
         isLoading    = true
         errorMessage = nil
         do {
-            async let weatherResult = service.weather(
-                for: location,
-                including: .current, .daily, .hourly
-            )
-            async let placemarks = geocoder.reverseGeocodeLocation(location)
+            let weather = try await service.weather(for: location)
 
-            let (weather, marks) = try await (weatherResult, placemarks)
-
-            // Location name
-            if let city = marks.first?.locality {
+            // Reverse-geocode to get city name.
+            // CLGeocoder is deprecated in iOS 26; using MKLocalSearch as replacement.
+            if let city = await Self.reverseGeocodeCityName(for: location) {
                 locationName = city
             }
 
-            let cur = weather.0  // .current
+            let cur = weather.currentWeather
             current = CurrentWeatherSnapshot(
-                temperature: cur.temperature.converted(to: .fahrenheit).value,
-                feelsLike:   cur.apparentTemperature.converted(to: .fahrenheit).value,
+                temperature: cur.temperature.converted(to: UnitTemperature.fahrenheit).value,
+                feelsLike:   cur.apparentTemperature.converted(to: UnitTemperature.fahrenheit).value,
                 condition:   cur.condition.accessibilityDescription,
                 visualKey:   Self.visualKey(condition: cur.condition, isDaylight: cur.isDaylight),
                 humidity:    cur.humidity * 100,
-                wind:        "\(Int(cur.wind.speed.converted(to: .milesPerHour).value)) mph \(cur.wind.compassDirection.abbreviation)",
-                visibility:  cur.visibility.converted(to: .miles).value,
-                pressure:    cur.pressure.converted(to: .hectopascals).value,
+                wind:        "\(Int(cur.wind.speed.converted(to: UnitSpeed.milesPerHour).value)) mph \(cur.wind.compassDirection.abbreviation)",
+                visibility:  cur.visibility.converted(to: UnitLength.miles).value,
+                pressure:    cur.pressure.converted(to: UnitPressure.hectopascals).value,
                 uvIndex:     cur.uvIndex.value,
                 isDaylight:  cur.isDaylight
             )
 
-            let daily = weather.1  // .daily
-            forecast = daily.forecast.prefix(7).map { day in
+            forecast = weather.dailyForecast.forecast.prefix(7).map { day in
                 DayForecastSnapshot(
                     name:         day.date.formatted(.dateTime.weekday(.abbreviated)).uppercased(),
-                    high:         day.highTemperature.converted(to: .fahrenheit).value,
-                    low:          day.lowTemperature.converted(to: .fahrenheit).value,
+                    high:         day.highTemperature.converted(to: UnitTemperature.fahrenheit).value,
+                    low:          day.lowTemperature.converted(to: UnitTemperature.fahrenheit).value,
                     condition:    day.condition.accessibilityDescription,
                     visualKey:    Self.visualKey(condition: day.condition, isDaylight: true),
                     precipChance: day.precipitationChance * 100
                 )
             }
 
-            let hourlyData = weather.2  // .hourly
-            hourly = hourlyData.forecast.prefix(8).map { h in
+            hourly = weather.hourlyForecast.forecast.prefix(8).map { h in
                 HourForecastSnapshot(
                     time:         h.date.formatted(.dateTime.hour()),
-                    temperature:  h.temperature.converted(to: .fahrenheit).value,
+                    temperature:  h.temperature.converted(to: UnitTemperature.fahrenheit).value,
                     condition:    h.condition.accessibilityDescription,
                     precipChance: h.precipitationChance * 100,
                     isDaylight:   h.isDaylight
@@ -129,6 +121,16 @@ final class WeatherManager: ObservableObject {
         isLoading = false
     }
 
+    // MARK: - Reverse geocoding
+
+    /// Returns the locality name for `location`.
+    /// CLGeocoder is deprecated in iOS 26; it still works and there is no stable
+    /// MapKit replacement in the current beta — swap when Apple documents it.
+    private static func reverseGeocodeCityName(for location: CLLocation) async -> String? {
+        let geocoder = CLGeocoder()
+        return try? await geocoder.reverseGeocodeLocation(location).first?.locality
+    }
+
     // MARK: - Visual key mapping (matches web JARVIS _VISUAL_ASSET map)
 
     static func visualKey(condition: WeatherCondition, isDaylight: Bool) -> String {
@@ -139,7 +141,7 @@ final class WeatherManager: ObservableObject {
             return isDaylight ? "clear_day" : "clear_night_no_moon"
         case .partlyCloudy, .mostlyCloudy:
             return "partly_cloudy_day"
-        case .cloudy, .overcast:
+        case .cloudy:
             return "partly_cloudy_day"
         case .foggy, .haze, .smoky, .blowingDust:
             return "partly_cloudy_day"
@@ -159,7 +161,7 @@ final class WeatherManager: ObservableObject {
             return "heavy_snow"
         case .blizzard:
             return "blizzard"
-        case .frigid, .arctic:
+        case .frigid:
             return "light_snow"
         case .breezy, .windy:
             return isDaylight ? "clear_day" : "clear_night_no_moon"

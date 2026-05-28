@@ -284,7 +284,9 @@ private struct ThinkingDots: View {
         }
         .onAppear {
             Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { _ in
-                phase = (phase + 1) % 3
+                Task { @MainActor in
+                    phase = (phase + 1) % 3
+                }
             }
         }
     }
