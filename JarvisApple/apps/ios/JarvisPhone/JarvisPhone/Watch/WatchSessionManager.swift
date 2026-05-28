@@ -82,7 +82,7 @@ final class WatchSessionManager: NSObject, ObservableObject {
 
 // MARK: - WCSessionDelegate
 
-extension WatchSessionManager: @preconcurrency WCSessionDelegate {
+extension WatchSessionManager: WCSessionDelegate {
 
     nonisolated func session(
         _ session: WCSession,

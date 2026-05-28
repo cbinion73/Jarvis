@@ -110,7 +110,7 @@ final class HomeKitManager: NSObject, ObservableObject {
 
 // MARK: - HMHomeManagerDelegate
 
-extension HomeKitManager: @preconcurrency HMHomeManagerDelegate {
+extension HomeKitManager: HMHomeManagerDelegate {
 
     nonisolated func homeManagerDidUpdateHomes(_ manager: HMHomeManager) {
         Task { @MainActor in

@@ -78,9 +78,12 @@ final class SoundAnalysisManager: NSObject, ObservableObject {
         queue: DispatchQueue,
         analyzer: SNAudioStreamAnalyzer
     ) {
+        let analyzerBox = UncheckedSendable(analyzer)
         inputNode.installTap(onBus: 0, bufferSize: 8192, format: inputNode.outputFormat(forBus: 0)) { buffer, time in
+            let bufferBox = UncheckedSendable(buffer)
+            let sampleTime = time.sampleTime
             queue.async {
-                analyzer.analyze(buffer, atAudioFramePosition: time.sampleTime)
+                analyzerBox.value.analyze(bufferBox.value, atAudioFramePosition: sampleTime)
             }
         }
     }

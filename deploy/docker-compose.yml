@@ -16,6 +16,7 @@ services:
       CHRONICLE_SNAPSHOT_DIR: /chronicle-snapshots
       CHRONICLE_API_URL: http://chronicle:5174
       GHOSTWRITR_BASE_URL: http://ghostwritr:3000
+      CATALYST_DB_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/jarvis_catalyst
     networks:
       - internal
 

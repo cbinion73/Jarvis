@@ -52,6 +52,7 @@ data/settings/adaptation_profiles.json
 data/settings/assistant_core.json
 data/settings/faith_daily_word.json
 data/settings/identity.json
+data/settings/layout_state.json
 data/settings/sam_protocol_today.json
 data/settings/profiles/
 data/settings/layout_weights_cache.json
@@ -59,7 +60,10 @@ data/workshop/model_forge/
 
 # ── Xcode / Swift build artifacts ───────────────────────────────────────────
 JarvisApple/.build/
+JarvisApple/.derivedData*/
 JarvisApple/.swiftpm/xcode/xcuserdata/
+JarvisApple/**/*.xcodeproj/project.xcworkspace/xcuserdata/
+JarvisApple/**/*.xcodeproj/xcuserdata/
 *.xcuserstate
 
 # ── Large binary voice models (use Git LFS or store outside repo) ────────────
