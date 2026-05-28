@@ -1880,7 +1880,9 @@ class BriefingBuilder:
             logger.debug("Could not fetch approval needs for briefing", exc_info=True)
 
         # Note: Catalyst bridge handoff removed (external app retired).
-        # Work intelligence briefings now run natively via wi_workers.daily_briefing.
+        # Keep the field in the packet as an empty shape so older clients
+        # continue to deserialize it without crashing the briefing builder.
+        catalyst_handoff_status: dict = {}
 
         # Disciple / Chronicle — spiritual context for morning briefing (Epic 9)
         spiritual_context: dict = {}

@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchKit
 
 @main
 struct JarvisWatchApp: App {
@@ -7,21 +8,10 @@ struct JarvisWatchApp: App {
 
     var body: some Scene {
         WindowGroup {
-            WatchRootView()
-                .environmentObject(vm)
+            NavigationStack {
+                JarvisWatchHomeView()
+            }
+            .environmentObject(vm)
         }
-    }
-}
-
-struct WatchRootView: View {
-    @EnvironmentObject var vm: WatchViewModel
-
-    var body: some View {
-        TabView {
-            BriefingWatchView()
-            NeedsWatchView()
-            WeatherWatchView()
-        }
-        .tabViewStyle(.verticalPage)
     }
 }

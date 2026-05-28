@@ -14,7 +14,7 @@ final class VisionManager: ObservableObject {
     @Published var isProcessing     = false
     @Published var errorMessage:    String?
 
-    private override init() {}
+    private init() {}
 
     // MARK: - OCR: Recognize text in image
 

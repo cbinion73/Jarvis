@@ -13,8 +13,5 @@ struct JarvisWidgetBundle: WidgetBundle {
         JarvisAccessoryWidget()
         // Live Activity (Dynamic Island + Lock Screen)
         JarvisLiveActivityWidget()
-        // Control Center controls (iOS 18+)
-        JarvisRefreshControl()
-        JarvisBriefMeControl()
     }
 }

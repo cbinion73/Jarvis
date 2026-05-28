@@ -84,15 +84,17 @@ final class SpeechManager: NSObject, ObservableObject {
 
 extension SpeechManager: @preconcurrency AVSpeechSynthesizerDelegate {
 
-    nonisolated func speechSynthesizer(
+    func speechSynthesizer(
         _ synthesizer: AVSpeechSynthesizer,
         didFinish utterance: AVSpeechUtterance
     ) {
+        let rate  = utterance.rate
+        let pitch = utterance.pitchMultiplier
         Task { @MainActor in
             if self.queue.isEmpty {
                 self.isSpeaking = false
             } else {
-                self.drainQueue(rate: utterance.rate, pitch: utterance.pitchMultiplier)
+                self.drainQueue(rate: rate, pitch: pitch)
             }
         }
     }

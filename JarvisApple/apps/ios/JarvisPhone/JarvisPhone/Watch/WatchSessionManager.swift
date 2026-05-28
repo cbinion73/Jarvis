@@ -97,25 +97,43 @@ extension WatchSessionManager: @preconcurrency WCSessionDelegate {
         session.activate()
     }
 
-    /// Watch requested a data refresh
+    /// Watch requested a data refresh or sent a voice command
     nonisolated func session(
         _ session: WCSession,
         didReceiveMessage message: [String: Any],
         replyHandler: @escaping ([String: Any]) -> Void
     ) {
-        guard message["action"] as? String == "refresh" else {
-            replyHandler(["ok": false])
+        let reply = UncheckedSendable(replyHandler)
+
+        // ── Voice command relay ──────────────────────────────────
+        if let text = message["voice_command"] as? String, !text.isEmpty {
+            Task.detached {
+                do {
+                    try await AppleAPIClient.shared.sendVoiceCommand(text)
+                    reply.value(["ok": true])
+                } catch {
+                    reply.value(["ok": false, "error": error.localizedDescription])
+                }
+            }
             return
         }
-        Task { @MainActor in
+
+        // ── Briefing refresh ─────────────────────────────────────
+        guard message["action"] as? String == "refresh" else {
+            reply.value(["ok": false])
+            return
+        }
+        Task.detached {
             do {
                 let packet = try await AppleAPIClient.shared.fetchBriefing()
                 let needs  = try await AppleAPIClient.shared.fetchNeeds()
-                self.sendBriefing(packet)
-                self.sendNeeds(needs)
-                replyHandler(["ok": true, "needs_count": needs.count])
+                await MainActor.run {
+                    self.sendBriefing(packet)
+                    self.sendNeeds(needs)
+                }
+                reply.value(["ok": true, "needs_count": needs.count])
             } catch {
-                replyHandler(["ok": false, "error": error.localizedDescription])
+                reply.value(["ok": false, "error": error.localizedDescription])
             }
         }
     }

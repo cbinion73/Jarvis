@@ -1,8 +1,10 @@
 import SwiftUI
+import WatchKit
 
 struct BriefingWatchView: View {
 
     @EnvironmentObject var vm: WatchViewModel
+    @State private var prevNeedsCount = 0
 
     var body: some View {
         ScrollView {
@@ -20,19 +22,22 @@ struct BriefingWatchView: View {
 
                 // ── Needs alert chip ──────────────────────────────
                 if vm.needsCount > 0 {
-                    Label("\(vm.needsCount) need\(vm.needsCount == 1 ? "s" : "") you",
-                          systemImage: "exclamationmark.circle.fill")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.orange)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.orange.opacity(0.2))
-                        .clipShape(Capsule())
+                    NavigationLink(destination: NeedsWatchView()) {
+                        Label("\(vm.needsCount) need\(vm.needsCount == 1 ? "s" : "") you",
+                              systemImage: "exclamationmark.circle.fill")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.orange)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.orange.opacity(0.2))
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 // ── Top 3 items ───────────────────────────────────
                 if vm.briefTop3.isEmpty {
-                    Text("No brief yet — refresh to sync")
+                    Text("No brief — refresh to sync")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .italic()
@@ -58,14 +63,15 @@ struct BriefingWatchView: View {
                 }
 
                 // ── Last update ───────────────────────────────────
-                if let update = vm.lastUpdate {
-                    Text(update.formatted(.relative(presentation: .named)))
+                if let ts = vm.lastUpdate {
+                    Text(ts.formatted(.relative(presentation: .named)))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
 
                 // ── Refresh ───────────────────────────────────────
                 Button {
+                    WKInterfaceDevice.current().play(.click)
                     vm.requestRefresh()
                 } label: {
                     if vm.isRefreshing {
@@ -83,5 +89,17 @@ struct BriefingWatchView: View {
         }
         .navigationTitle("Brief")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { prevNeedsCount = vm.needsCount }
+        .onChange(of: vm.needsCount) { old, new in
+            if new > old {
+                // New approval needed — buzz the wrist
+                WKInterfaceDevice.current().play(.notification)
+            }
+        }
+        .onChange(of: vm.isRefreshing) { _, refreshing in
+            if !refreshing {
+                WKInterfaceDevice.current().play(.success)
+            }
+        }
     }
 }
