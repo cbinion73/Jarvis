@@ -101,13 +101,19 @@ struct CatalystView: View {
                 }
 
                 // ── Portfolio summary ─────────────────────────────
-                if !ov.portfolio.isEmpty {
+                if !ov.portfolio.summaryCounts.isEmpty || !ov.portfolio.mission.isEmpty {
                     CatSection(title: "Portfolio", icon: "chart.bar.xaxis", accent: blue) {
+                        if !ov.portfolio.mission.isEmpty {
+                            Text(ov.portfolio.mission)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .padding(.bottom, 2)
+                        }
                         LazyVGrid(
                             columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2),
                             spacing: 10
                         ) {
-                            ForEach(ov.portfolio.sorted(by: { $0.key < $1.key }), id: \.key) { key, val in
+                            ForEach(ov.portfolio.summaryCounts.sorted(by: { $0.key < $1.key }), id: \.key) { key, val in
                                 PortfolioTile(label: key, count: val, accent: blue)
                             }
                         }

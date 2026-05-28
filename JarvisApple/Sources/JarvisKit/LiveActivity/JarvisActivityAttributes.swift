@@ -1,4 +1,4 @@
-#if canImport(ActivityKit)
+#if canImport(ActivityKit) && !os(macOS)
 import ActivityKit
 
 /// Shared Live Activity attributes — used by both JarvisPhone (to start/update)

@@ -6,7 +6,7 @@ import Foundation
 public struct CatalystOverview: Codable, Sendable {
     public let activeWork:  [WorkLifecycleItem]
     public let signals:     [CatalystSignal]
-    public let portfolio:   [String: Int]
+    public let portfolio:   CatalystPortfolio
     public let updatedAt:   String
 
     enum CodingKeys: String, CodingKey {
@@ -14,6 +14,44 @@ public struct CatalystOverview: Codable, Sendable {
         case signals
         case portfolio
         case updatedAt   = "updated_at"
+    }
+}
+
+// MARK: - CatalystPortfolio
+
+public struct CatalystPortfolio: Codable, Sendable {
+    public let mission: String
+    public let activeProjectTarget: Int
+    public let hypothesisReviewTarget: Int
+    public let lanes: [CatalystPortfolioLane]
+
+    public var summaryCounts: [String: Int] {
+        [
+            "active target": activeProjectTarget,
+            "hypothesis target": hypothesisReviewTarget,
+            "lanes": lanes.count,
+        ]
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case mission
+        case activeProjectTarget = "active_project_target"
+        case hypothesisReviewTarget = "hypothesis_review_target"
+        case lanes
+    }
+}
+
+public struct CatalystPortfolioLane: Codable, Identifiable, Sendable {
+    public let id: String
+    public let title: String
+    public let status: String?
+    public let projectCount: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case status
+        case projectCount = "project_count"
     }
 }
 
