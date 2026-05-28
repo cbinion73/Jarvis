@@ -40,6 +40,7 @@ except Exception:  # pragma: no cover
     def _render_glass_shell(runtime, initial_packet=""):  # type: ignore[misc]
         return render_voice_shell(runtime, initial_packet=initial_packet)
 from .apple_api import _register_apple_api
+from . import layout_engine as _layout_engine
 
 try:
     from .voice_pipeline import get_friday, get_pipeline, get_time_aware_greeting, init_voice as _init_voice_pipeline, VOICE_TOOL_ALLOWLIST
@@ -2501,6 +2502,35 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         )
         background_tasks.add_task(_broadcast_dashboard, "mode.updated")
         return _json(result)
+
+    # ── Adaptive Layout endpoints ────────────────────────────────────────────
+
+    @app.get("/api/layout/state")
+    async def api_layout_state() -> JSONResponse:
+        try:
+            payload = await asyncio.to_thread(_layout_engine.get_state_payload, runtime)
+            return _json(payload)
+        except Exception as exc:  # pragma: no cover
+            return _json({"error": str(exc), "mode": "morning_brief", "layout": {"hero": [], "priority": [], "ambient": []}, "alerts": [], "card_weights": {}, "modes": {}})
+
+    @app.post("/api/layout/mode")
+    async def api_layout_set_mode(
+        payload: dict[str, Any],
+        background_tasks: BackgroundTasks,
+    ) -> JSONResponse:
+        mode   = str(payload.get("mode", "")).strip()
+        manual = bool(payload.get("manual", True))
+        result = await asyncio.to_thread(_layout_engine.set_mode, mode, manual=manual)
+        background_tasks.add_task(_broadcast_dashboard, "layout.mode_changed")
+        return _json(result)
+
+    @app.post("/api/layout/interact")
+    async def api_layout_interact(payload: dict[str, Any]) -> JSONResponse:
+        card_id = str(payload.get("card_id", "")).strip()
+        mode    = str(payload.get("mode", "morning_brief")).strip()
+        action  = str(payload.get("action", "click")).strip()
+        await asyncio.to_thread(_layout_engine.log_interaction, card_id, mode, action)
+        return _json({"ok": True})
 
     @app.post("/api/design-review-state")
     async def api_save_design_review_state(
