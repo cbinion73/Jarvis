@@ -9,7 +9,8 @@ __pycache__/
 # ── Credentials & secrets ────────────────────────────────────────────────────
 config/google_client_secret.json
 config/openviking/
-config/cobalt-list-385701-8a97dbcce1b5.json   # GCP service-account key
+# GCP service-account key
+config/cobalt-list-385701-8a97dbcce1b5.json
 
 # OAuth tokens
 data/google/
@@ -28,7 +29,8 @@ data/agents/
 data/cache/
 data/conversations/
 data/camera_hls/
-data/forge/jobs/          # uploaded photos — can be large
+# uploaded photos — can be large
+data/forge/jobs/
 data/system/worktrees/
 
 # Runtime logs (*.jsonl files live here)
