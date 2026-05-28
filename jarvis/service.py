@@ -6278,6 +6278,143 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
         raise HTTPException(status_code=404, detail="Not found")
 
+    # ------------------------------------------------------------------
+    # Phase 4: Symptom Triage Engine (Oracle-First Protocol)
+    # ------------------------------------------------------------------
+
+    @app.post("/api/health/symptom/triage")
+    async def api_symptom_triage(request: Request) -> JSONResponse:
+        """Full symptom triage: Oracle gate + specialist routing + structured report."""
+        try:
+            from .symptom_triage import run_triage
+        except ImportError:
+            from symptom_triage import run_triage
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        result = await run_triage(
+            symptoms=str(body.get("symptoms", "")),
+            duration=str(body.get("duration", "")),
+            severity=body.get("severity"),
+            associated_symptoms=str(body.get("associated_symptoms", "")),
+            context=str(body.get("context", "")),
+        )
+        return _json(result)
+
+    @app.get("/api/health/symptom/redflags")
+    async def api_symptom_redflags() -> JSONResponse:
+        """Chris's personalized red flag symptom list."""
+        try:
+            from .symptom_triage import get_red_flags_for_patient
+        except ImportError:
+            from symptom_triage import get_red_flags_for_patient
+        return _json(get_red_flags_for_patient())
+
+    # ------------------------------------------------------------------
+    # Phase 4: Predictive Drift Detection (Heimdall Protocol)
+    # ------------------------------------------------------------------
+
+    @app.get("/api/health/drift/scan")
+    async def api_drift_scan() -> JSONResponse:
+        """Full drift scan: signals, cluster evaluation, baseline deviations, alerts."""
+        try:
+            from .drift_detection import run_drift_scan
+        except ImportError:
+            from drift_detection import run_drift_scan
+        return _json(await run_drift_scan())
+
+    @app.get("/api/health/drift/clusters")
+    async def api_drift_clusters() -> JSONResponse:
+        """Evaluate all 5 drift clusters against current signals."""
+        try:
+            from .drift_detection import scan_all_clusters, get_current_signals
+        except ImportError:
+            from drift_detection import scan_all_clusters, get_current_signals
+        signals = await get_current_signals()
+        clusters = await scan_all_clusters(signals)
+        active = [c for c in clusters if c["active"]]
+        return _json({
+            "clusters": clusters,
+            "active_count": len(active),
+            "total_count": len(clusters),
+            "signals_loaded": list(signals.keys()),
+        })
+
+    @app.get("/api/health/drift/baseline")
+    async def api_drift_baseline() -> JSONResponse:
+        """Chris's personal baseline metrics with current deviations."""
+        try:
+            from .drift_detection import get_baseline_deviations, get_current_signals, _CHRIS_BASELINES
+        except ImportError:
+            from drift_detection import get_baseline_deviations, get_current_signals, _CHRIS_BASELINES
+        signals = await get_current_signals()
+        deviations = await get_baseline_deviations(signals)
+        return _json({
+            "baselines": _CHRIS_BASELINES,
+            "current_deviations": deviations,
+            "significant_count": sum(1 for d in deviations if d["significant"]),
+        })
+
+    # ------------------------------------------------------------------
+    # Phase 4: Quarterly Longevity Council Review
+    # ------------------------------------------------------------------
+
+    @app.post("/api/health/quarterly/review")
+    async def api_quarterly_review(request: Request) -> JSONResponse:
+        """Run full 90-day quarterly review (LLM-intensive). May take 30-60s."""
+        try:
+            from .quarterly_review import run_quarterly_review
+        except ImportError:
+            from quarterly_review import run_quarterly_review
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        result = await run_quarterly_review(
+            review_period_days=int(body.get("review_period_days", 90)),
+            major_life_context=str(body.get("major_life_context", "")),
+            additional_context=str(body.get("additional_context", "")),
+        )
+        return _json(result)
+
+    @app.get("/api/health/quarterly/objectives")
+    async def api_quarterly_objectives_get() -> JSONResponse:
+        """Return current 90-day objectives."""
+        try:
+            from .quarterly_review import get_current_objectives
+        except ImportError:
+            from quarterly_review import get_current_objectives
+        objectives = await get_current_objectives()
+        return _json({"objectives": objectives, "count": len(objectives)})
+
+    @app.post("/api/health/quarterly/objectives")
+    async def api_quarterly_objectives_set(request: Request) -> JSONResponse:
+        """Set new 90-day objectives. Body: {objectives: [...]}"""
+        try:
+            from .quarterly_review import set_objectives
+        except ImportError:
+            from quarterly_review import set_objectives
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        objectives = body.get("objectives", [])
+        if not isinstance(objectives, list):
+            return JSONResponse({"error": "objectives must be a list"}, status_code=400)
+        result = await set_objectives(objectives)
+        status_code = 201 if result.get("ok") else 400
+        return JSONResponse(result, status_code=status_code)
+
+    @app.get("/api/health/quarterly/doctor-packet")
+    async def api_quarterly_doctor_packet() -> JSONResponse:
+        """Generate quarterly doctor discussion packet for Nov 13 visit with Dr. Wenk."""
+        try:
+            from .quarterly_review import generate_doctor_packet
+        except ImportError:
+            from quarterly_review import generate_doctor_packet
+        return _json(await generate_doctor_packet())
+
     return app
 
 
