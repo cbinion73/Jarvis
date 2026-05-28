@@ -207,6 +207,9 @@ public final class AppleAPIClient: Sendable {
     }
 
     private func perform<T: Decodable>(_ request: URLRequest) async throws -> T {
+        var request = request
+        request.setValue(CloudflareConfig.clientId,     forHTTPHeaderField: "CF-Access-Client-Id")
+        request.setValue(CloudflareConfig.clientSecret, forHTTPHeaderField: "CF-Access-Client-Secret")
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let http = response as? HTTPURLResponse else {

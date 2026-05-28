@@ -25,3 +25,4 @@ vendor/trellis-mac/TRELLIS.2/
 vendor/**/*.so
 vendor/**/*.dylib
 vendor/**/__pycache__/
+CloudflareConfig.swift

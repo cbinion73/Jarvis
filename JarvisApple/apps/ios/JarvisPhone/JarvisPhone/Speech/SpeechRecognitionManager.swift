@@ -19,20 +19,25 @@ final class SpeechRecognitionManager: ObservableObject {
     private let audioEngine        = AVAudioEngine()
     private var onFinal:           ((String) -> Void)?
 
-    private override init() {
+    private init() {
         Task { await checkAuthorization() }
     }
 
     // MARK: - Authorization
 
     func checkAuthorization() async {
-        let speechStatus = await withCheckedContinuation { continuation in
+        let speechStatus = await Self.requestSpeechAuth()
+        let audioGranted = await AVAudioApplication.requestRecordPermission()
+        isAuthorized = (speechStatus == .authorized) && audioGranted
+    }
+
+    // nonisolated so the TCC callback fires without @MainActor isolation check
+    private nonisolated static func requestSpeechAuth() async -> SFSpeechRecognizerAuthorizationStatus {
+        await withCheckedContinuation { continuation in
             SFSpeechRecognizer.requestAuthorization { status in
                 continuation.resume(returning: status)
             }
         }
-        let audioGranted = await AVAudioApplication.requestRecordPermission()
-        isAuthorized = (speechStatus == .authorized) && audioGranted
     }
 
     // MARK: - Start / Stop

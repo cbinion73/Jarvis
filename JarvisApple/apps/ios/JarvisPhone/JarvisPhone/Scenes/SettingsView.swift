@@ -1,11 +1,16 @@
 import SwiftUI
 import JarvisKit
 
+// MARK: - SettingsView  "Systems"
+
 struct SettingsView: View {
 
     @State private var selectedEnvironment: JARVISEnvironmentOption = .local
-    @State private var customURL = ""
+    @State private var customURL     = ""
     @State private var showingURLField = false
+    @State private var serverOK      = false
+
+    private let steel = Color(red: 0.55, green: 0.65, blue: 0.78)
 
     var body: some View {
         NavigationStack {
@@ -15,24 +20,51 @@ struct SettingsView: View {
                 ScrollView {
                     VStack(spacing: 14) {
 
-                        // ── Server ────────────────────────────────
-                        GlassSettingsSection(title: "Server", icon: "server.rack") {
-
-                            // Environment picker row
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Environment")
-                                    .font(.caption.weight(.semibold))
+                        // ── Status banner ──────────────────────────
+                        HStack(spacing: 14) {
+                            ZStack {
+                                Circle().fill(serverOK ? Color.green.opacity(0.15) : Color.red.opacity(0.1))
+                                    .frame(width: 44, height: 44)
+                                Image(systemName: serverOK ? "server.rack" : "exclamationmark.triangle.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(serverOK ? .green : .red)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(serverOK ? "SYSTEMS NOMINAL" : "CONNECTION ERROR")
+                                    .font(.system(size: 10, weight: .black))
+                                    .tracking(1.2)
+                                    .foregroundStyle(serverOK ? .green : .red)
+                                Text(JARVISEnvironment.baseURL.host ?? "—")
+                                    .font(.caption2.monospaced())
                                     .foregroundStyle(.secondary)
-                                Picker("", selection: $selectedEnvironment) {
-                                    ForEach(JARVISEnvironmentOption.allCases) { option in
-                                        Text(option.displayName).tag(option)
-                                    }
+                                    .lineLimit(1)
+                            }
+                            Spacer()
+                            // Ping button
+                            Button("Ping") { Task { await pingServer() } }
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(steel)
+                                .glassEffect(in: Capsule())
+                        }
+                        .padding(14)
+                        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+
+                        // ── Server environment ──────────────────────
+                        SystemsSection(title: "Server", icon: "wifi", accent: steel) {
+
+                            Text("Environment")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                            Picker("", selection: $selectedEnvironment) {
+                                ForEach(JARVISEnvironmentOption.allCases) { option in
+                                    Text(option.displayName).tag(option)
                                 }
-                                .pickerStyle(.segmented)
-                                .onChange(of: selectedEnvironment) { _, newValue in
-                                    applyEnvironment(newValue)
-                                    showingURLField = (newValue == .custom)
-                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .tint(steel)
+                            .onChange(of: selectedEnvironment) { _, newValue in
+                                applyEnvironment(newValue)
+                                showingURLField = (newValue == .custom)
                             }
 
                             if showingURLField {
@@ -42,7 +74,7 @@ struct SettingsView: View {
                                     .autocorrectionDisabled()
                                     .textInputAutocapitalization(.never)
                                     .foregroundStyle(.white)
-                                    .tint(.cyan)
+                                    .tint(steel)
                                     .onSubmit { applyCustomURL() }
                             }
 
@@ -50,63 +82,82 @@ struct SettingsView: View {
 
                             HStack {
                                 Text("Base URL")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(.caption).foregroundStyle(.secondary)
                                 Spacer()
                                 Text(JARVISEnvironment.baseURL.absoluteString)
                                     .font(.caption.monospaced())
-                                    .foregroundStyle(.cyan.opacity(0.8))
+                                    .foregroundStyle(steel.opacity(0.9))
                                     .lineLimit(1)
                                     .truncationMode(.middle)
                             }
                         }
 
-                        // ── App Info ──────────────────────────────
-                        GlassSettingsSection(title: "App", icon: "info.circle.fill") {
-                            SettingsRow(label: "Version") {
-                                Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
-                                    .foregroundStyle(.secondary)
-                            }
-                            Divider().opacity(0.3)
-                            SettingsRow(label: "Build") {
-                                Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—")
-                                    .foregroundStyle(.secondary)
+                        // ── App info ────────────────────────────────
+                        SystemsSection(title: "Build", icon: "info.circle.fill", accent: steel) {
+                            SysRow(label: "Version") {
+                                versionChip(
+                                    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—",
+                                    build: Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
+                                )
                             }
                         }
 
-                        // ── Links ─────────────────────────────────
-                        GlassSettingsSection(title: "Links", icon: "link") {
+                        // ── Links ────────────────────────────────────
+                        SystemsSection(title: "Links", icon: "link", accent: steel) {
                             Link(destination: URL(string: JARVISEnvironment.baseURL.absoluteString)!) {
                                 HStack {
                                     Label("Open JARVIS Web", systemImage: "safari")
-                                        .foregroundStyle(.cyan)
+                                        .foregroundStyle(steel)
                                     Spacer()
                                     Image(systemName: "arrow.up.right.square")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .font(.caption).foregroundStyle(.secondary)
                                 }
                             }
                         }
 
-                        // ── About ─────────────────────────────────
-                        VStack(spacing: 4) {
+                        // ── About watermark ──────────────────────────
+                        VStack(spacing: 3) {
                             Text("JARVIS")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.white.opacity(0.5))
-                            Text("Just A Rather Very Intelligent System")
-                                .font(.caption2)
+                                .font(.system(size: 11, weight: .black))
+                                .tracking(2)
                                 .foregroundStyle(.white.opacity(0.3))
+                            Text("JUST A RATHER VERY INTELLIGENT SYSTEM")
+                                .font(.system(size: 8, weight: .medium))
+                                .tracking(1)
+                                .foregroundStyle(.white.opacity(0.18))
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.top, 8)
+                        .padding(.top, 10)
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                 }
             }
-            .navigationTitle("Settings")
+            .navigationTitle("Systems")
             .navigationBarTitleDisplayMode(.large)
             .onAppear { syncPickerFromCurrent() }
+        }
+    }
+
+    // MARK: - Version chip
+
+    private func versionChip(_ version: String, build: String) -> some View {
+        Text("v\(version) · build \(build)")
+            .font(.system(size: 10, weight: .semibold).monospaced())
+            .foregroundStyle(steel)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(steel.opacity(0.1), in: Capsule())
+    }
+
+    // MARK: - Ping
+
+    private func pingServer() async {
+        do {
+            let _: WatchStatus = try await AppleAPIClient.shared.fetchStatus()
+            serverOK = true
+        } catch {
+            serverOK = false
         }
     }
 
@@ -114,29 +165,18 @@ struct SettingsView: View {
 
     private func syncPickerFromCurrent() {
         let url = JARVISEnvironment.baseURL.absoluteString
-        if url.contains("teambinion") {
-            selectedEnvironment = .production
-        } else if url.contains("localhost") {
-            selectedEnvironment = .local
-        } else if url.contains("tailscale") || url.contains("100.") {
-            selectedEnvironment = .tailscale
-        } else {
-            selectedEnvironment = .custom
-            customURL = url
-            showingURLField = true
-        }
+        if url.contains("teambinion")        { selectedEnvironment = .production }
+        else if url.contains("localhost")    { selectedEnvironment = .local }
+        else if url.contains("tailscale") || url.contains("100.") { selectedEnvironment = .tailscale }
+        else { selectedEnvironment = .custom; customURL = url; showingURLField = true }
     }
 
     private func applyEnvironment(_ option: JARVISEnvironmentOption) {
         switch option {
-        case .production:
-            JARVISEnvironment.current = .production
-        case .local:
-            JARVISEnvironment.current = .local
-        case .tailscale:
-            JARVISEnvironment.current = .tailscale
-        case .custom:
-            break  // applied on URL submit
+        case .production: JARVISEnvironment.current = .production
+        case .local:      JARVISEnvironment.current = .local
+        case .tailscale:  JARVISEnvironment.current = .tailscale
+        case .custom:     break
         }
     }
 
@@ -146,19 +186,25 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Glass section
+// MARK: - Section
 
-private struct GlassSettingsSection<Content: View>: View {
+private struct SystemsSection<Content: View>: View {
     let title: String
     let icon: String
-    var accentColor: Color = .white
+    let accent: Color
     @ViewBuilder let content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label(title, systemImage: icon)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(accentColor.opacity(0.7))
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(accent)
+                Text(title.uppercased())
+                    .font(.system(size: 10, weight: .bold))
+                    .tracking(1.0)
+                    .foregroundStyle(accent.opacity(0.8))
+            }
             content
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -167,38 +213,33 @@ private struct GlassSettingsSection<Content: View>: View {
     }
 }
 
-// MARK: - Settings row
+// MARK: - Row
 
-private struct SettingsRow<Trailing: View>: View {
+private struct SysRow<Trailing: View>: View {
     let label: String
     @ViewBuilder let trailing: Trailing
 
     var body: some View {
         HStack {
             Text(label)
-                .font(.subheadline)
-                .foregroundStyle(.white)
+                .font(.subheadline).foregroundStyle(.white)
             Spacer()
-            trailing
-                .font(.subheadline)
+            trailing.font(.subheadline)
         }
         .padding(.vertical, 2)
     }
 }
 
-// MARK: - Environment option enum (UI only)
+// MARK: - Environment option enum
 
 enum JARVISEnvironmentOption: String, CaseIterable, Identifiable {
-    case production
-    case local
-    case tailscale
-    case custom
+    case production, local, tailscale, custom
 
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
-        case .production: return "Production"
+        case .production: return "Prod"
         case .local:      return "Local"
         case .tailscale:  return "Tailscale"
         case .custom:     return "Custom"
@@ -206,6 +247,4 @@ enum JARVISEnvironmentOption: String, CaseIterable, Identifiable {
     }
 }
 
-#Preview {
-    SettingsView()
-}
+#Preview { SettingsView() }
