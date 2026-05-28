@@ -129,7 +129,10 @@ CREATE TABLE IF NOT EXISTS raw_signals (
                         CHECK (signal_type IN (
                             'calendar_event','email','teams_message',
                             'meeting_transcript','quick_note','notebook_photo',
-                            'slack_message','document','web_clip'
+                            'slack_message','document','web_clip','news',
+                            'agent_activity','agent_alert','agent_commitment',
+                            'agent_completion','agent_decision','agent_observation',
+                            'agent_route','agent_work'
                         )),
     signal_criticality  VARCHAR(20) DEFAULT 'STANDARD'
                         CHECK (signal_criticality IN ('CRITICAL','STANDARD','LOW')),
@@ -286,7 +289,10 @@ CREATE TABLE IF NOT EXISTS catalyst_tasks (
     title               VARCHAR(1000) NOT NULL,
     description         TEXT,
     task_type           VARCHAR(30) DEFAULT 'project_derived'
-                        CHECK (task_type IN ('project_derived','ad_hoc','routine')),
+                        CHECK (task_type IN (
+                            'project_derived','ad_hoc','routine',
+                            'agent_task','agent_approved'
+                        )),
     status              VARCHAR(20) DEFAULT 'open'
                         CHECK (status IN ('open','in_progress','complete','blocked')),
     priority            VARCHAR(10) DEFAULT 'medium'
@@ -813,6 +819,31 @@ class CatalystDB:
             with self._connect() as conn:
                 with conn.cursor() as cur:
                     cur.execute(_SCHEMA_SQL)
+                    cur.execute(
+                        """
+                        ALTER TABLE raw_signals
+                            DROP CONSTRAINT IF EXISTS raw_signals_signal_type_check;
+                        ALTER TABLE raw_signals
+                            ADD CONSTRAINT raw_signals_signal_type_check
+                            CHECK (signal_type IN (
+                                'calendar_event','email','teams_message',
+                                'meeting_transcript','quick_note','notebook_photo',
+                                'slack_message','document','web_clip','news',
+                                'agent_activity','agent_alert','agent_commitment',
+                                'agent_completion','agent_decision','agent_observation',
+                                'agent_route','agent_work'
+                            ));
+
+                        ALTER TABLE catalyst_tasks
+                            DROP CONSTRAINT IF EXISTS catalyst_tasks_task_type_check;
+                        ALTER TABLE catalyst_tasks
+                            ADD CONSTRAINT catalyst_tasks_task_type_check
+                            CHECK (task_type IN (
+                                'project_derived','ad_hoc','routine',
+                                'agent_task','agent_approved'
+                            ));
+                        """
+                    )
                 conn.commit()
             log.info("CatalystDB: schema ensured on jarvis_catalyst")
             return True
