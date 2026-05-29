@@ -1904,9 +1904,9 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         return _ok(aggregated)
 
     # ------------------------------------------------------------------
-    # GET /api/apple/focus/state
+    # GET /api/apple/focus-state
     # ------------------------------------------------------------------
-    @app.get("/api/apple/focus/state")
+    @app.get("/api/apple/focus-state")
     async def apple_focus_state():
         data_root = Path("data/apple")
         focus_payload = _safe_read_json(data_root / "focus_state.json", {})
