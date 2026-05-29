@@ -946,7 +946,7 @@ class JarvisRuntime:
 
     def _storm_route_geometry(self, origin: dict, destination: dict) -> dict:
         coords = f"{origin['lon']},{origin['lat']};{destination['lon']},{destination['lat']}"
-        url = f"https://router.project-osrm.org/route/v1/driving/{coords}?overview=full&geometries=geojson&steps=false"
+        url = f"https://router.project-osrm.org/route/v1/driving/{coords}?overview=full&geometries=geojson&steps=true"
         request = urllib.request.Request(
             url,
             headers={
@@ -960,10 +960,47 @@ class JarvisRuntime:
         if not routes:
             raise RuntimeError("No drivable route returned.")
         route = routes[0]
+        legs = list(route.get("legs") or [])
+        leg = dict(legs[0]) if legs else {}
+        steps = []
+        for idx, raw_step in enumerate(list(leg.get("steps") or [])):
+            if not isinstance(raw_step, dict):
+                continue
+            maneuver = dict(raw_step.get("maneuver") or {})
+            road_name = str(raw_step.get("name") or raw_step.get("ref") or "").strip()
+            destinations = list(raw_step.get("destinations") or [])
+            instruction_parts = [str(raw_step.get("mode") or "Drive").title()]
+            maneuver_type = str(maneuver.get("type") or "").strip()
+            maneuver_modifier = str(maneuver.get("modifier") or "").strip()
+            if maneuver_type:
+                readable_type = maneuver_type.replace("_", " ")
+                if maneuver_modifier:
+                    instruction_parts.append(f"{readable_type} {maneuver_modifier}")
+                else:
+                    instruction_parts.append(readable_type)
+            if road_name:
+                instruction_parts.append(f"onto {road_name}")
+            elif destinations:
+                instruction_parts.append(f"toward {destinations[0]}")
+            instruction = " ".join(part for part in instruction_parts if part).strip()
+            distance_miles = round(float(raw_step.get("distance", 0.0)) / 1609.344, 1)
+            duration_minutes = max(1, round(float(raw_step.get("duration", 0.0)) / 60))
+            steps.append(
+                {
+                    "sequence": idx + 1,
+                    "instruction": instruction or "Continue on route",
+                    "distance_miles": distance_miles,
+                    "duration_minutes": duration_minutes,
+                    "maneuver": maneuver_type or "straight",
+                    "modifier": maneuver_modifier,
+                    "name": road_name,
+                }
+            )
         return {
             "distance_miles": round(float(route.get("distance", 0.0)) / 1609.344, 1),
             "duration_minutes": round(float(route.get("duration", 0.0)) / 60),
             "coordinates": list(((route.get("geometry") or {}).get("coordinates")) or []),
+            "steps": steps,
         }
 
     def _storm_route_sample_points(self, coordinates: list[list[float]], limit: int = 5) -> list[tuple[float, float]]:
