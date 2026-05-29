@@ -20,6 +20,8 @@ struct ApplePayloadDecodingTests {
         try decode(FocusStateOverview.self, from: payloads, key: "/api/apple/focus-state", decoder: decoder)
         try decode(SoundHistoryOverview.self, from: payloads, key: "/api/apple/sound-alerts", decoder: decoder)
         try decode(VisionHistoryOverview.self, from: payloads, key: "/api/apple/vision/scans", decoder: decoder)
+        try decode(NowPlayingStateOverview.self, from: payloads, key: "/api/apple/now-playing/state", decoder: decoder)
+        try decode(ControlPlaneOverview.self, from: payloads, key: "/api/apple/control-plane/state", decoder: decoder)
         try decode(NotificationCenterOverview.self, from: payloads, key: "/api/apple/notifications", decoder: decoder)
         try decode(EventTimelineOverview.self, from: payloads, key: "/api/apple/events/recent", decoder: decoder)
         try decode(AppleWeatherOverview.self, from: payloads, key: "/api/apple/weather", decoder: decoder)

@@ -21,6 +21,8 @@ struct SettingsView: View {
     @State private var focusState: FocusStateOverview?
     @State private var soundHistory: SoundHistoryOverview?
     @State private var visionHistory: VisionHistoryOverview?
+    @State private var nowPlayingState: NowPlayingStateOverview?
+    @State private var controlPlane: ControlPlaneOverview?
     @State private var pingError: String?
     @State private var isRefreshing = false
     @State private var showingInbox = false
@@ -468,6 +470,100 @@ struct SettingsView: View {
                             }
                         }
 
+                        SystemsSection(title: "Media Workflow", icon: "music.note.tv.fill", accent: .purple) {
+                            if let nowPlayingState {
+                                SysRow(label: "State") {
+                                    syncStatusChip(label: nowPlayingState.isPlaying ? "Playing" : "Idle")
+                                }
+                                SysRow(label: "Updated") {
+                                    Text(nonEmpty(nowPlayingState.updatedAt, fallback: nil))
+                                        .foregroundStyle(.white)
+                                }
+                                SysRow(label: "Artwork") {
+                                    syncStatusChip(label: nowPlayingState.artworkAvailable ? "Available" : "Missing")
+                                }
+                                if !nowPlayingState.title.isEmpty {
+                                    Text("\(nowPlayingState.title)\(nowPlayingState.artist.isEmpty ? "" : " · \(nowPlayingState.artist)")")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(2)
+                                }
+                                if !nowPlayingState.recentItems.isEmpty {
+                                    Divider().opacity(0.3)
+                                    Text("Recent Media Events")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        ForEach(nowPlayingState.recentItems.prefix(3)) { item in
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                Text(item.title.isEmpty ? "Media update" : item.title)
+                                                    .font(.caption.bold())
+                                                    .foregroundStyle(.white)
+                                                if !item.detail.isEmpty {
+                                                    Text(item.detail)
+                                                        .font(.caption2)
+                                                        .foregroundStyle(.secondary)
+                                                }
+                                                Text(nonEmpty(item.ts, fallback: nil))
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                Text("Now playing workflow not loaded yet.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        SystemsSection(title: "Control Plane", icon: "switch.2", accent: steel) {
+                            if let controlPlane {
+                                SysRow(label: "Notifications") {
+                                    Text("\(controlPlane.notifications.total) total · \(controlPlane.notifications.pending) pending")
+                                        .foregroundStyle(.white)
+                                }
+                                SysRow(label: "Event Spine") {
+                                    Text("\(controlPlane.events.recentCount) recent")
+                                        .foregroundStyle(.white)
+                                }
+                                SysRow(label: "Last Event") {
+                                    Text(nonEmpty(controlPlane.events.lastEventAt, fallback: nil))
+                                        .foregroundStyle(.white)
+                                }
+                                SysRow(label: "Notif Freshness") {
+                                    Text(nonEmpty(controlPlane.notifications.lastUpdatedAt, fallback: nil))
+                                        .foregroundStyle(.white)
+                                }
+                                Divider().opacity(0.3)
+                                Text("Notification Status")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                HStack(spacing: 10) {
+                                    systemsMetric("Seen", "\(controlPlane.notifications.seen)")
+                                    systemsMetric("Snoozed", "\(controlPlane.notifications.snoozed)")
+                                    systemsMetric("Resolved", "\(controlPlane.notifications.resolved)")
+                                }
+                                Divider().opacity(0.3)
+                                Text("Event Domains")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                VStack(alignment: .leading, spacing: 6) {
+                                    ForEach(controlPlane.events.domains.keys.sorted().prefix(4), id: \.self) { key in
+                                        SysRow(label: key.capitalized) {
+                                            Text("\(controlPlane.events.domains[key] ?? 0)")
+                                                .foregroundStyle(.white)
+                                        }
+                                    }
+                                }
+                            } else {
+                                Text("Control plane summary not loaded yet.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
                         SystemsSection(title: "Calendar Workflow", icon: "calendar.badge.clock", accent: .cyan) {
                             if let calendarState {
                                 SysRow(label: "Mirror") {
@@ -796,6 +892,8 @@ struct SettingsView: View {
             async let focus = AppleAPIClient.shared.fetchFocusState()
             async let sound = AppleAPIClient.shared.fetchSoundHistory()
             async let vision = AppleAPIClient.shared.fetchVisionHistory()
+            async let nowPlaying = AppleAPIClient.shared.fetchNowPlayingState()
+            async let control = AppleAPIClient.shared.fetchControlPlaneState()
             watchStatus = try await status
             appState = try await state
             calendarState = try await calendar
@@ -803,6 +901,8 @@ struct SettingsView: View {
             focusState = try await focus
             soundHistory = try await sound
             visionHistory = try await vision
+            nowPlayingState = try await nowPlaying
+            controlPlane = try await control
             serverOK = true
             pingError = nil
             calendarWorkflowError = ""

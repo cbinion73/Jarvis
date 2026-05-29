@@ -842,6 +842,65 @@ def _build_apple_vision_state(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "attention_flags": attention_flags,
     }
 
+def _build_apple_now_playing_state(payload: dict[str, Any], recent_events: list[dict[str, Any]]) -> dict[str, Any]:
+    rows = [row for row in recent_events if isinstance(row, dict)]
+    recent_items = [
+        {
+            "id": str(row.get("id") or f"media-{index}"),
+            "title": str(row.get("title") or "").strip(),
+            "detail": str(row.get("detail") or "").strip(),
+            "ts": str(row.get("ts") or ""),
+            "is_playing": bool((row.get("metadata") or {}).get("is_playing")),
+            "artist": str((row.get("metadata") or {}).get("artist") or "").strip(),
+            "album": str((row.get("metadata") or {}).get("album") or "").strip(),
+        }
+        for index, row in enumerate(rows[:10])
+    ]
+    return {
+        "title": str(payload.get("title") or "") if isinstance(payload, dict) else "",
+        "artist": str(payload.get("artist") or "") if isinstance(payload, dict) else "",
+        "album": str(payload.get("album") or "") if isinstance(payload, dict) else "",
+        "is_playing": bool(payload.get("is_playing")) if isinstance(payload, dict) else False,
+        "updated_at": str(payload.get("updated_at") or "") if isinstance(payload, dict) else "",
+        "artwork_available": Path("data/apple/now_playing_artwork.jpg").exists(),
+        "recent_items": recent_items,
+    }
+
+
+def _build_apple_control_plane_state(*, now_playing_payload: dict[str, Any]) -> dict[str, Any]:
+    notifications = _notification_center.list(limit=0)
+    events = _event_log.recent(limit=100)
+    status_counts = Counter(str(item.get("status") or "unknown") for item in notifications if isinstance(item, dict))
+    category_counts = Counter(str(item.get("category") or "unknown") for item in notifications if isinstance(item, dict))
+    domain_counts = Counter(str(item.get("domain") or "unknown") for item in events if isinstance(item, dict))
+    severity_counts = Counter(str(item.get("severity") or "unknown") for item in events if isinstance(item, dict))
+    last_notification_at = str(notifications[0].get("updated_at") or notifications[0].get("created_at") or "") if notifications else ""
+    last_event_at = str(events[0].get("ts") or "") if events else ""
+    return {
+        "notifications": {
+            "total": len(notifications),
+            "pending": status_counts.get("pending", 0),
+            "seen": status_counts.get("seen", 0),
+            "snoozed": status_counts.get("snoozed", 0),
+            "resolved": status_counts.get("resolved", 0),
+            "dismissed": status_counts.get("dismissed", 0),
+            "categories": dict(category_counts),
+            "last_updated_at": last_notification_at,
+        },
+        "events": {
+            "recent_count": len(events),
+            "domains": dict(domain_counts),
+            "severities": dict(severity_counts),
+            "last_event_at": last_event_at,
+        },
+        "media": {
+            "synced": bool(now_playing_payload),
+            "updated_at": str(now_playing_payload.get("updated_at") or "") if isinstance(now_playing_payload, dict) else "",
+            "title": str(now_playing_payload.get("title") or "") if isinstance(now_playing_payload, dict) else "",
+            "is_playing": bool(now_playing_payload.get("is_playing")) if isinstance(now_playing_payload, dict) else False,
+        },
+    }
+
 
 def _build_briefing_command_items(
     *,
@@ -3207,6 +3266,15 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             }
         )
 
+
+    @app.get("/api/apple/control-plane/state")
+    async def apple_control_plane_state():
+        data_root = Path("data/apple")
+        now_playing_payload = _safe_read_json(data_root / "now_playing.json", {})
+        return _ok(_build_apple_control_plane_state(
+            now_playing_payload=now_playing_payload if isinstance(now_playing_payload, dict) else {},
+        ))
+
     # ------------------------------------------------------------------
     # GET /api/apple/notifications
     # ------------------------------------------------------------------
@@ -3671,6 +3739,15 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         return _ok({"stored": True})
 
     # ── MusicKit: Now Playing ─────────────────────────────────────────────────
+
+    @app.get("/api/apple/now-playing/state")
+    async def apple_now_playing_state():
+        payload = _safe_read_json(Path("data/apple/now_playing.json"), {})
+        events = _event_log.recent(limit=20, domain="media")
+        return _ok(_build_apple_now_playing_state(
+            payload if isinstance(payload, dict) else {},
+            events,
+        ))
 
     @app.post("/api/apple/now-playing")
     async def apple_now_playing(payload: dict):
