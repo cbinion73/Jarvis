@@ -30,6 +30,8 @@ JARVIS_APPLE_DIR = REPO_ROOT / "JarvisApple"
 ENDPOINTS: list[tuple[str, str]] = [
     ("/api/apple/status", "/api/apple/status"),
     ("/api/apple/app-state", "/api/apple/app-state"),
+    ("/api/apple/notifications", "/api/apple/notifications"),
+    ("/api/apple/events/recent", "/api/apple/events/recent"),
     ("/api/apple/weather", "/api/apple/weather"),
     ("/api/apple/navigation/locations", "/api/apple/navigation/locations"),
     (
@@ -126,6 +128,28 @@ def validate_phase_one_contracts(payloads: dict[str, dict]) -> None:
             raise RuntimeError(f"/api/apple/needs items[{index}] is not an object")
         if "allowed_actions" not in item:
             raise RuntimeError(f"/api/apple/needs items[{index}] missing 'allowed_actions'")
+
+    notifications_wrapper = require_mapping(payloads, "/api/apple/notifications")
+    notifications = notifications_wrapper.get("notifications")
+    if not isinstance(notifications, list):
+        raise RuntimeError("/api/apple/notifications missing list field 'notifications'")
+    for index, item in enumerate(notifications[:3]):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"/api/apple/notifications notifications[{index}] is not an object")
+        for key in ("id", "category", "title", "status", "created_at", "available_actions"):
+            if key not in item:
+                raise RuntimeError(f"/api/apple/notifications notifications[{index}] missing '{key}'")
+
+    events_wrapper = require_mapping(payloads, "/api/apple/events/recent")
+    events = events_wrapper.get("events")
+    if not isinstance(events, list):
+        raise RuntimeError("/api/apple/events/recent missing list field 'events'")
+    for index, item in enumerate(events[:3]):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"/api/apple/events/recent events[{index}] is not an object")
+        for key in ("id", "ts", "domain", "kind", "severity", "title", "status"):
+            if key not in item:
+                raise RuntimeError(f"/api/apple/events/recent events[{index}] missing '{key}'")
 
     chronicle = require_mapping(payloads, "/api/apple/chronicle")
     context = chronicle.get("context")

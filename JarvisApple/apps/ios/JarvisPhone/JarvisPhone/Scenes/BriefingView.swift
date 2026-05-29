@@ -9,6 +9,7 @@ struct BriefingView: View {
     @StateObject private var nowPlaying = NowPlayingManager.shared
     @StateObject private var speech     = SpeechRecognitionManager.shared
     @State private var status: WatchStatus?
+    @State private var showingInbox = false
 
     private let gold = Color(red: 1.0, green: 0.82, blue: 0.28)
 
@@ -56,12 +57,22 @@ struct BriefingView: View {
                             Image(systemName: "arrow.clockwise")
                         }
                         .glassEffect(in: Circle())
+
+                        Button {
+                            showingInbox = true
+                        } label: {
+                            Image(systemName: "bell.badge")
+                        }
+                        .glassEffect(in: Circle())
                     }
                 }
             }
         }
         .task { await loadStatus() }
         .refreshable { await refreshAll() }
+        .sheet(isPresented: $showingInbox) {
+            NotificationCenterView()
+        }
     }
 
     // MARK: - Loading
@@ -306,6 +317,15 @@ struct BriefingView: View {
         if !appState.notifications.recent.isEmpty {
             OracleSection(title: "Notifications", icon: "bell.badge.fill", accent: .yellow) {
                 VStack(alignment: .leading, spacing: 10) {
+                    Button {
+                        showingInbox = true
+                    } label: {
+                        Label("Open Notification Center", systemImage: "tray.full")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(gold)
+                    }
+                    .buttonStyle(.plain)
+
                     ForEach(Array(appState.notifications.recent.prefix(3))) { notification in
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(alignment: .firstTextBaseline) {

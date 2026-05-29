@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import asyncio
 from collections import Counter
+from copy import deepcopy
 import json
 import logging
 import os
@@ -44,6 +45,8 @@ from .settings import LOCATION_SETTINGS_PATH
 
 logger = logging.getLogger(__name__)
 _NAVIGATION_STATE_PATH = Path("data/settings/navigation_state.json")
+_EVENT_LOG_PATH = Path("data/state/event_log.jsonl")
+_NOTIFICATION_CENTER_PATH = Path("data/state/notification_center.json")
 
 _NAV_STOP_LABELS = {
     "food": "Food",
@@ -97,6 +100,23 @@ def _safe_read_json(path: Path, default: Any) -> Any:
     except Exception as exc:
         logger.warning("apple_api.safe_read_json %s: %s", path, exc)
     return default
+
+
+def _safe_write_json(path: Path, payload: Any) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    except Exception as exc:
+        logger.warning("apple_api.safe_write_json %s: %s", path, exc)
+
+
+def _append_jsonl(path: Path, payload: dict[str, Any]) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(payload) + "\n")
+    except Exception as exc:
+        logger.warning("apple_api.append_jsonl %s: %s", path, exc)
 
 
 def _safe_read_jsonl_tail(path: Path, limit: int = 1) -> list[dict[str, Any]]:
@@ -912,6 +932,186 @@ class _NotificationStore:
         return len(self._pending)
 
 
+class _EventLogStore:
+    def __init__(self, path: Path) -> None:
+        self._path = path
+
+    def record(
+        self,
+        *,
+        domain: str,
+        kind: str,
+        title: str,
+        detail: str = "",
+        severity: str = "low",
+        actor: str = "jarvis",
+        surface: str = "server",
+        status: str = "new",
+        source: str = "",
+        source_id: str = "",
+        thread_id: str = "",
+        navigation_target: str = "",
+        actions: list[str] | None = None,
+        trust_zone: str = "household_operations",
+        authority_stage: str = "live",
+        why_now: str = "",
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        event = {
+            "id": f"evt_{uuid.uuid4().hex}",
+            "ts": _ts(),
+            "actor": str(actor or "jarvis"),
+            "surface": str(surface or "server"),
+            "domain": str(domain or "system"),
+            "kind": str(kind or "info"),
+            "severity": str(severity or "low"),
+            "title": str(title or "JARVIS event"),
+            "detail": str(detail or ""),
+            "status": str(status or "new"),
+            "source": str(source or ""),
+            "source_id": str(source_id or ""),
+            "thread_id": str(thread_id or ""),
+            "navigation_target": str(navigation_target or ""),
+            "actions": [str(action) for action in (actions or []) if str(action or "").strip()],
+            "trust_zone": str(trust_zone or "household_operations"),
+            "authority_stage": str(authority_stage or "live"),
+            "why_now": str(why_now or ""),
+            "metadata": metadata if isinstance(metadata, dict) else {},
+        }
+        _append_jsonl(self._path, event)
+        return event
+
+    def recent(
+        self,
+        *,
+        limit: int = 25,
+        domain: str | None = None,
+        status: str | None = None,
+        severity: str | None = None,
+    ) -> list[dict[str, Any]]:
+        rows = _safe_read_jsonl_tail(self._path, limit=0)
+        if domain:
+            rows = [row for row in rows if str(row.get("domain") or "") == domain]
+        if status:
+            rows = [row for row in rows if str(row.get("status") or "") == status]
+        if severity:
+            rows = [row for row in rows if str(row.get("severity") or "") == severity]
+        if limit > 0:
+            rows = rows[-limit:]
+        rows.reverse()
+        return rows
+
+
+class _NotificationCenterStore:
+    def __init__(self, path: Path, event_log: _EventLogStore) -> None:
+        self._path = path
+        self._event_log = event_log
+
+    def _load(self) -> dict[str, Any]:
+        data = _safe_read_json(self._path, {})
+        items = data.get("items") if isinstance(data, dict) else []
+        if not isinstance(items, list):
+            items = []
+        return {"items": [item for item in items if isinstance(item, dict)]}
+
+    def _save(self, payload: dict[str, Any]) -> None:
+        _safe_write_json(self._path, payload)
+
+    def create(
+        self,
+        *,
+        category: str,
+        title: str,
+        detail: str = "",
+        severity: str = "low",
+        audience: str = "household",
+        delivery_mode: str = "badge_only",
+        navigation_target: str = "",
+        available_actions: list[str] | None = None,
+        why_now: str = "",
+        source_summary: str = "",
+        event: dict[str, Any] | None = None,
+        expires_at: str = "",
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        store = self._load()
+        notification = {
+            "id": f"notif_{uuid.uuid4().hex}",
+            "event_id": str((event or {}).get("id") or ""),
+            "category": str(category or "system"),
+            "title": str(title or "JARVIS Alert"),
+            "detail": str(detail or ""),
+            "body": str(detail or ""),
+            "severity": str(severity or "low"),
+            "status": "pending",
+            "created_at": _ts(),
+            "updated_at": _ts(),
+            "expires_at": str(expires_at or ""),
+            "audience": str(audience or "household"),
+            "delivery_mode": str(delivery_mode or "badge_only"),
+            "navigation_target": str(navigation_target or ""),
+            "available_actions": [str(action) for action in (available_actions or ["open", "dismiss"]) if str(action or "").strip()],
+            "why_now": str(why_now or ""),
+            "source_summary": str(source_summary or ""),
+            "badge": 0,
+            "metadata": metadata if isinstance(metadata, dict) else {},
+        }
+        store["items"].append(notification)
+        self._save(store)
+        return notification
+
+    def list(
+        self,
+        *,
+        status: str | None = None,
+        limit: int = 50,
+        category: str | None = None,
+    ) -> list[dict[str, Any]]:
+        items = self._load()["items"]
+        if status:
+            items = [item for item in items if str(item.get("status") or "") == status]
+        if category:
+            items = [item for item in items if str(item.get("category") or "") == category]
+        items.sort(key=lambda item: str(item.get("created_at") or ""), reverse=True)
+        if limit > 0:
+            items = items[:limit]
+        return items
+
+    def count(self, *, status: str = "pending") -> int:
+        return len(self.list(status=status, limit=0))
+
+    def recent(self, limit: int = 5) -> list[dict[str, Any]]:
+        return self.list(limit=limit)
+
+    def update_status(self, notification_id: str, status: str, *, reason: str = "") -> dict[str, Any] | None:
+        store = self._load()
+        for item in store["items"]:
+            if str(item.get("id") or "") != notification_id:
+                continue
+            item["status"] = status
+            item["updated_at"] = _ts()
+            self._save(store)
+            self._event_log.record(
+                domain="system",
+                kind="resolved" if status in {"resolved", "dismissed"} else "info",
+                title=f"Notification {status}",
+                detail=str(item.get("title") or ""),
+                severity=str(item.get("severity") or "low"),
+                source="apple.notification_center",
+                source_id=notification_id,
+                navigation_target=str(item.get("navigation_target") or ""),
+                actions=["open"],
+                trust_zone="household_operations",
+                authority_stage="live",
+                why_now=reason or f"Notification status changed to {status}.",
+                metadata={"notification_id": notification_id, "status": status},
+            )
+            return deepcopy(item)
+        return None
+
+
+_event_log = _EventLogStore(_EVENT_LOG_PATH)
+_notification_center = _NotificationCenterStore(_NOTIFICATION_CENTER_PATH, _event_log)
 _notification_store = _NotificationStore()
 _health_store = HealthSampleStore()
 
@@ -930,6 +1130,68 @@ def _time_of_day_greeting() -> tuple[str, str]:
     elif hour < 21:
         return "Good evening, Sir.", "evening"
     return "Good night, Sir.", "night"
+
+
+def _record_shared_event(
+    *,
+    domain: str,
+    kind: str,
+    title: str,
+    detail: str = "",
+    severity: str = "low",
+    actor: str = "jarvis",
+    source: str = "",
+    source_id: str = "",
+    navigation_target: str = "",
+    actions: list[str] | None = None,
+    trust_zone: str = "household_operations",
+    authority_stage: str = "live",
+    why_now: str = "",
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return _event_log.record(
+        domain=domain,
+        kind=kind,
+        title=title,
+        detail=detail,
+        severity=severity,
+        actor=actor,
+        surface="apple_api",
+        status="new",
+        source=source,
+        source_id=source_id,
+        navigation_target=navigation_target,
+        actions=actions or [],
+        trust_zone=trust_zone,
+        authority_stage=authority_stage,
+        why_now=why_now,
+        metadata=metadata or {},
+    )
+
+
+def _create_notification_from_event(
+    event: dict[str, Any],
+    *,
+    category: str,
+    delivery_mode: str = "badge_only",
+    audience: str = "household",
+    available_actions: list[str] | None = None,
+    source_summary: str = "",
+) -> dict[str, Any]:
+    return _notification_center.create(
+        category=category,
+        title=str(event.get("title") or "JARVIS Alert"),
+        detail=str(event.get("detail") or ""),
+        severity=str(event.get("severity") or "low"),
+        audience=audience,
+        delivery_mode=delivery_mode,
+        navigation_target=str(event.get("navigation_target") or ""),
+        available_actions=available_actions or list(event.get("actions") or ["open", "dismiss"]),
+        why_now=str(event.get("why_now") or ""),
+        source_summary=source_summary or str(event.get("source") or ""),
+        event=event,
+        metadata={"event_id": str(event.get("id") or "")},
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1122,8 +1384,9 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         ]
         reminder_items.sort(key=lambda item: str(item.get("due") or "9999"))
 
-        notifications_recent = _notification_store.peek(limit=5)
-        notifications_recent.reverse()
+        notifications_recent = _notification_center.recent(limit=5)
+        for item in notifications_recent:
+            item.setdefault("created_at", _ts())
 
         sync_health = {
             "calendar": {
@@ -1195,7 +1458,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 "source": str(focus_payload.get("source") or "") if isinstance(focus_payload, dict) else "",
             },
             "notifications": {
-                "pending_count": _notification_store.count(),
+                "pending_count": _notification_center.count(status="pending"),
                 "recent": notifications_recent,
             },
             "now_playing": {
@@ -1802,6 +2065,30 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         except Exception as exc:
             logger.warning("apple_home_command: approval guard failed: %s", exc)
 
+        event = _record_shared_event(
+            domain="home",
+            kind="stage_ready",
+            title=command,
+            detail=f"Home command staged: {service or 'service'} on {entity_id or 'target'}.",
+            severity="medium",
+            actor="chris",
+            source="apple.home_command",
+            source_id=request_id,
+            navigation_target="home",
+            actions=["open", "stage", "dismiss"],
+            trust_zone="household_home",
+            authority_stage="draft",
+            why_now="A home command was requested from the Apple client and now awaits approval.",
+            metadata={"command": command, "entity_id": entity_id, "service": service},
+        )
+        _create_notification_from_event(
+            event,
+            category="household",
+            delivery_mode="badge_only",
+            available_actions=["open", "dismiss", "resolve"],
+            source_summary="Staged home command",
+        )
+
         return _ok({"request_id": request_id, "status": "pending_approval"})
 
     # ------------------------------------------------------------------
@@ -1840,6 +2127,23 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             except Exception as exc2:
                 logger.warning("apple_presence: runtime presence update failed: %s", exc2)
 
+        _record_shared_event(
+            domain="home",
+            kind="info",
+            title=f"{actor_id.capitalize()} {event.replace('_', ' ')}",
+            detail=f"Presence update received from iPhone at {lat:.4f}, {lon:.4f}.",
+            severity="low",
+            actor=actor_id,
+            source="apple.presence",
+            source_id=event,
+            navigation_target="home",
+            actions=["open"],
+            trust_zone="household_presence",
+            authority_stage="live",
+            why_now="Presence changes update the live household state.",
+            metadata={"lat": lat, "lon": lon, "event": event},
+        )
+
         return _ok({"event": event, "actor_id": actor_id, "ts": _ts()})
 
     # ------------------------------------------------------------------
@@ -1854,6 +2158,59 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         """
         notifications = _notification_store.drain()
         return _ok({"notifications": notifications})
+
+    # ------------------------------------------------------------------
+    # GET /api/apple/events/recent
+    # ------------------------------------------------------------------
+    @app.get("/api/apple/events/recent")
+    async def apple_events_recent(limit: int = 25, domain: str = "", status: str = "", severity: str = ""):
+        return _ok(
+            {
+                "events": _event_log.recent(
+                    limit=max(1, min(limit, 100)),
+                    domain=domain or None,
+                    status=status or None,
+                    severity=severity or None,
+                )
+            }
+        )
+
+    # ------------------------------------------------------------------
+    # GET /api/apple/notifications
+    # ------------------------------------------------------------------
+    @app.get("/api/apple/notifications")
+    async def apple_notifications(status: str = "", category: str = "", limit: int = 50):
+        return _ok(
+            {
+                "notifications": _notification_center.list(
+                    status=status or None,
+                    category=category or None,
+                    limit=max(1, min(limit, 200)),
+                )
+            }
+        )
+
+    async def _notification_action(notification_id: str, status: str, reason: str) -> dict:
+        item = _notification_center.update_status(notification_id, status, reason=reason)
+        if item is None:
+            raise HTTPException(status_code=404, detail="Notification not found")
+        return _ok({"notification": item, "status": status})
+
+    @app.post("/api/apple/notifications/{notification_id}/seen")
+    async def apple_notification_seen(notification_id: str):
+        return await _notification_action(notification_id, "seen", "Marked seen from Apple client.")
+
+    @app.post("/api/apple/notifications/{notification_id}/dismiss")
+    async def apple_notification_dismiss(notification_id: str):
+        return await _notification_action(notification_id, "dismissed", "Dismissed from Apple client.")
+
+    @app.post("/api/apple/notifications/{notification_id}/resolve")
+    async def apple_notification_resolve(notification_id: str):
+        return await _notification_action(notification_id, "resolved", "Resolved from Apple client.")
+
+    @app.post("/api/apple/notifications/{notification_id}/snooze")
+    async def apple_notification_snooze(notification_id: str):
+        return await _notification_action(notification_id, "snoozed", "Snoozed from Apple client.")
 
     # ------------------------------------------------------------------
     # GET /api/apple/voice/greeting
@@ -1903,6 +2260,30 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         except Exception:
             pass
 
+        event = _record_shared_event(
+            domain="approvals",
+            kind="resolved",
+            title="Approval granted",
+            detail=str(item_dict.get("title") or request_id),
+            severity="medium",
+            actor=approved_by,
+            source="apple.approvals.approve",
+            source_id=request_id,
+            navigation_target="needs",
+            actions=["open"],
+            trust_zone="household_approvals",
+            authority_stage="live",
+            why_now="A pending approval was resolved from the Apple client.",
+            metadata={"request_id": request_id, "status": "approved"},
+        )
+        _create_notification_from_event(
+            event,
+            category="approval",
+            delivery_mode="badge_only",
+            available_actions=["open", "resolve"],
+            source_summary="Approval workflow",
+        )
+
         return _ok({"status": "approved", "request": item_dict})
 
     @app.post("/api/apple/approvals/{request_id}/reject")
@@ -1918,6 +2299,22 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         ok = queue.reject(request_id, reason=reason, rejected_by=rejected_by)
         if not ok:
             raise HTTPException(status_code=404, detail="Pending approval request not found")
+        _record_shared_event(
+            domain="approvals",
+            kind="resolved",
+            title="Approval rejected",
+            detail=reason or request_id,
+            severity="medium",
+            actor=rejected_by,
+            source="apple.approvals.reject",
+            source_id=request_id,
+            navigation_target="needs",
+            actions=["open"],
+            trust_zone="household_approvals",
+            authority_stage="live",
+            why_now="A pending approval was rejected from the Apple client.",
+            metadata={"request_id": request_id, "status": "rejected", "reason": reason},
+        )
         return _ok({"status": "rejected", "request_id": request_id, "reason": reason})
 
     @app.post("/api/apple/approvals/{request_id}/cancel")
@@ -1931,6 +2328,22 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         ok = queue.cancel(request_id)
         if not ok:
             raise HTTPException(status_code=404, detail="Pending approval request not found")
+        _record_shared_event(
+            domain="approvals",
+            kind="resolved",
+            title="Approval cancelled",
+            detail=request_id,
+            severity="low",
+            actor="chris",
+            source="apple.approvals.cancel",
+            source_id=request_id,
+            navigation_target="needs",
+            actions=["open"],
+            trust_zone="household_approvals",
+            authority_stage="live",
+            why_now="A pending approval was cancelled from the Apple client.",
+            metadata={"request_id": request_id, "status": "cancelled"},
+        )
         return _ok({"status": "cancelled", "request_id": request_id})
 
     # ── EventKit: Calendar ────────────────────────────────────────────────────
@@ -1949,6 +2362,22 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             "synced_at": _ts(),
         }, indent=2))
         logger.info("EventKit calendar: stored %d events", len(events))
+        _record_shared_event(
+            domain="calendar",
+            kind="info",
+            title="Calendar synced",
+            detail=f"Stored {len(events)} calendar events from EventKit.",
+            severity="low",
+            actor="iphone",
+            source="apple.calendar",
+            source_id="eventkit",
+            navigation_target="brief",
+            actions=["open"],
+            trust_zone="household_schedule",
+            authority_stage="live",
+            why_now="The iPhone mirrored calendar state into JARVIS.",
+            metadata={"count": len(events)},
+        )
         return _ok({"stored": len(events)})
 
     # ── EventKit: Reminders ───────────────────────────────────────────────────
@@ -1967,6 +2396,22 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             "synced_at": _ts(),
         }, indent=2))
         logger.info("EventKit reminders: stored %d items", len(reminders))
+        _record_shared_event(
+            domain="reminders",
+            kind="info",
+            title="Reminders synced",
+            detail=f"Stored {len(reminders)} reminders from EventKit.",
+            severity="low",
+            actor="iphone",
+            source="apple.reminders",
+            source_id="eventkit",
+            navigation_target="brief",
+            actions=["open"],
+            trust_zone="household_schedule",
+            authority_stage="live",
+            why_now="The iPhone mirrored reminder state into JARVIS.",
+            metadata={"count": len(reminders)},
+        )
         return _ok({"stored": len(reminders)})
 
     # ── Focus Filter ─────────────────────────────────────────────────────────
@@ -1985,6 +2430,22 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         except Exception:
             pass
 
+        event = _record_shared_event(
+            domain="system",
+            kind="info",
+            title="Focus state updated",
+            detail=f"Focus is {'active' if bool(payload.get('focus_active')) else 'inactive'}.",
+            severity="low",
+            actor=str(payload.get("actor_id") or "iphone"),
+            source="apple.focus",
+            source_id=str(payload.get("source") or "focus"),
+            navigation_target="systems",
+            actions=["open"],
+            trust_zone="household_attention",
+            authority_stage="live",
+            why_now="Focus posture affects interruption behavior.",
+            metadata=record,
+        )
         return _ok({"stored": True, "focus_active": bool(payload.get("focus_active"))})
 
     # ── Sound Analysis ───────────────────────────────────────────────────────
@@ -2003,6 +2464,30 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             broadcast_event("apple.sound_alert", record)
         except Exception:
             pass
+
+        event = _record_shared_event(
+            domain="sound",
+            kind="warning",
+            title=str(payload.get("classification") or payload.get("label") or "Sound alert"),
+            detail=str(payload.get("detail") or payload.get("summary") or "On-device sound analysis captured an alert."),
+            severity="medium" if _coerce_float(payload.get("confidence"), 0.0) >= 0.7 else "low",
+            actor=str(payload.get("actor_id") or "iphone"),
+            source="apple.sound_alert",
+            source_id=str(record.get("received_at") or ""),
+            navigation_target="systems",
+            actions=["open", "dismiss"],
+            trust_zone="household_safety",
+            authority_stage="live",
+            why_now="A new sound alert was captured on-device.",
+            metadata=record,
+        )
+        _create_notification_from_event(
+            event,
+            category="household",
+            delivery_mode="badge_only",
+            available_actions=["open", "dismiss", "resolve"],
+            source_summary="Sound alert",
+        )
 
         return _ok({"stored": True})
 
@@ -2027,6 +2512,22 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         except Exception:
             pass
 
+        event = _record_shared_event(
+            domain="vision",
+            kind="info",
+            title=str(payload.get("context") or "Vision scan"),
+            detail=str(payload.get("text") or "")[:200] or "A new on-device scan was captured.",
+            severity="low",
+            actor=str(payload.get("actor_id") or "iphone"),
+            source="apple.vision_scan",
+            source_id=str(record.get("received_at") or ""),
+            navigation_target="systems",
+            actions=["open", "dismiss"],
+            trust_zone="household_perception",
+            authority_stage="live",
+            why_now="A new scan was captured on-device.",
+            metadata={"source": payload.get("source"), "context": payload.get("context")},
+        )
         return _ok({"stored": True})
 
     # ── MusicKit: Now Playing ─────────────────────────────────────────────────
@@ -2059,6 +2560,22 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             })
         except Exception:
             pass
+        _record_shared_event(
+            domain="media",
+            kind="info",
+            title=str(payload.get("title") or "Now playing updated"),
+            detail=str(payload.get("artist") or ""),
+            severity="low",
+            actor="iphone",
+            source="apple.now_playing",
+            source_id=str(payload.get("title") or ""),
+            navigation_target="brief",
+            actions=["open"],
+            trust_zone="household_media",
+            authority_stage="live",
+            why_now="Now playing state changed on the iPhone.",
+            metadata={"is_playing": bool(payload.get("is_playing")), "artist": payload.get("artist"), "album": payload.get("album")},
+        )
         return _ok({"stored": True})
 
     # ── TTS via iOS (replaces ElevenLabs) ────────────────────────────────────

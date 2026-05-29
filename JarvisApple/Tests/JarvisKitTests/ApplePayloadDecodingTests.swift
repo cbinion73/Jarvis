@@ -15,6 +15,8 @@ struct ApplePayloadDecodingTests {
 
         try decode(WatchStatus.self, from: payloads, key: "/api/apple/status", decoder: decoder)
         try decode(AppStateOverview.self, from: payloads, key: "/api/apple/app-state", decoder: decoder)
+        try decode(NotificationCenterOverview.self, from: payloads, key: "/api/apple/notifications", decoder: decoder)
+        try decode(EventTimelineOverview.self, from: payloads, key: "/api/apple/events/recent", decoder: decoder)
         try decode(AppleWeatherOverview.self, from: payloads, key: "/api/apple/weather", decoder: decoder)
         try decode(NavigationLocationsOverview.self, from: payloads, key: "/api/apple/navigation/locations", decoder: decoder)
         try decode(

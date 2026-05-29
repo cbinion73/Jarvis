@@ -17,6 +17,7 @@ struct SettingsView: View {
     @State private var appState: AppStateOverview?
     @State private var pingError: String?
     @State private var isRefreshing = false
+    @State private var showingInbox = false
 
     private let steel = Color(red: 0.55, green: 0.65, blue: 0.78)
 
@@ -239,6 +240,15 @@ struct SettingsView: View {
                             }
                             if let recentNotifications = appState?.notifications.recent, !recentNotifications.isEmpty {
                                 Divider().opacity(0.3)
+                                Button {
+                                    showingInbox = true
+                                } label: {
+                                    Label("Open Notification Center", systemImage: "tray.full")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.yellow)
+                                }
+                                .buttonStyle(.plain)
+
                                 VStack(alignment: .leading, spacing: 10) {
                                     ForEach(Array(recentNotifications.prefix(3))) { notification in
                                         VStack(alignment: .leading, spacing: 3) {
@@ -336,6 +346,9 @@ struct SettingsView: View {
             }
             .navigationTitle("Systems")
             .navigationBarTitleDisplayMode(.large)
+            .sheet(isPresented: $showingInbox) {
+                NotificationCenterView()
+            }
             .task { await refreshSystems() }
             .refreshable { await refreshSystems() }
         }
@@ -506,3 +519,276 @@ private struct SysRow<Trailing: View>: View {
     }
 }
 #Preview { SettingsView() }
+
+struct NotificationCenterView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var notifications: [NotificationCenterItem] = []
+    @State private var events: [EventTimelineItem] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+
+    private let client = AppleAPIClient.shared
+    private let accent = Color(red: 1.0, green: 0.82, blue: 0.28)
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
+
+                Group {
+                    if isLoading && notifications.isEmpty && events.isEmpty {
+                        ProgressView("Loading Inbox…")
+                            .tint(accent)
+                    } else {
+                        ScrollView {
+                            VStack(spacing: 14) {
+                                if let errorMessage, !errorMessage.isEmpty {
+                                    Text(errorMessage)
+                                        .font(.caption)
+                                        .foregroundStyle(.red.opacity(0.9))
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(12)
+                                        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+                                }
+
+                                HStack(spacing: 10) {
+                                    summaryMetric(title: "Pending", value: "\(notifications.filter { $0.status == "pending" }.count)")
+                                    summaryMetric(title: "Active", value: "\(notifications.count)")
+                                    summaryMetric(title: "Events", value: "\(events.count)")
+                                }
+                                .padding(12)
+                                .glassEffect(in: RoundedRectangle(cornerRadius: 18))
+
+                                if notifications.isEmpty {
+                                    VStack(spacing: 8) {
+                                        Image(systemName: "bell.slash")
+                                            .font(.system(size: 28))
+                                            .foregroundStyle(accent.opacity(0.8))
+                                        Text("No active notifications")
+                                            .font(.headline)
+                                            .foregroundStyle(.white)
+                                        Text("JARVIS does not currently have any unresolved household attention items.")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .multilineTextAlignment(.center)
+                                    }
+                                    .padding(18)
+                                    .frame(maxWidth: .infinity)
+                                    .glassEffect(in: RoundedRectangle(cornerRadius: 20))
+                                } else {
+                                    VStack(alignment: .leading, spacing: 10) {
+                                        sectionHeader("Inbox", icon: "bell.badge.fill")
+                                        ForEach(notifications) { item in
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                HStack(alignment: .firstTextBaseline) {
+                                                    Text(item.title.isEmpty ? "JARVIS Alert" : item.title)
+                                                        .font(.headline)
+                                                        .foregroundStyle(.white)
+                                                    Spacer()
+                                                    pill(item.severity.uppercased(), color: severityColor(item.severity))
+                                                }
+
+                                                if !item.detail.isEmpty {
+                                                    Text(item.detail)
+                                                        .font(.caption)
+                                                        .foregroundStyle(.secondary)
+                                                }
+
+                                                HStack(spacing: 8) {
+                                                    if !item.category.isEmpty {
+                                                        pill(item.category.capitalized, color: accent)
+                                                    }
+                                                    if !item.status.isEmpty {
+                                                        pill(item.status.capitalized, color: .white.opacity(0.35))
+                                                    }
+                                                }
+
+                                                if !item.whyNow.isEmpty {
+                                                    Text(item.whyNow)
+                                                        .font(.caption2)
+                                                        .foregroundStyle(accent.opacity(0.85))
+                                                }
+
+                                                HStack(spacing: 10) {
+                                                    Button("Seen") {
+                                                        Task { await markSeen(item.id) }
+                                                    }
+                                                    .buttonStyle(.bordered)
+                                                    .tint(.white.opacity(0.8))
+
+                                                    Button("Dismiss") {
+                                                        Task { await dismissNotification(item.id) }
+                                                    }
+                                                    .buttonStyle(.bordered)
+                                                    .tint(.orange)
+
+                                                    Button("Resolve") {
+                                                        Task { await resolveNotification(item.id) }
+                                                    }
+                                                    .buttonStyle(.borderedProminent)
+                                                    .tint(accent)
+                                                }
+                                                .font(.caption.weight(.semibold))
+
+                                                Text(formatTimestamp(item.createdAt))
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary.opacity(0.75))
+                                            }
+                                            .padding(14)
+                                            .glassEffect(in: RoundedRectangle(cornerRadius: 18))
+                                        }
+                                    }
+                                }
+
+                                if !events.isEmpty {
+                                    VStack(alignment: .leading, spacing: 10) {
+                                        sectionHeader("Recent Events", icon: "clock.arrow.circlepath")
+                                        ForEach(events.prefix(8)) { event in
+                                            VStack(alignment: .leading, spacing: 5) {
+                                                HStack(alignment: .firstTextBaseline) {
+                                                    Text(event.title)
+                                                        .font(.subheadline.bold())
+                                                        .foregroundStyle(.white)
+                                                    Spacer()
+                                                    pill(event.domain.uppercased(), color: .blue.opacity(0.8))
+                                                }
+                                                if !event.detail.isEmpty {
+                                                    Text(event.detail)
+                                                        .font(.caption)
+                                                        .foregroundStyle(.secondary)
+                                                        .lineLimit(3)
+                                                }
+                                                if !event.whyNow.isEmpty {
+                                                    Text(event.whyNow)
+                                                        .font(.caption2)
+                                                        .foregroundStyle(accent.opacity(0.85))
+                                                }
+                                                Text(formatTimestamp(event.ts))
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary.opacity(0.75))
+                                            }
+                                            .padding(12)
+                                            .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+                                        }
+                                    }
+                                }
+                            }
+                            .padding()
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Notification Center")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Done") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        Task { await load() }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                }
+            }
+        }
+        .task { await load() }
+    }
+
+    private func load() async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            async let fetchedNotifications = client.fetchNotifications()
+            async let fetchedEvents = client.fetchRecentEvents(limit: 20)
+            notifications = try await fetchedNotifications
+            events = try await fetchedEvents
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    private func markSeen(_ id: String) async {
+        do {
+            if try await client.markNotificationSeen(id) {
+                await load()
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func dismissNotification(_ id: String) async {
+        do {
+            if try await client.dismissNotification(id) {
+                await load()
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func resolveNotification(_ id: String) async {
+        do {
+            if try await client.resolveNotification(id) {
+                await load()
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func summaryMetric(title: String, value: String) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.headline)
+                .foregroundStyle(.white)
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func sectionHeader(_ title: String, icon: String) -> some View {
+        HStack {
+            Label(title, systemImage: icon)
+                .font(.headline)
+                .foregroundStyle(.white)
+            Spacer()
+        }
+    }
+
+    private func pill(_ text: String, color: Color) -> some View {
+        Text(text)
+            .font(.system(size: 9, weight: .black))
+            .tracking(0.8)
+            .foregroundStyle(.black)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(color, in: Capsule())
+    }
+
+    private func severityColor(_ severity: String) -> Color {
+        switch severity.lowercased() {
+        case "critical":
+            return .red
+        case "high":
+            return .orange
+        case "medium":
+            return .yellow
+        default:
+            return .white.opacity(0.75)
+        }
+    }
+
+    private func formatTimestamp(_ raw: String) -> String {
+        guard !raw.isEmpty else { return "Just now" }
+        let formatter = ISO8601DateFormatter()
+        guard let date = formatter.date(from: raw) else { return raw }
+        return date.formatted(date: .abbreviated, time: .shortened)
+    }
+}

@@ -362,6 +362,45 @@ public final class AppleAPIClient: Sendable {
         return wrapper.notifications
     }
 
+    public func fetchNotifications(status: String = "", limit: Int = 50) async throws -> [NotificationCenterItem] {
+        let safeStatus = status.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let wrapper: NotificationCenterOverview = try await get("/api/apple/notifications?status=\(safeStatus)&limit=\(limit)")
+        return wrapper.notifications
+    }
+
+    public func fetchRecentEvents(limit: Int = 25) async throws -> [EventTimelineItem] {
+        let wrapper: EventTimelineOverview = try await get("/api/apple/events/recent?limit=\(limit)")
+        return wrapper.events
+    }
+
+    @discardableResult
+    public func markNotificationSeen(_ notificationId: String) async throws -> Bool {
+        struct Response: Decodable { let status: String }
+        let response: Response = try await post("/api/apple/notifications/\(notificationId)/seen", body: EmptyBody())
+        return response.status == "seen"
+    }
+
+    @discardableResult
+    public func dismissNotification(_ notificationId: String) async throws -> Bool {
+        struct Response: Decodable { let status: String }
+        let response: Response = try await post("/api/apple/notifications/\(notificationId)/dismiss", body: EmptyBody())
+        return response.status == "dismissed"
+    }
+
+    @discardableResult
+    public func resolveNotification(_ notificationId: String) async throws -> Bool {
+        struct Response: Decodable { let status: String }
+        let response: Response = try await post("/api/apple/notifications/\(notificationId)/resolve", body: EmptyBody())
+        return response.status == "resolved"
+    }
+
+    @discardableResult
+    public func snoozeNotification(_ notificationId: String) async throws -> Bool {
+        struct Response: Decodable { let status: String }
+        let response: Response = try await post("/api/apple/notifications/\(notificationId)/snooze", body: EmptyBody())
+        return response.status == "snoozed"
+    }
+
     // MARK: - Internal networking
 
     private func get<T: Decodable>(_ path: String) async throws -> T {
@@ -447,6 +486,8 @@ public final class AppleAPIClient: Sendable {
         let ok: Bool
         let error: String?
     }
+
+    private struct EmptyBody: Encodable {}
 }
 
 // MARK: - PendingNotification
