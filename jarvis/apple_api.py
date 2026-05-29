@@ -398,6 +398,8 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 "visibility_miles": current.get("visibility_miles"),
                 "pressure_hpa": current.get("pressure_hpa"),
                 "visual_key": str(current.get("visual_key") or ""),
+                "moon_phase": str(current.get("moon_phase") or ""),
+                "moon_phase_label": str(current.get("moon_phase_label") or ""),
                 "using_forecast_fallback": bool(current.get("using_forecast_fallback")),
             },
             "hourly": [

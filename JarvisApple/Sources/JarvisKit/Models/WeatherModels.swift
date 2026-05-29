@@ -29,6 +29,8 @@ public struct AppleWeatherCurrent: Codable, Sendable {
     public let visibilityMiles: Double?
     public let pressureHpa: Double?
     public let visualKey: String
+    public let moonPhase: String
+    public let moonPhaseLabel: String
     public let usingForecastFallback: Bool
 
     enum CodingKeys: String, CodingKey {
@@ -39,6 +41,8 @@ public struct AppleWeatherCurrent: Codable, Sendable {
         case visibilityMiles = "visibility_miles"
         case pressureHpa = "pressure_hpa"
         case visualKey = "visual_key"
+        case moonPhase = "moon_phase"
+        case moonPhaseLabel = "moon_phase_label"
         case usingForecastFallback = "using_forecast_fallback"
     }
 }
