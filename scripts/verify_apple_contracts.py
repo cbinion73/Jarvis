@@ -31,6 +31,7 @@ ENDPOINTS: list[tuple[str, str]] = [
     ("/api/apple/status", "/api/apple/status"),
     ("/api/apple/app-state", "/api/apple/app-state"),
     ("/api/apple/calendar/state", "/api/apple/calendar/state"),
+    ("/api/apple/reminders/state", "/api/apple/reminders/state"),
     ("/api/apple/focus-state", "/api/apple/focus-state"),
     ("/api/apple/notifications", "/api/apple/notifications"),
     ("/api/apple/events/recent", "/api/apple/events/recent"),
@@ -190,9 +191,33 @@ def validate_phase_one_contracts(payloads: dict[str, dict]) -> None:
     for index, item in enumerate(top_items[:3]):
         if not isinstance(item, dict):
             raise RuntimeError(f"/api/apple/app-state reminders top_items[{index}] is not an object")
-        for key in ("id", "title", "due", "list", "priority"):
+            for key in ("id", "title", "due", "list", "priority"):
+                if key not in item:
+                    raise RuntimeError(f"/api/apple/app-state reminders top_items[{index}] missing '{key}'")
+
+    reminders_state = require_mapping(payloads, "/api/apple/reminders/state")
+    for key in ("synced", "synced_at", "count", "open_items", "overdue_items", "due_soon_items", "priority_items", "attention_flags"):
+        if key not in reminders_state:
+            raise RuntimeError(f"/api/apple/reminders/state missing '{key}'")
+    for field in ("open_items", "overdue_items", "due_soon_items", "priority_items"):
+        items = reminders_state.get(field)
+        if not isinstance(items, list):
+            raise RuntimeError(f"/api/apple/reminders/state {field} is not a list")
+        for index, item in enumerate(items[:3]):
+            if not isinstance(item, dict):
+                raise RuntimeError(f"/api/apple/reminders/state {field}[{index}] is not an object")
+            for key in ("id", "title", "due", "list", "priority", "priority_label", "minutes_away", "overdue", "due_soon", "available_actions"):
+                if key not in item:
+                    raise RuntimeError(f"/api/apple/reminders/state {field}[{index}] missing '{key}'")
+    flags = reminders_state.get("attention_flags")
+    if not isinstance(flags, list):
+        raise RuntimeError("/api/apple/reminders/state attention_flags is not a list")
+    for index, item in enumerate(flags[:3]):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"/api/apple/reminders/state attention_flags[{index}] is not an object")
+        for key in ("id", "reminder_id", "kind", "severity", "title", "detail"):
             if key not in item:
-                raise RuntimeError(f"/api/apple/app-state reminders top_items[{index}] missing '{key}'")
+                raise RuntimeError(f"/api/apple/reminders/state attention_flags[{index}] missing '{key}'")
 
     items = require_data(payloads, "/api/apple/needs")
     if not isinstance(items, list):
