@@ -88,6 +88,21 @@ public final class AppleAPIClient: Sendable {
         )
     }
 
+    @discardableResult
+    public func stageCalendarPrep(title: String, start: String = "", location: String = "") async throws -> Bool {
+        struct Body: Encodable {
+            let title: String
+            let start: String
+            let location: String
+        }
+        struct Response: Decodable { let status: String }
+        let response: Response = try await post(
+            "/api/apple/calendar/stage-prep",
+            body: Body(title: title, start: start, location: location)
+        )
+        return response.status == "staged"
+    }
+
     /// Fetch the Needs You zone items.
     public func fetchNeeds() async throws -> [NeedsItem] {
         try await get("/api/apple/needs")

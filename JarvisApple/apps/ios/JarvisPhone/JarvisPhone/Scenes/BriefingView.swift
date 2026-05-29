@@ -10,6 +10,8 @@ struct BriefingView: View {
     @StateObject private var speech     = SpeechRecognitionManager.shared
     @State private var status: WatchStatus?
     @State private var showingInbox = false
+    @State private var calendarActionMessage = ""
+    @State private var calendarActionError = ""
     @State private var reminderActionMessage = ""
     @State private var reminderActionError = ""
 
@@ -373,6 +375,15 @@ struct BriefingView: View {
         if !appState.calendar.nextItems.isEmpty {
             OracleSection(title: "Calendar", icon: "calendar", accent: .cyan) {
                 VStack(alignment: .leading, spacing: 10) {
+                    if !calendarActionError.isEmpty {
+                        Text(calendarActionError)
+                            .font(.caption2)
+                            .foregroundStyle(.red.opacity(0.9))
+                    } else if !calendarActionMessage.isEmpty {
+                        Text(calendarActionMessage)
+                            .font(.caption2)
+                            .foregroundStyle(gold.opacity(0.82))
+                    }
                     ForEach(Array(appState.calendar.nextItems.prefix(3))) { nextEvent in
                         VStack(alignment: .leading, spacing: 4) {
                             Text(nextEvent.title)
@@ -386,6 +397,22 @@ struct BriefingView: View {
                                     .font(.caption2)
                                     .foregroundStyle(gold.opacity(0.7))
                             }
+                            HStack(spacing: 10) {
+                                Button("Stage Prep") {
+                                    Task { await stageCalendarPrep(nextEvent) }
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.cyan)
+
+                                if !nextEvent.location.isEmpty {
+                                    Button("Maps") {
+                                        openCalendarLocation(nextEvent)
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .tint(.white.opacity(0.85))
+                                }
+                            }
+                            .font(.caption.weight(.semibold))
                         }
                         if nextEvent.id != appState.calendar.nextItems.prefix(3).last?.id {
                             Divider().opacity(0.2)
@@ -502,6 +529,28 @@ struct BriefingView: View {
         } catch {
             reminderActionError = error.localizedDescription
         }
+    }
+
+    private func stageCalendarPrep(_ event: AppStateCalendarItem) async {
+        calendarActionError = ""
+        do {
+            if try await AppleAPIClient.shared.stageCalendarPrep(
+                title: event.title,
+                start: event.start,
+                location: event.location
+            ) {
+                calendarActionMessage = "Staged prep for \(event.title)"
+            }
+        } catch {
+            calendarActionError = error.localizedDescription
+        }
+    }
+
+    private func openCalendarLocation(_ event: AppStateCalendarItem) {
+        let destination = event.location.isEmpty ? event.title : event.location
+        let query = destination.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? destination
+        guard let url = URL(string: "http://maps.apple.com/?daddr=\(query)&dirflg=d") else { return }
+        UIApplication.shared.open(url)
     }
 
     private func snoozeReminder(_ reminder: AppStateReminderItem) async {
