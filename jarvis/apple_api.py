@@ -344,6 +344,101 @@ def _build_briefing_command_items(
     return items[:5]
 
 
+def _build_home_action_items(*, state: dict[str, Any], home_context: dict[str, Any], needs_count: int) -> list[dict[str, Any]]:
+    actions: list[dict[str, Any]] = []
+    lights_on = [str(name).strip() for name in (state.get("lights_on") or []) if str(name).strip()]
+    alerts = state.get("alerts") if isinstance(state.get("alerts"), list) else []
+    alerts = [alert for alert in alerts if isinstance(alert, dict)]
+    present_members = [str(name).strip() for name in (state.get("present_members") or []) if str(name).strip()]
+    doors = state.get("doors") if isinstance(state.get("doors"), dict) else {}
+
+    attention = home_context.get("attention") if isinstance(home_context, dict) else {}
+    attention = attention if isinstance(attention, dict) else {}
+    agenda = home_context.get("agenda") if isinstance(home_context, dict) else {}
+    agenda = agenda if isinstance(agenda, dict) else {}
+
+    if alerts:
+        first_alert = alerts[0]
+        actions.append({
+            "id": "home-action-alert",
+            "title": "Stage a response to live home alerts",
+            "detail": str(first_alert.get("message") or "JARVIS detected a live home alert."),
+            "command": "Review and resolve live home alerts",
+            "entity_id": "",
+            "service": "jarvis.review_home_alerts",
+            "emphasis": "high",
+        })
+
+    if lights_on:
+        actions.append({
+            "id": "home-action-lights",
+            "title": "Stage all lights off",
+            "detail": f"{len(lights_on)} light" + ("s are" if len(lights_on) != 1 else " is") + " currently on.",
+            "command": "Turn all lights off",
+            "entity_id": "",
+            "service": "jarvis.all_lights_off",
+            "emphasis": "medium",
+        })
+
+    open_doors = [name for name, value in doors.items() if str(value).strip().lower() not in {"closed", "locked", "secure"}]
+    if open_doors:
+        actions.append({
+            "id": "home-action-secure",
+            "title": "Stage a home security sweep",
+            "detail": ", ".join(open_doors[:3]),
+            "command": "Secure the home",
+            "entity_id": "",
+            "service": "jarvis.secure_home",
+            "emphasis": "high",
+        })
+
+    if int(attention.get("notification_count") or 0) > 0 or needs_count > 0:
+        actions.append({
+            "id": "home-action-attention",
+            "title": "Stage household attention review",
+            "detail": f"{needs_count} needs · {int(attention.get('notification_count') or 0)} alerts",
+            "command": "Review household attention queue",
+            "entity_id": "",
+            "service": "jarvis.review_attention",
+            "emphasis": "medium",
+        })
+
+    if str(agenda.get("next_event_title") or "").strip():
+        actions.append({
+            "id": "home-action-agenda",
+            "title": "Stage next-event preparation",
+            "detail": str(agenda.get("next_event_title") or ""),
+            "command": f"Prepare the household for {str(agenda.get('next_event_title') or '').strip()}",
+            "entity_id": "",
+            "service": "jarvis.prepare_next_event",
+            "emphasis": "medium",
+        })
+
+    if present_members:
+        actions.append({
+            "id": "home-action-presence",
+            "title": "Stage a household status check",
+            "detail": ", ".join(present_members[:3]),
+            "command": "Review household presence and home posture",
+            "entity_id": "",
+            "service": "jarvis.review_presence",
+            "emphasis": "low",
+        })
+
+    if not actions:
+        actions.append({
+            "id": "home-action-clear",
+            "title": "Home is steady",
+            "detail": "No urgent household actions are waiting right now.",
+            "command": "Review household posture",
+            "entity_id": "",
+            "service": "jarvis.review_home_posture",
+            "emphasis": "low",
+        })
+
+    return actions[:4]
+
+
 def _default_navigation_state() -> dict[str, Any]:
     return {
         "favorite_destinations": [],
@@ -1512,7 +1607,13 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             state = _mock_home_state()
         if isinstance(state, dict):
             state = dict(state)
-            state["home_context"] = _build_home_context(needs_count=needs_count)
+            home_context = _build_home_context(needs_count=needs_count)
+            state["home_context"] = home_context
+            state["action_items"] = _build_home_action_items(
+                state=state,
+                home_context=home_context,
+                needs_count=needs_count,
+            )
         return _ok(state)
 
     # ------------------------------------------------------------------
