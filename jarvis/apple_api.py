@@ -37,6 +37,8 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 
+from .settings import LOCATION_SETTINGS_PATH
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -416,6 +418,82 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             "alerts_count": len(snapshot.get("alerts") or []) if isinstance(snapshot, dict) else 0,
         }
         return _ok(data)
+
+    # ------------------------------------------------------------------
+    # GET /api/apple/navigation/locations
+    # ------------------------------------------------------------------
+    @app.get("/api/apple/navigation/locations")
+    async def apple_navigation_locations():
+        """Saved family locations for Navigation quick actions."""
+        payload = {"preferred_location_id": None, "saved_locations": []}
+        try:
+            if LOCATION_SETTINGS_PATH.exists():
+                raw = json.loads(LOCATION_SETTINGS_PATH.read_text(encoding="utf-8"))
+                saved = raw.get("saved_locations") if isinstance(raw, dict) else []
+                payload = {
+                    "preferred_location_id": str((raw or {}).get("preferred_location_id") or "") or None,
+                    "saved_locations": [
+                        {
+                            "id": str(item.get("id") or ""),
+                            "label": str(item.get("label") or ""),
+                            "address": str(item.get("address") or ""),
+                            "geography": str(item.get("geography") or ""),
+                            "latitude": item.get("latitude"),
+                            "longitude": item.get("longitude"),
+                            "source": str(item.get("source") or ""),
+                            "notes": str(item.get("notes") or ""),
+                        }
+                        for item in saved
+                        if isinstance(item, dict)
+                    ],
+                }
+        except Exception as exc:
+            logger.warning("apple_navigation_locations: %s", exc)
+        return _ok(payload)
+
+    # ------------------------------------------------------------------
+    # GET /api/apple/navigation/route
+    # ------------------------------------------------------------------
+    @app.get("/api/apple/navigation/route")
+    async def apple_navigation_route(origin: str, destination: str):
+        """Route weather summary for the iPhone Navigation tab."""
+        origin = str(origin or "").strip()
+        destination = str(destination or "").strip()
+        if not origin or not destination:
+            raise HTTPException(status_code=400, detail="origin and destination are required")
+        try:
+            route = runtime.storm_route_weather(origin, destination)
+        except Exception as exc:
+            logger.warning("apple_navigation_route: %s", exc)
+            raise HTTPException(status_code=502, detail=str(exc))
+
+        route_info = route.get("route") if isinstance(route, dict) else {}
+        samples = route.get("samples") if isinstance(route, dict) else []
+        payload = {
+            "origin": route.get("origin") or {},
+            "destination": route.get("destination") or {},
+            "summary": str(route.get("summary") or ""),
+            "hazard_active": bool(route.get("hazard_active")),
+            "route": {
+                "distance_miles": route_info.get("distance_miles"),
+                "duration_minutes": route_info.get("duration_minutes"),
+                "coordinates": route_info.get("coordinates") if isinstance(route_info.get("coordinates"), list) else [],
+            },
+            "samples": [
+                {
+                    "lat": item.get("lat"),
+                    "lon": item.get("lon"),
+                    "condition": str(item.get("condition") or ""),
+                    "temperature_f": item.get("temperature_f"),
+                    "rain_pct": item.get("rain_pct"),
+                    "wind": str(item.get("wind") or ""),
+                    "alerts": [str(alert) for alert in (item.get("alerts") or [])],
+                }
+                for item in samples
+                if isinstance(item, dict)
+            ],
+        }
+        return _ok(payload)
 
     # ------------------------------------------------------------------
     # GET /api/apple/needs

@@ -44,6 +44,21 @@ public final class AppleAPIClient: Sendable {
         try await get("/api/apple/weather")
     }
 
+    public func fetchNavigationLocations() async throws -> NavigationLocationsOverview {
+        try await get("/api/apple/navigation/locations")
+    }
+
+    public func fetchNavigationRoute(origin: String, destination: String) async throws -> NavigationRouteOverview {
+        let allowed = CharacterSet.urlQueryAllowed
+        guard
+            let encodedOrigin = origin.addingPercentEncoding(withAllowedCharacters: allowed),
+            let encodedDestination = destination.addingPercentEncoding(withAllowedCharacters: allowed)
+        else {
+            throw JarvisClientError.invalidURL("/api/apple/navigation/route")
+        }
+        return try await get("/api/apple/navigation/route?origin=\(encodedOrigin)&destination=\(encodedDestination)")
+    }
+
     /// Fetch the Needs You zone items.
     public func fetchNeeds() async throws -> [NeedsItem] {
         try await get("/api/apple/needs")
