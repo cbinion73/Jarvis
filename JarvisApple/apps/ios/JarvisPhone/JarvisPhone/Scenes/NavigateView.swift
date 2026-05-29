@@ -71,6 +71,10 @@ struct NavigateView: View {
     }
 
     private var destinationSuggestions: [DestinationSuggestion] {
+        if destinationText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return historyAndFavoriteSuggestions
+        }
+
         let live = completer.results.map(DestinationSuggestion.init(completion:))
         if !live.isEmpty {
             return live
@@ -88,6 +92,16 @@ struct NavigateView: View {
 
     private var showSuggestions: Bool {
         destinationFocused && !destinationSuggestions.isEmpty
+    }
+
+    private var historyAndFavoriteSuggestions: [DestinationSuggestion] {
+        var results: [DestinationSuggestion] = []
+        results.append(contentsOf: favoriteDestinations.prefix(3).map(DestinationSuggestion.init(favoriteTitle:)))
+        let filteredRecent = recentDestinations.filter { recent in
+            favoriteDestinations.contains { $0.caseInsensitiveCompare(recent) == .orderedSame } == false
+        }
+        results.append(contentsOf: filteredRecent.prefix(5).map(DestinationSuggestion.init(recentTitle:)))
+        return results
     }
 
     var body: some View {
@@ -190,6 +204,34 @@ struct NavigateView: View {
                         .padding(8)
                         .background(.black.opacity(0.25), in: Circle())
                 }
+            }
+            .padding(14)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            VStack(spacing: 10) {
+                if route != nil {
+                    Button {
+                        focusMapOnCurrentContext()
+                    } label: {
+                        Image(systemName: "map")
+                            .font(.system(size: 16, weight: .semibold))
+                            .frame(width: 40, height: 40)
+                    }
+                    .buttonStyle(.plain)
+                    .background(.black.opacity(0.28), in: Circle())
+                    .foregroundStyle(.white)
+                }
+
+                Button {
+                    centerMapOnUser()
+                } label: {
+                    Image(systemName: "location.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(width: 40, height: 40)
+                }
+                .buttonStyle(.plain)
+                .background(.black.opacity(0.28), in: Circle())
+                .foregroundStyle(.white)
             }
             .padding(14)
         }
@@ -302,6 +344,17 @@ struct NavigateView: View {
 
             if showSuggestions {
                 destinationSuggestionsCard
+            }
+
+            if route != nil {
+                Button(role: .destructive) {
+                    clearRoute()
+                } label: {
+                    Label("End Route", systemImage: "xmark.circle.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
             }
         }
         .padding(16)
@@ -588,8 +641,8 @@ struct NavigateView: View {
                     selectSuggestion(suggestion)
                 } label: {
                     HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: suggestion.isFallback ? "clock.arrow.circlepath" : "magnifyingglass")
-                            .foregroundStyle(suggestion.isFallback ? slate.opacity(0.8) : slate)
+                        Image(systemName: suggestion.symbolName)
+                            .foregroundStyle(suggestion.tintColor(slate: slate))
                             .padding(.top, 2)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(suggestion.title)
@@ -766,6 +819,34 @@ struct NavigateView: View {
         destinationFocused = false
     }
 
+    private func clearRoute() {
+        route = nil
+        stopSections = []
+        routeError = nil
+        cameraPosition = .automatic
+    }
+
+    private func centerMapOnUser() {
+        if let currentCoordinate {
+            cameraPosition = .region(
+                MKCoordinateRegion(
+                    center: currentCoordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)
+                )
+            )
+        } else if selectedOriginMode == .current {
+            loc.requestAndFetch(force: true, userInitiated: true)
+        }
+    }
+
+    private func focusMapOnCurrentContext() {
+        if let route {
+            focusMap(on: route)
+        } else {
+            centerMapOnUser()
+        }
+    }
+
     private func focusMap(on route: NavigationRouteOverview) {
         if let polyline = routePolyline {
             cameraPosition = .rect(polyline.boundingMapRect)
@@ -879,15 +960,22 @@ struct NavigateView: View {
 }
 
 private struct DestinationSuggestion: Identifiable {
+    private enum Kind {
+        case live
+        case favorite
+        case recent
+        case fallback
+    }
+
     let id: String
     let title: String
     let subtitle: String
-    let isFallback: Bool
+    private let kind: Kind
 
     init(completion: MKLocalSearchCompletion) {
         self.title = completion.title
         self.subtitle = completion.subtitle
-        self.isFallback = false
+        self.kind = .live
         self.id = [completion.title, completion.subtitle].joined(separator: "::")
     }
 
@@ -895,13 +983,46 @@ private struct DestinationSuggestion: Identifiable {
         self.id = fallbackTitle
         self.title = fallbackTitle
         self.subtitle = ""
-        self.isFallback = true
+        self.kind = .fallback
+    }
+
+    init(favoriteTitle: String) {
+        self.id = "favorite::\(favoriteTitle)"
+        self.title = favoriteTitle
+        self.subtitle = "Favorite"
+        self.kind = .favorite
+    }
+
+    init(recentTitle: String) {
+        self.id = "recent::\(recentTitle)"
+        self.title = recentTitle
+        self.subtitle = "Recent"
+        self.kind = .recent
     }
 
     var displayText: String {
         [title, subtitle]
-            .filter { !$0.isEmpty }
+            .filter { part in
+                guard !part.isEmpty else { return false }
+                return part != "Favorite" && part != "Recent"
+            }
             .joined(separator: ", ")
+    }
+
+    var symbolName: String {
+        switch kind {
+        case .live: return "magnifyingglass"
+        case .favorite: return "star.fill"
+        case .recent, .fallback: return "clock.arrow.circlepath"
+        }
+    }
+
+    func tintColor(slate: Color) -> Color {
+        switch kind {
+        case .favorite: return .yellow
+        case .recent, .fallback: return slate.opacity(0.8)
+        case .live: return slate
+        }
     }
 }
 
