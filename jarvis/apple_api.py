@@ -173,6 +173,31 @@ def _iso_date_days_away(value: str) -> int | None:
         return None
 
 
+def _iso_minutes_away(value: str) -> int | None:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        target = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc)
+        return int((target - now).total_seconds() // 60)
+    except ValueError:
+        return None
+
+
+def _is_recent_iso(value: str, *, minutes: int) -> bool:
+    raw = str(value or "").strip()
+    if not raw:
+        return False
+    try:
+        target = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc)
+        delta = abs((now - target).total_seconds())
+        return delta <= minutes * 60
+    except ValueError:
+        return False
+
+
 def _chronicle_actor_matches(entry: dict[str, Any], actor: str) -> bool:
     entry_actor = str(entry.get("actor") or entry.get("actor_id") or "").strip().lower()
     if not entry_actor:
@@ -1060,6 +1085,68 @@ class _NotificationCenterStore:
         self._save(store)
         return notification
 
+    def upsert(
+        self,
+        *,
+        source_key: str,
+        category: str,
+        title: str,
+        detail: str = "",
+        severity: str = "low",
+        audience: str = "household",
+        delivery_mode: str = "badge_only",
+        navigation_target: str = "",
+        available_actions: list[str] | None = None,
+        why_now: str = "",
+        source_summary: str = "",
+        event: dict[str, Any] | None = None,
+        expires_at: str = "",
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        store = self._load()
+        key = str(source_key or "").strip()
+        now = _ts()
+        merged_metadata = metadata if isinstance(metadata, dict) else {}
+        merged_metadata = {**merged_metadata, "source_key": key}
+        for item in store["items"]:
+            item_key = str((item.get("metadata") or {}).get("source_key") or "")
+            if key and item_key == key and str(item.get("status") or "") not in {"resolved", "dismissed"}:
+                item.update({
+                    "event_id": str((event or {}).get("id") or item.get("event_id") or ""),
+                    "category": str(category or item.get("category") or "system"),
+                    "title": str(title or item.get("title") or "JARVIS Alert"),
+                    "detail": str(detail or item.get("detail") or ""),
+                    "body": str(detail or item.get("body") or ""),
+                    "severity": str(severity or item.get("severity") or "low"),
+                    "updated_at": now,
+                    "expires_at": str(expires_at or item.get("expires_at") or ""),
+                    "audience": str(audience or item.get("audience") or "household"),
+                    "delivery_mode": str(delivery_mode or item.get("delivery_mode") or "badge_only"),
+                    "navigation_target": str(navigation_target or item.get("navigation_target") or ""),
+                    "available_actions": [str(action) for action in (available_actions or item.get("available_actions") or ["open", "dismiss"]) if str(action or "").strip()],
+                    "why_now": str(why_now or item.get("why_now") or ""),
+                    "source_summary": str(source_summary or item.get("source_summary") or ""),
+                    "metadata": {**(item.get("metadata") or {}), **merged_metadata},
+                })
+                self._save(store)
+                return deepcopy(item)
+        notification = self.create(
+            category=category,
+            title=title,
+            detail=detail,
+            severity=severity,
+            audience=audience,
+            delivery_mode=delivery_mode,
+            navigation_target=navigation_target,
+            available_actions=available_actions,
+            why_now=why_now,
+            source_summary=source_summary,
+            event=event,
+            expires_at=expires_at,
+            metadata=merged_metadata,
+        )
+        return notification
+
     def list(
         self,
         *,
@@ -1192,6 +1279,144 @@ def _create_notification_from_event(
         event=event,
         metadata={"event_id": str(event.get("id") or "")},
     )
+
+
+def _reconcile_shared_notifications(
+    *,
+    watch_status: dict[str, Any],
+    home_state: dict[str, Any],
+    calendar_payload: dict[str, Any],
+    reminders_payload: dict[str, Any],
+    focus_payload: dict[str, Any],
+    latest_sound: dict[str, Any],
+    latest_scan: dict[str, Any],
+) -> None:
+    needs_count = int(watch_status.get("needs_count") or 0)
+    if needs_count > 0:
+        _notification_center.upsert(
+            source_key="needs:pending",
+            category="approval",
+            title="Approvals waiting",
+            detail=f"{needs_count} approval request" + ("s are" if needs_count != 1 else " is") + " waiting for attention.",
+            severity="high" if needs_count >= 3 else "medium",
+            delivery_mode="badge_only",
+            navigation_target="needs",
+            available_actions=["open", "dismiss"],
+            why_now="Pending approvals are part of the current household attention load.",
+            source_summary="Approval queue",
+            metadata={"needs_count": needs_count},
+        )
+
+    next_event = {}
+    calendar_events = calendar_payload.get("events") if isinstance(calendar_payload, dict) else []
+    if isinstance(calendar_events, list):
+        ordered = [event for event in calendar_events if isinstance(event, dict)]
+        ordered.sort(key=lambda item: str(item.get("start") or ""))
+        next_event = ordered[0] if ordered else {}
+    event_title = str(next_event.get("title") or "").strip()
+    event_start = str(next_event.get("start") or "").strip()
+    minutes_away = _iso_minutes_away(event_start)
+    if event_title and minutes_away is not None and -60 <= minutes_away <= 24 * 60:
+        _notification_center.upsert(
+            source_key=f"calendar:{event_title}:{event_start}",
+            category="household",
+            title=f"Prepare for {event_title}",
+            detail=f"Next event starts {('in ' + str(minutes_away) + ' min') if minutes_away >= 0 else 'soon'}" + (f" at {event_start}" if event_start else "."),
+            severity="medium" if minutes_away <= 120 else "low",
+            delivery_mode="hold_for_brief" if minutes_away > 60 else "badge_only",
+            navigation_target="calendar",
+            available_actions=["open", "dismiss"],
+            why_now="The next calendar event is within the household planning window.",
+            source_summary="Calendar",
+            metadata={"title": event_title, "start": event_start},
+        )
+
+    reminders = reminders_payload.get("reminders") if isinstance(reminders_payload, dict) else []
+    if isinstance(reminders, list):
+        open_reminders = [
+            reminder for reminder in reminders
+            if isinstance(reminder, dict) and not bool(reminder.get("completed"))
+        ]
+    else:
+        open_reminders = []
+    if open_reminders:
+        top = open_reminders[0]
+        _notification_center.upsert(
+            source_key=f"reminders:{len(open_reminders)}",
+            category="household",
+            title="Reminders need attention",
+            detail=str(top.get("title") or "Outstanding reminders are waiting."),
+            severity="medium" if len(open_reminders) >= 3 else "low",
+            delivery_mode="hold_for_brief",
+            navigation_target="workshop",
+            available_actions=["open", "dismiss"],
+            why_now="Open reminders are part of today's active load.",
+            source_summary="Reminders",
+            metadata={"count": len(open_reminders)},
+        )
+
+    alerts = home_state.get("alerts") or []
+    if isinstance(alerts, list) and alerts:
+        first_alert = alerts[0]
+        _notification_center.upsert(
+            source_key=f"home-alert:{str(first_alert)}",
+            category="household",
+            title="Household alert",
+            detail=str(first_alert),
+            severity="high",
+            delivery_mode="deliver_now",
+            navigation_target="home",
+            available_actions=["open", "resolve"],
+            why_now="The home surface is reporting an active alert.",
+            source_summary="Home state",
+        )
+
+    if bool(focus_payload.get("focus_active")):
+        _notification_center.upsert(
+            source_key="focus:active",
+            category="system",
+            title="Focus is active",
+            detail="JARVIS should keep interruptions quieter right now.",
+            severity="low",
+            delivery_mode="quiet_store",
+            navigation_target="systems",
+            available_actions=["open", "dismiss"],
+            why_now="Current focus state changes how notifications should be delivered.",
+            source_summary="Focus",
+            metadata={"source": focus_payload.get("source")},
+        )
+
+    sound_label = str(latest_sound.get("classification") or latest_sound.get("label") or latest_sound.get("sound") or "").strip()
+    if sound_label and _is_recent_iso(str(latest_sound.get("received_at") or ""), minutes=120):
+        _notification_center.upsert(
+            source_key=f"sound:{sound_label}:{str(latest_sound.get('received_at') or '')}",
+            category="household",
+            title=f"Sound detected: {sound_label}",
+            detail=str(latest_sound.get("detail") or "Recent sound analysis detected a notable event."),
+            severity="medium" if _coerce_float(latest_sound.get("confidence"), 0.0) >= 0.7 else "low",
+            delivery_mode="badge_only",
+            navigation_target="vision",
+            available_actions=["open", "resolve", "dismiss"],
+            why_now="A recent sound alert may matter to the household.",
+            source_summary="Sound Analysis",
+            metadata={"confidence": latest_sound.get("confidence")},
+        )
+
+    scan_context = str(latest_scan.get("context") or "").strip()
+    scan_text = str(latest_scan.get("text") or "").strip()
+    if (scan_context or scan_text) and _is_recent_iso(str(latest_scan.get("received_at") or ""), minutes=120):
+        _notification_center.upsert(
+            source_key=f"vision:{scan_context}:{str(latest_scan.get('received_at') or '')}",
+            category="system",
+            title=scan_context or "Vision scan captured",
+            detail=scan_text[:180] or "A recent scan is available for review.",
+            severity="low",
+            delivery_mode="quiet_store",
+            navigation_target="vision",
+            available_actions=["open", "dismiss"],
+            why_now="Recent vision captures are available for inspection.",
+            source_summary="Vision",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1368,6 +1593,15 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
 
         watch_status = (await apple_status()).get("data") or {}
         home_state = (await apple_home_state()).get("data") or {}
+        _reconcile_shared_notifications(
+            watch_status=watch_status,
+            home_state=home_state,
+            calendar_payload=calendar_payload if isinstance(calendar_payload, dict) else {},
+            reminders_payload=reminders_payload if isinstance(reminders_payload, dict) else {},
+            focus_payload=focus_payload if isinstance(focus_payload, dict) else {},
+            latest_sound=latest_sound if isinstance(latest_sound, dict) else {},
+            latest_scan=latest_scan if isinstance(latest_scan, dict) else {},
+        )
 
         calendar_events = calendar_payload.get("events") if isinstance(calendar_payload, dict) else []
         if not isinstance(calendar_events, list):
@@ -2180,6 +2414,16 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
     # ------------------------------------------------------------------
     @app.get("/api/apple/notifications")
     async def apple_notifications(status: str = "", category: str = "", limit: int = 50):
+        data_root = Path("data/apple")
+        _reconcile_shared_notifications(
+            watch_status=(await apple_status()).get("data") or {},
+            home_state=(await apple_home_state()).get("data") or {},
+            calendar_payload=_safe_read_json(data_root / "calendar_events.json", {}),
+            reminders_payload=_safe_read_json(data_root / "reminders.json", {}),
+            focus_payload=_safe_read_json(data_root / "focus_state.json", {}),
+            latest_sound=((_safe_read_jsonl_tail(data_root / "sound_alerts.jsonl", limit=1) or [{}])[0]),
+            latest_scan=((_safe_read_jsonl_tail(data_root / "vision_scans.jsonl", limit=1) or [{}])[0]),
+        )
         return _ok(
             {
                 "notifications": _notification_center.list(
