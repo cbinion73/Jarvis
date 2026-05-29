@@ -93,28 +93,46 @@ public struct WorkingItem: Codable, Identifiable, Sendable {
 public struct NeedsItem: Codable, Identifiable, Sendable {
     public let id: String
     public let text: String
+    public let detail: String?
     public let agent: String
     /// Risk tier: "low" | "medium" | "high"
     public let risk: String
     public let expiresIn: String?
+    public let createdAt: String?
+    public let status: String?
+    public let allowedActions: [String]
+    public let requestType: String?
 
     public init(
         id: String,
         text: String,
+        detail: String? = nil,
         agent: String,
         risk: String = "medium",
-        expiresIn: String? = nil
+        expiresIn: String? = nil,
+        createdAt: String? = nil,
+        status: String? = nil,
+        allowedActions: [String] = ["approve"],
+        requestType: String? = nil
     ) {
         self.id = id
         self.text = text
+        self.detail = detail
         self.agent = agent
         self.risk = risk
         self.expiresIn = expiresIn
+        self.createdAt = createdAt
+        self.status = status
+        self.allowedActions = allowedActions
+        self.requestType = requestType
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, text, agent, risk
+        case id, text, detail, agent, risk, status
         case expiresIn = "expires_in"
+        case createdAt = "created_at"
+        case allowedActions = "allowed_actions"
+        case requestType = "request_type"
     }
 }
 

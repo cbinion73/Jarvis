@@ -83,6 +83,10 @@ struct NeedsView: View {
                 ForEach(viewModel.items) { item in
                     AlertItemCard(item: item) {
                         Task { await viewModel.approve(item: item) }
+                    } onReject: {
+                        Task { await viewModel.reject(item: item) }
+                    } onCancel: {
+                        Task { await viewModel.cancel(item: item) }
                     }
                 }
             }
@@ -122,8 +126,12 @@ struct NeedsView: View {
 private struct AlertItemCard: View {
     let item:      NeedsItem
     let onApprove: () -> Void
+    let onReject: () -> Void
+    let onCancel: () -> Void
 
     @State private var confirming = false
+    @State private var confirmReject = false
+    @State private var confirmCancel = false
 
     var riskColor: Color {
         switch item.risk { case "high": .red; case "medium": .orange; default: .yellow }
@@ -167,28 +175,62 @@ private struct AlertItemCard: View {
                     .foregroundStyle(.white)
                     .fixedSize(horizontal: false, vertical: true)
 
+                if let detail = item.detail, !detail.isEmpty {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 if let exp = item.expiresIn {
                     Label(exp, systemImage: "clock")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
 
-                // Approve action
-                Button(action: { confirming = true }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark.shield.fill")
-                        Text("Approve")
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .font(.subheadline)
+                if let requestType = item.requestType, !requestType.isEmpty {
+                    Text(requestType.replacingOccurrences(of: "_", with: " ").capitalized)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(riskColor.opacity(0.9))
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.green)
-                .confirmationDialog("Approve this request?", isPresented: $confirming, titleVisibility: .visible) {
-                    Button("Approve", role: .none, action: onApprove)
-                    Button("Cancel", role: .cancel) {}
-                } message: { Text(item.text) }
+
+                HStack(spacing: 8) {
+                    if item.allowedActions.contains("approve") {
+                        Button(action: { confirming = true }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "checkmark.shield.fill")
+                                Text("Approve")
+                                    .fontWeight(.semibold)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .font(.subheadline)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.green)
+                        .confirmationDialog("Approve this request?", isPresented: $confirming, titleVisibility: .visible) {
+                            Button("Approve", role: .none, action: onApprove)
+                            Button("Cancel", role: .cancel) {}
+                        } message: { Text(item.text) }
+                    }
+
+                    if item.allowedActions.contains("reject") {
+                        Button("Reject", role: .destructive) { confirmReject = true }
+                            .buttonStyle(.bordered)
+                            .confirmationDialog("Reject this request?", isPresented: $confirmReject, titleVisibility: .visible) {
+                                Button("Reject", role: .destructive, action: onReject)
+                                Button("Keep Pending", role: .cancel) {}
+                            } message: { Text(item.text) }
+                    }
+
+                    if item.allowedActions.contains("cancel") {
+                        Button("Cancel Request") { confirmCancel = true }
+                            .buttonStyle(.bordered)
+                            .confirmationDialog("Cancel this request?", isPresented: $confirmCancel, titleVisibility: .visible) {
+                                Button("Cancel Request", role: .destructive, action: onCancel)
+                                Button("Keep Pending", role: .cancel) {}
+                            } message: { Text(item.text) }
+                    }
+                }
             }
             .padding(14)
         }
