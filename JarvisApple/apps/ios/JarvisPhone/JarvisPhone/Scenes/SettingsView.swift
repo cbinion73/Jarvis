@@ -30,6 +30,8 @@ struct SettingsView: View {
     @State private var calendarWorkflowError = ""
     @State private var reminderWorkflowMessage = ""
     @State private var reminderWorkflowError = ""
+    @State private var signalWorkflowMessage = ""
+    @State private var signalWorkflowError = ""
 
     private let steel = Color(red: 0.55, green: 0.65, blue: 0.78)
 
@@ -382,6 +384,15 @@ struct SettingsView: View {
                                 Text("\(visionHistory?.count ?? 0)")
                                     .foregroundStyle(.white)
                             }
+                            if !signalWorkflowError.isEmpty {
+                                Text(signalWorkflowError)
+                                    .font(.caption)
+                                    .foregroundStyle(.red.opacity(0.9))
+                            } else if !signalWorkflowMessage.isEmpty {
+                                Text(signalWorkflowMessage)
+                                    .font(.caption)
+                                    .foregroundStyle(.mint.opacity(0.9))
+                            }
 
                             if let soundHistory, !soundHistory.attentionFlags.isEmpty {
                                 Divider().opacity(0.3)
@@ -430,6 +441,20 @@ struct SettingsView: View {
                                                     .font(.caption2)
                                                     .foregroundStyle(.secondary)
                                             }
+                                            if item.resolved {
+                                                Text("Resolved \(nonEmpty(item.resolvedAt, fallback: nil))")
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            } else {
+                                                Button {
+                                                    Task { await resolveSoundItem(item) }
+                                                } label: {
+                                                    Label("Resolve", systemImage: "checkmark.circle")
+                                                        .font(.caption2.weight(.semibold))
+                                                        .foregroundStyle(.mint)
+                                                }
+                                                .buttonStyle(.plain)
+                                            }
                                             Text(nonEmpty(item.receivedAt, fallback: nil))
                                                 .font(.caption2)
                                                 .foregroundStyle(.secondary)
@@ -460,6 +485,20 @@ struct SettingsView: View {
                                                     .font(.caption2)
                                                     .foregroundStyle(.secondary)
                                                     .lineLimit(3)
+                                            }
+                                            if item.resolved {
+                                                Text("Resolved \(nonEmpty(item.resolvedAt, fallback: nil))")
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            } else {
+                                                Button {
+                                                    Task { await resolveVisionItem(item) }
+                                                } label: {
+                                                    Label("Resolve", systemImage: "checkmark.circle")
+                                                        .font(.caption2.weight(.semibold))
+                                                        .foregroundStyle(.mint)
+                                                }
+                                                .buttonStyle(.plain)
                                             }
                                             Text(nonEmpty(item.receivedAt, fallback: nil))
                                                 .font(.caption2)
@@ -1055,6 +1094,36 @@ struct SettingsView: View {
             return "Not Synced"
         default:
             return status.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+    }
+
+    private func resolveSoundItem(_ item: SoundHistoryItem) async {
+        signalWorkflowError = ""
+        signalWorkflowMessage = ""
+        do {
+            if try await AppleAPIClient.shared.resolveSoundAlert(item.id) {
+                signalWorkflowMessage = "Resolved sound alert."
+                await refreshSystems()
+            } else {
+                signalWorkflowError = "JARVIS could not resolve that sound alert."
+            }
+        } catch {
+            signalWorkflowError = error.localizedDescription
+        }
+    }
+
+    private func resolveVisionItem(_ item: VisionHistoryItem) async {
+        signalWorkflowError = ""
+        signalWorkflowMessage = ""
+        do {
+            if try await AppleAPIClient.shared.resolveVisionScan(item.id) {
+                signalWorkflowMessage = "Resolved vision scan."
+                await refreshSystems()
+            } else {
+                signalWorkflowError = "JARVIS could not resolve that vision scan."
+            }
+        } catch {
+            signalWorkflowError = error.localizedDescription
         }
     }
 

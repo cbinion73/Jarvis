@@ -70,6 +70,7 @@ Source-of-truth rule:
 - [x] Add vision-scan visibility.
 - [x] Add now-playing sync/status visibility.
 - [x] Add control-plane freshness and event-flow visibility in Systems and Notifications.
+- [x] Add signal resolve workflows for sound alerts and vision scans.
 
 ### Phase 4: Guardrails
 

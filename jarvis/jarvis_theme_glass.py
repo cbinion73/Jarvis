@@ -9968,6 +9968,8 @@ async function loadNotificationCenter() {{
     if (signalEl) {{
       const soundItems = Array.isArray(sound.recent_items) ? sound.recent_items : [];
       const visionItems = Array.isArray(vision.recent_items) ? vision.recent_items : [];
+      const unresolvedSound = soundItems.find(item => !item.resolved);
+      const unresolvedVision = visionItems.find(item => !item.resolved);
       signalEl.innerHTML = `
         <div class="list-row">
           <div style="flex:1;min-width:0;">
@@ -9976,6 +9978,14 @@ async function loadNotificationCenter() {{
           </div>
           <span class="kv-tag">${{escHtml(String(sound.count || 0))}}</span>
         </div>
+        ${{unresolvedSound ? `
+        <div class="list-row" style="margin-top:8px;">
+          <div style="flex:1;min-width:0;">
+            <div class="list-row-name">${{escHtml(unresolvedSound.label || 'Sound alert')}}</div>
+            <div class="list-row-sub">${{escHtml(unresolvedSound.detail || 'Awaiting review')}}</div>
+          </div>
+          <button class="btn btn-hue btn-sm" onclick="signalHistoryAction('sound','${{String(unresolvedSound.id || '').replaceAll(\"'\", \"\\\\'\")}}','resolve')">Resolve</button>
+        </div>` : ''}}
         <div class="list-row" style="margin-top:8px;">
           <div style="flex:1;min-width:0;">
             <div class="list-row-name">Vision History</div>
@@ -9983,6 +9993,14 @@ async function loadNotificationCenter() {{
           </div>
           <span class="kv-tag">${{escHtml(String(vision.count || 0))}}</span>
         </div>
+        ${{unresolvedVision ? `
+        <div class="list-row" style="margin-top:8px;">
+          <div style="flex:1;min-width:0;">
+            <div class="list-row-name">${{escHtml(unresolvedVision.context || 'Vision scan')}}</div>
+            <div class="list-row-sub">${{escHtml(unresolvedVision.text_preview || 'Awaiting review')}}</div>
+          </div>
+          <button class="btn btn-hue btn-sm" onclick="signalHistoryAction('vision','${{String(unresolvedVision.id || '').replaceAll(\"'\", \"\\\\'\")}}','resolve')">Resolve</button>
+        </div>` : ''}}
       `;
     }}
     if (controlEl) {{
@@ -10217,6 +10235,24 @@ async function notificationAction(id, action) {{
       return;
     }}
     showToast(`Notification ${{action}}`, action === 'resolve' ? 'success' : 'info');
+    loadNotificationCenter();
+  }} catch (e) {{
+    showToast('No connection', 'error');
+  }}
+}}
+
+async function signalHistoryAction(domain, id, action) {{
+  try {{
+    if (action !== 'resolve') return;
+    const route = domain === 'sound'
+      ? `/api/apple/sound-alerts/${{id}}/resolve`
+      : `/api/apple/vision/scans/${{id}}/resolve`;
+    const res = await fetch(route, {{ method: 'POST' }});
+    if (!res.ok) {{
+      showToast('Signal action failed', 'error');
+      return;
+    }}
+    showToast(`${{domain === 'sound' ? 'Sound alert' : 'Vision scan'}} resolved`, 'success');
     loadNotificationCenter();
   }} catch (e) {{
     showToast('No connection', 'error');

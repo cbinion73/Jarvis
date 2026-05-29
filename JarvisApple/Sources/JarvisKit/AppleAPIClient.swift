@@ -123,6 +123,20 @@ public final class AppleAPIClient: Sendable {
         try await get("/api/apple/vision/scans")
     }
 
+    @discardableResult
+    public func resolveSoundAlert(_ alertId: String) async throws -> Bool {
+        struct Response: Decodable { let status: String }
+        let response: Response = try await post("/api/apple/sound-alerts/\(alertId)/resolve", body: EmptyBody())
+        return response.status == "resolved"
+    }
+
+    @discardableResult
+    public func resolveVisionScan(_ scanId: String) async throws -> Bool {
+        struct Response: Decodable { let status: String }
+        let response: Response = try await post("/api/apple/vision/scans/\(scanId)/resolve", body: EmptyBody())
+        return response.status == "resolved"
+    }
+
     public func fetchNowPlayingState() async throws -> NowPlayingStateOverview {
         try await get("/api/apple/now-playing/state")
     }

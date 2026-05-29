@@ -21,10 +21,13 @@ public struct SoundHistoryItem: Codable, Sendable, Identifiable {
     public let source: String
     public let confidence: Double?
     public let receivedAt: String
+    public let resolved: Bool
+    public let resolvedAt: String
 
     enum CodingKeys: String, CodingKey {
-        case id, label, detail, source, confidence
+        case id, label, detail, source, confidence, resolved
         case receivedAt = "received_at"
+        case resolvedAt = "resolved_at"
     }
 }
 
@@ -48,11 +51,14 @@ public struct VisionHistoryItem: Codable, Sendable, Identifiable {
     public let source: String
     public let textPreview: String
     public let receivedAt: String
+    public let resolved: Bool
+    public let resolvedAt: String
 
     enum CodingKeys: String, CodingKey {
-        case id, context, source
+        case id, context, source, resolved
         case textPreview = "text_preview"
         case receivedAt = "received_at"
+        case resolvedAt = "resolved_at"
     }
 }
 
