@@ -5,9 +5,6 @@ import JarvisKit
 
 struct SettingsView: View {
 
-    @State private var selectedEnvironment: JARVISEnvironmentOption = .local
-    @State private var customURL     = ""
-    @State private var showingURLField = false
     @State private var serverOK      = false
 
     private let steel = Color(red: 0.55, green: 0.65, blue: 0.78)
@@ -51,32 +48,18 @@ struct SettingsView: View {
 
                         // ── Server environment ──────────────────────
                         SystemsSection(title: "Server", icon: "wifi", accent: steel) {
+                            HStack {
+                                Text("Environment")
+                                    .font(.caption).foregroundStyle(.secondary)
+                                Spacer()
+                                Text("Production")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.green)
+                            }
 
-                            Text("Environment")
-                                .font(.caption.weight(.semibold))
+                            Text("This app is locked to the live JARVIS production server.")
+                                .font(.caption)
                                 .foregroundStyle(.secondary)
-                            Picker("", selection: $selectedEnvironment) {
-                                ForEach(JARVISEnvironmentOption.allCases) { option in
-                                    Text(option.displayName).tag(option)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .tint(steel)
-                            .onChange(of: selectedEnvironment) { _, newValue in
-                                applyEnvironment(newValue)
-                                showingURLField = (newValue == .custom)
-                            }
-
-                            if showingURLField {
-                                Divider().opacity(0.3)
-                                TextField("https://…", text: $customURL)
-                                    .keyboardType(.URL)
-                                    .autocorrectionDisabled()
-                                    .textInputAutocapitalization(.never)
-                                    .foregroundStyle(.white)
-                                    .tint(steel)
-                                    .onSubmit { applyCustomURL() }
-                            }
 
                             Divider().opacity(0.3)
 
@@ -135,7 +118,7 @@ struct SettingsView: View {
             }
             .navigationTitle("Systems")
             .navigationBarTitleDisplayMode(.large)
-            .onAppear { syncPickerFromCurrent() }
+            .task { await pingServer() }
         }
     }
 
@@ -162,28 +145,6 @@ struct SettingsView: View {
     }
 
     // MARK: - Helpers
-
-    private func syncPickerFromCurrent() {
-        let url = JARVISEnvironment.baseURL.absoluteString
-        if url.contains("teambinion")        { selectedEnvironment = .production }
-        else if url.contains("localhost")    { selectedEnvironment = .local }
-        else if url.contains("tailscale") || url.contains("100.") { selectedEnvironment = .tailscale }
-        else { selectedEnvironment = .custom; customURL = url; showingURLField = true }
-    }
-
-    private func applyEnvironment(_ option: JARVISEnvironmentOption) {
-        switch option {
-        case .production: JARVISEnvironment.current = .production
-        case .local:      JARVISEnvironment.current = .local
-        case .tailscale:  JARVISEnvironment.current = .tailscale
-        case .custom:     break
-        }
-    }
-
-    private func applyCustomURL() {
-        guard let url = URL(string: customURL), !customURL.isEmpty else { return }
-        JARVISEnvironment.current = .custom(url)
-    }
 }
 
 // MARK: - Section
@@ -229,22 +190,4 @@ private struct SysRow<Trailing: View>: View {
         .padding(.vertical, 2)
     }
 }
-
-// MARK: - Environment option enum
-
-enum JARVISEnvironmentOption: String, CaseIterable, Identifiable {
-    case production, local, tailscale, custom
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .production: return "Prod"
-        case .local:      return "Local"
-        case .tailscale:  return "Tailscale"
-        case .custom:     return "Custom"
-        }
-    }
-}
-
 #Preview { SettingsView() }
