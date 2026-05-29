@@ -5,6 +5,7 @@ import JarvisKit
 final class BriefingViewModel: ObservableObject {
 
     @Published var packet: BriefingPacket?
+    @Published var appState: AppStateOverview?
     @Published var isLoading = false
     @Published var errorMessage: String?
 
@@ -14,7 +15,10 @@ final class BriefingViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         do {
-            packet = try await client.fetchBriefing()
+            async let briefing = client.fetchBriefing()
+            async let state = client.fetchAppState()
+            packet = try await briefing
+            appState = try await state
         } catch {
             errorMessage = error.localizedDescription
         }
