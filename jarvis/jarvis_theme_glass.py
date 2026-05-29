@@ -5938,6 +5938,10 @@ body::after {{
       <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
       Overview
     </button>
+    <button class="nav-tab" data-view="notifications" onclick="switchView('notifications')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2a3 3 0 0 1 3 3v1.5c0 .8.3 1.5.8 2.1l.9 1V11H3.3V9.6l.9-1A3.2 3.2 0 0 0 5 6.5V5a3 3 0 0 1 3-3z"/><path d="M6.5 13a1.5 1.5 0 0 0 3 0"/></svg>
+      Notifications
+    </button>
     <button class="nav-tab" data-view="dining" onclick="switchView('dining')">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 2v5a3 3 0 0 0 6 0V2M8 9v5M6 14h4"/></svg>
       Dining
@@ -6146,6 +6150,54 @@ body::after {{
       <!-- populated by applyLayout() -->
     </div>
 
+  </div>
+
+  <!-- ── NOTIFICATIONS ───────────────────────────────────────── -->
+  <div id="view-notifications" class="view" style="display:none;">
+    <div class="view-header">
+      <div class="view-title">NOTIFICATION CENTER<div class="view-title-line"></div></div>
+      <div class="view-subtitle">Shared household attention, event spine, and actionable alerts</div>
+    </div>
+
+    <div class="stats-strip" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">
+      <div class="card stat-tile accent">
+        <div class="stat-label">Pending</div>
+        <div class="stat-value" id="notif-stat-pending">—</div>
+        <div class="stat-sub">needs triage</div>
+      </div>
+      <div class="card stat-tile">
+        <div class="stat-label">Visible</div>
+        <div class="stat-value" id="notif-stat-active">—</div>
+        <div class="stat-sub">in inbox</div>
+      </div>
+      <div class="card stat-tile">
+        <div class="stat-label">Recent Events</div>
+        <div class="stat-value" id="notif-stat-events">—</div>
+        <div class="stat-sub">event spine</div>
+      </div>
+    </div>
+
+    <div class="card-grid-2">
+      <div class="card">
+        <div class="card-inner">
+          <div class="card-header">
+            <span class="card-title">Inbox</span>
+            <button class="btn-ghost" style="font-size:10px;padding:3px 8px;" onclick="loadNotificationCenter()">Refresh ↻</button>
+          </div>
+          <div id="notification-center-list">
+            <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading notifications…</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-inner">
+          <div class="card-header"><span class="card-title">Event Spine</span></div>
+          <div id="notification-event-list">
+            <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading events…</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ── DINING ─────────────────────────────────────────────────── -->
@@ -9144,6 +9196,7 @@ function loadViewData(name) {{
       _agentsRefreshTimer = setInterval(() => {{ loadLiveAgents(); }}, 30000);
       break;
     case 'huddle':       loadHuddle(); loadPassiveIncomePipeline(); loadDossiers(); loadPartyStatus(); loadIdeaInbox(); break;
+    case 'notifications': loadNotificationCenter(); break;
     case 'publishing':   loadPublishing(); loadHomeProjects(); break;
     case 'intelligence': loadStatus(); break;
     case 'chronicle':    loadChronicle(); break;
@@ -9789,6 +9842,102 @@ async function loadApprovals() {{
     const data = await res.json();
     renderApprovals(data);
   }} catch(e) {{ console.error('loadApprovals failed', e); }}
+}}
+
+async function loadNotificationCenter() {{
+  const notifEl = document.getElementById('notification-center-list');
+  const eventEl = document.getElementById('notification-event-list');
+  const pendingEl = document.getElementById('notif-stat-pending');
+  const activeEl = document.getElementById('notif-stat-active');
+  const eventsEl = document.getElementById('notif-stat-events');
+  if (!notifEl || !eventEl) return;
+
+  try {{
+    const [notifRes, eventRes] = await Promise.all([
+      fetch('/api/apple/notifications'),
+      fetch('/api/apple/events/recent?limit=20'),
+    ]);
+    if (!notifRes.ok || !eventRes.ok) {{
+      throw new Error('notification center unavailable');
+    }}
+    const notifPayload = await notifRes.json();
+    const eventPayload = await eventRes.json();
+    const notifications = ((notifPayload || {{}}).data || {{}}).notifications || [];
+    const events = ((eventPayload || {{}}).data || {{}}).events || [];
+
+    const pendingCount = notifications.filter(n => (n.status || '') === 'pending').length;
+    if (pendingEl) pendingEl.textContent = String(pendingCount);
+    if (activeEl) activeEl.textContent = String(notifications.length);
+    if (eventsEl) eventsEl.textContent = String(events.length);
+
+    if (!notifications.length) {{
+      notifEl.innerHTML = '<div class="list-row"><span class="dot dot-standby"></span><div><div class="list-row-name">No active notifications</div><div class="list-row-sub">JARVIS has no unresolved household attention items right now.</div></div></div>';
+    }} else {{
+      notifEl.innerHTML = notifications.map(item => {{
+        const severity = String(item.severity || 'low').toLowerCase();
+        const dotCls = severity === 'critical' ? 'dot-error' : severity === 'high' ? 'dot-active' : 'dot-standby';
+        const actions = [];
+        actions.push(`<button class="btn btn-navy btn-sm" onclick="notificationAction('${{item.id}}','seen')">Seen</button>`);
+        actions.push(`<button class="btn btn-crimson btn-sm" onclick="notificationAction('${{item.id}}','dismiss')">Dismiss</button>`);
+        actions.push(`<button class="btn btn-hue btn-sm" onclick="notificationAction('${{item.id}}','resolve')">Resolve</button>`);
+        return `
+          <div class="approval-item">
+            <div style="display:flex;align-items:flex-start;gap:8px;">
+              <span class="dot ${{dotCls}}" style="margin-top:5px;"></span>
+              <div style="flex:1;min-width:0;">
+                <div class="approval-title">${{escHtml(item.title || 'JARVIS Alert')}}</div>
+                <div class="approval-meta">${{escHtml(String(item.category || 'system').toUpperCase())}} &nbsp;·&nbsp; ${{escHtml(String(item.status || 'pending').toUpperCase())}}</div>
+                <div style="font-size:12px;color:var(--text-2);margin-top:6px;line-height:1.5;">${{escHtml(item.detail || item.body || '')}}</div>
+                ${{item.why_now ? `<div style="font-size:10px;color:var(--gold);margin-top:6px;">${{escHtml(item.why_now)}}</div>` : ''}}
+                <div class="approval-actions" style="margin-top:10px;">${{actions.join('')}}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }}).join('');
+    }}
+
+    if (!events.length) {{
+      eventEl.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">No recent events</div></div>';
+    }} else {{
+      eventEl.innerHTML = events.slice(0, 12).map(item => {{
+        const severity = String(item.severity || 'low').toLowerCase();
+        const dotCls = severity === 'critical' ? 'dot-error' : severity === 'high' ? 'dot-active' : 'dot-standby';
+        return `
+          <div class="list-row">
+            <span class="dot ${{dotCls}}" style="margin-top:3px;flex-shrink:0;"></span>
+            <div style="flex:1;min-width:0;">
+              <div class="list-row-name">${{escHtml(item.title || 'Event')}}</div>
+              <div class="list-row-sub">${{escHtml(item.domain || 'system')}} · ${{fmtLocalTime(item.ts, {{short:true}})}}</div>
+              ${{item.detail ? `<div style="font-size:11px;color:var(--text-2);margin-top:4px;line-height:1.5;">${{escHtml(item.detail)}}</div>` : ''}}
+            </div>
+          </div>
+        `;
+      }}).join('');
+    }}
+  }} catch (e) {{
+    notifEl.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--crimson);">Could not load notifications</div></div>';
+    eventEl.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--crimson);">Could not load event spine</div></div>';
+  }}
+}}
+
+async function notificationAction(id, action) {{
+  const endpoint = action === 'seen'
+    ? 'seen'
+    : action === 'dismiss'
+      ? 'dismiss'
+      : 'resolve';
+  try {{
+    const res = await fetch(`/api/apple/notifications/${{id}}/${{endpoint}}`, {{ method: 'POST' }});
+    if (!res.ok) {{
+      showToast('Notification action failed', 'error');
+      return;
+    }}
+    showToast(`Notification ${{action}}`, action === 'resolve' ? 'success' : 'info');
+    loadNotificationCenter();
+  }} catch (e) {{
+    showToast('No connection', 'error');
+  }}
 }}
 
 async function loadPublishing() {{
@@ -16346,12 +16495,22 @@ function connectWebSocket() {{
 function handlePacket(pkt) {{
   if (!pkt || !pkt.type) return;
   switch (pkt.type) {{
-    case 'approvals_update':  renderApprovals(pkt.data);   break;
+    case 'approvals_update':
+      renderApprovals(pkt.data);
+      if (currentView === 'notifications') loadNotificationCenter();
+      break;
+    case 'apple.focus':
+    case 'apple.sound_alert':
+    case 'apple.vision_scan':
+    case 'apple.now_playing':
+      if (currentView === 'notifications') loadNotificationCenter();
+      break;
     case 'status_update':     renderStatus(pkt.data);      break;
     case 'briefing_update':   renderBriefing(pkt.data);    break;
     case 'toast':             showToast(pkt.message, pkt.level || 'info'); break;
     case 'layout.mode_changed': if (currentView === 'overview') loadLayoutState(); break;
     case 'layout.alert':
+      if (currentView === 'notifications') loadNotificationCenter();
       if (currentView === 'overview') {{
         // Patch the live alert state and re-render banner + pulse rings in-place
         // without a full layout reload (cards don't move, just the banner updates)

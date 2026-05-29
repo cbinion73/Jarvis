@@ -34,7 +34,7 @@ Source-of-truth rule:
 | Forge | forge/workshop panels | `ForgeView.swift` | `GET /api/apple/forge`, `POST /api/apple/forge/submit`, `POST /api/apple/forge/save` | Partial | Capture/upload exists; processing and broader workshop parity are still incomplete |
 | Voice / Chat | chat + command flows, voice interactions | `VoiceView.swift` | `POST /api/apple/speak`, `GET /api/apple/voice/greeting` | Partial | Basic live voice bridge exists; missing broader chat/system command parity with web |
 | Systems / Settings | `settingsNavTo(...)`, accounts, voice, location, family, devices, costs, Maps API status | `SettingsView.swift` | `GET /api/apple/status`, `GET /api/apple/app-state` plus server-side config endpoints | Partial | Phone Systems now shows mirror state and recent alerts, but it is still far behind full web settings breadth like accounts, family management, and cost/config panels |
-| Notifications | web ambient/alert surfaces | `BriefingView.swift`, `SettingsView.swift` | `GET /api/apple/app-state`, `GET /api/apple/notifications/pending` | Partial | Recent notifications now surface on phone, but there is still no dedicated inbox/workflow surface |
+| Notifications | web ambient/alert surfaces | `BriefingView.swift`, `SettingsView.swift`, `NotificationCenterView` | `GET /api/apple/app-state`, `GET /api/apple/notifications`, `GET /api/apple/events/recent`, `POST /api/apple/notifications/*` | Partial | Dedicated inbox/workflow surfaces now exist on web and phone; remaining gaps are interruption-posture policy, richer category-specific actions, and broader ambient routing |
 | Calendar sync | web calendar panels | `BriefingView.swift`, `SettingsView.swift` | `GET /api/apple/app-state`, `POST /api/apple/calendar` | Partial | Server mirror and upcoming events are now visible, but there is no deeper calendar workflow surface |
 | Reminders sync | web task/reminder panels | `BriefingView.swift`, `SettingsView.swift` | `GET /api/apple/app-state`, `POST /api/apple/reminders` | Partial | Mirror state and top reminders are visible, but there is no deeper reminder/task management surface |
 | Focus sync | web notification/focus behavior | `BriefingView.swift`, `SettingsView.swift` | `GET /api/apple/app-state`, `POST /api/apple/focus` | Partial | Focus state now surfaces on phone, but not as a full control surface |
@@ -62,7 +62,7 @@ Source-of-truth rule:
 
 ### Phase 3: Deepen Existing Shared State Surfaces
 
-- [ ] Add notification inbox / pending notification workflow surface.
+- [x] Add notification inbox / pending notification workflow surface.
 - [x] Add calendar sync visibility.
 - [x] Add reminders sync visibility.
 - [x] Add focus-mode sync visibility.
