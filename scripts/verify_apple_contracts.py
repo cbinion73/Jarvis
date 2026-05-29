@@ -30,6 +30,7 @@ JARVIS_APPLE_DIR = REPO_ROOT / "JarvisApple"
 ENDPOINTS: list[tuple[str, str]] = [
     ("/api/apple/status", "/api/apple/status"),
     ("/api/apple/app-state", "/api/apple/app-state"),
+    ("/api/apple/calendar/state", "/api/apple/calendar/state"),
     ("/api/apple/focus-state", "/api/apple/focus-state"),
     ("/api/apple/notifications", "/api/apple/notifications"),
     ("/api/apple/events/recent", "/api/apple/events/recent"),
@@ -132,6 +133,39 @@ def validate_phase_one_contracts(payloads: dict[str, dict]) -> None:
         for key in ("title", "start", "end", "location", "calendar"):
             if key not in item:
                 raise RuntimeError(f"/api/apple/app-state calendar next_items[{index}] missing '{key}'")
+
+    calendar_state = require_mapping(payloads, "/api/apple/calendar/state")
+    for key in ("synced", "synced_at", "count", "next_events", "today_events", "route_sensitive_events", "preparation_cues", "attention_flags"):
+        if key not in calendar_state:
+            raise RuntimeError(f"/api/apple/calendar/state missing '{key}'")
+    for field in ("next_events", "today_events", "route_sensitive_events"):
+        events = calendar_state.get(field)
+        if not isinstance(events, list):
+            raise RuntimeError(f"/api/apple/calendar/state {field} is not a list")
+        for index, item in enumerate(events[:3]):
+            if not isinstance(item, dict):
+                raise RuntimeError(f"/api/apple/calendar/state {field}[{index}] is not an object")
+            for key in ("id", "title", "start", "end", "location", "calendar", "all_day", "prep_window_open", "route_ready"):
+                if key not in item:
+                    raise RuntimeError(f"/api/apple/calendar/state {field}[{index}] missing '{key}'")
+    cues = calendar_state.get("preparation_cues")
+    if not isinstance(cues, list):
+        raise RuntimeError("/api/apple/calendar/state preparation_cues is not a list")
+    for index, item in enumerate(cues[:3]):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"/api/apple/calendar/state preparation_cues[{index}] is not an object")
+        for key in ("event_id", "title", "detail", "action", "start", "location"):
+            if key not in item:
+                raise RuntimeError(f"/api/apple/calendar/state preparation_cues[{index}] missing '{key}'")
+    flags = calendar_state.get("attention_flags")
+    if not isinstance(flags, list):
+        raise RuntimeError("/api/apple/calendar/state attention_flags is not a list")
+    for index, item in enumerate(flags[:3]):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"/api/apple/calendar/state attention_flags[{index}] is not an object")
+        for key in ("id", "event_id", "kind", "severity", "title", "detail"):
+            if key not in item:
+                raise RuntimeError(f"/api/apple/calendar/state attention_flags[{index}] missing '{key}'")
     focus = app_state.get("focus")
     if not isinstance(focus, dict):
         raise RuntimeError("/api/apple/app-state focus is not an object")

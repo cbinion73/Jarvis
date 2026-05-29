@@ -6,6 +6,7 @@ import JarvisKit
 // MARK: - SettingsView  "Systems"
 
 struct SettingsView: View {
+    @Environment(\.openURL) private var openURL
 
     @ObservedObject private var eventSync = EventKitSyncManager.shared
     @ObservedObject private var healthSync = HealthSyncManager.shared
@@ -15,9 +16,12 @@ struct SettingsView: View {
     @State private var serverOK = false
     @State private var watchStatus: WatchStatus?
     @State private var appState: AppStateOverview?
+    @State private var calendarState: CalendarWorkflowOverview?
     @State private var pingError: String?
     @State private var isRefreshing = false
     @State private var showingInbox = false
+    @State private var calendarWorkflowMessage = ""
+    @State private var calendarWorkflowError = ""
 
     private let steel = Color(red: 0.55, green: 0.65, blue: 0.78)
 
@@ -299,6 +303,118 @@ struct SettingsView: View {
                             }
                         }
 
+                        SystemsSection(title: "Calendar Workflow", icon: "calendar.badge.clock", accent: .cyan) {
+                            if let calendarState {
+                                SysRow(label: "Mirror") {
+                                    syncStatusChip(label: calendarState.synced ? "Live" : "Not synced yet")
+                                }
+                                SysRow(label: "Events") {
+                                    Text("\(calendarState.count)")
+                                        .foregroundStyle(.white)
+                                }
+                                SysRow(label: "Synced At") {
+                                    Text(nonEmpty(calendarState.syncedAt, fallback: nil))
+                                        .foregroundStyle(.white)
+                                }
+
+                                if !calendarWorkflowError.isEmpty {
+                                    Text(calendarWorkflowError)
+                                        .font(.caption)
+                                        .foregroundStyle(.red.opacity(0.9))
+                                } else if !calendarWorkflowMessage.isEmpty {
+                                    Text(calendarWorkflowMessage)
+                                        .font(.caption)
+                                        .foregroundStyle(.cyan.opacity(0.9))
+                                }
+
+                                if !calendarState.attentionFlags.isEmpty {
+                                    Divider().opacity(0.3)
+                                    Text("Attention Flags")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        ForEach(calendarState.attentionFlags.prefix(3)) { flag in
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                HStack(alignment: .firstTextBaseline) {
+                                                    Text(flag.title)
+                                                        .font(.caption.bold())
+                                                        .foregroundStyle(.white)
+                                                    Spacer()
+                                                    syncStatusChip(label: flag.severity.capitalized)
+                                                }
+                                                Text(flag.detail)
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if !calendarState.nextEvents.isEmpty {
+                                    Divider().opacity(0.3)
+                                    Text("Next Events")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    VStack(alignment: .leading, spacing: 10) {
+                                        ForEach(calendarState.nextEvents.prefix(3)) { event in
+                                            VStack(alignment: .leading, spacing: 5) {
+                                                Text(event.title.isEmpty ? "Upcoming event" : event.title)
+                                                    .font(.caption.bold())
+                                                    .foregroundStyle(.white)
+                                                Text(calendarTimingLabel(for: event))
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                                if !event.location.isEmpty {
+                                                    Text(event.location)
+                                                        .font(.caption2)
+                                                        .foregroundStyle(.cyan.opacity(0.8))
+                                                }
+                                                HStack(spacing: 10) {
+                                                    Button("Stage Prep") {
+                                                        Task { await prepareCalendarEvent(event) }
+                                                    }
+                                                    .buttonStyle(.borderedProminent)
+                                                    .tint(.cyan)
+
+                                                    if event.routeReady {
+                                                        Button("Route") {
+                                                            openCalendarRoute(for: event)
+                                                        }
+                                                        .buttonStyle(.bordered)
+                                                        .tint(.white.opacity(0.85))
+                                                    }
+                                                }
+                                                .font(.caption.weight(.semibold))
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if !calendarState.preparationCues.isEmpty {
+                                    Divider().opacity(0.3)
+                                    Text("Preparation Cues")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        ForEach(calendarState.preparationCues.prefix(3)) { cue in
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                Text(cue.title)
+                                                    .font(.caption.bold())
+                                                    .foregroundStyle(.white)
+                                                Text(cue.detail)
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                Text("Calendar workflow not loaded yet.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
                         // ── Presence + location ────────────────────
                         SystemsSection(title: "Presence", icon: "location.fill", accent: .cyan) {
                             SysRow(label: "Home Geofence") {
@@ -431,10 +547,13 @@ struct SettingsView: View {
         do {
             async let status = AppleAPIClient.shared.fetchStatus()
             async let state = AppleAPIClient.shared.fetchAppState()
+            async let calendar = AppleAPIClient.shared.fetchCalendarState()
             watchStatus = try await status
             appState = try await state
+            calendarState = try await calendar
             serverOK = true
             pingError = nil
+            calendarWorkflowError = ""
         } catch {
             serverOK = false
             pingError = error.localizedDescription
@@ -508,6 +627,35 @@ struct SettingsView: View {
         default:
             return mode.replacingOccurrences(of: "_", with: " ").capitalized
         }
+    }
+
+    private func calendarTimingLabel(for event: CalendarWorkflowEvent) -> String {
+        if let minutesAway = event.minutesAway {
+            if minutesAway < 0 {
+                return "Started \(abs(minutesAway)) min ago"
+            }
+            return "Starts in \(minutesAway) min"
+        }
+        return nonEmpty(event.start, fallback: "Time not available")
+    }
+
+    private func prepareCalendarEvent(_ event: CalendarWorkflowEvent) async {
+        calendarWorkflowError = ""
+        do {
+            if try await AppleAPIClient.shared.prepareCalendarEvent(event.id) {
+                calendarWorkflowMessage = "Staged prep for \(event.title)"
+                calendarState = try await AppleAPIClient.shared.fetchCalendarState()
+            }
+        } catch {
+            calendarWorkflowError = error.localizedDescription
+        }
+    }
+
+    private func openCalendarRoute(for event: CalendarWorkflowEvent) {
+        let destination = event.location.isEmpty ? event.title : event.location
+        let query = destination.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? destination
+        guard let url = URL(string: "http://maps.apple.com/?daddr=\(query)&dirflg=d") else { return }
+        openURL(url)
     }
 }
 

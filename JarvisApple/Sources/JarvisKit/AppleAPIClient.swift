@@ -103,6 +103,21 @@ public final class AppleAPIClient: Sendable {
         return response.status == "staged"
     }
 
+    public func fetchCalendarState() async throws -> CalendarWorkflowOverview {
+        try await get("/api/apple/calendar/state")
+    }
+
+    @discardableResult
+    public func prepareCalendarEvent(_ eventId: String) async throws -> Bool {
+        struct Response: Decodable { let status: String }
+        let response: Response = try await post("/api/apple/calendar/events/\(eventId)/prepare", body: EmptyBody())
+        return response.status == "staged"
+    }
+
+    public func routeCalendarEvent(_ eventId: String) async throws -> CalendarRouteActionResult {
+        try await post("/api/apple/calendar/events/\(eventId)/route", body: EmptyBody())
+    }
+
     /// Fetch the Needs You zone items.
     public func fetchNeeds() async throws -> [NeedsItem] {
         try await get("/api/apple/needs")

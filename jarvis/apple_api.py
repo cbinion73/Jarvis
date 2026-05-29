@@ -37,6 +37,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import FastAPI, HTTPException
 
@@ -505,6 +506,119 @@ def _build_home_context(*, needs_count: int = 0) -> dict[str, Any]:
             "active_work_items_count": active_work_items_count,
             "top_titles": project_titles[:3],
         },
+    }
+
+def _apple_calendar_events(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    events = payload.get("events") if isinstance(payload, dict) else []
+    if not isinstance(events, list):
+        return []
+    normalized = [event for event in events if isinstance(event, dict)]
+    normalized.sort(key=lambda item: str(item.get("start") or ""))
+    return normalized
+
+
+def _apple_calendar_event_id(event: dict[str, Any]) -> str:
+    explicit = str(event.get("id") or "").strip()
+    if explicit:
+        return explicit
+    title = str(event.get("title") or "").strip()
+    start = str(event.get("start") or "").strip()
+    location = str(event.get("location") or "").strip()
+    return f"{title}|{start}|{location}"
+
+
+def _apple_calendar_event_record(event: dict[str, Any]) -> dict[str, Any]:
+    start = str(event.get("start") or "").strip()
+    minutes_away = _iso_minutes_away(start)
+    return {
+        "id": _apple_calendar_event_id(event),
+        "title": str(event.get("title") or "").strip(),
+        "start": start,
+        "end": str(event.get("end") or "").strip(),
+        "location": str(event.get("location") or "").strip(),
+        "calendar": str(event.get("calendar") or "").strip(),
+        "all_day": bool(event.get("all_day")),
+        "minutes_away": minutes_away,
+        "prep_window_open": minutes_away is not None and -60 <= minutes_away <= 24 * 60,
+        "route_ready": bool(str(event.get("location") or "").strip()),
+    }
+
+
+def _apple_find_calendar_event(payload: dict[str, Any], event_id: str) -> dict[str, Any] | None:
+    target = str(event_id or "").strip()
+    if not target:
+        return None
+    for event in _apple_calendar_events(payload):
+        if _apple_calendar_event_id(event) == target:
+            return event
+    return None
+
+
+def _build_apple_calendar_state(payload: dict[str, Any]) -> dict[str, Any]:
+    events = _apple_calendar_events(payload)
+    next_events = [_apple_calendar_event_record(event) for event in events[:5]]
+    today_events = [
+        _apple_calendar_event_record(event)
+        for event in events
+        if (_iso_date_days_away(str(event.get("start") or "").strip()) or 0) == 0
+    ][:6]
+
+    route_sensitive_events = [
+        record for record in next_events
+        if record["route_ready"] and record["minutes_away"] is not None and -60 <= int(record["minutes_away"]) <= 24 * 60
+    ][:4]
+
+    preparation_cues: list[dict[str, Any]] = []
+    attention_flags: list[dict[str, Any]] = []
+    for record in next_events:
+        title = str(record.get("title") or "Upcoming event")
+        start = str(record.get("start") or "")
+        location = str(record.get("location") or "")
+        minutes_away = record.get("minutes_away")
+        if minutes_away is None:
+            continue
+        if -60 <= int(minutes_away) <= 180:
+            preparation_cues.append(
+                {
+                    "event_id": record["id"],
+                    "title": title,
+                    "detail": f"Prep for {title}" + (f" at {location}" if location else ""),
+                    "action": "prepare",
+                    "start": start,
+                    "location": location,
+                }
+            )
+            attention_flags.append(
+                {
+                    "id": f"prep:{record['id']}",
+                    "event_id": record["id"],
+                    "kind": "prep_window",
+                    "severity": "medium" if int(minutes_away) <= 120 else "low",
+                    "title": f"Prep window open for {title}",
+                    "detail": "This event is close enough that JARVIS can stage preparation now.",
+                }
+            )
+        if location and -30 <= int(minutes_away) <= 6 * 60:
+            attention_flags.append(
+                {
+                    "id": f"route:{record['id']}",
+                    "event_id": record["id"],
+                    "kind": "route_ready",
+                    "severity": "medium",
+                    "title": f"Route planning ready for {title}",
+                    "detail": "This event has a location and is within the route-planning window.",
+                }
+            )
+
+    return {
+        "synced": bool(payload),
+        "synced_at": str(payload.get("synced_at") or "") if isinstance(payload, dict) else "",
+        "count": int(payload.get("count") or len(events)) if isinstance(payload, dict) else len(events),
+        "next_events": next_events,
+        "today_events": today_events,
+        "route_sensitive_events": route_sensitive_events,
+        "preparation_cues": preparation_cues[:5],
+        "attention_flags": attention_flags[:6],
     }
 
 
@@ -3064,6 +3178,11 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
 
     # ── EventKit: Calendar ────────────────────────────────────────────────────
 
+    @app.get("/api/apple/calendar/state")
+    async def apple_calendar_state():
+        payload = _safe_read_json(Path("data/apple/calendar_events.json"), {})
+        return _ok(_build_apple_calendar_state(payload if isinstance(payload, dict) else {}))
+
     @app.post("/api/apple/calendar")
     async def apple_calendar(payload: dict):
         """Receives Calendar events from EventKit on the iPhone.
@@ -3103,6 +3222,58 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         start = str(body.get("start") or "").strip()
         location = str(body.get("location") or "").strip()
         return _ok(_apple_stage_calendar_prep(title, start=start, location=location))
+
+    @app.post("/api/apple/calendar/events/{event_id}/prepare")
+    async def apple_calendar_event_prepare(event_id: str):
+        payload = _safe_read_json(Path("data/apple/calendar_events.json"), {})
+        event = _apple_find_calendar_event(payload if isinstance(payload, dict) else {}, event_id)
+        if event is None:
+            raise HTTPException(status_code=404, detail="Calendar event not found")
+        return _ok(
+            _apple_stage_calendar_prep(
+                str(event.get("title") or ""),
+                start=str(event.get("start") or ""),
+                location=str(event.get("location") or ""),
+            )
+        )
+
+    @app.post("/api/apple/calendar/events/{event_id}/route")
+    async def apple_calendar_event_route(event_id: str):
+        payload = _safe_read_json(Path("data/apple/calendar_events.json"), {})
+        event = _apple_find_calendar_event(payload if isinstance(payload, dict) else {}, event_id)
+        if event is None:
+            raise HTTPException(status_code=404, detail="Calendar event not found")
+        title = str(event.get("title") or "").strip() or "Upcoming event"
+        location = str(event.get("location") or "").strip()
+        if not location:
+            raise HTTPException(status_code=400, detail="Calendar event has no location")
+        query = quote(location, safe="")
+        maps_url = f"http://maps.apple.com/?daddr={query}&dirflg=d"
+        _record_shared_event(
+            domain="calendar",
+            kind="info",
+            title="Calendar route handed off",
+            detail=f"Route prepared for {title}",
+            severity="low",
+            source="apple.calendar",
+            source_id=event_id,
+            navigation_target="navigate",
+            actions=["open"],
+            trust_zone="household_schedule",
+            authority_stage="live",
+            why_now="The household asked JARVIS to route to a calendar event location.",
+            metadata={"event_id": event_id, "location": location, "maps_url": maps_url},
+        )
+        return _ok(
+            {
+                "status": "ready",
+                "event_id": event_id,
+                "title": title,
+                "location": location,
+                "maps_url": maps_url,
+            }
+        )
+
 
     # ── EventKit: Reminders ───────────────────────────────────────────────────
 
