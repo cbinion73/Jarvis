@@ -30,7 +30,7 @@ Source-of-truth rule:
 | Faith | `loadFaith`, faith roster/context | `FaithView.swift` | `GET /api/apple/faith` | Partial | Daily word works; missing deeper faith mode orchestration from web |
 | Publish | `loadPublishing`, KDP/launch/pipeline panels | `PublishView.swift` | `GET /api/apple/publishing` | Partial | Summary exists; missing fuller publishing workspace actions and platform-specific tools |
 | Huddle / Agents | `loadHuddle`, `loadAgentRoster`, `loadLiveAgents` | `HuddleView.swift` | `GET /api/apple/huddle` | Partial | Basic huddle view exists; missing richer agent roster/live-agent parity |
-| Navigate | `renderNavRoute`, `loadNavPOIs`, active route controls, POI toggles, parks radius slider | `NavigateView.swift` | `GET /api/apple/navigation/*` | Partial | Strong progress; still needs continued HUD parity, more route-state polish, and long-route reliability |
+| Navigate | `renderNavRoute`, `loadNavPOIs`, active route controls, POI toggles, parks radius slider | `NavigateView.swift` | `GET /api/apple/navigation/*` | Partial | Live route state now hydrates from JARVIS; remaining gaps are deeper HUD parity, maneuver presentation polish, and long-route reliability |
 | Forge | forge/workshop panels | `ForgeView.swift` | `GET /api/apple/forge`, `POST /api/apple/forge/submit`, `POST /api/apple/forge/save` | Partial | Capture/upload exists; processing and broader workshop parity are still incomplete |
 | Voice / Chat | chat + command flows, voice interactions | `VoiceView.swift` | `POST /api/apple/speak`, `GET /api/apple/voice/greeting` | Partial | Basic live voice bridge exists; missing broader chat/system command parity with web |
 | Systems / Settings | `settingsNavTo(...)`, accounts, voice, location, family, devices, costs, Maps API status | `SettingsView.swift` | `GET /api/apple/status` plus server-side config endpoints | Partial | Phone Systems is still a thin diagnostics view, far behind web settings breadth |
@@ -49,7 +49,7 @@ Source-of-truth rule:
 - [x] Home tab must reflect live JARVIS house state and not rely only on local HomeKit.
 - [x] Brief tab must expose more live overview truth from JARVIS instead of acting as a reduced report.
 - [x] Systems tab must surface production sync health for the major shared state domains.
-- [ ] Phone-local caches for home, location, navigation preferences, and route state must hydrate from JARVIS.
+- [x] Phone-local caches for home, location, navigation preferences, and route state must hydrate from JARVIS.
 
 ### Phase 2: Deepen Existing Tabs
 
@@ -86,10 +86,10 @@ Verification command:
 2. Brief
 3. Systems
 4. Needs
-5. Navigation polish and reliability
+5. Navigation HUD and reliability polish
 6. Health depth
 7. Remaining ingestion surfaces
 
 ## Current Pass
 
-Current implementation pass is focused on collapsing remaining split-brain state into the production-backed Apple contracts, starting with `Home`, `Brief`, `Systems`, `Needs`, and `Health`.
+Current implementation pass is focused on pushing the remaining partial tabs toward behavioral parity while keeping the iPhone app tied to production-backed JARVIS truth.
