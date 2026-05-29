@@ -52,6 +52,14 @@ public final class AppleAPIClient: Sendable {
         try await get("/api/apple/navigation/locations")
     }
 
+    public func fetchNavigationState() async throws -> NavigationState {
+        try await get("/api/apple/navigation/state")
+    }
+
+    public func updateNavigationState(_ state: NavigationStatePatch) async throws -> NavigationState {
+        try await post("/api/apple/navigation/state", body: state)
+    }
+
     public func fetchNavigationRoute(origin: String, destination: String) async throws -> NavigationRouteOverview {
         let allowed = CharacterSet.urlQueryAllowed
         guard

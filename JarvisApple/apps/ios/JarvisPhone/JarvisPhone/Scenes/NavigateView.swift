@@ -47,9 +47,6 @@ struct NavigateView: View {
     @FocusState private var destinationFocused: Bool
 
     private let slate = Color(red: 0.4, green: 0.55, blue: 0.75)
-    private static let favoriteDestinationsKey = "jarvis.navigate.favoriteDestinations"
-    private static let recentDestinationsKey = "jarvis.navigate.recentDestinations"
-
     private var selectedSavedLocation: NavigationSavedLocation? {
         if let selectedSavedLocationID,
            let match = savedLocations.first(where: { $0.id == selectedSavedLocationID }) {
@@ -197,13 +194,17 @@ struct NavigateView: View {
             }
         }
         .task {
-            restoreFavoriteDestinations()
-            restoreRecentDestinations()
             await loadNavigationLocations()
             loc.requestAndFetch()
         }
         .onChange(of: destinationText) { _, newValue in
             completer.update(query: newValue)
+        }
+        .onChange(of: selectedOriginMode) { _, newValue in
+            persistNavigationState(selectedOriginMode: newValue.rawValue)
+        }
+        .onChange(of: selectedSavedLocationID) { _, newValue in
+            persistNavigationState(selectedSavedLocationID: newValue ?? "")
         }
     }
 
@@ -1079,21 +1080,13 @@ struct NavigateView: View {
         }
     }
 
-    private func restoreRecentDestinations() {
-        recentDestinations = UserDefaults.standard.stringArray(forKey: Self.recentDestinationsKey) ?? []
-    }
-
-    private func restoreFavoriteDestinations() {
-        favoriteDestinations = UserDefaults.standard.stringArray(forKey: Self.favoriteDestinationsKey) ?? []
-    }
-
     private func saveRecentDestination(_ destination: String) {
         let trimmed = destination.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         var next = recentDestinations.filter { $0.caseInsensitiveCompare(trimmed) != .orderedSame }
         next.insert(trimmed, at: 0)
         recentDestinations = Array(next.prefix(5))
-        UserDefaults.standard.set(recentDestinations, forKey: Self.recentDestinationsKey)
+        persistNavigationState(recentDestinations: recentDestinations)
     }
 
     private func toggleFavorite(_ destination: String) {
@@ -1105,7 +1098,7 @@ struct NavigateView: View {
             favoriteDestinations.insert(trimmed, at: 0)
             favoriteDestinations = Array(favoriteDestinations.prefix(8))
         }
-        UserDefaults.standard.set(favoriteDestinations, forKey: Self.favoriteDestinationsKey)
+        persistNavigationState(favoriteDestinations: favoriteDestinations)
     }
 
     private func isFavoriteDestination(_ destination: String) -> Bool {
@@ -1161,6 +1154,7 @@ struct NavigateView: View {
         } else {
             activeStopCategoryIDs.insert(categoryID)
         }
+        persistNavigationState(activeStopCategoryIDs: Array(activeStopCategoryIDs))
     }
 
     private func routeToStop(_ stop: NavigationStop) {
@@ -1303,6 +1297,9 @@ struct NavigateView: View {
             if availableOriginModes.contains(selectedOriginMode) == false {
                 selectedOriginMode = availableOriginModes.first ?? .current
             }
+            if let state = overview.navigationState {
+                hydrateNavigationState(state)
+            }
         } catch {
             routeError = error.localizedDescription
         }
@@ -1325,6 +1322,7 @@ struct NavigateView: View {
             focusMap(on: overview)
             await loadStops(origin: origin, destination: destination)
             saveRecentDestination(destination)
+            persistNavigationState(lastRoute: NavigationLastRoute(origin: origin, destination: destination))
         } catch {
             route = nil
             stopSections = []
@@ -1350,6 +1348,48 @@ struct NavigateView: View {
     private func reloadStopsForActiveRoute() async {
         guard !currentRouteOriginQuery.isEmpty, !currentRouteDestinationQuery.isEmpty else { return }
         await loadStops(origin: currentRouteOriginQuery, destination: currentRouteDestinationQuery)
+        persistNavigationState(parksHistoricRadiusMiles: Int(parksHistoricRadiusMiles.rounded()))
+    }
+
+    private func hydrateNavigationState(_ state: NavigationState) {
+        favoriteDestinations = state.favoriteDestinations
+        recentDestinations = state.recentDestinations
+        activeStopCategoryIDs = Set(state.activeStopCategoryIDs)
+        parksHistoricRadiusMiles = Double(state.parksHistoricRadiusMiles)
+        if let restoredOriginMode = OriginMode(rawValue: state.selectedOriginMode),
+           availableOriginModes.contains(restoredOriginMode) {
+            selectedOriginMode = restoredOriginMode
+        }
+        if !state.selectedSavedLocationID.isEmpty {
+            selectedSavedLocationID = state.selectedSavedLocationID
+        }
+        if destinationText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           !state.lastRoute.destination.isEmpty {
+            destinationText = state.lastRoute.destination
+        }
+    }
+
+    private func persistNavigationState(
+        favoriteDestinations: [String]? = nil,
+        recentDestinations: [String]? = nil,
+        activeStopCategoryIDs: [String]? = nil,
+        parksHistoricRadiusMiles: Int? = nil,
+        selectedOriginMode: String? = nil,
+        selectedSavedLocationID: String? = nil,
+        lastRoute: NavigationLastRoute? = nil
+    ) {
+        let patch = NavigationStatePatch(
+            favoriteDestinations: favoriteDestinations,
+            recentDestinations: recentDestinations,
+            activeStopCategoryIDs: activeStopCategoryIDs,
+            parksHistoricRadiusMiles: parksHistoricRadiusMiles,
+            selectedOriginMode: selectedOriginMode,
+            selectedSavedLocationID: selectedSavedLocationID,
+            lastRoute: lastRoute
+        )
+        Task {
+            _ = try? await AppleAPIClient.shared.updateNavigationState(patch)
+        }
     }
 
     private func resolveOriginQuery() async throws -> String {

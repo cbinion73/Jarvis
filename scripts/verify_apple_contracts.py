@@ -29,6 +29,7 @@ JARVIS_APPLE_DIR = REPO_ROOT / "JarvisApple"
 ENDPOINTS: list[tuple[str, str]] = [
     ("/api/apple/status", "/api/apple/status"),
     ("/api/apple/app-state", "/api/apple/app-state"),
+    ("/api/apple/navigation/locations", "/api/apple/navigation/locations"),
     ("/api/apple/briefing?actor=chris", "/api/apple/briefing?actor=chris"),
     ("/api/apple/needs", "/api/apple/needs"),
     ("/api/apple/health/summary?actor=chris", "/api/apple/health/summary?actor=chris"),
