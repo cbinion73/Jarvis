@@ -574,6 +574,19 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 "distance_miles": route_info.get("distance_miles"),
                 "duration_minutes": route_info.get("duration_minutes"),
                 "coordinates": route_info.get("coordinates") if isinstance(route_info.get("coordinates"), list) else [],
+                "steps": [
+                    {
+                        "sequence": int(step.get("sequence") or 0),
+                        "instruction": str(step.get("instruction") or ""),
+                        "distance_miles": step.get("distance_miles"),
+                        "duration_minutes": step.get("duration_minutes"),
+                        "maneuver": str(step.get("maneuver") or ""),
+                        "modifier": str(step.get("modifier") or ""),
+                        "name": str(step.get("name") or ""),
+                    }
+                    for step in (route_info.get("steps") or [])
+                    if isinstance(step, dict)
+                ],
             },
             "samples": [
                 {

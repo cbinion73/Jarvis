@@ -45,9 +45,28 @@ public struct NavigationRouteShape: Codable, Sendable {
     public let distanceMiles: Double?
     public let durationMinutes: Int?
     public let coordinates: [[Double]]
+    public let steps: [NavigationRouteStep]
 
     enum CodingKeys: String, CodingKey {
-        case coordinates
+        case coordinates, steps
+        case distanceMiles = "distance_miles"
+        case durationMinutes = "duration_minutes"
+    }
+}
+
+public struct NavigationRouteStep: Codable, Identifiable, Sendable {
+    public var id: String { "\(sequence)-\(instruction)" }
+
+    public let sequence: Int
+    public let instruction: String
+    public let distanceMiles: Double?
+    public let durationMinutes: Int?
+    public let maneuver: String
+    public let modifier: String
+    public let name: String
+
+    enum CodingKeys: String, CodingKey {
+        case sequence, instruction, maneuver, modifier, name
         case distanceMiles = "distance_miles"
         case durationMinutes = "duration_minutes"
     }

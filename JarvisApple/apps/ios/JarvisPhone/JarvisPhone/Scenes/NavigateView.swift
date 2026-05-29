@@ -66,6 +66,10 @@ struct NavigateView: View {
         route?.samples.first
     }
 
+    private var upcomingSteps: [NavigationRouteStep] {
+        Array(route?.route.steps.prefix(4) ?? [])
+    }
+
     private var arrivalTimeText: String? {
         guard let minutes = route?.route.durationMinutes else { return nil }
         let arrival = Date().addingTimeInterval(TimeInterval(minutes * 60))
@@ -131,6 +135,9 @@ struct NavigateView: View {
 
                         if let route {
                             routeGuidanceCard(route)
+                            if !upcomingSteps.isEmpty {
+                                routeStepsCard
+                            }
                             routeSummaryCard(route)
                             routeStopsCard
                             routeWeatherCard(route)
@@ -554,10 +561,10 @@ struct NavigateView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(sample.condition.isEmpty ? "Conditions ahead are updating" : sample.condition)
+                        Text(primaryGuidanceTitle(sample: sample))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.white)
-                        Text(guidanceSecondaryLine(for: route, sample: sample))
+                        Text(primaryGuidanceSubtitle(route: route, sample: sample))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         if !sample.alerts.isEmpty {
@@ -579,6 +586,44 @@ struct NavigateView: View {
                 routeMetric(icon: "clock.fill", title: "Arrival", value: arrivalTimeText ?? "--")
                 routeMetric(icon: "thermometer.medium", title: "Temp", value: leadingRouteSample?.temperatureF.map { "\(Int($0.rounded()))°" } ?? "--")
                 routeMetric(icon: "exclamationmark.triangle.fill", title: "Alerts", value: alertCountLabel)
+            }
+        }
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 18))
+    }
+
+    private var routeStepsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Upcoming Maneuvers", systemImage: "arrow.triangle.turn.up.right.diamond.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(slate)
+
+            ForEach(upcomingSteps) { step in
+                HStack(alignment: .top, spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(stepAccentColor(for: step).opacity(0.15))
+                            .frame(width: 40, height: 40)
+                        Image(systemName: stepIcon(for: step))
+                            .foregroundStyle(stepAccentColor(for: step))
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(step.instruction.isEmpty ? "Continue on route" : step.instruction)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(stepMetaLine(step))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Text("#\(step.sequence)")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white.opacity(0.7))
+                }
             }
         }
         .padding(16)
@@ -1021,6 +1066,55 @@ struct NavigateView: View {
             parts.append(sample.wind)
         }
         return parts.isEmpty ? route.summary : parts.joined(separator: " • ")
+    }
+
+    private func primaryGuidanceTitle(sample: NavigationRouteSample) -> String {
+        if let firstStep = route?.route.steps.first, !firstStep.instruction.isEmpty {
+            return firstStep.instruction
+        }
+        return sample.condition.isEmpty ? "Conditions ahead are updating" : sample.condition
+    }
+
+    private func primaryGuidanceSubtitle(route: NavigationRouteOverview, sample: NavigationRouteSample) -> String {
+        if let firstStep = route.route.steps.first {
+            return stepMetaLine(firstStep)
+        }
+        return guidanceSecondaryLine(for: route, sample: sample)
+    }
+
+    private func stepMetaLine(_ step: NavigationRouteStep) -> String {
+        var parts: [String] = []
+        if let miles = step.distanceMiles {
+            parts.append(String(format: "%.1f mi", miles))
+        }
+        if let minutes = step.durationMinutes {
+            parts.append("\(minutes) min")
+        }
+        if !step.name.isEmpty {
+            parts.append(step.name)
+        }
+        return parts.isEmpty ? "Stay on route" : parts.joined(separator: " • ")
+    }
+
+    private func stepIcon(for step: NavigationRouteStep) -> String {
+        let maneuver = step.maneuver.lowercased()
+        let modifier = step.modifier.lowercased()
+        if maneuver.contains("arrive") { return "flag.checkered.2.crossed" }
+        if modifier.contains("left") { return "arrow.turn.up.left" }
+        if modifier.contains("right") { return "arrow.turn.up.right" }
+        if maneuver.contains("roundabout") || maneuver.contains("rotary") { return "arrow.trianglehead.clockwise" }
+        if maneuver.contains("merge") || maneuver.contains("fork") { return "arrow.merge" }
+        if maneuver.contains("depart") { return "car.fill" }
+        return "arrow.up"
+    }
+
+    private func stepAccentColor(for step: NavigationRouteStep) -> Color {
+        let modifier = step.modifier.lowercased()
+        let maneuver = step.maneuver.lowercased()
+        if maneuver.contains("arrive") { return .green }
+        if modifier.contains("left") { return .orange }
+        if modifier.contains("right") { return .blue }
+        return slate
     }
 
     private func focusMap(on route: NavigationRouteOverview) {
