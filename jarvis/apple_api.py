@@ -198,6 +198,101 @@ def _is_recent_iso(value: str, *, minutes: int) -> bool:
         return False
 
 
+def _local_hour() -> int:
+    return datetime.now().astimezone().hour
+
+
+def _compute_interruption_posture(
+    *,
+    watch_status: dict[str, Any],
+    home_state: dict[str, Any],
+    focus_payload: dict[str, Any],
+) -> dict[str, Any]:
+    focus_active = bool(focus_payload.get("focus_active"))
+    quiet_hours = _local_hour() < 7 or _local_hour() >= 21
+    alerts = home_state.get("alerts") if isinstance(home_state.get("alerts"), list) else []
+    present_members = [
+        str(member).strip()
+        for member in (home_state.get("present_members") or [])
+        if str(member).strip()
+    ]
+    alert_count = len(alerts)
+    needs_count = int(watch_status.get("needs_count") or 0)
+
+    mode = "active_hours"
+    label = "Active hours"
+    reason = "JARVIS can surface normal household attention during active hours."
+    recommended_delivery = "badge_only"
+
+    if alert_count > 0:
+        mode = "household_alert"
+        label = "Household alert override"
+        reason = "An active home alert overrides quieter delivery modes."
+        recommended_delivery = "deliver_now"
+    elif focus_active:
+        mode = "focus_active"
+        label = "Focus active"
+        reason = "Focus is active on the phone, so JARVIS should keep interruptions quieter."
+        recommended_delivery = "quiet_store"
+    elif quiet_hours and needs_count > 0:
+        mode = "quiet_hours_attention"
+        label = "Quiet hours with active attention"
+        reason = "Quiet hours are active, but pending approvals should remain visible without breaking the household."
+        recommended_delivery = "badge_only"
+    elif quiet_hours:
+        mode = "quiet_hours"
+        label = "Quiet hours"
+        reason = "It is outside normal household hours, so lower-priority items should wait for Brief."
+        recommended_delivery = "hold_for_brief"
+
+    return {
+        "mode": mode,
+        "label": label,
+        "reason": reason,
+        "recommended_delivery": recommended_delivery,
+        "focus_active": focus_active,
+        "quiet_hours": quiet_hours,
+        "hour_local": _local_hour(),
+        "needs_count": needs_count,
+        "alert_count": alert_count,
+        "present_members": present_members,
+        "updated_at": _ts(),
+    }
+
+
+def _choose_delivery_mode(
+    *,
+    default_mode: str,
+    severity: str,
+    category: str,
+    posture: dict[str, Any],
+) -> tuple[str, str]:
+    posture_mode = str(posture.get("mode") or "active_hours")
+    posture_reason = str(posture.get("reason") or "")
+    normalized_severity = str(severity or "low").lower()
+    normalized_category = str(category or "system").lower()
+
+    if posture_mode == "household_alert":
+        return "deliver_now", posture_reason
+
+    if posture_mode == "focus_active":
+        if normalized_severity in {"high", "critical"} or normalized_category in {"approval", "household"}:
+            return "badge_only", "Focus is active, but this item stays visible because it affects live household flow."
+        return "quiet_store", posture_reason
+
+    if posture_mode in {"quiet_hours", "quiet_hours_attention"}:
+        if normalized_severity in {"high", "critical"}:
+            return "badge_only", "Quiet hours are active, but higher-severity items remain visible."
+        if normalized_category == "approval":
+            return "badge_only", "Quiet hours are active, but approvals remain visible for morning command flow."
+        return "hold_for_brief", posture_reason
+
+    if normalized_severity == "critical":
+        return "deliver_now", "Critical items should break through during active hours."
+
+    return str(default_mode or "badge_only"), posture_reason or "Normal household hours allow standard delivery."
+
+
 def _chronicle_actor_matches(entry: dict[str, Any], actor: str) -> bool:
     entry_actor = str(entry.get("actor") or entry.get("actor_id") or "").strip().lower()
     if not entry_actor:
@@ -1058,6 +1153,8 @@ class _NotificationCenterStore:
         event: dict[str, Any] | None = None,
         expires_at: str = "",
         metadata: dict[str, Any] | None = None,
+        decision_reason: str = "",
+        posture_snapshot: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         store = self._load()
         notification = {
@@ -1077,7 +1174,9 @@ class _NotificationCenterStore:
             "navigation_target": str(navigation_target or ""),
             "available_actions": [str(action) for action in (available_actions or ["open", "dismiss"]) if str(action or "").strip()],
             "why_now": str(why_now or ""),
+            "decision_reason": str(decision_reason or ""),
             "source_summary": str(source_summary or ""),
+            "posture_snapshot": posture_snapshot if isinstance(posture_snapshot, dict) else {},
             "badge": 0,
             "metadata": metadata if isinstance(metadata, dict) else {},
         }
@@ -1102,6 +1201,8 @@ class _NotificationCenterStore:
         event: dict[str, Any] | None = None,
         expires_at: str = "",
         metadata: dict[str, Any] | None = None,
+        decision_reason: str = "",
+        posture_snapshot: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         store = self._load()
         key = str(source_key or "").strip()
@@ -1125,7 +1226,9 @@ class _NotificationCenterStore:
                     "navigation_target": str(navigation_target or item.get("navigation_target") or ""),
                     "available_actions": [str(action) for action in (available_actions or item.get("available_actions") or ["open", "dismiss"]) if str(action or "").strip()],
                     "why_now": str(why_now or item.get("why_now") or ""),
+                    "decision_reason": str(decision_reason or item.get("decision_reason") or ""),
                     "source_summary": str(source_summary or item.get("source_summary") or ""),
+                    "posture_snapshot": posture_snapshot if isinstance(posture_snapshot, dict) else (item.get("posture_snapshot") or {}),
                     "metadata": {**(item.get("metadata") or {}), **merged_metadata},
                 })
                 self._save(store)
@@ -1144,6 +1247,8 @@ class _NotificationCenterStore:
             event=event,
             expires_at=expires_at,
             metadata=merged_metadata,
+            decision_reason=decision_reason,
+            posture_snapshot=posture_snapshot,
         )
         return notification
 
@@ -1291,18 +1396,32 @@ def _reconcile_shared_notifications(
     latest_sound: dict[str, Any],
     latest_scan: dict[str, Any],
 ) -> None:
+    posture = _compute_interruption_posture(
+        watch_status=watch_status,
+        home_state=home_state,
+        focus_payload=focus_payload,
+    )
+
     needs_count = int(watch_status.get("needs_count") or 0)
     if needs_count > 0:
+        delivery_mode, decision_reason = _choose_delivery_mode(
+            default_mode="badge_only",
+            severity="high" if needs_count >= 3 else "medium",
+            category="approval",
+            posture=posture,
+        )
         _notification_center.upsert(
             source_key="needs:pending",
             category="approval",
             title="Approvals waiting",
             detail=f"{needs_count} approval request" + ("s are" if needs_count != 1 else " is") + " waiting for attention.",
             severity="high" if needs_count >= 3 else "medium",
-            delivery_mode="badge_only",
+            delivery_mode=delivery_mode,
             navigation_target="needs",
             available_actions=["open", "dismiss"],
             why_now="Pending approvals are part of the current household attention load.",
+            decision_reason=decision_reason,
+            posture_snapshot=posture,
             source_summary="Approval queue",
             metadata={"needs_count": needs_count},
         )
@@ -1317,16 +1436,25 @@ def _reconcile_shared_notifications(
     event_start = str(next_event.get("start") or "").strip()
     minutes_away = _iso_minutes_away(event_start)
     if event_title and minutes_away is not None and -60 <= minutes_away <= 24 * 60:
+        default_mode = "hold_for_brief" if minutes_away > 60 else "badge_only"
+        delivery_mode, decision_reason = _choose_delivery_mode(
+            default_mode=default_mode,
+            severity="medium" if minutes_away <= 120 else "low",
+            category="household",
+            posture=posture,
+        )
         _notification_center.upsert(
             source_key=f"calendar:{event_title}:{event_start}",
             category="household",
             title=f"Prepare for {event_title}",
             detail=f"Next event starts {('in ' + str(minutes_away) + ' min') if minutes_away >= 0 else 'soon'}" + (f" at {event_start}" if event_start else "."),
             severity="medium" if minutes_away <= 120 else "low",
-            delivery_mode="hold_for_brief" if minutes_away > 60 else "badge_only",
+            delivery_mode=delivery_mode,
             navigation_target="calendar",
             available_actions=["open", "dismiss"],
             why_now="The next calendar event is within the household planning window.",
+            decision_reason=decision_reason,
+            posture_snapshot=posture,
             source_summary="Calendar",
             metadata={"title": event_title, "start": event_start},
         )
@@ -1341,16 +1469,24 @@ def _reconcile_shared_notifications(
         open_reminders = []
     if open_reminders:
         top = open_reminders[0]
+        delivery_mode, decision_reason = _choose_delivery_mode(
+            default_mode="hold_for_brief",
+            severity="medium" if len(open_reminders) >= 3 else "low",
+            category="household",
+            posture=posture,
+        )
         _notification_center.upsert(
             source_key=f"reminders:{len(open_reminders)}",
             category="household",
             title="Reminders need attention",
             detail=str(top.get("title") or "Outstanding reminders are waiting."),
             severity="medium" if len(open_reminders) >= 3 else "low",
-            delivery_mode="hold_for_brief",
+            delivery_mode=delivery_mode,
             navigation_target="workshop",
             available_actions=["open", "dismiss"],
             why_now="Open reminders are part of today's active load.",
+            decision_reason=decision_reason,
+            posture_snapshot=posture,
             source_summary="Reminders",
             metadata={"count": len(open_reminders)},
         )
@@ -1358,46 +1494,71 @@ def _reconcile_shared_notifications(
     alerts = home_state.get("alerts") or []
     if isinstance(alerts, list) and alerts:
         first_alert = alerts[0]
+        delivery_mode, decision_reason = _choose_delivery_mode(
+            default_mode="deliver_now",
+            severity="high",
+            category="household",
+            posture=posture,
+        )
         _notification_center.upsert(
             source_key=f"home-alert:{str(first_alert)}",
             category="household",
             title="Household alert",
             detail=str(first_alert),
             severity="high",
-            delivery_mode="deliver_now",
+            delivery_mode=delivery_mode,
             navigation_target="home",
             available_actions=["open", "resolve"],
             why_now="The home surface is reporting an active alert.",
+            decision_reason=decision_reason,
+            posture_snapshot=posture,
             source_summary="Home state",
         )
 
     if bool(focus_payload.get("focus_active")):
+        delivery_mode, decision_reason = _choose_delivery_mode(
+            default_mode="quiet_store",
+            severity="low",
+            category="system",
+            posture=posture,
+        )
         _notification_center.upsert(
             source_key="focus:active",
             category="system",
             title="Focus is active",
             detail="JARVIS should keep interruptions quieter right now.",
             severity="low",
-            delivery_mode="quiet_store",
+            delivery_mode=delivery_mode,
             navigation_target="systems",
             available_actions=["open", "dismiss"],
             why_now="Current focus state changes how notifications should be delivered.",
+            decision_reason=decision_reason,
+            posture_snapshot=posture,
             source_summary="Focus",
             metadata={"source": focus_payload.get("source")},
         )
 
     sound_label = str(latest_sound.get("classification") or latest_sound.get("label") or latest_sound.get("sound") or "").strip()
     if sound_label and _is_recent_iso(str(latest_sound.get("received_at") or ""), minutes=120):
+        sound_severity = "medium" if _coerce_float(latest_sound.get("confidence"), 0.0) >= 0.7 else "low"
+        delivery_mode, decision_reason = _choose_delivery_mode(
+            default_mode="badge_only",
+            severity=sound_severity,
+            category="household",
+            posture=posture,
+        )
         _notification_center.upsert(
             source_key=f"sound:{sound_label}:{str(latest_sound.get('received_at') or '')}",
             category="household",
             title=f"Sound detected: {sound_label}",
             detail=str(latest_sound.get("detail") or "Recent sound analysis detected a notable event."),
-            severity="medium" if _coerce_float(latest_sound.get("confidence"), 0.0) >= 0.7 else "low",
-            delivery_mode="badge_only",
+            severity=sound_severity,
+            delivery_mode=delivery_mode,
             navigation_target="vision",
             available_actions=["open", "resolve", "dismiss"],
             why_now="A recent sound alert may matter to the household.",
+            decision_reason=decision_reason,
+            posture_snapshot=posture,
             source_summary="Sound Analysis",
             metadata={"confidence": latest_sound.get("confidence")},
         )
@@ -1405,16 +1566,24 @@ def _reconcile_shared_notifications(
     scan_context = str(latest_scan.get("context") or "").strip()
     scan_text = str(latest_scan.get("text") or "").strip()
     if (scan_context or scan_text) and _is_recent_iso(str(latest_scan.get("received_at") or ""), minutes=120):
+        delivery_mode, decision_reason = _choose_delivery_mode(
+            default_mode="quiet_store",
+            severity="low",
+            category="system",
+            posture=posture,
+        )
         _notification_center.upsert(
             source_key=f"vision:{scan_context}:{str(latest_scan.get('received_at') or '')}",
             category="system",
             title=scan_context or "Vision scan captured",
             detail=scan_text[:180] or "A recent scan is available for review.",
             severity="low",
-            delivery_mode="quiet_store",
+            delivery_mode=delivery_mode,
             navigation_target="vision",
             available_actions=["open", "dismiss"],
             why_now="Recent vision captures are available for inspection.",
+            decision_reason=decision_reason,
+            posture_snapshot=posture,
             source_summary="Vision",
         )
 
@@ -1432,7 +1601,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
     @app.post("/api/apple/device/register")
     async def apple_device_register(payload: dict):
         """Store an APNs device token for push notification delivery."""
-        actor_id = str(payload.get("actor_id") or "chris").strip()
+        actor_id = str(payload.get("actor_id") or payload.get("actor") or "chris").strip()
         token    = str(payload.get("token")    or "").strip()
         platform = str(payload.get("platform") or "ios").strip()
         if not token:
@@ -1602,6 +1771,11 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             latest_sound=latest_sound if isinstance(latest_sound, dict) else {},
             latest_scan=latest_scan if isinstance(latest_scan, dict) else {},
         )
+        posture = _compute_interruption_posture(
+            watch_status=watch_status,
+            home_state=home_state,
+            focus_payload=focus_payload if isinstance(focus_payload, dict) else {},
+        )
 
         calendar_events = calendar_payload.get("events") if isinstance(calendar_payload, dict) else []
         if not isinstance(calendar_events, list):
@@ -1690,6 +1864,12 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 "focus_active": bool(focus_payload.get("focus_active")) if isinstance(focus_payload, dict) else False,
                 "updated_at": str(focus_payload.get("updated_at") or "") if isinstance(focus_payload, dict) else "",
                 "source": str(focus_payload.get("source") or "") if isinstance(focus_payload, dict) else "",
+                "posture_mode": str(posture.get("mode") or ""),
+                "posture_label": str(posture.get("label") or ""),
+                "posture_reason": str(posture.get("reason") or ""),
+                "recommended_delivery": str(posture.get("recommended_delivery") or ""),
+                "quiet_hours": bool(posture.get("quiet_hours")),
+                "hour_local": int(posture.get("hour_local") or 0),
             },
             "notifications": {
                 "pending_count": _notification_center.count(status="pending"),
@@ -1722,6 +1902,27 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             "sync_health": sync_health,
         }
         return _ok(aggregated)
+
+    # ------------------------------------------------------------------
+    # GET /api/apple/focus/state
+    # ------------------------------------------------------------------
+    @app.get("/api/apple/focus/state")
+    async def apple_focus_state():
+        data_root = Path("data/apple")
+        focus_payload = _safe_read_json(data_root / "focus_state.json", {})
+        watch_status = (await apple_status()).get("data") or {}
+        home_state = (await apple_home_state()).get("data") or {}
+        posture = _compute_interruption_posture(
+            watch_status=watch_status,
+            home_state=home_state,
+            focus_payload=focus_payload if isinstance(focus_payload, dict) else {},
+        )
+        return _ok({
+            "focus_active": bool(focus_payload.get("focus_active")) if isinstance(focus_payload, dict) else False,
+            "updated_at": str(focus_payload.get("updated_at") or "") if isinstance(focus_payload, dict) else "",
+            "source": str(focus_payload.get("source") or "") if isinstance(focus_payload, dict) else "",
+            "interruption_posture": posture,
+        })
 
     # ------------------------------------------------------------------
     # GET /api/apple/weather
@@ -2050,7 +2251,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         Route a text command from Phone / Siri through the JARVIS agent router.
         """
         text = str(payload.get("text") or "").strip()
-        actor_id = str(payload.get("actor_id") or "chris").strip()
+        actor_id = str(payload.get("actor_id") or payload.get("actor") or "chris").strip()
         if not text:
             raise HTTPException(status_code=400, detail="text is required")
 
@@ -2824,7 +3025,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
 
     # ── TTS via iOS (replaces ElevenLabs) ────────────────────────────────────
 
-    @app.post("/api/apple/speak")
+    @app.post("/api/apple/speak/push")
     async def apple_speak_push(payload: dict):
         """Push a 'speak this text' silent notification to the user's iPhone.
         The iOS app speaks it using AVSpeechSynthesizer (free, on-device)."""

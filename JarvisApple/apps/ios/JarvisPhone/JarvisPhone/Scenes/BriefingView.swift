@@ -349,8 +349,13 @@ struct BriefingView: View {
                                     .foregroundStyle(.secondary)
                                     .lineLimit(3)
                             }
-                            if let createdAt = notification.createdAt, !createdAt.isEmpty {
-                                Text(formatTimestamp(createdAt))
+                            if let decisionReason = notification.decisionReason, !decisionReason.isEmpty {
+                                Text(decisionReason)
+                                    .font(.caption2)
+                                    .foregroundStyle(gold.opacity(0.78))
+                            }
+                            if !notification.createdAt.isEmpty {
+                                Text(formatTimestamp(notification.createdAt))
                                     .font(.caption2)
                                     .foregroundStyle(gold.opacity(0.7))
                             }
@@ -419,10 +424,17 @@ struct BriefingView: View {
                     if appState.focus.focusActive {
                         signalRow(
                             title: "Focus",
-                            body: "Active on the phone",
+                            body: appState.focus.postureLabel?.isEmpty == false
+                                ? (appState.focus.postureLabel ?? "Active on the phone")
+                                : "Active on the phone",
                             footnote: formatTimestamp(appState.focus.updatedAt),
                             icon: "moon.fill"
                         )
+                        if let postureReason = appState.focus.postureReason, !postureReason.isEmpty {
+                            Text(postureReason)
+                                .font(.caption2)
+                                .foregroundStyle(gold.opacity(0.75))
+                        }
                     }
                     if !appState.nowPlaying.title.isEmpty {
                         signalRow(
