@@ -1023,6 +1023,95 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         else:
             readiness = "low"
 
+        daily_score: dict[str, Any] | None = None
+        protocol_items: list[dict[str, Any]] = []
+        alerts: list[dict[str, Any]] = []
+        next_actions: list[str] = []
+
+        try:
+            from .health_bridge import compute_readiness, get_latest
+
+            readiness_detail = compute_readiness(get_latest())
+            if readiness_detail.get("score") is not None:
+                daily_score = {
+                    "value": int(readiness_detail.get("score") or 0),
+                    "grade": str(readiness_detail.get("grade") or readiness.title()),
+                    "message": str(readiness_detail.get("message") or ""),
+                    "estimated": bool(readiness_detail.get("data_incomplete")),
+                }
+
+            for factor in readiness_detail.get("factors") or []:
+                if not isinstance(factor, dict):
+                    continue
+                label = str(factor.get("label") or factor.get("metric") or "Metric")
+                score = factor.get("score")
+                missing = bool(factor.get("missing"))
+                if missing:
+                    protocol_items.append({
+                        "title": f"Fill {label} gap",
+                        "detail": f"Capture {label.lower()} again so JARVIS can score your recovery accurately.",
+                        "emphasis": "medium",
+                    })
+                elif isinstance(score, (int, float)) and float(score) < 60:
+                    protocol_items.append({
+                        "title": f"Support {label}",
+                        "detail": f"{label} is trailing today. Favor hydration, recovery, and a lighter load.",
+                        "emphasis": "high",
+                    })
+        except Exception:
+            pass
+
+        completeness = _safe_read_json(Path.home() / ".jarvis" / "health" / "completeness_score.json")
+        if isinstance(completeness, dict):
+            total_score = completeness.get("total_score")
+            grade = completeness.get("grade")
+            if daily_score is None and isinstance(total_score, (int, float)):
+                daily_score = {
+                    "value": int(round(float(total_score))),
+                    "grade": str(grade or readiness.title()),
+                    "message": "Health file completeness score from JARVIS baseline review.",
+                    "estimated": False,
+                }
+            for gap in (completeness.get("critical_gaps") or [])[:3]:
+                if gap:
+                    alerts.append({
+                        "title": str(gap),
+                        "severity": "high",
+                    })
+            for quick_win in (completeness.get("quick_wins") or [])[:3]:
+                if quick_win:
+                    next_actions.append(str(quick_win))
+
+        health_state = _safe_read_json(Path.home() / ".jarvis" / "health" / "chris_health_state.json")
+        if isinstance(health_state, dict):
+            conditions = ((health_state.get("medical_history") or {}).get("known_conditions") or [])[:8]
+            for condition in conditions:
+                if not isinstance(condition, dict):
+                    continue
+                risk_score = condition.get("risk_score")
+                key_finding = str(condition.get("key_finding") or "").strip()
+                if isinstance(risk_score, (int, float)) and float(risk_score) >= 85 and key_finding:
+                    alerts.append({
+                        "title": str(condition.get("name") or "High-risk condition"),
+                        "detail": key_finding,
+                        "severity": "high",
+                    })
+            meds = ((health_state.get("current_care_state") or {}).get("medications") or [])[:8]
+            for med in meds:
+                if not isinstance(med, dict) or not med.get("high_risk"):
+                    continue
+                monitoring = str(med.get("monitoring") or "").strip()
+                if monitoring:
+                    protocol_items.append({
+                        "title": f"Monitor {med.get('name') or 'medication'}",
+                        "detail": monitoring,
+                        "emphasis": "medium",
+                    })
+
+        protocol_items = protocol_items[:4]
+        next_actions = next_actions[:4]
+        alerts = alerts[:4]
+
         data = {
             "steps_today": agg["steps"],
             "heart_rate_avg": agg["heart_rate_avg"],
@@ -1033,6 +1122,10 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             "readiness": readiness,
             "thor_note": thor_note,
             "last_sync": agg["last_sync"],
+            "daily_score": daily_score,
+            "protocol_items": protocol_items,
+            "alerts": alerts,
+            "next_actions": next_actions,
         }
         return _ok(data)
 

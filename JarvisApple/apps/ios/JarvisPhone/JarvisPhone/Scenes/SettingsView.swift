@@ -387,8 +387,11 @@ struct SettingsView: View {
         return date.formatted(date: .abbreviated, time: .shortened)
     }
 
-    private func nonEmpty(_ value: String, fallback: String) -> String {
-        value.isEmpty ? (fallback.isEmpty ? "Never" : fallback) : value
+    private func nonEmpty(_ value: String?, fallback: String?) -> String {
+        let primary = (value ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !primary.isEmpty { return primary }
+        let secondary = (fallback ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return secondary.isEmpty ? "Not synced yet" : secondary
     }
 }
 

@@ -168,7 +168,7 @@ public struct AppStateSyncHealth: Codable, Sendable {
 
 public struct AppStateSyncDomain: Codable, Sendable {
     public let synced: Bool
-    public let syncedAt: String
+    public let syncedAt: String?
 
     enum CodingKeys: String, CodingKey {
         case synced

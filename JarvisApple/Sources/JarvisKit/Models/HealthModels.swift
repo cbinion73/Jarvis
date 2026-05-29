@@ -14,6 +14,10 @@ public struct HealthSummary: Codable, Sendable {
     public let readiness: String
     public let thorNote: String
     public let lastSync: String
+    public let dailyScore: HealthDailyScore?
+    public let protocolItems: [HealthProtocolItem]
+    public let alerts: [HealthAlert]
+    public let nextActions: [String]
 
     public init(
         stepsToday: Int,
@@ -24,7 +28,11 @@ public struct HealthSummary: Codable, Sendable {
         hrv: Int,
         readiness: String,
         thorNote: String,
-        lastSync: String
+        lastSync: String,
+        dailyScore: HealthDailyScore? = nil,
+        protocolItems: [HealthProtocolItem] = [],
+        alerts: [HealthAlert] = [],
+        nextActions: [String] = []
     ) {
         self.stepsToday = stepsToday
         self.heartRateAvg = heartRateAvg
@@ -35,6 +43,10 @@ public struct HealthSummary: Codable, Sendable {
         self.readiness = readiness
         self.thorNote = thorNote
         self.lastSync = lastSync
+        self.dailyScore = dailyScore
+        self.protocolItems = protocolItems
+        self.alerts = alerts
+        self.nextActions = nextActions
     }
 
     enum CodingKeys: String, CodingKey {
@@ -47,6 +59,67 @@ public struct HealthSummary: Codable, Sendable {
         case readiness
         case thorNote = "thor_note"
         case lastSync = "last_sync"
+        case dailyScore = "daily_score"
+        case protocolItems = "protocol_items"
+        case alerts
+        case nextActions = "next_actions"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        stepsToday = try container.decode(Int.self, forKey: .stepsToday)
+        heartRateAvg = try container.decode(Int.self, forKey: .heartRateAvg)
+        sleepHours = try container.decode(Double.self, forKey: .sleepHours)
+        activeCalories = try container.decode(Int.self, forKey: .activeCalories)
+        standHours = try container.decode(Int.self, forKey: .standHours)
+        hrv = try container.decode(Int.self, forKey: .hrv)
+        readiness = try container.decode(String.self, forKey: .readiness)
+        thorNote = try container.decode(String.self, forKey: .thorNote)
+        lastSync = try container.decode(String.self, forKey: .lastSync)
+        dailyScore = try container.decodeIfPresent(HealthDailyScore.self, forKey: .dailyScore)
+        protocolItems = try container.decodeIfPresent([HealthProtocolItem].self, forKey: .protocolItems) ?? []
+        alerts = try container.decodeIfPresent([HealthAlert].self, forKey: .alerts) ?? []
+        nextActions = try container.decodeIfPresent([String].self, forKey: .nextActions) ?? []
+    }
+}
+
+public struct HealthDailyScore: Codable, Sendable {
+    public let value: Int
+    public let grade: String
+    public let message: String
+    public let estimated: Bool
+
+    public init(value: Int, grade: String, message: String, estimated: Bool = false) {
+        self.value = value
+        self.grade = grade
+        self.message = message
+        self.estimated = estimated
+    }
+}
+
+public struct HealthProtocolItem: Codable, Sendable, Identifiable {
+    public var id: String { "\(title)|\(detail)" }
+    public let title: String
+    public let detail: String
+    public let emphasis: String
+
+    public init(title: String, detail: String, emphasis: String) {
+        self.title = title
+        self.detail = detail
+        self.emphasis = emphasis
+    }
+}
+
+public struct HealthAlert: Codable, Sendable, Identifiable {
+    public var id: String { "\(title)|\(detail ?? "")|\(severity)" }
+    public let title: String
+    public let detail: String?
+    public let severity: String
+
+    public init(title: String, detail: String? = nil, severity: String) {
+        self.title = title
+        self.detail = detail
+        self.severity = severity
     }
 }
 
