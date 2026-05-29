@@ -8,6 +8,7 @@ struct HomeView: View {
 
     @StateObject private var hk = HomeKitManager.shared
     @State private var serverState: HomeState?
+    @State private var appState: AppStateOverview?
     @State private var isLoadingServerState = false
     @State private var serverError: String?
 
@@ -201,6 +202,34 @@ struct HomeView: View {
                         }
                     }
                 }
+
+                if let appState {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Household Context")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(amber)
+
+                        HStack(spacing: 10) {
+                            liveMetric(title: "Events", value: "\(appState.calendar.count)")
+                            liveMetric(title: "Reminders", value: "\(appState.reminders.count)")
+                            liveMetric(title: "Alerts", value: "\(appState.notifications.pendingCount)")
+                        }
+
+                        if let nextEvent = appState.calendar.nextItems.first, !nextEvent.title.isEmpty {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(nextEvent.title)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                Text(nextEvent.start.isEmpty ? "Upcoming family event" : nextEvent.start)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        }
+                    }
+                }
             } else if serverError == nil {
                 Text("Loading live house state from JARVIS…")
                     .font(.caption)
@@ -268,7 +297,10 @@ struct HomeView: View {
         isLoadingServerState = true
         defer { isLoadingServerState = false }
         do {
-            serverState = try await AppleAPIClient.shared.fetchHomeState()
+            async let home = AppleAPIClient.shared.fetchHomeState()
+            async let state = AppleAPIClient.shared.fetchAppState()
+            serverState = try await home
+            appState = try await state
             serverError = nil
         } catch {
             serverError = error.localizedDescription
