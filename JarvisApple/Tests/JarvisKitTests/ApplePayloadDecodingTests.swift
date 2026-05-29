@@ -17,6 +17,7 @@ struct ApplePayloadDecodingTests {
         try decode(AppStateOverview.self, from: payloads, key: "/api/apple/app-state", decoder: decoder)
         try decode(CalendarWorkflowOverview.self, from: payloads, key: "/api/apple/calendar/state", decoder: decoder)
         try decode(ReminderWorkflowOverview.self, from: payloads, key: "/api/apple/reminders/state", decoder: decoder)
+        try decode(FocusStateOverview.self, from: payloads, key: "/api/apple/focus-state", decoder: decoder)
         try decode(NotificationCenterOverview.self, from: payloads, key: "/api/apple/notifications", decoder: decoder)
         try decode(EventTimelineOverview.self, from: payloads, key: "/api/apple/events/recent", decoder: decoder)
         try decode(AppleWeatherOverview.self, from: payloads, key: "/api/apple/weather", decoder: decoder)

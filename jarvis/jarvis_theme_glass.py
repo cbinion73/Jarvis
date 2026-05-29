@@ -6177,6 +6177,15 @@ body::after {{
       </div>
     </div>
 
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-inner">
+        <div class="card-header"><span class="card-title">Focus Posture</span></div>
+        <div id="notification-focus-posture">
+          <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading focus posture…</div></div>
+        </div>
+      </div>
+    </div>
+
     <div class="card-grid-2">
       <div class="card">
         <div class="card-inner">
@@ -9865,6 +9874,7 @@ async function loadApprovals() {{
 async function loadNotificationCenter() {{
   const notifEl = document.getElementById('notification-center-list');
   const eventEl = document.getElementById('notification-event-list');
+  const focusEl = document.getElementById('notification-focus-posture');
   const pendingEl = document.getElementById('notif-stat-pending');
   const activeEl = document.getElementById('notif-stat-active');
   const eventsEl = document.getElementById('notif-stat-events');
@@ -9879,17 +9889,20 @@ async function loadNotificationCenter() {{
   if (!notifEl || !eventEl) return;
 
   try {{
-    const [notifRes, eventRes] = await Promise.all([
+    const [notifRes, eventRes, focusRes] = await Promise.all([
       fetch('/api/apple/notifications'),
       fetch('/api/apple/events/recent?limit=20'),
+      fetch('/api/apple/focus-state'),
     ]);
-    if (!notifRes.ok || !eventRes.ok) {{
+    if (!notifRes.ok || !eventRes.ok || !focusRes.ok) {{
       throw new Error('notification center unavailable');
     }}
     const notifPayload = await notifRes.json();
     const eventPayload = await eventRes.json();
+    const focusPayload = await focusRes.json();
     const notifications = ((notifPayload || {{}}).data || {{}}).notifications || [];
     const events = ((eventPayload || {{}}).data || {{}}).events || [];
+    const focus = ((focusPayload || {{}}).data || {{}});
     window.__jarvisNotificationCenterState = window.__jarvisNotificationCenterState || {{
       notificationStatus: 'all',
       notificationCategory: 'all',
@@ -9904,6 +9917,22 @@ async function loadNotificationCenter() {{
     if (pendingEl) pendingEl.textContent = String(pendingCount);
     if (activeEl) activeEl.textContent = String(notifications.length);
     if (eventsEl) eventsEl.textContent = String(events.length);
+    if (focusEl) {{
+      const posture = focus.interruption_posture || {{}};
+      const rules = Array.isArray(focus.suppression_rules) ? focus.suppression_rules : [];
+      focusEl.innerHTML = `
+        <div class="list-row">
+          <div style="flex:1;min-width:0;">
+            <div class="list-row-name">${{escHtml((focus.summary && focus.summary.label) || posture.label || 'Focus posture')}}</div>
+            <div class="list-row-sub">${{escHtml((focus.summary && focus.summary.detail) || posture.reason || '')}}</div>
+          </div>
+          <span class="kv-tag">${{escHtml(String((posture.recommended_delivery || '').replaceAll('_',' ') || 'unknown').toUpperCase())}}</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">
+          ${{rules.slice(0, 4).map(rule => `<span class="kv-tag" style="opacity:${{rule.active ? '1' : '.65'}};">${{escHtml(rule.title)}}: ${{rule.active ? 'ACTIVE' : 'IDLE'}}</span>`).join('')}}
+        </div>
+      `;
+    }}
 
     const statuses = ['all', ...new Set(notifications.map(item => String(item.status || '').toLowerCase()).filter(Boolean))];
     const categories = ['all', ...new Set(notifications.map(item => String(item.category || '').toLowerCase()).filter(Boolean))];

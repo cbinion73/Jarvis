@@ -18,6 +18,7 @@ struct SettingsView: View {
     @State private var appState: AppStateOverview?
     @State private var calendarState: CalendarWorkflowOverview?
     @State private var remindersState: ReminderWorkflowOverview?
+    @State private var focusState: FocusStateOverview?
     @State private var pingError: String?
     @State private var isRefreshing = false
     @State private var showingInbox = false
@@ -303,6 +304,68 @@ struct SettingsView: View {
                                         }
                                     }
                                 }
+                            }
+                        }
+
+                        SystemsSection(title: "Focus Workflow", icon: "moon.zzz.fill", accent: .indigo) {
+                            if let focusState {
+                                SysRow(label: "State") {
+                                    syncStatusChip(label: focusState.focusActive ? "Active" : "Inactive")
+                                }
+                                SysRow(label: "Source") {
+                                    Text(nonEmpty(focusState.source, fallback: "Unknown"))
+                                        .foregroundStyle(.white)
+                                }
+                                SysRow(label: "Updated") {
+                                    Text(nonEmpty(focusState.updatedAt, fallback: nil))
+                                        .foregroundStyle(.white)
+                                }
+                                SysRow(label: "Fresh") {
+                                    syncStatusChip(label: focusState.sourceFresh ? "Fresh" : "Stale")
+                                }
+                                Divider().opacity(0.3)
+                                SysRow(label: "Posture") {
+                                    syncStatusChip(label: focusState.interruptionPosture.label)
+                                }
+                                SysRow(label: "Delivery") {
+                                    Text(readableDeliveryMode(focusState.interruptionPosture.recommendedDelivery))
+                                        .foregroundStyle(.white)
+                                }
+                                SysRow(label: "Local Hour") {
+                                    Text("\(focusState.interruptionPosture.hourLocal)")
+                                        .foregroundStyle(.white)
+                                }
+                                if !focusState.summary.detail.isEmpty {
+                                    Text(focusState.summary.detail)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                if !focusState.suppressionRules.isEmpty {
+                                    Divider().opacity(0.3)
+                                    Text("Suppression Rules")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        ForEach(focusState.suppressionRules.prefix(4)) { rule in
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                HStack(alignment: .firstTextBaseline) {
+                                                    Text(rule.title)
+                                                        .font(.caption.bold())
+                                                        .foregroundStyle(.white)
+                                                    Spacer()
+                                                    syncStatusChip(label: rule.active ? "Active" : "Idle")
+                                                }
+                                                Text(rule.detail)
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                Text("Focus workflow not loaded yet.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                             }
                         }
 
@@ -631,10 +694,12 @@ struct SettingsView: View {
             async let state = AppleAPIClient.shared.fetchAppState()
             async let calendar = AppleAPIClient.shared.fetchCalendarState()
             async let reminders = AppleAPIClient.shared.fetchRemindersState()
+            async let focus = AppleAPIClient.shared.fetchFocusState()
             watchStatus = try await status
             appState = try await state
             calendarState = try await calendar
             remindersState = try await reminders
+            focusState = try await focus
             serverOK = true
             pingError = nil
             calendarWorkflowError = ""
