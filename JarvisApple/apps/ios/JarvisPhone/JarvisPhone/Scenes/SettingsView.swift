@@ -575,9 +575,32 @@ struct NotificationCenterView: View {
     @State private var events: [EventTimelineItem] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var selectedNotificationStatus = "all"
+    @State private var selectedNotificationCategory = "all"
+    @State private var selectedEventDomain = "all"
 
     private let client = AppleAPIClient.shared
     private let accent = Color(red: 1.0, green: 0.82, blue: 0.28)
+    private var notificationStatuses: [String] {
+        ["all"] + notifications.map { $0.status.lowercased() }.filter { !$0.isEmpty }.uniqued()
+    }
+    private var notificationCategories: [String] {
+        ["all"] + notifications.map { $0.category.lowercased() }.filter { !$0.isEmpty }.uniqued()
+    }
+    private var eventDomains: [String] {
+        ["all"] + events.map { $0.domain.lowercased() }.filter { !$0.isEmpty }.uniqued()
+    }
+    private var filteredNotifications: [NotificationCenterItem] {
+        notifications.filter { item in
+            (selectedNotificationStatus == "all" || item.status.lowercased() == selectedNotificationStatus) &&
+            (selectedNotificationCategory == "all" || item.category.lowercased() == selectedNotificationCategory)
+        }
+    }
+    private var filteredEvents: [EventTimelineItem] {
+        events.filter { item in
+            selectedEventDomain == "all" || item.domain.lowercased() == selectedEventDomain
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -627,7 +650,20 @@ struct NotificationCenterView: View {
                                 } else {
                                     VStack(alignment: .leading, spacing: 10) {
                                         sectionHeader("Inbox", icon: "bell.badge.fill")
-                                        ForEach(notifications) { item in
+                                        filterScroller(
+                                            title: "Status",
+                                            values: notificationStatuses,
+                                            selected: selectedNotificationStatus
+                                        ) { selectedNotificationStatus = $0 }
+                                        filterScroller(
+                                            title: "Category",
+                                            values: notificationCategories,
+                                            selected: selectedNotificationCategory
+                                        ) { selectedNotificationCategory = $0 }
+                                        if filteredNotifications.isEmpty {
+                                            emptyFilterState("No notifications match the current filters.")
+                                        }
+                                        ForEach(filteredNotifications) { item in
                                             VStack(alignment: .leading, spacing: 8) {
                                                 HStack(alignment: .firstTextBaseline) {
                                                     Text(item.title.isEmpty ? "JARVIS Alert" : item.title)
@@ -695,7 +731,15 @@ struct NotificationCenterView: View {
                                 if !events.isEmpty {
                                     VStack(alignment: .leading, spacing: 10) {
                                         sectionHeader("Recent Events", icon: "clock.arrow.circlepath")
-                                        ForEach(events.prefix(8)) { event in
+                                        filterScroller(
+                                            title: "Domain",
+                                            values: eventDomains,
+                                            selected: selectedEventDomain
+                                        ) { selectedEventDomain = $0 }
+                                        if filteredEvents.isEmpty {
+                                            emptyFilterState("No recent events match the current filters.")
+                                        }
+                                        ForEach(filteredEvents.prefix(8)) { event in
                                             VStack(alignment: .leading, spacing: 5) {
                                                 HStack(alignment: .firstTextBaseline) {
                                                     Text(event.title)
@@ -896,6 +940,44 @@ struct NotificationCenterView: View {
         ["resolve", "complete_reminder", "stage_prep"].contains(action)
     }
 
+    private func filterScroller(
+        title: String,
+        values: [String],
+        selected: String,
+        onSelect: @escaping (String) -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(values, id: \.self) { value in
+                        Button(prettyFilterLabel(value)) {
+                            onSelect(value)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(selected == value ? accent : .white.opacity(0.18))
+                        .foregroundStyle(selected == value ? .black : .white)
+                    }
+                }
+            }
+        }
+    }
+
+    private func emptyFilterState(_ message: String) -> some View {
+        Text(message)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 6)
+    }
+
+    private func prettyFilterLabel(_ raw: String) -> String {
+        if raw == "all" { return "All" }
+        return raw.replacingOccurrences(of: "_", with: " ").capitalized
+    }
+
     private func formatTimestamp(_ raw: String) -> String {
         guard !raw.isEmpty else { return "Just now" }
         let formatter = ISO8601DateFormatter()
@@ -916,5 +998,12 @@ struct NotificationCenterView: View {
         default:
             return mode.replacingOccurrences(of: "_", with: " ").capitalized
         }
+    }
+}
+
+private extension Array where Element == String {
+    func uniqued() -> [String] {
+        var seen = Set<String>()
+        return filter { seen.insert($0).inserted }
     }
 }
