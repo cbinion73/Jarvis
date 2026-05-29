@@ -621,6 +621,105 @@ def _build_apple_calendar_state(payload: dict[str, Any]) -> dict[str, Any]:
         "attention_flags": attention_flags[:6],
     }
 
+def _apple_reminder_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    reminders = payload.get("reminders") if isinstance(payload, dict) else []
+    if not isinstance(reminders, list):
+        return []
+    open_items = [
+        reminder for reminder in reminders
+        if isinstance(reminder, dict) and not bool(reminder.get("completed"))
+    ]
+    open_items.sort(
+        key=lambda item: (
+            _iso_minutes_away(str(item.get("due") or "").strip()) is None,
+            _iso_minutes_away(str(item.get("due") or "").strip()) or 0,
+            -_coerce_int(item.get("priority"), 0),
+            str(item.get("title") or ""),
+        )
+    )
+    return open_items
+
+
+def _apple_reminder_record(reminder: dict[str, Any]) -> dict[str, Any]:
+    due = str(reminder.get("due") or "").strip()
+    minutes_away = _iso_minutes_away(due)
+    priority = _coerce_int(reminder.get("priority"), 0)
+    if priority >= 8:
+        priority_label = "high"
+    elif priority <= 2:
+        priority_label = "low"
+    else:
+        priority_label = "normal"
+    return {
+        "id": str(reminder.get("id") or "").strip(),
+        "title": str(reminder.get("title") or "").strip(),
+        "due": due,
+        "list": str(reminder.get("list") or "").strip(),
+        "priority": priority,
+        "priority_label": priority_label,
+        "notes": str(reminder.get("notes") or "").strip(),
+        "minutes_away": minutes_away,
+        "overdue": minutes_away is not None and minutes_away < 0,
+        "due_soon": minutes_away is not None and 0 <= minutes_away <= 4 * 60,
+        "available_actions": ["complete", "snooze_1h"],
+    }
+
+
+def _build_apple_reminders_state(payload: dict[str, Any]) -> dict[str, Any]:
+    reminders = _apple_reminder_items(payload)
+    records = [_apple_reminder_record(reminder) for reminder in reminders]
+    overdue_items = [record for record in records if record["overdue"]][:6]
+    due_soon_items = [record for record in records if record["due_soon"]][:6]
+    priority_items = [record for record in records if record["priority"] >= 7][:6]
+
+    attention_flags: list[dict[str, Any]] = []
+    if overdue_items:
+        first = overdue_items[0]
+        attention_flags.append(
+            {
+                "id": f"overdue:{first['id']}",
+                "reminder_id": first["id"],
+                "kind": "overdue",
+                "severity": "high",
+                "title": f"Overdue reminder: {first['title'] or 'Reminder'}",
+                "detail": "This reminder is already overdue and should be resolved or deferred.",
+            }
+        )
+    if due_soon_items:
+        first = due_soon_items[0]
+        attention_flags.append(
+            {
+                "id": f"due_soon:{first['id']}",
+                "reminder_id": first["id"],
+                "kind": "due_soon",
+                "severity": "medium",
+                "title": f"Due soon: {first['title'] or 'Reminder'}",
+                "detail": "This reminder is inside the active household window.",
+            }
+        )
+    if len(priority_items) >= 2:
+        attention_flags.append(
+            {
+                "id": "priority-bundle",
+                "reminder_id": "",
+                "kind": "priority_load",
+                "severity": "medium",
+                "title": f"{len(priority_items)} high-priority reminders are open",
+                "detail": "Priority reminder load is high enough to surface in command surfaces.",
+            }
+        )
+
+    return {
+        "synced": bool(payload),
+        "synced_at": str(payload.get("synced_at") or "") if isinstance(payload, dict) else "",
+        "count": int(payload.get("count") or len(reminders)) if isinstance(payload, dict) else len(reminders),
+        "open_items": records[:8],
+        "overdue_items": overdue_items,
+        "due_soon_items": due_soon_items,
+        "priority_items": priority_items,
+        "attention_flags": attention_flags[:6],
+    }
+
 
 def _build_briefing_command_items(
     *,
@@ -3276,6 +3375,11 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
 
 
     # ── EventKit: Reminders ───────────────────────────────────────────────────
+
+    @app.get("/api/apple/reminders/state")
+    async def apple_reminders_state():
+        payload = _safe_read_json(Path("data/apple/reminders.json"), {})
+        return _ok(_build_apple_reminders_state(payload if isinstance(payload, dict) else {}))
 
     @app.post("/api/apple/reminders")
     async def apple_reminders(payload: dict):

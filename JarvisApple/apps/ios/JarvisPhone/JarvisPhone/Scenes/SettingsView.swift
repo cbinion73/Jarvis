@@ -17,11 +17,14 @@ struct SettingsView: View {
     @State private var watchStatus: WatchStatus?
     @State private var appState: AppStateOverview?
     @State private var calendarState: CalendarWorkflowOverview?
+    @State private var remindersState: ReminderWorkflowOverview?
     @State private var pingError: String?
     @State private var isRefreshing = false
     @State private var showingInbox = false
     @State private var calendarWorkflowMessage = ""
     @State private var calendarWorkflowError = ""
+    @State private var reminderWorkflowMessage = ""
+    @State private var reminderWorkflowError = ""
 
     private let steel = Color(red: 0.55, green: 0.65, blue: 0.78)
 
@@ -415,6 +418,85 @@ struct SettingsView: View {
                             }
                         }
 
+                        SystemsSection(title: "Reminder Workflow", icon: "checklist.checked", accent: .orange) {
+                            if let remindersState {
+                                SysRow(label: "Mirror") {
+                                    syncStatusChip(label: remindersState.synced ? "Live" : "Not synced yet")
+                                }
+                                SysRow(label: "Open") {
+                                    Text("\(remindersState.count)")
+                                        .foregroundStyle(.white)
+                                }
+                                SysRow(label: "Synced At") {
+                                    Text(nonEmpty(remindersState.syncedAt, fallback: nil))
+                                        .foregroundStyle(.white)
+                                }
+
+                                if !reminderWorkflowError.isEmpty {
+                                    Text(reminderWorkflowError)
+                                        .font(.caption)
+                                        .foregroundStyle(.red.opacity(0.9))
+                                } else if !reminderWorkflowMessage.isEmpty {
+                                    Text(reminderWorkflowMessage)
+                                        .font(.caption)
+                                        .foregroundStyle(.orange.opacity(0.95))
+                                }
+
+                                if !remindersState.attentionFlags.isEmpty {
+                                    Divider().opacity(0.3)
+                                    Text("Attention Flags")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        ForEach(remindersState.attentionFlags.prefix(3)) { flag in
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                HStack(alignment: .firstTextBaseline) {
+                                                    Text(flag.title)
+                                                        .font(.caption.bold())
+                                                        .foregroundStyle(.white)
+                                                    Spacer()
+                                                    syncStatusChip(label: flag.severity.capitalized)
+                                                }
+                                                Text(flag.detail)
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if !remindersState.overdueItems.isEmpty {
+                                    Divider().opacity(0.3)
+                                    Text("Overdue")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    reminderWorkflowList(remindersState.overdueItems.prefix(3))
+                                } else if !remindersState.dueSoonItems.isEmpty {
+                                    Divider().opacity(0.3)
+                                    Text("Due Soon")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    reminderWorkflowList(remindersState.dueSoonItems.prefix(3))
+                                } else if !remindersState.priorityItems.isEmpty {
+                                    Divider().opacity(0.3)
+                                    Text("Priority")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    reminderWorkflowList(remindersState.priorityItems.prefix(3))
+                                } else if !remindersState.openItems.isEmpty {
+                                    Divider().opacity(0.3)
+                                    Text("Open Queue")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    reminderWorkflowList(remindersState.openItems.prefix(3))
+                                }
+                            } else {
+                                Text("Reminder workflow not loaded yet.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
                         // ── Presence + location ────────────────────
                         SystemsSection(title: "Presence", icon: "location.fill", accent: .cyan) {
                             SysRow(label: "Home Geofence") {
@@ -548,12 +630,15 @@ struct SettingsView: View {
             async let status = AppleAPIClient.shared.fetchStatus()
             async let state = AppleAPIClient.shared.fetchAppState()
             async let calendar = AppleAPIClient.shared.fetchCalendarState()
+            async let reminders = AppleAPIClient.shared.fetchRemindersState()
             watchStatus = try await status
             appState = try await state
             calendarState = try await calendar
+            remindersState = try await reminders
             serverOK = true
             pingError = nil
             calendarWorkflowError = ""
+            reminderWorkflowError = ""
         } catch {
             serverOK = false
             pingError = error.localizedDescription
@@ -656,6 +741,81 @@ struct SettingsView: View {
         let query = destination.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? destination
         guard let url = URL(string: "http://maps.apple.com/?daddr=\(query)&dirflg=d") else { return }
         openURL(url)
+    }
+
+    @ViewBuilder
+    private func reminderWorkflowList<S: Sequence>(_ items: S) -> some View where S.Element == ReminderWorkflowItem {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(Array(items), id: \.id) { item in
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(item.title.isEmpty ? "Reminder" : item.title)
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                        Spacer()
+                        syncStatusChip(label: item.priorityLabel.capitalized)
+                    }
+                    Text(reminderTimingLabel(for: item))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    if !item.list.isEmpty {
+                        Text(item.list)
+                            .font(.caption2)
+                            .foregroundStyle(.orange.opacity(0.85))
+                    }
+                    HStack(spacing: 10) {
+                        Button("Complete") {
+                            Task { await completeReminderWorkflow(item) }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.orange)
+
+                        Button("Snooze 1h") {
+                            Task { await snoozeReminderWorkflow(item) }
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.white.opacity(0.85))
+                    }
+                    .font(.caption.weight(.semibold))
+                }
+            }
+        }
+    }
+
+    private func reminderTimingLabel(for item: ReminderWorkflowItem) -> String {
+        if let minutesAway = item.minutesAway {
+            if minutesAway < 0 {
+                return "Overdue by \(abs(minutesAway)) min"
+            }
+            return "Due in \(minutesAway) min"
+        }
+        return nonEmpty(item.due, fallback: "No due date")
+    }
+
+    private func completeReminderWorkflow(_ item: ReminderWorkflowItem) async {
+        reminderWorkflowError = ""
+        do {
+            if try await AppleAPIClient.shared.completeReminder(item.id) {
+                reminderWorkflowMessage = "Completed \(item.title)"
+                remindersState = try await AppleAPIClient.shared.fetchRemindersState()
+                appState = try await AppleAPIClient.shared.fetchAppState()
+            }
+        } catch {
+            reminderWorkflowError = error.localizedDescription
+        }
+    }
+
+    private func snoozeReminderWorkflow(_ item: ReminderWorkflowItem) async {
+        reminderWorkflowError = ""
+        do {
+            if try await AppleAPIClient.shared.snoozeReminder(item.id, minutes: 60) {
+                reminderWorkflowMessage = "Snoozed \(item.title) for 1 hour"
+                remindersState = try await AppleAPIClient.shared.fetchRemindersState()
+                appState = try await AppleAPIClient.shared.fetchAppState()
+            }
+        } catch {
+            reminderWorkflowError = error.localizedDescription
+        }
     }
 }
 

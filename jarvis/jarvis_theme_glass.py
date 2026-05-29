@@ -13290,28 +13290,69 @@ async function loadOverviewPublishing() {{
 ═══════════════════════════════════════════════════════════════ */
 async function loadOverviewReminders() {{
   try {{
-    const res = await fetch('/api/reminders');
-    if (!res.ok) {{ console.warn('loadOverviewReminders', res.status); return; }}
-    const d = await res.json();
-    const items = d.reminders || [];
+    const [legacyRes, stateRes] = await Promise.all([
+      fetch('/api/reminders'),
+      fetch('/api/apple/reminders/state')
+    ]);
+    if (!legacyRes.ok) {{ console.warn('loadOverviewReminders', legacyRes.status); return; }}
+    const legacy = await legacyRes.json();
+    const items = legacy.reminders || [];
+    const statePayload = stateRes.ok ? await stateRes.json() : {{}};
+    const state = (statePayload || {{}}).data || {{}};
+    const attentionFlags = Array.isArray(state.attention_flags) ? state.attention_flags : [];
+    const overdueItems = Array.isArray(state.overdue_items) ? state.overdue_items : [];
+    const dueSoonItems = Array.isArray(state.due_soon_items) ? state.due_soon_items : [];
+    const priorityItems = Array.isArray(state.priority_items) ? state.priority_items : [];
+    const openItems = Array.isArray(state.open_items) ? state.open_items : [];
     const countEl = document.getElementById('reminders-count');
-    if (countEl) countEl.textContent = items.length || '0';
+    if (countEl) countEl.textContent = state.count || items.length || '0';
     const el = document.getElementById('overview-reminders');
     if (!el) return;
-    if (items.length === 0) {{
+    if (items.length === 0 && openItems.length === 0) {{
       el.innerHTML = '<div class="list-row-sub" style="color:var(--text-3);font-style:italic;">No pending reminders.</div>';
       return;
     }}
-    el.innerHTML = items.slice(0, 5).map(r => {{
+    const workflowItems = overdueItems.length ? overdueItems : (dueSoonItems.length ? dueSoonItems : (priorityItems.length ? priorityItems : openItems));
+    const attentionHtml = attentionFlags.slice(0, 2).map(flag => `
+      <div class="list-row" style="padding-bottom:6px;">
+        <div style="flex:1;min-width:0;">
+          <div class="list-row-name">${{escHtml(flag.title || 'Reminder attention')}}</div>
+          <div class="list-row-sub">${{escHtml(flag.detail || '')}}</div>
+        </div>
+        <span class="kv-tag">${{escHtml(String(flag.severity || 'low').toUpperCase())}}</span>
+      </div>
+    `).join('');
+    const queueHtml = workflowItems.slice(0, 4).map(item => {{
+      const timing = reminderWorkflowTiming(item);
+      const list = item.list ? `<span style="font-size:9px;color:var(--accent-2);">${{escHtml(item.list)}}</span>` : '';
+      return `<div class="approval-item" style="margin-top:8px;">
+        <div class="approval-title">${{escHtml(item.title || item.text || 'Reminder')}}</div>
+        <div class="approval-meta">${{escHtml(timing)}}${{list ? ' · ' + list : ''}}</div>
+        <div class="approval-actions" style="margin-top:10px;">
+          <button class="btn btn-hue btn-sm" onclick="completeMirroredReminder('${{escHtml(item.id)}}')">Complete</button>
+          <button class="btn btn-navy btn-sm" onclick="snoozeMirroredReminder('${{escHtml(item.id)}}', 60)">Snooze 1h</button>
+        </div>
+      </div>`;
+    }}).join('');
+    const legacyHtml = items.slice(0, 2).map(r => {{
       const pri = r.priority === 'high' ? 'dot-error' : r.priority === 'low' ? 'dot-standby' : 'dot-active';
       const due = r.due ? ' <span style="font-size:9px;color:var(--text-3);">' + new Date(r.due).toLocaleDateString([], {{month:'short',day:'numeric'}}) + '</span>' : '';
       return `<div class="list-row" style="align-items:center;">
         <span class="dot ${{pri}}" style="cursor:pointer;flex-shrink:0;" onclick="completeReminder('${{escHtml(r.id)}}')" title="Mark done"></span>
         <div style="flex:1;font-size:12px;color:var(--text-1);">${{escHtml(r.text)}}${{due}}</div>
-        <span style="font-size:10px;color:var(--text-3);cursor:pointer;" onclick="deleteReminder('${{escHtml(r.id)}}')" title="Delete">✕</span>
       </div>`;
     }}).join('');
+    el.innerHTML = `${{attentionHtml}}${{queueHtml || legacyHtml}}`;
   }} catch(e) {{ console.error('loadOverviewReminders failed', e); }}
+}}
+
+function reminderWorkflowTiming(item) {{
+  const minutes = Number(item && item.minutes_away);
+  if (Number.isFinite(minutes)) {{
+    if (minutes < 0) return `Overdue by ${{Math.abs(minutes)}} min`;
+    return `Due in ${{minutes}} min`;
+  }}
+  return item && item.due ? fmtLocalTime(item.due, {{short:true}}) : 'No due date';
 }}
 
 async function addReminder() {{
@@ -13334,6 +13375,40 @@ async function completeReminder(id) {{
     await fetch('/api/reminders/' + id + '/complete', {{method: 'POST'}});
     loadOverviewReminders();
   }} catch(e) {{}}
+}}
+
+async function completeMirroredReminder(id) {{
+  try {{
+    const res = await fetch('/api/apple/reminders/' + id + '/complete', {{method:'POST'}});
+    if (!res.ok) {{
+      showToast('Could not complete reminder', 'error');
+      return;
+    }}
+    showToast('Reminder completed', 'success');
+    loadOverviewReminders();
+    if (currentView === 'notifications') loadNotificationCenter();
+  }} catch(e) {{
+    showToast('Could not complete reminder', 'error');
+  }}
+}}
+
+async function snoozeMirroredReminder(id, minutes) {{
+  try {{
+    const res = await fetch('/api/apple/reminders/' + id + '/snooze', {{
+      method:'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{minutes}})
+    }});
+    if (!res.ok) {{
+      showToast('Could not snooze reminder', 'error');
+      return;
+    }}
+    showToast('Reminder snoozed', 'success');
+    loadOverviewReminders();
+    if (currentView === 'notifications') loadNotificationCenter();
+  }} catch(e) {{
+    showToast('Could not snooze reminder', 'error');
+  }}
 }}
 
 async function deleteReminder(id) {{
