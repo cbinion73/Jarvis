@@ -33,6 +33,8 @@ ENDPOINTS: list[tuple[str, str]] = [
     ("/api/apple/calendar/state", "/api/apple/calendar/state"),
     ("/api/apple/reminders/state", "/api/apple/reminders/state"),
     ("/api/apple/focus-state", "/api/apple/focus-state"),
+    ("/api/apple/sound-alerts", "/api/apple/sound-alerts"),
+    ("/api/apple/vision/scans", "/api/apple/vision/scans"),
     ("/api/apple/notifications", "/api/apple/notifications"),
     ("/api/apple/events/recent", "/api/apple/events/recent"),
     ("/api/apple/weather", "/api/apple/weather"),
@@ -199,6 +201,35 @@ def validate_phase_one_contracts(payloads: dict[str, dict]) -> None:
     for key in ("label", "detail", "recommended_delivery"):
         if key not in summary:
             raise RuntimeError(f"/api/apple/focus-state summary missing '{key}'")
+
+    sound_state = require_mapping(payloads, "/api/apple/sound-alerts")
+    for key in ("count", "recent_items", "high_confidence_items", "attention_flags"):
+        if key not in sound_state:
+            raise RuntimeError(f"/api/apple/sound-alerts missing '{key}'")
+    for field in ("recent_items", "high_confidence_items"):
+        items = sound_state.get(field)
+        if not isinstance(items, list):
+            raise RuntimeError(f"/api/apple/sound-alerts {field} is not a list")
+        for index, item in enumerate(items[:3]):
+            if not isinstance(item, dict):
+                raise RuntimeError(f"/api/apple/sound-alerts {field}[{index}] is not an object")
+            for key in ("id", "label", "detail", "source", "confidence", "received_at"):
+                if key not in item:
+                    raise RuntimeError(f"/api/apple/sound-alerts {field}[{index}] missing '{key}'")
+
+    vision_state = require_mapping(payloads, "/api/apple/vision/scans")
+    for key in ("count", "recent_items", "recent_contexts", "attention_flags"):
+        if key not in vision_state:
+            raise RuntimeError(f"/api/apple/vision/scans missing '{key}'")
+    items = vision_state.get("recent_items")
+    if not isinstance(items, list):
+        raise RuntimeError("/api/apple/vision/scans recent_items is not a list")
+    for index, item in enumerate(items[:3]):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"/api/apple/vision/scans recent_items[{index}] is not an object")
+        for key in ("id", "context", "source", "text_preview", "received_at"):
+            if key not in item:
+                raise RuntimeError(f"/api/apple/vision/scans recent_items[{index}] missing '{key}'")
 
     reminders = app_state.get("reminders")
     if not isinstance(reminders, dict):

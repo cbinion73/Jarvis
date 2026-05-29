@@ -6186,6 +6186,15 @@ body::after {{
       </div>
     </div>
 
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-inner">
+        <div class="card-header"><span class="card-title">Signal History</span></div>
+        <div id="notification-signal-history">
+          <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading signal history…</div></div>
+        </div>
+      </div>
+    </div>
+
     <div class="card-grid-2">
       <div class="card">
         <div class="card-inner">
@@ -9875,6 +9884,7 @@ async function loadNotificationCenter() {{
   const notifEl = document.getElementById('notification-center-list');
   const eventEl = document.getElementById('notification-event-list');
   const focusEl = document.getElementById('notification-focus-posture');
+  const signalEl = document.getElementById('notification-signal-history');
   const pendingEl = document.getElementById('notif-stat-pending');
   const activeEl = document.getElementById('notif-stat-active');
   const eventsEl = document.getElementById('notif-stat-events');
@@ -9889,20 +9899,26 @@ async function loadNotificationCenter() {{
   if (!notifEl || !eventEl) return;
 
   try {{
-    const [notifRes, eventRes, focusRes] = await Promise.all([
+    const [notifRes, eventRes, focusRes, soundRes, visionRes] = await Promise.all([
       fetch('/api/apple/notifications'),
       fetch('/api/apple/events/recent?limit=20'),
       fetch('/api/apple/focus-state'),
+      fetch('/api/apple/sound-alerts'),
+      fetch('/api/apple/vision/scans'),
     ]);
-    if (!notifRes.ok || !eventRes.ok || !focusRes.ok) {{
+    if (!notifRes.ok || !eventRes.ok || !focusRes.ok || !soundRes.ok || !visionRes.ok) {{
       throw new Error('notification center unavailable');
     }}
     const notifPayload = await notifRes.json();
     const eventPayload = await eventRes.json();
     const focusPayload = await focusRes.json();
+    const soundPayload = await soundRes.json();
+    const visionPayload = await visionRes.json();
     const notifications = ((notifPayload || {{}}).data || {{}}).notifications || [];
     const events = ((eventPayload || {{}}).data || {{}}).events || [];
     const focus = ((focusPayload || {{}}).data || {{}});
+    const sound = ((soundPayload || {{}}).data || {{}});
+    const vision = ((visionPayload || {{}}).data || {{}});
     window.__jarvisNotificationCenterState = window.__jarvisNotificationCenterState || {{
       notificationStatus: 'all',
       notificationCategory: 'all',
@@ -9930,6 +9946,26 @@ async function loadNotificationCenter() {{
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">
           ${{rules.slice(0, 4).map(rule => `<span class="kv-tag" style="opacity:${{rule.active ? '1' : '.65'}};">${{escHtml(rule.title)}}: ${{rule.active ? 'ACTIVE' : 'IDLE'}}</span>`).join('')}}
+        </div>
+      `;
+    }}
+    if (signalEl) {{
+      const soundItems = Array.isArray(sound.recent_items) ? sound.recent_items : [];
+      const visionItems = Array.isArray(vision.recent_items) ? vision.recent_items : [];
+      signalEl.innerHTML = `
+        <div class="list-row">
+          <div style="flex:1;min-width:0;">
+            <div class="list-row-name">Sound History</div>
+            <div class="list-row-sub">${{soundItems.length ? escHtml(soundItems[0].label || 'Recent sound alert') : 'No recent sound alerts.'}}</div>
+          </div>
+          <span class="kv-tag">${{escHtml(String(sound.count || 0))}}</span>
+        </div>
+        <div class="list-row" style="margin-top:8px;">
+          <div style="flex:1;min-width:0;">
+            <div class="list-row-name">Vision History</div>
+            <div class="list-row-sub">${{visionItems.length ? escHtml(visionItems[0].context || 'Recent vision capture') : 'No recent vision captures.'}}</div>
+          </div>
+          <span class="kv-tag">${{escHtml(String(vision.count || 0))}}</span>
         </div>
       `;
     }}

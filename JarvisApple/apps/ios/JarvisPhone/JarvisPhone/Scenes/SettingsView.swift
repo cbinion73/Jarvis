@@ -19,6 +19,8 @@ struct SettingsView: View {
     @State private var calendarState: CalendarWorkflowOverview?
     @State private var remindersState: ReminderWorkflowOverview?
     @State private var focusState: FocusStateOverview?
+    @State private var soundHistory: SoundHistoryOverview?
+    @State private var visionHistory: VisionHistoryOverview?
     @State private var pingError: String?
     @State private var isRefreshing = false
     @State private var showingInbox = false
@@ -369,6 +371,103 @@ struct SettingsView: View {
                             }
                         }
 
+                        SystemsSection(title: "Signal History", icon: "waveform.badge.magnifyingglass", accent: .mint) {
+                            SysRow(label: "Sound Events") {
+                                Text("\(soundHistory?.count ?? 0)")
+                                    .foregroundStyle(.white)
+                            }
+                            SysRow(label: "Vision Captures") {
+                                Text("\(visionHistory?.count ?? 0)")
+                                    .foregroundStyle(.white)
+                            }
+
+                            if let soundHistory, !soundHistory.attentionFlags.isEmpty {
+                                Divider().opacity(0.3)
+                                Text("Sound Attention")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                VStack(alignment: .leading, spacing: 8) {
+                                    ForEach(soundHistory.attentionFlags.prefix(2)) { flag in
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            HStack(alignment: .firstTextBaseline) {
+                                                Text(flag.title)
+                                                    .font(.caption.bold())
+                                                    .foregroundStyle(.white)
+                                                Spacer()
+                                                syncStatusChip(label: flag.severity.capitalized)
+                                            }
+                                            Text(flag.detail)
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                            }
+
+                            if let soundHistory, !soundHistory.recentItems.isEmpty {
+                                Divider().opacity(0.3)
+                                Text("Recent Sound")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                VStack(alignment: .leading, spacing: 8) {
+                                    ForEach(soundHistory.recentItems.prefix(3)) { item in
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            HStack(alignment: .firstTextBaseline) {
+                                                Text(item.label.isEmpty ? "Sound alert" : item.label)
+                                                    .font(.caption.bold())
+                                                    .foregroundStyle(.white)
+                                                Spacer()
+                                                if let confidence = item.confidence {
+                                                    Text("\(Int(confidence * 100))%")
+                                                        .font(.caption2)
+                                                        .foregroundStyle(.secondary)
+                                                }
+                                            }
+                                            if !item.detail.isEmpty {
+                                                Text(item.detail)
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                            Text(nonEmpty(item.receivedAt, fallback: nil))
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                            }
+
+                            if let visionHistory, !visionHistory.recentItems.isEmpty {
+                                Divider().opacity(0.3)
+                                Text("Recent Vision")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                VStack(alignment: .leading, spacing: 8) {
+                                    ForEach(visionHistory.recentItems.prefix(3)) { item in
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            HStack(alignment: .firstTextBaseline) {
+                                                Text(item.context.isEmpty ? "Vision scan" : item.context)
+                                                    .font(.caption.bold())
+                                                    .foregroundStyle(.white)
+                                                Spacer()
+                                                if !item.source.isEmpty {
+                                                    syncStatusChip(label: item.source.capitalized)
+                                                }
+                                            }
+                                            if !item.textPreview.isEmpty {
+                                                Text(item.textPreview)
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                                    .lineLimit(3)
+                                            }
+                                            Text(nonEmpty(item.receivedAt, fallback: nil))
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         SystemsSection(title: "Calendar Workflow", icon: "calendar.badge.clock", accent: .cyan) {
                             if let calendarState {
                                 SysRow(label: "Mirror") {
@@ -695,11 +794,15 @@ struct SettingsView: View {
             async let calendar = AppleAPIClient.shared.fetchCalendarState()
             async let reminders = AppleAPIClient.shared.fetchRemindersState()
             async let focus = AppleAPIClient.shared.fetchFocusState()
+            async let sound = AppleAPIClient.shared.fetchSoundHistory()
+            async let vision = AppleAPIClient.shared.fetchVisionHistory()
             watchStatus = try await status
             appState = try await state
             calendarState = try await calendar
             remindersState = try await reminders
             focusState = try await focus
+            soundHistory = try await sound
+            visionHistory = try await vision
             serverOK = true
             pingError = nil
             calendarWorkflowError = ""
