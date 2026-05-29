@@ -48,6 +48,7 @@ logger = logging.getLogger(__name__)
 _NAVIGATION_STATE_PATH = Path("data/settings/navigation_state.json")
 _EVENT_LOG_PATH = Path("data/state/event_log.jsonl")
 _NOTIFICATION_CENTER_PATH = Path("data/state/notification_center.json")
+_SIGNAL_RESOLUTIONS_PATH = Path("data/state/signal_resolutions.json")
 
 _NAV_STOP_LABELS = {
     "food": "Food",
@@ -146,6 +147,32 @@ def _safe_read_jsonl_tail(path: Path, limit: int = 1) -> list[dict[str, Any]]:
 
 def _safe_read_jsonl(path: Path) -> list[dict[str, Any]]:
     return _safe_read_jsonl_tail(path, limit=0)
+
+
+def _load_signal_resolutions() -> dict[str, dict[str, str]]:
+    payload = _safe_read_json(_SIGNAL_RESOLUTIONS_PATH, {})
+    if not isinstance(payload, dict):
+        return {"sound": {}, "vision": {}}
+    result: dict[str, dict[str, str]] = {}
+    for domain in ("sound", "vision"):
+        raw = payload.get(domain)
+        if isinstance(raw, dict):
+            result[domain] = {str(key): str(value) for key, value in raw.items() if str(key).strip()}
+        else:
+            result[domain] = {}
+    return result
+
+
+def _mark_signal_resolved(domain: str, item_id: str) -> str:
+    key = str(item_id or "").strip()
+    if not key:
+        raise ValueError("signal resolution requires a non-empty id")
+    payload = _load_signal_resolutions()
+    resolved_at = _ts()
+    bucket = payload.setdefault(domain, {})
+    bucket[key] = resolved_at
+    _safe_write_json(_SIGNAL_RESOLUTIONS_PATH, payload)
+    return resolved_at
 
 
 def _coerce_float(value: Any, default: float = 0.0) -> float:
@@ -771,6 +798,7 @@ def _build_apple_focus_state(
     }
 
 def _build_apple_sound_state(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    resolved = _load_signal_resolutions().get("sound", {})
     recent_rows = [row for row in rows if isinstance(row, dict)]
     recent_rows.sort(key=lambda item: str(item.get("received_at") or ""), reverse=True)
     recent_items = [
@@ -781,10 +809,15 @@ def _build_apple_sound_state(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "source": str(row.get("source") or "").strip(),
             "confidence": _coerce_float(row.get("confidence"), 0.0),
             "received_at": str(row.get("received_at") or ""),
+            "resolved": str(row.get("received_at") or row.get("timestamp") or f"sound-{index}") in resolved,
+            "resolved_at": resolved.get(str(row.get("received_at") or row.get("timestamp") or f"sound-{index}"), ""),
         }
         for index, row in enumerate(recent_rows[:12])
     ]
-    high_confidence_items = [item for item in recent_items if _coerce_float(item.get("confidence"), 0.0) >= 0.7][:6]
+    high_confidence_items = [
+        item for item in recent_items
+        if _coerce_float(item.get("confidence"), 0.0) >= 0.7 and not bool(item.get("resolved"))
+    ][:6]
     attention_flags: list[dict[str, Any]] = []
     if high_confidence_items:
         first = high_confidence_items[0]
@@ -806,6 +839,7 @@ def _build_apple_sound_state(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _build_apple_vision_state(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    resolved = _load_signal_resolutions().get("vision", {})
     recent_rows = [row for row in rows if isinstance(row, dict)]
     recent_rows.sort(key=lambda item: str(item.get("received_at") or ""), reverse=True)
     recent_items = [
@@ -815,6 +849,8 @@ def _build_apple_vision_state(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "source": str(row.get("source") or "").strip(),
             "text_preview": str(row.get("text") or "")[:180],
             "received_at": str(row.get("received_at") or ""),
+            "resolved": str(row.get("received_at") or f"vision-{index}") in resolved,
+            "resolved_at": resolved.get(str(row.get("received_at") or f"vision-{index}"), ""),
         }
         for index, row in enumerate(recent_rows[:12])
     ]
@@ -824,8 +860,9 @@ def _build_apple_vision_state(rows: list[dict[str, Any]]) -> dict[str, Any]:
         if context not in contexts:
             contexts.append(context)
     attention_flags: list[dict[str, Any]] = []
-    if recent_items:
-        first = recent_items[0]
+    unresolved_items = [item for item in recent_items if not bool(item.get("resolved"))]
+    if unresolved_items:
+        first = unresolved_items[0]
         attention_flags.append(
             {
                 "id": f"vision:{first['id']}",
@@ -841,6 +878,7 @@ def _build_apple_vision_state(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "recent_contexts": contexts[:6],
         "attention_flags": attention_flags,
     }
+
 
 def _build_apple_now_playing_state(payload: dict[str, Any], recent_events: list[dict[str, Any]]) -> dict[str, Any]:
     rows = [row for row in recent_events if isinstance(row, dict)]
@@ -3766,6 +3804,37 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         rows = _safe_read_jsonl_tail(Path("data/apple/sound_alerts.jsonl"), limit=max(1, min(limit, 50)))
         return _ok(_build_apple_sound_state(rows))
 
+    @app.post("/api/apple/sound-alerts/{alert_id}/resolve")
+    async def apple_sound_alert_resolve(alert_id: str):
+        rows = _safe_read_jsonl(Path("data/apple/sound_alerts.jsonl"))
+        target = next(
+            (
+                row for row in rows
+                if str(row.get("received_at") or row.get("timestamp") or "").strip() == str(alert_id or "").strip()
+            ),
+            None,
+        )
+        if target is None:
+            raise HTTPException(status_code=404, detail="Sound alert not found")
+        resolved_at = _mark_signal_resolved("sound", alert_id)
+        _record_shared_event(
+            domain="sound",
+            kind="resolved",
+            title=str(target.get("classification") or target.get("label") or "Sound alert resolved"),
+            detail=str(target.get("detail") or target.get("summary") or "A sound alert was resolved from Apple Systems."),
+            severity="low",
+            actor="jarvis",
+            source="apple.sound_alert.resolve",
+            source_id=str(alert_id),
+            navigation_target="systems",
+            actions=["open"],
+            trust_zone="household_safety",
+            authority_stage="live",
+            why_now="A household sound alert was resolved from the Apple client.",
+            metadata={"resolved_at": resolved_at},
+        )
+        return _ok({"status": "resolved", "id": str(alert_id), "resolved_at": resolved_at})
+
     @app.post("/api/apple/sound-alert")
     async def apple_sound_alert(payload: dict):
         """Receives on-device SoundAnalysis alerts from the iPhone."""
@@ -3813,6 +3882,37 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
     async def apple_vision_scans(limit: int = 12):
         rows = _safe_read_jsonl_tail(Path("data/apple/vision_scans.jsonl"), limit=max(1, min(limit, 50)))
         return _ok(_build_apple_vision_state(rows))
+
+    @app.post("/api/apple/vision/scans/{scan_id}/resolve")
+    async def apple_vision_scan_resolve(scan_id: str):
+        rows = _safe_read_jsonl(Path("data/apple/vision_scans.jsonl"))
+        target = next(
+            (
+                row for row in rows
+                if str(row.get("received_at") or "").strip() == str(scan_id or "").strip()
+            ),
+            None,
+        )
+        if target is None:
+            raise HTTPException(status_code=404, detail="Vision scan not found")
+        resolved_at = _mark_signal_resolved("vision", scan_id)
+        _record_shared_event(
+            domain="vision",
+            kind="resolved",
+            title=str(target.get("context") or "Vision scan resolved"),
+            detail=str(target.get("text") or "")[:200] or "A vision scan was resolved from Apple Systems.",
+            severity="low",
+            actor="jarvis",
+            source="apple.vision_scan.resolve",
+            source_id=str(scan_id),
+            navigation_target="systems",
+            actions=["open"],
+            trust_zone="household_perception",
+            authority_stage="live",
+            why_now="A household vision scan was resolved from the Apple client.",
+            metadata={"resolved_at": resolved_at},
+        )
+        return _ok({"status": "resolved", "id": str(scan_id), "resolved_at": resolved_at})
 
     @app.post("/api/apple/vision/scan")
     async def apple_vision_scan(payload: dict):

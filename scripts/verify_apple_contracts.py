@@ -215,7 +215,7 @@ def validate_phase_one_contracts(payloads: dict[str, dict]) -> None:
         for index, item in enumerate(items[:3]):
             if not isinstance(item, dict):
                 raise RuntimeError(f"/api/apple/sound-alerts {field}[{index}] is not an object")
-            for key in ("id", "label", "detail", "source", "confidence", "received_at"):
+            for key in ("id", "label", "detail", "source", "confidence", "received_at", "resolved", "resolved_at"):
                 if key not in item:
                     raise RuntimeError(f"/api/apple/sound-alerts {field}[{index}] missing '{key}'")
 
@@ -229,7 +229,7 @@ def validate_phase_one_contracts(payloads: dict[str, dict]) -> None:
     for index, item in enumerate(items[:3]):
         if not isinstance(item, dict):
             raise RuntimeError(f"/api/apple/vision/scans recent_items[{index}] is not an object")
-        for key in ("id", "context", "source", "text_preview", "received_at"):
+        for key in ("id", "context", "source", "text_preview", "received_at", "resolved", "resolved_at"):
             if key not in item:
                 raise RuntimeError(f"/api/apple/vision/scans recent_items[{index}] missing '{key}'")
 
