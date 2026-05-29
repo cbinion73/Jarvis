@@ -198,6 +198,12 @@ def _is_recent_iso(value: str, *, minutes: int) -> bool:
         return False
 
 
+def _iso_after_minutes(minutes: int) -> str:
+    return datetime.now(timezone.utc).fromtimestamp(
+        datetime.now(timezone.utc).timestamp() + minutes * 60
+    ).isoformat()
+
+
 def _local_hour() -> int:
     return datetime.now().astimezone().hour
 
@@ -1275,6 +1281,23 @@ class _NotificationCenterStore:
     def recent(self, limit: int = 5) -> list[dict[str, Any]]:
         return self.list(limit=limit)
 
+    def get(self, notification_id: str) -> dict[str, Any] | None:
+        for item in self._load()["items"]:
+            if str(item.get("id") or "") == notification_id:
+                return deepcopy(item)
+        return None
+
+    def update_item(self, notification_id: str, updates: dict[str, Any]) -> dict[str, Any] | None:
+        store = self._load()
+        for item in store["items"]:
+            if str(item.get("id") or "") != notification_id:
+                continue
+            item.update(updates)
+            item["updated_at"] = _ts()
+            self._save(store)
+            return deepcopy(item)
+        return None
+
     def update_status(self, notification_id: str, status: str, *, reason: str = "") -> dict[str, Any] | None:
         store = self._load()
         for item in store["items"]:
@@ -1359,6 +1382,156 @@ def _record_shared_event(
         why_now=why_now,
         metadata=metadata or {},
     )
+
+
+def _sync_mirrored_reminder(
+    reminder_id: str,
+    *,
+    completed: bool | None = None,
+    due: str | None = None,
+) -> None:
+    path = Path("data/apple/reminders.json")
+    payload = _safe_read_json(path, {})
+    reminders = payload.get("reminders") if isinstance(payload, dict) else []
+    if not isinstance(reminders, list):
+        return
+    changed = False
+    for reminder in reminders:
+        if not isinstance(reminder, dict):
+            continue
+        if str(reminder.get("id") or "") != reminder_id:
+            continue
+        if completed is not None:
+            reminder["completed"] = bool(completed)
+            changed = True
+        if due is not None:
+            reminder["due"] = due
+            changed = True
+    if not changed:
+        return
+    active_count = sum(
+        1 for reminder in reminders
+        if isinstance(reminder, dict) and not bool(reminder.get("completed"))
+    )
+    payload["reminders"] = reminders
+    payload["count"] = active_count
+    payload["synced_at"] = _ts()
+    _safe_write_json(path, payload)
+
+
+def _perform_notification_action(notification_id: str, action: str) -> dict[str, Any]:
+    item = _notification_center.get(notification_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Notification not found")
+
+    action_name = str(action or "").strip().lower()
+    allowed = [str(name).strip().lower() for name in (item.get("available_actions") or [])]
+    if action_name not in allowed:
+        raise HTTPException(status_code=400, detail=f"Action '{action_name}' is not allowed for this notification")
+
+    metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+    title = str(item.get("title") or "Notification")
+    category = str(item.get("category") or "system")
+
+    if action_name == "complete_reminder":
+        from .reminders import complete_reminder
+
+        reminder_id = str(metadata.get("reminder_id") or "").strip()
+        if not reminder_id:
+            raise HTTPException(status_code=400, detail="Reminder notification missing reminder_id")
+        ok = complete_reminder(reminder_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Reminder not found")
+        _sync_mirrored_reminder(reminder_id, completed=True)
+        updated = _notification_center.update_status(
+            notification_id,
+            "resolved",
+            reason="Reminder was completed from Notification Center.",
+        )
+        _record_shared_event(
+            domain="reminders",
+            kind="resolved",
+            title="Reminder completed",
+            detail=title,
+            severity="low",
+            source="apple.notification_center",
+            source_id=reminder_id,
+            navigation_target="workshop",
+            actions=["open"],
+            trust_zone="household_schedule",
+            authority_stage="live",
+            why_now="A reminder was completed directly from the notification workflow.",
+            metadata={"notification_id": notification_id, "action": action_name},
+        )
+        return {"ok": True, "status": str((updated or {}).get("status") or "resolved"), "notification": updated, "performed_action": action_name}
+
+    if action_name == "snooze_reminder":
+        from .reminders import snooze_reminder
+
+        reminder_id = str(metadata.get("reminder_id") or "").strip()
+        if not reminder_id:
+            raise HTTPException(status_code=400, detail="Reminder notification missing reminder_id")
+        new_due = _iso_after_minutes(60)
+        ok = snooze_reminder(reminder_id, new_due)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Reminder not found")
+        _sync_mirrored_reminder(reminder_id, completed=False, due=new_due)
+        updated = _notification_center.update_status(
+            notification_id,
+            "snoozed",
+            reason="Reminder was snoozed for one hour from Notification Center.",
+        )
+        _record_shared_event(
+            domain="reminders",
+            kind="info",
+            title="Reminder snoozed",
+            detail=f"{title} until {new_due}",
+            severity="low",
+            source="apple.notification_center",
+            source_id=reminder_id,
+            navigation_target="workshop",
+            actions=["open"],
+            trust_zone="household_schedule",
+            authority_stage="live",
+            why_now="A reminder was deferred from the shared notification workflow.",
+            metadata={"notification_id": notification_id, "action": action_name, "due": new_due},
+        )
+        return {"ok": True, "status": str((updated or {}).get("status") or "snoozed"), "notification": updated, "performed_action": action_name, "due": new_due}
+
+    if action_name == "stage_prep":
+        event_title = str(metadata.get("title") or title).strip()
+        event_start = str(metadata.get("start") or "").strip()
+        updated = _notification_center.update_status(
+            notification_id,
+            "resolved",
+            reason="Calendar preparation was staged from Notification Center.",
+        )
+        _record_shared_event(
+            domain="calendar",
+            kind="stage_ready",
+            title="Calendar preparation staged",
+            detail=f"{event_title}" + (f" at {event_start}" if event_start else ""),
+            severity="low",
+            source="apple.notification_center",
+            source_id=notification_id,
+            navigation_target="calendar",
+            actions=["open"],
+            trust_zone="household_schedule",
+            authority_stage="staged",
+            why_now="The household asked JARVIS to stage prep for an upcoming event.",
+            metadata={"notification_id": notification_id, "action": action_name, "category": category},
+        )
+        return {"ok": True, "status": str((updated or {}).get("status") or "resolved"), "notification": updated, "performed_action": action_name}
+
+    if action_name == "open":
+        updated = _notification_center.update_status(
+            notification_id,
+            "seen",
+            reason="Notification was opened from Notification Center.",
+        )
+        return {"ok": True, "status": str((updated or {}).get("status") or "seen"), "notification": updated, "performed_action": action_name}
+
+    raise HTTPException(status_code=400, detail=f"Unhandled notification action '{action_name}'")
 
 
 def _create_notification_from_event(
@@ -1451,7 +1624,7 @@ def _reconcile_shared_notifications(
             severity="medium" if minutes_away <= 120 else "low",
             delivery_mode=delivery_mode,
             navigation_target="calendar",
-            available_actions=["open", "dismiss"],
+            available_actions=["open", "stage_prep", "dismiss"],
             why_now="The next calendar event is within the household planning window.",
             decision_reason=decision_reason,
             posture_snapshot=posture,
@@ -1469,6 +1642,7 @@ def _reconcile_shared_notifications(
         open_reminders = []
     if open_reminders:
         top = open_reminders[0]
+        reminder_id = str(top.get("id") or "").strip()
         delivery_mode, decision_reason = _choose_delivery_mode(
             default_mode="hold_for_brief",
             severity="medium" if len(open_reminders) >= 3 else "low",
@@ -1483,12 +1657,17 @@ def _reconcile_shared_notifications(
             severity="medium" if len(open_reminders) >= 3 else "low",
             delivery_mode=delivery_mode,
             navigation_target="workshop",
-            available_actions=["open", "dismiss"],
+            available_actions=["open", "complete_reminder", "snooze_reminder", "dismiss"],
             why_now="Open reminders are part of today's active load.",
             decision_reason=decision_reason,
             posture_snapshot=posture,
             source_summary="Reminders",
-            metadata={"count": len(open_reminders)},
+            metadata={
+                "count": len(open_reminders),
+                "reminder_id": reminder_id,
+                "reminder_title": str(top.get("title") or ""),
+                "due": str(top.get("due") or ""),
+            },
         )
 
     alerts = home_state.get("alerts") or []
@@ -2656,6 +2835,13 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
     @app.post("/api/apple/notifications/{notification_id}/snooze")
     async def apple_notification_snooze(notification_id: str):
         return await _notification_action(notification_id, "snoozed", "Snoozed from Apple client.")
+
+    @app.post("/api/apple/notifications/{notification_id}/action")
+    async def apple_notification_workflow_action(notification_id: str, payload: dict):
+        action = str(payload.get("action") or "").strip()
+        if not action:
+            raise HTTPException(status_code=400, detail="action required")
+        return _ok(_perform_notification_action(notification_id, action))
 
     # ------------------------------------------------------------------
     # GET /api/apple/voice/greeting

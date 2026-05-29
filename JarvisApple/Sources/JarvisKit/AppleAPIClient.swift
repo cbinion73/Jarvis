@@ -401,6 +401,23 @@ public final class AppleAPIClient: Sendable {
         return response.status == "snoozed"
     }
 
+    @discardableResult
+    public func performNotificationAction(_ notificationId: String, action: String) async throws -> Bool {
+        struct Body: Encodable { let action: String }
+        struct Response: Decodable {
+            let ok: Bool?
+            let status: String?
+            let performedAction: String?
+
+            enum CodingKeys: String, CodingKey {
+                case ok, status
+                case performedAction = "performed_action"
+            }
+        }
+        let response: Response = try await post("/api/apple/notifications/\(notificationId)/action", body: Body(action: action))
+        return response.ok ?? !(response.status ?? "").isEmpty || response.performedAction == action
+    }
+
     // MARK: - Internal networking
 
     private func get<T: Decodable>(_ path: String) async throws -> T {

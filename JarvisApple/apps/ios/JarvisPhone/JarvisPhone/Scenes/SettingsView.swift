@@ -554,6 +554,18 @@ private struct SysRow<Trailing: View>: View {
         .padding(.vertical, 2)
     }
 }
+
+private extension View {
+    @ViewBuilder
+    func applyNotificationButtonStyle(prominent: Bool) -> some View {
+        if prominent {
+            self.buttonStyle(.borderedProminent)
+        } else {
+            self.buttonStyle(.bordered)
+        }
+    }
+}
+
 #Preview { SettingsView() }
 
 struct NotificationCenterView: View {
@@ -660,23 +672,13 @@ struct NotificationCenterView: View {
                                                 }
 
                                                 HStack(spacing: 10) {
-                                                    Button("Seen") {
-                                                        Task { await markSeen(item.id) }
+                                                    ForEach(buttonActions(for: item), id: \.self) { action in
+                                                        Button(notificationActionLabel(action)) {
+                                                            Task { await performAction(action, for: item.id) }
+                                                        }
+                                                        .tint(buttonTint(for: action))
+                                                        .applyNotificationButtonStyle(prominent: isProminentAction(action))
                                                     }
-                                                    .buttonStyle(.bordered)
-                                                    .tint(.white.opacity(0.8))
-
-                                                    Button("Dismiss") {
-                                                        Task { await dismissNotification(item.id) }
-                                                    }
-                                                    .buttonStyle(.bordered)
-                                                    .tint(.orange)
-
-                                                    Button("Resolve") {
-                                                        Task { await resolveNotification(item.id) }
-                                                    }
-                                                    .buttonStyle(.borderedProminent)
-                                                    .tint(accent)
                                                 }
                                                 .font(.caption.weight(.semibold))
 
@@ -790,6 +792,33 @@ struct NotificationCenterView: View {
         }
     }
 
+    private func performAction(_ action: String, for id: String) async {
+        switch action {
+        case "seen":
+            await markSeen(id)
+        case "dismiss":
+            await dismissNotification(id)
+        case "resolve":
+            await resolveNotification(id)
+        case "snooze":
+            do {
+                if try await client.snoozeNotification(id) {
+                    await load()
+                }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        default:
+            do {
+                if try await client.performNotificationAction(id, action: action) {
+                    await load()
+                }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
     private func summaryMetric(title: String, value: String) -> some View {
         VStack(spacing: 4) {
             Text(value)
@@ -832,6 +861,39 @@ struct NotificationCenterView: View {
         default:
             return .white.opacity(0.75)
         }
+    }
+
+    private func buttonActions(for item: NotificationCenterItem) -> [String] {
+        let allowed = item.availableActions.filter { !$0.isEmpty && $0 != "open" }
+        return allowed.isEmpty ? ["seen", "dismiss", "resolve"] : allowed
+    }
+
+    private func notificationActionLabel(_ action: String) -> String {
+        switch action {
+        case "complete_reminder":
+            return "Complete"
+        case "snooze_reminder":
+            return "Snooze 1h"
+        case "stage_prep":
+            return "Stage Prep"
+        default:
+            return action.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+    }
+
+    private func buttonTint(for action: String) -> Color {
+        switch action {
+        case "dismiss":
+            return .orange
+        case "resolve", "complete_reminder", "stage_prep":
+            return accent
+        default:
+            return .white.opacity(0.8)
+        }
+    }
+
+    private func isProminentAction(_ action: String) -> Bool {
+        ["resolve", "complete_reminder", "stage_prep"].contains(action)
     }
 
     private func formatTimestamp(_ raw: String) -> String {
