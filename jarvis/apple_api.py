@@ -121,6 +121,89 @@ def _safe_read_jsonl_tail(path: Path, limit: int = 1) -> list[dict[str, Any]]:
     return rows[-limit:]
 
 
+def _build_home_context(*, needs_count: int = 0) -> dict[str, Any]:
+    data_root = Path("data/apple")
+    calendar_payload = _safe_read_json(data_root / "calendar_events.json", {})
+    reminders_payload = _safe_read_json(data_root / "reminders.json", {})
+    focus_payload = _safe_read_json(data_root / "focus_state.json", {})
+
+    calendar_events = calendar_payload.get("events") if isinstance(calendar_payload, dict) else []
+    if not isinstance(calendar_events, list):
+        calendar_events = []
+    calendar_events = [event for event in calendar_events if isinstance(event, dict)]
+    calendar_events.sort(key=lambda item: str(item.get("start") or ""))
+
+    reminder_items = reminders_payload.get("reminders") if isinstance(reminders_payload, dict) else []
+    if not isinstance(reminder_items, list):
+        reminder_items = []
+    reminder_items = [
+        reminder for reminder in reminder_items
+        if isinstance(reminder, dict) and not bool(reminder.get("completed"))
+    ]
+    reminder_items.sort(key=lambda item: str(item.get("due") or "9999"))
+
+    unread_email_count = 0
+    try:
+        from .unified_inbox import get_unified_inbox
+
+        inbox = get_unified_inbox()
+        if inbox is not None:
+            unread_email_count = int((inbox.get_email_stats() or {}).get("total_unread") or 0)
+    except Exception as exc:
+        logger.warning("apple_api.build_home_context inbox: %s", exc)
+
+    publishing_count = 0
+    project_titles: list[str] = []
+    try:
+        from .publishing_suite import PublishingStore
+
+        projects = PublishingStore().list_projects()
+        publishing_count = len(projects)
+        project_titles.extend([str(project.title).strip() for project in projects[:3] if str(project.title).strip()])
+    except Exception as exc:
+        logger.warning("apple_api.build_home_context publishing: %s", exc)
+
+    active_work_items_count = 0
+    try:
+        from .catalyst import CatalystStore
+
+        work_items = CatalystStore(Path.home() / ".jarvis" / "catalyst").work_lifecycle()
+        active_statuses = {"queued", "active", "review", "draft", "planned", "ready"}
+        active_work_items_count = sum(
+            1 for item in work_items
+            if str(item.get("status") or "").strip().lower() in active_statuses
+        )
+        for item in work_items[:3]:
+            title = str(item.get("title") or "").strip()
+            if title and title not in project_titles:
+                project_titles.append(title)
+    except Exception as exc:
+        logger.warning("apple_api.build_home_context catalyst: %s", exc)
+
+    next_event = calendar_events[0] if calendar_events else {}
+
+    return {
+        "agenda": {
+            "today_event_count": int(calendar_payload.get("count") or len(calendar_events)) if isinstance(calendar_payload, dict) else len(calendar_events),
+            "next_event_title": str(next_event.get("title") or ""),
+            "next_event_start": str(next_event.get("start") or ""),
+            "next_event_location": str(next_event.get("location") or ""),
+        },
+        "attention": {
+            "reminder_count": int(reminders_payload.get("count") or len(reminder_items)) if isinstance(reminders_payload, dict) else len(reminder_items),
+            "notification_count": _notification_store.count(),
+            "unread_email_count": unread_email_count,
+            "needs_count": int(needs_count or 0),
+            "focus_active": bool(focus_payload.get("focus_active")) if isinstance(focus_payload, dict) else False,
+        },
+        "projects": {
+            "publishing_project_count": publishing_count,
+            "active_work_items_count": active_work_items_count,
+            "top_titles": project_titles[:3],
+        },
+    }
+
+
 def _nav_route_points(route_info: dict[str, Any]) -> list[tuple[float, float]]:
     points: list[tuple[float, float]] = []
     for pair in list(route_info.get("coordinates") or []):
@@ -1152,6 +1235,12 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
     @app.get("/api/apple/home/state")
     async def apple_home_state():
         """Return current house state via HomeAssistantConnector."""
+        needs_count = 0
+        try:
+            status = (await apple_status()).get("data") or {}
+            needs_count = int(status.get("needs_count") or 0)
+        except Exception:
+            needs_count = 0
         try:
             from .data_connectors import get_ha
             ha = get_ha()
@@ -1162,6 +1251,9 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         except Exception as exc:
             logger.warning("apple_home_state: %s", exc)
             state = _mock_home_state()
+        if isinstance(state, dict):
+            state = dict(state)
+            state["home_context"] = _build_home_context(needs_count=needs_count)
         return _ok(state)
 
     # ------------------------------------------------------------------

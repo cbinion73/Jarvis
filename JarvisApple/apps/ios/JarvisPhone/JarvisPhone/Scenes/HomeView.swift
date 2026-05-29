@@ -8,7 +8,6 @@ struct HomeView: View {
 
     @StateObject private var hk = HomeKitManager.shared
     @State private var serverState: HomeState?
-    @State private var appState: AppStateOverview?
     @State private var isLoadingServerState = false
     @State private var serverError: String?
 
@@ -203,30 +202,56 @@ struct HomeView: View {
                     }
                 }
 
-                if let appState {
+                if let context = state.homeContext {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Household Context")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(amber)
 
                         HStack(spacing: 10) {
-                            liveMetric(title: "Events", value: "\(appState.calendar.count)")
-                            liveMetric(title: "Reminders", value: "\(appState.reminders.count)")
-                            liveMetric(title: "Alerts", value: "\(appState.notifications.pendingCount)")
+                            liveMetric(title: "Events", value: "\(context.agenda.todayEventCount)")
+                            liveMetric(title: "Reminders", value: "\(context.attention.reminderCount)")
+                            liveMetric(title: "Needs", value: "\(context.attention.needsCount)")
                         }
 
-                        if let nextEvent = appState.calendar.nextItems.first, !nextEvent.title.isEmpty {
+                        HStack(spacing: 10) {
+                            liveMetric(title: "Inbox", value: "\(context.attention.unreadEmailCount)")
+                            liveMetric(title: "Alerts", value: "\(context.attention.notificationCount)")
+                            liveMetric(title: "Projects", value: "\(context.projects.activeWorkItemsCount)")
+                        }
+
+                        if !context.agenda.nextEventTitle.isEmpty {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(nextEvent.title)
+                                Text(context.agenda.nextEventTitle)
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(.white)
-                                Text(nextEvent.start.isEmpty ? "Upcoming family event" : nextEvent.start)
+                                Text(context.agenda.nextEventStart.isEmpty ? "Upcoming family event" : context.agenda.nextEventStart)
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
+                                if !context.agenda.nextEventLocation.isEmpty {
+                                    Text(context.agenda.nextEventLocation)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary.opacity(0.85))
+                                }
                             }
                             .padding(10)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        }
+
+                        if !context.projects.topTitles.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Active Work")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(amber)
+                                ForEach(context.projects.topTitles, id: \.self) { title in
+                                    Text(title)
+                                        .font(.caption)
+                                        .foregroundStyle(.white.opacity(0.82))
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 2)
+                                }
+                            }
                         }
                     }
                 }
@@ -297,10 +322,7 @@ struct HomeView: View {
         isLoadingServerState = true
         defer { isLoadingServerState = false }
         do {
-            async let home = AppleAPIClient.shared.fetchHomeState()
-            async let state = AppleAPIClient.shared.fetchAppState()
-            serverState = try await home
-            appState = try await state
+            serverState = try await AppleAPIClient.shared.fetchHomeState()
             serverError = nil
         } catch {
             serverError = error.localizedDescription

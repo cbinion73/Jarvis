@@ -46,15 +46,15 @@ Source-of-truth rule:
 
 ### Phase 1: Stop Split-Brain State
 
-- [ ] Home tab must reflect live JARVIS house state and not rely only on local HomeKit.
-- [ ] Brief tab must expose more live overview truth from JARVIS instead of acting as a reduced report.
-- [ ] Systems tab must surface production sync health for the major shared state domains.
+- [x] Home tab must reflect live JARVIS house state and not rely only on local HomeKit.
+- [x] Brief tab must expose more live overview truth from JARVIS instead of acting as a reduced report.
+- [x] Systems tab must surface production sync health for the major shared state domains.
 - [ ] Phone-local caches for home, location, navigation preferences, and route state must hydrate from JARVIS.
 
 ### Phase 2: Deepen Existing Tabs
 
-- [ ] Expand Needs into a richer request workflow surface.
-- [ ] Bring Health closer to SAM / score / protocol parity.
+- [x] Expand Needs into a richer request workflow surface.
+- [x] Bring Health closer to SAM / score / protocol parity.
 - [ ] Add richer Chronicle context and pattern visibility.
 - [ ] Add deeper Publishing workspace actions and launch pipeline visibility.
 - [ ] Add richer Huddle / live-agent roster visibility.
@@ -88,4 +88,4 @@ Source-of-truth rule:
 
 ## Current Pass
 
-Current implementation pass begins with `Home`, because it is one of the clearest split-brain surfaces between the web instance and the phone app.
+Current implementation pass is focused on collapsing remaining split-brain state into the production-backed Apple contracts, starting with `Home`, `Brief`, `Systems`, `Needs`, and `Health`.
