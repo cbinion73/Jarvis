@@ -29,7 +29,7 @@ Source-of-truth rule:
 | Chronicle | `loadChronicle`, context/pattern loaders | `ChronicleView.swift` | `GET /api/apple/chronicle`, `POST /api/apple/chronicle/capture` | Partial | Phone Chronicle now shows live formation context and pattern visibility from JARVIS; remaining gaps are broader chronicle tooling and deeper prayer/study workflows |
 | Faith | `loadFaith`, faith roster/context | `FaithView.swift` | `GET /api/apple/faith` | Partial | Daily word works; missing deeper faith mode orchestration from web |
 | Publish | `loadPublishing`, KDP/launch/pipeline panels | `PublishView.swift` | `GET /api/apple/publishing`, `POST /api/apple/publishing/reviews/*` | Partial | Phone Publish now exposes launch-control posture and pending review workflow from JARVIS; remaining gaps are broader KDP/platform-specific tools and deeper asset-generation controls |
-| Huddle / Agents | `loadHuddle`, `loadAgentRoster`, `loadLiveAgents` | `HuddleView.swift` | `GET /api/apple/huddle` | Partial | Basic huddle view exists; missing richer agent roster/live-agent parity |
+| Huddle / Agents | `loadHuddle`, `loadAgentRoster`, `loadLiveAgents` | `HuddleView.swift` | `GET /api/apple/huddle` | Partial | Live roster depth now mirrors JARVIS more closely; remaining gaps are deeper live-agent controls and broader orchestration context |
 | Navigate | `renderNavRoute`, `loadNavPOIs`, active route controls, POI toggles, parks radius slider | `NavigateView.swift` | `GET /api/apple/navigation/*` | Partial | Core HUD parity, route restore, stop recovery, and route-state reliability now mirror JARVIS more closely; remaining gaps are broader weather/aerial extras rather than core navigation behavior |
 | Forge | forge/workshop panels | `ForgeView.swift` | `GET /api/apple/forge`, `POST /api/apple/forge/submit`, `POST /api/apple/forge/save` | Partial | Capture/upload exists; processing and broader workshop parity are still incomplete |
 | Voice / Chat | chat + command flows, voice interactions | `VoiceView.swift` | `POST /api/apple/speak`, `GET /api/apple/voice/greeting` | Partial | Basic live voice bridge exists; missing broader chat/system command parity with web |
@@ -57,7 +57,7 @@ Source-of-truth rule:
 - [x] Bring Health closer to SAM / score / protocol parity.
 - [x] Add richer Chronicle context and pattern visibility.
 - [x] Add deeper Publishing workspace actions and launch pipeline visibility.
-- [ ] Add richer Huddle / live-agent roster visibility.
+- [x] Add richer Huddle / live-agent roster visibility.
 - [x] Continue Navigation HUD and route-state parity.
 
 ### Phase 3: Deepen Existing Shared State Surfaces
