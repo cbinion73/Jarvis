@@ -27,6 +27,8 @@ struct WeatherView: View {
                            || loc.authorizationStatus == .restricted {
                         // ── User explicitly denied permission
                         deniedState
+                    } else if loc.lastErrorMessage != nil && !loc.isRequestingLocation {
+                        locationProblemView
                     } else {
                         // ── Authorized but waiting for first GPS fix
                         locatingView
@@ -41,7 +43,7 @@ struct WeatherView: View {
                         if let l = loc.location {
                             Task { await wx.load(location: l) }
                         } else {
-                            loc.requestAndFetch()
+                            loc.requestAndFetch(force: true)
                         }
                     } label: {
                         Image(systemName: "arrow.clockwise")
@@ -87,7 +89,10 @@ struct WeatherView: View {
                 .symbolEffect(.pulse)
             Text("Finding your location…")
                 .font(.headline).foregroundStyle(.white)
-            Text("JARVIS has location access. Getting a fix…")
+            Text(loc.lastErrorMessage
+                 ?? (loc.isRequestingLocation
+                     ? "JARVIS has location access. Getting a fix…"
+                     : "JARVIS is ready to request your location."))
                 .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
         }
         .padding(24)
@@ -95,6 +100,25 @@ struct WeatherView: View {
         .padding(.horizontal, 32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear { loc.requestAndFetch() }
+    }
+
+    private var locationProblemView: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "location.magnifyingglass")
+                .font(.system(size: 48)).foregroundStyle(sky.opacity(0.6))
+            Text("Couldn't find your location")
+                .font(.headline).foregroundStyle(.white)
+            Text(loc.lastErrorMessage ?? "JARVIS could not get a location fix.")
+                .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            Button("Try Again") {
+                loc.requestAndFetch(force: true)
+            }
+            .buttonStyle(.borderedProminent).tint(sky)
+        }
+        .padding(24)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20))
+        .padding(.horizontal, 32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Location permission denied
