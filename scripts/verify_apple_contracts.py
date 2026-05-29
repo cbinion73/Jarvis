@@ -127,6 +127,20 @@ def validate_phase_one_contracts(payloads: dict[str, dict]) -> None:
         if "allowed_actions" not in item:
             raise RuntimeError(f"/api/apple/needs items[{index}] missing 'allowed_actions'")
 
+    chronicle = require_mapping(payloads, "/api/apple/chronicle")
+    context = chronicle.get("context")
+    if not isinstance(context, dict):
+        raise RuntimeError("/api/apple/chronicle missing object field 'context'")
+    for key in ("active_prayers", "top_themes", "total_entries", "active_prayer_count", "answered_prayer_count"):
+        if key not in context:
+            raise RuntimeError(f"/api/apple/chronicle context missing '{key}'")
+    patterns = chronicle.get("patterns")
+    if not isinstance(patterns, dict):
+        raise RuntimeError("/api/apple/chronicle missing object field 'patterns'")
+    for key in ("window_days", "total_recent_entries", "entry_type_breakdown", "recurring_themes", "prayer_arc", "writing_streak_days"):
+        if key not in patterns:
+            raise RuntimeError(f"/api/apple/chronicle patterns missing '{key}'")
+
 
 def fetch_http(base_url: str, path: str) -> dict:
     with urlopen(f"{base_url.rstrip('/')}{path}") as response:

@@ -26,7 +26,7 @@ Source-of-truth rule:
 | Weather | `loadWeatherWidget`, weather modal, route weather hooks | `WeatherView.swift` | `GET /api/apple/weather` | Partial | Core live weather works; still missing broader weather-module parity and some richer route/weather integrations |
 | Home | `loadHomeDashboard`, home email/calendar/projects/tasks, home ops | `HomeView.swift` | `GET /api/apple/home/state`, `POST /api/apple/home/command`, `POST /api/apple/presence` | Partial | Phone was HomeKit-first; needs live JARVIS house-state parity, staged commands, presence, and household context |
 | Catalyst | `loadOverviewCatalyst`, catalyst workspace panels | `CatalystView.swift` | `GET /api/apple/catalyst` | Partial | Data exists, but phone lacks full action depth and overview integration |
-| Chronicle | `loadChronicle`, context/pattern loaders | `ChronicleView.swift` | `GET /api/apple/chronicle`, `POST /api/apple/chronicle/capture` | Partial | Entries and capture exist; missing pattern/context parity and broader chronicle tooling |
+| Chronicle | `loadChronicle`, context/pattern loaders | `ChronicleView.swift` | `GET /api/apple/chronicle`, `POST /api/apple/chronicle/capture` | Partial | Phone Chronicle now shows live formation context and pattern visibility from JARVIS; remaining gaps are broader chronicle tooling and deeper prayer/study workflows |
 | Faith | `loadFaith`, faith roster/context | `FaithView.swift` | `GET /api/apple/faith` | Partial | Daily word works; missing deeper faith mode orchestration from web |
 | Publish | `loadPublishing`, KDP/launch/pipeline panels | `PublishView.swift` | `GET /api/apple/publishing` | Partial | Summary exists; missing fuller publishing workspace actions and platform-specific tools |
 | Huddle / Agents | `loadHuddle`, `loadAgentRoster`, `loadLiveAgents` | `HuddleView.swift` | `GET /api/apple/huddle` | Partial | Basic huddle view exists; missing richer agent roster/live-agent parity |
@@ -55,7 +55,7 @@ Source-of-truth rule:
 
 - [x] Expand Needs into a richer request workflow surface.
 - [x] Bring Health closer to SAM / score / protocol parity.
-- [ ] Add richer Chronicle context and pattern visibility.
+- [x] Add richer Chronicle context and pattern visibility.
 - [ ] Add deeper Publishing workspace actions and launch pipeline visibility.
 - [ ] Add richer Huddle / live-agent roster visibility.
 - [ ] Continue Navigation HUD and route-state parity.
