@@ -1,11 +1,15 @@
 import SwiftUI
 import HomeKit
+import JarvisKit
 
 // MARK: - HomeView  "The Control Room"
 
 struct HomeView: View {
 
     @StateObject private var hk = HomeKitManager.shared
+    @State private var serverState: HomeState?
+    @State private var isLoadingServerState = false
+    @State private var serverError: String?
 
     private let amber = Color.orange
 
@@ -14,12 +18,20 @@ struct HomeView: View {
             ZStack {
                 Color.black.ignoresSafeArea()
 
-                if !hk.isAuthorized {
-                    setupState
-                } else if hk.accessories.isEmpty {
-                    emptyState
-                } else {
-                    contentView
+                ScrollView {
+                    VStack(spacing: 14) {
+                        liveStateSection
+
+                        if !hk.isAuthorized {
+                            setupState
+                        } else if hk.accessories.isEmpty {
+                            emptyState
+                        } else {
+                            contentView
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
             }
             .navigationTitle("Home")
@@ -42,74 +54,162 @@ struct HomeView: View {
                             }
                             .glassEffect(in: Capsule())
                         }
+
+                        Button {
+                            Task { await loadServerState() }
+                        } label: {
+                            if isLoadingServerState {
+                                ProgressView().tint(amber).scaleEffect(0.8)
+                            } else {
+                                Image(systemName: "arrow.clockwise")
+                                    .foregroundStyle(amber)
+                            }
+                        }
+                        .glassEffect(in: Circle())
                     }
                 }
             }
         }
+        .task { await loadServerState() }
+        .refreshable { await loadServerState() }
     }
 
     // MARK: - Content
 
     private var contentView: some View {
-        ScrollView {
-            VStack(spacing: 14) {
-
-                // ── Status banner ──────────────────────────────────
-                HStack(spacing: 14) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(hk.homes.first?.name ?? "Home")
-                            .font(.title3.bold())
-                            .foregroundStyle(.white)
-                        Text("\(hk.accessories.count) devices paired")
-                            .font(.caption)
-                            .foregroundStyle(amber.opacity(0.8))
-                    }
-                    Spacer()
-                    Image(systemName: "house.fill")
-                        .font(.system(size: 32))
-                        .foregroundStyle(amber.opacity(0.7))
+        VStack(spacing: 14) {
+            // ── Status banner ──────────────────────────────────
+            HStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(hk.homes.first?.name ?? "Home")
+                        .font(.title3.bold())
+                        .foregroundStyle(.white)
+                    Text("\(hk.accessories.count) devices paired")
+                        .font(.caption)
+                        .foregroundStyle(amber.opacity(0.8))
                 }
-                .padding(16)
-                .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+                Spacer()
+                Image(systemName: "house.fill")
+                    .font(.system(size: 32))
+                    .foregroundStyle(amber.opacity(0.7))
+            }
+            .padding(16)
+            .glassEffect(in: RoundedRectangle(cornerRadius: 16))
 
-                // ── Lights ─────────────────────────────────────────
-                if !hk.lights.isEmpty {
-                    HomeSection(title: "Lights", icon: "lightbulb.fill", accent: amber) {
-                        LazyVGrid(
-                            columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2),
-                            spacing: 10
-                        ) {
-                            ForEach(hk.lights, id: \.uniqueIdentifier) { light in
-                                LightTile(accessory: light)
-                            }
-                        }
-                    }
-                }
-
-                // ── Locks ──────────────────────────────────────────
-                if !hk.locks.isEmpty {
-                    HomeSection(title: "Locks", icon: "lock.shield.fill", accent: .green) {
-                        ForEach(hk.locks, id: \.uniqueIdentifier) { lock in
-                            LockRow(accessory: lock)
-                        }
-                    }
-                }
-
-                // ── Climate ────────────────────────────────────────
-                if !hk.thermostats.isEmpty {
-                    HomeSection(title: "Climate", icon: "thermometer.medium", accent: Color(red: 0.4, green: 0.75, blue: 1.0)) {
-                        ForEach(hk.thermostats, id: \.uniqueIdentifier) { thermo in
-                            ThermostatRow(accessory: thermo)
+            // ── Lights ─────────────────────────────────────────
+            if !hk.lights.isEmpty {
+                HomeSection(title: "Lights", icon: "lightbulb.fill", accent: amber) {
+                    LazyVGrid(
+                        columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2),
+                        spacing: 10
+                    ) {
+                        ForEach(hk.lights, id: \.uniqueIdentifier) { light in
+                            LightTile(accessory: light)
                         }
                     }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+
+            // ── Locks ──────────────────────────────────────────
+            if !hk.locks.isEmpty {
+                HomeSection(title: "Locks", icon: "lock.shield.fill", accent: .green) {
+                    ForEach(hk.locks, id: \.uniqueIdentifier) { lock in
+                        LockRow(accessory: lock)
+                    }
+                }
+            }
+
+            // ── Climate ────────────────────────────────────────
+            if !hk.thermostats.isEmpty {
+                HomeSection(title: "Climate", icon: "thermometer.medium", accent: Color(red: 0.4, green: 0.75, blue: 1.0)) {
+                    ForEach(hk.thermostats, id: \.uniqueIdentifier) { thermo in
+                        ThermostatRow(accessory: thermo)
+                    }
+                }
+            }
         }
     }
 
     // MARK: - Setup / empty states
+
+    private var liveStateSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill((serverError == nil ? amber : Color.red).opacity(0.12))
+                        .frame(width: 42, height: 42)
+                    Image(systemName: serverError == nil ? "dot.radiowaves.left.and.right" : "exclamationmark.triangle.fill")
+                        .foregroundStyle(serverError == nil ? amber : .red)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Live JARVIS Home")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                    Text(serverError ?? "Household state from the production JARVIS stack")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if isLoadingServerState {
+                    ProgressView().tint(amber)
+                }
+            }
+
+            if let state = serverState {
+                HStack(spacing: 10) {
+                    liveMetric(title: "Present", value: state.presentMembers.isEmpty ? "0" : "\(state.presentMembers.count)")
+                    liveMetric(title: "Lights", value: state.lightsOn.isEmpty ? "0" : "\(state.lightsOn.count)")
+                    liveMetric(title: "Alerts", value: state.alerts.isEmpty ? "0" : "\(state.alerts.count)")
+                }
+
+                HStack(spacing: 10) {
+                    liveMetric(title: "Inside", value: "\(Int(state.temperature.inside.rounded()))°")
+                    liveMetric(title: "Target", value: "\(Int(state.temperature.target.rounded()))°")
+                    liveMetric(title: "Mode", value: state.temperature.mode.isEmpty ? "—" : state.temperature.mode.capitalized)
+                }
+
+                if !state.presentMembers.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Present Members")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(amber)
+                        Text(state.presentMembers.joined(separator: " • "))
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.82))
+                    }
+                }
+
+                if !state.alerts.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Live Alerts")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.red)
+                        ForEach(Array(state.alerts.enumerated()), id: \.offset) { _, alert in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(alert.message)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                Text("\(alert.entity) · \(alert.state)")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        }
+                    }
+                }
+            } else if serverError == nil {
+                Text("Loading live house state from JARVIS…")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
 
     private var setupState: some View {
         VStack(spacing: 20) {
@@ -130,8 +230,7 @@ struct HomeView: View {
         }
         .padding(32)
         .glassEffect(in: RoundedRectangle(cornerRadius: 20))
-        .padding(.horizontal, 32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
     }
 
     private var emptyState: some View {
@@ -146,7 +245,34 @@ struct HomeView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20))
+    }
+
+    private func liveMetric(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(value)
+                .font(.headline.bold())
+                .foregroundStyle(.white)
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func loadServerState() async {
+        isLoadingServerState = true
+        defer { isLoadingServerState = false }
+        do {
+            serverState = try await AppleAPIClient.shared.fetchHomeState()
+            serverError = nil
+        } catch {
+            serverError = error.localizedDescription
+        }
     }
 }
 
