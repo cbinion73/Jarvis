@@ -20,6 +20,9 @@ GET  /api/apple/notifications/pending       Pending notifications for APNs deliv
 POST /api/apple/presence                    Phone reports user presence / location
 GET  /api/apple/voice/greeting              Voice greeting for wake
 POST /api/apple/approvals/{id}/approve      One-tap approval from Watch / Phone
+POST /api/apple/focus                       Focus Filter state from iPhone
+POST /api/apple/sound-alert                 On-device sound classification alert
+POST /api/apple/vision/scan                 On-device OCR / barcode scan result
 """
 
 from __future__ import annotations
@@ -657,6 +660,66 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         }, indent=2))
         logger.info("EventKit reminders: stored %d items", len(reminders))
         return _ok({"stored": len(reminders)})
+
+    # ── Focus Filter ─────────────────────────────────────────────────────────
+
+    @app.post("/api/apple/focus")
+    async def apple_focus(payload: dict):
+        """Receives iOS Focus Filter state so JARVIS can adjust notification behavior."""
+        out_path = Path("data/apple/focus_state.json")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        record = {**payload, "updated_at": _ts()}
+        out_path.write_text(json.dumps(record, indent=2))
+
+        try:
+            from .service import broadcast_event
+            broadcast_event("apple.focus", record)
+        except Exception:
+            pass
+
+        return _ok({"stored": True, "focus_active": bool(payload.get("focus_active"))})
+
+    # ── Sound Analysis ───────────────────────────────────────────────────────
+
+    @app.post("/api/apple/sound-alert")
+    async def apple_sound_alert(payload: dict):
+        """Receives on-device SoundAnalysis alerts from the iPhone."""
+        out_path = Path("data/apple/sound_alerts.jsonl")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        record = {**payload, "received_at": _ts()}
+        with out_path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record) + "\n")
+
+        try:
+            from .service import broadcast_event
+            broadcast_event("apple.sound_alert", record)
+        except Exception:
+            pass
+
+        return _ok({"stored": True})
+
+    # ── Vision Scan ──────────────────────────────────────────────────────────
+
+    @app.post("/api/apple/vision/scan")
+    async def apple_vision_scan(payload: dict):
+        """Receives OCR/barcode scan text produced on-device by Vision."""
+        out_path = Path("data/apple/vision_scans.jsonl")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        record = {**payload, "received_at": _ts()}
+        with out_path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record) + "\n")
+
+        try:
+            from .service import broadcast_event
+            broadcast_event("apple.vision_scan", {
+                "context": payload.get("context"),
+                "source": payload.get("source"),
+                "text_preview": str(payload.get("text") or "")[:200],
+            })
+        except Exception:
+            pass
+
+        return _ok({"stored": True})
 
     # ── MusicKit: Now Playing ─────────────────────────────────────────────────
 

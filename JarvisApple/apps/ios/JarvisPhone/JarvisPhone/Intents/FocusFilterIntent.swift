@@ -32,25 +32,19 @@ struct JarvisFocusFilter: SetFocusFilterIntent {
     // MARK: - Perform
 
     func perform() async throws -> some IntentResult {
-        let payload: [String: Any] = [
-            "focus_active":      true,
-            "jarvis_mode":       jarvisMode?.rawValue ?? "morning_brief",
-            "hold_approvals":    holdApprovals ?? false,
-            "silence_briefings": silenceBriefings ?? false,
-            "source":            "focus_filter",
-        ]
+        let payload = FocusPayload(
+            focusActive: true,
+            jarvisMode: jarvisMode?.rawValue ?? "morning_brief",
+            holdApprovals: holdApprovals ?? false,
+            silenceBriefings: silenceBriefings ?? false,
+            source: "focus_filter"
+        )
         await sendFocusState(payload)
         return .result()
     }
 
-    private func sendFocusState(_ payload: [String: Any]) async {
-        guard let url  = URL(string: JARVISEnvironment.baseURL.absoluteString + "/api/apple/focus"),
-              let body = try? JSONSerialization.data(withJSONObject: payload) else { return }
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = body
-        _ = try? await URLSession.shared.data(for: req)
+    private func sendFocusState(_ payload: FocusPayload) async {
+        try? await AppleAPIClient.shared.postAcknowledged("/api/apple/focus", body: payload)
     }
 }
 
@@ -81,16 +75,30 @@ struct JarvisFocusEndedIntent: AppIntent {
     static let title: LocalizedStringResource = "JARVIS Focus Ended"
 
     func perform() async throws -> some IntentResult {
-        let payload: [String: Any] = ["focus_active": false, "source": "focus_filter"]
-        guard let url  = URL(string: JARVISEnvironment.baseURL.absoluteString + "/api/apple/focus"),
-              let body = try? JSONSerialization.data(withJSONObject: payload) else {
-            return .result()
-        }
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = body
-        _ = try? await URLSession.shared.data(for: req)
+        let payload = FocusPayload(
+            focusActive: false,
+            jarvisMode: nil,
+            holdApprovals: nil,
+            silenceBriefings: nil,
+            source: "focus_filter"
+        )
+        try? await AppleAPIClient.shared.postAcknowledged("/api/apple/focus", body: payload)
         return .result()
+    }
+}
+
+private struct FocusPayload: Encodable, Sendable {
+    let focusActive: Bool
+    let jarvisMode: String?
+    let holdApprovals: Bool?
+    let silenceBriefings: Bool?
+    let source: String
+
+    enum CodingKeys: String, CodingKey {
+        case source
+        case focusActive = "focus_active"
+        case jarvisMode = "jarvis_mode"
+        case holdApprovals = "hold_approvals"
+        case silenceBriefings = "silence_briefings"
     }
 }

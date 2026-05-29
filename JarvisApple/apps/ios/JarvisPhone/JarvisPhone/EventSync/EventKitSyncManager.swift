@@ -17,6 +17,7 @@ final class EventKitSyncManager: ObservableObject {
     @Published var isSyncing = false
 
     private let store = EKEventStore()
+    private let client = AppleAPIClient.shared
 
     private init() {
         calendarStatus  = EKEventStore.authorizationStatus(for: .event)
@@ -65,22 +66,21 @@ final class EventKitSyncManager: ObservableObject {
         let predicate = store.predicateForEvents(withStart: now, end: twoWeeks, calendars: nil)
         let events = store.events(matching: predicate)
 
-        let payload: [[String: Any]] = events.prefix(50).map { event in
-            var dict: [String: Any] = [
-                "id":       event.eventIdentifier ?? UUID().uuidString,
-                "title":    event.title ?? "",
-                "start":    ISO8601DateFormatter().string(from: event.startDate),
-                "end":      ISO8601DateFormatter().string(from: event.endDate),
-                "all_day":  event.isAllDay,
-                "calendar": event.calendar?.title ?? "",
-                "location": event.location ?? "",
-            ]
-            if let notes = event.notes { dict["notes"] = notes }
-            if let url   = event.url   { dict["url"]   = url.absoluteString }
-            return dict
+        let payload: [CalendarEventRecord] = events.prefix(50).map { event in
+            CalendarEventRecord(
+                id: event.eventIdentifier ?? UUID().uuidString,
+                title: event.title ?? "",
+                start: ISO8601DateFormatter().string(from: event.startDate),
+                end: ISO8601DateFormatter().string(from: event.endDate),
+                allDay: event.isAllDay,
+                calendar: event.calendar?.title ?? "",
+                location: event.location ?? "",
+                notes: event.notes,
+                url: event.url?.absoluteString
+            )
         }
 
-        await push(path: "/api/apple/calendar", payload: ["events": payload, "source": "eventkit"])
+        await push(path: "/api/apple/calendar", payload: CalendarPush(events: payload, source: "eventkit"))
         lastEventCount = events.count
     }
 
@@ -114,29 +114,62 @@ final class EventKitSyncManager: ObservableObject {
             }
         }
 
-        let payload: [[String: Any]] = extracted.map { r in
-            var dict: [String: Any] = [
-                "id": r.id, "title": r.title, "list": r.list,
-                "priority": r.priority, "completed": r.completed,
-            ]
-            if let due = r.due { dict["due"] = due }
-            if let notes = r.notes { dict["notes"] = notes }
-            return dict
+        let payload: [ReminderRecord] = extracted.map { r in
+            ReminderRecord(
+                id: r.id,
+                title: r.title,
+                list: r.list,
+                priority: r.priority,
+                completed: r.completed,
+                due: r.due,
+                notes: r.notes
+            )
         }
 
-        await push(path: "/api/apple/reminders", payload: ["reminders": payload, "source": "eventkit"])
+        await push(path: "/api/apple/reminders", payload: ReminderPush(reminders: payload, source: "eventkit"))
         lastReminderCount = extracted.count
     }
 
     // MARK: - HTTP push
 
-    private func push(path: String, payload: [String: Any]) async {
-        guard let url = URL(string: JARVISEnvironment.baseURL.absoluteString + path),
-              let body = try? JSONSerialization.data(withJSONObject: payload) else { return }
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = body
-        _ = try? await URLSession.shared.data(for: req)
+    private func push<P: Encodable & Sendable>(path: String, payload: P) async {
+        try? await client.postAcknowledged(path, body: payload)
     }
+}
+
+private struct CalendarEventRecord: Encodable, Sendable {
+    let id: String
+    let title: String
+    let start: String
+    let end: String
+    let allDay: Bool
+    let calendar: String
+    let location: String
+    let notes: String?
+    let url: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, start, end, calendar, location, notes, url
+        case allDay = "all_day"
+    }
+}
+
+private struct CalendarPush: Encodable, Sendable {
+    let events: [CalendarEventRecord]
+    let source: String
+}
+
+private struct ReminderRecord: Encodable, Sendable {
+    let id: String
+    let title: String
+    let list: String
+    let priority: Int
+    let completed: Bool
+    let due: String?
+    let notes: String?
+}
+
+private struct ReminderPush: Encodable, Sendable {
+    let reminders: [ReminderRecord]
+    let source: String
 }

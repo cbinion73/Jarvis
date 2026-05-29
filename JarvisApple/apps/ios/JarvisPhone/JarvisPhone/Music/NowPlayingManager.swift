@@ -69,27 +69,38 @@ final class NowPlayingManager: ObservableObject {
 
     private func push() async {
         guard let title else { return }
-        var payload: [String: Any] = [
-            "title":      title,
-            "artist":     artist ?? "",
-            "album":      album  ?? "",
-            "is_playing": isPlaying,
-            "source":     "mediaplayerkit",
-        ]
+        var artworkBase64: String?
         // Encode artwork as base64 thumbnail (≤ 80×80)
         if let img = artwork,
            let small = img.resize(to: CGSize(width: 80, height: 80)),
            let jpeg  = small.jpegData(compressionQuality: 0.6) {
-            payload["artwork_b64"] = jpeg.base64EncodedString()
+            artworkBase64 = jpeg.base64EncodedString()
         }
 
-        guard let url  = URL(string: JARVISEnvironment.baseURL.absoluteString + "/api/apple/now-playing"),
-              let body = try? JSONSerialization.data(withJSONObject: payload) else { return }
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = body
-        _ = try? await URLSession.shared.data(for: req)
+        let payload = NowPlayingPayload(
+            title: title,
+            artist: artist ?? "",
+            album: album ?? "",
+            isPlaying: isPlaying,
+            source: "mediaplayerkit",
+            artworkBase64: artworkBase64
+        )
+        try? await AppleAPIClient.shared.postAcknowledged("/api/apple/now-playing", body: payload)
+    }
+}
+
+private struct NowPlayingPayload: Encodable, Sendable {
+    let title: String
+    let artist: String
+    let album: String
+    let isPlaying: Bool
+    let source: String
+    let artworkBase64: String?
+
+    enum CodingKeys: String, CodingKey {
+        case title, artist, album, source
+        case isPlaying = "is_playing"
+        case artworkBase64 = "artwork_b64"
     }
 }
 

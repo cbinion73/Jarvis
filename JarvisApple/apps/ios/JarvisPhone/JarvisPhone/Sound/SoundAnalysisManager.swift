@@ -113,18 +113,19 @@ final class SoundAnalysisManager: NSObject, ObservableObject {
     }
 
     private func sendSoundAlert(_ event: SoundEvent) async {
-        guard let url = URL(string: JARVISEnvironment.baseURL.absoluteString + "/api/apple/sound-alert") else { return }
-        let payload: [String: Any] = [
-            "sound":      event.label,
-            "confidence": event.confidence,
-            "timestamp":  ISO8601DateFormatter().string(from: event.timestamp),
-        ]
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try? JSONSerialization.data(withJSONObject: payload)
-        _ = try? await URLSession.shared.data(for: req)
+        let payload = SoundAlertPayload(
+            sound: event.label,
+            confidence: event.confidence,
+            timestamp: ISO8601DateFormatter().string(from: event.timestamp)
+        )
+        try? await AppleAPIClient.shared.postAcknowledged("/api/apple/sound-alert", body: payload)
     }
+}
+
+private struct SoundAlertPayload: Encodable, Sendable {
+    let sound: String
+    let confidence: Double
+    let timestamp: String
 }
 
 // MARK: - SNResultsObserving wrapper
