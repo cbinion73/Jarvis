@@ -175,12 +175,30 @@ def validate_phase_one_contracts(payloads: dict[str, dict]) -> None:
             raise RuntimeError(f"/api/apple/app-state focus missing '{key}'")
 
     focus_state = require_mapping(payloads, "/api/apple/focus-state")
+    for key in ("focus_active", "updated_at", "source", "source_fresh", "interruption_posture", "suppression_rules", "summary"):
+        if key not in focus_state:
+            raise RuntimeError(f"/api/apple/focus-state missing '{key}'")
     posture = focus_state.get("interruption_posture")
     if not isinstance(posture, dict):
         raise RuntimeError("/api/apple/focus-state missing object field 'interruption_posture'")
     for key in ("mode", "label", "reason", "recommended_delivery", "quiet_hours", "hour_local"):
         if key not in posture:
             raise RuntimeError(f"/api/apple/focus-state interruption_posture missing '{key}'")
+    rules = focus_state.get("suppression_rules")
+    if not isinstance(rules, list):
+        raise RuntimeError("/api/apple/focus-state missing list field 'suppression_rules'")
+    for index, item in enumerate(rules[:4]):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"/api/apple/focus-state suppression_rules[{index}] is not an object")
+        for key in ("id", "title", "detail", "active"):
+            if key not in item:
+                raise RuntimeError(f"/api/apple/focus-state suppression_rules[{index}] missing '{key}'")
+    summary = focus_state.get("summary")
+    if not isinstance(summary, dict):
+        raise RuntimeError("/api/apple/focus-state missing object field 'summary'")
+    for key in ("label", "detail", "recommended_delivery"):
+        if key not in summary:
+            raise RuntimeError(f"/api/apple/focus-state summary missing '{key}'")
 
     reminders = app_state.get("reminders")
     if not isinstance(reminders, dict):

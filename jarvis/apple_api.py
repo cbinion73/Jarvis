@@ -720,6 +720,56 @@ def _build_apple_reminders_state(payload: dict[str, Any]) -> dict[str, Any]:
         "attention_flags": attention_flags[:6],
     }
 
+def _build_apple_focus_state(
+    *,
+    focus_payload: dict[str, Any],
+    posture: dict[str, Any],
+) -> dict[str, Any]:
+    focus_active = bool(focus_payload.get("focus_active"))
+    source = str(focus_payload.get("source") or "")
+    updated_at = str(focus_payload.get("updated_at") or "")
+    recommended_delivery = str(posture.get("recommended_delivery") or "")
+    posture_label = str(posture.get("label") or "")
+    suppression_rules = [
+        {
+            "id": "focus_active_quiet_store",
+            "title": "Focus reduces proactive interruptions",
+            "detail": "Non-urgent notifications should stay quiet while Focus is active.",
+            "active": focus_active and recommended_delivery == "quiet_store",
+        },
+        {
+            "id": "quiet_hours_hold_for_brief",
+            "title": "Quiet hours hold lower-priority items for Brief",
+            "detail": "During quiet hours, lower-priority items should wait for the next command surface.",
+            "active": bool(posture.get("quiet_hours")) and recommended_delivery == "hold_for_brief",
+        },
+        {
+            "id": "household_alert_override",
+            "title": "Household alerts can break through",
+            "detail": "Live household alerts override quieter delivery modes.",
+            "active": str(posture.get("mode") or "") == "household_alert",
+        },
+        {
+            "id": "approvals_badge_only",
+            "title": "Approvals stay visible without becoming noisy",
+            "detail": "Approvals remain visible even when JARVIS is being quieter.",
+            "active": recommended_delivery in {"badge_only", "quiet_store", "hold_for_brief"},
+        },
+    ]
+    return {
+        "focus_active": focus_active,
+        "updated_at": updated_at,
+        "source": source,
+        "source_fresh": bool(updated_at),
+        "interruption_posture": posture,
+        "suppression_rules": suppression_rules,
+        "summary": {
+            "label": posture_label or ("Focus active" if focus_active else "Focus inactive"),
+            "detail": str(posture.get("reason") or "") or "JARVIS is using the current device posture to route interruptions.",
+            "recommended_delivery": recommended_delivery,
+        },
+    }
+
 
 def _build_briefing_command_items(
     *,
@@ -2394,12 +2444,10 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             home_state=home_state,
             focus_payload=focus_payload if isinstance(focus_payload, dict) else {},
         )
-        return _ok({
-            "focus_active": bool(focus_payload.get("focus_active")) if isinstance(focus_payload, dict) else False,
-            "updated_at": str(focus_payload.get("updated_at") or "") if isinstance(focus_payload, dict) else "",
-            "source": str(focus_payload.get("source") or "") if isinstance(focus_payload, dict) else "",
-            "interruption_posture": posture,
-        })
+        return _ok(_build_apple_focus_state(
+            focus_payload=focus_payload if isinstance(focus_payload, dict) else {},
+            posture=posture,
+        ))
 
     # ------------------------------------------------------------------
     # GET /api/apple/weather

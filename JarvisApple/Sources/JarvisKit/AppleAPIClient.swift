@@ -111,6 +111,10 @@ public final class AppleAPIClient: Sendable {
         try await get("/api/apple/reminders/state")
     }
 
+    public func fetchFocusState() async throws -> FocusStateOverview {
+        try await get("/api/apple/focus-state")
+    }
+
     @discardableResult
     public func prepareCalendarEvent(_ eventId: String) async throws -> Bool {
         struct Response: Decodable { let status: String }
