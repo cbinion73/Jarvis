@@ -608,12 +608,17 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
     # GET /api/apple/navigation/stops
     # ------------------------------------------------------------------
     @app.get("/api/apple/navigation/stops")
-    async def apple_navigation_stops(origin: str, destination: str):
+    async def apple_navigation_stops(
+        origin: str,
+        destination: str,
+        parks_radius_miles: float = 25.0,
+    ):
         """Along-route stop suggestions for the Navigation tab."""
         origin = str(origin or "").strip()
         destination = str(destination or "").strip()
         if not origin or not destination:
             raise HTTPException(status_code=400, detail="origin and destination are required")
+        parks_radius_miles = max(5.0, min(float(parks_radius_miles or 25.0), 100.0))
 
         try:
             route_packet = runtime.storm_route_weather(origin, destination)
@@ -656,7 +661,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         try:
             for category in categories:
                 seen_by_category[category] = set()
-                radius_m = 50_000 if category in {"parks", "historic"} else 2400
+                radius_m = min(int(parks_radius_miles * 1609.34), 50_000) if category in {"parks", "historic"} else 2400
                 items: list[dict[str, Any]] = []
                 for sample_idx, (slat, slng) in enumerate(samples):
                     marker = mile_markers[sample_idx] if sample_idx < len(mile_markers) else round(total_miles, 1)
@@ -687,7 +692,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                         str((route_packet.get("destination") or {}).get("label") or ""),
                     )
                     if states:
-                        for park in _nav_nps_along_route(bridge, route_points, states):
+                        for park in _nav_nps_along_route(bridge, route_points, states, max_distance_miles=parks_radius_miles):
                             key = f"nps:{park.get('name')}"
                             if key in seen_by_category[category]:
                                 continue
