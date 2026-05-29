@@ -125,6 +125,13 @@ struct BriefingView: View {
                     }
                 }
 
+                if packet.briefingItems.isEmpty
+                    && packet.needsItems.isEmpty
+                    && packet.workingItems.isEmpty
+                    && packet.driftItems.isEmpty {
+                    emptyTruthState
+                }
+
                 // ── Needs You ─────────────────────────────────────
                 if !packet.needsItems.isEmpty {
                     OracleSection(title: "Needs You", icon: "exclamationmark.circle.fill", accent: .red) {
@@ -158,6 +165,24 @@ struct BriefingView: View {
     }
 
     // MARK: - Error
+
+    private var emptyTruthState: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "checkmark.seal.fill")
+                .font(.system(size: 30))
+                .foregroundStyle(gold.opacity(0.8))
+            Text("No live briefing items")
+                .font(.headline)
+                .foregroundStyle(.white)
+            Text("JARVIS is connected, but there is no verified briefing data to show yet.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(18)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
 
     private func errorView(_ message: String) -> some View {
         VStack(spacing: 16) {

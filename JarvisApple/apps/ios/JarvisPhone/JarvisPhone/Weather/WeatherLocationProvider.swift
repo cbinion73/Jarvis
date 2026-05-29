@@ -50,6 +50,7 @@ final class WeatherLocationProvider: NSObject, ObservableObject {
         switch manager.authorizationStatus {
         case .notDetermined:
             lastErrorMessage = nil
+            isRequestingLocation = true
             manager.requestWhenInUseAuthorization()
         case .authorizedWhenInUse, .authorizedAlways:
             beginLocationRequest()

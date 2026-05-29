@@ -94,6 +94,12 @@ struct WeatherView: View {
                      ? "JARVIS has location access. Getting a fix…"
                      : "JARVIS is ready to request your location."))
                 .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            if !loc.isRequestingLocation {
+                Button("Allow Location") {
+                    loc.requestAndFetch(force: true)
+                }
+                .buttonStyle(.borderedProminent).tint(sky)
+            }
         }
         .padding(24)
         .glassEffect(in: RoundedRectangle(cornerRadius: 20))
