@@ -109,7 +109,12 @@ def _nav_state_codes(*labels: str) -> list[str]:
     return found
 
 
-def _nav_nps_along_route(bridge: NavBridge, route_points: list[tuple[float, float]], states: list[str]) -> list[dict[str, Any]]:
+def _nav_nps_along_route(
+    bridge: NavBridge,
+    route_points: list[tuple[float, float]],
+    states: list[str],
+    max_distance_miles: float = 25.0,
+) -> list[dict[str, Any]]:
     parks = bridge.search_nps_by_states(states)
     if not parks or not route_points:
         return []
@@ -124,7 +129,7 @@ def _nav_nps_along_route(bridge: NavBridge, route_points: list[tuple[float, floa
         if plat == 0 and plng == 0:
             continue
         dist = min_distance_to_route(plat, plng, route_points)
-        if dist > 25.0:
+        if dist > max_distance_miles:
             continue
         closest_idx = min(
             range(len(route_points)),
