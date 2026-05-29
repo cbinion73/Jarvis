@@ -9889,6 +9889,11 @@ async function loadNotificationCenter() {{
                 <div class="approval-meta">${{escHtml(String(item.category || 'system').toUpperCase())}} &nbsp;·&nbsp; ${{escHtml(String(item.status || 'pending').toUpperCase())}}</div>
                 <div style="font-size:12px;color:var(--text-2);margin-top:6px;line-height:1.5;">${{escHtml(item.detail || item.body || '')}}</div>
                 ${{item.why_now ? `<div style="font-size:10px;color:var(--gold);margin-top:6px;">${{escHtml(item.why_now)}}</div>` : ''}}
+                ${{item.decision_reason ? `<div style="font-size:10px;color:var(--sky);margin-top:4px;">${{escHtml(item.decision_reason)}}</div>` : ''}}
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+                  ${{item.delivery_mode ? `<span class="kv-tag">${{escHtml(String(item.delivery_mode).replaceAll('_',' '))}}</span>` : ''}}
+                  ${{item.posture_snapshot && item.posture_snapshot.label ? `<span class="kv-tag">${{escHtml(item.posture_snapshot.label)}}</span>` : ''}}
+                </div>
                 <div class="approval-actions" style="margin-top:10px;">${{actions.join('')}}</div>
               </div>
             </div>

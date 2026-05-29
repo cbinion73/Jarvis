@@ -21,7 +21,9 @@ public struct NotificationCenterItem: Codable, Identifiable, Sendable {
     public let navigationTarget: String
     public let availableActions: [String]
     public let whyNow: String
+    public let decisionReason: String?
     public let sourceSummary: String
+    public let postureSnapshot: NotificationPostureSnapshot?
     public let badge: Int
 
     enum CodingKeys: String, CodingKey {
@@ -34,7 +36,29 @@ public struct NotificationCenterItem: Codable, Identifiable, Sendable {
         case navigationTarget = "navigation_target"
         case availableActions = "available_actions"
         case whyNow = "why_now"
+        case decisionReason = "decision_reason"
         case sourceSummary = "source_summary"
+        case postureSnapshot = "posture_snapshot"
+    }
+}
+
+public struct NotificationPostureSnapshot: Codable, Sendable {
+    public let mode: String?
+    public let label: String?
+    public let reason: String?
+    public let recommendedDelivery: String?
+    public let quietHours: Bool?
+    public let hourLocal: Int?
+    public let needsCount: Int?
+    public let alertCount: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case mode, label, reason
+        case recommendedDelivery = "recommended_delivery"
+        case quietHours = "quiet_hours"
+        case hourLocal = "hour_local"
+        case needsCount = "needs_count"
+        case alertCount = "alert_count"
     }
 }
 

@@ -30,6 +30,7 @@ JARVIS_APPLE_DIR = REPO_ROOT / "JarvisApple"
 ENDPOINTS: list[tuple[str, str]] = [
     ("/api/apple/status", "/api/apple/status"),
     ("/api/apple/app-state", "/api/apple/app-state"),
+    ("/api/apple/focus/state", "/api/apple/focus/state"),
     ("/api/apple/notifications", "/api/apple/notifications"),
     ("/api/apple/events/recent", "/api/apple/events/recent"),
     ("/api/apple/weather", "/api/apple/weather"),
@@ -119,6 +120,20 @@ def validate_phase_one_contracts(payloads: dict[str, dict]) -> None:
     ):
         if key not in app_state:
             raise RuntimeError(f"/api/apple/app-state missing '{key}'")
+    focus = app_state.get("focus")
+    if not isinstance(focus, dict):
+        raise RuntimeError("/api/apple/app-state focus is not an object")
+    for key in ("focus_active", "updated_at", "source", "posture_mode", "posture_label", "posture_reason", "recommended_delivery", "quiet_hours", "hour_local"):
+        if key not in focus:
+            raise RuntimeError(f"/api/apple/app-state focus missing '{key}'")
+
+    focus_state = require_mapping(payloads, "/api/apple/focus/state")
+    posture = focus_state.get("interruption_posture")
+    if not isinstance(posture, dict):
+        raise RuntimeError("/api/apple/focus/state missing object field 'interruption_posture'")
+    for key in ("mode", "label", "reason", "recommended_delivery", "quiet_hours", "hour_local"):
+        if key not in posture:
+            raise RuntimeError(f"/api/apple/focus/state interruption_posture missing '{key}'")
 
     items = require_data(payloads, "/api/apple/needs")
     if not isinstance(items, list):
@@ -136,7 +151,7 @@ def validate_phase_one_contracts(payloads: dict[str, dict]) -> None:
     for index, item in enumerate(notifications[:3]):
         if not isinstance(item, dict):
             raise RuntimeError(f"/api/apple/notifications notifications[{index}] is not an object")
-        for key in ("id", "category", "title", "status", "created_at", "available_actions"):
+        for key in ("id", "category", "title", "status", "created_at", "available_actions", "delivery_mode", "decision_reason", "posture_snapshot"):
             if key not in item:
                 raise RuntimeError(f"/api/apple/notifications notifications[{index}] missing '{key}'")
 

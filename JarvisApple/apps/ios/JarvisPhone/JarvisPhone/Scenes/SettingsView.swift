@@ -220,6 +220,22 @@ struct SettingsView: View {
                             SysRow(label: "Focus") {
                                 syncStatusChip(label: (appState?.focus.focusActive ?? false) ? "Active" : "Inactive")
                             }
+                            if let postureLabel = appState?.focus.postureLabel, !postureLabel.isEmpty {
+                                SysRow(label: "Posture") {
+                                    syncStatusChip(label: postureLabel)
+                                }
+                            }
+                            if let recommendedDelivery = appState?.focus.recommendedDelivery, !recommendedDelivery.isEmpty {
+                                SysRow(label: "Delivery") {
+                                    Text(readableDeliveryMode(recommendedDelivery))
+                                        .foregroundStyle(.white)
+                                }
+                            }
+                            if let postureReason = appState?.focus.postureReason, !postureReason.isEmpty {
+                                Text(postureReason)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                             SysRow(label: "Now Playing") {
                                 Text(appState?.nowPlaying.title.isEmpty == false ? appState?.nowPlaying.title ?? "—" : "Nothing playing")
                                     .foregroundStyle(.white)
@@ -267,8 +283,13 @@ struct SettingsView: View {
                                                     .foregroundStyle(.secondary)
                                                     .lineLimit(3)
                                             }
-                                            if let createdAt = notification.createdAt, !createdAt.isEmpty {
-                                                Text(nonEmpty(createdAt, fallback: nil))
+                                            if let decisionReason = notification.decisionReason, !decisionReason.isEmpty {
+                                                Text(decisionReason)
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.yellow.opacity(0.8))
+                                            }
+                                            if !notification.createdAt.isEmpty {
+                                                Text(nonEmpty(notification.createdAt, fallback: nil))
                                                     .font(.caption2)
                                                     .foregroundStyle(.secondary)
                                             }
@@ -473,6 +494,21 @@ struct SettingsView: View {
         let secondary = (fallback ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         return secondary.isEmpty ? "Not synced yet" : secondary
     }
+
+    private func readableDeliveryMode(_ mode: String) -> String {
+        switch mode {
+        case "deliver_now":
+            return "Deliver Now"
+        case "hold_for_brief":
+            return "Hold for Brief"
+        case "quiet_store":
+            return "Quiet Store"
+        case "badge_only":
+            return "Badge Only"
+        default:
+            return mode.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+    }
 }
 
 // MARK: - Section
@@ -608,6 +644,19 @@ struct NotificationCenterView: View {
                                                     Text(item.whyNow)
                                                         .font(.caption2)
                                                         .foregroundStyle(accent.opacity(0.85))
+                                                }
+
+                                                if let decisionReason = item.decisionReason, !decisionReason.isEmpty {
+                                                    Text(decisionReason)
+                                                        .font(.caption2)
+                                                        .foregroundStyle(.yellow.opacity(0.8))
+                                                }
+
+                                                HStack(spacing: 8) {
+                                                    pill(readableDeliveryMode(item.deliveryMode), color: .blue.opacity(0.82))
+                                                    if let postureLabel = item.postureSnapshot?.label, !postureLabel.isEmpty {
+                                                        pill(postureLabel, color: .white.opacity(0.35))
+                                                    }
                                                 }
 
                                                 HStack(spacing: 10) {
@@ -790,5 +839,20 @@ struct NotificationCenterView: View {
         let formatter = ISO8601DateFormatter()
         guard let date = formatter.date(from: raw) else { return raw }
         return date.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    private func readableDeliveryMode(_ mode: String) -> String {
+        switch mode {
+        case "deliver_now":
+            return "Deliver Now"
+        case "hold_for_brief":
+            return "Hold for Brief"
+        case "quiet_store":
+            return "Quiet Store"
+        case "badge_only":
+            return "Badge Only"
+        default:
+            return mode.replacingOccurrences(of: "_", with: " ").capitalized
+        }
     }
 }

@@ -81,17 +81,29 @@ public struct AppStateFocus: Codable, Sendable {
     public let focusActive: Bool
     public let updatedAt: String
     public let source: String
+    public let postureMode: String?
+    public let postureLabel: String?
+    public let postureReason: String?
+    public let recommendedDelivery: String?
+    public let quietHours: Bool?
+    public let hourLocal: Int?
 
     enum CodingKeys: String, CodingKey {
         case source
         case focusActive = "focus_active"
         case updatedAt = "updated_at"
+        case postureMode = "posture_mode"
+        case postureLabel = "posture_label"
+        case postureReason = "posture_reason"
+        case recommendedDelivery = "recommended_delivery"
+        case quietHours = "quiet_hours"
+        case hourLocal = "hour_local"
     }
 }
 
 public struct AppStateNotifications: Codable, Sendable {
     public let pendingCount: Int
-    public let recent: [PendingNotification]
+    public let recent: [NotificationCenterItem]
 
     enum CodingKeys: String, CodingKey {
         case recent
