@@ -285,10 +285,26 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         raw_drift     = packet.get("drift_items")     or packet.get("drift",       [])
 
         data = {
-            "briefing_items": [_normalise_briefing_item(i) for i in raw_briefing  if isinstance(i, dict)],
-            "working_items":  [_normalise_working_item(i)  for i in raw_working   if isinstance(i, dict)],
-            "needs_items":    [_normalise_needs_item(i)    for i in raw_needs     if isinstance(i, dict)],
-            "drift_items":    [_normalise_drift_item(i)    for i in raw_drift     if isinstance(i, dict)],
+            "briefing_items": [
+                _normalise_briefing_item(i)
+                for i in raw_briefing
+                if isinstance(i, dict) and _is_live_apple_item(i, zone="briefing")
+            ],
+            "working_items":  [
+                _normalise_working_item(i)
+                for i in raw_working
+                if isinstance(i, dict) and _is_live_apple_item(i, zone="working")
+            ],
+            "needs_items":    [
+                _normalise_needs_item(i)
+                for i in raw_needs
+                if isinstance(i, dict) and _is_live_apple_item(i, zone="needs")
+            ],
+            "drift_items":    [
+                _normalise_drift_item(i)
+                for i in raw_drift
+                if isinstance(i, dict) and _is_live_apple_item(i, zone="drift")
+            ],
             "greeting":       packet.get("greeting") or greeting,
             "mode":           packet.get("mode")     or mode,
             "generated_at":   packet.get("generated_at") or _ts(),
@@ -1138,10 +1154,15 @@ def _normalise_briefing_item(raw: dict) -> dict:
     """Convert any internal feed-item shape → Swift BriefingItem fields."""
     kind = str(raw.get("kind") or raw.get("priority") or "normal").lower()
     priority = "high" if kind in ("priority", "high", "urgent", "critical") else "normal"
+    sub = raw.get("sub") or raw.get("body") or None
+    if isinstance(sub, list):
+        sub = "\n".join(str(item) for item in sub if str(item).strip()) or None
+    elif sub is not None:
+        sub = str(sub)
     return {
         "id":        str(raw.get("id") or uuid.uuid4()),
         "text":      str(raw.get("text") or raw.get("title") or ""),
-        "sub":       raw.get("sub") or raw.get("body") or None,
+        "sub":       sub,
         "priority":  priority,
         "agent":     str(raw.get("agent") or raw.get("source") or "JARVIS"),
         "timestamp": str(raw.get("timestamp") or raw.get("ts") or _ts()),
@@ -1182,6 +1203,44 @@ def _normalise_drift_item(raw: dict) -> dict:
         "severity": severity,
         "agent":    str(raw.get("agent") or raw.get("source") or "JARVIS"),
     }
+
+
+def _is_live_apple_item(raw: dict, *, zone: str) -> bool:
+    """Keep mock/demo/seeded material out of the iPhone app's truth surfaces."""
+    source = str(raw.get("source") or raw.get("source_type") or "").strip().lower()
+    if source in {"mock", "fallback", "demo", "sample", "fixture", "test"}:
+        return False
+
+    agent = str(raw.get("agent") or raw.get("source") or raw.get("requester") or "").strip().lower()
+    text = " ".join(
+        str(raw.get(key) or "")
+        for key in ("text", "title", "body", "summary")
+    ).strip().lower()
+
+    if "partly cloudy, 72.0" in text and agent == "storm":
+        return False
+    if "no activity logged yet" in text:
+        return False
+    if "last contact: never" in text:
+        return False
+
+    seeded_growth_agents = {"agatha", "gamora", "thor", "spider-man", "spiderman"}
+    evidence_keys = {
+        "id",
+        "request_id",
+        "source_signal_id",
+        "work_id",
+        "drift_id",
+        "approval_id",
+        "created_at",
+        "completed_at",
+    }
+    if zone in {"briefing", "drift"} and agent in seeded_growth_agents:
+        has_evidence = any(str(raw.get(key) or "").strip() for key in evidence_keys)
+        if not has_evidence:
+            return False
+
+    return True
 
 
 def _truncate(text: str, max_len: int) -> str:
