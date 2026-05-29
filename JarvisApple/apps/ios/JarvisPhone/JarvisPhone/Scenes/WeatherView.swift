@@ -398,11 +398,12 @@ struct WeatherView: View {
     }
 
     private func serverHeroImageKey(for current: AppleWeatherCurrent) -> String {
-        if current.visualKey == "clear_night_no_moon", !current.moonPhase.isEmpty {
+        let visualKey = WeatherManager.canonicalImageKey(current.visualKey)
+        if visualKey == "clear_night_no_moon", !current.moonPhase.isEmpty {
             return current.moonPhase
         }
-        if !current.visualKey.isEmpty {
-            return current.visualKey
+        if !visualKey.isEmpty {
+            return visualKey
         }
         return "clear_day"
     }
