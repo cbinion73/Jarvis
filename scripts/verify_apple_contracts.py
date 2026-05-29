@@ -425,6 +425,68 @@ def fetch_ssh(ssh_host: str, container: str, path: str, base_url: str) -> dict:
     return json.loads(output)
 
 
+def fetch_all_ssh(
+    *,
+    ssh_host: str,
+    container: str,
+    base_url: str,
+    paths: list[str],
+    attempts: int = 15,
+    delay_s: float = 2.0,
+) -> dict[str, dict]:
+    remote_script = """
+import json
+import sys
+import time
+import urllib.request
+
+payload = json.loads(sys.stdin.read())
+base_url = str(payload["base_url"]).rstrip("/")
+paths = list(payload["paths"])
+attempts = int(payload["attempts"])
+delay_s = float(payload["delay_s"])
+
+def fetch(path: str) -> dict:
+    last_exc = None
+    for attempt in range(1, attempts + 1):
+        try:
+            with urllib.request.urlopen(base_url + path, timeout=10) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except Exception as exc:  # pragma: no cover - exercised in live use
+            last_exc = exc
+            if attempt == attempts:
+                raise
+            time.sleep(delay_s)
+    raise last_exc or RuntimeError(f"failed fetching {path}")
+
+result = {}
+for path in paths:
+    result[path] = fetch(path)
+print(json.dumps(result))
+""".strip()
+
+    payload = json.dumps(
+        {
+            "base_url": base_url,
+            "paths": paths,
+            "attempts": attempts,
+            "delay_s": delay_s,
+        }
+    )
+    remote = f"docker exec -i {shlex.quote(container)} python3 -c {shlex.quote(remote_script)}"
+    completed = subprocess.run(
+        ["ssh", ssh_host, remote],
+        input=payload,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        stderr = completed.stderr.strip() or completed.stdout.strip() or "unknown ssh verification failure"
+        raise RuntimeError(stderr)
+    return json.loads(completed.stdout)
+
+
 def fetch_with_retry(*, use_ssh: bool, path: str, base_url: str, ssh_host: str | None, container: str, attempts: int = 15, delay_s: float = 2.0) -> dict:
     last_exc: Exception | None = None
     for attempt in range(1, attempts + 1):
@@ -445,24 +507,45 @@ def main() -> int:
     parser.add_argument("--base-url", default="http://127.0.0.1:8787")
     parser.add_argument("--ssh-host", help="Optional SSH host for remote container probing.")
     parser.add_argument("--container", default="jarvis-family-jarvis-1")
+    parser.add_argument("--attempts", type=int, default=15)
+    parser.add_argument("--delay-s", type=float, default=2.0)
     parser.add_argument("--keep-fixture", action="store_true")
     args = parser.parse_args()
 
     use_ssh = bool(args.ssh_host)
 
     payloads: dict[str, dict] = {}
-    for key, path in ENDPOINTS:
+    if use_ssh:
+        path_map = {key: path for key, path in ENDPOINTS}
         try:
-            payloads[key] = fetch_with_retry(
-                use_ssh=use_ssh,
-                path=path,
-                base_url=args.base_url,
-                ssh_host=args.ssh_host,
+            fetched = fetch_all_ssh(
+                ssh_host=args.ssh_host or "",
                 container=args.container,
+                base_url=args.base_url,
+                paths=list(path_map.values()),
+                attempts=args.attempts,
+                delay_s=args.delay_s,
             )
+            for key, path in ENDPOINTS:
+                payloads[key] = fetched[path]
         except Exception as exc:  # pragma: no cover - exercised in live use
-            print(f"failed fetching {path}: {exc}", file=sys.stderr)
+            print(f"failed fetching apple payloads over ssh: {exc}", file=sys.stderr)
             return 1
+    else:
+        for key, path in ENDPOINTS:
+            try:
+                payloads[key] = fetch_with_retry(
+                    use_ssh=False,
+                    path=path,
+                    base_url=args.base_url,
+                    ssh_host=args.ssh_host,
+                    container=args.container,
+                    attempts=args.attempts,
+                    delay_s=args.delay_s,
+                )
+            except Exception as exc:  # pragma: no cover - exercised in live use
+                print(f"failed fetching {path}: {exc}", file=sys.stderr)
+                return 1
 
     try:
         validate_phase_one_contracts(payloads)
