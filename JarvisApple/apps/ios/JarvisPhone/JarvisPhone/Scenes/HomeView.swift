@@ -10,6 +10,8 @@ struct HomeView: View {
     @State private var serverState: HomeState?
     @State private var isLoadingServerState = false
     @State private var serverError: String?
+    @State private var stagedHomeActionID: String?
+    @State private var stagedHomeActionMessage: String?
 
     private let amber = Color.orange
 
@@ -202,6 +204,56 @@ struct HomeView: View {
                     }
                 }
 
+                if !state.actionItems.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Household Actions")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(amber)
+                        ForEach(state.actionItems) { item in
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack(alignment: .top, spacing: 10) {
+                                    Circle()
+                                        .fill(actionColor(for: item.emphasis).opacity(0.18))
+                                        .frame(width: 10, height: 10)
+                                        .padding(.top, 4)
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(item.title)
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.white)
+                                        Text(item.detail)
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(3)
+                                    }
+                                    Spacer()
+                                    Button {
+                                        Task { await stageHomeAction(item) }
+                                    } label: {
+                                        if stagedHomeActionID == item.id {
+                                            ProgressView()
+                                                .tint(amber)
+                                                .scaleEffect(0.8)
+                                        } else {
+                                            Text("Stage")
+                                                .font(.caption.weight(.semibold))
+                                                .foregroundStyle(amber)
+                                        }
+                                    }
+                                    .glassEffect(in: Capsule())
+                                }
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        }
+                        if let stagedHomeActionMessage, !stagedHomeActionMessage.isEmpty {
+                            Text(stagedHomeActionMessage)
+                                .font(.caption2)
+                                .foregroundStyle(amber.opacity(0.9))
+                        }
+                    }
+                }
+
                 if let context = state.homeContext {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Household Context")
@@ -326,6 +378,31 @@ struct HomeView: View {
             serverError = nil
         } catch {
             serverError = error.localizedDescription
+        }
+    }
+
+    private func stageHomeAction(_ item: HomeActionItem) async {
+        stagedHomeActionID = item.id
+        defer { stagedHomeActionID = nil }
+        do {
+            _ = try await AppleAPIClient.shared.sendHomeCommand(
+                HomeCommand(command: item.command, entityId: item.entityId, service: item.service)
+            )
+            stagedHomeActionMessage = "Queued for approval: \(item.title)"
+            await loadServerState()
+        } catch {
+            stagedHomeActionMessage = error.localizedDescription
+        }
+    }
+
+    private func actionColor(for emphasis: String) -> Color {
+        switch emphasis {
+        case "high":
+            return .red
+        case "medium":
+            return amber
+        default:
+            return .cyan
         }
     }
 }

@@ -10,6 +10,7 @@ public struct HomeState: Codable, Sendable {
     public let lightsOn: [String]
     public let alerts: [HomeAlert]
     public let homeContext: HomeContext?
+    public let actionItems: [HomeActionItem]
 
     public init(
         presentMembers: [String],
@@ -17,7 +18,8 @@ public struct HomeState: Codable, Sendable {
         temperature: TemperatureState,
         lightsOn: [String],
         alerts: [HomeAlert],
-        homeContext: HomeContext? = nil
+        homeContext: HomeContext? = nil,
+        actionItems: [HomeActionItem] = []
     ) {
         self.presentMembers = presentMembers
         self.doors = doors
@@ -25,6 +27,7 @@ public struct HomeState: Codable, Sendable {
         self.lightsOn = lightsOn
         self.alerts = alerts
         self.homeContext = homeContext
+        self.actionItems = actionItems
     }
 
     enum CodingKeys: String, CodingKey {
@@ -34,6 +37,7 @@ public struct HomeState: Codable, Sendable {
         case lightsOn = "lights_on"
         case alerts
         case homeContext = "home_context"
+        case actionItems = "action_items"
     }
 
     public init(from decoder: Decoder) throws {
@@ -44,6 +48,22 @@ public struct HomeState: Codable, Sendable {
         lightsOn = try container.decode([String].self, forKey: .lightsOn)
         alerts = try container.decode([HomeAlert].self, forKey: .alerts)
         homeContext = try container.decodeIfPresent(HomeContext.self, forKey: .homeContext)
+        actionItems = try container.decodeIfPresent([HomeActionItem].self, forKey: .actionItems) ?? []
+    }
+}
+
+public struct HomeActionItem: Codable, Identifiable, Sendable {
+    public let id: String
+    public let title: String
+    public let detail: String
+    public let command: String
+    public let entityId: String
+    public let service: String
+    public let emphasis: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, detail, command, service, emphasis
+        case entityId = "entity_id"
     }
 }
 
