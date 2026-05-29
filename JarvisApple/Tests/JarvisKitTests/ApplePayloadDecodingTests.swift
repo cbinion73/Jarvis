@@ -15,7 +15,14 @@ struct ApplePayloadDecodingTests {
 
         try decode(WatchStatus.self, from: payloads, key: "/api/apple/status", decoder: decoder)
         try decode(AppStateOverview.self, from: payloads, key: "/api/apple/app-state", decoder: decoder)
+        try decode(AppleWeatherOverview.self, from: payloads, key: "/api/apple/weather", decoder: decoder)
         try decode(NavigationLocationsOverview.self, from: payloads, key: "/api/apple/navigation/locations", decoder: decoder)
+        try decode(
+            NavigationRouteOverview.self,
+            from: payloads,
+            key: "/api/apple/navigation/route?origin=8384%20Riley%20Rd%2C%20Alexandria%2C%20KY%2041001&destination=Cincinnati%2C%20OH",
+            decoder: decoder
+        )
         try decode(BriefingPacket.self, from: payloads, key: "/api/apple/briefing?actor=chris", decoder: decoder)
         try decode([NeedsItem].self, from: payloads, key: "/api/apple/needs", decoder: decoder)
         try decode(HealthSummary.self, from: payloads, key: "/api/apple/health/summary?actor=chris", decoder: decoder)
