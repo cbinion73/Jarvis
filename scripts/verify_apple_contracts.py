@@ -49,6 +49,85 @@ ENDPOINTS: list[tuple[str, str]] = [
 ]
 
 
+def require_mapping(payloads: dict[str, dict], path: str) -> dict:
+    try:
+        payload = payloads[path]
+    except KeyError as exc:
+        raise RuntimeError(f"missing payload for {path}") from exc
+    data = payload.get("data")
+    if not isinstance(data, dict):
+        raise RuntimeError(f"{path} returned non-object data payload")
+    return data
+
+
+def require_data(payloads: dict[str, dict], path: str):
+    try:
+        payload = payloads[path]
+    except KeyError as exc:
+        raise RuntimeError(f"missing payload for {path}") from exc
+    if "data" not in payload:
+        raise RuntimeError(f"{path} missing 'data' field")
+    return payload["data"]
+
+
+def require_list(data: dict, path: str, field: str) -> list:
+    value = data.get(field)
+    if not isinstance(value, list):
+        raise RuntimeError(f"{path} missing list field '{field}'")
+    return value
+
+
+def validate_phase_one_contracts(payloads: dict[str, dict]) -> None:
+    briefing = require_mapping(payloads, "/api/apple/briefing?actor=chris")
+    command_items = require_list(briefing, "/api/apple/briefing?actor=chris", "command_items")
+    for index, item in enumerate(command_items):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"/api/apple/briefing?actor=chris command_items[{index}] is not an object")
+        for key in ("id", "title", "detail", "priority", "kind"):
+            if key not in item:
+                raise RuntimeError(f"/api/apple/briefing?actor=chris command_items[{index}] missing '{key}'")
+
+    home_state = require_mapping(payloads, "/api/apple/home/state")
+    action_items = require_list(home_state, "/api/apple/home/state", "action_items")
+    home_context = home_state.get("home_context")
+    if not isinstance(home_context, dict):
+        raise RuntimeError("/api/apple/home/state missing object field 'home_context'")
+    for key in ("agenda", "attention", "projects"):
+        if key not in home_context:
+            raise RuntimeError(f"/api/apple/home/state home_context missing '{key}'")
+    for index, item in enumerate(action_items):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"/api/apple/home/state action_items[{index}] is not an object")
+        for key in ("id", "title", "detail", "command", "service", "emphasis"):
+            if key not in item:
+                raise RuntimeError(f"/api/apple/home/state action_items[{index}] missing '{key}'")
+
+    app_state = require_mapping(payloads, "/api/apple/app-state")
+    for key in (
+        "server",
+        "calendar",
+        "reminders",
+        "focus",
+        "notifications",
+        "now_playing",
+        "sound_alert",
+        "vision_scan",
+        "presence",
+        "sync_health",
+    ):
+        if key not in app_state:
+            raise RuntimeError(f"/api/apple/app-state missing '{key}'")
+
+    items = require_data(payloads, "/api/apple/needs")
+    if not isinstance(items, list):
+        raise RuntimeError("/api/apple/needs returned non-list data payload")
+    for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"/api/apple/needs items[{index}] is not an object")
+        if "allowed_actions" not in item:
+            raise RuntimeError(f"/api/apple/needs items[{index}] missing 'allowed_actions'")
+
+
 def fetch_http(base_url: str, path: str) -> dict:
     with urlopen(f"{base_url.rstrip('/')}{path}") as response:
         return json.loads(response.read().decode("utf-8"))
@@ -106,6 +185,12 @@ def main() -> int:
         except Exception as exc:  # pragma: no cover - exercised in live use
             print(f"failed fetching {path}: {exc}", file=sys.stderr)
             return 1
+
+    try:
+        validate_phase_one_contracts(payloads)
+    except Exception as exc:  # pragma: no cover - exercised in live use
+        print(f"phase 1 contract validation failed: {exc}", file=sys.stderr)
+        return 1
 
     with tempfile.NamedTemporaryFile(
         mode="w",
