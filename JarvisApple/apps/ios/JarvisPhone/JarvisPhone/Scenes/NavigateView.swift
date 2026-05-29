@@ -1238,6 +1238,11 @@ struct NavigateView: View {
             let overview = try await AppleAPIClient.shared.fetchNavigationLocations()
             savedLocations = overview.savedLocations
             preferredLocationId = overview.preferredLocationId
+            if let home = overview.savedLocations.first(where: { $0.id == overview.preferredLocationId }) ?? overview.savedLocations.first,
+               let latitude = home.latitude,
+               let longitude = home.longitude {
+                geo.syncHomeCoordinate(latitude: latitude, longitude: longitude)
+            }
             if selectedSavedLocationID == nil {
                 selectedSavedLocationID = overview.preferredLocationId ?? overview.savedLocations.first?.id
             }
