@@ -176,9 +176,25 @@ final class WeatherManager: ObservableObject {
 
     // MARK: - Image helper
 
+    static func canonicalImageKey(_ key: String) -> String {
+        switch key {
+        case "clear_night":
+            return "clear_night_no_moon"
+        case "partly_cloudy", "cloudy", "overcast", "fog", "haze", "smoke", "windy":
+            return "partly_cloudy_day"
+        case "rain", "showers", "drizzle":
+            return "light_rain"
+        case "snow", "flurries", "sleet":
+            return "light_snow"
+        default:
+            return key
+        }
+    }
+
     /// Loads one of the 18 bundled weather PNG assets by its visual key.
     static func conditionImage(_ key: String) -> Image {
-        if let url  = Bundle.main.url(forResource: key, withExtension: "png"),
+        let canonicalKey = canonicalImageKey(key)
+        if let url  = Bundle.main.url(forResource: canonicalKey, withExtension: "png"),
            let data = try? Data(contentsOf: url),
            let img  = UIImage(data: data) {
             return Image(uiImage: img)
