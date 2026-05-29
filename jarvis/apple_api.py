@@ -1061,7 +1061,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         except Exception:
             pass
 
-        completeness = _safe_read_json(Path.home() / ".jarvis" / "health" / "completeness_score.json")
+        completeness = _safe_read_json(Path.home() / ".jarvis" / "health" / "completeness_score.json", {})
         if isinstance(completeness, dict):
             total_score = completeness.get("total_score")
             grade = completeness.get("grade")
@@ -1082,7 +1082,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 if quick_win:
                     next_actions.append(str(quick_win))
 
-        health_state = _safe_read_json(Path.home() / ".jarvis" / "health" / "chris_health_state.json")
+        health_state = _safe_read_json(Path.home() / ".jarvis" / "health" / "chris_health_state.json", {})
         if isinstance(health_state, dict):
             conditions = ((health_state.get("medical_history") or {}).get("known_conditions") or [])[:8]
             for condition in conditions:
