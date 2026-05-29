@@ -6184,6 +6184,8 @@ body::after {{
             <span class="card-title">Inbox</span>
             <button class="btn-ghost" style="font-size:10px;padding:3px 8px;" onclick="loadNotificationCenter()">Refresh ↻</button>
           </div>
+          <div id="notification-center-filters-status" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"></div>
+          <div id="notification-center-filters-category" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
           <div id="notification-center-list">
             <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading notifications…</div></div>
           </div>
@@ -6192,6 +6194,7 @@ body::after {{
       <div class="card">
         <div class="card-inner">
           <div class="card-header"><span class="card-title">Event Spine</span></div>
+          <div id="notification-event-filters-domain" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
           <div id="notification-event-list">
             <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading events…</div></div>
           </div>
@@ -9850,6 +9853,9 @@ async function loadNotificationCenter() {{
   const pendingEl = document.getElementById('notif-stat-pending');
   const activeEl = document.getElementById('notif-stat-active');
   const eventsEl = document.getElementById('notif-stat-events');
+  const statusFilterEl = document.getElementById('notification-center-filters-status');
+  const categoryFilterEl = document.getElementById('notification-center-filters-category');
+  const domainFilterEl = document.getElementById('notification-event-filters-domain');
   if (!notifEl || !eventEl) return;
 
   try {{
@@ -9864,16 +9870,45 @@ async function loadNotificationCenter() {{
     const eventPayload = await eventRes.json();
     const notifications = ((notifPayload || {{}}).data || {{}}).notifications || [];
     const events = ((eventPayload || {{}}).data || {{}}).events || [];
+    window.__jarvisNotificationCenterState = window.__jarvisNotificationCenterState || {{
+      notificationStatus: 'all',
+      notificationCategory: 'all',
+      eventDomain: 'all',
+    }};
+    const state = window.__jarvisNotificationCenterState;
 
     const pendingCount = notifications.filter(n => (n.status || '') === 'pending').length;
     if (pendingEl) pendingEl.textContent = String(pendingCount);
     if (activeEl) activeEl.textContent = String(notifications.length);
     if (eventsEl) eventsEl.textContent = String(events.length);
 
+    const statuses = ['all', ...new Set(notifications.map(item => String(item.status || '').toLowerCase()).filter(Boolean))];
+    const categories = ['all', ...new Set(notifications.map(item => String(item.category || '').toLowerCase()).filter(Boolean))];
+    const domains = ['all', ...new Set(events.map(item => String(item.domain || '').toLowerCase()).filter(Boolean))];
+    if (statusFilterEl) {{
+      statusFilterEl.innerHTML = statuses.map(value => notificationFilterButton('notificationStatus', value, state.notificationStatus === value)).join('');
+    }}
+    if (categoryFilterEl) {{
+      categoryFilterEl.innerHTML = categories.map(value => notificationFilterButton('notificationCategory', value, state.notificationCategory === value)).join('');
+    }}
+    if (domainFilterEl) {{
+      domainFilterEl.innerHTML = domains.map(value => notificationFilterButton('eventDomain', value, state.eventDomain === value)).join('');
+    }}
+
+    const filteredNotifications = notifications.filter(item =>
+      (state.notificationStatus === 'all' || String(item.status || '').toLowerCase() === state.notificationStatus) &&
+      (state.notificationCategory === 'all' || String(item.category || '').toLowerCase() === state.notificationCategory)
+    );
+    const filteredEvents = events.filter(item =>
+      state.eventDomain === 'all' || String(item.domain || '').toLowerCase() === state.eventDomain
+    );
+
     if (!notifications.length) {{
       notifEl.innerHTML = '<div class="list-row"><span class="dot dot-standby"></span><div><div class="list-row-name">No active notifications</div><div class="list-row-sub">JARVIS has no unresolved household attention items right now.</div></div></div>';
+    }} else if (!filteredNotifications.length) {{
+      notifEl.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">No notifications match the current filters.</div></div>';
     }} else {{
-      notifEl.innerHTML = notifications.map(item => {{
+      notifEl.innerHTML = filteredNotifications.map(item => {{
         const severity = String(item.severity || 'low').toLowerCase();
         const dotCls = severity === 'critical' ? 'dot-error' : severity === 'high' ? 'dot-active' : 'dot-standby';
         const actions = (Array.isArray(item.available_actions) && item.available_actions.length ? item.available_actions : ['seen','dismiss','resolve'])
@@ -9916,8 +9951,10 @@ async function loadNotificationCenter() {{
 
     if (!events.length) {{
       eventEl.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">No recent events</div></div>';
+    }} else if (!filteredEvents.length) {{
+      eventEl.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">No events match the current filters.</div></div>';
     }} else {{
-      eventEl.innerHTML = events.slice(0, 12).map(item => {{
+      eventEl.innerHTML = filteredEvents.slice(0, 12).map(item => {{
         const severity = String(item.severity || 'low').toLowerCase();
         const dotCls = severity === 'critical' ? 'dot-error' : severity === 'high' ? 'dot-active' : 'dot-standby';
         return `
@@ -9936,6 +9973,20 @@ async function loadNotificationCenter() {{
     notifEl.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--crimson);">Could not load notifications</div></div>';
     eventEl.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--crimson);">Could not load event spine</div></div>';
   }}
+}}
+
+function notificationFilterButton(kind, value, selected) {{
+  const label = value === 'all'
+    ? 'All'
+    : String(value).replaceAll('_', ' ').replace(/\\b\\w/g, c => c.toUpperCase());
+  const cls = selected ? 'btn btn-hue btn-sm' : 'btn btn-navy btn-sm';
+  return `<button class="${{cls}}" onclick="setNotificationCenterFilter('${{kind}}','${{String(value).replaceAll("'", "\\\\'")}}')">${{escHtml(label)}}</button>`;
+}}
+
+function setNotificationCenterFilter(kind, value) {{
+  window.__jarvisNotificationCenterState = window.__jarvisNotificationCenterState || {{}};
+  window.__jarvisNotificationCenterState[kind] = value;
+  loadNotificationCenter();
 }}
 
 async function notificationAction(id, action) {{
