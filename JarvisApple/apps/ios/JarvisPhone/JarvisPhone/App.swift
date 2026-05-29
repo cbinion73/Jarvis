@@ -30,9 +30,9 @@ struct JarvisPhoneApp: App {
         // HealthKit
         await HealthSyncManager.shared.requestPermissionsAndSync()
 
-        // Presence — both WiFi and geofencing
+        // Presence uses existing permissions only. Do not trigger location
+        // permission prompts during app startup.
         WiFiPresenceMonitor.shared.start()
-        GeofenceManager.shared.requestPermission()
         GeofenceManager.shared.startMonitoring()
 
         // WatchConnectivity

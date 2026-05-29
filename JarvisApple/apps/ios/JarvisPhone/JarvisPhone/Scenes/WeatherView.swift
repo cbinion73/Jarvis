@@ -116,7 +116,7 @@ struct WeatherView: View {
             Text(loc.lastErrorMessage ?? "JARVIS could not get a location fix.")
                 .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
             Button("Try Again") {
-                loc.requestAndFetch(force: true)
+                loc.requestAndFetch(force: true, userInitiated: true)
             }
             .buttonStyle(.borderedProminent).tint(sky)
         }
