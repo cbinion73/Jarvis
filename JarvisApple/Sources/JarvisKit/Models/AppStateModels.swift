@@ -70,7 +70,7 @@ public struct AppStateReminders: Codable, Sendable {
 }
 
 public struct AppStateReminderItem: Codable, Sendable, Identifiable {
-    public var id: String { "\(title)|\(due)|\(list)" }
+    public let id: String
     public let title: String
     public let due: String
     public let list: String

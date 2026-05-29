@@ -135,6 +135,19 @@ def validate_phase_one_contracts(payloads: dict[str, dict]) -> None:
         if key not in posture:
             raise RuntimeError(f"/api/apple/focus-state interruption_posture missing '{key}'")
 
+    reminders = app_state.get("reminders")
+    if not isinstance(reminders, dict):
+        raise RuntimeError("/api/apple/app-state reminders is not an object")
+    top_items = reminders.get("top_items")
+    if not isinstance(top_items, list):
+        raise RuntimeError("/api/apple/app-state reminders missing list field 'top_items'")
+    for index, item in enumerate(top_items[:3]):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"/api/apple/app-state reminders top_items[{index}] is not an object")
+        for key in ("id", "title", "due", "list", "priority"):
+            if key not in item:
+                raise RuntimeError(f"/api/apple/app-state reminders top_items[{index}] missing '{key}'")
+
     items = require_data(payloads, "/api/apple/needs")
     if not isinstance(items, list):
         raise RuntimeError("/api/apple/needs returned non-list data payload")

@@ -10,6 +10,8 @@ struct BriefingView: View {
     @StateObject private var speech     = SpeechRecognitionManager.shared
     @State private var status: WatchStatus?
     @State private var showingInbox = false
+    @State private var reminderActionMessage = ""
+    @State private var reminderActionError = ""
 
     private let gold = Color(red: 1.0, green: 0.82, blue: 0.28)
 
@@ -396,6 +398,15 @@ struct BriefingView: View {
         if !appState.reminders.topItems.isEmpty {
             OracleSection(title: "Reminders", icon: "checklist", accent: .orange) {
                 VStack(alignment: .leading, spacing: 10) {
+                    if !reminderActionError.isEmpty {
+                        Text(reminderActionError)
+                            .font(.caption2)
+                            .foregroundStyle(.red.opacity(0.9))
+                    } else if !reminderActionMessage.isEmpty {
+                        Text(reminderActionMessage)
+                            .font(.caption2)
+                            .foregroundStyle(gold.opacity(0.82))
+                    }
                     ForEach(Array(appState.reminders.topItems.prefix(3))) { reminder in
                         VStack(alignment: .leading, spacing: 4) {
                             Text(reminder.title)
@@ -409,6 +420,20 @@ struct BriefingView: View {
                                     .font(.caption2)
                                     .foregroundStyle(gold.opacity(0.7))
                             }
+                            HStack(spacing: 10) {
+                                Button("Complete") {
+                                    Task { await completeReminder(reminder) }
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.orange)
+
+                                Button("Snooze 1h") {
+                                    Task { await snoozeReminder(reminder) }
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(.white.opacity(0.85))
+                            }
+                            .font(.caption.weight(.semibold))
                         }
                         if reminder.id != appState.reminders.topItems.prefix(3).last?.id {
                             Divider().opacity(0.2)
@@ -465,6 +490,35 @@ struct BriefingView: View {
                 }
             }
         }
+    }
+
+    private func completeReminder(_ reminder: AppStateReminderItem) async {
+        reminderActionError = ""
+        do {
+            if try await AppleAPIClient.shared.completeReminder(reminder.id) {
+                reminderActionMessage = "Completed \(reminder.title)"
+                await refreshMorningState()
+            }
+        } catch {
+            reminderActionError = error.localizedDescription
+        }
+    }
+
+    private func snoozeReminder(_ reminder: AppStateReminderItem) async {
+        reminderActionError = ""
+        do {
+            if try await AppleAPIClient.shared.snoozeReminder(reminder.id, minutes: 60) {
+                reminderActionMessage = "Snoozed \(reminder.title) for 1 hour"
+                await refreshMorningState()
+            }
+        } catch {
+            reminderActionError = error.localizedDescription
+        }
+    }
+
+    private func refreshMorningState() async {
+        await viewModel.refreshAppState()
+        reminderActionError = viewModel.errorMessage ?? ""
     }
 
     private func signalRow(title: String, body: String, footnote: String, icon: String) -> some View {
