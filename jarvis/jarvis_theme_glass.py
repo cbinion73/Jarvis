@@ -9876,10 +9876,22 @@ async function loadNotificationCenter() {{
       notifEl.innerHTML = notifications.map(item => {{
         const severity = String(item.severity || 'low').toLowerCase();
         const dotCls = severity === 'critical' ? 'dot-error' : severity === 'high' ? 'dot-active' : 'dot-standby';
-        const actions = [];
-        actions.push(`<button class="btn btn-navy btn-sm" onclick="notificationAction('${{item.id}}','seen')">Seen</button>`);
-        actions.push(`<button class="btn btn-crimson btn-sm" onclick="notificationAction('${{item.id}}','dismiss')">Dismiss</button>`);
-        actions.push(`<button class="btn btn-hue btn-sm" onclick="notificationAction('${{item.id}}','resolve')">Resolve</button>`);
+        const actions = (Array.isArray(item.available_actions) && item.available_actions.length ? item.available_actions : ['seen','dismiss','resolve'])
+          .filter(action => action && action !== 'open')
+          .map(action => {{
+            const labelMap = {{
+              complete_reminder: 'Complete',
+              snooze_reminder: 'Snooze 1h',
+              stage_prep: 'Stage Prep',
+            }};
+            const label = labelMap[action] || String(action).replaceAll('_',' ').replace(/\\b\\w/g, c => c.toUpperCase());
+            const cls = action === 'dismiss'
+              ? 'btn btn-crimson btn-sm'
+              : (action === 'resolve' || action === 'complete_reminder' || action === 'stage_prep')
+                ? 'btn btn-hue btn-sm'
+                : 'btn btn-navy btn-sm';
+            return `<button class="${{cls}}" onclick="notificationAction('${{item.id}}','${{action}}')">${{label}}</button>`;
+          }});
         return `
           <div class="approval-item">
             <div style="display:flex;align-items:flex-start;gap:8px;">
@@ -9927,13 +9939,19 @@ async function loadNotificationCenter() {{
 }}
 
 async function notificationAction(id, action) {{
-  const endpoint = action === 'seen'
-    ? 'seen'
-    : action === 'dismiss'
-      ? 'dismiss'
-      : 'resolve';
   try {{
-    const res = await fetch(`/api/apple/notifications/${{id}}/${{endpoint}}`, {{ method: 'POST' }});
+    const direct = ['seen', 'dismiss', 'resolve', 'snooze'].includes(action);
+    const url = direct
+      ? `/api/apple/notifications/${{id}}/${{action === 'dismiss' ? 'dismiss' : action}}`
+      : `/api/apple/notifications/${{id}}/action`;
+    const options = direct
+      ? {{ method: 'POST' }}
+      : {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{ action }})
+        }};
+    const res = await fetch(url, options);
     if (!res.ok) {{
       showToast('Notification action failed', 'error');
       return;
