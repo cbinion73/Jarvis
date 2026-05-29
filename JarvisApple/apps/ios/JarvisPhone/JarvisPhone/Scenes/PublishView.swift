@@ -9,6 +9,7 @@ struct PublishView: View {
     @State private var overview: PublishOverview?
     @State private var isLoading  = false
     @State private var error: String?
+    @State private var reviewActionInFlight: String?
 
     private let green = Color(red: 0.15, green: 0.85, blue: 0.45)
 
@@ -65,8 +66,36 @@ struct PublishView: View {
         ScrollView {
             VStack(spacing: 14) {
 
+                if !ov.actionItems.isEmpty {
+                    PressSection(title: "Command Queue", icon: "sparkles.rectangle.stack.fill", accent: green) {
+                        ForEach(ov.actionItems) { item in
+                            ActionItemRow(item: item, green: green)
+                            if item.id != ov.actionItems.last?.id { Divider().opacity(0.2) }
+                        }
+                    }
+                }
+
+                if let launch = ov.launchControl {
+                    launchControlCard(launch, reviewCount: ov.pendingReviewsCount)
+                }
+
                 // ── Revenue banner ────────────────────────────────
                 revenueBanner(ov.revenueSummary)
+
+                if !ov.pendingReviews.isEmpty {
+                    PressSection(title: "Ready For Review", icon: "checklist.unchecked", accent: green) {
+                        ForEach(ov.pendingReviews) { review in
+                            ReviewRow(
+                                review: review,
+                                green: green,
+                                isActing: reviewActionInFlight == review.id,
+                                onApprove: { Task { await approveReview(review.id) } },
+                                onRevise: { Task { await requestRevision(review.id) } }
+                            )
+                            if review.id != ov.pendingReviews.last?.id { Divider().opacity(0.2) }
+                        }
+                    }
+                }
 
                 // ── Projects ──────────────────────────────────────
                 if !ov.projects.isEmpty {
@@ -129,6 +158,61 @@ struct PublishView: View {
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(green.opacity(0.15), lineWidth: 1))
     }
 
+    @ViewBuilder
+    private func launchControlCard(_ launch: PublishLaunchControl, reviewCount: Int) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("LAUNCH CONTROL")
+                        .font(.system(size: 9, weight: .bold)).tracking(1.2).foregroundStyle(.secondary)
+                    Text(launch.title)
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(.white)
+                    HStack(spacing: 6) {
+                        if !launch.phase.isEmpty {
+                            badge(launch.phase.replacingOccurrences(of: "_", with: " ").capitalized, color: .cyan)
+                        }
+                        if !launch.status.isEmpty {
+                            badge(launch.status.capitalized, color: .orange)
+                        }
+                        if !launch.platform.isEmpty {
+                            badge(launch.platform.replacingOccurrences(of: "_", with: " ").uppercased(), color: green)
+                        }
+                    }
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(daysLabel(for: launch.daysToLaunch))
+                        .font(.system(size: 28, weight: .bold).monospacedDigit())
+                        .foregroundStyle(launch.daysToLaunch ?? 0 <= 7 ? .orange : green)
+                    Text("to launch")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            HStack(spacing: 10) {
+                metricPill("\(reviewCount)", "Reviews", tint: .orange)
+                metricPill("\(launch.postsPendingApproval)", "Posts Waiting", tint: .yellow)
+                metricPill("\(launch.postsScheduled)", "Scheduled", tint: green)
+            }
+
+            if !launch.nextAction.isEmpty {
+                Text(launch.nextAction)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white)
+            }
+            if !launch.launchDate.isEmpty {
+                Text("Launch target: \(launch.launchDate.prefix(10))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(green.opacity(0.15), lineWidth: 1))
+    }
+
     // MARK: - Error
 
     private func errorView(_ msg: String) -> some View {
@@ -148,6 +232,61 @@ struct PublishView: View {
         do { overview = try await AppleAPIClient.shared.fetchPublishing() }
         catch { self.error = error.localizedDescription }
         isLoading = false
+    }
+
+    private func approveReview(_ reviewId: String) async {
+        reviewActionInFlight = reviewId
+        do {
+            _ = try await AppleAPIClient.shared.approvePublishingReview(reviewId)
+            await load()
+        } catch {
+            self.error = error.localizedDescription
+        }
+        reviewActionInFlight = nil
+    }
+
+    private func requestRevision(_ reviewId: String) async {
+        reviewActionInFlight = reviewId
+        do {
+            _ = try await AppleAPIClient.shared.requestPublishingRevision(reviewId)
+            await load()
+        } catch {
+            self.error = error.localizedDescription
+        }
+        reviewActionInFlight = nil
+    }
+
+    private func daysLabel(for days: Int?) -> String {
+        guard let days else { return "—" }
+        if days == 0 { return "0d" }
+        if days < 0 { return "Live" }
+        return "\(days)d"
+    }
+
+    @ViewBuilder
+    private func metricPill(_ value: String, _ label: String, tint: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.system(size: 16, weight: .bold).monospacedDigit())
+                .foregroundStyle(tint)
+            Text(label.uppercased())
+                .font(.system(size: 8, weight: .bold))
+                .tracking(0.8)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    @ViewBuilder
+    private func badge(_ text: String, color: Color) -> some View {
+        Text(text)
+            .font(.system(size: 9, weight: .bold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.14), in: Capsule())
     }
 }
 
@@ -197,27 +336,45 @@ private struct ProjectRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: typeIcon)
-                .font(.system(size: 16))
-                .foregroundStyle(green.opacity(0.6))
-                .frame(width: 22)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                Image(systemName: typeIcon)
+                    .font(.system(size: 16))
+                    .foregroundStyle(green.opacity(0.6))
+                    .frame(width: 22)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(project.title).font(.subheadline).foregroundStyle(.white)
-                HStack(spacing: 4) {
-                    Text(project.platform).font(.caption2).foregroundStyle(.secondary)
-                    if !project.platform.isEmpty && !project.status.isEmpty {
-                        Text("·").font(.caption2).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(project.title).font(.subheadline).foregroundStyle(.white)
+                    HStack(spacing: 4) {
+                        Text(project.platform).font(.caption2).foregroundStyle(.secondary)
+                        if !project.platform.isEmpty && !project.status.isEmpty {
+                            Text("·").font(.caption2).foregroundStyle(.secondary)
+                        }
+                        if !project.type.isEmpty {
+                            Text(project.type.replacingOccurrences(of: "_", with: " ").capitalized)
+                                .font(.caption2).foregroundStyle(.secondary)
+                        }
                     }
                 }
+                Spacer()
+                Text(project.status.capitalized)
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(statusColor)
+                    .padding(.horizontal, 7).padding(.vertical, 3)
+                    .background(statusColor.opacity(0.12), in: Capsule())
             }
-            Spacer()
-            Text(project.status.capitalized)
-                .font(.system(size: 9, weight: .bold))
-                .foregroundStyle(statusColor)
-                .padding(.horizontal, 7).padding(.vertical, 3)
-                .background(statusColor.opacity(0.12), in: Capsule())
+            if !project.description.isEmpty {
+                Text(project.description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            if !project.notes.isEmpty {
+                Text(project.notes)
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(2)
+            }
         }
         .padding(.vertical, 2)
     }
@@ -283,6 +440,101 @@ private struct CalendarRow: View {
                 Text(item.status.capitalized)
                     .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(statusColor)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+private struct ActionItemRow: View {
+    let item: PublishActionItem
+    let green: Color
+
+    private var tint: Color {
+        switch item.priority.lowercased() {
+        case "high": return .orange
+        case "medium": return green
+        default: return .secondary
+        }
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Circle()
+                .fill(tint.opacity(0.2))
+                .frame(width: 26, height: 26)
+                .overlay(
+                    Image(systemName: item.kind == "review" ? "checklist" : item.kind == "launch" ? "megaphone.fill" : "calendar")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(tint)
+                )
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title).font(.subheadline).foregroundStyle(.white)
+                Text(item.detail).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text(item.priority.uppercased())
+                .font(.system(size: 8, weight: .bold))
+                .tracking(0.8)
+                .foregroundStyle(tint)
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+private struct ReviewRow: View {
+    let review: PublishReview
+    let green: Color
+    let isActing: Bool
+    let onApprove: () -> Void
+    let onRevise: () -> Void
+
+    private var previewText: String {
+        let raw = review.contentPreview.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return "Ready for review." }
+        if raw.first == "{", let data = raw.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            var parts: [String] = []
+            if let words = json["totalWords"] as? Int { parts.append("\(words.formatted()) words") }
+            if let chapters = json["chapterCount"] as? Int { parts.append("\(chapters) chapters") }
+            if let subtitle = json["subtitle"] as? String, !subtitle.isEmpty { parts.append(subtitle) }
+            return parts.isEmpty ? "Structured draft package ready." : parts.joined(separator: " · ")
+        }
+        return String(raw.prefix(140))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(review.title).font(.subheadline).foregroundStyle(.white)
+                    Text(review.stageDisplay.isEmpty ? review.stageKey.replacingOccurrences(of: "_", with: " ").capitalized : review.stageDisplay)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.orange)
+                }
+                Spacer()
+                if review.wordCount > 0 {
+                    Text("\(review.wordCount.formatted()) words")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Text(previewText)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            HStack {
+                Text(review.readySince.prefix(10))
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button(isActing ? "Working…" : "Needs Work") { onRevise() }
+                    .buttonStyle(.bordered)
+                    .tint(.orange)
+                    .disabled(isActing)
+                Button(isActing ? "Working…" : "Approve") { onApprove() }
+                    .buttonStyle(.borderedProminent)
+                    .tint(green)
+                    .disabled(isActing)
             }
         }
         .padding(.vertical, 2)

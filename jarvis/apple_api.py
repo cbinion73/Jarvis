@@ -123,6 +123,36 @@ def _safe_read_jsonl_tail(path: Path, limit: int = 1) -> list[dict[str, Any]]:
     return rows[-limit:]
 
 
+def _safe_read_jsonl(path: Path) -> list[dict[str, Any]]:
+    return _safe_read_jsonl_tail(path, limit=0)
+
+
+def _coerce_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _coerce_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _iso_date_days_away(value: str) -> int | None:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        target = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc)
+        return (target.date() - now.date()).days
+    except ValueError:
+        return None
+
+
 def _chronicle_actor_matches(entry: dict[str, Any], actor: str) -> bool:
     entry_actor = str(entry.get("actor") or entry.get("actor_id") or "").strip().lower()
     if not entry_actor:
@@ -2270,6 +2300,14 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             proj_path = pub_root / "projects.json"
             proj_raw  = json.loads(proj_path.read_text()) if proj_path.exists() else {}
             proj_list = list(proj_raw.values()) if isinstance(proj_raw, dict) else proj_raw
+            active_projects = [
+                p for p in proj_list
+                if str(p.get("status") or "").lower() != "archived"
+            ]
+            active_projects.sort(
+                key=lambda project: str(project.get("updated_at") or project.get("created_at") or ""),
+                reverse=True,
+            )
             projects  = [
                 {
                     "project_id": str(p.get("project_id") or ""),
@@ -2278,10 +2316,17 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                     "status":     str(p.get("status") or ""),
                     "platform":   str(p.get("platform") or ""),
                     "url":        p.get("url") or None,
+                    "description": str(p.get("description") or ""),
+                    "notes": str(p.get("notes") or ""),
+                    "updated_at": str(p.get("updated_at") or p.get("created_at") or ""),
                 }
-                for p in proj_list
-                if str(p.get("status") or "") != "archived"
-            ][:8]
+                for p in active_projects[:8]
+            ]
+            project_lookup = {
+                str(project.get("project_id") or ""): project
+                for project in active_projects
+                if str(project.get("project_id") or "")
+            }
 
             # Revenue streams total
             rev_path = pub_root / "revenue_streams.json"
@@ -2326,15 +2371,178 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 if str(c.get("status") or "") not in ("published", "archived")
             ][-6:]
 
+            review_rows = [
+                row for row in _safe_read_jsonl(pub_root / "ghostwritr_reviews.jsonl")
+                if str(row.get("jarvis_status") or "").lower() == "pending"
+            ]
+            review_rows.sort(key=lambda row: str(row.get("ready_since") or ""))
+            pending_reviews = [
+                {
+                    "review_id": str(review.get("review_id") or ""),
+                    "title": str(review.get("title") or ""),
+                    "slug": str(review.get("slug") or ""),
+                    "stage_key": str(review.get("stage_key") or ""),
+                    "stage_display": str(review.get("stage_display") or ""),
+                    "content_preview": str(review.get("content_preview") or ""),
+                    "word_count": _coerce_int(review.get("word_count")),
+                    "ready_since": str(review.get("ready_since") or ""),
+                    "approval_id": str(review.get("approval_id") or ""),
+                }
+                for review in review_rows[:6]
+            ]
+
+            launch_strategies_raw = _safe_read_json(pub_root / "launch_strategies.json", {})
+            launch_strategies = launch_strategies_raw if isinstance(launch_strategies_raw, dict) else {}
+            schedules = [
+                row for row in _safe_read_jsonl(pub_root / "schedules.jsonl")
+                if str(row.get("status") or "").lower() == "active"
+            ]
+            schedules.sort(key=lambda row: str(row.get("start_date") or ""), reverse=True)
+            posts = _safe_read_jsonl(pub_root / "posts.jsonl")
+            posts_by_project: dict[str, list[dict[str, Any]]] = {}
+            for post in posts:
+                project_id = str(post.get("project_id") or "").strip()
+                if project_id:
+                    posts_by_project.setdefault(project_id, []).append(post)
+
+            active_schedule = schedules[0] if schedules else None
+            launch_project_id = str(active_schedule.get("project_id") or "") if isinstance(active_schedule, dict) else ""
+            strategy = launch_strategies.get(launch_project_id) if launch_project_id else None
+            active_project_raw = project_lookup.get(launch_project_id)
+            if active_project_raw is None and active_projects:
+                active_project_raw = active_projects[0]
+
+            active_project_id = str((active_project_raw or {}).get("project_id") or launch_project_id or "")
+            launch_posts = posts_by_project.get(launch_project_id) if launch_project_id else []
+            scheduled_posts = [post for post in launch_posts if str(post.get("scheduled_at") or "").strip()]
+            draft_posts = [post for post in launch_posts if str(post.get("status") or "").lower() == "draft"]
+
+            launch_days = None
+            if isinstance(strategy, dict):
+                launch_days = _iso_date_days_away(str(strategy.get("launch_date") or ""))
+            if launch_days is None and isinstance(active_schedule, dict):
+                launch_days = _iso_date_days_away(str(active_schedule.get("start_date") or ""))
+
+            active_project = None
+            if active_project_raw or strategy or active_schedule:
+                active_project = {
+                    "project_id": active_project_id,
+                    "title": str(
+                        (active_project_raw or {}).get("title")
+                        or (strategy or {}).get("book_title")
+                        or active_project_id
+                    ),
+                    "platform": str((active_project_raw or {}).get("platform") or ""),
+                    "status": str((active_project_raw or {}).get("status") or (active_schedule or {}).get("status") or ""),
+                    "phase": str((active_schedule or {}).get("phase") or "pre_launch"),
+                    "days_to_launch": launch_days,
+                    "posts_scheduled": len(scheduled_posts),
+                    "posts_pending_approval": len(draft_posts),
+                    "launch_date": str((strategy or {}).get("launch_date") or ""),
+                    "next_action": (
+                        f"Review {len(pending_reviews)} pending draft" + ("s" if len(pending_reviews) != 1 else "")
+                        if pending_reviews else
+                        f"Approve {len(draft_posts)} launch post" + ("s" if len(draft_posts) != 1 else "")
+                        if draft_posts else
+                        f"Prepare {str((active_schedule or {}).get('phase') or 'launch').replace('_', ' ')} queue"
+                        if active_schedule else
+                        "Keep the publishing pipeline moving"
+                    ),
+                }
+
+            action_items: list[dict[str, Any]] = []
+            if pending_reviews:
+                top_review = pending_reviews[0]
+                action_items.append({
+                    "title": f"Review {top_review['title']}",
+                    "detail": f"{top_review['stage_display'] or top_review['stage_key']} is ready for approval.",
+                    "kind": "review",
+                    "priority": "high",
+                })
+            if active_project and active_project.get("posts_pending_approval"):
+                posts_pending_approval = int(active_project["posts_pending_approval"])
+                action_items.append({
+                    "title": f"Approve {posts_pending_approval} launch post" + ("s" if posts_pending_approval != 1 else ""),
+                    "detail": f"{active_project.get('title') or 'Active launch'} has social copy waiting in the queue.",
+                    "kind": "launch",
+                    "priority": "medium",
+                })
+            if upcoming:
+                next_upcoming = upcoming[0]
+                action_items.append({
+                    "title": f"Prepare {next_upcoming['title']}",
+                    "detail": f"{next_upcoming['platform'] or 'Publishing'} is scheduled for {next_upcoming['planned_date'] or 'soon'}.",
+                    "kind": "calendar",
+                    "priority": "medium",
+                })
+
             return _ok({
                 "projects":        projects,
                 "revenue_summary": revenue_summary,
                 "upcoming":        upcoming,
+                "pending_reviews": pending_reviews,
+                "pending_reviews_count": len(pending_reviews),
+                "launch_control": active_project,
+                "action_items": action_items,
                 "updated_at":      _ts(),
             })
         except Exception as exc:
             logger.exception("apple_publishing failed: %s", exc)
-            return _ok({"projects": [], "revenue_summary": {"monthly_estimate": 0.0, "stream_count": 0, "streams": []}, "upcoming": [], "updated_at": _ts()})
+            return _ok({
+                "projects": [],
+                "revenue_summary": {"monthly_estimate": 0.0, "stream_count": 0, "streams": []},
+                "upcoming": [],
+                "pending_reviews": [],
+                "pending_reviews_count": 0,
+                "launch_control": None,
+                "action_items": [],
+                "updated_at": _ts(),
+            })
+
+    @app.post("/api/apple/publishing/reviews/{review_id}/approve")
+    async def apple_publishing_approve_review(review_id: str):
+        pub_root = Path.home() / ".jarvis" / "publishing"
+        reviews_path = pub_root / "ghostwritr_reviews.jsonl"
+        rows = _safe_read_jsonl(reviews_path)
+        updated = False
+        now = _ts()
+        for row in rows:
+            if str(row.get("review_id") or "") == review_id:
+                row["jarvis_status"] = "approved"
+                row["feedback"] = str(row.get("feedback") or "")
+                row["reviewed_at"] = now
+                updated = True
+                break
+        if not updated:
+            raise HTTPException(status_code=404, detail=f"Review {review_id} not found")
+        reviews_path.write_text(
+            "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + ("\n" if rows else ""),
+            encoding="utf-8",
+        )
+        return _ok({"status": "approved", "review_id": review_id})
+
+    @app.post("/api/apple/publishing/reviews/{review_id}/revise")
+    async def apple_publishing_revise_review(review_id: str, payload: dict[str, Any]):
+        pub_root = Path.home() / ".jarvis" / "publishing"
+        reviews_path = pub_root / "ghostwritr_reviews.jsonl"
+        rows = _safe_read_jsonl(reviews_path)
+        feedback = str(payload.get("feedback") or "").strip() or "Needs revision from JarvisPhone."
+        updated = False
+        now = _ts()
+        for row in rows:
+            if str(row.get("review_id") or "") == review_id:
+                row["jarvis_status"] = "needs_revision"
+                row["feedback"] = feedback
+                row["reviewed_at"] = now
+                updated = True
+                break
+        if not updated:
+            raise HTTPException(status_code=404, detail=f"Review {review_id} not found")
+        reviews_path.write_text(
+            "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + ("\n" if rows else ""),
+            encoding="utf-8",
+        )
+        return _ok({"status": "needs_revision", "review_id": review_id, "feedback": feedback})
 
     # ── Huddle ────────────────────────────────────────────────────────────────
 

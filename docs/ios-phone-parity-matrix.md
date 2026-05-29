@@ -28,7 +28,7 @@ Source-of-truth rule:
 | Catalyst | `loadOverviewCatalyst`, catalyst workspace panels | `CatalystView.swift` | `GET /api/apple/catalyst` | Partial | Data exists, but phone lacks full action depth and overview integration |
 | Chronicle | `loadChronicle`, context/pattern loaders | `ChronicleView.swift` | `GET /api/apple/chronicle`, `POST /api/apple/chronicle/capture` | Partial | Phone Chronicle now shows live formation context and pattern visibility from JARVIS; remaining gaps are broader chronicle tooling and deeper prayer/study workflows |
 | Faith | `loadFaith`, faith roster/context | `FaithView.swift` | `GET /api/apple/faith` | Partial | Daily word works; missing deeper faith mode orchestration from web |
-| Publish | `loadPublishing`, KDP/launch/pipeline panels | `PublishView.swift` | `GET /api/apple/publishing` | Partial | Summary exists; missing fuller publishing workspace actions and platform-specific tools |
+| Publish | `loadPublishing`, KDP/launch/pipeline panels | `PublishView.swift` | `GET /api/apple/publishing`, `POST /api/apple/publishing/reviews/*` | Partial | Phone Publish now exposes launch-control posture and pending review workflow from JARVIS; remaining gaps are broader KDP/platform-specific tools and deeper asset-generation controls |
 | Huddle / Agents | `loadHuddle`, `loadAgentRoster`, `loadLiveAgents` | `HuddleView.swift` | `GET /api/apple/huddle` | Partial | Basic huddle view exists; missing richer agent roster/live-agent parity |
 | Navigate | `renderNavRoute`, `loadNavPOIs`, active route controls, POI toggles, parks radius slider | `NavigateView.swift` | `GET /api/apple/navigation/*` | Partial | Live route state now hydrates from JARVIS; remaining gaps are deeper HUD parity, maneuver presentation polish, and long-route reliability |
 | Forge | forge/workshop panels | `ForgeView.swift` | `GET /api/apple/forge`, `POST /api/apple/forge/submit`, `POST /api/apple/forge/save` | Partial | Capture/upload exists; processing and broader workshop parity are still incomplete |
@@ -56,7 +56,7 @@ Source-of-truth rule:
 - [x] Expand Needs into a richer request workflow surface.
 - [x] Bring Health closer to SAM / score / protocol parity.
 - [x] Add richer Chronicle context and pattern visibility.
-- [ ] Add deeper Publishing workspace actions and launch pipeline visibility.
+- [x] Add deeper Publishing workspace actions and launch pipeline visibility.
 - [ ] Add richer Huddle / live-agent roster visibility.
 - [ ] Continue Navigation HUD and route-state parity.
 
