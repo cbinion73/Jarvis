@@ -44,6 +44,8 @@ struct NavigateView: View {
     @State private var selectedSavedLocationID: String?
     @State private var currentRouteOriginQuery = ""
     @State private var currentRouteDestinationQuery = ""
+    @State private var pendingRouteRestore: NavigationLastRoute?
+    @State private var restoringRoute = false
     @FocusState private var destinationFocused: Bool
 
     private let slate = Color(red: 0.4, green: 0.55, blue: 0.75)
@@ -197,14 +199,20 @@ struct NavigateView: View {
             await loadNavigationLocations()
             loc.requestAndFetch()
         }
+        .onChange(of: loc.location) { _, _ in
+            guard selectedOriginMode == .current else { return }
+            Task { await restorePendingRouteIfPossible() }
+        }
         .onChange(of: destinationText) { _, newValue in
             completer.update(query: newValue)
         }
         .onChange(of: selectedOriginMode) { _, newValue in
             persistNavigationState(selectedOriginMode: newValue.rawValue)
+            Task { await restorePendingRouteIfPossible() }
         }
         .onChange(of: selectedSavedLocationID) { _, newValue in
             persistNavigationState(selectedSavedLocationID: newValue ?? "")
+            Task { await restorePendingRouteIfPossible() }
         }
     }
 
@@ -250,6 +258,13 @@ struct NavigateView: View {
                         .tint(.white)
                         .padding(8)
                         .background(.black.opacity(0.25), in: Circle())
+                } else if restoringRoute {
+                    Label("Restoring", systemImage: "arrow.clockwise")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(.black.opacity(0.25), in: Capsule())
                 }
             }
             .padding(14)
@@ -792,9 +807,30 @@ struct NavigateView: View {
             }
 
             if stopSections.allSatisfy({ $0.items.isEmpty }) {
-                Text("No suggested stops surfaced yet for this route.")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.76))
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(stopEmptyStateTitle)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.88))
+                    Text(stopEmptyStateDetail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 10) {
+                        Button("Reload Stops") {
+                            Task { await reloadStopsForActiveRoute() }
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.white)
+
+                        if activeStopCategoryIDs.contains("parks") || activeStopCategoryIDs.contains("historic") {
+                            Button("Widen Search") {
+                                parksHistoricRadiusMiles = min(100, parksHistoricRadiusMiles + 10)
+                                Task { await reloadStopsForActiveRoute() }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(parksHistoricAccent)
+                        }
+                    }
+                }
             } else {
                 ForEach(visibleStopSections) { section in
                     VStack(alignment: .leading, spacing: 10) {
@@ -1051,6 +1087,20 @@ struct NavigateView: View {
         return count == 0 ? "--" : "\(count)"
     }
 
+    private var stopEmptyStateTitle: String {
+        loadingStops ? "Refreshing route intelligence…" : "No suggested stops surfaced yet for this route."
+    }
+
+    private var stopEmptyStateDetail: String {
+        if loadingStops {
+            return "JARVIS is checking along-the-way coffee, food, parks, historic sites, family stops, and gas."
+        }
+        if activeStopCategoryIDs.contains("parks") || activeStopCategoryIDs.contains("historic") {
+            return "Try enabling more categories or widening the Parks & Historic search radius."
+        }
+        return "Try enabling more stop categories to widen the along-the-way search."
+    }
+
     private var alertCountLabel: String {
         let count = route?.samples.reduce(0) { $0 + $1.alerts.count } ?? 0
         return count == 0 ? "0" : "\(count)"
@@ -1142,7 +1192,11 @@ struct NavigateView: View {
         route = nil
         stopSections = []
         routeError = nil
+        currentRouteOriginQuery = ""
+        currentRouteDestinationQuery = ""
+        pendingRouteRestore = nil
         cameraPosition = .automatic
+        persistNavigationState(lastRoute: NavigationLastRoute(origin: "", destination: ""))
     }
 
     private func toggleStopCategory(_ categoryID: String) {
@@ -1300,6 +1354,7 @@ struct NavigateView: View {
             if let state = overview.navigationState {
                 hydrateNavigationState(state)
             }
+            await restorePendingRouteIfPossible()
         } catch {
             routeError = error.localizedDescription
         }
@@ -1354,7 +1409,7 @@ struct NavigateView: View {
     private func hydrateNavigationState(_ state: NavigationState) {
         favoriteDestinations = state.favoriteDestinations
         recentDestinations = state.recentDestinations
-        activeStopCategoryIDs = Set(state.activeStopCategoryIDs)
+        activeStopCategoryIDs = Set(state.activeStopCategoryIDs.isEmpty ? ["food", "starbucks", "parks", "historic", "family"] : state.activeStopCategoryIDs)
         parksHistoricRadiusMiles = Double(state.parksHistoricRadiusMiles)
         if let restoredOriginMode = OriginMode(rawValue: state.selectedOriginMode),
            availableOriginModes.contains(restoredOriginMode) {
@@ -1366,6 +1421,9 @@ struct NavigateView: View {
         if destinationText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
            !state.lastRoute.destination.isEmpty {
             destinationText = state.lastRoute.destination
+        }
+        if !state.lastRoute.origin.isEmpty, !state.lastRoute.destination.isEmpty {
+            pendingRouteRestore = state.lastRoute
         }
     }
 
@@ -1407,6 +1465,37 @@ struct NavigateView: View {
                 return try await reverseGeocodeCoordinate(coordinate)
             }
             throw JarvisClientError.serverError("Phone location is not available yet.")
+        }
+    }
+
+    private func restorePendingRouteIfPossible() async {
+        guard route == nil,
+              !loadingRoute,
+              !restoringRoute,
+              let pendingRouteRestore,
+              !pendingRouteRestore.destination.isEmpty
+        else { return }
+
+        if selectedOriginMode == .current, currentCoordinate == nil {
+            return
+        }
+
+        restoringRoute = true
+        defer { restoringRoute = false }
+
+        do {
+            let origin = try await resolveOriginQuery()
+            let destination = pendingRouteRestore.destination
+            let overview = try await AppleAPIClient.shared.fetchNavigationRoute(origin: origin, destination: destination)
+            route = overview
+            currentRouteOriginQuery = origin
+            currentRouteDestinationQuery = destination
+            destinationText = destination
+            focusMap(on: overview)
+            await loadStops(origin: origin, destination: destination)
+            self.pendingRouteRestore = nil
+        } catch {
+            routeError = error.localizedDescription
         }
     }
 

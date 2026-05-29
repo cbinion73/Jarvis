@@ -30,7 +30,7 @@ Source-of-truth rule:
 | Faith | `loadFaith`, faith roster/context | `FaithView.swift` | `GET /api/apple/faith` | Partial | Daily word works; missing deeper faith mode orchestration from web |
 | Publish | `loadPublishing`, KDP/launch/pipeline panels | `PublishView.swift` | `GET /api/apple/publishing`, `POST /api/apple/publishing/reviews/*` | Partial | Phone Publish now exposes launch-control posture and pending review workflow from JARVIS; remaining gaps are broader KDP/platform-specific tools and deeper asset-generation controls |
 | Huddle / Agents | `loadHuddle`, `loadAgentRoster`, `loadLiveAgents` | `HuddleView.swift` | `GET /api/apple/huddle` | Partial | Basic huddle view exists; missing richer agent roster/live-agent parity |
-| Navigate | `renderNavRoute`, `loadNavPOIs`, active route controls, POI toggles, parks radius slider | `NavigateView.swift` | `GET /api/apple/navigation/*` | Partial | Live route state now hydrates from JARVIS; remaining gaps are deeper HUD parity, maneuver presentation polish, and long-route reliability |
+| Navigate | `renderNavRoute`, `loadNavPOIs`, active route controls, POI toggles, parks radius slider | `NavigateView.swift` | `GET /api/apple/navigation/*` | Partial | Core HUD parity, route restore, stop recovery, and route-state reliability now mirror JARVIS more closely; remaining gaps are broader weather/aerial extras rather than core navigation behavior |
 | Forge | forge/workshop panels | `ForgeView.swift` | `GET /api/apple/forge`, `POST /api/apple/forge/submit`, `POST /api/apple/forge/save` | Partial | Capture/upload exists; processing and broader workshop parity are still incomplete |
 | Voice / Chat | chat + command flows, voice interactions | `VoiceView.swift` | `POST /api/apple/speak`, `GET /api/apple/voice/greeting` | Partial | Basic live voice bridge exists; missing broader chat/system command parity with web |
 | Systems / Settings | `settingsNavTo(...)`, accounts, voice, location, family, devices, costs, Maps API status | `SettingsView.swift` | `GET /api/apple/status`, `GET /api/apple/app-state` plus server-side config endpoints | Partial | Phone Systems now shows mirror state and recent alerts, but it is still far behind full web settings breadth like accounts, family management, and cost/config panels |
@@ -58,7 +58,7 @@ Source-of-truth rule:
 - [x] Add richer Chronicle context and pattern visibility.
 - [x] Add deeper Publishing workspace actions and launch pipeline visibility.
 - [ ] Add richer Huddle / live-agent roster visibility.
-- [ ] Continue Navigation HUD and route-state parity.
+- [x] Continue Navigation HUD and route-state parity.
 
 ### Phase 3: Deepen Existing Shared State Surfaces
 
