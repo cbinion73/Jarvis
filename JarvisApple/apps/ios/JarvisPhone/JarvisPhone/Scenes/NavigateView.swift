@@ -23,6 +23,7 @@ struct NavigateView: View {
 
     @ObservedObject private var loc = WeatherLocationProvider.shared
     @ObservedObject private var geo = GeofenceManager.shared
+    @ObservedObject private var speech = SpeechRecognitionManager.shared
     @StateObject private var completer = NavigationSearchCompleter()
 
     @State private var cameraPosition: MapCameraPosition = .automatic
@@ -59,6 +60,16 @@ struct NavigateView: View {
 
     private var currentCoordinate: CLLocationCoordinate2D? {
         loc.location?.coordinate
+    }
+
+    private var leadingRouteSample: NavigationRouteSample? {
+        route?.samples.first
+    }
+
+    private var arrivalTimeText: String? {
+        guard let minutes = route?.route.durationMinutes else { return nil }
+        let arrival = Date().addingTimeInterval(TimeInterval(minutes * 60))
+        return arrival.formatted(date: .omitted, time: .shortened)
     }
 
     private var routePolyline: MKPolyline? {
@@ -119,6 +130,7 @@ struct NavigateView: View {
                         }
 
                         if let route {
+                            routeGuidanceCard(route)
                             routeSummaryCard(route)
                             routeStopsCard
                             routeWeatherCard(route)
@@ -272,23 +284,40 @@ struct NavigateView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                TextField("Where do you want to go?", text: $destinationText)
-                    .textInputAutocapitalization(.words)
-                    .disableAutocorrection(true)
-                    .focused($destinationFocused)
-                    .submitLabel(.go)
-                    .onSubmit { Task { await planRoute() } }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(.white.opacity(0.06))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(.white.opacity(0.08), lineWidth: 1)
-                    )
-                    .foregroundStyle(.white)
+                HStack(spacing: 10) {
+                    TextField("Where do you want to go?", text: $destinationText)
+                        .textInputAutocapitalization(.words)
+                        .disableAutocorrection(true)
+                        .focused($destinationFocused)
+                        .submitLabel(.go)
+                        .onSubmit { Task { await planRoute() } }
+                        .foregroundStyle(.white)
+
+                    Button {
+                        toggleDestinationListening()
+                    } label: {
+                        Image(systemName: speech.isListening ? "stop.fill" : "mic.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .frame(width: 34, height: 34)
+                            .foregroundStyle(.white)
+                            .background((speech.isListening ? slate : Color.white.opacity(0.08)), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(.white.opacity(0.06))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(speech.isListening ? slate.opacity(0.55) : .white.opacity(0.08), lineWidth: 1)
+                )
+
+                if speech.isListening || !speech.transcript.isEmpty || speech.errorMessage != nil {
+                    navigationVoiceStatus
+                }
             }
 
             HStack(spacing: 10) {
@@ -445,6 +474,111 @@ struct NavigateView: View {
                         .buttonStyle(.plain)
                     }
                 }
+            }
+        }
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 18))
+    }
+
+    private var navigationVoiceStatus: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: speech.isListening ? "waveform" : "mic.slash.fill")
+                .foregroundStyle(speech.isListening ? slate : .orange)
+                .symbolEffect(.variableColor.iterative, isActive: speech.isListening)
+                .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 3) {
+                if speech.isListening {
+                    Text("Listening for your destination…")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white)
+                    if !speech.transcript.isEmpty {
+                        Text(speech.transcript)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.75))
+                    }
+                } else if let error = speech.errorMessage, !error.isEmpty {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.orange.opacity(0.95))
+                } else if !speech.transcript.isEmpty {
+                    Text("Captured destination")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white)
+                    Text(speech.transcript)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.75))
+                }
+            }
+            Spacer()
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.white.opacity(0.04))
+        )
+    }
+
+    private func routeGuidanceCard(_ route: NavigationRouteOverview) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Drive Status", systemImage: "location.north.line.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(slate)
+                    Text(route.destination.label)
+                        .font(.title3.bold())
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                }
+                Spacer()
+                if let arrivalTimeText {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("ETA")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Text(arrivalTimeText)
+                            .font(.headline.bold())
+                            .foregroundStyle(.white)
+                    }
+                }
+            }
+
+            if let sample = leadingRouteSample {
+                HStack(spacing: 10) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(routeSampleAccent(for: sample).opacity(0.15))
+                            .frame(width: 48, height: 48)
+                        Image(systemName: routeSampleIcon(for: sample))
+                            .foregroundStyle(routeSampleAccent(for: sample))
+                    }
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(sample.condition.isEmpty ? "Conditions ahead are updating" : sample.condition)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Text(guidanceSecondaryLine(for: route, sample: sample))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        if !sample.alerts.isEmpty {
+                            Text(sample.alerts.prefix(2).joined(separator: " • "))
+                                .font(.caption2)
+                                .foregroundStyle(.orange.opacity(0.95))
+                                .lineLimit(2)
+                        }
+                    }
+                    Spacer()
+                }
+            } else {
+                Text(route.summary)
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.84))
+            }
+
+            HStack(spacing: 10) {
+                routeMetric(icon: "clock.fill", title: "Arrival", value: arrivalTimeText ?? "--")
+                routeMetric(icon: "thermometer.medium", title: "Temp", value: leadingRouteSample?.temperatureF.map { "\(Int($0.rounded()))°" } ?? "--")
+                routeMetric(icon: "exclamationmark.triangle.fill", title: "Alerts", value: alertCountLabel)
             }
         }
         .padding(16)
@@ -757,6 +891,11 @@ struct NavigateView: View {
         return count == 0 ? "--" : "\(count)"
     }
 
+    private var alertCountLabel: String {
+        let count = route?.samples.reduce(0) { $0 + $1.alerts.count } ?? 0
+        return count == 0 ? "0" : "\(count)"
+    }
+
     private func stopSectionColor(for section: NavigationStopSection) -> Color {
         switch section.id {
         case "food": return .orange
@@ -819,6 +958,26 @@ struct NavigateView: View {
         destinationFocused = false
     }
 
+    private func toggleDestinationListening() {
+        if speech.isListening {
+            speech.stopListening()
+            return
+        }
+
+        if !speech.isAuthorized {
+            Task { await speech.checkAuthorization() }
+        }
+
+        speech.startListening { text in
+            Task { @MainActor in
+                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { return }
+                destinationText = trimmed
+                destinationFocused = false
+            }
+        }
+    }
+
     private func clearRoute() {
         route = nil
         stopSections = []
@@ -845,6 +1004,23 @@ struct NavigateView: View {
         } else {
             centerMapOnUser()
         }
+    }
+
+    private func guidanceSecondaryLine(for route: NavigationRouteOverview, sample: NavigationRouteSample) -> String {
+        var parts: [String] = []
+        if let minutes = route.route.durationMinutes {
+            parts.append("\(minutes) min drive")
+        }
+        if let miles = route.route.distanceMiles {
+            parts.append(String(format: "%.1f mi", miles))
+        }
+        if let rain = sample.rainPct, rain > 0 {
+            parts.append("Rain \(rain)%")
+        }
+        if !sample.wind.isEmpty {
+            parts.append(sample.wind)
+        }
+        return parts.isEmpty ? route.summary : parts.joined(separator: " • ")
     }
 
     private func focusMap(on route: NavigationRouteOverview) {
