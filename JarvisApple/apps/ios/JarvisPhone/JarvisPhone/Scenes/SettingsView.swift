@@ -575,8 +575,11 @@ struct NotificationCenterView: View {
     @State private var events: [EventTimelineItem] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var notificationSearchText = ""
+    @State private var eventSearchText = ""
     @State private var selectedNotificationStatus = "all"
     @State private var selectedNotificationCategory = "all"
+    @State private var selectedNotificationSeverity = "all"
     @State private var selectedEventDomain = "all"
 
     private let client = AppleAPIClient.shared
@@ -587,18 +590,27 @@ struct NotificationCenterView: View {
     private var notificationCategories: [String] {
         ["all"] + notifications.map { $0.category.lowercased() }.filter { !$0.isEmpty }.uniqued()
     }
+    private var notificationSeverities: [String] {
+        ["all"] + notifications.map { $0.severity.lowercased() }.filter { !$0.isEmpty }.uniqued()
+    }
     private var eventDomains: [String] {
         ["all"] + events.map { $0.domain.lowercased() }.filter { !$0.isEmpty }.uniqued()
     }
     private var filteredNotifications: [NotificationCenterItem] {
         notifications.filter { item in
-            (selectedNotificationStatus == "all" || item.status.lowercased() == selectedNotificationStatus) &&
-            (selectedNotificationCategory == "all" || item.category.lowercased() == selectedNotificationCategory)
+            let matchesQuery = notificationSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                || notificationSearchHaystack(for: item).localizedCaseInsensitiveContains(notificationSearchText)
+            return (selectedNotificationStatus == "all" || item.status.lowercased() == selectedNotificationStatus) &&
+                (selectedNotificationCategory == "all" || item.category.lowercased() == selectedNotificationCategory) &&
+                (selectedNotificationSeverity == "all" || item.severity.lowercased() == selectedNotificationSeverity) &&
+                matchesQuery
         }
     }
     private var filteredEvents: [EventTimelineItem] {
         events.filter { item in
-            selectedEventDomain == "all" || item.domain.lowercased() == selectedEventDomain
+            let matchesQuery = eventSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                || eventSearchHaystack(for: item).localizedCaseInsensitiveContains(eventSearchText)
+            return (selectedEventDomain == "all" || item.domain.lowercased() == selectedEventDomain) && matchesQuery
         }
     }
 
@@ -650,6 +662,11 @@ struct NotificationCenterView: View {
                                 } else {
                                     VStack(alignment: .leading, spacing: 10) {
                                         sectionHeader("Inbox", icon: "bell.badge.fill")
+                                        filterSearchField(
+                                            title: "Search notifications",
+                                            text: $notificationSearchText,
+                                            prompt: "Search title, detail, or reason"
+                                        )
                                         filterScroller(
                                             title: "Status",
                                             values: notificationStatuses,
@@ -660,6 +677,14 @@ struct NotificationCenterView: View {
                                             values: notificationCategories,
                                             selected: selectedNotificationCategory
                                         ) { selectedNotificationCategory = $0 }
+                                        filterScroller(
+                                            title: "Severity",
+                                            values: notificationSeverities,
+                                            selected: selectedNotificationSeverity
+                                        ) { selectedNotificationSeverity = $0 }
+                                        Text("Showing \(filteredNotifications.count) of \(notifications.count)")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
                                         if filteredNotifications.isEmpty {
                                             emptyFilterState("No notifications match the current filters.")
                                         }
@@ -731,11 +756,19 @@ struct NotificationCenterView: View {
                                 if !events.isEmpty {
                                     VStack(alignment: .leading, spacing: 10) {
                                         sectionHeader("Recent Events", icon: "clock.arrow.circlepath")
+                                        filterSearchField(
+                                            title: "Search event spine",
+                                            text: $eventSearchText,
+                                            prompt: "Search title, detail, or domain"
+                                        )
                                         filterScroller(
                                             title: "Domain",
                                             values: eventDomains,
                                             selected: selectedEventDomain
                                         ) { selectedEventDomain = $0 }
+                                        Text("Showing \(filteredEvents.count) of \(events.count)")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
                                         if filteredEvents.isEmpty {
                                             emptyFilterState("No recent events match the current filters.")
                                         }
@@ -940,6 +973,32 @@ struct NotificationCenterView: View {
         ["resolve", "complete_reminder", "stage_prep"].contains(action)
     }
 
+    private func notificationSearchHaystack(for item: NotificationCenterItem) -> String {
+        [
+            item.title,
+            item.detail,
+            item.whyNow,
+            item.category,
+            item.status,
+            item.severity,
+            item.decisionReason ?? "",
+            item.deliveryMode,
+            item.postureSnapshot?.label ?? ""
+        ]
+        .joined(separator: " ")
+    }
+
+    private func eventSearchHaystack(for item: EventTimelineItem) -> String {
+        [
+            item.title,
+            item.detail,
+            item.whyNow,
+            item.domain,
+            item.severity
+        ]
+        .joined(separator: " ")
+    }
+
     private func filterScroller(
         title: String,
         values: [String],
@@ -971,6 +1030,34 @@ struct NotificationCenterView: View {
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 6)
+    }
+
+    private func filterSearchField(title: String, text: Binding<String>, prompt: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField(prompt, text: text)
+                    .textInputAutocapitalization(.never)
+                    .disableAutocorrection(true)
+                    .foregroundStyle(.white)
+                if !text.wrappedValue.isEmpty {
+                    Button {
+                        text.wrappedValue = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
     }
 
     private func prettyFilterLabel(_ raw: String) -> String {

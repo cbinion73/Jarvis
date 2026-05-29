@@ -6184,8 +6184,11 @@ body::after {{
             <span class="card-title">Inbox</span>
             <button class="btn-ghost" style="font-size:10px;padding:3px 8px;" onclick="loadNotificationCenter()">Refresh ↻</button>
           </div>
+          <div id="notification-center-search" style="margin-bottom:10px;"></div>
           <div id="notification-center-filters-status" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"></div>
           <div id="notification-center-filters-category" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
+          <div id="notification-center-filters-severity" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
+          <div id="notification-center-match-count" style="font-size:11px;color:var(--text-3);margin-bottom:10px;"></div>
           <div id="notification-center-list">
             <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading notifications…</div></div>
           </div>
@@ -6194,7 +6197,9 @@ body::after {{
       <div class="card">
         <div class="card-inner">
           <div class="card-header"><span class="card-title">Event Spine</span></div>
+          <div id="notification-event-search" style="margin-bottom:10px;"></div>
           <div id="notification-event-filters-domain" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
+          <div id="notification-event-match-count" style="font-size:11px;color:var(--text-3);margin-bottom:10px;"></div>
           <div id="notification-event-list">
             <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading events…</div></div>
           </div>
@@ -9853,9 +9858,14 @@ async function loadNotificationCenter() {{
   const pendingEl = document.getElementById('notif-stat-pending');
   const activeEl = document.getElementById('notif-stat-active');
   const eventsEl = document.getElementById('notif-stat-events');
+  const notificationSearchEl = document.getElementById('notification-center-search');
   const statusFilterEl = document.getElementById('notification-center-filters-status');
   const categoryFilterEl = document.getElementById('notification-center-filters-category');
+  const severityFilterEl = document.getElementById('notification-center-filters-severity');
+  const notificationMatchCountEl = document.getElementById('notification-center-match-count');
+  const eventSearchEl = document.getElementById('notification-event-search');
   const domainFilterEl = document.getElementById('notification-event-filters-domain');
+  const eventMatchCountEl = document.getElementById('notification-event-match-count');
   if (!notifEl || !eventEl) return;
 
   try {{
@@ -9873,7 +9883,10 @@ async function loadNotificationCenter() {{
     window.__jarvisNotificationCenterState = window.__jarvisNotificationCenterState || {{
       notificationStatus: 'all',
       notificationCategory: 'all',
+      notificationSeverity: 'all',
       eventDomain: 'all',
+      notificationSearch: '',
+      eventSearch: '',
     }};
     const state = window.__jarvisNotificationCenterState;
 
@@ -9884,24 +9897,65 @@ async function loadNotificationCenter() {{
 
     const statuses = ['all', ...new Set(notifications.map(item => String(item.status || '').toLowerCase()).filter(Boolean))];
     const categories = ['all', ...new Set(notifications.map(item => String(item.category || '').toLowerCase()).filter(Boolean))];
+    const severities = ['all', ...new Set(notifications.map(item => String(item.severity || '').toLowerCase()).filter(Boolean))];
     const domains = ['all', ...new Set(events.map(item => String(item.domain || '').toLowerCase()).filter(Boolean))];
+    if (notificationSearchEl) {{
+      notificationSearchEl.innerHTML = notificationSearchField('notificationSearch', state.notificationSearch, 'Search title, detail, or reason');
+    }}
     if (statusFilterEl) {{
       statusFilterEl.innerHTML = statuses.map(value => notificationFilterButton('notificationStatus', value, state.notificationStatus === value)).join('');
     }}
     if (categoryFilterEl) {{
       categoryFilterEl.innerHTML = categories.map(value => notificationFilterButton('notificationCategory', value, state.notificationCategory === value)).join('');
     }}
+    if (severityFilterEl) {{
+      severityFilterEl.innerHTML = severities.map(value => notificationFilterButton('notificationSeverity', value, state.notificationSeverity === value)).join('');
+    }}
+    if (eventSearchEl) {{
+      eventSearchEl.innerHTML = notificationSearchField('eventSearch', state.eventSearch, 'Search title, detail, or domain');
+    }}
     if (domainFilterEl) {{
       domainFilterEl.innerHTML = domains.map(value => notificationFilterButton('eventDomain', value, state.eventDomain === value)).join('');
     }}
 
-    const filteredNotifications = notifications.filter(item =>
+    const filteredNotifications = notifications.filter(item => {{
+      const haystack = [
+        item.title || '',
+        item.detail || item.body || '',
+        item.why_now || '',
+        item.category || '',
+        item.status || '',
+        item.severity || '',
+        item.decision_reason || '',
+        item.delivery_mode || '',
+        (item.posture_snapshot && item.posture_snapshot.label) || '',
+      ].join(' ').toLowerCase();
+      const query = String(state.notificationSearch || '').trim().toLowerCase();
+      return (
       (state.notificationStatus === 'all' || String(item.status || '').toLowerCase() === state.notificationStatus) &&
-      (state.notificationCategory === 'all' || String(item.category || '').toLowerCase() === state.notificationCategory)
-    );
-    const filteredEvents = events.filter(item =>
-      state.eventDomain === 'all' || String(item.domain || '').toLowerCase() === state.eventDomain
-    );
+      (state.notificationCategory === 'all' || String(item.category || '').toLowerCase() === state.notificationCategory) &&
+      (state.notificationSeverity === 'all' || String(item.severity || '').toLowerCase() === state.notificationSeverity) &&
+      (!query || haystack.includes(query))
+      );
+    }});
+    const filteredEvents = events.filter(item => {{
+      const haystack = [
+        item.title || '',
+        item.detail || '',
+        item.why_now || '',
+        item.domain || '',
+        item.severity || '',
+      ].join(' ').toLowerCase();
+      const query = String(state.eventSearch || '').trim().toLowerCase();
+      return (state.eventDomain === 'all' || String(item.domain || '').toLowerCase() === state.eventDomain) &&
+        (!query || haystack.includes(query));
+    }});
+    if (notificationMatchCountEl) {{
+      notificationMatchCountEl.textContent = `Showing ${{filteredNotifications.length}} of ${{notifications.length}} notifications`;
+    }}
+    if (eventMatchCountEl) {{
+      eventMatchCountEl.textContent = `Showing ${{filteredEvents.length}} of ${{events.length}} events`;
+    }}
 
     if (!notifications.length) {{
       notifEl.innerHTML = '<div class="list-row"><span class="dot dot-standby"></span><div><div class="list-row-name">No active notifications</div><div class="list-row-sub">JARVIS has no unresolved household attention items right now.</div></div></div>';
@@ -9983,7 +10037,29 @@ function notificationFilterButton(kind, value, selected) {{
   return `<button class="${{cls}}" onclick="setNotificationCenterFilter('${{kind}}','${{String(value).replaceAll("'", "\\\\'")}}')">${{escHtml(label)}}</button>`;
 }}
 
+function notificationSearchField(kind, value, placeholder) {{
+  return `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);">
+      <span style="font-size:12px;color:var(--text-3);">⌕</span>
+      <input
+        type="text"
+        value="${{escHtml(value || '')}}"
+        placeholder="${{escHtml(placeholder || 'Search')}}"
+        oninput="setNotificationCenterSearch('${{kind}}', this.value)"
+        style="flex:1;background:transparent;border:none;outline:none;color:var(--text-1);font-size:12px;"
+      />
+      ${{value ? `<button class="btn-ghost" style="font-size:10px;padding:3px 8px;" onclick="setNotificationCenterSearch('${{kind}}','')">Clear</button>` : ''}}
+    </div>
+  `;
+}}
+
 function setNotificationCenterFilter(kind, value) {{
+  window.__jarvisNotificationCenterState = window.__jarvisNotificationCenterState || {{}};
+  window.__jarvisNotificationCenterState[kind] = value;
+  loadNotificationCenter();
+}}
+
+function setNotificationCenterSearch(kind, value) {{
   window.__jarvisNotificationCenterState = window.__jarvisNotificationCenterState || {{}};
   window.__jarvisNotificationCenterState[kind] = value;
   loadNotificationCenter();
