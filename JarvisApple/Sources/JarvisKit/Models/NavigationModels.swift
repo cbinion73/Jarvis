@@ -70,3 +70,35 @@ public struct NavigationRouteSample: Codable, Identifiable, Sendable {
         case rainPct = "rain_pct"
     }
 }
+
+public struct NavigationStopsOverview: Codable, Sendable {
+    public let sections: [NavigationStopSection]
+}
+
+public struct NavigationStopSection: Codable, Identifiable, Sendable {
+    public let id: String
+    public let label: String
+    public let items: [NavigationStop]
+}
+
+public struct NavigationStop: Codable, Identifiable, Sendable {
+    public var id: String {
+        "\(name)-\(lat ?? 0)-\(lng ?? 0)-\(routeMileMarker ?? 0)"
+    }
+
+    public let name: String
+    public let address: String
+    public let description: String
+    public let url: String
+    public let lat: Double?
+    public let lng: Double?
+    public let rating: Double?
+    public let routeMileMarker: Double?
+    public let distanceFromRoute: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case name, address, description, url, lat, lng, rating
+        case routeMileMarker = "route_mile_marker"
+        case distanceFromRoute = "distance_from_route"
+    }
+}

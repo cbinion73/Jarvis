@@ -27,11 +27,13 @@ struct NavigateView: View {
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var destinationText = ""
     @State private var route: NavigationRouteOverview?
+    @State private var stopSections: [NavigationStopSection] = []
     @State private var savedLocations: [NavigationSavedLocation] = []
     @State private var preferredLocationId: String?
     @State private var recentDestinations: [String] = []
     @State private var selectedOriginMode: OriginMode = .home
     @State private var loadingRoute = false
+    @State private var loadingStops = false
     @State private var loadingLocations = false
     @State private var routeError: String?
     @State private var selectedSavedLocationID: String?
@@ -81,6 +83,7 @@ struct NavigateView: View {
 
                         if let route {
                             routeSummaryCard(route)
+                            routeStopsCard
                             routeWeatherCard(route)
                         } else if let routeError {
                             routeErrorCard(routeError)
@@ -346,7 +349,63 @@ struct NavigateView: View {
             HStack(spacing: 10) {
                 routeMetric(icon: "car.fill", title: "Drive", value: route.route.durationMinutes.map { "\($0) min" } ?? "--")
                 routeMetric(icon: "road.lanes", title: "Distance", value: route.route.distanceMiles.map { String(format: "%.1f mi", $0) } ?? "--")
-                routeMetric(icon: "cloud.sun.fill", title: "Samples", value: "\(route.samples.count)")
+                routeMetric(icon: "mappin.and.ellipse", title: "Stops", value: stopCountLabel)
+            }
+        }
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 18))
+    }
+
+    private var routeStopsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Along The Way", systemImage: "map.circle.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(slate)
+                Spacer()
+                if loadingStops {
+                    ProgressView().tint(slate)
+                }
+            }
+
+            Text("Coffee, food, parks, historic sites, family stops, and fuel pulled from JARVIS route intelligence.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if stopSections.allSatisfy({ $0.items.isEmpty }) {
+                Text("No suggested stops surfaced yet for this route.")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.76))
+            } else {
+                ForEach(stopSections.filter { !$0.items.isEmpty }) { section in
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 8) {
+                            Image(systemName: stopSectionIcon(for: section))
+                                .foregroundStyle(stopSectionColor(for: section))
+                            Text(section.label)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                            Text("\(section.items.count)")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.black)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(stopSectionColor(for: section), in: Capsule())
+                        }
+
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ForEach(section.items.prefix(8)) { stop in
+                                    NavigationStopCard(
+                                        stop: stop,
+                                        color: stopSectionColor(for: section),
+                                        icon: stopSectionIcon(for: section)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
         .padding(16)
@@ -519,6 +578,35 @@ struct NavigateView: View {
         return "sun.max.fill"
     }
 
+    private var stopCountLabel: String {
+        let count = stopSections.reduce(0) { $0 + $1.items.count }
+        return count == 0 ? "--" : "\(count)"
+    }
+
+    private func stopSectionColor(for section: NavigationStopSection) -> Color {
+        switch section.id {
+        case "food": return .orange
+        case "starbucks": return Color(red: 0.0, green: 0.44, blue: 0.29)
+        case "parks": return .green
+        case "historic": return .yellow
+        case "family": return .blue
+        case "gas": return .gray
+        default: return slate
+        }
+    }
+
+    private func stopSectionIcon(for section: NavigationStopSection) -> String {
+        switch section.id {
+        case "food": return "fork.knife"
+        case "starbucks": return "cup.and.saucer.fill"
+        case "parks": return "tree.fill"
+        case "historic": return "building.columns.fill"
+        case "family": return "figure.2.and.child.holdinghands"
+        case "gas": return "fuelpump.fill"
+        default: return "mappin.circle.fill"
+        }
+    }
+
     private func restoreRecentDestinations() {
         recentDestinations = UserDefaults.standard.stringArray(forKey: Self.recentDestinationsKey) ?? []
     }
@@ -582,10 +670,23 @@ struct NavigateView: View {
             let overview = try await AppleAPIClient.shared.fetchNavigationRoute(origin: origin, destination: destination)
             route = overview
             focusMap(on: overview)
+            await loadStops(origin: origin, destination: destination)
             saveRecentDestination(destination)
         } catch {
             route = nil
+            stopSections = []
             routeError = error.localizedDescription
+        }
+    }
+
+    private func loadStops(origin: String, destination: String) async {
+        loadingStops = true
+        defer { loadingStops = false }
+        do {
+            let overview = try await AppleAPIClient.shared.fetchNavigationStops(origin: origin, destination: destination)
+            stopSections = overview.sections
+        } catch {
+            stopSections = []
         }
     }
 
@@ -628,6 +729,69 @@ struct NavigateView: View {
             }
         }
         return "\(coordinate.latitude),\(coordinate.longitude)"
+    }
+}
+
+private struct NavigationStopCard: View {
+    let stop: NavigationStop
+    let color: Color
+    let icon: String
+
+    var body: some View {
+        Button {
+            let query = [stop.name, stop.address]
+                .filter { !$0.isEmpty }
+                .joined(separator: " ")
+                .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? stop.name
+            guard let url = URL(string: "http://maps.apple.com/?q=\(query)") else { return }
+            UIApplication.shared.open(url)
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .top) {
+                    Image(systemName: icon)
+                        .foregroundStyle(color)
+                    Spacer()
+                    if let marker = stop.routeMileMarker {
+                        Text("mi \(Int(marker.rounded()))")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Text(stop.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                if !stop.address.isEmpty {
+                    Text(stop.address)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                if !stop.description.isEmpty {
+                    Text(stop.description)
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.72))
+                        .lineLimit(3)
+                }
+
+                HStack(spacing: 8) {
+                    if let rating = stop.rating {
+                        Label(String(format: "%.1f", rating), systemImage: "star.fill")
+                            .foregroundStyle(color)
+                    }
+                    if let distance = stop.distanceFromRoute {
+                        Text("\(String(format: "%.1f", distance)) mi off route")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .font(.caption2)
+            }
+            .frame(width: 220, alignment: .leading)
+            .padding(14)
+            .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+        }
+        .buttonStyle(.plain)
     }
 }
 

@@ -30,6 +30,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -37,9 +38,32 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 
+from .nav_bridge import NavBridge, haversine, min_distance_to_route, sample_route_points
 from .settings import LOCATION_SETTINGS_PATH
 
 logger = logging.getLogger(__name__)
+
+_NAV_STOP_LABELS = {
+    "food": "Food",
+    "starbucks": "Starbucks",
+    "parks": "Parks",
+    "historic": "Historic",
+    "family": "Family",
+    "gas": "Gas",
+}
+
+_US_STATE_CODES = {
+    "alabama": "AL", "alaska": "AK", "arizona": "AZ", "arkansas": "AR", "california": "CA",
+    "colorado": "CO", "connecticut": "CT", "delaware": "DE", "florida": "FL", "georgia": "GA",
+    "hawaii": "HI", "idaho": "ID", "illinois": "IL", "indiana": "IN", "iowa": "IA",
+    "kansas": "KS", "kentucky": "KY", "louisiana": "LA", "maine": "ME", "maryland": "MD",
+    "massachusetts": "MA", "michigan": "MI", "minnesota": "MN", "mississippi": "MS", "missouri": "MO",
+    "montana": "MT", "nebraska": "NE", "nevada": "NV", "new hampshire": "NH", "new jersey": "NJ",
+    "new mexico": "NM", "new york": "NY", "north carolina": "NC", "north dakota": "ND", "ohio": "OH",
+    "oklahoma": "OK", "oregon": "OR", "pennsylvania": "PA", "rhode island": "RI", "south carolina": "SC",
+    "south dakota": "SD", "tennessee": "TN", "texas": "TX", "utah": "UT", "vermont": "VT",
+    "virginia": "VA", "washington": "WA", "west virginia": "WV", "wisconsin": "WI", "wyoming": "WY",
+}
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -55,6 +79,78 @@ def _ok(data: Any) -> dict:
 
 def _err(message: str, status: int = 400) -> tuple[dict, int]:
     return {"ok": False, "data": None, "error": message, "ts": _ts()}, status
+
+
+def _nav_bridge() -> NavBridge:
+    return NavBridge(
+        os.getenv("GOOGLE_MAPS_API_KEY", ""),
+        os.getenv("NPS_API_KEY", ""),
+    )
+
+
+def _nav_route_points(route_info: dict[str, Any]) -> list[tuple[float, float]]:
+    points: list[tuple[float, float]] = []
+    for pair in list(route_info.get("coordinates") or []):
+        if isinstance(pair, list) and len(pair) == 2:
+            try:
+                points.append((float(pair[1]), float(pair[0])))
+            except (TypeError, ValueError):
+                continue
+    return points
+
+
+def _nav_state_codes(*labels: str) -> list[str]:
+    found: list[str] = []
+    for label in labels:
+        lowered = str(label or "").lower()
+        for state_name, code in _US_STATE_CODES.items():
+            if state_name in lowered and code not in found:
+                found.append(code)
+    return found
+
+
+def _nav_nps_along_route(bridge: NavBridge, route_points: list[tuple[float, float]], states: list[str]) -> list[dict[str, Any]]:
+    parks = bridge.search_nps_by_states(states)
+    if not parks or not route_points:
+        return []
+
+    filtered: list[dict[str, Any]] = []
+    for park in parks:
+        try:
+            plat = float(park.get("latitude") or 0)
+            plng = float(park.get("longitude") or 0)
+        except (TypeError, ValueError):
+            continue
+        if plat == 0 and plng == 0:
+            continue
+        dist = min_distance_to_route(plat, plng, route_points)
+        if dist > 25.0:
+            continue
+        closest_idx = min(
+            range(len(route_points)),
+            key=lambda i: haversine(plat, plng, route_points[i][0], route_points[i][1]),
+        )
+        cumulative = 0.0
+        for idx in range(1, closest_idx + 1):
+            cumulative += haversine(
+                route_points[idx - 1][0], route_points[idx - 1][1],
+                route_points[idx][0], route_points[idx][1],
+            )
+        filtered.append(
+            {
+                "name": str(park.get("fullName") or ""),
+                "address": str(park.get("states") or ""),
+                "description": str(park.get("description") or ""),
+                "url": str(park.get("url") or ""),
+                "lat": plat,
+                "lng": plng,
+                "route_mile_marker": round(cumulative, 1),
+                "distance_from_route": round(dist, 1),
+                "rating": None,
+            }
+        )
+    filtered.sort(key=lambda item: item.get("route_mile_marker") or 0)
+    return filtered
 
 
 # ---------------------------------------------------------------------------
@@ -494,6 +590,109 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             ],
         }
         return _ok(payload)
+
+    # ------------------------------------------------------------------
+    # GET /api/apple/navigation/stops
+    # ------------------------------------------------------------------
+    @app.get("/api/apple/navigation/stops")
+    async def apple_navigation_stops(origin: str, destination: str):
+        """Along-route stop suggestions for the Navigation tab."""
+        origin = str(origin or "").strip()
+        destination = str(destination or "").strip()
+        if not origin or not destination:
+            raise HTTPException(status_code=400, detail="origin and destination are required")
+
+        try:
+            route_packet = runtime.storm_route_weather(origin, destination)
+        except Exception as exc:
+            logger.warning("apple_navigation_stops.route: %s", exc)
+            raise HTTPException(status_code=502, detail=str(exc))
+
+        route_info = route_packet.get("route") if isinstance(route_packet, dict) else {}
+        route_points = _nav_route_points(route_info if isinstance(route_info, dict) else {})
+        total_miles = float(route_info.get("distance_miles") or 0) if isinstance(route_info, dict) else 0.0
+        if not route_points:
+            return _ok({"sections": []})
+
+        bridge = _nav_bridge()
+        interval = 12.0
+        if total_miles > 0 and total_miles < 24:
+            interval = max(5.0, total_miles / 3)
+        samples = sample_route_points(route_points, interval_miles=interval)
+
+        # Approximate mile markers aligned to the sampled points.
+        mile_markers: list[float] = []
+        cumulative = 0.0
+        next_threshold = interval
+        mile_markers.append(0.0)
+        for idx in range(1, len(route_points)):
+            cumulative += haversine(
+                route_points[idx - 1][0], route_points[idx - 1][1],
+                route_points[idx][0], route_points[idx][1],
+            )
+            if cumulative >= next_threshold:
+                mile_markers.append(round(cumulative, 1))
+                next_threshold += interval
+        while len(mile_markers) < len(samples):
+            mile_markers.append(round(total_miles, 1))
+
+        sections: list[dict[str, Any]] = []
+        seen_by_category: dict[str, set[str]] = {}
+        categories = ["food", "starbucks", "parks", "historic", "family", "gas"]
+
+        try:
+            for category in categories:
+                seen_by_category[category] = set()
+                radius_m = 50_000 if category in {"parks", "historic"} else 2400
+                items: list[dict[str, Any]] = []
+                for sample_idx, (slat, slng) in enumerate(samples):
+                    marker = mile_markers[sample_idx] if sample_idx < len(mile_markers) else round(total_miles, 1)
+                    for poi in bridge.search_places_near(slat, slng, category, radius_m=radius_m):
+                        key = str(poi.get("place_id") or poi.get("name") or "")
+                        if not key or key in seen_by_category[category]:
+                            continue
+                        seen_by_category[category].add(key)
+                        items.append(
+                            {
+                                "name": str(poi.get("name") or ""),
+                                "address": str(poi.get("address") or ""),
+                                "description": "",
+                                "url": "",
+                                "lat": poi.get("lat"),
+                                "lng": poi.get("lng"),
+                                "rating": poi.get("rating"),
+                                "route_mile_marker": marker,
+                                "distance_from_route": None,
+                            }
+                        )
+                items.sort(key=lambda item: item.get("route_mile_marker") or 0)
+
+                # Blend in official NPS parks/sites for the parks category when possible.
+                if category == "parks":
+                    states = _nav_state_codes(
+                        str((route_packet.get("origin") or {}).get("label") or ""),
+                        str((route_packet.get("destination") or {}).get("label") or ""),
+                    )
+                    if states:
+                        for park in _nav_nps_along_route(bridge, route_points, states):
+                            key = f"nps:{park.get('name')}"
+                            if key in seen_by_category[category]:
+                                continue
+                            seen_by_category[category].add(key)
+                            items.append(park)
+                        items.sort(key=lambda item: item.get("route_mile_marker") or 0)
+
+                sections.append(
+                    {
+                        "id": category,
+                        "label": _NAV_STOP_LABELS.get(category, category.title()),
+                        "items": items[:8],
+                    }
+                )
+        except Exception as exc:
+            logger.warning("apple_navigation_stops.poi: %s", exc)
+
+        return _ok({"sections": sections})
 
     # ------------------------------------------------------------------
     # GET /api/apple/needs
