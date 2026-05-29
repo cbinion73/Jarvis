@@ -25,6 +25,20 @@ final class BriefingViewModel: ObservableObject {
         await load()
     }
 
+    @discardableResult
+    func approve(requestId: String) async -> Bool {
+        do {
+            let success = try await client.approve(requestId: requestId)
+            if success {
+                await load()
+            }
+            return success
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
     /// Send a voice command transcript to the JARVIS /speak endpoint.
     func sendVoiceCommand(_ text: String) async {
         guard !text.isEmpty else { return }

@@ -8,6 +8,7 @@ struct BriefingView: View {
     @ObservedObject var viewModel: BriefingViewModel
     @StateObject private var nowPlaying = NowPlayingManager.shared
     @StateObject private var speech     = SpeechRecognitionManager.shared
+    @State private var status: WatchStatus?
 
     private let gold = Color(red: 1.0, green: 0.82, blue: 0.28)
 
@@ -51,7 +52,7 @@ struct BriefingView: View {
                         }
                         .glassEffect(in: Circle())
 
-                        Button { Task { await viewModel.refresh() } } label: {
+                        Button { Task { await refreshAll() } } label: {
                             Image(systemName: "arrow.clockwise")
                         }
                         .glassEffect(in: Circle())
@@ -59,7 +60,8 @@ struct BriefingView: View {
                 }
             }
         }
-        .refreshable { await viewModel.refresh() }
+        .task { await loadStatus() }
+        .refreshable { await refreshAll() }
     }
 
     // MARK: - Loading
@@ -87,6 +89,10 @@ struct BriefingView: View {
                 // ── Now Playing ───────────────────────────────────
                 if nowPlaying.isPlaying, let title = nowPlaying.title {
                     NowPlayingCard(title: title, artist: nowPlaying.artist ?? "", artwork: nowPlaying.artwork)
+                }
+
+                if let status {
+                    statusCard(status)
                 }
 
                 // ── Greeting + mode chip ─────────────────────────
@@ -136,7 +142,9 @@ struct BriefingView: View {
                 if !packet.needsItems.isEmpty {
                     OracleSection(title: "Needs You", icon: "exclamationmark.circle.fill", accent: .red) {
                         ForEach(packet.needsItems) { item in
-                            NeedsSummaryRow(item: item)
+                            NeedsSummaryRow(item: item) {
+                                await viewModel.approve(requestId: item.id)
+                            }
                         }
                     }
                 }
@@ -196,7 +204,7 @@ struct BriefingView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            Button("Try Again") { Task { await viewModel.refresh() } }
+            Button("Try Again") { Task { await refreshAll() } }
                 .buttonStyle(.borderedProminent)
                 .tint(gold)
         }
@@ -210,6 +218,47 @@ struct BriefingView: View {
         let f = ISO8601DateFormatter()
         guard let d = f.date(from: iso) else { return iso.prefix(10).description }
         return d.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    private func statusCard(_ status: WatchStatus) -> some View {
+        HStack(spacing: 10) {
+            snapshotMetric(title: "Mode", value: status.mode.capitalized)
+            snapshotMetric(title: "Needs", value: "\(status.needsCount)")
+            snapshotMetric(title: "Drift", value: status.drift ? "Yes" : "No")
+        }
+        .overlay(alignment: .bottomLeading) {
+            Text(status.weather.isEmpty ? "Live JARVIS status" : status.weather)
+                .font(.caption2)
+                .foregroundStyle(gold.opacity(0.7))
+                .padding(.horizontal, 14)
+                .padding(.bottom, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.top, 8)
+        .padding(.horizontal, 14)
+        .padding(.bottom, 28)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func snapshotMetric(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(value)
+                .font(.headline.bold())
+                .foregroundStyle(.white)
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func refreshAll() async {
+        await viewModel.refresh()
+        await loadStatus()
+    }
+
+    private func loadStatus() async {
+        status = try? await AppleAPIClient.shared.fetchStatus()
     }
 }
 
@@ -276,22 +325,49 @@ private struct IntelRow: View {
 
 private struct NeedsSummaryRow: View {
     let item: NeedsItem
+    let onApprove: @Sendable () async -> Void
 
     var riskColor: Color {
         switch item.risk { case "high": .red; case "medium": .orange; default: .yellow }
     }
 
+    @State private var isApproving = false
+
     var body: some View {
-        HStack(spacing: 10) {
-            Circle().fill(riskColor).frame(width: 7, height: 7)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(item.text).font(.subheadline).foregroundStyle(.white)
-                Text(item.agent).font(.caption2).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Circle().fill(riskColor).frame(width: 7, height: 7)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(item.text).font(.subheadline).foregroundStyle(.white)
+                    Text(item.agent).font(.caption2).foregroundStyle(.secondary)
+                }
+                Spacer()
+                if let exp = item.expiresIn {
+                    Text(exp).font(.caption2).foregroundStyle(.secondary)
+                }
             }
-            Spacer()
-            if let exp = item.expiresIn {
-                Text(exp).font(.caption2).foregroundStyle(.secondary)
+
+            Button {
+                Task {
+                    isApproving = true
+                    await onApprove()
+                    isApproving = false
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    if isApproving {
+                        ProgressView().tint(.green)
+                    } else {
+                        Image(systemName: "checkmark.shield.fill")
+                    }
+                    Text(isApproving ? "Approving…" : "Approve")
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
+            .tint(.green)
+            .disabled(isApproving)
         }
     }
 }
