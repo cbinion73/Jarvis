@@ -9,19 +9,22 @@ public struct HomeState: Codable, Sendable {
     public let temperature: TemperatureState
     public let lightsOn: [String]
     public let alerts: [HomeAlert]
+    public let homeContext: HomeContext?
 
     public init(
         presentMembers: [String],
         doors: [String: String],
         temperature: TemperatureState,
         lightsOn: [String],
-        alerts: [HomeAlert]
+        alerts: [HomeAlert],
+        homeContext: HomeContext? = nil
     ) {
         self.presentMembers = presentMembers
         self.doors = doors
         self.temperature = temperature
         self.lightsOn = lightsOn
         self.alerts = alerts
+        self.homeContext = homeContext
     }
 
     enum CodingKeys: String, CodingKey {
@@ -30,6 +33,65 @@ public struct HomeState: Codable, Sendable {
         case temperature
         case lightsOn = "lights_on"
         case alerts
+        case homeContext = "home_context"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        presentMembers = try container.decode([String].self, forKey: .presentMembers)
+        doors = try container.decode([String: String].self, forKey: .doors)
+        temperature = try container.decode(TemperatureState.self, forKey: .temperature)
+        lightsOn = try container.decode([String].self, forKey: .lightsOn)
+        alerts = try container.decode([HomeAlert].self, forKey: .alerts)
+        homeContext = try container.decodeIfPresent(HomeContext.self, forKey: .homeContext)
+    }
+}
+
+public struct HomeContext: Codable, Sendable {
+    public let agenda: HomeAgendaContext
+    public let attention: HomeAttentionContext
+    public let projects: HomeProjectsContext
+}
+
+public struct HomeAgendaContext: Codable, Sendable {
+    public let todayEventCount: Int
+    public let nextEventTitle: String
+    public let nextEventStart: String
+    public let nextEventLocation: String
+
+    enum CodingKeys: String, CodingKey {
+        case todayEventCount = "today_event_count"
+        case nextEventTitle = "next_event_title"
+        case nextEventStart = "next_event_start"
+        case nextEventLocation = "next_event_location"
+    }
+}
+
+public struct HomeAttentionContext: Codable, Sendable {
+    public let reminderCount: Int
+    public let notificationCount: Int
+    public let unreadEmailCount: Int
+    public let needsCount: Int
+    public let focusActive: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case reminderCount = "reminder_count"
+        case notificationCount = "notification_count"
+        case unreadEmailCount = "unread_email_count"
+        case needsCount = "needs_count"
+        case focusActive = "focus_active"
+    }
+}
+
+public struct HomeProjectsContext: Codable, Sendable {
+    public let publishingProjectCount: Int
+    public let activeWorkItemsCount: Int
+    public let topTitles: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case publishingProjectCount = "publishing_project_count"
+        case activeWorkItemsCount = "active_work_items_count"
+        case topTitles = "top_titles"
     }
 }
 
