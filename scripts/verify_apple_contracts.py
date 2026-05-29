@@ -20,6 +20,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from urllib.request import urlopen
 
@@ -67,6 +68,21 @@ def fetch_ssh(ssh_host: str, container: str, path: str, base_url: str) -> dict:
     return json.loads(output)
 
 
+def fetch_with_retry(*, use_ssh: bool, path: str, base_url: str, ssh_host: str | None, container: str, attempts: int = 15, delay_s: float = 2.0) -> dict:
+    last_exc: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            if use_ssh:
+                return fetch_ssh(ssh_host or "", container, path, base_url)
+            return fetch_http(base_url, path)
+        except Exception as exc:  # pragma: no cover - exercised in live use
+            last_exc = exc
+            if attempt == attempts:
+                break
+            time.sleep(delay_s)
+    raise last_exc or RuntimeError(f"failed fetching {path}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-url", default="http://127.0.0.1:8787")
@@ -80,10 +96,13 @@ def main() -> int:
     payloads: dict[str, dict] = {}
     for key, path in ENDPOINTS:
         try:
-            if use_ssh:
-                payloads[key] = fetch_ssh(args.ssh_host, args.container, path, args.base_url)
-            else:
-                payloads[key] = fetch_http(args.base_url, path)
+            payloads[key] = fetch_with_retry(
+                use_ssh=use_ssh,
+                path=path,
+                base_url=args.base_url,
+                ssh_host=args.ssh_host,
+                container=args.container,
+            )
         except Exception as exc:  # pragma: no cover - exercised in live use
             print(f"failed fetching {path}: {exc}", file=sys.stderr)
             return 1
