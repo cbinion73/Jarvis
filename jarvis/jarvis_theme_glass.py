@@ -9989,6 +9989,16 @@ async function loadNotificationCenter() {{
       const notif = control.notifications || {{}};
       const eventStats = control.events || {{}};
       const mediaState = control.media || media || {{}};
+      const freshness = Array.isArray(control.freshness) ? control.freshness : [];
+      const freshnessHtml = freshness.slice(0, 8).map(item => `
+        <div class="list-row" style="margin-top:8px;">
+          <div style="flex:1;min-width:0;">
+            <div class="list-row-name">${{escHtml(item.label || 'Source')}}</div>
+            <div class="list-row-sub">${{escHtml(item.detail || (item.updated_at ? fmtLocalTime(item.updated_at, {{short:true}}) : 'Not updated yet'))}}</div>
+          </div>
+          <span class="kv-tag">${{escHtml(String(item.status || 'unknown').replaceAll('_',' ').toUpperCase())}}</span>
+        </div>
+      `).join('');
       controlEl.innerHTML = `
         <div class="list-row">
           <div style="flex:1;min-width:0;">
@@ -10011,6 +10021,10 @@ async function loadNotificationCenter() {{
           </div>
           <span class="kv-tag">${{(mediaState.is_playing || media.is_playing) ? 'PLAYING' : 'IDLE'}}</span>
         </div>
+        ${{freshnessHtml ? `<div style="margin-top:10px;">
+          <div class="list-row-name" style="margin-bottom:4px;">Source freshness</div>
+          ${{freshnessHtml}}
+        </div>` : ''}}
       `;
     }}
 

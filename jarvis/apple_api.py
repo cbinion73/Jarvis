@@ -867,15 +867,126 @@ def _build_apple_now_playing_state(payload: dict[str, Any], recent_events: list[
     }
 
 
+def _control_plane_freshness_item(
+    *,
+    key: str,
+    label: str,
+    updated_at: str,
+    synced: bool,
+    fresh_minutes: int,
+    detail: str = "",
+) -> dict[str, Any]:
+    normalized_updated = str(updated_at or "").strip()
+    is_fresh = _is_recent_iso(normalized_updated, minutes=fresh_minutes)
+    if not synced:
+        status = "not_synced"
+    elif is_fresh:
+        status = "fresh"
+    else:
+        status = "stale"
+    return {
+        "id": key,
+        "label": label,
+        "synced": synced,
+        "updated_at": normalized_updated,
+        "status": status,
+        "detail": detail,
+    }
+
+
 def _build_apple_control_plane_state(*, now_playing_payload: dict[str, Any]) -> dict[str, Any]:
+    data_root = Path("data/apple")
     notifications = _notification_center.list(limit=0)
     events = _event_log.recent(limit=100)
+    recent_items = [
+        {
+            "id": str(item.get("id") or f"event-{index}"),
+            "title": str(item.get("title") or "").strip(),
+            "detail": str(item.get("detail") or "").strip(),
+            "domain": str(item.get("domain") or "").strip(),
+            "severity": str(item.get("severity") or "").strip(),
+            "ts": str(item.get("ts") or "").strip(),
+        }
+        for index, item in enumerate(events[:8])
+        if isinstance(item, dict)
+    ]
     status_counts = Counter(str(item.get("status") or "unknown") for item in notifications if isinstance(item, dict))
     category_counts = Counter(str(item.get("category") or "unknown") for item in notifications if isinstance(item, dict))
     domain_counts = Counter(str(item.get("domain") or "unknown") for item in events if isinstance(item, dict))
     severity_counts = Counter(str(item.get("severity") or "unknown") for item in events if isinstance(item, dict))
     last_notification_at = str(notifications[0].get("updated_at") or notifications[0].get("created_at") or "") if notifications else ""
     last_event_at = str(events[0].get("ts") or "") if events else ""
+    calendar_payload = _safe_read_json(data_root / "calendar_events.json", {})
+    reminders_payload = _safe_read_json(data_root / "reminders.json", {})
+    focus_payload = _safe_read_json(data_root / "focus_state.json", {})
+    latest_sound = (_safe_read_jsonl_tail(data_root / "sound_alerts.jsonl", limit=1) or [{}])[0]
+    latest_scan = (_safe_read_jsonl_tail(data_root / "vision_scans.jsonl", limit=1) or [{}])[0]
+    freshness = [
+        _control_plane_freshness_item(
+            key="calendar",
+            label="Calendar",
+            updated_at=str(calendar_payload.get("synced_at") or ""),
+            synced=bool(calendar_payload),
+            fresh_minutes=24 * 60,
+            detail=f"{int(calendar_payload.get('count') or 0)} events mirrored" if isinstance(calendar_payload, dict) else "",
+        ),
+        _control_plane_freshness_item(
+            key="reminders",
+            label="Reminders",
+            updated_at=str(reminders_payload.get("synced_at") or ""),
+            synced=bool(reminders_payload),
+            fresh_minutes=24 * 60,
+            detail=f"{int(reminders_payload.get('count') or 0)} reminders mirrored" if isinstance(reminders_payload, dict) else "",
+        ),
+        _control_plane_freshness_item(
+            key="focus",
+            label="Focus",
+            updated_at=str(focus_payload.get("updated_at") or ""),
+            synced=bool(focus_payload),
+            fresh_minutes=12 * 60,
+            detail=str(focus_payload.get("source") or "").strip(),
+        ),
+        _control_plane_freshness_item(
+            key="now_playing",
+            label="Now Playing",
+            updated_at=str(now_playing_payload.get("updated_at") or "") if isinstance(now_playing_payload, dict) else "",
+            synced=bool(now_playing_payload),
+            fresh_minutes=12 * 60,
+            detail=str(now_playing_payload.get("title") or "").strip() if isinstance(now_playing_payload, dict) else "",
+        ),
+        _control_plane_freshness_item(
+            key="sound_alert",
+            label="Sound",
+            updated_at=str(latest_sound.get("received_at") or ""),
+            synced=bool(latest_sound),
+            fresh_minutes=24 * 60,
+            detail=str(latest_sound.get("label") or "").strip(),
+        ),
+        _control_plane_freshness_item(
+            key="vision_scan",
+            label="Vision",
+            updated_at=str(latest_scan.get("received_at") or ""),
+            synced=bool(latest_scan),
+            fresh_minutes=24 * 60,
+            detail=str(latest_scan.get("context") or "").strip(),
+        ),
+        _control_plane_freshness_item(
+            key="notifications",
+            label="Notifications",
+            updated_at=last_notification_at,
+            synced=bool(notifications),
+            fresh_minutes=24 * 60,
+            detail=f"{len(notifications)} inbox items",
+        ),
+        _control_plane_freshness_item(
+            key="events",
+            label="Event Spine",
+            updated_at=last_event_at,
+            synced=bool(events),
+            fresh_minutes=24 * 60,
+            detail=f"{len(events)} recent events",
+        ),
+    ]
     return {
         "notifications": {
             "total": len(notifications),
@@ -892,6 +1003,7 @@ def _build_apple_control_plane_state(*, now_playing_payload: dict[str, Any]) -> 
             "domains": dict(domain_counts),
             "severities": dict(severity_counts),
             "last_event_at": last_event_at,
+            "recent_items": recent_items,
         },
         "media": {
             "synced": bool(now_playing_payload),
@@ -899,6 +1011,7 @@ def _build_apple_control_plane_state(*, now_playing_payload: dict[str, Any]) -> 
             "title": str(now_playing_payload.get("title") or "") if isinstance(now_playing_payload, dict) else "",
             "is_playing": bool(now_playing_payload.get("is_playing")) if isinstance(now_playing_payload, dict) else False,
         },
+        "freshness": freshness,
     }
 
 

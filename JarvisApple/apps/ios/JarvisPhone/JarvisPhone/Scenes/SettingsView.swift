@@ -557,6 +557,69 @@ struct SettingsView: View {
                                         }
                                     }
                                 }
+                                if !controlPlane.freshness.isEmpty {
+                                    Divider().opacity(0.3)
+                                    Text("Source Freshness")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        ForEach(controlPlane.freshness.prefix(8)) { item in
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                HStack(alignment: .firstTextBaseline) {
+                                                    Text(item.label)
+                                                        .font(.caption.bold())
+                                                        .foregroundStyle(.white)
+                                                    Spacer()
+                                                    syncStatusChip(label: readableFreshnessStatus(item.status))
+                                                }
+                                                if !item.detail.isEmpty {
+                                                    Text(item.detail)
+                                                        .font(.caption2)
+                                                        .foregroundStyle(.secondary)
+                                                }
+                                                Text(nonEmpty(item.updatedAt, fallback: "Not updated yet"))
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                    }
+                                }
+                                if !controlPlane.events.recentItems.isEmpty {
+                                    Divider().opacity(0.3)
+                                    Text("Recent Event Flow")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        ForEach(controlPlane.events.recentItems.prefix(4)) { item in
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                HStack(alignment: .firstTextBaseline) {
+                                                    Text(item.title.isEmpty ? "Event" : item.title)
+                                                        .font(.caption.bold())
+                                                        .foregroundStyle(.white)
+                                                    Spacer()
+                                                    if !item.domain.isEmpty {
+                                                        syncStatusChip(label: item.domain.capitalized)
+                                                    }
+                                                }
+                                                if !item.detail.isEmpty {
+                                                    Text(item.detail)
+                                                        .font(.caption2)
+                                                        .foregroundStyle(.secondary)
+                                                }
+                                                HStack(spacing: 8) {
+                                                    if !item.severity.isEmpty {
+                                                        Text(item.severity.capitalized)
+                                                            .font(.caption2)
+                                                            .foregroundStyle(.secondary)
+                                                    }
+                                                    Text(nonEmpty(item.ts, fallback: nil))
+                                                        .font(.caption2)
+                                                        .foregroundStyle(.secondary)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             } else {
                                 Text("Control plane summary not loaded yet.")
                                     .font(.caption)
@@ -979,6 +1042,19 @@ struct SettingsView: View {
             return "Badge Only"
         default:
             return mode.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+    }
+
+    private func readableFreshnessStatus(_ status: String) -> String {
+        switch status {
+        case "fresh":
+            return "Fresh"
+        case "stale":
+            return "Stale"
+        case "not_synced":
+            return "Not Synced"
+        default:
+            return status.replacingOccurrences(of: "_", with: " ").capitalized
         }
     }
 

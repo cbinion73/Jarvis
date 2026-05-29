@@ -37,6 +37,7 @@ public struct ControlPlaneOverview: Codable, Sendable {
     public let notifications: ControlPlaneNotifications
     public let events: ControlPlaneEvents
     public let media: ControlPlaneMedia
+    public let freshness: [ControlPlaneFreshnessItem]
 }
 
 public struct ControlPlaneNotifications: Codable, Sendable {
@@ -60,11 +61,13 @@ public struct ControlPlaneEvents: Codable, Sendable {
     public let domains: [String: Int]
     public let severities: [String: Int]
     public let lastEventAt: String
+    public let recentItems: [ControlPlaneEventItem]
 
     enum CodingKeys: String, CodingKey {
         case domains, severities
         case recentCount = "recent_count"
         case lastEventAt = "last_event_at"
+        case recentItems = "recent_items"
     }
 }
 
@@ -79,4 +82,27 @@ public struct ControlPlaneMedia: Codable, Sendable {
         case updatedAt = "updated_at"
         case isPlaying = "is_playing"
     }
+}
+
+public struct ControlPlaneFreshnessItem: Codable, Sendable, Identifiable {
+    public let id: String
+    public let label: String
+    public let synced: Bool
+    public let updatedAt: String
+    public let status: String
+    public let detail: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, label, synced, status, detail
+        case updatedAt = "updated_at"
+    }
+}
+
+public struct ControlPlaneEventItem: Codable, Sendable, Identifiable {
+    public let id: String
+    public let title: String
+    public let detail: String
+    public let domain: String
+    public let severity: String
+    public let ts: String
 }

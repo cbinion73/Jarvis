@@ -260,15 +260,33 @@ def validate_phase_one_contracts(payloads: dict[str, dict]) -> None:
     event_stats = control_state.get("events")
     if not isinstance(event_stats, dict):
         raise RuntimeError("/api/apple/control-plane/state events is not an object")
-    for key in ("recent_count", "domains", "severities", "last_event_at"):
+    for key in ("recent_count", "domains", "severities", "last_event_at", "recent_items"):
         if key not in event_stats:
             raise RuntimeError(f"/api/apple/control-plane/state events missing '{key}'")
+    recent_items = event_stats.get("recent_items")
+    if not isinstance(recent_items, list):
+        raise RuntimeError("/api/apple/control-plane/state events recent_items is not a list")
+    for index, item in enumerate(recent_items[:4]):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"/api/apple/control-plane/state events recent_items[{index}] is not an object")
+        for key in ("id", "title", "detail", "domain", "severity", "ts"):
+            if key not in item:
+                raise RuntimeError(f"/api/apple/control-plane/state events recent_items[{index}] missing '{key}'")
     media_summary = control_state.get("media")
     if not isinstance(media_summary, dict):
         raise RuntimeError("/api/apple/control-plane/state media is not an object")
     for key in ("synced", "updated_at", "title", "is_playing"):
         if key not in media_summary:
             raise RuntimeError(f"/api/apple/control-plane/state media missing '{key}'")
+    freshness = control_state.get("freshness")
+    if not isinstance(freshness, list):
+        raise RuntimeError("/api/apple/control-plane/state freshness is not a list")
+    for index, item in enumerate(freshness[:8]):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"/api/apple/control-plane/state freshness[{index}] is not an object")
+        for key in ("id", "label", "synced", "updated_at", "status", "detail"):
+            if key not in item:
+                raise RuntimeError(f"/api/apple/control-plane/state freshness[{index}] missing '{key}'")
 
     reminders = app_state.get("reminders")
     if not isinstance(reminders, dict):
