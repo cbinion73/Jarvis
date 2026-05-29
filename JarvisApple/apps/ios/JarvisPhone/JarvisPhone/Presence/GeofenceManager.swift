@@ -31,6 +31,7 @@ final class GeofenceManager: NSObject, ObservableObject {
     // MARK: - Setup
 
     func requestPermission() {
+        guard manager.authorizationStatus == .authorizedWhenInUse else { return }
         manager.requestAlwaysAuthorization()
     }
 

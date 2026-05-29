@@ -49,13 +49,14 @@ final class WiFiPresenceMonitor: NSObject, ObservableObject {
 
     // MARK: - Public API
 
-    /// Call once at app launch. Requests location permission then checks WiFi.
+    /// Call once at app launch. Uses location permission only after the user
+    /// grants it elsewhere; startup should never trigger the system prompt.
     func start() {
         switch locationManager.authorizationStatus {
-        case .notDetermined:
-            locationManager.requestWhenInUseAuthorization()
         case .authorizedWhenInUse, .authorizedAlways:
             Task { await checkAndReport() }
+        case .notDetermined:
+            break
         default:
             print("[JARVIS WiFi] Location permission denied — WiFi presence unavailable.")
         }

@@ -43,7 +43,7 @@ struct WeatherView: View {
                         if let l = loc.location {
                             Task { await wx.load(location: l) }
                         } else {
-                            loc.requestAndFetch(force: true)
+                            loc.requestAndFetch(force: true, userInitiated: true)
                         }
                     } label: {
                         Image(systemName: "arrow.clockwise")
@@ -96,7 +96,7 @@ struct WeatherView: View {
                 .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
             if !loc.isRequestingLocation {
                 Button("Allow Location") {
-                    loc.requestAndFetch(force: true)
+                    loc.requestAndFetch(force: true, userInitiated: true)
                 }
                 .buttonStyle(.borderedProminent).tint(sky)
             }
@@ -105,7 +105,6 @@ struct WeatherView: View {
         .glassEffect(in: RoundedRectangle(cornerRadius: 20))
         .padding(.horizontal, 32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear { loc.requestAndFetch() }
     }
 
     private var locationProblemView: some View {
