@@ -30,7 +30,7 @@ JARVIS_APPLE_DIR = REPO_ROOT / "JarvisApple"
 ENDPOINTS: list[tuple[str, str]] = [
     ("/api/apple/status", "/api/apple/status"),
     ("/api/apple/app-state", "/api/apple/app-state"),
-    ("/api/apple/focus/state", "/api/apple/focus/state"),
+    ("/api/apple/focus-state", "/api/apple/focus-state"),
     ("/api/apple/notifications", "/api/apple/notifications"),
     ("/api/apple/events/recent", "/api/apple/events/recent"),
     ("/api/apple/weather", "/api/apple/weather"),
@@ -127,13 +127,13 @@ def validate_phase_one_contracts(payloads: dict[str, dict]) -> None:
         if key not in focus:
             raise RuntimeError(f"/api/apple/app-state focus missing '{key}'")
 
-    focus_state = require_mapping(payloads, "/api/apple/focus/state")
+    focus_state = require_mapping(payloads, "/api/apple/focus-state")
     posture = focus_state.get("interruption_posture")
     if not isinstance(posture, dict):
-        raise RuntimeError("/api/apple/focus/state missing object field 'interruption_posture'")
+        raise RuntimeError("/api/apple/focus-state missing object field 'interruption_posture'")
     for key in ("mode", "label", "reason", "recommended_delivery", "quiet_hours", "hour_local"):
         if key not in posture:
-            raise RuntimeError(f"/api/apple/focus/state interruption_posture missing '{key}'")
+            raise RuntimeError(f"/api/apple/focus-state interruption_posture missing '{key}'")
 
     items = require_data(payloads, "/api/apple/needs")
     if not isinstance(items, list):
