@@ -141,6 +141,27 @@ def validate_phase_one_contracts(payloads: dict[str, dict]) -> None:
         if key not in patterns:
             raise RuntimeError(f"/api/apple/chronicle patterns missing '{key}'")
 
+    publishing = require_mapping(payloads, "/api/apple/publishing")
+    for key in ("projects", "revenue_summary", "upcoming", "pending_reviews", "pending_reviews_count", "launch_control", "action_items"):
+        if key not in publishing:
+            raise RuntimeError(f"/api/apple/publishing missing '{key}'")
+    reviews = publishing.get("pending_reviews")
+    if not isinstance(reviews, list):
+        raise RuntimeError("/api/apple/publishing pending_reviews is not a list")
+    for index, item in enumerate(reviews):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"/api/apple/publishing pending_reviews[{index}] is not an object")
+        for key in ("review_id", "title", "stage_key", "stage_display", "content_preview", "word_count", "ready_since"):
+            if key not in item:
+                raise RuntimeError(f"/api/apple/publishing pending_reviews[{index}] missing '{key}'")
+    launch_control = publishing.get("launch_control")
+    if launch_control is not None:
+        if not isinstance(launch_control, dict):
+            raise RuntimeError("/api/apple/publishing launch_control is not an object")
+        for key in ("project_id", "title", "phase", "posts_scheduled", "posts_pending_approval", "next_action"):
+            if key not in launch_control:
+                raise RuntimeError(f"/api/apple/publishing launch_control missing '{key}'")
+
     huddle = require_mapping(payloads, "/api/apple/huddle")
     for key in ("reports", "blockers", "highlights", "approvals", "approvals_count", "total_active_work"):
         if key not in huddle:

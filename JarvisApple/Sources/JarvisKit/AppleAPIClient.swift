@@ -290,6 +290,25 @@ public final class AppleAPIClient: Sendable {
         try await get("/api/apple/publishing")
     }
 
+    @discardableResult
+    public func approvePublishingReview(_ reviewId: String) async throws -> Bool {
+        struct Body: Encodable {}
+        struct Result: Decodable { let status: String }
+        let result: Result = try await post("/api/apple/publishing/reviews/\(reviewId)/approve", body: Body())
+        return result.status == "approved"
+    }
+
+    @discardableResult
+    public func requestPublishingRevision(_ reviewId: String, feedback: String = "Needs revision from JarvisPhone.") async throws -> Bool {
+        struct Body: Encodable { let feedback: String }
+        struct Result: Decodable { let status: String }
+        let result: Result = try await post(
+            "/api/apple/publishing/reviews/\(reviewId)/revise",
+            body: Body(feedback: feedback)
+        )
+        return result.status == "needs_revision"
+    }
+
     // MARK: - Huddle
 
     public func fetchHuddle() async throws -> HuddleOverview {
