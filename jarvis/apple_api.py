@@ -364,6 +364,58 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         return _ok(data)
 
     # ------------------------------------------------------------------
+    # GET /api/apple/weather
+    # ------------------------------------------------------------------
+    @app.get("/api/apple/weather")
+    async def apple_weather():
+        """Compact live Storm weather snapshot for Apple clients."""
+        try:
+            snapshot = runtime.storm_weather_snapshot(force=False)
+        except Exception as exc:
+            logger.warning("apple_weather: %s", exc)
+            snapshot = {}
+
+        current = snapshot.get("current") if isinstance(snapshot, dict) else {}
+        current = current if isinstance(current, dict) else {}
+        hourly = snapshot.get("hourly") if isinstance(snapshot, dict) else []
+        hourly = hourly if isinstance(hourly, list) else []
+
+        data = {
+            "available": bool(snapshot.get("available")) if isinstance(snapshot, dict) else False,
+            "live": bool(snapshot.get("live")) if isinstance(snapshot, dict) else False,
+            "stale": bool(snapshot.get("stale")) if isinstance(snapshot, dict) else False,
+            "location": str(snapshot.get("location") or current.get("location") or ""),
+            "summary": str(snapshot.get("summary") or current.get("condition") or ""),
+            "source": str(snapshot.get("source") or "weather.gov"),
+            "fetched_at": str(snapshot.get("fetched_at") or _ts()),
+            "current": {
+                "temperature_f": current.get("temperature_f"),
+                "feels_like_f": current.get("feels_like_f"),
+                "condition": str(current.get("condition") or ""),
+                "icon": str(current.get("icon") or ""),
+                "wind": str(current.get("wind") or ""),
+                "humidity_pct": current.get("humidity_pct"),
+                "visibility_miles": current.get("visibility_miles"),
+                "pressure_hpa": current.get("pressure_hpa"),
+                "visual_key": str(current.get("visual_key") or ""),
+                "using_forecast_fallback": bool(current.get("using_forecast_fallback")),
+            },
+            "hourly": [
+                {
+                    "time": str(item.get("time") or ""),
+                    "temperature_f": item.get("temperature_f"),
+                    "rain_pct": item.get("rain_pct"),
+                    "forecast": str(item.get("forecast") or ""),
+                    "icon": str(item.get("icon") or ""),
+                }
+                for item in hourly[:8]
+                if isinstance(item, dict)
+            ],
+            "alerts_count": len(snapshot.get("alerts") or []) if isinstance(snapshot, dict) else 0,
+        }
+        return _ok(data)
+
+    # ------------------------------------------------------------------
     # GET /api/apple/needs
     # ------------------------------------------------------------------
     @app.get("/api/apple/needs")

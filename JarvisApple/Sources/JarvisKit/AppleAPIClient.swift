@@ -38,6 +38,12 @@ public final class AppleAPIClient: Sendable {
         try await get("/api/apple/status")
     }
 
+    /// Fetch live server-side Storm weather. This does not require iPhone
+    /// location permission and is the preferred fallback for the Weather tab.
+    public func fetchAppleWeather() async throws -> AppleWeatherOverview {
+        try await get("/api/apple/weather")
+    }
+
     /// Fetch the Needs You zone items.
     public func fetchNeeds() async throws -> [NeedsItem] {
         try await get("/api/apple/needs")
@@ -384,7 +390,16 @@ public enum JarvisClientError: Error, LocalizedError, Sendable {
         case .invalidResponse:
             return "Invalid server response"
         case .httpError(let code, let message):
-            return "HTTP \(code): \(message)"
+            if code == 502 || code == 503 || code == 504 {
+                return "JARVIS is restarting or Cloudflare cannot reach the server. Please retry in a moment."
+            }
+            if code == 403 {
+                return "Cloudflare Access denied this request. Check the app access credentials."
+            }
+            let clean = message
+                .replacingOccurrences(of: "\n", with: " ")
+                .replacingOccurrences(of: "\t", with: " ")
+            return "HTTP \(code): \(String(clean.prefix(180)))"
         case .serverError(let message):
             return "Server error: \(message)"
         case .missingData:

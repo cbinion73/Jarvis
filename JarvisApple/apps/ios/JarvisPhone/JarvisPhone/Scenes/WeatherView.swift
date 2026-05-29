@@ -1,5 +1,6 @@
 import SwiftUI
 import WeatherKit
+import JarvisKit
 
 // MARK: - WeatherView  "The Observatory"
 
@@ -8,6 +9,10 @@ struct WeatherView: View {
     // Singletons — use @ObservedObject so SwiftUI doesn't take duplicate ownership.
     @ObservedObject private var wx  = WeatherManager.shared
     @ObservedObject private var loc = WeatherLocationProvider.shared
+
+    @State private var serverWeather: AppleWeatherOverview?
+    @State private var serverWeatherError: String?
+    @State private var isLoadingServerWeather = false
 
     private let sky = Color(red: 0.4, green: 0.75, blue: 1.0)
 
@@ -20,7 +25,9 @@ struct WeatherView: View {
                     if let cur = wx.current {
                         // ── Have data — show it (even while a background refresh runs)
                         weatherContent(cur)
-                    } else if wx.isLoading {
+                    } else if let serverWeather {
+                        serverWeatherContent(serverWeather)
+                    } else if wx.isLoading || isLoadingServerWeather {
                         // ── Weather fetch in progress
                         loadingView
                     } else if loc.authorizationStatus == .denied
@@ -29,9 +36,12 @@ struct WeatherView: View {
                         deniedState
                     } else if loc.lastErrorMessage != nil && !loc.isRequestingLocation {
                         locationProblemView
-                    } else {
+                    } else if loc.authorizationStatus == .authorizedWhenInUse
+                           || loc.authorizationStatus == .authorizedAlways {
                         // ── Authorized but waiting for first GPS fix
                         locatingView
+                    } else {
+                        serverWeatherUnavailableView
                     }
                 }
             }
@@ -43,7 +53,7 @@ struct WeatherView: View {
                         if let l = loc.location {
                             Task { await wx.load(location: l) }
                         } else {
-                            loc.requestAndFetch(force: true, userInitiated: true)
+                            Task { await loadServerWeather(force: true) }
                         }
                     } label: {
                         Image(systemName: "arrow.clockwise")
@@ -58,6 +68,9 @@ struct WeatherView: View {
         }
         .onAppear {
             loc.requestAndFetch()
+            if wx.current == nil {
+                Task { await loadServerWeather(force: false) }
+            }
             // If a cached location was restored before this view appeared,
             // onChange won't fire — load weather immediately in that case.
             if let l = loc.location, wx.current == nil {
@@ -92,14 +105,33 @@ struct WeatherView: View {
             Text(loc.lastErrorMessage
                  ?? (loc.isRequestingLocation
                      ? "JARVIS has location access. Getting a fix…"
-                     : "JARVIS is ready to request your location."))
+                     : "JARVIS is using server weather. Phone location is optional."))
                 .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
             if !loc.isRequestingLocation {
-                Button("Allow Location") {
+                Button("Use Phone Location") {
                     loc.requestAndFetch(force: true, userInitiated: true)
                 }
                 .buttonStyle(.borderedProminent).tint(sky)
             }
+        }
+        .padding(24)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20))
+        .padding(.horizontal, 32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var serverWeatherUnavailableView: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "cloud.sun.fill")
+                .font(.system(size: 48)).foregroundStyle(sky.opacity(0.6))
+            Text("Weather unavailable")
+                .font(.headline).foregroundStyle(.white)
+            Text(serverWeatherError ?? "JARVIS could not load server weather.")
+                .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            Button("Retry") {
+                Task { await loadServerWeather(force: true) }
+            }
+            .buttonStyle(.borderedProminent).tint(sky)
         }
         .padding(24)
         .glassEffect(in: RoundedRectangle(cornerRadius: 20))
@@ -263,6 +295,148 @@ struct WeatherView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
+    }
+
+    @ViewBuilder
+    private func serverWeatherContent(_ overview: AppleWeatherOverview) -> some View {
+        let cur = overview.current
+        ScrollView {
+            VStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(overview.location.isEmpty ? "JARVIS Weather" : overview.location)
+                                .font(.headline).foregroundStyle(.white)
+                            Text(overview.live ? "Live from \(overview.source)" : "Latest from \(overview.source)")
+                                .font(.caption2).foregroundStyle(sky.opacity(0.75))
+                        }
+                        Spacer()
+                        if overview.stale {
+                            Text("STALE")
+                                .font(.system(size: 9, weight: .black))
+                                .foregroundStyle(.black)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(.orange, in: Capsule())
+                        }
+                    }
+
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Text(cur.temperatureF.map { "\(Int($0.rounded()))°" } ?? "--°")
+                            .font(.system(size: 68, weight: .bold))
+                            .foregroundStyle(.white)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(cur.condition.isEmpty ? overview.summary : cur.condition)
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.9))
+                            if let feels = cur.feelsLikeF {
+                                Text("Feels \(Int(feels.rounded()))°")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+
+                    if cur.usingForecastFallback {
+                        Text("Using forecast fallback because the latest observation is stale.")
+                            .font(.caption2)
+                            .foregroundStyle(.orange.opacity(0.9))
+                    }
+                }
+                .padding(18)
+                .glassEffect(in: RoundedRectangle(cornerRadius: 18))
+
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2),
+                    spacing: 10
+                ) {
+                    ServerWeatherTile(label: "Wind", value: cur.wind.isEmpty ? "--" : cur.wind, icon: "wind", color: .white)
+                    ServerWeatherTile(label: "Humidity", value: cur.humidityPct.map { "\($0)%" } ?? "--", icon: "humidity.fill", color: sky)
+                    ServerWeatherTile(label: "Visibility", value: cur.visibilityMiles.map { String(format: "%.1f mi", $0) } ?? "--", icon: "eye.fill", color: .blue)
+                    ServerWeatherTile(label: "Pressure", value: cur.pressureHpa.map { "\(Int($0.rounded())) hPa" } ?? "--", icon: "gauge.with.dots.needle.bottom.50percent", color: .purple)
+                }
+
+                if !overview.hourly.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("HOURLY")
+                            .font(.system(size: 10, weight: .bold))
+                            .tracking(1.0)
+                            .foregroundStyle(sky.opacity(0.85))
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(overview.hourly) { hour in
+                                    ServerHourTile(hour: hour, sky: sky)
+                                }
+                            }
+                        }
+                    }
+                    .padding(14)
+                    .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+    }
+
+    private func loadServerWeather(force: Bool) async {
+        if serverWeather != nil && !force { return }
+        isLoadingServerWeather = true
+        serverWeatherError = nil
+        do {
+            serverWeather = try await AppleAPIClient.shared.fetchAppleWeather()
+        } catch {
+            serverWeatherError = error.localizedDescription
+        }
+        isLoadingServerWeather = false
+    }
+}
+
+private struct ServerWeatherTile: View {
+    let label: String
+    let value: String
+    let icon: String
+    let color: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Image(systemName: icon)
+                .font(.system(size: 11))
+                .foregroundStyle(color)
+                .frame(width: 20, height: 20)
+                .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+            Text(value)
+                .font(.subheadline.bold())
+                .foregroundStyle(.white)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+private struct ServerHourTile: View {
+    let hour: AppleWeatherHour
+    let sky: Color
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Text(hour.time)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(hour.temperatureF.map { "\(Int($0.rounded()))°" } ?? "--")
+                .font(.headline.bold())
+                .foregroundStyle(.white)
+            Text(hour.rainPct.map { "\($0)%" } ?? "")
+                .font(.caption2)
+                .foregroundStyle(sky.opacity(0.8))
+        }
+        .frame(width: 58)
+        .padding(.vertical, 10)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 12))
     }
 }
 
