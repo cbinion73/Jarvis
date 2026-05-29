@@ -59,7 +59,11 @@ public final class AppleAPIClient: Sendable {
         return try await get("/api/apple/navigation/route?origin=\(encodedOrigin)&destination=\(encodedDestination)")
     }
 
-    public func fetchNavigationStops(origin: String, destination: String) async throws -> NavigationStopsOverview {
+    public func fetchNavigationStops(
+        origin: String,
+        destination: String,
+        parksRadiusMiles: Int = 25
+    ) async throws -> NavigationStopsOverview {
         let allowed = CharacterSet.urlQueryAllowed
         guard
             let encodedOrigin = origin.addingPercentEncoding(withAllowedCharacters: allowed),
@@ -67,7 +71,9 @@ public final class AppleAPIClient: Sendable {
         else {
             throw JarvisClientError.invalidURL("/api/apple/navigation/stops")
         }
-        return try await get("/api/apple/navigation/stops?origin=\(encodedOrigin)&destination=\(encodedDestination)")
+        return try await get(
+            "/api/apple/navigation/stops?origin=\(encodedOrigin)&destination=\(encodedDestination)&parks_radius_miles=\(parksRadiusMiles)"
+        )
     }
 
     /// Fetch the Needs You zone items.

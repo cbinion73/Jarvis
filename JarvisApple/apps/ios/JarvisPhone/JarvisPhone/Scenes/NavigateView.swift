@@ -35,12 +35,15 @@ struct NavigateView: View {
     @State private var favoriteDestinations: [String] = []
     @State private var recentDestinations: [String] = []
     @State private var activeStopCategoryIDs: Set<String> = ["food", "starbucks", "parks", "historic", "family"]
+    @State private var parksHistoricRadiusMiles = 25.0
     @State private var selectedOriginMode: OriginMode = .home
     @State private var loadingRoute = false
     @State private var loadingStops = false
     @State private var loadingLocations = false
     @State private var routeError: String?
     @State private var selectedSavedLocationID: String?
+    @State private var currentRouteOriginQuery = ""
+    @State private var currentRouteDestinationQuery = ""
     @FocusState private var destinationFocused: Bool
 
     private let slate = Color(red: 0.4, green: 0.55, blue: 0.75)
@@ -103,6 +106,10 @@ struct NavigateView: View {
         } ?? []
         guard !coordinates.isEmpty else { return nil }
         return MKPolyline(coordinates: coordinates, count: coordinates.count)
+    }
+
+    private var parksHistoricAccent: Color {
+        .green
     }
 
     private var destinationSuggestions: [DestinationSuggestion] {
@@ -736,6 +743,53 @@ struct NavigateView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
+            if stopSections.contains(where: { ["parks", "historic"].contains($0.id) && !$0.items.isEmpty }) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Parks & Historic Search Radius")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Spacer()
+                        Text("\(Int(parksHistoricRadiusMiles)) mi")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(parksHistoricAccent)
+                    }
+
+                    Slider(
+                        value: $parksHistoricRadiusMiles,
+                        in: 5...100,
+                        step: 5,
+                        onEditingChanged: { editing in
+                            if !editing {
+                                Task { await reloadStopsForActiveRoute() }
+                            }
+                        }
+                    )
+                    .tint(parksHistoricAccent)
+
+                    HStack {
+                        Text("5 mi")
+                        Spacer()
+                        Text("25 mi")
+                        Spacer()
+                        Text("50 mi")
+                        Spacer()
+                        Text("100 mi")
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                }
+                .padding(14)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(.white.opacity(0.04))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(.white.opacity(0.08), lineWidth: 1)
+                )
+            }
+
             if stopSections.allSatisfy({ $0.items.isEmpty }) {
                 Text("No suggested stops surfaced yet for this route.")
                     .font(.subheadline)
@@ -1266,6 +1320,8 @@ struct NavigateView: View {
             let origin = try await resolveOriginQuery()
             let overview = try await AppleAPIClient.shared.fetchNavigationRoute(origin: origin, destination: destination)
             route = overview
+            currentRouteOriginQuery = origin
+            currentRouteDestinationQuery = destination
             focusMap(on: overview)
             await loadStops(origin: origin, destination: destination)
             saveRecentDestination(destination)
@@ -1280,11 +1336,20 @@ struct NavigateView: View {
         loadingStops = true
         defer { loadingStops = false }
         do {
-            let overview = try await AppleAPIClient.shared.fetchNavigationStops(origin: origin, destination: destination)
+            let overview = try await AppleAPIClient.shared.fetchNavigationStops(
+                origin: origin,
+                destination: destination,
+                parksRadiusMiles: Int(parksHistoricRadiusMiles.rounded())
+            )
             stopSections = overview.sections
         } catch {
             stopSections = []
         }
+    }
+
+    private func reloadStopsForActiveRoute() async {
+        guard !currentRouteOriginQuery.isEmpty, !currentRouteDestinationQuery.isEmpty else { return }
+        await loadStops(origin: currentRouteOriginQuery, destination: currentRouteDestinationQuery)
     }
 
     private func resolveOriginQuery() async throws -> String {
