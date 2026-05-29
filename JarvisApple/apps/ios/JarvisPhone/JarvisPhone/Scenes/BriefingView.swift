@@ -115,6 +115,16 @@ struct BriefingView: View {
                 }
 
                 if let appState = viewModel.appState {
+                    alertBanner(
+                        appState: appState,
+                        focusState: viewModel.focusState,
+                        controlPlane: viewModel.controlPlaneState
+                    )
+                    householdPostureCards(
+                        appState: appState,
+                        focusState: viewModel.focusState,
+                        controlPlane: viewModel.controlPlaneState
+                    )
                     appStateCards(appState)
                 }
 
@@ -519,6 +529,137 @@ struct BriefingView: View {
         }
     }
 
+
+    @ViewBuilder
+    private func alertBanner(
+        appState: AppStateOverview,
+        focusState: FocusStateOverview?,
+        controlPlane: ControlPlaneOverview?
+    ) -> some View {
+        if let notification = rankedAlert(from: appState.notifications.recent) {
+            OracleSection(title: "What Matters Now", icon: "exclamationmark.bubble.fill", accent: severityColor(notification.severity)) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(notification.title.isEmpty ? "JARVIS Alert" : notification.title)
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        Spacer(minLength: 8)
+                        pill(notification.severity.uppercased(), color: severityColor(notification.severity))
+                    }
+                    if !notification.detail.isEmpty {
+                        Text(notification.detail)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else if !notification.body.isEmpty {
+                        Text(notification.body)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    if !notification.whyNow.isEmpty {
+                        Text(notification.whyNow)
+                            .font(.caption2)
+                            .foregroundStyle(gold.opacity(0.82))
+                    }
+                    HStack(spacing: 8) {
+                        if !notification.category.isEmpty {
+                            pill(notification.category.capitalized, color: gold.opacity(0.92))
+                        }
+                        if !notification.deliveryMode.isEmpty {
+                            pill(readableDeliveryMode(notification.deliveryMode), color: .blue.opacity(0.82))
+                        }
+                        if let label = notification.postureSnapshot?.label, !label.isEmpty {
+                            pill(label, color: .white.opacity(0.28))
+                        }
+                    }
+                    Button {
+                        showingInbox = true
+                    } label: {
+                        Label("Open Notification Center", systemImage: "tray.full")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(gold)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        } else if let focusState, focusState.interruptionPosture.quietHours || focusState.interruptionPosture.focusActive {
+            OracleSection(title: "What Matters Now", icon: "moon.stars.fill", accent: .indigo) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(focusState.interruptionPosture.label)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                    Text(focusState.interruptionPosture.reason)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 8) {
+                        pill(readableDeliveryMode(focusState.interruptionPosture.recommendedDelivery), color: .blue.opacity(0.82))
+                        if focusState.interruptionPosture.quietHours {
+                            pill("Quiet Hours", color: .white.opacity(0.28))
+                        }
+                        if focusState.interruptionPosture.focusActive {
+                            pill("Focus Active", color: .white.opacity(0.28))
+                        }
+                    }
+                }
+            }
+        } else if let freshnessItem = freshestConcern(from: controlPlane) {
+            OracleSection(title: "What Matters Now", icon: "antenna.radiowaves.left.and.right.slash", accent: .orange) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(freshnessItem.label)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                    Text(freshnessItem.detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if !freshnessItem.updatedAt.isEmpty {
+                        Text("Last updated \(formatTimestamp(freshnessItem.updatedAt))")
+                            .font(.caption2)
+                            .foregroundStyle(gold.opacity(0.78))
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func householdPostureCards(
+        appState: AppStateOverview,
+        focusState: FocusStateOverview?,
+        controlPlane: ControlPlaneOverview?
+    ) -> some View {
+        let presenceSummary = presenceSummaryText(appState.presence)
+        let freshnessItems = Array((controlPlane?.freshness ?? []).filter { !$0.synced || $0.status.lowercased() != "fresh" }.prefix(2))
+        if !presenceSummary.isEmpty || focusState != nil || !freshnessItems.isEmpty {
+            OracleSection(title: "Household Posture", icon: "person.3.sequence.fill", accent: .mint) {
+                VStack(alignment: .leading, spacing: 10) {
+                    if !presenceSummary.isEmpty {
+                        signalRow(
+                            title: "Presence",
+                            body: presenceSummary,
+                            footnote: presenceFootnote(appState.presence),
+                            icon: "house.fill"
+                        )
+                    }
+                    if let focusState {
+                        signalRow(
+                            title: "Interruption Posture",
+                            body: focusState.summary.label,
+                            footnote: focusState.summary.detail,
+                            icon: "moon.zzz.fill"
+                        )
+                    }
+                    ForEach(freshnessItems) { item in
+                        signalRow(
+                            title: item.label,
+                            body: item.detail,
+                            footnote: item.updatedAt.isEmpty ? item.status.capitalized : formatTimestamp(item.updatedAt),
+                            icon: item.synced ? "clock.badge.exclamationmark" : "arrow.triangle.2.circlepath"
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     private func completeReminder(_ reminder: AppStateReminderItem) async {
         reminderActionError = ""
         do {
@@ -540,6 +681,7 @@ struct BriefingView: View {
                 location: event.location
             ) {
                 calendarActionMessage = "Staged prep for \(event.title)"
+                await refreshMorningState()
             }
         } catch {
             calendarActionError = error.localizedDescription
@@ -626,6 +768,87 @@ struct BriefingView: View {
         return "\(source) · \(time)"
     }
 
+    private func rankedAlert(from notifications: [NotificationCenterItem]) -> NotificationCenterItem? {
+        notifications
+            .filter { item in
+                let status = item.status.lowercased()
+                return status == "pending" || status == "seen" || status == "active"
+            }
+            .sorted { lhs, rhs in
+                let leftRank = severityRank(lhs.severity)
+                let rightRank = severityRank(rhs.severity)
+                if leftRank != rightRank {
+                    return leftRank > rightRank
+                }
+                return lhs.createdAt > rhs.createdAt
+            }
+            .first
+    }
+
+    private func severityRank(_ severity: String) -> Int {
+        switch severity.lowercased() {
+        case "critical": return 4
+        case "high": return 3
+        case "medium": return 2
+        case "low": return 1
+        default: return 0
+        }
+    }
+
+    private func severityColor(_ severity: String) -> Color {
+        switch severity.lowercased() {
+        case "critical", "high":
+            return .red
+        case "medium":
+            return .orange
+        case "low":
+            return gold.opacity(0.9)
+        default:
+            return .white.opacity(0.35)
+        }
+    }
+
+    private func readableDeliveryMode(_ mode: String) -> String {
+        switch mode.lowercased() {
+        case "push_now":
+            return "Push Now"
+        case "quiet_store":
+            return "Quiet Store"
+        case "hold_for_brief":
+            return "Hold for Brief"
+        default:
+            return mode.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+    }
+
+    private func freshestConcern(from controlPlane: ControlPlaneOverview?) -> ControlPlaneFreshnessItem? {
+        controlPlane?.freshness.first(where: { !$0.synced || $0.status.lowercased() != "fresh" })
+    }
+
+    private func presenceSummaryText(_ presence: AppStatePresence) -> String {
+        let members = presence.presentMembers.joined(separator: ", ")
+        switch (members.isEmpty, presence.lightsOnCount) {
+        case (false, 0):
+            return "\(members) \(presence.presentMembers.count == 1 ? "is" : "are") home."
+        case (false, _):
+            return "\(members) \(presence.presentMembers.count == 1 ? "is" : "are") home with \(presence.lightsOnCount) lights on."
+        case (true, let lights) where lights > 0:
+            return "\(lights) lights are still on with no presence confirmed."
+        default:
+            return ""
+        }
+    }
+
+    private func presenceFootnote(_ presence: AppStatePresence) -> String {
+        if presence.alertCount > 0 {
+            return "\(presence.alertCount) household alerts need attention"
+        }
+        if presence.presentMembers.isEmpty {
+            return "No live presence members are confirmed right now."
+        }
+        return "Household presence is live."
+    }
+
     private func loadStatus() async {
         status = try? await AppleAPIClient.shared.fetchStatus()
     }
@@ -656,6 +879,16 @@ private struct OracleSection<Content: View>: View {
         .padding(14)
         .glassEffect(in: RoundedRectangle(cornerRadius: 16))
     }
+}
+
+private func pill(_ text: String, color: Color) -> some View {
+    Text(text)
+        .font(.system(size: 9, weight: .black))
+        .tracking(0.9)
+        .foregroundStyle(.white)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(color, in: Capsule())
 }
 
 // MARK: - Row types
