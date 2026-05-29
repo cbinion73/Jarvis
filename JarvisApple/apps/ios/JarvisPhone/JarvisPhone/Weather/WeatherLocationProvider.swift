@@ -37,7 +37,7 @@ final class WeatherLocationProvider: NSObject, ObservableObject {
 
     // MARK: - Public
 
-    func requestAndFetch(force: Bool = false) {
+    func requestAndFetch(force: Bool = false, userInitiated: Bool = false) {
         authorizationStatus = manager.authorizationStatus
 
         // If we already have a recent location, there's nothing to do.
@@ -49,9 +49,12 @@ final class WeatherLocationProvider: NSObject, ObservableObject {
 
         switch manager.authorizationStatus {
         case .notDetermined:
-            lastErrorMessage = nil
-            isRequestingLocation = true
-            manager.requestWhenInUseAuthorization()
+            guard userInitiated else {
+                isRequestingLocation = false
+                lastErrorMessage = nil
+                return
+            }
+            requestPermission()
         case .authorizedWhenInUse, .authorizedAlways:
             beginLocationRequest()
         default:
@@ -59,6 +62,17 @@ final class WeatherLocationProvider: NSObject, ObservableObject {
             lastErrorMessage = "Location access is disabled for JARVIS."
             break
         }
+    }
+
+    func requestPermission() {
+        authorizationStatus = manager.authorizationStatus
+        guard authorizationStatus == .notDetermined else {
+            requestAndFetch(force: true)
+            return
+        }
+        lastErrorMessage = nil
+        isRequestingLocation = true
+        manager.requestWhenInUseAuthorization()
     }
 
     private func beginLocationRequest() {
