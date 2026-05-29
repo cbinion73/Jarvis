@@ -944,6 +944,81 @@ class JarvisRuntime:
             "lon": float(item["lon"]),
         }
 
+    def _storm_step_instruction(
+        self,
+        maneuver_type: str,
+        maneuver_modifier: str,
+        road_name: str,
+        destinations: list[str],
+    ) -> str:
+        maneuver_type = str(maneuver_type or "").strip().lower()
+        maneuver_modifier = str(maneuver_modifier or "").strip().lower()
+        road_name = str(road_name or "").strip()
+        destination_hint = str(destinations[0]).strip() if destinations else ""
+
+        direction = ""
+        if maneuver_modifier:
+            direction = maneuver_modifier.replace("_", " ")
+
+        if maneuver_type == "depart":
+            if road_name and direction:
+                return f"Head {direction} on {road_name}"
+            if road_name:
+                return f"Head out on {road_name}"
+            if destination_hint:
+                return f"Start driving toward {destination_hint}"
+            return "Start driving"
+
+        if maneuver_type == "arrive":
+            if direction:
+                return f"Arrive on the {direction}"
+            return "Arrive at your destination"
+
+        if maneuver_type in {"turn", "end of road"}:
+            if road_name and direction:
+                return f"Turn {direction} onto {road_name}"
+            if direction:
+                return f"Turn {direction}"
+        elif maneuver_type in {"merge", "fork"}:
+            if road_name and direction:
+                return f"Merge {direction} onto {road_name}"
+            if road_name:
+                return f"Merge onto {road_name}"
+            if direction:
+                return f"Merge {direction}"
+        elif maneuver_type in {"new name", "continue"}:
+            if road_name:
+                return f"Continue on {road_name}"
+        elif maneuver_type in {"roundabout", "rotary"}:
+            if road_name:
+                return f"Enter the roundabout toward {road_name}"
+            return "Enter the roundabout"
+        elif maneuver_type == "ramp":
+            if road_name and direction:
+                return f"Take the {direction} ramp to {road_name}"
+            if road_name:
+                return f"Take the ramp to {road_name}"
+            if direction:
+                return f"Take the {direction} ramp"
+        elif maneuver_type == "exit roundabout":
+            if road_name:
+                return f"Exit the roundabout onto {road_name}"
+            return "Exit the roundabout"
+        elif maneuver_type == "notification":
+            if road_name:
+                return f"Continue toward {road_name}"
+            if destination_hint:
+                return f"Continue toward {destination_hint}"
+            return "Continue on route"
+
+        if road_name and destination_hint:
+            return f"Continue on {road_name} toward {destination_hint}"
+        if road_name:
+            return f"Continue on {road_name}"
+        if destination_hint:
+            return f"Continue toward {destination_hint}"
+        return "Continue on route"
+
     def _storm_route_geometry(self, origin: dict, destination: dict) -> dict:
         coords = f"{origin['lon']},{origin['lat']};{destination['lon']},{destination['lat']}"
         url = f"https://router.project-osrm.org/route/v1/driving/{coords}?overview=full&geometries=geojson&steps=true"
@@ -969,20 +1044,14 @@ class JarvisRuntime:
             maneuver = dict(raw_step.get("maneuver") or {})
             road_name = str(raw_step.get("name") or raw_step.get("ref") or "").strip()
             destinations = list(raw_step.get("destinations") or [])
-            instruction_parts = [str(raw_step.get("mode") or "Drive").title()]
             maneuver_type = str(maneuver.get("type") or "").strip()
             maneuver_modifier = str(maneuver.get("modifier") or "").strip()
-            if maneuver_type:
-                readable_type = maneuver_type.replace("_", " ")
-                if maneuver_modifier:
-                    instruction_parts.append(f"{readable_type} {maneuver_modifier}")
-                else:
-                    instruction_parts.append(readable_type)
-            if road_name:
-                instruction_parts.append(f"onto {road_name}")
-            elif destinations:
-                instruction_parts.append(f"toward {destinations[0]}")
-            instruction = " ".join(part for part in instruction_parts if part).strip()
+            instruction = self._storm_step_instruction(
+                maneuver_type=maneuver_type,
+                maneuver_modifier=maneuver_modifier,
+                road_name=road_name,
+                destinations=destinations,
+            )
             distance_miles = round(float(raw_step.get("distance", 0.0)) / 1609.344, 1)
             duration_minutes = max(1, round(float(raw_step.get("duration", 0.0)) / 60))
             steps.append(
