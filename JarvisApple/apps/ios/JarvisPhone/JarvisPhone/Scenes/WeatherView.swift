@@ -187,39 +187,12 @@ struct WeatherView: View {
     private func weatherContent(_ cur: CurrentWeatherSnapshot) -> some View {
         ScrollView {
             VStack(spacing: 14) {
-
-                // ── Hero image — taller, cinematic ─────────────────
-                WeatherManager.conditionImage(cur.visualKey)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 240)
-                    .clipped()
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .overlay(
-                        // Gradient overlay so text is always legible
-                        LinearGradient(
-                            colors: [.clear, .black.opacity(0.7)],
-                            startPoint: UnitPoint(x: 0.5, y: 0.25),
-                            endPoint: .bottom
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                    )
-                    .overlay(alignment: .bottomLeading) {
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text(cur.tempString)
-                                .font(.system(size: 68, weight: .bold))
-                                .foregroundStyle(.white)
-                                .shadow(radius: 2)
-                            Text(cur.condition)
-                                .font(.title3.weight(.semibold))
-                                .foregroundStyle(.white.opacity(0.9))
-                            Text(cur.feelsLikeString)
-                                .font(.subheadline)
-                                .foregroundStyle(.white.opacity(0.65))
-                        }
-                        .padding(18)
-                    }
+                weatherHeroCard(
+                    imageKey: cur.visualKey,
+                    temperatureText: cur.tempString,
+                    title: cur.condition,
+                    subtitle: cur.feelsLikeString
+                )
 
                 // ── Stats grid — colored icon backgrounds ──────────
                 LazyVGrid(
@@ -302,49 +275,15 @@ struct WeatherView: View {
         let cur = overview.current
         ScrollView {
             VStack(spacing: 14) {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(overview.location.isEmpty ? "JARVIS Weather" : overview.location)
-                                .font(.headline).foregroundStyle(.white)
-                            Text(overview.live ? "Live from \(overview.source)" : "Latest from \(overview.source)")
-                                .font(.caption2).foregroundStyle(sky.opacity(0.75))
-                        }
-                        Spacer()
-                        if overview.stale {
-                            Text("STALE")
-                                .font(.system(size: 9, weight: .black))
-                                .foregroundStyle(.black)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(.orange, in: Capsule())
-                        }
-                    }
-
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Text(cur.temperatureF.map { "\(Int($0.rounded()))°" } ?? "--°")
-                            .font(.system(size: 68, weight: .bold))
-                            .foregroundStyle(.white)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(cur.condition.isEmpty ? overview.summary : cur.condition)
-                                .font(.title3.weight(.semibold))
-                                .foregroundStyle(.white.opacity(0.9))
-                            if let feels = cur.feelsLikeF {
-                                Text("Feels \(Int(feels.rounded()))°")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-
-                    if cur.usingForecastFallback {
-                        Text("Using forecast fallback because the latest observation is stale.")
-                            .font(.caption2)
-                            .foregroundStyle(.orange.opacity(0.9))
-                    }
-                }
-                .padding(18)
-                .glassEffect(in: RoundedRectangle(cornerRadius: 18))
+                weatherHeroCard(
+                    imageKey: serverHeroImageKey(for: cur),
+                    eyebrow: overview.location.isEmpty ? "JARVIS Weather" : overview.location,
+                    badge: overview.stale ? "STALE" : nil,
+                    temperatureText: cur.temperatureF.map { "\(Int($0.rounded()))°" } ?? "--°",
+                    title: cur.condition.isEmpty ? overview.summary : cur.condition,
+                    subtitle: serverHeroSubtitle(for: cur),
+                    footnote: serverHeroFootnote(for: overview)
+                )
 
                 LazyVGrid(
                     columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2),
@@ -358,10 +297,15 @@ struct WeatherView: View {
 
                 if !overview.hourly.isEmpty {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("HOURLY")
-                            .font(.system(size: 10, weight: .bold))
-                            .tracking(1.0)
-                            .foregroundStyle(sky.opacity(0.85))
+                        HStack(spacing: 6) {
+                            Image(systemName: "clock.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(sky)
+                            Text("HOURLY")
+                                .font(.system(size: 10, weight: .bold))
+                                .tracking(1.0)
+                                .foregroundStyle(sky.opacity(0.85))
+                        }
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
                                 ForEach(overview.hourly) { hour in
@@ -377,6 +321,112 @@ struct WeatherView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
+    }
+
+    @ViewBuilder
+    private func weatherHeroCard(
+        imageKey: String,
+        eyebrow: String? = nil,
+        badge: String? = nil,
+        temperatureText: String,
+        title: String,
+        subtitle: String? = nil,
+        footnote: String? = nil
+    ) -> some View {
+        WeatherManager.conditionImage(imageKey)
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .frame(maxWidth: .infinity)
+            .frame(height: 240)
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .overlay(
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.75)],
+                    startPoint: UnitPoint(x: 0.5, y: 0.25),
+                    endPoint: .bottom
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+            )
+            .overlay(alignment: .topLeading) {
+                if eyebrow != nil || badge != nil {
+                    HStack(alignment: .top) {
+                        if let eyebrow, !eyebrow.isEmpty {
+                            Text(eyebrow)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.92))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(.black.opacity(0.22), in: Capsule())
+                        }
+                        Spacer()
+                        if let badge, !badge.isEmpty {
+                            Text(badge)
+                                .font(.system(size: 9, weight: .black))
+                                .foregroundStyle(.black)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(.orange, in: Capsule())
+                        }
+                    }
+                    .padding(16)
+                }
+            }
+            .overlay(alignment: .bottomLeading) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(temperatureText)
+                        .font(.system(size: 68, weight: .bold))
+                        .foregroundStyle(.white)
+                        .shadow(radius: 2)
+                    Text(title)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.92))
+                    if let subtitle, !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.72))
+                    }
+                    if let footnote, !footnote.isEmpty {
+                        Text(footnote)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.85))
+                            .padding(.top, 6)
+                    }
+                }
+                .padding(18)
+            }
+    }
+
+    private func serverHeroImageKey(for current: AppleWeatherCurrent) -> String {
+        if current.visualKey == "clear_night_no_moon", !current.moonPhase.isEmpty {
+            return current.moonPhase
+        }
+        if !current.visualKey.isEmpty {
+            return current.visualKey
+        }
+        return "clear_day"
+    }
+
+    private func serverHeroSubtitle(for current: AppleWeatherCurrent) -> String? {
+        var parts: [String] = []
+        if let feels = current.feelsLikeF {
+            parts.append("Feels \(Int(feels.rounded()))°")
+        }
+        if !current.moonPhaseLabel.isEmpty {
+            parts.append(current.moonPhaseLabel)
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: "  ·  ")
+    }
+
+    private func serverHeroFootnote(for overview: AppleWeatherOverview) -> String? {
+        if overview.stale {
+            return "Latest packet from \(overview.source)."
+        }
+        if overview.current.usingForecastFallback {
+            return "Using forecast fallback while live observation catches up."
+        }
+        let mode = overview.live ? "Live" : "Latest"
+        return "\(mode) from \(overview.source)"
     }
 
     private func loadServerWeather(force: Bool) async {
