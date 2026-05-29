@@ -256,33 +256,92 @@ struct BriefingView: View {
             }
         }
 
-        if let nextEvent = appState.calendar.nextItems.first, !nextEvent.title.isEmpty {
-            OracleSection(title: "Calendar", icon: "calendar", accent: .cyan) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(nextEvent.title)
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.white)
-                    Text(nextEvent.start.isEmpty ? "Today" : nextEvent.start)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    if !nextEvent.location.isEmpty {
-                        Text(nextEvent.location)
-                            .font(.caption2)
-                            .foregroundStyle(gold.opacity(0.7))
+        if !appState.notifications.recent.isEmpty {
+            OracleSection(title: "Notifications", icon: "bell.badge.fill", accent: .yellow) {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(Array(appState.notifications.recent.prefix(3))) { notification in
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(alignment: .firstTextBaseline) {
+                                Text(notification.title.isEmpty ? "JARVIS Alert" : notification.title)
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(.white)
+                                Spacer()
+                                if !notification.category.isEmpty {
+                                    Text(notification.category.uppercased())
+                                        .font(.system(size: 9, weight: .black))
+                                        .tracking(1)
+                                        .foregroundStyle(.black)
+                                        .padding(.horizontal, 7)
+                                        .padding(.vertical, 3)
+                                        .background(gold.opacity(0.9), in: Capsule())
+                                }
+                            }
+                            if !notification.body.isEmpty {
+                                Text(notification.body)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(3)
+                            }
+                            if let createdAt = notification.createdAt, !createdAt.isEmpty {
+                                Text(formatTimestamp(createdAt))
+                                    .font(.caption2)
+                                    .foregroundStyle(gold.opacity(0.7))
+                            }
+                        }
+                        if notification.id != appState.notifications.recent.prefix(3).last?.id {
+                            Divider().opacity(0.2)
+                        }
                     }
                 }
             }
         }
 
-        if let reminder = appState.reminders.topItems.first, !reminder.title.isEmpty {
+        if !appState.calendar.nextItems.isEmpty {
+            OracleSection(title: "Calendar", icon: "calendar", accent: .cyan) {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(Array(appState.calendar.nextItems.prefix(3))) { nextEvent in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(nextEvent.title)
+                                .font(.subheadline.bold())
+                                .foregroundStyle(.white)
+                            Text(nextEvent.start.isEmpty ? "Today" : formatTimestamp(nextEvent.start))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            if !nextEvent.location.isEmpty {
+                                Text(nextEvent.location)
+                                    .font(.caption2)
+                                    .foregroundStyle(gold.opacity(0.7))
+                            }
+                        }
+                        if nextEvent.id != appState.calendar.nextItems.prefix(3).last?.id {
+                            Divider().opacity(0.2)
+                        }
+                    }
+                }
+            }
+        }
+
+        if !appState.reminders.topItems.isEmpty {
             OracleSection(title: "Reminders", icon: "checklist", accent: .orange) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(reminder.title)
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.white)
-                    Text(reminder.due.isEmpty ? reminder.list : reminder.due)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(Array(appState.reminders.topItems.prefix(3))) { reminder in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(reminder.title)
+                                .font(.subheadline.bold())
+                                .foregroundStyle(.white)
+                            Text(reminder.due.isEmpty ? reminder.list : formatTimestamp(reminder.due))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            if !reminder.list.isEmpty && !reminder.due.isEmpty {
+                                Text(reminder.list)
+                                    .font(.caption2)
+                                    .foregroundStyle(gold.opacity(0.7))
+                            }
+                        }
+                        if reminder.id != appState.reminders.topItems.prefix(3).last?.id {
+                            Divider().opacity(0.2)
+                        }
+                    }
                 }
             }
         }
@@ -291,26 +350,62 @@ struct BriefingView: View {
             OracleSection(title: "Ambient Signals", icon: "bell.and.waves.left.and.right.fill", accent: .purple) {
                 VStack(alignment: .leading, spacing: 8) {
                     if appState.focus.focusActive {
-                        Label("Focus is active on the phone", systemImage: "moon.fill")
-                            .font(.caption)
-                            .foregroundStyle(.white)
+                        signalRow(
+                            title: "Focus",
+                            body: "Active on the phone",
+                            footnote: formatTimestamp(appState.focus.updatedAt),
+                            icon: "moon.fill"
+                        )
                     }
                     if !appState.nowPlaying.title.isEmpty {
-                        Text("Now Playing: \(appState.nowPlaying.title)")
-                            .font(.caption)
-                            .foregroundStyle(.white)
+                        signalRow(
+                            title: "Now Playing",
+                            body: [appState.nowPlaying.title, appState.nowPlaying.artist]
+                                .filter { !$0.isEmpty }
+                                .joined(separator: " — "),
+                            footnote: formatTimestamp(appState.nowPlaying.updatedAt),
+                            icon: "music.note"
+                        )
                     }
                     if !appState.soundAlert.label.isEmpty {
-                        Text("Latest sound alert: \(appState.soundAlert.label)")
-                            .font(.caption)
-                            .foregroundStyle(.white)
+                        signalRow(
+                            title: "Sound Alert",
+                            body: appState.soundAlert.label,
+                            footnote: signalFootnote(source: appState.soundAlert.source, timestamp: appState.soundAlert.receivedAt),
+                            icon: "waveform"
+                        )
                     }
                     if !appState.visionScan.textPreview.isEmpty {
-                        Text(appState.visionScan.textPreview)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(3)
+                        signalRow(
+                            title: appState.visionScan.context.isEmpty ? "Vision Scan" : appState.visionScan.context,
+                            body: appState.visionScan.textPreview,
+                            footnote: signalFootnote(source: appState.visionScan.source, timestamp: appState.visionScan.receivedAt),
+                            icon: "viewfinder"
+                        )
                     }
+                }
+            }
+        }
+    }
+
+    private func signalRow(title: String, body: String, footnote: String, icon: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: icon)
+                .font(.caption.bold())
+                .foregroundStyle(gold)
+                .frame(width: 16, height: 16)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.caption.bold())
+                    .foregroundStyle(.white)
+                Text(body)
+                    .font(.caption)
+                    .foregroundStyle(.white)
+                    .lineLimit(3)
+                if !footnote.isEmpty {
+                    Text(footnote)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
@@ -331,6 +426,22 @@ struct BriefingView: View {
     private func refreshAll() async {
         await viewModel.refresh()
         await loadStatus()
+    }
+
+    private func formatTimestamp(_ raw: String) -> String {
+        guard !raw.isEmpty else { return "" }
+        let iso = ISO8601DateFormatter()
+        if let date = iso.date(from: raw) {
+            return date.formatted(date: .abbreviated, time: .shortened)
+        }
+        return raw
+    }
+
+    private func signalFootnote(source: String, timestamp: String) -> String {
+        let time = formatTimestamp(timestamp)
+        if source.isEmpty { return time }
+        if time.isEmpty { return source }
+        return "\(source) · \(time)"
     }
 
     private func loadStatus() async {

@@ -20,7 +20,7 @@ Source-of-truth rule:
 
 | Area | Web JARVIS source | iPhone surface | Apple contract | Status | Main gaps |
 |---|---|---|---|---|---|
-| Brief / Overview | `jarvis/jarvis_theme_glass.py` overview loaders, briefing renderers, family bar, alert banner, mini-cards | `BriefingView.swift` | `GET /api/apple/briefing` | Partial | Phone shows packet, but not the richer overview orchestration, alert banner behavior, presence rollups, reminder/tasks/catalyst/chronicle mini-card depth |
+| Brief / Overview | `jarvis/jarvis_theme_glass.py` overview loaders, briefing renderers, family bar, alert banner, mini-cards | `BriefingView.swift` | `GET /api/apple/briefing`, `GET /api/apple/app-state` | Partial | Live notifications, calendar, reminders, and ambient signals now surface on phone; remaining gaps are richer alert-banner behavior, presence rollups, and deeper catalyst/chronicle orchestration |
 | Needs / Approvals | `renderApprovals`, approval workflows | `NeedsView.swift` | `GET /api/apple/needs`, `POST /api/apple/approvals/{id}/approve` | Partial | Approve path exists; missing richer request context, alternate actions, and deeper workflow state |
 | Health | `loadHealth`, SAM/score panels, overview health cards | `HealthView.swift` | `GET /api/apple/health/summary`, `POST /api/apple/health/log` | Partial | Good live summary, but not full SAM protocol / daily score / deeper web health modules |
 | Weather | `loadWeatherWidget`, weather modal, route weather hooks | `WeatherView.swift` | `GET /api/apple/weather` | Partial | Core live weather works; still missing broader weather-module parity and some richer route/weather integrations |
@@ -33,14 +33,14 @@ Source-of-truth rule:
 | Navigate | `renderNavRoute`, `loadNavPOIs`, active route controls, POI toggles, parks radius slider | `NavigateView.swift` | `GET /api/apple/navigation/*` | Partial | Live route state now hydrates from JARVIS; remaining gaps are deeper HUD parity, maneuver presentation polish, and long-route reliability |
 | Forge | forge/workshop panels | `ForgeView.swift` | `GET /api/apple/forge`, `POST /api/apple/forge/submit`, `POST /api/apple/forge/save` | Partial | Capture/upload exists; processing and broader workshop parity are still incomplete |
 | Voice / Chat | chat + command flows, voice interactions | `VoiceView.swift` | `POST /api/apple/speak`, `GET /api/apple/voice/greeting` | Partial | Basic live voice bridge exists; missing broader chat/system command parity with web |
-| Systems / Settings | `settingsNavTo(...)`, accounts, voice, location, family, devices, costs, Maps API status | `SettingsView.swift` | `GET /api/apple/status` plus server-side config endpoints | Partial | Phone Systems is still a thin diagnostics view, far behind web settings breadth |
-| Notifications | web ambient/alert surfaces | no real phone inbox surface | `GET /api/apple/notifications/pending` | Missing | Pull notifications exist server-side, but the phone app does not expose them as a first-class UI |
-| Calendar sync | web calendar panels | no explicit phone UI | `POST /api/apple/calendar` | Missing | Ingest endpoint exists but no visible sync/status surface |
-| Reminders sync | web task/reminder panels | no explicit phone UI | `POST /api/apple/reminders` | Missing | Same as calendar |
-| Focus sync | web notification/focus behavior | no explicit phone UI | `POST /api/apple/focus` | Missing | Server can store focus state, but phone has no product UI around it |
-| Sound alerts | web/security ambient flows | no explicit phone UI | `POST /api/apple/sound-alert` | Missing | Backend ingest exists only |
-| Vision scan | web/vision security/workflow surface | no explicit phone UI | `POST /api/apple/vision/scan` | Missing | Backend ingest exists only |
-| Now playing | web ambient media behavior | only indirect brief usage | `POST /api/apple/now-playing` | Partial | Server ingest exists; phone has no dedicated now-playing sync/status surface |
+| Systems / Settings | `settingsNavTo(...)`, accounts, voice, location, family, devices, costs, Maps API status | `SettingsView.swift` | `GET /api/apple/status`, `GET /api/apple/app-state` plus server-side config endpoints | Partial | Phone Systems now shows mirror state and recent alerts, but it is still far behind full web settings breadth like accounts, family management, and cost/config panels |
+| Notifications | web ambient/alert surfaces | `BriefingView.swift`, `SettingsView.swift` | `GET /api/apple/app-state`, `GET /api/apple/notifications/pending` | Partial | Recent notifications now surface on phone, but there is still no dedicated inbox/workflow surface |
+| Calendar sync | web calendar panels | `BriefingView.swift`, `SettingsView.swift` | `GET /api/apple/app-state`, `POST /api/apple/calendar` | Partial | Server mirror and upcoming events are now visible, but there is no deeper calendar workflow surface |
+| Reminders sync | web task/reminder panels | `BriefingView.swift`, `SettingsView.swift` | `GET /api/apple/app-state`, `POST /api/apple/reminders` | Partial | Mirror state and top reminders are visible, but there is no deeper reminder/task management surface |
+| Focus sync | web notification/focus behavior | `BriefingView.swift`, `SettingsView.swift` | `GET /api/apple/app-state`, `POST /api/apple/focus` | Partial | Focus state now surfaces on phone, but not as a full control surface |
+| Sound alerts | web/security ambient flows | `BriefingView.swift`, `SettingsView.swift` | `GET /api/apple/app-state`, `POST /api/apple/sound-alert` | Partial | Latest sound state is visible, but no deeper alert history or actions exist on phone yet |
+| Vision scan | web/vision security/workflow surface | `BriefingView.swift`, `SettingsView.swift` | `GET /api/apple/app-state`, `POST /api/apple/vision/scan` | Partial | Latest scan summary is visible, but no deeper history/workflow surface exists yet |
+| Now playing | web ambient media behavior | `BriefingView.swift`, `SettingsView.swift` | `GET /api/apple/app-state`, `POST /api/apple/now-playing` | Partial | Now-playing state is now visible in multiple phone surfaces, but still lacks a dedicated media control surface |
 
 ## Implementation Checklist
 
@@ -60,15 +60,15 @@ Source-of-truth rule:
 - [ ] Add richer Huddle / live-agent roster visibility.
 - [ ] Continue Navigation HUD and route-state parity.
 
-### Phase 3: Expose Existing Apple Endpoints
+### Phase 3: Deepen Existing Shared State Surfaces
 
-- [ ] Add notification inbox / pending notification surface.
-- [ ] Add calendar sync visibility.
-- [ ] Add reminders sync visibility.
-- [ ] Add focus-mode sync visibility.
-- [ ] Add sound-alert visibility.
-- [ ] Add vision-scan visibility.
-- [ ] Add dedicated now-playing sync/status visibility.
+- [ ] Add notification inbox / pending notification workflow surface.
+- [x] Add calendar sync visibility.
+- [x] Add reminders sync visibility.
+- [x] Add focus-mode sync visibility.
+- [x] Add sound-alert visibility.
+- [x] Add vision-scan visibility.
+- [x] Add now-playing sync/status visibility.
 
 ### Phase 4: Guardrails
 
