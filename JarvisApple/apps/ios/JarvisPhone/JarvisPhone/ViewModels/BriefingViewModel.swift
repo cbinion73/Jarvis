@@ -6,6 +6,8 @@ final class BriefingViewModel: ObservableObject {
 
     @Published var packet: BriefingPacket?
     @Published var appState: AppStateOverview?
+    @Published var focusState: FocusStateOverview?
+    @Published var controlPlaneState: ControlPlaneOverview?
     @Published var isLoading = false
     @Published var errorMessage: String?
 
@@ -19,6 +21,10 @@ final class BriefingViewModel: ObservableObject {
             async let state = client.fetchAppState()
             packet = try await briefing
             appState = try await state
+            async let focus = try? client.fetchFocusState()
+            async let control = try? client.fetchControlPlaneState()
+            focusState = await focus
+            controlPlaneState = await control
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -32,6 +38,10 @@ final class BriefingViewModel: ObservableObject {
     func refreshAppState() async {
         do {
             appState = try await client.fetchAppState()
+            async let focus = try? client.fetchFocusState()
+            async let control = try? client.fetchControlPlaneState()
+            focusState = await focus
+            controlPlaneState = await control
         } catch {
             errorMessage = error.localizedDescription
         }

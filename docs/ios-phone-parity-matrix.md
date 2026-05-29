@@ -20,7 +20,7 @@ Source-of-truth rule:
 
 | Area | Web JARVIS source | iPhone surface | Apple contract | Status | Main gaps |
 |---|---|---|---|---|---|
-| Brief / Overview | `jarvis/jarvis_theme_glass.py` overview loaders, briefing renderers, family bar, alert banner, mini-cards | `BriefingView.swift` | `GET /api/apple/briefing`, `GET /api/apple/app-state` | Partial | Live notifications, calendar, reminders, and ambient signals now surface on phone; remaining gaps are richer alert-banner behavior, presence rollups, and deeper catalyst/chronicle orchestration |
+| Brief / Overview | `jarvis/jarvis_theme_glass.py` overview loaders, briefing renderers, family bar, alert banner, mini-cards | `BriefingView.swift` | `GET /api/apple/briefing`, `GET /api/apple/app-state` | Partial | Alert-banner ranking, presence rollups, and control-plane posture now surface in Brief; remaining gaps are deeper catalyst/chronicle orchestration and any final web-to-phone polish |
 | Needs / Approvals | `renderApprovals`, approval workflows | `NeedsView.swift` | `GET /api/apple/needs`, `POST /api/apple/approvals/{id}/approve` | Partial | Approve path exists; missing richer request context, alternate actions, and deeper workflow state |
 | Health | `loadHealth`, SAM/score panels, overview health cards | `HealthView.swift` | `GET /api/apple/health/summary`, `POST /api/apple/health/log` | Partial | Good live summary, but not full SAM protocol / daily score / deeper web health modules |
 | Weather | `loadWeatherWidget`, weather modal, route weather hooks | `WeatherView.swift` | `GET /api/apple/weather` | Partial | Core live weather works; still missing broader weather-module parity and some richer route/weather integrations |
