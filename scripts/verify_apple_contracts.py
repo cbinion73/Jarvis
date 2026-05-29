@@ -35,6 +35,8 @@ ENDPOINTS: list[tuple[str, str]] = [
     ("/api/apple/focus-state", "/api/apple/focus-state"),
     ("/api/apple/sound-alerts", "/api/apple/sound-alerts"),
     ("/api/apple/vision/scans", "/api/apple/vision/scans"),
+    ("/api/apple/now-playing/state", "/api/apple/now-playing/state"),
+    ("/api/apple/control-plane/state", "/api/apple/control-plane/state"),
     ("/api/apple/notifications", "/api/apple/notifications"),
     ("/api/apple/events/recent", "/api/apple/events/recent"),
     ("/api/apple/weather", "/api/apple/weather"),
@@ -231,6 +233,43 @@ def validate_phase_one_contracts(payloads: dict[str, dict]) -> None:
             if key not in item:
                 raise RuntimeError(f"/api/apple/vision/scans recent_items[{index}] missing '{key}'")
 
+    media_state = require_mapping(payloads, "/api/apple/now-playing/state")
+    for key in ("title", "artist", "album", "is_playing", "updated_at", "artwork_available", "recent_items"):
+        if key not in media_state:
+            raise RuntimeError(f"/api/apple/now-playing/state missing '{key}'")
+    media_items = media_state.get("recent_items")
+    if not isinstance(media_items, list):
+        raise RuntimeError("/api/apple/now-playing/state recent_items is not a list")
+    for index, item in enumerate(media_items[:3]):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"/api/apple/now-playing/state recent_items[{index}] is not an object")
+        for key in ("id", "title", "detail", "ts", "is_playing", "artist", "album"):
+            if key not in item:
+                raise RuntimeError(f"/api/apple/now-playing/state recent_items[{index}] missing '{key}'")
+
+    control_state = require_mapping(payloads, "/api/apple/control-plane/state")
+    for key in ("notifications", "events", "media"):
+        if key not in control_state:
+            raise RuntimeError(f"/api/apple/control-plane/state missing '{key}'")
+    notifications = control_state.get("notifications")
+    if not isinstance(notifications, dict):
+        raise RuntimeError("/api/apple/control-plane/state notifications is not an object")
+    for key in ("total", "pending", "seen", "snoozed", "resolved", "dismissed", "categories", "last_updated_at"):
+        if key not in notifications:
+            raise RuntimeError(f"/api/apple/control-plane/state notifications missing '{key}'")
+    event_stats = control_state.get("events")
+    if not isinstance(event_stats, dict):
+        raise RuntimeError("/api/apple/control-plane/state events is not an object")
+    for key in ("recent_count", "domains", "severities", "last_event_at"):
+        if key not in event_stats:
+            raise RuntimeError(f"/api/apple/control-plane/state events missing '{key}'")
+    media_summary = control_state.get("media")
+    if not isinstance(media_summary, dict):
+        raise RuntimeError("/api/apple/control-plane/state media is not an object")
+    for key in ("synced", "updated_at", "title", "is_playing"):
+        if key not in media_summary:
+            raise RuntimeError(f"/api/apple/control-plane/state media missing '{key}'")
+
     reminders = app_state.get("reminders")
     if not isinstance(reminders, dict):
         raise RuntimeError("/api/apple/app-state reminders is not an object")
@@ -240,9 +279,9 @@ def validate_phase_one_contracts(payloads: dict[str, dict]) -> None:
     for index, item in enumerate(top_items[:3]):
         if not isinstance(item, dict):
             raise RuntimeError(f"/api/apple/app-state reminders top_items[{index}] is not an object")
-            for key in ("id", "title", "due", "list", "priority"):
-                if key not in item:
-                    raise RuntimeError(f"/api/apple/app-state reminders top_items[{index}] missing '{key}'")
+        for key in ("id", "title", "due", "list", "priority"):
+            if key not in item:
+                raise RuntimeError(f"/api/apple/app-state reminders top_items[{index}] missing '{key}'")
 
     reminders_state = require_mapping(payloads, "/api/apple/reminders/state")
     for key in ("synced", "synced_at", "count", "open_items", "overdue_items", "due_soon_items", "priority_items", "attention_flags"):

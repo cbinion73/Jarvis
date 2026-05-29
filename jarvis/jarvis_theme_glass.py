@@ -6195,6 +6195,15 @@ body::after {{
       </div>
     </div>
 
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-inner">
+        <div class="card-header"><span class="card-title">Control Plane</span></div>
+        <div id="notification-control-plane">
+          <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading control plane…</div></div>
+        </div>
+      </div>
+    </div>
+
     <div class="card-grid-2">
       <div class="card">
         <div class="card-inner">
@@ -9885,6 +9894,7 @@ async function loadNotificationCenter() {{
   const eventEl = document.getElementById('notification-event-list');
   const focusEl = document.getElementById('notification-focus-posture');
   const signalEl = document.getElementById('notification-signal-history');
+  const controlEl = document.getElementById('notification-control-plane');
   const pendingEl = document.getElementById('notif-stat-pending');
   const activeEl = document.getElementById('notif-stat-active');
   const eventsEl = document.getElementById('notif-stat-events');
@@ -9899,14 +9909,16 @@ async function loadNotificationCenter() {{
   if (!notifEl || !eventEl) return;
 
   try {{
-    const [notifRes, eventRes, focusRes, soundRes, visionRes] = await Promise.all([
+    const [notifRes, eventRes, focusRes, soundRes, visionRes, mediaRes, controlRes] = await Promise.all([
       fetch('/api/apple/notifications'),
       fetch('/api/apple/events/recent?limit=20'),
       fetch('/api/apple/focus-state'),
       fetch('/api/apple/sound-alerts'),
       fetch('/api/apple/vision/scans'),
+      fetch('/api/apple/now-playing/state'),
+      fetch('/api/apple/control-plane/state'),
     ]);
-    if (!notifRes.ok || !eventRes.ok || !focusRes.ok || !soundRes.ok || !visionRes.ok) {{
+    if (!notifRes.ok || !eventRes.ok || !focusRes.ok || !soundRes.ok || !visionRes.ok || !mediaRes.ok || !controlRes.ok) {{
       throw new Error('notification center unavailable');
     }}
     const notifPayload = await notifRes.json();
@@ -9914,11 +9926,15 @@ async function loadNotificationCenter() {{
     const focusPayload = await focusRes.json();
     const soundPayload = await soundRes.json();
     const visionPayload = await visionRes.json();
+    const mediaPayload = await mediaRes.json();
+    const controlPayload = await controlRes.json();
     const notifications = ((notifPayload || {{}}).data || {{}}).notifications || [];
     const events = ((eventPayload || {{}}).data || {{}}).events || [];
     const focus = ((focusPayload || {{}}).data || {{}});
     const sound = ((soundPayload || {{}}).data || {{}});
     const vision = ((visionPayload || {{}}).data || {{}});
+    const media = ((mediaPayload || {{}}).data || {{}});
+    const control = ((controlPayload || {{}}).data || {{}});
     window.__jarvisNotificationCenterState = window.__jarvisNotificationCenterState || {{
       notificationStatus: 'all',
       notificationCategory: 'all',
@@ -9966,6 +9982,34 @@ async function loadNotificationCenter() {{
             <div class="list-row-sub">${{visionItems.length ? escHtml(visionItems[0].context || 'Recent vision capture') : 'No recent vision captures.'}}</div>
           </div>
           <span class="kv-tag">${{escHtml(String(vision.count || 0))}}</span>
+        </div>
+      `;
+    }}
+    if (controlEl) {{
+      const notif = control.notifications || {{}};
+      const eventStats = control.events || {{}};
+      const mediaState = control.media || media || {{}};
+      controlEl.innerHTML = `
+        <div class="list-row">
+          <div style="flex:1;min-width:0;">
+            <div class="list-row-name">Notification freshness</div>
+            <div class="list-row-sub">${{escHtml(notif.last_updated_at ? fmtLocalTime(notif.last_updated_at, {{short:true}}) : 'Not updated yet')}}</div>
+          </div>
+          <span class="kv-tag">${{escHtml(String(notif.pending || 0))}} pending</span>
+        </div>
+        <div class="list-row" style="margin-top:8px;">
+          <div style="flex:1;min-width:0;">
+            <div class="list-row-name">Event spine freshness</div>
+            <div class="list-row-sub">${{escHtml(eventStats.last_event_at ? fmtLocalTime(eventStats.last_event_at, {{short:true}}) : 'No recent events')}}</div>
+          </div>
+          <span class="kv-tag">${{escHtml(String(eventStats.recent_count || 0))}} events</span>
+        </div>
+        <div class="list-row" style="margin-top:8px;">
+          <div style="flex:1;min-width:0;">
+            <div class="list-row-name">Now playing</div>
+            <div class="list-row-sub">${{escHtml(mediaState.title || media.title || 'Nothing playing')}}</div>
+          </div>
+          <span class="kv-tag">${{(mediaState.is_playing || media.is_playing) ? 'PLAYING' : 'IDLE'}}</span>
         </div>
       `;
     }}
