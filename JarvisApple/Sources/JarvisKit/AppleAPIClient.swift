@@ -198,6 +198,35 @@ public final class AppleAPIClient: Sendable {
         return result.status == "approved"
     }
 
+    @discardableResult
+    public func reject(requestId: String, reason: String = "", rejectedBy: String = "chris") async throws -> Bool {
+        struct Body: Encodable {
+            let reason: String
+            let rejected_by: String
+        }
+        struct RejectResult: Decodable {
+            let status: String
+        }
+        let result: RejectResult = try await post(
+            "/api/apple/approvals/\(requestId)/reject",
+            body: Body(reason: reason, rejected_by: rejectedBy)
+        )
+        return result.status == "rejected"
+    }
+
+    @discardableResult
+    public func cancel(requestId: String) async throws -> Bool {
+        struct Body: Encodable {}
+        struct CancelResult: Decodable {
+            let status: String
+        }
+        let result: CancelResult = try await post(
+            "/api/apple/approvals/\(requestId)/cancel",
+            body: Body()
+        )
+        return result.status == "cancelled"
+    }
+
     // MARK: - Presence
 
     /// Report a presence event (arrived home / left home).

@@ -905,16 +905,47 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         """
         items: list[dict] = []
         try:
-            pending = runtime.list_pending_approvals()
-            raw = pending if isinstance(pending, list) else pending.get("items", [])
-            for item in raw:
-                items.append({
-                    "id": str(item.get("id") or item.get("request_id") or uuid.uuid4()),
-                    "text": _truncate(str(item.get("title") or item.get("text") or ""), 80),
-                    "agent": str(item.get("agent") or item.get("requester") or "JARVIS"),
-                    "risk": str(item.get("risk") or item.get("risk_tier") or "medium"),
-                    "expires_in": item.get("expires_in"),
-                })
+            from .approvals import get_approval_guard
+            guard = get_approval_guard()
+            if guard is not None:
+                for item in guard.get_pending_for_ui(actor_id="chris"):
+                    if not isinstance(item, dict):
+                        continue
+                    risk = str(item.get("risk") or item.get("risk_tier") or "medium")
+                    actions = ["approve"]
+                    if risk in {"medium", "high", "critical"}:
+                        actions.append("reject")
+                    actions.append("cancel")
+                    items.append({
+                        "id": str(item.get("id") or item.get("request_id") or uuid.uuid4()),
+                        "text": _truncate(str(item.get("text") or item.get("title") or ""), 80),
+                        "detail": str(item.get("sub") or item.get("description") or ""),
+                        "agent": str(item.get("agent") or item.get("requester") or "JARVIS"),
+                        "risk": risk,
+                        "expires_in": item.get("expires_in"),
+                        "created_at": str(item.get("requested_at") or ""),
+                        "status": "pending",
+                        "allowed_actions": actions,
+                        "request_type": str(item.get("action_type") or ""),
+                    })
+            else:
+                pending = runtime.list_pending_approvals()
+                raw = pending if isinstance(pending, list) else pending.get("items", [])
+                for item in raw:
+                    if not isinstance(item, dict):
+                        continue
+                    items.append({
+                        "id": str(item.get("id") or item.get("request_id") or uuid.uuid4()),
+                        "text": _truncate(str(item.get("title") or item.get("text") or ""), 80),
+                        "detail": str(item.get("description") or item.get("sub") or ""),
+                        "agent": str(item.get("agent") or item.get("requester") or "JARVIS"),
+                        "risk": str(item.get("risk") or item.get("risk_tier") or "medium"),
+                        "expires_in": item.get("expires_in"),
+                        "created_at": str(item.get("requested_at") or ""),
+                        "status": str(item.get("status") or "pending"),
+                        "allowed_actions": ["approve", "reject", "cancel"],
+                        "request_type": str(item.get("action_type") or ""),
+                    })
         except Exception as exc:
             logger.warning("apple_needs: %s", exc)
         return _ok(items)
@@ -1171,6 +1202,34 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             pass
 
         return _ok({"status": "approved", "request": item_dict})
+
+    @app.post("/api/apple/approvals/{request_id}/reject")
+    async def apple_reject(request_id: str, payload: dict = {}):
+        """Reject a pending request from Phone or Watch."""
+        from .approvals import get_approval_queue
+        queue = get_approval_queue()
+        if queue is None:
+            raise HTTPException(status_code=503, detail="Approval system not initialised")
+
+        reason = str(payload.get("reason") or "").strip()
+        rejected_by = str(payload.get("rejected_by") or "chris").strip()
+        ok = queue.reject(request_id, reason=reason, rejected_by=rejected_by)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Pending approval request not found")
+        return _ok({"status": "rejected", "request_id": request_id, "reason": reason})
+
+    @app.post("/api/apple/approvals/{request_id}/cancel")
+    async def apple_cancel(request_id: str):
+        """Cancel a pending request from Phone or Watch."""
+        from .approvals import get_approval_queue
+        queue = get_approval_queue()
+        if queue is None:
+            raise HTTPException(status_code=503, detail="Approval system not initialised")
+
+        ok = queue.cancel(request_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Pending approval request not found")
+        return _ok({"status": "cancelled", "request_id": request_id})
 
     # ── EventKit: Calendar ────────────────────────────────────────────────────
 
