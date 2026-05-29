@@ -770,6 +770,78 @@ def _build_apple_focus_state(
         },
     }
 
+def _build_apple_sound_state(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    recent_rows = [row for row in rows if isinstance(row, dict)]
+    recent_rows.sort(key=lambda item: str(item.get("received_at") or ""), reverse=True)
+    recent_items = [
+        {
+            "id": str(row.get("received_at") or row.get("timestamp") or f"sound-{index}"),
+            "label": str(row.get("classification") or row.get("label") or row.get("sound") or "").strip(),
+            "detail": str(row.get("detail") or row.get("summary") or "").strip(),
+            "source": str(row.get("source") or "").strip(),
+            "confidence": _coerce_float(row.get("confidence"), 0.0),
+            "received_at": str(row.get("received_at") or ""),
+        }
+        for index, row in enumerate(recent_rows[:12])
+    ]
+    high_confidence_items = [item for item in recent_items if _coerce_float(item.get("confidence"), 0.0) >= 0.7][:6]
+    attention_flags: list[dict[str, Any]] = []
+    if high_confidence_items:
+        first = high_confidence_items[0]
+        attention_flags.append(
+            {
+                "id": f"sound:{first['id']}",
+                "kind": "high_confidence",
+                "severity": "medium",
+                "title": first["label"] or "Sound alert",
+                "detail": first["detail"] or "High-confidence sound activity was captured.",
+            }
+        )
+    return {
+        "count": len(recent_rows),
+        "recent_items": recent_items,
+        "high_confidence_items": high_confidence_items,
+        "attention_flags": attention_flags,
+    }
+
+
+def _build_apple_vision_state(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    recent_rows = [row for row in rows if isinstance(row, dict)]
+    recent_rows.sort(key=lambda item: str(item.get("received_at") or ""), reverse=True)
+    recent_items = [
+        {
+            "id": str(row.get("received_at") or f"vision-{index}"),
+            "context": str(row.get("context") or "").strip(),
+            "source": str(row.get("source") or "").strip(),
+            "text_preview": str(row.get("text") or "")[:180],
+            "received_at": str(row.get("received_at") or ""),
+        }
+        for index, row in enumerate(recent_rows[:12])
+    ]
+    contexts = []
+    for item in recent_items:
+        context = item["context"] or "Scan"
+        if context not in contexts:
+            contexts.append(context)
+    attention_flags: list[dict[str, Any]] = []
+    if recent_items:
+        first = recent_items[0]
+        attention_flags.append(
+            {
+                "id": f"vision:{first['id']}",
+                "kind": "recent_capture",
+                "severity": "low",
+                "title": first["context"] or "Vision scan",
+                "detail": first["text_preview"] or "A new vision scan was captured.",
+            }
+        )
+    return {
+        "count": len(recent_rows),
+        "recent_items": recent_items,
+        "recent_contexts": contexts[:6],
+        "attention_flags": attention_flags,
+    }
+
 
 def _build_briefing_command_items(
     *,
@@ -3508,6 +3580,11 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
 
     # ── Sound Analysis ───────────────────────────────────────────────────────
 
+    @app.get("/api/apple/sound-alerts")
+    async def apple_sound_alerts(limit: int = 12):
+        rows = _safe_read_jsonl_tail(Path("data/apple/sound_alerts.jsonl"), limit=max(1, min(limit, 50)))
+        return _ok(_build_apple_sound_state(rows))
+
     @app.post("/api/apple/sound-alert")
     async def apple_sound_alert(payload: dict):
         """Receives on-device SoundAnalysis alerts from the iPhone."""
@@ -3550,6 +3627,11 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         return _ok({"stored": True})
 
     # ── Vision Scan ──────────────────────────────────────────────────────────
+
+    @app.get("/api/apple/vision/scans")
+    async def apple_vision_scans(limit: int = 12):
+        rows = _safe_read_jsonl_tail(Path("data/apple/vision_scans.jsonl"), limit=max(1, min(limit, 50)))
+        return _ok(_build_apple_vision_state(rows))
 
     @app.post("/api/apple/vision/scan")
     async def apple_vision_scan(payload: dict):

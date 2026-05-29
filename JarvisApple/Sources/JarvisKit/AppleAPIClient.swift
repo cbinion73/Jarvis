@@ -115,6 +115,14 @@ public final class AppleAPIClient: Sendable {
         try await get("/api/apple/focus-state")
     }
 
+    public func fetchSoundHistory() async throws -> SoundHistoryOverview {
+        try await get("/api/apple/sound-alerts")
+    }
+
+    public func fetchVisionHistory() async throws -> VisionHistoryOverview {
+        try await get("/api/apple/vision/scans")
+    }
+
     @discardableResult
     public func prepareCalendarEvent(_ eventId: String) async throws -> Bool {
         struct Response: Decodable { let status: String }
