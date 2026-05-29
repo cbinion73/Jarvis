@@ -34,6 +34,7 @@ struct NavigateView: View {
     @State private var preferredLocationId: String?
     @State private var favoriteDestinations: [String] = []
     @State private var recentDestinations: [String] = []
+    @State private var activeStopCategoryIDs: Set<String> = ["food", "starbucks", "parks", "historic", "family"]
     @State private var selectedOriginMode: OriginMode = .home
     @State private var loadingRoute = false
     @State private var loadingStops = false
@@ -74,6 +75,25 @@ struct NavigateView: View {
         guard let minutes = route?.route.durationMinutes else { return nil }
         let arrival = Date().addingTimeInterval(TimeInterval(minutes * 60))
         return arrival.formatted(date: .omitted, time: .shortened)
+    }
+
+    private var visibleStopSections: [NavigationStopSection] {
+        let visible = stopSections.filter { section in
+            guard section.items.isEmpty == false else { return false }
+            return activeStopCategoryIDs.contains(section.id)
+        }
+        return visible.isEmpty ? stopSections.filter { !$0.items.isEmpty } : visible
+    }
+
+    private var activeStopSummary: String {
+        let labels = stopSections
+            .filter { activeStopCategoryIDs.contains($0.id) && !$0.items.isEmpty }
+            .map(\.label)
+
+        guard labels.isEmpty == false else {
+            return "JARVIS is ready to surface coffee, food, parks, historic sites, family stops, and gas along the route."
+        }
+        return "Showing \(labels.joined(separator: ", ")) stops from JARVIS route intelligence."
     }
 
     private var routePolyline: MKPolyline? {
@@ -410,8 +430,7 @@ struct NavigateView: View {
                         .foregroundStyle(.secondary)
                     ForEach(favoriteDestinations, id: \.self) { destination in
                         Button {
-                            destinationText = destination
-                            destinationFocused = false
+                            queueDestination(destination, autoPlan: true)
                         } label: {
                             HStack(spacing: 10) {
                                 Image(systemName: "star.fill")
@@ -434,7 +453,7 @@ struct NavigateView: View {
                         ForEach(savedLocations) { location in
                             Button {
                                 selectedSavedLocationID = location.id
-                                destinationText = location.address
+                                queueDestination(location.address, autoPlan: true)
                             } label: {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(location.label)
@@ -466,7 +485,7 @@ struct NavigateView: View {
                         .foregroundStyle(.secondary)
                     ForEach(recentDestinations, id: \.self) { destination in
                         Button {
-                            destinationText = destination
+                            queueDestination(destination, autoPlan: true)
                         } label: {
                             HStack(spacing: 10) {
                                 Image(systemName: "clock.arrow.circlepath")
@@ -678,7 +697,42 @@ struct NavigateView: View {
                 }
             }
 
-            Text("Coffee, food, parks, historic sites, family stops, and fuel pulled from JARVIS route intelligence.")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(stopSections.filter { !$0.items.isEmpty }) { section in
+                        let isActive = activeStopCategoryIDs.contains(section.id)
+                        Button {
+                            toggleStopCategory(section.id)
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: stopSectionIcon(for: section))
+                                    .foregroundStyle(isActive ? .black : stopSectionColor(for: section))
+                                Text(section.label)
+                                    .font(.caption.weight(.semibold))
+                                Text("\(section.items.count)")
+                                    .font(.caption2.weight(.bold))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background((isActive ? Color.black.opacity(0.12) : stopSectionColor(for: section).opacity(0.18)), in: Capsule())
+                            }
+                            .foregroundStyle(isActive ? .black : .white.opacity(0.86))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                            .background(
+                                Capsule()
+                                    .fill(isActive ? stopSectionColor(for: section) : .white.opacity(0.06))
+                            )
+                            .overlay(
+                                Capsule()
+                                    .stroke(isActive ? stopSectionColor(for: section) : .white.opacity(0.08), lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            Text(activeStopSummary)
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -687,7 +741,7 @@ struct NavigateView: View {
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.76))
             } else {
-                ForEach(stopSections.filter { !$0.items.isEmpty }) { section in
+                ForEach(visibleStopSections) { section in
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(spacing: 8) {
                             Image(systemName: stopSectionIcon(for: section))
@@ -709,7 +763,13 @@ struct NavigateView: View {
                                     NavigationStopCard(
                                         stop: stop,
                                         color: stopSectionColor(for: section),
-                                        icon: stopSectionIcon(for: section)
+                                        icon: stopSectionIcon(for: section),
+                                        onRouteHere: {
+                                            routeToStop(stop)
+                                        },
+                                        onOpenInMaps: {
+                                            openStopInAppleMaps(stop)
+                                        }
                                     )
                                 }
                             }
@@ -999,8 +1059,16 @@ struct NavigateView: View {
     }
 
     private func selectSuggestion(_ suggestion: DestinationSuggestion) {
-        destinationText = suggestion.displayText
+        queueDestination(suggestion.displayText, autoPlan: false)
+    }
+
+    private func queueDestination(_ destination: String, autoPlan: Bool) {
+        let trimmed = destination.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        destinationText = trimmed
         destinationFocused = false
+        guard autoPlan else { return }
+        Task { await planRoute() }
     }
 
     private func toggleDestinationListening() {
@@ -1028,6 +1096,33 @@ struct NavigateView: View {
         stopSections = []
         routeError = nil
         cameraPosition = .automatic
+    }
+
+    private func toggleStopCategory(_ categoryID: String) {
+        if activeStopCategoryIDs.contains(categoryID) {
+            let remaining = activeStopCategoryIDs.subtracting([categoryID])
+            if remaining.isEmpty == false {
+                activeStopCategoryIDs = remaining
+            }
+        } else {
+            activeStopCategoryIDs.insert(categoryID)
+        }
+    }
+
+    private func routeToStop(_ stop: NavigationStop) {
+        let destination = [stop.name, stop.address]
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+        queueDestination(destination, autoPlan: true)
+    }
+
+    private func openStopInAppleMaps(_ stop: NavigationStop) {
+        let query = [stop.name, stop.address]
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? stop.name
+        guard let url = URL(string: "http://maps.apple.com/?q=\(query)") else { return }
+        UIApplication.shared.open(url)
     }
 
     private func centerMapOnUser() {
@@ -1331,62 +1426,69 @@ private struct NavigationStopCard: View {
     let stop: NavigationStop
     let color: Color
     let icon: String
+    let onRouteHere: () -> Void
+    let onOpenInMaps: () -> Void
 
     var body: some View {
-        Button {
-            let query = [stop.name, stop.address]
-                .filter { !$0.isEmpty }
-                .joined(separator: " ")
-                .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? stop.name
-            guard let url = URL(string: "http://maps.apple.com/?q=\(query)") else { return }
-            UIApplication.shared.open(url)
-        } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .top) {
-                    Image(systemName: icon)
-                        .foregroundStyle(color)
-                    Spacer()
-                    if let marker = stop.routeMileMarker {
-                        Text("mi \(Int(marker.rounded()))")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Text(stop.name)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(2)
-                if !stop.address.isEmpty {
-                    Text(stop.address)
-                        .font(.caption2)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
+                Image(systemName: icon)
+                    .foregroundStyle(color)
+                Spacer()
+                if let marker = stop.routeMileMarker {
+                    Text("mi \(Int(marker.rounded()))")
+                        .font(.caption2.weight(.semibold))
                         .foregroundStyle(.secondary)
-                        .lineLimit(2)
                 }
-                if !stop.description.isEmpty {
-                    Text(stop.description)
-                        .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.72))
-                        .lineLimit(3)
-                }
-
-                HStack(spacing: 8) {
-                    if let rating = stop.rating {
-                        Label(String(format: "%.1f", rating), systemImage: "star.fill")
-                            .foregroundStyle(color)
-                    }
-                    if let distance = stop.distanceFromRoute {
-                        Text("\(String(format: "%.1f", distance)) mi off route")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .font(.caption2)
             }
-            .frame(width: 220, alignment: .leading)
-            .padding(14)
-            .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+
+            Text(stop.name)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .lineLimit(2)
+            if !stop.address.isEmpty {
+                Text(stop.address)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            if !stop.description.isEmpty {
+                Text(stop.description)
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.72))
+                    .lineLimit(3)
+            }
+
+            HStack(spacing: 8) {
+                if let rating = stop.rating {
+                    Label(String(format: "%.1f", rating), systemImage: "star.fill")
+                        .foregroundStyle(color)
+                }
+                if let distance = stop.distanceFromRoute {
+                    Text("\(String(format: "%.1f", distance)) mi off route")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .font(.caption2)
+
+            HStack(spacing: 8) {
+                Button("Route Here") {
+                    onRouteHere()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(color)
+
+                Button("Maps") {
+                    onOpenInMaps()
+                }
+                .buttonStyle(.bordered)
+                .tint(.white)
+            }
+            .font(.caption.weight(.semibold))
         }
-        .buttonStyle(.plain)
+        .frame(width: 220, alignment: .leading)
+        .padding(14)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
     }
 }
 
