@@ -28,6 +28,7 @@ POST /api/apple/vision/scan                 On-device OCR / barcode scan result
 from __future__ import annotations
 
 import asyncio
+from collections import Counter
 import json
 import logging
 import os
@@ -120,6 +121,132 @@ def _safe_read_jsonl_tail(path: Path, limit: int = 1) -> list[dict[str, Any]]:
     if limit <= 0:
         return rows
     return rows[-limit:]
+
+
+def _chronicle_actor_matches(entry: dict[str, Any], actor: str) -> bool:
+    entry_actor = str(entry.get("actor") or entry.get("actor_id") or "").strip().lower()
+    if not entry_actor:
+        return True
+    return entry_actor == actor.strip().lower()
+
+
+def _chronicle_entry_date(entry: dict[str, Any]) -> str:
+    for key in ("date", "created_at", "timestamp"):
+        raw = str(entry.get(key) or "").strip()
+        if raw:
+            return raw[:10]
+    return ""
+
+
+def _chronicle_fallback_entries(raw_entries: list[dict[str, Any]], actor: str) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": str(e.get("entry_id") or e.get("id") or uuid.uuid4()),
+            "type": str(e.get("entry_type") or e.get("type") or e.get("theme") or "reflection"),
+            "title": _truncate(str(e.get("title") or e.get("theme") or "Reflection"), 50),
+            "body": _truncate(str(e.get("body") or e.get("note") or e.get("reflection") or ""), 200),
+            "scripture": e.get("scripture_ref") or e.get("passage") or None,
+            "timestamp": str(e.get("created_at") or e.get("timestamp") or ""),
+        }
+        for e in reversed(raw_entries)
+        if _chronicle_actor_matches(e, actor)
+    ][:12]
+
+
+def _chronicle_fallback_context(raw_entries: list[dict[str, Any]], actor: str) -> dict[str, Any]:
+    actor_entries = [entry for entry in raw_entries if _chronicle_actor_matches(entry, actor)]
+    study_entry = next(
+        (
+            entry
+            for entry in reversed(actor_entries)
+            if str(entry.get("scripture_ref") or entry.get("passage") or "").strip()
+        ),
+        None,
+    )
+    active_prayers = [
+        {
+            "id": str(entry.get("entry_id") or entry.get("id") or uuid.uuid4()),
+            "text": str(entry.get("note") or entry.get("body") or entry.get("reflection") or "").strip(),
+            "category": str(entry.get("theme") or "Prayer"),
+        }
+        for entry in reversed(actor_entries)
+        if str(entry.get("entry_type") or entry.get("type") or "").strip().lower() == "prayer"
+    ][:3]
+    top_themes = [
+        theme
+        for theme, _count in Counter(
+            str(entry.get("theme") or "").strip()
+            for entry in actor_entries
+            if str(entry.get("theme") or "").strip()
+        ).most_common(5)
+    ]
+    return {
+        "study": {
+            "passage": str(study_entry.get("scripture_ref") or study_entry.get("passage") or ""),
+            "title": str(study_entry.get("title") or study_entry.get("theme") or ""),
+            "date": _chronicle_entry_date(study_entry),
+        } if study_entry else None,
+        "active_prayers": active_prayers,
+        "todays_rhythm": None,
+        "top_themes": top_themes,
+        "total_entries": len(actor_entries),
+        "active_prayer_count": len(active_prayers),
+        "answered_prayer_count": 0,
+    }
+
+
+def _chronicle_fallback_patterns(raw_entries: list[dict[str, Any]], actor: str) -> dict[str, Any]:
+    actor_entries = [entry for entry in raw_entries if _chronicle_actor_matches(entry, actor)]
+    today = datetime.now(timezone.utc).date()
+    cutoff = today.fromordinal(today.toordinal() - 30)
+    recent = [
+        entry
+        for entry in actor_entries
+        if (date_str := _chronicle_entry_date(entry)) and date_str >= cutoff.isoformat()
+    ]
+    type_counts = Counter(
+        str(entry.get("entry_type") or entry.get("type") or "reflection")
+        for entry in recent
+    )
+    theme_counts = Counter(
+        str(entry.get("theme") or "").strip()
+        for entry in recent
+        if str(entry.get("theme") or "").strip()
+    )
+
+    dates = sorted({_chronicle_entry_date(entry) for entry in actor_entries if _chronicle_entry_date(entry)}, reverse=True)
+    streak = 0
+    check = today
+    for date_str in dates:
+        if date_str == check.isoformat():
+            streak += 1
+            check = check.fromordinal(check.toordinal() - 1)
+            continue
+        if streak == 0 and date_str == check.fromordinal(check.toordinal() - 1).isoformat():
+            streak += 1
+            check = check.fromordinal(check.toordinal() - 2)
+            continue
+        break
+
+    prayer_count = sum(
+        1 for entry in actor_entries
+        if str(entry.get("entry_type") or entry.get("type") or "").strip().lower() == "prayer"
+    )
+    return {
+        "window_days": 30,
+        "total_recent_entries": len(recent),
+        "entry_type_breakdown": dict(type_counts),
+        "recurring_themes": [
+            {"theme": theme, "count": count}
+            for theme, count in theme_counts.most_common(8)
+        ],
+        "prayer_arc": {
+            "total_active": prayer_count,
+            "answered_total": 0,
+            "answered_recent": 0,
+        },
+        "writing_streak_days": streak,
+    }
 
 
 def _build_home_context(*, needs_count: int = 0) -> dict[str, Any]:
@@ -2001,23 +2128,72 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                         except Exception:
                             pass
 
-            entries = [
-                {
-                    "id":         str(e.get("entry_id") or e.get("id") or uuid.uuid4()),
-                    "type":       str(e.get("entry_type") or e.get("theme") or "reflection"),
-                    "title":      _truncate(str(e.get("title") or e.get("theme") or "Reflection"), 50),
-                    "body":       _truncate(str(e.get("body") or e.get("note") or e.get("reflection") or ""), 200),
-                    "scripture":  e.get("scripture_ref") or None,
-                    "timestamp":  str(e.get("created_at") or e.get("timestamp") or ""),
-                }
-                for e in reversed(raw_entries)
-                if e.get("actor") in (actor, None, "")
-            ][:12]
+            entries = _chronicle_fallback_entries(raw_entries, actor)
+            context = _chronicle_fallback_context(raw_entries, actor)
+            patterns = _chronicle_fallback_patterns(raw_entries, actor)
 
-            return _ok({"entries": entries, "updated_at": _ts()})
+            try:
+                from .chronicle_bridge import get_chronicle_bridge
+
+                bridge = get_chronicle_bridge()
+                if bridge is not None:
+                    bridge_context = await asyncio.to_thread(bridge.get_context)
+                    if isinstance(bridge_context, dict) and bridge_context.get("ok"):
+                        context = {
+                            "study": bridge_context.get("study"),
+                            "active_prayers": bridge_context.get("active_prayers") or [],
+                            "todays_rhythm": bridge_context.get("todays_rhythm"),
+                            "top_themes": bridge_context.get("top_themes") or [],
+                            "total_entries": int(bridge_context.get("total_entries") or len(entries)),
+                            "active_prayer_count": int(bridge_context.get("active_prayer_count") or 0),
+                            "answered_prayer_count": int(bridge_context.get("answered_prayer_count") or 0),
+                        }
+                    bridge_patterns = await asyncio.to_thread(bridge.get_patterns)
+                    if isinstance(bridge_patterns, dict) and bridge_patterns.get("ok"):
+                        patterns = {
+                            "window_days": int(bridge_patterns.get("window_days") or 30),
+                            "total_recent_entries": int(bridge_patterns.get("total_recent_entries") or 0),
+                            "entry_type_breakdown": bridge_patterns.get("entry_type_breakdown") or {},
+                            "recurring_themes": bridge_patterns.get("recurring_themes") or [],
+                            "prayer_arc": bridge_patterns.get("prayer_arc") or {
+                                "total_active": 0,
+                                "answered_total": 0,
+                                "answered_recent": 0,
+                            },
+                            "writing_streak_days": int(bridge_patterns.get("writing_streak_days") or 0),
+                        }
+            except Exception as exc:
+                logger.warning("apple_chronicle bridge context fallback: %s", exc)
+
+            return _ok({
+                "entries": entries,
+                "context": context,
+                "patterns": patterns,
+                "updated_at": _ts(),
+            })
         except Exception as exc:
             logger.exception("apple_chronicle failed: %s", exc)
-            return _ok({"entries": [], "updated_at": _ts()})
+            return _ok({
+                "entries": [],
+                "context": {
+                    "study": None,
+                    "active_prayers": [],
+                    "todays_rhythm": None,
+                    "top_themes": [],
+                    "total_entries": 0,
+                    "active_prayer_count": 0,
+                    "answered_prayer_count": 0,
+                },
+                "patterns": {
+                    "window_days": 30,
+                    "total_recent_entries": 0,
+                    "entry_type_breakdown": {},
+                    "recurring_themes": [],
+                    "prayer_arc": {"total_active": 0, "answered_total": 0, "answered_recent": 0},
+                    "writing_streak_days": 0,
+                },
+                "updated_at": _ts(),
+            })
 
     @app.post("/api/apple/chronicle/capture")
     async def apple_chronicle_capture(payload: dict):
