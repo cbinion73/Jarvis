@@ -117,6 +117,17 @@ struct SettingsView: View {
                                     systemsMetric("Calendar", "\(appState.calendar.count)")
                                     systemsMetric("Reminders", "\(appState.reminders.count)")
                                 }
+                                if !appState.server.weather.isEmpty {
+                                    SysRow(label: "Weather") {
+                                        Text(appState.server.weather)
+                                            .foregroundStyle(.white)
+                                            .lineLimit(1)
+                                    }
+                                }
+                                SysRow(label: "Server Timestamp") {
+                                    Text(nonEmpty(appState.server.ts, fallback: nil))
+                                        .foregroundStyle(.white)
+                                }
                             }
 
                             if let pingError, !pingError.isEmpty {
@@ -152,6 +163,13 @@ struct SettingsView: View {
                                     Text(nonEmpty(appState.calendar.syncedAt, fallback: appState.reminders.syncedAt))
                                         .foregroundStyle(.white)
                                 }
+                                Divider().opacity(0.3)
+                                syncHealthRow(label: "Calendar Mirror", domain: appState.syncHealth.calendar)
+                                syncHealthRow(label: "Reminders Mirror", domain: appState.syncHealth.reminders)
+                                syncHealthRow(label: "Focus Mirror", domain: appState.syncHealth.focus)
+                                syncHealthRow(label: "Now Playing Mirror", domain: appState.syncHealth.nowPlaying)
+                                syncHealthRow(label: "Sound Mirror", domain: appState.syncHealth.soundAlert)
+                                syncHealthRow(label: "Vision Mirror", domain: appState.syncHealth.visionScan)
                             }
 
                             Button {
@@ -218,6 +236,35 @@ struct SettingsView: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(3)
+                            }
+                            if let recentNotifications = appState?.notifications.recent, !recentNotifications.isEmpty {
+                                Divider().opacity(0.3)
+                                VStack(alignment: .leading, spacing: 10) {
+                                    ForEach(Array(recentNotifications.prefix(3))) { notification in
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            HStack(alignment: .firstTextBaseline) {
+                                                Text(notification.title.isEmpty ? "JARVIS Alert" : notification.title)
+                                                    .font(.caption.bold())
+                                                    .foregroundStyle(.white)
+                                                Spacer()
+                                                if !notification.category.isEmpty {
+                                                    syncStatusChip(label: notification.category.capitalized)
+                                                }
+                                            }
+                                            if !notification.body.isEmpty {
+                                                Text(notification.body)
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                                    .lineLimit(3)
+                                            }
+                                            if let createdAt = notification.createdAt, !createdAt.isEmpty {
+                                                Text(nonEmpty(createdAt, fallback: nil))
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -330,6 +377,20 @@ struct SettingsView: View {
             .background(steel.opacity(0.1), in: Capsule())
     }
 
+    @ViewBuilder
+    private func syncHealthRow(label: String, domain: AppStateSyncDomain) -> some View {
+        SysRow(label: label) {
+            VStack(alignment: .trailing, spacing: 2) {
+                syncStatusChip(label: domain.synced ? "Mirrored" : "Not synced yet")
+                if let syncedAt = domain.syncedAt, !syncedAt.isEmpty {
+                    Text(syncedAt)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
     private func refreshSystems() async {
         isRefreshing = true
         defer { isRefreshing = false }
@@ -389,7 +450,13 @@ struct SettingsView: View {
 
     private func nonEmpty(_ value: String?, fallback: String?) -> String {
         let primary = (value ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        if !primary.isEmpty { return primary }
+        if !primary.isEmpty {
+            let iso = ISO8601DateFormatter()
+            if let date = iso.date(from: primary) {
+                return date.formatted(date: .abbreviated, time: .shortened)
+            }
+            return primary
+        }
         let secondary = (fallback ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         return secondary.isEmpty ? "Not synced yet" : secondary
     }
