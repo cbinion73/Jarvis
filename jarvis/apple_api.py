@@ -42,6 +42,7 @@ from .nav_bridge import NavBridge, haversine, min_distance_to_route, sample_rout
 from .settings import LOCATION_SETTINGS_PATH
 
 logger = logging.getLogger(__name__)
+_NAVIGATION_STATE_PATH = Path("data/settings/navigation_state.json")
 
 _NAV_STOP_LABELS = {
     "food": "Food",
@@ -202,6 +203,105 @@ def _build_home_context(*, needs_count: int = 0) -> dict[str, Any]:
             "top_titles": project_titles[:3],
         },
     }
+
+
+def _default_navigation_state() -> dict[str, Any]:
+    return {
+        "favorite_destinations": [],
+        "recent_destinations": [],
+        "active_stop_category_ids": ["food", "starbucks", "parks", "historic", "family"],
+        "parks_historic_radius_miles": 25,
+        "selected_origin_mode": "home",
+        "selected_saved_location_id": "",
+        "last_route": {
+            "origin": "",
+            "destination": "",
+        },
+    }
+
+
+def _load_navigation_state() -> dict[str, Any]:
+    payload = _safe_read_json(_NAVIGATION_STATE_PATH, _default_navigation_state())
+    if not isinstance(payload, dict):
+        payload = {}
+    merged = dict(_default_navigation_state())
+    merged.update(payload)
+    merged["favorite_destinations"] = [
+        str(item).strip()
+        for item in (merged.get("favorite_destinations") or [])
+        if str(item).strip()
+    ][:8]
+    merged["recent_destinations"] = [
+        str(item).strip()
+        for item in (merged.get("recent_destinations") or [])
+        if str(item).strip()
+    ][:8]
+    merged["active_stop_category_ids"] = [
+        str(item).strip()
+        for item in (merged.get("active_stop_category_ids") or [])
+        if str(item).strip()
+    ] or list(_default_navigation_state()["active_stop_category_ids"])
+    try:
+        merged["parks_historic_radius_miles"] = max(
+            5,
+            min(100, int(float(merged.get("parks_historic_radius_miles") or 25))),
+        )
+    except Exception:
+        merged["parks_historic_radius_miles"] = 25
+    merged["selected_origin_mode"] = str(merged.get("selected_origin_mode") or "home").strip() or "home"
+    merged["selected_saved_location_id"] = str(merged.get("selected_saved_location_id") or "").strip()
+    last_route = merged.get("last_route") if isinstance(merged.get("last_route"), dict) else {}
+    merged["last_route"] = {
+        "origin": str((last_route or {}).get("origin") or "").strip(),
+        "destination": str((last_route or {}).get("destination") or "").strip(),
+    }
+    return merged
+
+
+def _save_navigation_state(patch: dict[str, Any]) -> dict[str, Any]:
+    current = _load_navigation_state()
+    merged = dict(current)
+    for key, value in patch.items():
+        if isinstance(value, dict) and isinstance(current.get(key), dict):
+            next_value = dict(current.get(key) or {})
+            next_value.update(value)
+            merged[key] = next_value
+        else:
+            merged[key] = value
+    cleaned = dict(_default_navigation_state())
+    cleaned.update(merged)
+    cleaned["favorite_destinations"] = [
+        str(item).strip()
+        for item in (cleaned.get("favorite_destinations") or [])
+        if str(item).strip()
+    ][:8]
+    cleaned["recent_destinations"] = [
+        str(item).strip()
+        for item in (cleaned.get("recent_destinations") or [])
+        if str(item).strip()
+    ][:8]
+    cleaned["active_stop_category_ids"] = [
+        str(item).strip()
+        for item in (cleaned.get("active_stop_category_ids") or [])
+        if str(item).strip()
+    ] or list(_default_navigation_state()["active_stop_category_ids"])
+    try:
+        cleaned["parks_historic_radius_miles"] = max(
+            5,
+            min(100, int(float(cleaned.get("parks_historic_radius_miles") or 25))),
+        )
+    except Exception:
+        cleaned["parks_historic_radius_miles"] = 25
+    cleaned["selected_origin_mode"] = str(cleaned.get("selected_origin_mode") or "home").strip() or "home"
+    cleaned["selected_saved_location_id"] = str(cleaned.get("selected_saved_location_id") or "").strip()
+    last_route = cleaned.get("last_route") if isinstance(cleaned.get("last_route"), dict) else {}
+    cleaned["last_route"] = {
+        "origin": str((last_route or {}).get("origin") or "").strip(),
+        "destination": str((last_route or {}).get("destination") or "").strip(),
+    }
+    _NAVIGATION_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _NAVIGATION_STATE_PATH.write_text(json.dumps(cleaned, indent=2) + "\n", encoding="utf-8")
+    return cleaned
 
 
 def _nav_route_points(route_info: dict[str, Any]) -> list[tuple[float, float]]:
@@ -786,7 +886,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
     @app.get("/api/apple/navigation/locations")
     async def apple_navigation_locations():
         """Saved family locations for Navigation quick actions."""
-        payload = {"preferred_location_id": None, "saved_locations": []}
+        payload = {"preferred_location_id": None, "saved_locations": [], "navigation_state": _load_navigation_state()}
         try:
             if LOCATION_SETTINGS_PATH.exists():
                 raw = json.loads(LOCATION_SETTINGS_PATH.read_text(encoding="utf-8"))
@@ -807,10 +907,21 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                         for item in saved
                         if isinstance(item, dict)
                     ],
+                    "navigation_state": _load_navigation_state(),
                 }
         except Exception as exc:
             logger.warning("apple_navigation_locations: %s", exc)
         return _ok(payload)
+
+    @app.get("/api/apple/navigation/state")
+    async def apple_navigation_state():
+        return _ok(_load_navigation_state())
+
+    @app.post("/api/apple/navigation/state")
+    async def apple_navigation_state_update(payload: dict):
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail="payload must be an object")
+        return _ok(_save_navigation_state(payload))
 
     # ------------------------------------------------------------------
     # GET /api/apple/navigation/route

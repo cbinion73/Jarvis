@@ -3,10 +3,80 @@ import Foundation
 public struct NavigationLocationsOverview: Codable, Sendable {
     public let preferredLocationId: String?
     public let savedLocations: [NavigationSavedLocation]
+    public let navigationState: NavigationState?
 
     enum CodingKeys: String, CodingKey {
         case preferredLocationId = "preferred_location_id"
         case savedLocations = "saved_locations"
+        case navigationState = "navigation_state"
+    }
+}
+
+public struct NavigationState: Codable, Sendable {
+    public let favoriteDestinations: [String]
+    public let recentDestinations: [String]
+    public let activeStopCategoryIDs: [String]
+    public let parksHistoricRadiusMiles: Int
+    public let selectedOriginMode: String
+    public let selectedSavedLocationID: String
+    public let lastRoute: NavigationLastRoute
+
+    enum CodingKeys: String, CodingKey {
+        case favoriteDestinations = "favorite_destinations"
+        case recentDestinations = "recent_destinations"
+        case activeStopCategoryIDs = "active_stop_category_ids"
+        case parksHistoricRadiusMiles = "parks_historic_radius_miles"
+        case selectedOriginMode = "selected_origin_mode"
+        case selectedSavedLocationID = "selected_saved_location_id"
+        case lastRoute = "last_route"
+    }
+}
+
+public struct NavigationLastRoute: Codable, Sendable {
+    public let origin: String
+    public let destination: String
+
+    public init(origin: String, destination: String) {
+        self.origin = origin
+        self.destination = destination
+    }
+}
+
+public struct NavigationStatePatch: Codable, Sendable {
+    public let favoriteDestinations: [String]?
+    public let recentDestinations: [String]?
+    public let activeStopCategoryIDs: [String]?
+    public let parksHistoricRadiusMiles: Int?
+    public let selectedOriginMode: String?
+    public let selectedSavedLocationID: String?
+    public let lastRoute: NavigationLastRoute?
+
+    public init(
+        favoriteDestinations: [String]? = nil,
+        recentDestinations: [String]? = nil,
+        activeStopCategoryIDs: [String]? = nil,
+        parksHistoricRadiusMiles: Int? = nil,
+        selectedOriginMode: String? = nil,
+        selectedSavedLocationID: String? = nil,
+        lastRoute: NavigationLastRoute? = nil
+    ) {
+        self.favoriteDestinations = favoriteDestinations
+        self.recentDestinations = recentDestinations
+        self.activeStopCategoryIDs = activeStopCategoryIDs
+        self.parksHistoricRadiusMiles = parksHistoricRadiusMiles
+        self.selectedOriginMode = selectedOriginMode
+        self.selectedSavedLocationID = selectedSavedLocationID
+        self.lastRoute = lastRoute
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case favoriteDestinations = "favorite_destinations"
+        case recentDestinations = "recent_destinations"
+        case activeStopCategoryIDs = "active_stop_category_ids"
+        case parksHistoricRadiusMiles = "parks_historic_radius_miles"
+        case selectedOriginMode = "selected_origin_mode"
+        case selectedSavedLocationID = "selected_saved_location_id"
+        case lastRoute = "last_route"
     }
 }
 
