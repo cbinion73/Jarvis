@@ -59,6 +59,17 @@ public final class AppleAPIClient: Sendable {
         return try await get("/api/apple/navigation/route?origin=\(encodedOrigin)&destination=\(encodedDestination)")
     }
 
+    public func fetchNavigationStops(origin: String, destination: String) async throws -> NavigationStopsOverview {
+        let allowed = CharacterSet.urlQueryAllowed
+        guard
+            let encodedOrigin = origin.addingPercentEncoding(withAllowedCharacters: allowed),
+            let encodedDestination = destination.addingPercentEncoding(withAllowedCharacters: allowed)
+        else {
+            throw JarvisClientError.invalidURL("/api/apple/navigation/stops")
+        }
+        return try await get("/api/apple/navigation/stops?origin=\(encodedOrigin)&destination=\(encodedDestination)")
+    }
+
     /// Fetch the Needs You zone items.
     public func fetchNeeds() async throws -> [NeedsItem] {
         try await get("/api/apple/needs")
