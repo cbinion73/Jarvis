@@ -7559,6 +7559,16 @@ body::after {{
       <div id="todayEventList" class="event-list" style="padding:4px 0 8px;"></div>
     </div>
 
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-hdr">
+        <span class="card-title">JARVIS WORKFLOW</span>
+        <span class="card-badge" id="calendarWorkflowSync">—</span>
+      </div>
+      <div id="calendarWorkflowAttention" style="padding:4px 0 12px;"></div>
+      <div id="calendarWorkflowRoutes" style="padding:0 0 12px;"></div>
+      <div id="calendarWorkflowPrep" style="padding:0 0 8px;"></div>
+    </div>
+
     <!-- Upcoming events -->
     <div class="card" style="margin-bottom:16px">
       <div class="card-hdr"><span class="card-title">NEXT 7 DAYS</span></div>
@@ -11907,9 +11917,10 @@ async function loadHomeEmail(unreadOnly) {{
 
 async function loadHomeCalendar() {{
   try {{
-    const [todayRes, upcomingRes] = await Promise.all([
+    const [todayRes, upcomingRes, workflowRes] = await Promise.all([
       fetch('/api/home/calendar/today'),
-      fetch('/api/home/calendar/upcoming?days=7')
+      fetch('/api/home/calendar/upcoming?days=7'),
+      fetch('/api/apple/calendar/state')
     ]);
     if (todayRes.ok) {{
       const d = await todayRes.json();
@@ -11923,7 +11934,61 @@ async function loadHomeCalendar() {{
       const d = await upcomingRes.json();
       renderEventList('upcomingEventList', d.events || []);
     }}
+    if (workflowRes.ok) {{
+      const payload = await workflowRes.json();
+      renderCalendarWorkflow(((payload || {{}}).data || {{}}));
+    }}
   }} catch(e) {{ console.error('calendar load failed', e); }}
+}}
+
+function renderCalendarWorkflow(data) {{
+  const syncEl = document.getElementById('calendarWorkflowSync');
+  const attentionEl = document.getElementById('calendarWorkflowAttention');
+  const routeEl = document.getElementById('calendarWorkflowRoutes');
+  const prepEl = document.getElementById('calendarWorkflowPrep');
+  if (!syncEl || !attentionEl || !routeEl || !prepEl) return;
+
+  const attentionFlags = Array.isArray(data.attention_flags) ? data.attention_flags : [];
+  const routeSensitive = Array.isArray(data.route_sensitive_events) ? data.route_sensitive_events : [];
+  const prepCues = Array.isArray(data.preparation_cues) ? data.preparation_cues : [];
+  syncEl.textContent = data.synced_at ? fmtLocalTime(data.synced_at, {{short:true}}) : 'Not synced';
+
+  attentionEl.innerHTML = attentionFlags.length ? attentionFlags.slice(0, 3).map(flag => `
+    <div class="list-row">
+      <div style="flex:1;min-width:0;">
+        <div class="list-row-name">${{escHtml(flag.title || 'Attention flag')}}</div>
+        <div class="list-row-sub">${{escHtml(flag.detail || '')}}</div>
+      </div>
+      <span class="kv-tag">${{escHtml(String(flag.severity || 'low').toUpperCase())}}</span>
+    </div>
+  `).join('') : '<div class="empty-state">No immediate calendar flags.</div>';
+
+  routeEl.innerHTML = routeSensitive.length ? `
+    <div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--text-3);margin-bottom:8px;">ROUTE-SENSITIVE</div>
+    ${{routeSensitive.slice(0, 3).map(event => `
+      <div class="approval-item">
+        <div class="approval-title">${{escHtml(event.title || 'Upcoming event')}}</div>
+        <div class="approval-meta">${{escHtml(event.location || 'Location needed')}} · ${{escHtml(calendarEventTimingLabel(event))}}</div>
+        <div class="approval-actions" style="margin-top:10px;">
+          <button class="btn btn-hue btn-sm" onclick="calendarWorkflowPrepare('${{String(event.id || '').replaceAll(\"'\", \"\\\\'\")}}')">Stage Prep</button>
+          <button class="btn btn-navy btn-sm" onclick="calendarWorkflowRoute('${{String(event.id || '').replaceAll(\"'\", \"\\\\'\")}}')">Route</button>
+        </div>
+      </div>
+    `).join('')}}
+  ` : '';
+
+  prepEl.innerHTML = prepCues.length ? `
+    <div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--text-3);margin-bottom:8px;">PREPARATION CUES</div>
+    ${{prepCues.slice(0, 3).map(cue => `
+      <div class="list-row">
+        <div style="flex:1;min-width:0;">
+          <div class="list-row-name">${{escHtml(cue.title || 'Preparation cue')}}</div>
+          <div class="list-row-sub">${{escHtml(cue.detail || '')}}</div>
+        </div>
+        <button class="btn btn-hue btn-sm" onclick="calendarWorkflowPrepare('${{String(cue.event_id || '').replaceAll(\"'\", \"\\\\'\")}}')">Stage Prep</button>
+      </div>
+    `).join('')}}
+  ` : '';
 }}
 
 async function loadHomeProjects() {{
@@ -13729,6 +13794,49 @@ function renderEventList(containerId, events) {{
       <div class="event-duration">${{escHtml(dur)}}</div>
     </div>`;
   }}).join('');
+}}
+
+function calendarEventTimingLabel(event) {{
+  const minutes = Number(event && event.minutes_away);
+  if (Number.isFinite(minutes)) {{
+    if (minutes < 0) return `Started ${{Math.abs(minutes)}} min ago`;
+    return `Starts in ${{minutes}} min`;
+  }}
+  return event && event.start ? fmtLocalTime(event.start, {{short:true}}) : 'Time TBD';
+}}
+
+async function calendarWorkflowPrepare(eventId) {{
+  try {{
+    const res = await fetch(`/api/apple/calendar/events/${{eventId}}/prepare`, {{ method:'POST' }});
+    if (!res.ok) {{
+      showToast('Could not stage calendar prep', 'error');
+      return;
+    }}
+    showToast('Calendar prep staged', 'success');
+    loadHomeCalendar();
+    if (currentView === 'notifications') loadNotificationCenter();
+  }} catch(e) {{
+    showToast('Could not stage calendar prep', 'error');
+  }}
+}}
+
+async function calendarWorkflowRoute(eventId) {{
+  try {{
+    const res = await fetch(`/api/apple/calendar/events/${{eventId}}/route`, {{ method:'POST' }});
+    if (!res.ok) {{
+      showToast('Could not prepare route', 'error');
+      return;
+    }}
+    const payload = await res.json();
+    const data = (payload || {{}}).data || {{}};
+    if (data.maps_url) {{
+      window.open(data.maps_url, '_blank', 'noopener');
+    }}
+    showToast('Calendar route ready', 'success');
+    if (currentView === 'notifications') loadNotificationCenter();
+  }} catch(e) {{
+    showToast('Could not prepare route', 'error');
+  }}
 }}
 
 function renderHomeProjects(projects, total) {{
