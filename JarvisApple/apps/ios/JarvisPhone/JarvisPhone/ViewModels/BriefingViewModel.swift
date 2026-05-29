@@ -27,15 +27,8 @@ final class BriefingViewModel: ObservableObject {
 
     /// Send a voice command transcript to the JARVIS /speak endpoint.
     func sendVoiceCommand(_ text: String) async {
-        guard !text.isEmpty,
-              let url  = URL(string: JARVISEnvironment.baseURL.absoluteString + "/api/apple/speak"),
-              let body = try? JSONSerialization.data(withJSONObject: ["text": text, "actor": "chris"])
-        else { return }
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = body
-        _ = try? await URLSession.shared.data(for: req)
+        guard !text.isEmpty else { return }
+        _ = try? await client.speak(text: text)
         // Refresh brief after command
         await load()
     }

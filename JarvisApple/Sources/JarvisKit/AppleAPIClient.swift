@@ -237,6 +237,22 @@ public final class AppleAPIClient: Sendable {
         try await post("/api/apple/forge/submit", body: job)
     }
 
+    // MARK: - Generic acknowledgements
+
+    /// POST an Encodable payload to an Apple endpoint that only needs the standard
+    /// `{ "ok": ... }` envelope checked. Useful for fire-and-forget device signals.
+    public func postAcknowledged<B: Encodable & Sendable>(_ path: String, body: B) async throws {
+        guard let url = URL(string: path, relativeTo: baseURL) else {
+            throw JarvisClientError.invalidURL(path)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.httpBody = try JSONEncoder().encode(body)
+        try await performEnvelopeOnly(request)
+    }
+
     // MARK: - Notifications
 
     /// Pull pending server-side notifications and clear them.
@@ -300,11 +316,37 @@ public final class AppleAPIClient: Sendable {
         return result
     }
 
+    private func performEnvelopeOnly(_ request: URLRequest) async throws {
+        var request = request
+        request.setValue(CloudflareConfig.clientId,     forHTTPHeaderField: "CF-Access-Client-Id")
+        request.setValue(CloudflareConfig.clientSecret, forHTTPHeaderField: "CF-Access-Client-Secret")
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let http = response as? HTTPURLResponse else {
+            throw JarvisClientError.invalidResponse
+        }
+
+        guard (200..<300).contains(http.statusCode) else {
+            let message = String(data: data, encoding: .utf8) ?? "HTTP \(http.statusCode)"
+            throw JarvisClientError.httpError(http.statusCode, message)
+        }
+
+        let envelope = try JSONDecoder().decode(APIAckEnvelope.self, from: data)
+        if !envelope.ok {
+            throw JarvisClientError.serverError(envelope.error ?? "Unknown server error")
+        }
+    }
+
     // MARK: - Envelope
 
     private struct APIEnvelope<T: Decodable>: Decodable {
         let ok: Bool
         let data: T?
+        let error: String?
+    }
+
+    private struct APIAckEnvelope: Decodable {
+        let ok: Bool
         let error: String?
     }
 }

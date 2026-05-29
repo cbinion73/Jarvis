@@ -70,17 +70,17 @@ final class VisionManager: ObservableObject {
 
         recognizedText = text
 
-        guard let url  = URL(string: JARVISEnvironment.baseURL.absoluteString + "/api/apple/vision/scan"),
-              let body = try? JSONSerialization.data(withJSONObject: [
-                "text": text, "context": context, "source": "vision_ocr"
-              ]) else { return text }
-
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = body
-        _ = try? await URLSession.shared.data(for: req)
+        try? await AppleAPIClient.shared.postAcknowledged(
+            "/api/apple/vision/scan",
+            body: VisionScanPayload(text: text, context: context, source: "vision_ocr")
+        )
 
         return text
     }
+}
+
+private struct VisionScanPayload: Encodable, Sendable {
+    let text: String
+    let context: String
+    let source: String
 }

@@ -75,17 +75,13 @@ final class GeofenceManager: NSObject, ObservableObject {
     private func reportPresence(arrived: Bool) {
         isHome = arrived
         Task {
-            guard let url = URL(string: JARVISEnvironment.baseURL.absoluteString + "/api/apple/presence") else { return }
-            let payload: [String: Any] = [
-                "event":     arrived ? "arrived" : "left",
-                "source":    "geofence",
-                "timestamp": ISO8601DateFormatter().string(from: Date()),
-            ]
-            var req = URLRequest(url: url)
-            req.httpMethod = "POST"
-            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            req.httpBody = try? JSONSerialization.data(withJSONObject: payload)
-            _ = try? await URLSession.shared.data(for: req)
+            let coord = homeCoordinate ?? manager.location?.coordinate
+            try? await AppleAPIClient.shared.reportPresence(
+                actorId: "chris",
+                event: arrived ? .arrivedHome : .leftHome,
+                lat: coord?.latitude ?? 0,
+                lon: coord?.longitude ?? 0
+            )
         }
     }
 }
