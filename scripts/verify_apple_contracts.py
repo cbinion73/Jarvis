@@ -29,7 +29,12 @@ JARVIS_APPLE_DIR = REPO_ROOT / "JarvisApple"
 ENDPOINTS: list[tuple[str, str]] = [
     ("/api/apple/status", "/api/apple/status"),
     ("/api/apple/app-state", "/api/apple/app-state"),
+    ("/api/apple/weather", "/api/apple/weather"),
     ("/api/apple/navigation/locations", "/api/apple/navigation/locations"),
+    (
+        "/api/apple/navigation/route?origin=8384%20Riley%20Rd%2C%20Alexandria%2C%20KY%2041001&destination=Cincinnati%2C%20OH",
+        "/api/apple/navigation/route?origin=8384%20Riley%20Rd%2C%20Alexandria%2C%20KY%2041001&destination=Cincinnati%2C%20OH",
+    ),
     ("/api/apple/briefing?actor=chris", "/api/apple/briefing?actor=chris"),
     ("/api/apple/needs", "/api/apple/needs"),
     ("/api/apple/health/summary?actor=chris", "/api/apple/health/summary?actor=chris"),
@@ -49,9 +54,14 @@ def fetch_http(base_url: str, path: str) -> dict:
 
 
 def fetch_ssh(ssh_host: str, container: str, path: str, base_url: str) -> dict:
+    full_url = f"{base_url.rstrip('/')}{path}"
+    python_snippet = (
+        "import json, sys, urllib.request; "
+        "print(json.dumps(json.loads(urllib.request.urlopen(sys.argv[1]).read().decode('utf-8'))))"
+    )
     remote = (
-        f"docker exec {shlex.quote(container)} sh -lc "
-        f"{shlex.quote(f'curl -s {base_url.rstrip('/')}{path}')}"
+        f"docker exec {shlex.quote(container)} "
+        f"python3 -c {shlex.quote(python_snippet)} {shlex.quote(full_url)}"
     )
     output = subprocess.check_output(["ssh", ssh_host, remote], text=True)
     return json.loads(output)
