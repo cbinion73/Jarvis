@@ -1585,6 +1585,39 @@ def _apple_snooze_reminder(reminder_id: str, *, minutes: int = 60) -> dict[str, 
     return {"ok": True, "reminder_id": reminder_id, "status": "snoozed", "due": new_due}
 
 
+def _apple_stage_calendar_prep(title: str, *, start: str = "", location: str = "") -> dict[str, Any]:
+    event_title = title.strip() or "Upcoming event"
+    event_start = start.strip()
+    event_location = location.strip()
+    detail_parts = [event_title]
+    if event_start:
+        detail_parts.append(event_start)
+    if event_location:
+        detail_parts.append(event_location)
+    _record_shared_event(
+        domain="calendar",
+        kind="stage_ready",
+        title="Calendar preparation staged",
+        detail=" at ".join(detail_parts[:2]) if len(detail_parts) >= 2 else event_title,
+        severity="low",
+        source="apple.calendar",
+        source_id=f"{event_title}:{event_start}:{event_location}",
+        navigation_target="calendar",
+        actions=["open"],
+        trust_zone="household_schedule",
+        authority_stage="staged",
+        why_now="The household asked JARVIS to stage prep for an upcoming event from Brief.",
+        metadata={"title": event_title, "start": event_start, "location": event_location},
+    )
+    return {
+        "ok": True,
+        "status": "staged",
+        "title": event_title,
+        "start": event_start,
+        "location": event_location,
+    }
+
+
 def _create_notification_from_event(
     event: dict[str, Any],
     *,
@@ -3062,6 +3095,14 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             metadata={"count": len(events)},
         )
         return _ok({"stored": len(events)})
+
+    @app.post("/api/apple/calendar/stage-prep")
+    async def apple_calendar_stage_prep(payload: dict | None = None):
+        body = payload or {}
+        title = str(body.get("title") or "").strip()
+        start = str(body.get("start") or "").strip()
+        location = str(body.get("location") or "").strip()
+        return _ok(_apple_stage_calendar_prep(title, start=start, location=location))
 
     # ── EventKit: Reminders ───────────────────────────────────────────────────
 

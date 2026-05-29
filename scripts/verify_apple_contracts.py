@@ -120,6 +120,18 @@ def validate_phase_one_contracts(payloads: dict[str, dict]) -> None:
     ):
         if key not in app_state:
             raise RuntimeError(f"/api/apple/app-state missing '{key}'")
+    calendar = app_state.get("calendar")
+    if not isinstance(calendar, dict):
+        raise RuntimeError("/api/apple/app-state calendar is not an object")
+    next_items = calendar.get("next_items")
+    if not isinstance(next_items, list):
+        raise RuntimeError("/api/apple/app-state calendar missing list field 'next_items'")
+    for index, item in enumerate(next_items[:3]):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"/api/apple/app-state calendar next_items[{index}] is not an object")
+        for key in ("title", "start", "end", "location", "calendar"):
+            if key not in item:
+                raise RuntimeError(f"/api/apple/app-state calendar next_items[{index}] missing '{key}'")
     focus = app_state.get("focus")
     if not isinstance(focus, dict):
         raise RuntimeError("/api/apple/app-state focus is not an object")
