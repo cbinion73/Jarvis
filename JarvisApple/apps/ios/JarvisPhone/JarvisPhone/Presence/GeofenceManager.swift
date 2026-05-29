@@ -54,6 +54,21 @@ final class GeofenceManager: NSObject, ObservableObject {
         manager.requestState(for: region)   // get current state immediately
     }
 
+    /// Sync the phone's local home geofence with the authoritative JARVIS home.
+    func syncHomeCoordinate(latitude: Double, longitude: Double) {
+        guard CLLocationCoordinate2DIsValid(CLLocationCoordinate2D(latitude: latitude, longitude: longitude)) else { return }
+        let next = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        if let current = homeCoordinate,
+           abs(current.latitude - next.latitude) < 0.000001,
+           abs(current.longitude - next.longitude) < 0.000001 {
+            return
+        }
+        saveHome(next)
+        if manager.authorizationStatus == .authorizedAlways {
+            startMonitoring()
+        }
+    }
+
     // MARK: - Persistence
 
     private func loadSavedHome() {
