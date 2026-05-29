@@ -23,6 +23,7 @@ struct NavigateView: View {
 
     @ObservedObject private var loc = WeatherLocationProvider.shared
     @ObservedObject private var geo = GeofenceManager.shared
+    @StateObject private var completer = NavigationSearchCompleter()
 
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var destinationText = ""
@@ -30,6 +31,7 @@ struct NavigateView: View {
     @State private var stopSections: [NavigationStopSection] = []
     @State private var savedLocations: [NavigationSavedLocation] = []
     @State private var preferredLocationId: String?
+    @State private var favoriteDestinations: [String] = []
     @State private var recentDestinations: [String] = []
     @State private var selectedOriginMode: OriginMode = .home
     @State private var loadingRoute = false
@@ -40,6 +42,7 @@ struct NavigateView: View {
     @FocusState private var destinationFocused: Bool
 
     private let slate = Color(red: 0.4, green: 0.55, blue: 0.75)
+    private static let favoriteDestinationsKey = "jarvis.navigate.favoriteDestinations"
     private static let recentDestinationsKey = "jarvis.navigate.recentDestinations"
 
     private var selectedSavedLocation: NavigationSavedLocation? {
@@ -65,6 +68,26 @@ struct NavigateView: View {
         } ?? []
         guard !coordinates.isEmpty else { return nil }
         return MKPolyline(coordinates: coordinates, count: coordinates.count)
+    }
+
+    private var destinationSuggestions: [DestinationSuggestion] {
+        let live = completer.results.map(DestinationSuggestion.init(completion:))
+        if !live.isEmpty {
+            return live
+        }
+
+        let query = destinationText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return [] }
+
+        let fallback = (favoriteDestinations + recentDestinations)
+            .filter { $0.localizedCaseInsensitiveContains(query) }
+            .prefix(6)
+            .map(DestinationSuggestion.init(fallbackTitle:))
+        return Array(fallback)
+    }
+
+    private var showSuggestions: Bool {
+        destinationFocused && !destinationSuggestions.isEmpty
     }
 
     var body: some View {
@@ -114,9 +137,13 @@ struct NavigateView: View {
             }
         }
         .task {
+            restoreFavoriteDestinations()
             restoreRecentDestinations()
             await loadNavigationLocations()
             loc.requestAndFetch()
+        }
+        .onChange(of: destinationText) { _, newValue in
+            completer.update(query: newValue)
         }
     }
 
@@ -242,6 +269,13 @@ struct NavigateView: View {
                     }
                     .buttonStyle(.bordered)
                     .tint(.white)
+                    Button {
+                        toggleFavorite(route.destination.label)
+                    } label: {
+                        Image(systemName: isFavoriteDestination(route.destination.label) ? "star.fill" : "star")
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(isFavoriteDestination(route.destination.label) ? .yellow : .white)
                 } else if selectedOriginMode == .current && loc.authorizationStatus == .notDetermined {
                     Button("Use Phone Location") {
                         loc.requestAndFetch(force: true, userInitiated: true)
@@ -249,6 +283,25 @@ struct NavigateView: View {
                     .buttonStyle(.bordered)
                     .tint(.white)
                 }
+            }
+
+            if selectedOriginMode == .current && selectedSavedLocation != nil {
+                Button {
+                    if let homeAddress = selectedSavedLocation?.address {
+                        destinationText = homeAddress
+                        destinationFocused = false
+                        Task { await planRoute() }
+                    }
+                } label: {
+                    Label("Route Home", systemImage: "house.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(.white)
+            }
+
+            if showSuggestions {
+                destinationSuggestionsCard
             }
         }
         .padding(16)
@@ -260,6 +313,31 @@ struct NavigateView: View {
             Label("Quick Destinations", systemImage: "star.fill")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(slate)
+
+            if !favoriteDestinations.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Favorites")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    ForEach(favoriteDestinations, id: \.self) { destination in
+                        Button {
+                            destinationText = destination
+                            destinationFocused = false
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: "star.fill")
+                                    .foregroundStyle(.yellow)
+                                Text(destination)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.white.opacity(0.9))
+                                    .lineLimit(1)
+                                Spacer()
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
 
             if !savedLocations.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -499,6 +577,49 @@ struct NavigateView: View {
         .glassEffect(in: RoundedRectangle(cornerRadius: 18))
     }
 
+    private var destinationSuggestionsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Suggestions")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            ForEach(destinationSuggestions) { suggestion in
+                Button {
+                    selectSuggestion(suggestion)
+                } label: {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: suggestion.isFallback ? "clock.arrow.circlepath" : "magnifyingglass")
+                            .foregroundStyle(suggestion.isFallback ? slate.opacity(0.8) : slate)
+                            .padding(.top, 2)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(suggestion.title)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+                            if !suggestion.subtitle.isEmpty {
+                                Text(suggestion.subtitle)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        Spacer()
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(.white.opacity(0.05))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(.white.opacity(0.08), lineWidth: 1)
+        )
+    }
+
     // MARK: - Helpers
 
     private var availableOriginModes: [OriginMode] {
@@ -611,6 +732,10 @@ struct NavigateView: View {
         recentDestinations = UserDefaults.standard.stringArray(forKey: Self.recentDestinationsKey) ?? []
     }
 
+    private func restoreFavoriteDestinations() {
+        favoriteDestinations = UserDefaults.standard.stringArray(forKey: Self.favoriteDestinationsKey) ?? []
+    }
+
     private func saveRecentDestination(_ destination: String) {
         let trimmed = destination.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -618,6 +743,27 @@ struct NavigateView: View {
         next.insert(trimmed, at: 0)
         recentDestinations = Array(next.prefix(5))
         UserDefaults.standard.set(recentDestinations, forKey: Self.recentDestinationsKey)
+    }
+
+    private func toggleFavorite(_ destination: String) {
+        let trimmed = destination.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if let index = favoriteDestinations.firstIndex(where: { $0.caseInsensitiveCompare(trimmed) == .orderedSame }) {
+            favoriteDestinations.remove(at: index)
+        } else {
+            favoriteDestinations.insert(trimmed, at: 0)
+            favoriteDestinations = Array(favoriteDestinations.prefix(8))
+        }
+        UserDefaults.standard.set(favoriteDestinations, forKey: Self.favoriteDestinationsKey)
+    }
+
+    private func isFavoriteDestination(_ destination: String) -> Bool {
+        favoriteDestinations.contains { $0.caseInsensitiveCompare(destination) == .orderedSame }
+    }
+
+    private func selectSuggestion(_ suggestion: DestinationSuggestion) {
+        destinationText = suggestion.displayText
+        destinationFocused = false
     }
 
     private func focusMap(on route: NavigationRouteOverview) {
@@ -729,6 +875,64 @@ struct NavigateView: View {
             }
         }
         return "\(coordinate.latitude),\(coordinate.longitude)"
+    }
+}
+
+private struct DestinationSuggestion: Identifiable {
+    let id: String
+    let title: String
+    let subtitle: String
+    let isFallback: Bool
+
+    init(completion: MKLocalSearchCompletion) {
+        self.title = completion.title
+        self.subtitle = completion.subtitle
+        self.isFallback = false
+        self.id = [completion.title, completion.subtitle].joined(separator: "::")
+    }
+
+    init(fallbackTitle: String) {
+        self.id = fallbackTitle
+        self.title = fallbackTitle
+        self.subtitle = ""
+        self.isFallback = true
+    }
+
+    var displayText: String {
+        [title, subtitle]
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+    }
+}
+
+@MainActor
+private final class NavigationSearchCompleter: NSObject, ObservableObject, @preconcurrency MKLocalSearchCompleterDelegate {
+    @Published private(set) var results: [MKLocalSearchCompletion] = []
+
+    private let completer = MKLocalSearchCompleter()
+
+    override init() {
+        super.init()
+        completer.delegate = self
+        completer.resultTypes = [.address, .pointOfInterest]
+    }
+
+    func update(query: String) {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else {
+            results = []
+            completer.queryFragment = ""
+            return
+        }
+        completer.queryFragment = trimmed
+    }
+
+    func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
+        results = Array(completer.results.prefix(6))
+    }
+
+    func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
+        results = []
     }
 }
 
