@@ -38,6 +38,10 @@ public final class AppleAPIClient: Sendable {
         try await get("/api/apple/status")
     }
 
+    public func fetchAppState() async throws -> AppStateOverview {
+        try await get("/api/apple/app-state")
+    }
+
     /// Fetch live server-side Storm weather. This does not require iPhone
     /// location permission and is the preferred fallback for the Weather tab.
     public func fetchAppleWeather() async throws -> AppleWeatherOverview {

@@ -14,6 +14,7 @@ struct SettingsView: View {
 
     @State private var serverOK = false
     @State private var watchStatus: WatchStatus?
+    @State private var appState: AppStateOverview?
     @State private var pingError: String?
     @State private var isRefreshing = false
 
@@ -109,6 +110,15 @@ struct SettingsView: View {
                                 }
                             }
 
+                            if let appState {
+                                Divider().opacity(0.3)
+                                HStack(spacing: 10) {
+                                    systemsMetric("Notifications", "\(appState.notifications.pendingCount)")
+                                    systemsMetric("Calendar", "\(appState.calendar.count)")
+                                    systemsMetric("Reminders", "\(appState.reminders.count)")
+                                }
+                            }
+
                             if let pingError, !pingError.isEmpty {
                                 Divider().opacity(0.3)
                                 Text(pingError)
@@ -132,6 +142,16 @@ struct SettingsView: View {
                             SysRow(label: "Pushed") {
                                 Text("\(eventSync.lastEventCount) events · \(eventSync.lastReminderCount) reminders")
                                     .foregroundStyle(.white)
+                            }
+                            if let appState {
+                                SysRow(label: "Server Mirror") {
+                                    Text("\(appState.calendar.count) events · \(appState.reminders.count) reminders")
+                                        .foregroundStyle(.white)
+                                }
+                                SysRow(label: "Mirrored At") {
+                                    Text(nonEmpty(appState.calendar.syncedAt, fallback: appState.reminders.syncedAt))
+                                        .foregroundStyle(.white)
+                                }
                             }
 
                             Button {
@@ -173,6 +193,34 @@ struct SettingsView: View {
                             .tint(.pink)
                         }
 
+                        SystemsSection(title: "Attention", icon: "bell.badge.fill", accent: .yellow) {
+                            SysRow(label: "Notifications") {
+                                Text("\(appState?.notifications.pendingCount ?? 0)")
+                                    .foregroundStyle(.white)
+                            }
+                            SysRow(label: "Focus") {
+                                syncStatusChip(label: (appState?.focus.focusActive ?? false) ? "Active" : "Inactive")
+                            }
+                            SysRow(label: "Now Playing") {
+                                Text(appState?.nowPlaying.title.isEmpty == false ? appState?.nowPlaying.title ?? "—" : "Nothing playing")
+                                    .foregroundStyle(.white)
+                                    .lineLimit(1)
+                            }
+                            if let soundLabel = appState?.soundAlert.label, !soundLabel.isEmpty {
+                                SysRow(label: "Last Sound") {
+                                    Text(soundLabel)
+                                        .foregroundStyle(.white)
+                                        .lineLimit(1)
+                                }
+                            }
+                            if let scanPreview = appState?.visionScan.textPreview, !scanPreview.isEmpty {
+                                Text(scanPreview)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(3)
+                            }
+                        }
+
                         // ── Presence + location ────────────────────
                         SystemsSection(title: "Presence", icon: "location.fill", accent: .cyan) {
                             SysRow(label: "Home Geofence") {
@@ -189,6 +237,12 @@ struct SettingsView: View {
                                 Text(String(format: "Home: %.4f, %.4f", coordinate.latitude, coordinate.longitude))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
+                            }
+                            if let appState {
+                                SysRow(label: "Present Members") {
+                                    Text("\(appState.presence.presentMembers.count)")
+                                        .foregroundStyle(.white)
+                                }
                             }
                         }
 
@@ -280,7 +334,10 @@ struct SettingsView: View {
         isRefreshing = true
         defer { isRefreshing = false }
         do {
-            watchStatus = try await AppleAPIClient.shared.fetchStatus()
+            async let status = AppleAPIClient.shared.fetchStatus()
+            async let state = AppleAPIClient.shared.fetchAppState()
+            watchStatus = try await status
+            appState = try await state
             serverOK = true
             pingError = nil
         } catch {
@@ -328,6 +385,10 @@ struct SettingsView: View {
     private func formatDate(_ date: Date?) -> String {
         guard let date else { return "Never" }
         return date.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    private func nonEmpty(_ value: String, fallback: String) -> String {
+        value.isEmpty ? (fallback.isEmpty ? "Never" : fallback) : value
     }
 }
 

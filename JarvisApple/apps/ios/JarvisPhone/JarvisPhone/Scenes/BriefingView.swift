@@ -95,6 +95,10 @@ struct BriefingView: View {
                     statusCard(status)
                 }
 
+                if let appState = viewModel.appState {
+                    appStateCards(appState)
+                }
+
                 // ── Greeting + mode chip ─────────────────────────
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .top) {
@@ -238,6 +242,78 @@ struct BriefingView: View {
         .padding(.horizontal, 14)
         .padding(.bottom, 28)
         .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    @ViewBuilder
+    private func appStateCards(_ appState: AppStateOverview) -> some View {
+        if appState.notifications.pendingCount > 0 || appState.calendar.count > 0 || appState.reminders.count > 0 {
+            OracleSection(title: "Morning Grid", icon: "square.grid.2x2.fill", accent: gold) {
+                HStack(spacing: 10) {
+                    snapshotMetric(title: "Alerts", value: "\(appState.notifications.pendingCount)")
+                    snapshotMetric(title: "Events", value: "\(appState.calendar.count)")
+                    snapshotMetric(title: "Reminders", value: "\(appState.reminders.count)")
+                }
+            }
+        }
+
+        if let nextEvent = appState.calendar.nextItems.first, !nextEvent.title.isEmpty {
+            OracleSection(title: "Calendar", icon: "calendar", accent: .cyan) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(nextEvent.title)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                    Text(nextEvent.start.isEmpty ? "Today" : nextEvent.start)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if !nextEvent.location.isEmpty {
+                        Text(nextEvent.location)
+                            .font(.caption2)
+                            .foregroundStyle(gold.opacity(0.7))
+                    }
+                }
+            }
+        }
+
+        if let reminder = appState.reminders.topItems.first, !reminder.title.isEmpty {
+            OracleSection(title: "Reminders", icon: "checklist", accent: .orange) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(reminder.title)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                    Text(reminder.due.isEmpty ? reminder.list : reminder.due)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+
+        if appState.focus.focusActive || !appState.nowPlaying.title.isEmpty || !appState.visionScan.textPreview.isEmpty || !appState.soundAlert.label.isEmpty {
+            OracleSection(title: "Ambient Signals", icon: "bell.and.waves.left.and.right.fill", accent: .purple) {
+                VStack(alignment: .leading, spacing: 8) {
+                    if appState.focus.focusActive {
+                        Label("Focus is active on the phone", systemImage: "moon.fill")
+                            .font(.caption)
+                            .foregroundStyle(.white)
+                    }
+                    if !appState.nowPlaying.title.isEmpty {
+                        Text("Now Playing: \(appState.nowPlaying.title)")
+                            .font(.caption)
+                            .foregroundStyle(.white)
+                    }
+                    if !appState.soundAlert.label.isEmpty {
+                        Text("Latest sound alert: \(appState.soundAlert.label)")
+                            .font(.caption)
+                            .foregroundStyle(.white)
+                    }
+                    if !appState.visionScan.textPreview.isEmpty {
+                        Text(appState.visionScan.textPreview)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(3)
+                    }
+                }
+            }
+        }
     }
 
     private func snapshotMetric(title: String, value: String) -> some View {

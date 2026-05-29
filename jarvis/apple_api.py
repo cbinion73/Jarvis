@@ -88,6 +88,39 @@ def _nav_bridge() -> NavBridge:
     )
 
 
+def _safe_read_json(path: Path, default: Any) -> Any:
+    try:
+        if path.exists():
+            return json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        logger.warning("apple_api.safe_read_json %s: %s", path, exc)
+    return default
+
+
+def _safe_read_jsonl_tail(path: Path, limit: int = 1) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    rows: list[dict[str, Any]] = []
+    try:
+        with path.open("r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    item = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(item, dict):
+                    rows.append(item)
+    except Exception as exc:
+        logger.warning("apple_api.safe_read_jsonl_tail %s: %s", path, exc)
+        return []
+    if limit <= 0:
+        return rows
+    return rows[-limit:]
+
+
 def _nav_route_points(route_info: dict[str, Any]) -> list[tuple[float, float]]:
     points: list[tuple[float, float]] = []
     for pair in list(route_info.get("coordinates") or []):
@@ -296,6 +329,14 @@ class _NotificationStore:
         self._pending.clear()
         return items
 
+    def peek(self, limit: int = 5) -> list[dict]:
+        if limit <= 0:
+            return list(self._pending)
+        return list(self._pending[-limit:])
+
+    def count(self) -> int:
+        return len(self._pending)
+
 
 _notification_store = _NotificationStore()
 _health_store = HealthSampleStore()
@@ -465,6 +506,142 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             "ts": _ts(),
         }
         return _ok(data)
+
+    # ------------------------------------------------------------------
+    # GET /api/apple/app-state
+    # ------------------------------------------------------------------
+    @app.get("/api/apple/app-state")
+    async def apple_app_state(actor: str = "chris"):
+        """Aggregate production and device-fed state for phone-wide sync truth."""
+        data_root = Path("data/apple")
+        calendar_payload = _safe_read_json(data_root / "calendar_events.json", {})
+        reminders_payload = _safe_read_json(data_root / "reminders.json", {})
+        focus_payload = _safe_read_json(data_root / "focus_state.json", {})
+        now_playing_payload = _safe_read_json(data_root / "now_playing.json", {})
+        latest_sound = (_safe_read_jsonl_tail(data_root / "sound_alerts.jsonl", limit=1) or [{}])[0]
+        latest_scan = (_safe_read_jsonl_tail(data_root / "vision_scans.jsonl", limit=1) or [{}])[0]
+
+        watch_status = (await apple_status()).get("data") or {}
+        home_state = (await apple_home_state()).get("data") or {}
+
+        calendar_events = calendar_payload.get("events") if isinstance(calendar_payload, dict) else []
+        if not isinstance(calendar_events, list):
+            calendar_events = []
+        calendar_events = [event for event in calendar_events if isinstance(event, dict)]
+        calendar_events.sort(key=lambda item: str(item.get("start") or ""))
+
+        reminder_items = reminders_payload.get("reminders") if isinstance(reminders_payload, dict) else []
+        if not isinstance(reminder_items, list):
+            reminder_items = []
+        reminder_items = [
+            reminder for reminder in reminder_items
+            if isinstance(reminder, dict) and not bool(reminder.get("completed"))
+        ]
+        reminder_items.sort(key=lambda item: str(item.get("due") or "9999"))
+
+        notifications_recent = _notification_store.peek(limit=5)
+        notifications_recent.reverse()
+
+        sync_health = {
+            "calendar": {
+                "synced": bool(calendar_payload),
+                "synced_at": calendar_payload.get("synced_at") if isinstance(calendar_payload, dict) else "",
+            },
+            "reminders": {
+                "synced": bool(reminders_payload),
+                "synced_at": reminders_payload.get("synced_at") if isinstance(reminders_payload, dict) else "",
+            },
+            "focus": {
+                "synced": bool(focus_payload),
+                "synced_at": focus_payload.get("updated_at") if isinstance(focus_payload, dict) else "",
+            },
+            "now_playing": {
+                "synced": bool(now_playing_payload),
+                "synced_at": now_playing_payload.get("updated_at") if isinstance(now_playing_payload, dict) else "",
+            },
+            "sound_alert": {
+                "synced": bool(latest_sound),
+                "synced_at": latest_sound.get("received_at") if isinstance(latest_sound, dict) else "",
+            },
+            "vision_scan": {
+                "synced": bool(latest_scan),
+                "synced_at": latest_scan.get("received_at") if isinstance(latest_scan, dict) else "",
+            },
+        }
+
+        aggregated = {
+            "server": {
+                "mode": str(watch_status.get("mode") or ""),
+                "needs_count": int(watch_status.get("needs_count") or 0),
+                "drift": bool(watch_status.get("drift")),
+                "weather": str(watch_status.get("weather") or ""),
+                "ts": str(watch_status.get("ts") or _ts()),
+            },
+            "calendar": {
+                "synced": bool(calendar_payload),
+                "count": int(calendar_payload.get("count") or len(calendar_events)) if isinstance(calendar_payload, dict) else len(calendar_events),
+                "synced_at": str(calendar_payload.get("synced_at") or "") if isinstance(calendar_payload, dict) else "",
+                "next_items": [
+                    {
+                        "title": str(event.get("title") or ""),
+                        "start": str(event.get("start") or ""),
+                        "end": str(event.get("end") or ""),
+                        "location": str(event.get("location") or ""),
+                        "calendar": str(event.get("calendar") or ""),
+                    }
+                    for event in calendar_events[:3]
+                ],
+            },
+            "reminders": {
+                "synced": bool(reminders_payload),
+                "count": int(reminders_payload.get("count") or len(reminder_items)) if isinstance(reminders_payload, dict) else len(reminder_items),
+                "synced_at": str(reminders_payload.get("synced_at") or "") if isinstance(reminders_payload, dict) else "",
+                "top_items": [
+                    {
+                        "title": str(reminder.get("title") or ""),
+                        "due": str(reminder.get("due") or ""),
+                        "list": str(reminder.get("list") or ""),
+                        "priority": int(reminder.get("priority") or 0),
+                    }
+                    for reminder in reminder_items[:3]
+                ],
+            },
+            "focus": {
+                "focus_active": bool(focus_payload.get("focus_active")) if isinstance(focus_payload, dict) else False,
+                "updated_at": str(focus_payload.get("updated_at") or "") if isinstance(focus_payload, dict) else "",
+                "source": str(focus_payload.get("source") or "") if isinstance(focus_payload, dict) else "",
+            },
+            "notifications": {
+                "pending_count": _notification_store.count(),
+                "recent": notifications_recent,
+            },
+            "now_playing": {
+                "title": str(now_playing_payload.get("title") or "") if isinstance(now_playing_payload, dict) else "",
+                "artist": str(now_playing_payload.get("artist") or "") if isinstance(now_playing_payload, dict) else "",
+                "album": str(now_playing_payload.get("album") or "") if isinstance(now_playing_payload, dict) else "",
+                "is_playing": bool(now_playing_payload.get("is_playing")) if isinstance(now_playing_payload, dict) else False,
+                "updated_at": str(now_playing_payload.get("updated_at") or "") if isinstance(now_playing_payload, dict) else "",
+            },
+            "sound_alert": {
+                "label": str(latest_sound.get("classification") or latest_sound.get("label") or latest_sound.get("sound") or "") if isinstance(latest_sound, dict) else "",
+                "confidence": latest_sound.get("confidence") if isinstance(latest_sound, dict) else None,
+                "source": str(latest_sound.get("source") or "") if isinstance(latest_sound, dict) else "",
+                "received_at": str(latest_sound.get("received_at") or "") if isinstance(latest_sound, dict) else "",
+            },
+            "vision_scan": {
+                "context": str(latest_scan.get("context") or "") if isinstance(latest_scan, dict) else "",
+                "source": str(latest_scan.get("source") or "") if isinstance(latest_scan, dict) else "",
+                "text_preview": str(latest_scan.get("text") or "")[:180] if isinstance(latest_scan, dict) else "",
+                "received_at": str(latest_scan.get("received_at") or "") if isinstance(latest_scan, dict) else "",
+            },
+            "presence": {
+                "present_members": [str(name) for name in (home_state.get("present_members") or [])],
+                "lights_on_count": len(home_state.get("lights_on") or []),
+                "alert_count": len(home_state.get("alerts") or []),
+            },
+            "sync_health": sync_health,
+        }
+        return _ok(aggregated)
 
     # ------------------------------------------------------------------
     # GET /api/apple/weather
