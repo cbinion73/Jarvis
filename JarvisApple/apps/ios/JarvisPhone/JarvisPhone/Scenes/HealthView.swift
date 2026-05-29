@@ -71,6 +71,10 @@ struct HealthView: View {
                 // ── Readiness gradient banner ──────────────────────
                 ReadinessBanner(status: s.readiness, note: s.thorNote)
 
+                if let dailyScore = s.dailyScore {
+                    scoreStrip(dailyScore)
+                }
+
                 // ── Metrics 2-column grid ──────────────────────────
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 6) {
@@ -154,10 +158,135 @@ struct HealthView: View {
                     Spacer()
                 }
                 .padding(.horizontal, 4)
+
+                if !s.protocolItems.isEmpty {
+                    guidanceCard(
+                        title: "Protocol",
+                        systemImage: "cross.case.fill",
+                        tint: Color(red: 0.2, green: 0.9, blue: 0.5),
+                        items: s.protocolItems.map { ($0.title, $0.detail, $0.emphasis == "high" ? "high" : "normal") }
+                    )
+                }
+
+                if !s.alerts.isEmpty {
+                    guidanceCard(
+                        title: "Alerts",
+                        systemImage: "exclamationmark.triangle.fill",
+                        tint: .yellow,
+                        items: s.alerts.map { ($0.title, $0.detail ?? "", "high") }
+                    )
+                }
+
+                if !s.nextActions.isEmpty {
+                    actionListCard(s.nextActions)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
+    }
+
+    private func scoreStrip(_ score: HealthDailyScore) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("DAILY SCORE")
+                    .font(.system(size: 10, weight: .bold))
+                    .tracking(1.0)
+                    .foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("\(score.value)")
+                        .font(.system(size: 34, weight: .heavy, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text(score.grade)
+                        .font(.headline)
+                        .foregroundStyle(Color(red: 0.2, green: 0.9, blue: 0.5))
+                }
+                if !score.message.isEmpty {
+                    Text(score.message)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.72))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer()
+            if score.estimated {
+                Label("Estimated", systemImage: "wand.and.stars")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.yellow)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(.yellow.opacity(0.12), in: Capsule())
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func guidanceCard(
+        title: String,
+        systemImage: String,
+        tint: Color,
+        items: [(title: String, detail: String, emphasis: String)]
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: systemImage)
+                    .foregroundStyle(tint)
+                Text(title)
+                    .font(.system(size: 11, weight: .bold))
+                    .tracking(1.0)
+                    .foregroundStyle(tint.opacity(0.92))
+                Spacer()
+            }
+
+            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(item.emphasis == "high" ? tint : .white.opacity(0.45))
+                            .frame(width: 7, height: 7)
+                        Text(item.title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                    }
+                    if !item.detail.isEmpty {
+                        Text(item.detail)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.68))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.leading, 15)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func actionListCard(_ actions: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Next Actions", systemImage: "checklist")
+                .font(.system(size: 11, weight: .bold))
+                .tracking(1.0)
+                .foregroundStyle(.orange.opacity(0.95))
+            ForEach(actions, id: \.self) { action in
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "arrow.right.circle.fill")
+                        .foregroundStyle(.orange)
+                        .font(.caption)
+                        .padding(.top, 2)
+                    Text(action)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.74))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
     }
 
     // MARK: - Error
