@@ -68,12 +68,23 @@ struct HuddleView: View {
                 // ── Summary strip ─────────────────────────────────
                 HStack(spacing: 14) {
                     SituationStat(label: "Agents", value: "\(ov.reports.count)", accent: teal)
+                    SituationStat(label: "Active Work", value: "\(ov.totalActiveWork)", accent: teal.opacity(0.85))
                     SituationStat(label: "Blockers", value: "\(ov.blockers.count)",
                                   accent: ov.blockers.isEmpty ? .green : .red)
-                    SituationStat(label: "Highlights", value: "\(ov.highlights.count)", accent: teal.opacity(0.7))
+                    SituationStat(label: "Approvals", value: "\(ov.approvalsCount)",
+                                  accent: ov.approvalsCount == 0 ? teal.opacity(0.7) : .orange)
                 }
                 .padding(14)
                 .glassEffect(in: RoundedRectangle(cornerRadius: 14))
+
+                if !ov.approvals.isEmpty {
+                    HuddleSection(title: "Awaiting Approval", icon: "checklist.checked", accent: .orange) {
+                        ForEach(ov.approvals) { approval in
+                            ApprovalRow(approval: approval)
+                            if approval.id != ov.approvals.last?.id { Divider().opacity(0.2) }
+                        }
+                    }
+                }
 
                 // ── Active blockers ───────────────────────────────
                 if !ov.blockers.isEmpty {
@@ -221,17 +232,57 @@ private struct AgentReportRow: View {
                     .foregroundStyle(statusColor).font(.caption)
                 Text(report.agentName.isEmpty ? report.agentId : report.agentName)
                     .font(.subheadline.weight(.medium)).foregroundStyle(.white)
+                if !report.domain.isEmpty {
+                    Text(report.domain.capitalized)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
-                Text(report.status.capitalized)
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(statusColor)
-                    .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(statusColor.opacity(0.12), in: Capsule())
+                HStack(spacing: 6) {
+                    Text(report.source.uppercased())
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6).padding(.vertical, 3)
+                        .background(Color.white.opacity(0.06), in: Capsule())
+                    Text(report.status.capitalized)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(statusColor)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(statusColor.opacity(0.12), in: Capsule())
+                }
             }
             if !report.summary.isEmpty {
                 Text(report.summary)
                     .font(.caption).foregroundStyle(.white.opacity(0.7))
                     .lineLimit(2)
+            }
+            if !report.yesterday.isEmpty {
+                detailBlock("Yesterday", text: report.yesterday)
+            }
+            if !report.today.isEmpty {
+                detailBlock("Today", text: report.today)
+            }
+            if !report.needs.isEmpty {
+                detailBlock("Needs", text: report.needs, accent: needsAccent)
+            }
+            if !report.highlights.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(report.highlights, id: \.self) { item in
+                            Text(item)
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.82))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 5)
+                                .background(teal.opacity(0.12), in: Capsule())
+                        }
+                    }
+                }
+            }
+            if report.activeWorkCount > 0 {
+                Text("\(report.activeWorkCount) active work item\(report.activeWorkCount == 1 ? "" : "s") in pipeline")
+                    .font(.caption2)
+                    .foregroundStyle(teal.opacity(0.82))
             }
             if !report.blockers.isEmpty {
                 ForEach(report.blockers, id: \.self) { b in
@@ -243,6 +294,67 @@ private struct AgentReportRow: View {
             }
         }
         .padding(.vertical, 2)
+    }
+
+    private var needsAccent: Color {
+        let lowered = report.needs.lowercased()
+        return lowered.contains("nothing needed") || lowered.contains("running independently")
+            ? .secondary
+            : .orange
+    }
+
+    private func detailBlock(_ label: String, text: String, accent: Color = .secondary) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label.uppercased())
+                .font(.system(size: 9, weight: .bold))
+                .tracking(0.9)
+                .foregroundStyle(accent.opacity(0.85))
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.78))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct ApprovalRow: View {
+    let approval: HuddleApproval
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(approval.title)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                    HStack(spacing: 4) {
+                        if !approval.agent.isEmpty {
+                            Text(approval.agent)
+                        }
+                        if !approval.domain.isEmpty {
+                            if !approval.agent.isEmpty { Text("·") }
+                            Text(approval.domain)
+                        }
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Text("Review")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color.orange.opacity(0.12), in: Capsule())
+            }
+
+            if !approval.proposal.isEmpty {
+                Text(approval.proposal)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.8))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 }
 

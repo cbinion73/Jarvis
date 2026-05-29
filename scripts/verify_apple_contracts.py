@@ -141,6 +141,20 @@ def validate_phase_one_contracts(payloads: dict[str, dict]) -> None:
         if key not in patterns:
             raise RuntimeError(f"/api/apple/chronicle patterns missing '{key}'")
 
+    huddle = require_mapping(payloads, "/api/apple/huddle")
+    for key in ("reports", "blockers", "highlights", "approvals", "approvals_count", "total_active_work"):
+        if key not in huddle:
+            raise RuntimeError(f"/api/apple/huddle missing '{key}'")
+    reports = huddle.get("reports")
+    if not isinstance(reports, list):
+        raise RuntimeError("/api/apple/huddle reports is not a list")
+    for index, item in enumerate(reports):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"/api/apple/huddle reports[{index}] is not an object")
+        for key in ("agent_id", "agent_name", "domain", "status", "summary", "blockers", "yesterday", "today", "needs", "highlights", "source", "active_work_count"):
+            if key not in item:
+                raise RuntimeError(f"/api/apple/huddle reports[{index}] missing '{key}'")
+
 
 def fetch_http(base_url: str, path: str) -> dict:
     with urlopen(f"{base_url.rstrip('/')}{path}") as response:

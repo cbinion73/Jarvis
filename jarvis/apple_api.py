@@ -2357,19 +2357,46 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 reports.append({
                     "agent_id":   str(r.get("agent_id") or ""),
                     "agent_name": str(r.get("agent_name") or r.get("agent_id") or ""),
+                    "domain":     str(r.get("domain") or ""),
                     "status":     str(r.get("status") or "ok"),
                     "summary":    _truncate(str(r.get("summary") or r.get("headline") or ""), 80),
                     "blockers":   [str(b)[:60] for b in (r.get("blockers") or [])[:2]],
+                    "yesterday":  _truncate(str(r.get("yesterday") or ""), 140),
+                    "today":      _truncate(str(r.get("today") or ""), 140),
+                    "needs":      _truncate(str(r.get("needs") or ""), 140),
+                    "highlights": [str(item)[:50] for item in (r.get("highlights") or [])[:4]],
+                    "source":     str(r.get("source") or "generated"),
+                    "active_work_count": int(r.get("active_work_count") or 0),
+                })
+            approvals = []
+            for item in (h.get("approvals_needed") or []):
+                approvals.append({
+                    "work_id": str(item.get("work_id") or ""),
+                    "title": _truncate(str(item.get("title") or "Untitled"), 80),
+                    "agent": str(item.get("agent") or item.get("agent_id") or ""),
+                    "proposal": _truncate(str(item.get("proposal") or item.get("idea") or ""), 160),
+                    "domain": str(item.get("domain") or ""),
                 })
             return _ok({
-                "reports":    reports[:15],
-                "blockers":   [str(b)[:80] for b in (h.get("blockers") or [])[:5]],
+                "reports": reports[:15],
+                "blockers": [str(b)[:80] for b in (h.get("blockers") or [])[:5]],
                 "highlights": [str(hl)[:80] for hl in (h.get("highlights") or [])[:5]],
+                "approvals": approvals[:8],
+                "approvals_count": int(len(h.get("approvals_needed") or [])),
+                "total_active_work": int(h.get("total_active_work") or 0),
                 "updated_at": _ts(),
             })
         except Exception as exc:
             logger.exception("apple_huddle failed: %s", exc)
-            return _ok({"reports": [], "blockers": [], "highlights": [], "updated_at": _ts()})
+            return _ok({
+                "reports": [],
+                "blockers": [],
+                "highlights": [],
+                "approvals": [],
+                "approvals_count": 0,
+                "total_active_work": 0,
+                "updated_at": _ts(),
+            })
 
     # ── Forge 3-D models ──────────────────────────────────────────────────────
 
