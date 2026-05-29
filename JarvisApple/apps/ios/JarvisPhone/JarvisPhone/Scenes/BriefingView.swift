@@ -95,6 +95,10 @@ struct BriefingView: View {
                     statusCard(status)
                 }
 
+                if !packet.commandItems.isEmpty {
+                    commandStack(packet.commandItems)
+                }
+
                 if let appState = viewModel.appState {
                     appStateCards(appState)
                 }
@@ -242,6 +246,49 @@ struct BriefingView: View {
         .padding(.horizontal, 14)
         .padding(.bottom, 28)
         .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func commandStack(_ items: [CommandItem]) -> some View {
+        OracleSection(title: "Command Stack", icon: "command.square.fill", accent: gold) {
+            VStack(spacing: 10) {
+                ForEach(items) { item in
+                    HStack(alignment: .top, spacing: 0) {
+                        if item.priority == "high" {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(gold)
+                                .frame(width: 3)
+                                .padding(.trailing, 10)
+                        } else {
+                            Color.clear
+                                .frame(width: 13)
+                        }
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(alignment: .firstTextBaseline) {
+                                Text(item.title)
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(.white)
+                                Spacer(minLength: 8)
+                                Text(item.kind.uppercased())
+                                    .font(.system(size: 9, weight: .black))
+                                    .tracking(1)
+                                    .foregroundStyle(.black)
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 3)
+                                    .background((item.priority == "high" ? gold : Color.white.opacity(0.5)), in: Capsule())
+                            }
+                            Text(item.detail)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(3)
+                        }
+                    }
+                    .padding(.leading, item.priority == "high" ? 0 : 0)
+                    if item.id != items.last?.id {
+                        Divider().opacity(0.2)
+                    }
+                }
+            }
+        }
     }
 
     @ViewBuilder

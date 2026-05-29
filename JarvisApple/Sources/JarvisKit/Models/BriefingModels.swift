@@ -4,6 +4,7 @@ import Foundation
 
 /// Full 5-zone Chamber home-screen packet returned by GET /api/apple/briefing
 public struct BriefingPacket: Codable, Sendable {
+    public let commandItems: [CommandItem]
     public let briefingItems: [BriefingItem]
     public let workingItems: [WorkingItem]
     public let needsItems: [NeedsItem]
@@ -13,6 +14,7 @@ public struct BriefingPacket: Codable, Sendable {
     public let generatedAt: String
 
     public init(
+        commandItems: [CommandItem] = [],
         briefingItems: [BriefingItem],
         workingItems: [WorkingItem],
         needsItems: [NeedsItem],
@@ -21,6 +23,7 @@ public struct BriefingPacket: Codable, Sendable {
         mode: String,
         generatedAt: String
     ) {
+        self.commandItems = commandItems
         self.briefingItems = briefingItems
         self.workingItems = workingItems
         self.needsItems = needsItems
@@ -31,6 +34,7 @@ public struct BriefingPacket: Codable, Sendable {
     }
 
     enum CodingKeys: String, CodingKey {
+        case commandItems = "command_items"
         case briefingItems = "briefing_items"
         case workingItems = "working_items"
         case needsItems = "needs_items"
@@ -39,6 +43,26 @@ public struct BriefingPacket: Codable, Sendable {
         case mode
         case generatedAt = "generated_at"
     }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        commandItems = try container.decodeIfPresent([CommandItem].self, forKey: .commandItems) ?? []
+        briefingItems = try container.decode([BriefingItem].self, forKey: .briefingItems)
+        workingItems = try container.decode([WorkingItem].self, forKey: .workingItems)
+        needsItems = try container.decode([NeedsItem].self, forKey: .needsItems)
+        driftItems = try container.decode([DriftItem].self, forKey: .driftItems)
+        greeting = try container.decode(String.self, forKey: .greeting)
+        mode = try container.decode(String.self, forKey: .mode)
+        generatedAt = try container.decode(String.self, forKey: .generatedAt)
+    }
+}
+
+public struct CommandItem: Codable, Identifiable, Sendable {
+    public let id: String
+    public let title: String
+    public let detail: String
+    public let priority: String
+    public let kind: String
 }
 
 // MARK: - BriefingItem

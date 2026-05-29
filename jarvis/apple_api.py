@@ -205,6 +205,145 @@ def _build_home_context(*, needs_count: int = 0) -> dict[str, Any]:
     }
 
 
+def _build_briefing_command_items(
+    *,
+    home_context: dict[str, Any],
+    home_state: dict[str, Any],
+    watch_status: dict[str, Any],
+) -> list[dict[str, Any]]:
+    agenda = home_context.get("agenda") if isinstance(home_context, dict) else {}
+    agenda = agenda if isinstance(agenda, dict) else {}
+    attention = home_context.get("attention") if isinstance(home_context, dict) else {}
+    attention = attention if isinstance(attention, dict) else {}
+    projects = home_context.get("projects") if isinstance(home_context, dict) else {}
+    projects = projects if isinstance(projects, dict) else {}
+
+    present_members = [str(name).strip() for name in (home_state.get("present_members") or []) if str(name).strip()]
+    alerts = home_state.get("alerts") if isinstance(home_state.get("alerts"), list) else []
+    alerts = [alert for alert in alerts if isinstance(alert, dict)]
+
+    needs_count = int(watch_status.get("needs_count") or 0)
+    reminder_count = int(attention.get("reminder_count") or 0)
+    notification_count = int(attention.get("notification_count") or 0)
+    unread_email_count = int(attention.get("unread_email_count") or 0)
+    active_work_items_count = int(projects.get("active_work_items_count") or 0)
+    publishing_project_count = int(projects.get("publishing_project_count") or 0)
+    next_event_title = str(agenda.get("next_event_title") or "").strip()
+    next_event_start = str(agenda.get("next_event_start") or "").strip()
+    next_event_location = str(agenda.get("next_event_location") or "").strip()
+    focus_active = bool(attention.get("focus_active"))
+    drift_active = bool(watch_status.get("drift"))
+    weather_summary = str(watch_status.get("weather") or "").strip()
+
+    items: list[dict[str, Any]] = []
+
+    if needs_count > 0:
+        items.append({
+            "id": "command-needs",
+            "title": f"Resolve {needs_count} pending decision" + ("s" if needs_count != 1 else ""),
+            "detail": "JARVIS is waiting on approvals before it can move the household forward.",
+            "priority": "high",
+            "kind": "needs",
+        })
+
+    if alerts:
+        first_alert = alerts[0]
+        items.append({
+            "id": "command-home-alerts",
+            "title": f"Review {len(alerts)} home alert" + ("s" if len(alerts) != 1 else ""),
+            "detail": str(first_alert.get("message") or "The home stack surfaced a live alert."),
+            "priority": "high",
+            "kind": "home",
+        })
+
+    if next_event_title:
+        detail_parts = [part for part in [next_event_start, next_event_location] if part]
+        items.append({
+            "id": "command-next-event",
+            "title": f"Prepare for {next_event_title}",
+            "detail": " · ".join(detail_parts) if detail_parts else "Your next calendar event is already on the board.",
+            "priority": "high" if not present_members else "normal",
+            "kind": "calendar",
+        })
+
+    if reminder_count > 0:
+        items.append({
+            "id": "command-reminders",
+            "title": f"Clear {reminder_count} active reminder" + ("s" if reminder_count != 1 else ""),
+            "detail": "Outstanding reminders are part of today's attention load.",
+            "priority": "normal",
+            "kind": "reminders",
+        })
+
+    if notification_count > 0 or unread_email_count > 0:
+        detail_parts = []
+        if notification_count > 0:
+            detail_parts.append(f"{notification_count} notification" + ("s" if notification_count != 1 else ""))
+        if unread_email_count > 0:
+            detail_parts.append(f"{unread_email_count} unread email" + ("s" if unread_email_count != 1 else ""))
+        items.append({
+            "id": "command-attention",
+            "title": "Triage incoming attention",
+            "detail": " · ".join(detail_parts),
+            "priority": "normal",
+            "kind": "attention",
+        })
+
+    if active_work_items_count > 0 or publishing_project_count > 0:
+        detail_parts = []
+        if active_work_items_count > 0:
+            detail_parts.append(f"{active_work_items_count} active work item" + ("s" if active_work_items_count != 1 else ""))
+        if publishing_project_count > 0:
+            detail_parts.append(f"{publishing_project_count} publishing project" + ("s" if publishing_project_count != 1 else ""))
+        top_titles = [str(title).strip() for title in (projects.get("top_titles") or []) if str(title).strip()]
+        detail = " · ".join(detail_parts)
+        if top_titles:
+            detail = f"{detail} · {', '.join(top_titles[:2])}" if detail else ", ".join(top_titles[:2])
+        items.append({
+            "id": "command-projects",
+            "title": "Keep active projects moving",
+            "detail": detail or "JARVIS sees active work in motion.",
+            "priority": "normal",
+            "kind": "projects",
+        })
+
+    if focus_active or drift_active or weather_summary:
+        detail_parts = []
+        if focus_active:
+            detail_parts.append("Focus mode is active")
+        if drift_active:
+            detail_parts.append("Drift signals are live")
+        if weather_summary:
+            detail_parts.append(weather_summary)
+        items.append({
+            "id": "command-posture",
+            "title": "Set the household posture",
+            "detail": " · ".join(detail_parts),
+            "priority": "normal",
+            "kind": "posture",
+        })
+
+    if present_members:
+        items.append({
+            "id": "command-presence",
+            "title": "Household presence is live",
+            "detail": ", ".join(present_members[:3]),
+            "priority": "normal",
+            "kind": "presence",
+        })
+
+    if not items:
+        items.append({
+            "id": "command-clear",
+            "title": "Household is clear",
+            "detail": "No urgent actions are blocking JARVIS right now. Start with Brief, Home, or Navigate to shape the day.",
+            "priority": "normal",
+            "kind": "clear",
+        })
+
+    return items[:5]
+
+
 def _default_navigation_state() -> dict[str, Any]:
     return {
         "favorite_destinations": [],
@@ -582,6 +721,10 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             builder = None
 
         greeting, mode = _time_of_day_greeting()
+        watch_status = (await apple_status()).get("data") or {}
+        home_state = (await apple_home_state()).get("data") or {}
+        needs_count = int(watch_status.get("needs_count") or 0)
+        home_context = _build_home_context(needs_count=needs_count)
 
         # Attempt live briefing
         packet: dict | None = None
@@ -635,6 +778,11 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             "greeting":       packet.get("greeting") or greeting,
             "mode":           packet.get("mode")     or mode,
             "generated_at":   packet.get("generated_at") or _ts(),
+            "command_items":  _build_briefing_command_items(
+                home_context=home_context,
+                home_state=home_state,
+                watch_status=watch_status,
+            ),
         }
         return _ok(data)
 
