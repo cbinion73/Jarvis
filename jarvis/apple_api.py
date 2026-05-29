@@ -1534,6 +1534,57 @@ def _perform_notification_action(notification_id: str, action: str) -> dict[str,
     raise HTTPException(status_code=400, detail=f"Unhandled notification action '{action_name}'")
 
 
+def _apple_complete_reminder(reminder_id: str) -> dict[str, Any]:
+    from .reminders import complete_reminder
+
+    ok = complete_reminder(reminder_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Reminder not found")
+    _sync_mirrored_reminder(reminder_id, completed=True)
+    _record_shared_event(
+        domain="reminders",
+        kind="resolved",
+        title="Reminder completed",
+        detail=reminder_id,
+        severity="low",
+        source="apple.reminders",
+        source_id=reminder_id,
+        navigation_target="workshop",
+        actions=["open"],
+        trust_zone="household_schedule",
+        authority_stage="live",
+        why_now="A reminder was completed from the Apple workflow.",
+        metadata={"reminder_id": reminder_id},
+    )
+    return {"ok": True, "reminder_id": reminder_id, "status": "completed"}
+
+
+def _apple_snooze_reminder(reminder_id: str, *, minutes: int = 60) -> dict[str, Any]:
+    from .reminders import snooze_reminder
+
+    new_due = _iso_after_minutes(minutes)
+    ok = snooze_reminder(reminder_id, new_due)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Reminder not found")
+    _sync_mirrored_reminder(reminder_id, completed=False, due=new_due)
+    _record_shared_event(
+        domain="reminders",
+        kind="info",
+        title="Reminder snoozed",
+        detail=f"{reminder_id} until {new_due}",
+        severity="low",
+        source="apple.reminders",
+        source_id=reminder_id,
+        navigation_target="workshop",
+        actions=["open"],
+        trust_zone="household_schedule",
+        authority_stage="live",
+        why_now="A reminder was deferred from the Apple workflow.",
+        metadata={"reminder_id": reminder_id, "due": new_due, "minutes": minutes},
+    )
+    return {"ok": True, "reminder_id": reminder_id, "status": "snoozed", "due": new_due}
+
+
 def _create_notification_from_event(
     event: dict[str, Any],
     *,
@@ -2031,6 +2082,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 "synced_at": str(reminders_payload.get("synced_at") or "") if isinstance(reminders_payload, dict) else "",
                 "top_items": [
                     {
+                        "id": str(reminder.get("id") or ""),
                         "title": str(reminder.get("title") or ""),
                         "due": str(reminder.get("due") or ""),
                         "list": str(reminder.get("list") or ""),
@@ -3044,6 +3096,17 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             metadata={"count": len(reminders)},
         )
         return _ok({"stored": len(reminders)})
+
+    @app.post("/api/apple/reminders/{reminder_id}/complete")
+    async def apple_reminder_complete(reminder_id: str):
+        return _ok(_apple_complete_reminder(reminder_id))
+
+    @app.post("/api/apple/reminders/{reminder_id}/snooze")
+    async def apple_reminder_snooze(reminder_id: str, payload: dict | None = None):
+        minutes = _coerce_int((payload or {}).get("minutes"), 60)
+        if minutes <= 0:
+            minutes = 60
+        return _ok(_apple_snooze_reminder(reminder_id, minutes=minutes))
 
     # ── Focus Filter ─────────────────────────────────────────────────────────
 

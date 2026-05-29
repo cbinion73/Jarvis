@@ -29,6 +29,14 @@ final class BriefingViewModel: ObservableObject {
         await load()
     }
 
+    func refreshAppState() async {
+        do {
+            appState = try await client.fetchAppState()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     @discardableResult
     func approve(requestId: String) async -> Bool {
         do {

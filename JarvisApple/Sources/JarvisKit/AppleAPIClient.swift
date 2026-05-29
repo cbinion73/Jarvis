@@ -418,6 +418,21 @@ public final class AppleAPIClient: Sendable {
         return response.ok ?? !(response.status ?? "").isEmpty || response.performedAction == action
     }
 
+    @discardableResult
+    public func completeReminder(_ reminderId: String) async throws -> Bool {
+        struct Response: Decodable { let status: String }
+        let response: Response = try await post("/api/apple/reminders/\(reminderId)/complete", body: EmptyBody())
+        return response.status == "completed"
+    }
+
+    @discardableResult
+    public func snoozeReminder(_ reminderId: String, minutes: Int = 60) async throws -> Bool {
+        struct Body: Encodable { let minutes: Int }
+        struct Response: Decodable { let status: String }
+        let response: Response = try await post("/api/apple/reminders/\(reminderId)/snooze", body: Body(minutes: minutes))
+        return response.status == "snoozed"
+    }
+
     // MARK: - Internal networking
 
     private func get<T: Decodable>(_ path: String) async throws -> T {
