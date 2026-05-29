@@ -76,6 +76,10 @@ Source-of-truth rule:
 - [ ] Add Swift decode tests for all JarvisKit Apple models.
 - [ ] Add a parity checklist to every live feature rollout: backend contract, web behavior, phone surface, device verification.
 
+Verification command:
+
+- `python3 scripts/verify_apple_contracts.py --ssh-host root@5.78.212.15 --container jarvis-family-jarvis-1`
+
 ## Priority Order
 
 1. Home
