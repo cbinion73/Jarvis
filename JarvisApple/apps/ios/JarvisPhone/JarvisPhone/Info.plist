@@ -20,6 +20,10 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>JARVIS_CF_ACCESS_CLIENT_ID</key>
+	<string></string>
+	<key>JARVIS_CF_ACCESS_CLIENT_SECRET</key>
+	<string></string>
 	<key>NSAppleMusicUsageDescription</key>
 	<string>JARVIS shows what you're listening to in your personal dashboard.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>

@@ -1,0 +1,170 @@
+diff --git a/JarvisApple/Sources/JarvisKit/AppleAPIClient.swift b/JarvisApple/Sources/JarvisKit/AppleAPIClient.swift
+index fbb8d2c..8ddb0dc 100644
+--- a/JarvisApple/Sources/JarvisKit/AppleAPIClient.swift
++++ b/JarvisApple/Sources/JarvisKit/AppleAPIClient.swift
+@@ -527,8 +527,7 @@ public final class AppleAPIClient: Sendable {
+ 
+     private func perform<T: Decodable>(_ request: URLRequest) async throws -> T {
+         var request = request
+-        request.setValue(CloudflareConfig.clientId,     forHTTPHeaderField: "CF-Access-Client-Id")
+-        request.setValue(CloudflareConfig.clientSecret, forHTTPHeaderField: "CF-Access-Client-Secret")
++        JARVISAccessConfig.apply(to: &request)
+         let (data, response) = try await URLSession.shared.data(for: request)
+ 
+         guard let http = response as? HTTPURLResponse else {
+@@ -555,8 +554,7 @@ public final class AppleAPIClient: Sendable {
+ 
+     private func performEnvelopeOnly(_ request: URLRequest) async throws {
+         var request = request
+-        request.setValue(CloudflareConfig.clientId,     forHTTPHeaderField: "CF-Access-Client-Id")
+-        request.setValue(CloudflareConfig.clientSecret, forHTTPHeaderField: "CF-Access-Client-Secret")
++        JARVISAccessConfig.apply(to: &request)
+         let (data, response) = try await URLSession.shared.data(for: request)
+ 
+         guard let http = response as? HTTPURLResponse else {
+diff --git a/JarvisApple/Sources/JarvisKit/JARVISAccessConfig.swift b/JarvisApple/Sources/JarvisKit/JARVISAccessConfig.swift
+new file mode 100644
+index 0000000..c315f54
+--- /dev/null
++++ b/JarvisApple/Sources/JarvisKit/JARVISAccessConfig.swift
+@@ -0,0 +1,25 @@
++import Foundation
++
++enum JARVISAccessConfig {
++    private static let clientIdInfoKey = "JARVIS_CF_ACCESS_CLIENT_ID"
++    private static let clientSecretInfoKey = "JARVIS_CF_ACCESS_CLIENT_SECRET"
++    private static let clientIdEnvKey = "JARVIS_CF_ACCESS_CLIENT_ID"
++    private static let clientSecretEnvKey = "JARVIS_CF_ACCESS_CLIENT_SECRET"
++
++    static func apply(to request: inout URLRequest) {
++        if let clientId = value(infoKey: clientIdInfoKey, envKey: clientIdEnvKey) {
++            request.setValue(clientId, forHTTPHeaderField: "CF-Access-Client-Id")
++        }
++        if let clientSecret = value(infoKey: clientSecretInfoKey, envKey: clientSecretEnvKey) {
++            request.setValue(clientSecret, forHTTPHeaderField: "CF-Access-Client-Secret")
++        }
++    }
++
++    private static func value(infoKey: String, envKey: String) -> String? {
++        let bundleValue = Bundle.main.object(forInfoDictionaryKey: infoKey) as? String
++        let envValue = ProcessInfo.processInfo.environment[envKey]
++        let candidate = (bundleValue?.isEmpty == false ? bundleValue : envValue)?.trimmingCharacters(in: .whitespacesAndNewlines)
++        guard let candidate, !candidate.isEmpty else { return nil }
++        return candidate
++    }
++}
+diff --git a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/App.swift b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/App.swift
+index 8532cd4..1f1ddcb 100644
+--- a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/App.swift
++++ b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/App.swift
+@@ -32,9 +32,6 @@ struct JarvisPhoneApp: App {
+         // Live Activity — start showing in Dynamic Island
+         LiveActivityManager.shared.start()
+ 
+-        // HealthKit
+-        await HealthSyncManager.shared.requestPermissionsAndSync()
+-
+         // Presence uses existing permissions only. Do not trigger location
+         // permission prompts during app startup.
+         WiFiPresenceMonitor.shared.start()
+@@ -43,9 +40,6 @@ struct JarvisPhoneApp: App {
+         // WatchConnectivity
+         _ = WatchSessionManager.shared
+ 
+-        // EventKit — calendar + reminders
+-        await EventKitSyncManager.shared.syncAll()
+-
+         // Now Playing observer
+         _ = NowPlayingManager.shared
+ 
+@@ -68,7 +62,6 @@ struct JarvisPhoneApp: App {
+             VoiceConversationLaunchCenter.shared.refreshFromStore()
+         }
+         WiFiPresenceMonitor.shared.refresh()
+-        Task { await EventKitSyncManager.shared.syncAll() }
+     }
+ 
+     private func refreshAppShortcuts() async {
+diff --git a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/AppDelegate.swift b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/AppDelegate.swift
+index 7c21a4c..c299512 100644
+--- a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/AppDelegate.swift
++++ b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/AppDelegate.swift
+@@ -8,7 +8,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
+         _ application: UIApplication,
+         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+     ) -> Bool {
+-        requestNotificationPermission()
+         registerNotificationCategories()
+         UNUserNotificationCenter.current().delegate = self
+         return true
+@@ -60,7 +59,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
+ 
+     // MARK: - Private
+ 
+-    private func requestNotificationPermission() {
++    func requestNotificationPermissionIfNeeded() {
+         UNUserNotificationCenter.current().requestAuthorization(
+             options: [.alert, .badge, .sound]
+         ) { granted, _ in
+diff --git a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/EventSync/EventKitSyncManager.swift b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/EventSync/EventKitSyncManager.swift
+index 7adef36..1398b50 100644
+--- a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/EventSync/EventKitSyncManager.swift
++++ b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/EventSync/EventKitSyncManager.swift
+@@ -39,9 +39,17 @@ final class EventKitSyncManager: ObservableObject {
+ 
+     // MARK: - Sync
+ 
++    func requestAccessAndSync() async {
++        guard calendarStatus != .fullAccess || remindersStatus != .fullAccess else {
++            await syncAll()
++            return
++        }
++        await requestAccess()
++        await syncAll()
++    }
++
+     func syncAll() async {
+         guard calendarStatus == .fullAccess || remindersStatus == .fullAccess else {
+-            await requestAccess()
+             return
+         }
+         isSyncing = true
+diff --git a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Info.plist b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Info.plist
+index 8ee9ff8..156eab6 100644
+--- a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Info.plist
++++ b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Info.plist
+@@ -20,6 +20,10 @@
+ 	<string>1.0</string>
+ 	<key>CFBundleVersion</key>
+ 	<string>1</string>
++	<key>JARVIS_CF_ACCESS_CLIENT_ID</key>
++	<string></string>
++	<key>JARVIS_CF_ACCESS_CLIENT_SECRET</key>
++	<string></string>
+ 	<key>NSAppleMusicUsageDescription</key>
+ 	<string>JARVIS shows what you're listening to in your personal dashboard.</string>
+ 	<key>NSCalendarsFullAccessUsageDescription</key>
+diff --git a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Scenes/SettingsView.swift b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Scenes/SettingsView.swift
+index b1c1809..685f705 100644
+--- a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Scenes/SettingsView.swift
++++ b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Scenes/SettingsView.swift
+@@ -1016,7 +1016,7 @@ struct SettingsView: View {
+     }
+ 
+     private func refreshEventSync() async {
+-        await eventSync.syncAll()
++        await eventSync.requestAccessAndSync()
+         await refreshSystems()
+     }
+ 
+diff --git a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Speech/SpeechRecognitionManager.swift b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Speech/SpeechRecognitionManager.swift
+index 17a327a..71e77e6 100644
+--- a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Speech/SpeechRecognitionManager.swift
++++ b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Speech/SpeechRecognitionManager.swift
+@@ -41,6 +41,7 @@ final class SpeechRecognitionManager: ObservableObject {
+     private var task:              SFSpeechRecognitionTask?
+     private var audioEngine        = AVAudioEngine()
+     private var onFinal:           ((String) -> Void)?
++    private var onPartial:         ((String) -> Void)?
+     private var suspendedSoundAnalysis = false
+     private va

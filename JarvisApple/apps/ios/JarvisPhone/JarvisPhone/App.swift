@@ -1,5 +1,8 @@
 import SwiftUI
 import JarvisKit
+#if canImport(AppIntents)
+import AppIntents
+#endif
 
 @main
 struct JarvisPhoneApp: App {
@@ -24,11 +27,10 @@ struct JarvisPhoneApp: App {
     // MARK: - Startup
 
     private func startupSequence() async {
+        await refreshAppShortcuts()
+
         // Live Activity — start showing in Dynamic Island
         LiveActivityManager.shared.start()
-
-        // HealthKit
-        await HealthSyncManager.shared.requestPermissionsAndSync()
 
         // Presence uses existing permissions only. Do not trigger location
         // permission prompts during app startup.
@@ -38,14 +40,8 @@ struct JarvisPhoneApp: App {
         // WatchConnectivity
         _ = WatchSessionManager.shared
 
-        // EventKit — calendar + reminders
-        await EventKitSyncManager.shared.syncAll()
-
         // Now Playing observer
         _ = NowPlayingManager.shared
-
-        // Sound Analysis — start listening for household alerts
-        SoundAnalysisManager.shared.startListening()
 
         // Load briefing, push to Watch + widgets + Live Activity
         if let packet = try? await AppleAPIClient.shared.fetchBriefing() {
@@ -61,8 +57,20 @@ struct JarvisPhoneApp: App {
     // MARK: - Foreground refresh
 
     private func foregroundRefresh() async {
+        await refreshAppShortcuts()
+        await MainActor.run {
+            VoiceConversationLaunchCenter.shared.refreshFromStore()
+        }
         WiFiPresenceMonitor.shared.refresh()
-        Task { await EventKitSyncManager.shared.syncAll() }
+    }
+
+    private func refreshAppShortcuts() async {
+        #if canImport(AppIntents)
+        if #available(iOS 16.0, *) {
+            JarvisShortcuts.updateAppShortcutParameters()
+            print("[JARVIS Siri] App Shortcuts refreshed.")
+        }
+        #endif
     }
 
     // MARK: - Write to App Group (feeds widgets + complications)

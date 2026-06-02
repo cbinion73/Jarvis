@@ -4,6 +4,23 @@ import Testing
 
 struct ApplePayloadDecodingTests {
     @Test
+    func decodesMinimalSpeakResponseUsingFallbackFields() throws {
+        let json = """
+        {
+          "response": "Schedule summary",
+          "agent": "JARVIS",
+          "speak": true
+        }
+        """.data(using: .utf8)!
+
+        let decoded = try JSONDecoder().decode(SpeakResponse.self, from: json)
+        #expect(decoded.response == "Schedule summary")
+        #expect(decoded.displayText == "Schedule summary")
+        #expect(decoded.spokenText == "Schedule summary")
+        #expect(decoded.presentationMode == "spoken_reply")
+    }
+
+    @Test
     func decodesLiveApplePayloadFixtureWhenProvided() throws {
         guard let fixturePath = ProcessInfo.processInfo.environment["JARVIS_APPLE_PAYLOAD_FIXTURE"] else {
             return
@@ -22,6 +39,7 @@ struct ApplePayloadDecodingTests {
         try decode(VisionHistoryOverview.self, from: payloads, key: "/api/apple/vision/scans", decoder: decoder)
         try decode(NowPlayingStateOverview.self, from: payloads, key: "/api/apple/now-playing/state", decoder: decoder)
         try decode(ControlPlaneOverview.self, from: payloads, key: "/api/apple/control-plane/state", decoder: decoder)
+        try decode(SystemsAdminSummary.self, from: payloads, key: "/api/apple/systems/admin-summary", decoder: decoder)
         try decode(NotificationCenterOverview.self, from: payloads, key: "/api/apple/notifications", decoder: decoder)
         try decode(EventTimelineOverview.self, from: payloads, key: "/api/apple/events/recent", decoder: decoder)
         try decode(AppleWeatherOverview.self, from: payloads, key: "/api/apple/weather", decoder: decoder)
