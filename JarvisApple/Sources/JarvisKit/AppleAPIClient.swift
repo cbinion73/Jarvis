@@ -176,7 +176,11 @@ public final class AppleAPIClient: Sendable {
     }
 
     public func fetchSystemsAdminSummary() async throws -> SystemsAdminSummary {
-        try await get("/api/apple/systems/admin-summary")
+        do {
+            return try await get("/api/apple/systems/admin-summary")
+        } catch JarvisClientError.httpError(let code, _) where code == 404 || code == 405 {
+            return try await post("/api/apple/systems/admin-summary", body: EmptyBody())
+        }
     }
 
     public func promoteTrustZone(_ zoneId: String, actor: String = "chris", basis: String = "manual promotion from phone") async throws -> SystemsTrustZoneActionResult {
