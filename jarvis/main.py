@@ -5,6 +5,7 @@ import asyncio
 import json
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 try:
     from dotenv import load_dotenv
@@ -13,11 +14,12 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for cold systems
         return None
 
 from .agent_registry_contract import contract_paths, load_contract_bundle
-from .runtime import JarvisRuntime
 from .openclaw_bridge import build_openclaw_envelope, envelope_to_json
 from .speech import voice_stack_status
-from .service import serve
 from .fresh_start import FreshStartProtocol
+
+if TYPE_CHECKING:
+    from .runtime import JarvisRuntime
 
 try:
     from .scheduler import init_scheduler as _init_scheduler
@@ -822,6 +824,8 @@ def _ensure_ollama_running() -> None:
 
 
 def command_serve(runtime: JarvisRuntime, host: str, port: int) -> int:
+    from .service import serve
+
     # Initialise Being Known memory layer before the HTTP server
     if _KNOWN_FACTS_IMPORT_OK:
         try:
@@ -2103,6 +2107,12 @@ def main() -> int:
     load_dotenv()
     parser = build_parser()
     args = parser.parse_args()
+
+    if args.command == "agent-registry-contract":
+        return command_agent_registry_contract()
+
+    from .runtime import JarvisRuntime
+
     runtime = JarvisRuntime.from_env()
 
     if args.command == "summary":
@@ -2123,8 +2133,6 @@ def main() -> int:
         return command_brain_status(runtime)
     if args.command == "agent-registry":
         return command_agent_registry(runtime)
-    if args.command == "agent-registry-contract":
-        return command_agent_registry_contract()
     if args.command == "agent-status":
         return command_agent_status(runtime)
     if args.command == "agent-runtime":
