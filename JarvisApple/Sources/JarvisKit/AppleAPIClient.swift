@@ -115,6 +115,42 @@ public final class AppleAPIClient: Sendable {
         try await get("/api/apple/focus-state")
     }
 
+    @discardableResult
+    public func applyFocusPreset(
+        focusActive: Bool,
+        jarvisMode: String,
+        holdApprovals: Bool,
+        silenceBriefings: Bool,
+        source: String = "systems_phone"
+    ) async throws -> FocusWorkflowActionResult {
+        struct Body: Encodable {
+            let focusActive: Bool
+            let jarvisMode: String
+            let holdApprovals: Bool
+            let silenceBriefings: Bool
+            let source: String
+
+            enum CodingKeys: String, CodingKey {
+                case source
+                case focusActive = "focus_active"
+                case jarvisMode = "jarvis_mode"
+                case holdApprovals = "hold_approvals"
+                case silenceBriefings = "silence_briefings"
+            }
+        }
+        let response: FocusWorkflowActionResult = try await post(
+            "/api/apple/focus",
+            body: Body(
+                focusActive: focusActive,
+                jarvisMode: jarvisMode,
+                holdApprovals: holdApprovals,
+                silenceBriefings: silenceBriefings,
+                source: source
+            )
+        )
+        return response
+    }
+
     public func fetchSoundHistory() async throws -> SoundHistoryOverview {
         try await get("/api/apple/sound-alerts")
     }
@@ -123,18 +159,12 @@ public final class AppleAPIClient: Sendable {
         try await get("/api/apple/vision/scans")
     }
 
-    @discardableResult
-    public func resolveSoundAlert(_ alertId: String) async throws -> Bool {
-        struct Response: Decodable { let status: String }
-        let response: Response = try await post("/api/apple/sound-alerts/\(alertId)/resolve", body: EmptyBody())
-        return response.status == "resolved"
+    public func resolveSoundAlert(_ alertId: String) async throws -> SignalResolutionActionResult {
+        try await post("/api/apple/sound-alerts/\(alertId)/resolve", body: EmptyBody())
     }
 
-    @discardableResult
-    public func resolveVisionScan(_ scanId: String) async throws -> Bool {
-        struct Response: Decodable { let status: String }
-        let response: Response = try await post("/api/apple/vision/scans/\(scanId)/resolve", body: EmptyBody())
-        return response.status == "resolved"
+    public func resolveVisionScan(_ scanId: String) async throws -> SignalResolutionActionResult {
+        try await post("/api/apple/vision/scans/\(scanId)/resolve", body: EmptyBody())
     }
 
     public func fetchNowPlayingState() async throws -> NowPlayingStateOverview {
@@ -143,6 +173,87 @@ public final class AppleAPIClient: Sendable {
 
     public func fetchControlPlaneState() async throws -> ControlPlaneOverview {
         try await get("/api/apple/control-plane/state")
+    }
+
+    public func fetchSystemsAdminSummary() async throws -> SystemsAdminSummary {
+        try await get("/api/apple/systems/admin-summary")
+    }
+
+    public func promoteTrustZone(_ zoneId: String, actor: String = "chris", basis: String = "manual promotion from phone") async throws -> SystemsTrustZoneActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let basis: String
+        }
+        return try await post(
+            "/api/apple/systems/trust-zones/\(zoneId)/promote",
+            body: Body(actor: actor, basis: basis)
+        )
+    }
+
+    public func demoteTrustZone(_ zoneId: String, actor: String = "chris", reason: String = "manual demotion from phone") async throws -> SystemsTrustZoneActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let reason: String
+        }
+        return try await post(
+            "/api/apple/systems/trust-zones/\(zoneId)/demote",
+            body: Body(actor: actor, reason: reason)
+        )
+    }
+
+    public func suspendResourceArena(_ arenaId: String, actor: String = "chris", reason: String = "manual suspension from phone") async throws -> SystemsArenaActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let reason: String
+        }
+        return try await post(
+            "/api/apple/systems/resource-arenas/\(arenaId)/suspend",
+            body: Body(actor: actor, reason: reason)
+        )
+    }
+
+    public func resumeResourceArena(_ arenaId: String, actor: String = "chris", reason: String = "manual resume from phone") async throws -> SystemsArenaActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let reason: String
+        }
+        return try await post(
+            "/api/apple/systems/resource-arenas/\(arenaId)/resume",
+            body: Body(actor: actor, reason: reason)
+        )
+    }
+
+    public func executeSandboxJob(_ jobId: String, actor: String = "chris", triggeredBy: String = "apple-systems") async throws -> SystemsSandboxJobActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let triggered_by: String
+        }
+        return try await post(
+            "/api/apple/systems/self-improvement/jobs/\(jobId)/sandbox-execute",
+            body: Body(actor: actor, triggered_by: triggeredBy)
+        )
+    }
+
+    public func cancelSandboxJob(_ jobId: String, actor: String = "chris", reason: String = "manual stop from phone") async throws -> SystemsSandboxJobActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let reason: String
+        }
+        return try await post(
+            "/api/apple/systems/self-improvement/jobs/\(jobId)/sandbox-cancel",
+            body: Body(actor: actor, reason: reason)
+        )
+    }
+
+    public func recoverSandboxJob(_ jobId: String, actor: String = "chris", reason: String = "manual recovery reset from phone") async throws -> SystemsSandboxJobActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let reason: String
+        }
+        return try await post(
+            "/api/apple/systems/self-improvement/jobs/\(jobId)/sandbox-recover",
+            body: Body(actor: actor, reason: reason)
+        )
     }
 
     @discardableResult
@@ -168,12 +279,13 @@ public final class AppleAPIClient: Sendable {
     /// - Parameters:
     ///   - text: The command text (from keyboard or Siri dictation).
     ///   - actorId: The actor identifier (default "chris").
-    public func speak(text: String, actorId: String = "chris") async throws -> SpeakResponse {
+    public func speak(text: String, actorId: String = "chris", conversationId: String? = nil) async throws -> SpeakResponse {
         struct Body: Encodable {
             let text: String
             let actor_id: String
+            let conversation_id: String?
         }
-        return try await post("/api/apple/speak", body: Body(text: text, actor_id: actorId))
+        return try await post("/api/apple/speak", body: Body(text: text, actor_id: actorId, conversation_id: conversationId))
     }
 
     /// Fire-and-forget voice command relay from Watch. Ignores response body.
@@ -186,6 +298,13 @@ public final class AppleAPIClient: Sendable {
     /// Fetch the current voice greeting (for app launch or wake-word).
     public func fetchGreeting(actor: String = "chris") async throws -> VoiceGreeting {
         try await get("/api/apple/voice/greeting?actor=\(actor)")
+    }
+
+    /// Fetch the current Apple voice console state, including recent conversation context.
+    public func fetchVoiceState(actor: String = "chris", conversationId: String = "") async throws -> VoiceConsoleState {
+        let encodedActor = actor.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? actor
+        let encodedConversation = conversationId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? conversationId
+        return try await get("/api/apple/voice/state?actor=\(encodedActor)&conversation_id=\(encodedConversation)")
     }
 
     // MARK: - Health
@@ -346,10 +465,26 @@ public final class AppleAPIClient: Sendable {
         return r.captured
     }
 
+    public func markChroniclePrayerPrayed(_ prayerId: String, payload: ChroniclePrayerActionPayload) async throws -> ChroniclePrayerActionResult {
+        try await post("/api/apple/chronicle/prayers/\(prayerId)/pray", body: payload)
+    }
+
+    public func markChroniclePrayerAnswered(_ prayerId: String, payload: ChroniclePrayerActionPayload) async throws -> ChroniclePrayerActionResult {
+        try await post("/api/apple/chronicle/prayers/\(prayerId)/answer", body: payload)
+    }
+
+    public func saveChronicleStudy(_ payload: ChronicleStudySavePayload) async throws -> ChronicleStudySaveResult {
+        try await post("/api/apple/chronicle/study/save", body: payload)
+    }
+
     // MARK: - Faith
 
     public func fetchFaith(actor: String = "chris") async throws -> FaithOverview {
         try await get("/api/apple/faith?actor=\(actor)")
+    }
+
+    public func chatFaith(_ payload: FaithChatPayload) async throws -> FaithChatResponse {
+        try await post("/api/apple/faith/chat", body: payload)
     }
 
     // MARK: - Publishing
@@ -358,23 +493,17 @@ public final class AppleAPIClient: Sendable {
         try await get("/api/apple/publishing")
     }
 
-    @discardableResult
-    public func approvePublishingReview(_ reviewId: String) async throws -> Bool {
+    public func approvePublishingReview(_ reviewId: String) async throws -> PublishReviewActionResult {
         struct Body: Encodable {}
-        struct Result: Decodable { let status: String }
-        let result: Result = try await post("/api/apple/publishing/reviews/\(reviewId)/approve", body: Body())
-        return result.status == "approved"
+        return try await post("/api/apple/publishing/reviews/\(reviewId)/approve", body: Body())
     }
 
-    @discardableResult
-    public func requestPublishingRevision(_ reviewId: String, feedback: String = "Needs revision from JarvisPhone.") async throws -> Bool {
+    public func requestPublishingRevision(_ reviewId: String, feedback: String = "Needs revision from JarvisPhone.") async throws -> PublishReviewActionResult {
         struct Body: Encodable { let feedback: String }
-        struct Result: Decodable { let status: String }
-        let result: Result = try await post(
+        return try await post(
             "/api/apple/publishing/reviews/\(reviewId)/revise",
             body: Body(feedback: feedback)
         )
-        return result.status == "needs_revision"
     }
 
     // MARK: - Huddle
@@ -383,12 +512,113 @@ public final class AppleAPIClient: Sendable {
         try await get("/api/apple/huddle")
     }
 
+    public func startHuddlePartyMode() async throws -> HuddlePartyModeActionResult {
+        try await post("/api/apple/huddle/party-mode/start", body: EmptyBody())
+    }
+
+    public func stageStewardshipLaneReview(_ laneId: String, actor: String = "chris", note: String = "") async throws -> StewardshipLaneActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let note: String
+        }
+        return try await post(
+            "/api/apple/stewardship-lanes/\(laneId)/stage-review",
+            body: Body(actor: actor, note: note)
+        )
+    }
+
+    public func approveStewardshipReview(_ reviewId: String, actor: String = "chris") async throws -> StewardshipLaneActionResult {
+        struct Body: Encodable {
+            let actor: String
+        }
+        return try await post(
+            "/api/apple/stewardship-reviews/\(reviewId)/approve",
+            body: Body(actor: actor)
+        )
+    }
+
+    public func routeStewardshipReview(
+        _ reviewId: String,
+        reviewSurface: String,
+        packetTarget: String,
+        actor: String = "chris"
+    ) async throws -> StewardshipLaneActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let reviewSurface: String
+            let packetTarget: String
+
+            enum CodingKeys: String, CodingKey {
+                case actor
+                case reviewSurface = "review_surface"
+                case packetTarget = "packet_target"
+            }
+        }
+        return try await post(
+            "/api/apple/stewardship-reviews/\(reviewId)/route",
+            body: Body(actor: actor, reviewSurface: reviewSurface, packetTarget: packetTarget)
+        )
+    }
+
+    public func retireStewardshipReview(
+        _ reviewId: String,
+        actor: String = "chris",
+        reason: String = "Retired from Systems/Admin."
+    ) async throws -> StewardshipLaneActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let reason: String
+        }
+        return try await post(
+            "/api/apple/stewardship-reviews/\(reviewId)/retire",
+            body: Body(actor: actor, reason: reason)
+        )
+    }
+
+    public func promoteGovernanceProposal(
+        _ proposalId: String,
+        actor: String = "chris",
+        basis: String = "Promoted from Systems/Admin."
+    ) async throws -> GovernanceProposalActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let basis: String
+        }
+        return try await post(
+            "/api/apple/governance-proposals/\(proposalId)/promote",
+            body: Body(actor: actor, basis: basis)
+        )
+    }
+
+    public func dismissGovernanceProposal(
+        _ proposalId: String,
+        actor: String = "chris",
+        reason: String = "Dismissed from Systems/Admin."
+    ) async throws -> GovernanceProposalActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let reason: String
+        }
+        return try await post(
+            "/api/apple/governance-proposals/\(proposalId)/dismiss",
+            body: Body(actor: actor, reason: reason)
+        )
+    }
+
     // MARK: - Forge
+
+    public func fetchForgeOverview() async throws -> ForgeOverview {
+        try await get("/api/apple/forge")
+    }
 
     public func fetchForgeModels() async throws -> [ForgeModelRecord] {
         struct Wrapper: Decodable { let models: [ForgeModelRecord] }
         let w: Wrapper = try await get("/api/apple/forge")
         return w.models
+    }
+
+    public func createForgeProject(_ payload: ForgeProjectCreatePayload) async throws -> ForgeProjectDetail {
+        try await post("/api/apple/forge/projects", body: payload)
     }
 
     @discardableResult
@@ -430,10 +660,13 @@ public final class AppleAPIClient: Sendable {
         return wrapper.notifications
     }
 
-    public func fetchNotifications(status: String = "", limit: Int = 50) async throws -> [NotificationCenterItem] {
+    public func fetchNotificationCenterOverview(status: String = "", limit: Int = 50) async throws -> NotificationCenterOverview {
         let safeStatus = status.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        let wrapper: NotificationCenterOverview = try await get("/api/apple/notifications?status=\(safeStatus)&limit=\(limit)")
-        return wrapper.notifications
+        return try await get("/api/apple/notifications?status=\(safeStatus)&limit=\(limit)")
+    }
+
+    public func fetchNotifications(status: String = "", limit: Int = 50) async throws -> [NotificationCenterItem] {
+        try await fetchNotificationCenterOverview(status: status, limit: limit).notifications
     }
 
     public func fetchRecentEvents(limit: Int = 25) async throws -> [EventTimelineItem] {
@@ -455,18 +688,12 @@ public final class AppleAPIClient: Sendable {
         return response.status == "dismissed"
     }
 
-    @discardableResult
-    public func resolveNotification(_ notificationId: String) async throws -> Bool {
-        struct Response: Decodable { let status: String }
-        let response: Response = try await post("/api/apple/notifications/\(notificationId)/resolve", body: EmptyBody())
-        return response.status == "resolved"
+    public func resolveNotification(_ notificationId: String) async throws -> NotificationWorkflowActionResult {
+        try await post("/api/apple/notifications/\(notificationId)/resolve", body: EmptyBody())
     }
 
-    @discardableResult
-    public func snoozeNotification(_ notificationId: String) async throws -> Bool {
-        struct Response: Decodable { let status: String }
-        let response: Response = try await post("/api/apple/notifications/\(notificationId)/snooze", body: EmptyBody())
-        return response.status == "snoozed"
+    public func snoozeNotification(_ notificationId: String) async throws -> NotificationWorkflowActionResult {
+        try await post("/api/apple/notifications/\(notificationId)/snooze", body: EmptyBody())
     }
 
     @discardableResult
@@ -486,19 +713,13 @@ public final class AppleAPIClient: Sendable {
         return response.ok ?? !(response.status ?? "").isEmpty || response.performedAction == action
     }
 
-    @discardableResult
-    public func completeReminder(_ reminderId: String) async throws -> Bool {
-        struct Response: Decodable { let status: String }
-        let response: Response = try await post("/api/apple/reminders/\(reminderId)/complete", body: EmptyBody())
-        return response.status == "completed"
+    public func completeReminder(_ reminderId: String) async throws -> ReminderWorkflowActionResult {
+        try await post("/api/apple/reminders/\(reminderId)/complete", body: EmptyBody())
     }
 
-    @discardableResult
-    public func snoozeReminder(_ reminderId: String, minutes: Int = 60) async throws -> Bool {
+    public func snoozeReminder(_ reminderId: String, minutes: Int = 60) async throws -> ReminderWorkflowActionResult {
         struct Body: Encodable { let minutes: Int }
-        struct Response: Decodable { let status: String }
-        let response: Response = try await post("/api/apple/reminders/\(reminderId)/snooze", body: Body(minutes: minutes))
-        return response.status == "snoozed"
+        return try await post("/api/apple/reminders/\(reminderId)/snooze", body: Body(minutes: minutes))
     }
 
     // MARK: - Internal networking
@@ -527,8 +748,7 @@ public final class AppleAPIClient: Sendable {
 
     private func perform<T: Decodable>(_ request: URLRequest) async throws -> T {
         var request = request
-        request.setValue(CloudflareConfig.clientId,     forHTTPHeaderField: "CF-Access-Client-Id")
-        request.setValue(CloudflareConfig.clientSecret, forHTTPHeaderField: "CF-Access-Client-Secret")
+        JARVISAccessConfig.apply(to: &request)
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let http = response as? HTTPURLResponse else {
@@ -555,8 +775,7 @@ public final class AppleAPIClient: Sendable {
 
     private func performEnvelopeOnly(_ request: URLRequest) async throws {
         var request = request
-        request.setValue(CloudflareConfig.clientId,     forHTTPHeaderField: "CF-Access-Client-Id")
-        request.setValue(CloudflareConfig.clientSecret, forHTTPHeaderField: "CF-Access-Client-Secret")
+        JARVISAccessConfig.apply(to: &request)
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let http = response as? HTTPURLResponse else {

@@ -39,9 +39,17 @@ final class EventKitSyncManager: ObservableObject {
 
     // MARK: - Sync
 
+    func requestAccessAndSync() async {
+        guard calendarStatus != .fullAccess || remindersStatus != .fullAccess else {
+            await syncAll()
+            return
+        }
+        await requestAccess()
+        await syncAll()
+    }
+
     func syncAll() async {
         guard calendarStatus == .fullAccess || remindersStatus == .fullAccess else {
-            await requestAccess()
             return
         }
         isSyncing = true
