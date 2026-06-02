@@ -1,0 +1,503 @@
+diff -ruN --exclude .git --exclude CloudflareConfig.swift /tmp/jarvis-native-baseline/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/App.swift /tmp/jarvis-native-package/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/App.swift
+--- /tmp/jarvis-native-baseline/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/App.swift	2026-06-01 22:49:21
++++ /tmp/jarvis-native-package/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/App.swift	2026-06-01 23:50:10
+@@ -1,5 +1,8 @@
+ import SwiftUI
+ import JarvisKit
++#if canImport(AppIntents)
++import AppIntents
++#endif
+ 
+ @main
+ struct JarvisPhoneApp: App {
+@@ -24,12 +27,11 @@
+     // MARK: - Startup
+ 
+     private func startupSequence() async {
++        await refreshAppShortcuts()
++
+         // Live Activity — start showing in Dynamic Island
+         LiveActivityManager.shared.start()
+ 
+-        // HealthKit
+-        await HealthSyncManager.shared.requestPermissionsAndSync()
+-
+         // Presence uses existing permissions only. Do not trigger location
+         // permission prompts during app startup.
+         WiFiPresenceMonitor.shared.start()
+@@ -38,15 +40,9 @@
+         // WatchConnectivity
+         _ = WatchSessionManager.shared
+ 
+-        // EventKit — calendar + reminders
+-        await EventKitSyncManager.shared.syncAll()
+-
+         // Now Playing observer
+         _ = NowPlayingManager.shared
+ 
+-        // Sound Analysis — start listening for household alerts
+-        SoundAnalysisManager.shared.startListening()
+-
+         // Load briefing, push to Watch + widgets + Live Activity
+         if let packet = try? await AppleAPIClient.shared.fetchBriefing() {
+             WatchSessionManager.shared.sendBriefing(packet)
+@@ -61,8 +57,17 @@
+     // MARK: - Foreground refresh
+ 
+     private func foregroundRefresh() async {
++        await refreshAppShortcuts()
+         WiFiPresenceMonitor.shared.refresh()
+-        Task { await EventKitSyncManager.shared.syncAll() }
++    }
++
++    private func refreshAppShortcuts() async {
++        #if canImport(AppIntents)
++        if #available(iOS 16.0, *) {
++            JarvisShortcuts.updateAppShortcutParameters()
++            print("[JARVIS Siri] App Shortcuts refreshed.")
++        }
++        #endif
+     }
+ 
+     // MARK: - Write to App Group (feeds widgets + complications)
+diff -ruN --exclude .git --exclude CloudflareConfig.swift /tmp/jarvis-native-baseline/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/AppDelegate.swift /tmp/jarvis-native-package/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/AppDelegate.swift
+--- /tmp/jarvis-native-baseline/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/AppDelegate.swift	2026-06-01 22:49:21
++++ /tmp/jarvis-native-package/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/AppDelegate.swift	2026-06-01 23:47:15
+@@ -8,7 +8,6 @@
+         _ application: UIApplication,
+         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+     ) -> Bool {
+-        requestNotificationPermission()
+         registerNotificationCategories()
+         UNUserNotificationCenter.current().delegate = self
+         return true
+@@ -33,7 +32,6 @@
+             name: "Default Configuration",
+             sessionRole: connectingSceneSession.role
+         )
+-        config.delegateClass = SceneDelegate.self
+         return config
+     }
+ 
+@@ -61,7 +59,7 @@
+ 
+     // MARK: - Private
+ 
+-    private func requestNotificationPermission() {
++    func requestNotificationPermissionIfNeeded() {
+         UNUserNotificationCenter.current().requestAuthorization(
+             options: [.alert, .badge, .sound]
+         ) { granted, _ in
+diff -ruN --exclude .git --exclude CloudflareConfig.swift /tmp/jarvis-native-baseline/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/EventSync/EventKitSyncManager.swift /tmp/jarvis-native-package/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/EventSync/EventKitSyncManager.swift
+--- /tmp/jarvis-native-baseline/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/EventSync/EventKitSyncManager.swift	2026-06-01 22:49:21
++++ /tmp/jarvis-native-package/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/EventSync/EventKitSyncManager.swift	2026-06-01 23:47:15
+@@ -39,9 +39,17 @@
+ 
+     // MARK: - Sync
+ 
++    func requestAccessAndSync() async {
++        guard calendarStatus != .fullAccess || remindersStatus != .fullAccess else {
++            await syncAll()
++            return
++        }
++        await requestAccess()
++        await syncAll()
++    }
++
+     func syncAll() async {
+         guard calendarStatus == .fullAccess || remindersStatus == .fullAccess else {
+-            await requestAccess()
+             return
+         }
+         isSyncing = true
+diff -ruN --exclude .git --exclude CloudflareConfig.swift /tmp/jarvis-native-baseline/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Scenes/SettingsView.swift /tmp/jarvis-native-package/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Scenes/SettingsView.swift
+--- /tmp/jarvis-native-baseline/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Scenes/SettingsView.swift	2026-06-01 22:49:21
++++ /tmp/jarvis-native-package/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Scenes/SettingsView.swift	2026-06-01 23:47:15
+@@ -1016,7 +1016,7 @@
+     }
+ 
+     private func refreshEventSync() async {
+-        await eventSync.syncAll()
++        await eventSync.requestAccessAndSync()
+         await refreshSystems()
+     }
+ 
+diff -ruN --exclude .git --exclude CloudflareConfig.swift /tmp/jarvis-native-baseline/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Speech/SpeechRecognitionManager.swift /tmp/jarvis-native-package/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Speech/SpeechRecognitionManager.swift
+--- /tmp/jarvis-native-baseline/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Speech/SpeechRecognitionManager.swift	2026-06-01 22:49:21
++++ /tmp/jarvis-native-package/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Speech/SpeechRecognitionManager.swift	2026-06-01 23:50:29
+@@ -1,6 +1,29 @@
+ import Speech
+ import AVFoundation
+ 
++enum SpeechRecognitionError: LocalizedError {
++    case unavailable
++    case recognizerMissing
++    case audioEngineStartFailed
++    case invalidInputFormat
++    case audioSessionSetupFailed(String)
++
++    var errorDescription: String? {
++        switch self {
++        case .unavailable:
++            return "Speech recognition unavailable"
++        case .recognizerMissing:
++            return "Speech recognizer is unavailable on this device"
++        case .audioEngineStartFailed:
++            return "Microphone input could not start"
++        case .invalidInputFormat:
++            return "Microphone input format is unavailable"
++        case .audioSessionSetupFailed(let step):
++            return "Microphone input could not start (\(step))"
++        }
++    }
++}
++
+ /// Free on-device speech recognition — replaces Whisper API calls.
+ /// Supports both continuous listening and one-shot recognition.
+ @MainActor
+@@ -16,15 +39,29 @@
+     private let recognizer       = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+     private var request:           SFSpeechAudioBufferRecognitionRequest?
+     private var task:              SFSpeechRecognitionTask?
+-    private let audioEngine        = AVAudioEngine()
++    private var audioEngine        = AVAudioEngine()
+     private var onFinal:           ((String) -> Void)?
++    private var onPartial:         ((String) -> Void)?
++    private var suspendedSoundAnalysis = false
++    private var stopRequested = false
++    private var autoStopTask: Task<Void, Never>?
+ 
++    private var hasActiveRecognitionSession: Bool {
++        isListening || request != nil || task != nil || audioEngine.isRunning
++    }
++
+     private init() {
+-        Task { await checkAuthorization() }
++        refreshAuthorizationStatus()
+     }
+ 
+     // MARK: - Authorization
+ 
++    func refreshAuthorizationStatus() {
++        let speechStatus = SFSpeechRecognizer.authorizationStatus()
++        let audioStatus = AVAudioSession.sharedInstance().recordPermission
++        isAuthorized = (speechStatus == .authorized) && (audioStatus == .granted)
++    }
++
+     func checkAuthorization() async {
+         let speechStatus = await Self.requestSpeechAuth()
+         let audioGranted = await AVAudioApplication.requestRecordPermission()
+@@ -43,55 +80,138 @@
+     // MARK: - Start / Stop
+ 
+     /// Start listening. `onFinal` is called with the final transcript when stopped.
+-    func startListening(onFinal: @escaping (String) -> Void) {
+-        guard isAuthorized, !(recognizer?.isAvailable ?? false == false) else {
+-            errorMessage = "Speech recognition unavailable"
++    func startListening(onPartial: ((String) -> Void)? = nil, onFinal: @escaping (String) -> Void) {
++        if hasActiveRecognitionSession {
++            print("[JARVIS Speech] Start requested while session active. Ignoring duplicate start.")
+             return
+         }
++        Task { @MainActor [weak self] in
++            await self?.beginListening(onPartial: onPartial, onFinal: onFinal)
++        }
++    }
++
++    private func beginListening(onPartial: ((String) -> Void)? = nil, onFinal: @escaping (String) -> Void) async {
++        print("[JARVIS Speech] Mic tapped. authorized=\(isAuthorized)")
++        if !isAuthorized {
++            await checkAuthorization()
++            print("[JARVIS Speech] Authorization refreshed. authorized=\(isAuthorized)")
++        }
++
++        guard isAuthorized else {
++            fail(with: .unavailable)
++            return
++        }
+         guard !isListening else { return }
++        guard let recognizer, recognizer.isAvailable else {
++            fail(with: .recognizerMissing)
++            return
++        }
+ 
+         self.onFinal = onFinal
++        self.onPartial = onPartial
+         transcript   = ""
+         errorMessage = nil
++        stopRequested = false
++        resetSessionState()
+ 
++        suspendedSoundAnalysis = false
++
+         let req = SFSpeechAudioBufferRecognitionRequest()
+         req.shouldReportPartialResults     = true
+         req.requiresOnDeviceRecognition    = false  // allow server for better accuracy
+         request = req
+ 
+-        let node   = audioEngine.inputNode
+-        let format = node.outputFormat(forBus: 0)
+-        node.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
+-            self?.request?.append(buffer)
++        let session = AVAudioSession.sharedInstance()
++        do {
++            try session.setCategory(
++                .playAndRecord,
++                mode: .voiceChat,
++                options: [.defaultToSpeaker, .allowBluetoothHFP, .duckOthers]
++            )
++        } catch {
++            print("[JARVIS Speech] setCategory failed: \(error.localizedDescription)")
++            fail(with: .audioSessionSetupFailed("setCategory"))
++            return
+         }
++        do {
++            try session.setActive(true, options: .notifyOthersOnDeactivation)
++        } catch {
++            print("[JARVIS Speech] setActive failed: \(error.localizedDescription)")
++            fail(with: .audioSessionSetupFailed("setActive"))
++            return
++        }
+ 
+-        try? audioEngine.start()
++        audioEngine = AVAudioEngine()
++        let node = audioEngine.inputNode
++        let inputFormat = node.inputFormat(forBus: 0)
++        guard inputFormat.sampleRate > 0, inputFormat.channelCount > 0 else {
++            fail(with: .invalidInputFormat)
++            return
++        }
++        node.removeTap(onBus: 0)
++        Self.installRecognitionTap(on: node, format: inputFormat, request: req)
++
++        audioEngine.prepare()
++        do {
++            try audioEngine.start()
++        } catch {
++            print("[JARVIS Speech] audioEngine.start failed: \(error.localizedDescription)")
++            fail(with: .audioEngineStartFailed)
++            return
++        }
+         isListening = true
++        print("[JARVIS Speech] Listening started.")
+ 
+-        task = recognizer?.recognitionTask(with: req) { [weak self] result, error in
+-            guard let self else { return }
+-            if let result {
+-                Task { @MainActor in
+-                    self.transcript = result.bestTranscription.formattedString
++        task = Self.makeRecognitionTask(
++            recognizer: recognizer,
++            request: req,
++            onTranscript: { [weak self] transcript in
++                Task { @MainActor [weak self] in
++                    guard let self else { return }
++                    self.transcript = transcript
++                    self.onPartial?(transcript)
++                    self.scheduleAutoStopAfterPause()
+                 }
++            },
++            onError: { [weak self] message in
++                Task { @MainActor [weak self] in
++                    guard let self else { return }
++                    if self.stopRequested, Self.isExpectedCancellation(message) {
++                        print("[JARVIS Speech] Ignoring expected cancellation: \(message)")
++                        return
++                    }
++                    if Self.isNoSpeechDetected(message) {
++                        print("[JARVIS Speech] No speech detected. Ending turn quietly.")
++                        self.errorMessage = nil
++                        self.stopListening()
++                        return
++                    }
++                    self.errorMessage = message
++                    self.stopListening()
++                }
++            },
++            onFinal: { [weak self] in
++                Task { @MainActor [weak self] in
++                    self?.stopListening()
++                }
+             }
+-            if error != nil || result?.isFinal == true {
+-                Task { @MainActor in self.stopListening() }
+-            }
+-        }
++        )
+     }
+ 
+     func stopListening() {
+-        audioEngine.stop()
+-        audioEngine.inputNode.removeTap(onBus: 0)
+-        request?.endAudio()
+-        task?.finish()
+-        request    = nil
+-        task       = nil
++        let final = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
++        stopRequested = true
++        autoStopTask?.cancel()
++        autoStopTask = nil
++        print("[JARVIS Speech] stopListening called. finalLength=\(final.count)")
++        resetSessionState()
+         isListening = false
+ 
+-        let final = transcript
+-        if !final.isEmpty { onFinal?(final) }
++        if !final.isEmpty {
++            print("[JARVIS Speech] Sending transcript: \(final)")
++        }
++        onFinal?(final)
++        onPartial = nil
+         onFinal = nil
+     }
+ 
+@@ -102,6 +222,90 @@
+             Task {
+                 try? await Task.sleep(for: .seconds(duration))
+                 await MainActor.run { self.stopListening() }
++            }
++        }
++    }
++
++    private func fail(with error: SpeechRecognitionError) {
++        errorMessage = error.localizedDescription
++        print("[JARVIS Speech] Failure: \(error.localizedDescription)")
++        resetSessionState()
++        isListening = false
++        onPartial = nil
++        onFinal = nil
++    }
++
++    private func resetSessionState() {
++        autoStopTask?.cancel()
++        autoStopTask = nil
++        if audioEngine.isRunning {
++            audioEngine.stop()
++        }
++        audioEngine.inputNode.removeTap(onBus: 0)
++        request?.endAudio()
++        task?.cancel()
++        request = nil
++        task = nil
++        audioEngine = AVAudioEngine()
++        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
++    }
++
++    private nonisolated static func isExpectedCancellation(_ message: String) -> Bool {
++        let lowered = message.lowercased()
++        return lowered.contains("cancel")
++    }
++
++    private func scheduleAutoStopAfterPause() {
++        let currentTranscript = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
++        guard currentTranscript.isEmpty == false else { return }
++        autoStopTask?.cancel()
++        autoStopTask = Task { [weak self] in
++            try? await Task.sleep(for: .seconds(1.2))
++            await MainActor.run {
++                guard let self else { return }
++                guard self.isListening else { return }
++                let latest = self.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
++                guard latest.isEmpty == false else { return }
++                print("[JARVIS Speech] Auto-stopping after pause.")
++                self.stopListening()
++            }
++        }
++    }
++
++    private nonisolated static func isNoSpeechDetected(_ message: String) -> Bool {
++        let lowered = message.lowercased()
++        return lowered.contains("no speech detected")
++            || lowered.contains("speech was not detected")
++    }
++
++    // nonisolated so audio and speech callbacks do not inherit @MainActor isolation
++    private nonisolated static func installRecognitionTap(
++        on inputNode: AVAudioInputNode,
++        format: AVAudioFormat,
++        request: SFSpeechAudioBufferRecognitionRequest
++    ) {
++        let requestBox = UncheckedSendable(request)
++        inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
++            requestBox.value.append(buffer)
++        }
++    }
++
++    // nonisolated so the recognition callback does not trip actor queue assertions
++    private nonisolated static func makeRecognitionTask(
++        recognizer: SFSpeechRecognizer,
++        request: SFSpeechAudioBufferRecognitionRequest,
++        onTranscript: @escaping @Sendable (String) -> Void,
++        onError: @escaping @Sendable (String) -> Void,
++        onFinal: @escaping @Sendable () -> Void
++    ) -> SFSpeechRecognitionTask {
++        recognizer.recognitionTask(with: request) { result, error in
++            if let result {
++                onTranscript(result.bestTranscription.formattedString)
++            }
++            if let error {
++                onError(error.localizedDescription)
++            } else if result?.isFinal == true {
++                onFinal()
+             }
+         }
+     }
+diff -ruN --exclude .git --exclude CloudflareConfig.swift /tmp/jarvis-native-baseline/JarvisApple/apps/ios/JarvisPhone/JarvisWatch/WatchViewModel.swift /tmp/jarvis-native-package/JarvisApple/apps/ios/JarvisPhone/JarvisWatch/WatchViewModel.swift
+--- /tmp/jarvis-native-baseline/JarvisApple/apps/ios/JarvisPhone/JarvisWatch/WatchViewModel.swift	2026-06-01 22:49:21
++++ /tmp/jarvis-native-package/JarvisApple/apps/ios/JarvisPhone/JarvisWatch/WatchViewModel.swift	2026-06-01 23:47:15
+@@ -1,8 +1,11 @@
+ import Foundation
+ import WatchConnectivity
+-import WatchKit
+ import WidgetKit
+ 
++#if canImport(WatchKit)
++import WatchKit
++#endif
++
+ /// Receives briefing and needs data from the paired iPhone via WatchConnectivity.
+ /// Also persists the latest snapshot to UserDefaults so complications can read it.
+ @MainActor
+@@ -52,7 +55,7 @@
+     /// Buzz the wrist if there are pending needs on first load.
+     func playHapticIfNeeded() {
+         if needsCount > 0 {
+-            WKInterfaceDevice.current().play(.notification)
++            playWatchHaptic(.notification)
+         }
+     }
+ 
+@@ -139,6 +142,27 @@
+     }
+ }
+ 
++enum JarvisWatchHaptic {
++    case click
++    case success
++    case notification
++}
++
++func playWatchHaptic(_ haptic: JarvisWatchHaptic) {
++#if canImport(WatchKit)
++    let watchHaptic: WKHapticType
++    switch haptic {
++    case .click:
++        watchHaptic = .click
++    case .success:
++        watchHaptic = .success
++    case .notification:
++        watchHaptic = .notification
++    }
++    WKInterfaceDevice.current().play(watchHaptic)
++#endif
++}
++
+ // MARK: - WCSessionDelegate
+ 
+ extension WatchViewModel: @preconcurrency WCSessionDelegate {
+@@ -166,4 +190,5 @@
+             self.applyContext(dict)
+         }
+     }
++
+ }

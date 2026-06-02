@@ -8,7 +8,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        requestNotificationPermission()
         registerNotificationCategories()
         UNUserNotificationCenter.current().delegate = self
         return true
@@ -33,7 +32,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             name: "Default Configuration",
             sessionRole: connectingSceneSession.role
         )
-        config.delegateClass = SceneDelegate.self
         return config
     }
 
@@ -61,7 +59,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 
     // MARK: - Private
 
-    private func requestNotificationPermission() {
+    func requestNotificationPermissionIfNeeded() {
         UNUserNotificationCenter.current().requestAuthorization(
             options: [.alert, .badge, .sound]
         ) { granted, _ in
