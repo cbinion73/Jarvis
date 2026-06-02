@@ -1,6 +1,8 @@
 import SwiftUI
 import EventKit
 import CoreLocation
+import UserNotifications
+import UIKit
 import JarvisKit
 
 // MARK: - SettingsView  "Systems"
@@ -24,6 +26,8 @@ struct SettingsView: View {
     @State private var nowPlayingState: NowPlayingStateOverview?
     @State private var controlPlane: ControlPlaneOverview?
     @State private var adminSummary: SystemsAdminSummary?
+    @State private var notificationAuthorizationStatus: UNAuthorizationStatus = .notDetermined
+    @State private var remoteNotificationsRegistered = false
     @State private var pingError: String?
     @State private var isRefreshing = false
     @State private var showingInbox = false
@@ -977,6 +981,12 @@ struct SettingsView: View {
 
                         // ── Sync health ─────────────────────────────
                         SystemsSection(title: "Sync", icon: "arrow.triangle.2.circlepath", accent: steel) {
+                            SysRow(label: "Notifications") {
+                                syncStatusChip(label: notificationStatusLabel(notificationAuthorizationStatus))
+                            }
+                            SysRow(label: "Remote Push") {
+                                syncStatusChip(label: remoteNotificationsRegistered ? "Registered" : "Not Registered")
+                            }
                             SysRow(label: "Calendar") {
                                 syncStatusChip(label: eventKitStatusLabel(eventSync.calendarStatus))
                             }
@@ -1008,6 +1018,14 @@ struct SettingsView: View {
                                 syncHealthRow(label: "Sound Mirror", domain: appState.syncHealth.soundAlert)
                                 syncHealthRow(label: "Vision Mirror", domain: appState.syncHealth.visionScan)
                             }
+
+                            Button {
+                                Task { await refreshNotificationPermissions() }
+                            } label: {
+                                Label(notificationActionLabel, systemImage: notificationActionSystemImage)
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
 
                             Button {
                                 Task { await refreshEventSync() }
@@ -2166,6 +2184,7 @@ struct SettingsView: View {
     private func refreshSystems() async {
         isRefreshing = true
         defer { isRefreshing = false }
+        await refreshNotificationStatus()
         do {
             async let status = AppleAPIClient.shared.fetchStatus()
             async let state = AppleAPIClient.shared.fetchAppState()
@@ -2195,6 +2214,35 @@ struct SettingsView: View {
             serverOK = false
             pingError = error.localizedDescription
         }
+    }
+
+    @MainActor
+    private func refreshNotificationPermissions() async {
+        await refreshNotificationStatus()
+
+        switch notificationAuthorizationStatus {
+        case .notDetermined:
+            (UIApplication.shared.delegate as? AppDelegate)?.requestNotificationPermissionIfNeeded()
+            try? await Task.sleep(for: .milliseconds(500))
+            await refreshNotificationStatus()
+        case .authorized, .provisional, .ephemeral:
+            UIApplication.shared.registerForRemoteNotifications()
+            try? await Task.sleep(for: .milliseconds(250))
+            await refreshNotificationStatus()
+        case .denied:
+            if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                openURL(settingsURL)
+            }
+        @unknown default:
+            break
+        }
+    }
+
+    @MainActor
+    private func refreshNotificationStatus() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        notificationAuthorizationStatus = settings.authorizationStatus
+        remoteNotificationsRegistered = UIApplication.shared.isRegisteredForRemoteNotifications
     }
 
     private func applyFocusPreset(_ preset: FocusPreset) async {
@@ -2424,6 +2472,49 @@ struct SettingsView: View {
             return "Not Asked"
         @unknown default:
             return "Unknown"
+        }
+    }
+
+    private func notificationStatusLabel(_ status: UNAuthorizationStatus) -> String {
+        switch status {
+        case .authorized:
+            return "Allowed"
+        case .provisional:
+            return "Provisional"
+        case .ephemeral:
+            return "Ephemeral"
+        case .denied:
+            return "Blocked"
+        case .notDetermined:
+            return "Not Asked"
+        @unknown default:
+            return "Unknown"
+        }
+    }
+
+    private var notificationActionLabel: String {
+        switch notificationAuthorizationStatus {
+        case .notDetermined:
+            return "Enable Notifications"
+        case .authorized, .provisional, .ephemeral:
+            return remoteNotificationsRegistered ? "Refresh Notification Registration" : "Register for Push Notifications"
+        case .denied:
+            return "Open Notification Settings"
+        @unknown default:
+            return "Review Notification Access"
+        }
+    }
+
+    private var notificationActionSystemImage: String {
+        switch notificationAuthorizationStatus {
+        case .denied:
+            return "gearshape"
+        case .authorized, .provisional, .ephemeral:
+            return "bell.badge"
+        case .notDetermined:
+            return "bell"
+        @unknown default:
+            return "bell"
         }
     }
 
