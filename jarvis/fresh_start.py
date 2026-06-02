@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -26,8 +26,8 @@ def _now_stamp() -> str:
 class FreshStartProtocol:
     config: AppConfig
     root: Path = Path.cwd()
-    data_root: Path = Path(init=False)
-    backup_root: Path = Path(init=False)
+    data_root: Path = field(init=False)
+    backup_root: Path = field(init=False)
 
     def __post_init__(self) -> None:
         self.data_root = self.root / "data"
