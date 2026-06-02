@@ -90,6 +90,15 @@ class AuditLog:
         with self.actions_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(entry) + "\n")
 
+    def log_event(self, entry_type: str, payload: dict) -> None:
+        entry = {
+            "entry_type": str(entry_type).strip() or "event",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        entry.update(dict(payload))
+        with self.actions_path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(entry) + "\n")
+
     def list_recent(self, limit: int = 25, entry_type: str | None = None) -> list[dict]:
         if not self.actions_path.exists():
             return []

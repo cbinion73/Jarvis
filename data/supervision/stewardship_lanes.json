@@ -1,0 +1,169 @@
+[
+  {
+    "lane_id": "family-stewardship",
+    "name": "Family Stewardship",
+    "mission": "Protect household peace, rhythm, and logistics through governed preparation and escalation.",
+    "primary_burden": "Household drift and social friction.",
+    "primary_agents": [
+      "pepper",
+      "family-steward",
+      "family-chief"
+    ],
+    "trust_zone_ids": [
+      "shared-email.stage",
+      "household_schedule",
+      "household_home",
+      "household_tasks"
+    ],
+    "report_cadence": "event_driven",
+    "output_types": [
+      "briefing_item",
+      "decision_needed",
+      "drift_signal",
+      "blocked_work"
+    ],
+    "escalation_target": "chris",
+    "autonomy_posture": "prepare-and-stage",
+    "sandbox_default": "household.workflow",
+    "doctrine_threshold": {
+      "min_reviewed_successes": 3,
+      "max_reversals": 0,
+      "min_success_rate": 0.95
+    },
+    "notes": "",
+    "status": "active",
+    "created_at": "2026-06-02T02:08:00.330798+00:00",
+    "updated_at": "2026-06-02T02:08:00.330798+00:00"
+  },
+  {
+    "lane_id": "executive-calendar",
+    "name": "Executive and Calendar",
+    "mission": "Reduce work friction through staged prep, scheduling hygiene, and bounded routing actions.",
+    "primary_burden": "Calendar collisions and underprepared decisions.",
+    "primary_agents": [
+      "herald",
+      "executive-counsel",
+      "kang"
+    ],
+    "trust_zone_ids": [
+      "household_schedule",
+      "shared-email.stage",
+      "household_attention"
+    ],
+    "report_cadence": "event_driven",
+    "output_types": [
+      "prepared_work",
+      "decision_needed",
+      "quiet_completion"
+    ],
+    "escalation_target": "chris",
+    "autonomy_posture": "stage-before-send",
+    "sandbox_default": "calendar-routing",
+    "doctrine_threshold": {
+      "min_reviewed_successes": 4,
+      "max_reversals": 0,
+      "min_success_rate": 0.97
+    },
+    "notes": "",
+    "status": "active",
+    "created_at": "2026-06-02T02:08:00.330798+00:00",
+    "updated_at": "2026-06-02T02:08:00.330798+00:00"
+  },
+  {
+    "lane_id": "watcher-continuity",
+    "name": "Watcher and Continuity",
+    "mission": "Preserve continuity, detect repeat friction, and strengthen doctrine from reviewed success.",
+    "primary_burden": "Loss of context and repeated unlearned mistakes.",
+    "primary_agents": [
+      "watcher",
+      "memory-curator"
+    ],
+    "trust_zone_ids": [
+      "household_attention",
+      "household_huddle"
+    ],
+    "report_cadence": "hourly",
+    "output_types": [
+      "drift_signal",
+      "prepared_work",
+      "quiet_completion"
+    ],
+    "escalation_target": "system-steward",
+    "autonomy_posture": "observe-synthesize-escalate",
+    "sandbox_default": "memory-review",
+    "doctrine_threshold": {
+      "min_reviewed_successes": 5,
+      "max_reversals": 1,
+      "min_success_rate": 0.98
+    },
+    "notes": "",
+    "status": "active",
+    "created_at": "2026-06-02T02:08:00.330798+00:00",
+    "updated_at": "2026-06-02T02:08:00.330798+00:00"
+  },
+  {
+    "lane_id": "wealth-opportunity",
+    "name": "Wealth and Opportunity",
+    "mission": "Prepare diligence and bounded simulations without letting enthusiasm outrun approval.",
+    "primary_burden": "Financial risk and premature commitment.",
+    "primary_agents": [
+      "black-panther",
+      "opportunity-scout"
+    ],
+    "trust_zone_ids": [
+      "publication_review",
+      "shared-email.stage"
+    ],
+    "report_cadence": "daily",
+    "output_types": [
+      "prepared_work",
+      "decision_needed",
+      "blocked_work"
+    ],
+    "escalation_target": "chris",
+    "autonomy_posture": "sandbox-and-stage",
+    "sandbox_default": "diligence-sandbox",
+    "doctrine_threshold": {
+      "min_reviewed_successes": 4,
+      "max_reversals": 0,
+      "min_success_rate": 0.99
+    },
+    "notes": "",
+    "status": "active",
+    "created_at": "2026-06-02T02:08:00.330798+00:00",
+    "updated_at": "2026-06-02T02:08:00.330798+00:00"
+  },
+  {
+    "lane_id": "chamber-operations",
+    "name": "Chamber Operations",
+    "mission": "Keep the agent society healthy, quiet, and reversible while extending autonomy only through review.",
+    "primary_burden": "Runtime drift, noisy automation, and unsafe self-change.",
+    "primary_agents": [
+      "system-steward",
+      "autoforge"
+    ],
+    "trust_zone_ids": [
+      "household_huddle",
+      "household_focus",
+      "household_attention"
+    ],
+    "report_cadence": "hourly",
+    "output_types": [
+      "quiet_completion",
+      "blocked_work",
+      "drift_signal"
+    ],
+    "escalation_target": "chris",
+    "autonomy_posture": "supervised-background",
+    "sandbox_default": "ops-sandbox",
+    "doctrine_threshold": {
+      "min_reviewed_successes": 5,
+      "max_reversals": 0,
+      "min_success_rate": 0.99
+    },
+    "notes": "",
+    "status": "active",
+    "created_at": "2026-06-02T02:08:00.330798+00:00",
+    "updated_at": "2026-06-02T02:08:00.330798+00:00"
+  }
+]

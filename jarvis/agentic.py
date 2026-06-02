@@ -4,6 +4,14 @@ import json
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+import uuid
+from typing import Any
+
+from .runtime_kernel import AgentRuntimeKernel
+
+from .agent_registry_contract import load_contract_bundle
+from .event_fabric import DurableEventStore, EventEnvelope, PresenceSnapshot, WakeDecision
+from .models import AttentionDisposition, InterruptionLevel, TriggerType, UserAttentionState
 
 
 def _now() -> datetime:
@@ -42,6 +50,9 @@ class AgentDefinition:
     mission_roles: list[str] = field(default_factory=list)
     allowed_tools: list[str] = field(default_factory=list)
     success_metrics: list[str] = field(default_factory=list)
+    foreground_policy: str = "relevant-when-present"
+    background_policy: str = "silent-unless-notable"
+    interruption_level: str = InterruptionLevel.IMPORTANT.value
 
 
 @dataclass(slots=True)
@@ -59,6 +70,8 @@ class AgentStatus:
     next_run_at: str
     due_now: bool
     priority: str
+    attention_mode: str = AttentionDisposition.SILENT.value
+    wake_triggers: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -143,6 +156,9 @@ class AgentRegistry:
                 mission_roles=["orchestrator", "router", "synthesizer"],
                 allowed_tools=["routing", "briefings", "mission-control"],
                 success_metrics=["Coherent routing", "Clear next move", "Low-friction orchestration"],
+                foreground_policy="always-front-door",
+                background_policy="standby-shell",
+                interruption_level=InterruptionLevel.PASSIVE.value,
             ),
             AgentDefinition(
                 agent_id="family-logistics",
@@ -153,6 +169,7 @@ class AgentRegistry:
                 dependencies=[],
                 memory_scope=["household", "personal"],
                 owns=["family plans", "meal timing", "departure checklists"],
+                background_policy="stage-routine-updates",
             ),
             AgentDefinition(
                 agent_id="executive-watch",
@@ -177,6 +194,8 @@ class AgentRegistry:
                 trust_zone="family-bmad.communications",
                 mission_roles=["workflow-operator", "communications", "planning"],
                 allowed_tools=["calendar", "gmail", "briefings", "project-planning"],
+                foreground_policy="foreground-on-work-signal",
+                background_policy="stage-briefings",
             ),
             AgentDefinition(
                 agent_id="chronicle-curator",
@@ -191,6 +210,8 @@ class AgentRegistry:
                 trust_zone="family-bmad.personal-local",
                 mission_roles=["reflection", "context", "formation"],
                 allowed_tools=["chronicle", "reflection", "briefings"],
+                background_policy="silent-curation",
+                interruption_level=InterruptionLevel.PASSIVE.value,
             ),
             AgentDefinition(
                 agent_id="workshop-watch",
@@ -219,6 +240,7 @@ class AgentRegistry:
                 trust_zone="family-bmad.family-ops",
                 mission_roles=["household-ops", "transition-support"],
                 allowed_tools=["home-assistant", "briefings", "alerts"],
+                background_policy="stage-transitions",
             ),
             AgentDefinition(
                 agent_id="watchtower",
@@ -233,6 +255,9 @@ class AgentRegistry:
                 trust_zone="family-bmad.family-ops",
                 mission_roles=["warning-posture", "anomaly-triage"],
                 allowed_tools=["alerts", "anomaly-watch", "briefings"],
+                foreground_policy="interrupt-on-anomaly",
+                background_policy="silent-watch",
+                interruption_level=InterruptionLevel.URGENT.value,
             ),
             AgentDefinition(
                 agent_id="storm",
@@ -249,6 +274,8 @@ class AgentRegistry:
                 mission_roles=["weather-intelligence", "warning-posture", "route-risk"],
                 allowed_tools=["weather", "alerts", "route-weather", "family-warnings"],
                 success_metrics=["Forecast truth", "Timely warning", "Cleaner route timing"],
+                foreground_policy="foreground-on-travel-or-risk",
+                interruption_level=InterruptionLevel.IMPORTANT.value,
             ),
             AgentDefinition(
                 agent_id="memory-curator",
@@ -259,6 +286,8 @@ class AgentRegistry:
                 dependencies=[],
                 memory_scope=["household", "personal", "project", "safety"],
                 owns=["memory proposals", "forget posture", "curation rules"],
+                background_policy="silent-curation",
+                interruption_level=InterruptionLevel.NEVER.value,
             ),
             AgentDefinition(
                 agent_id="system-steward",
@@ -274,6 +303,8 @@ class AgentRegistry:
                 trust_zone="family-bmad.personal-local",
                 mission_roles=["maintenance", "truth-checking", "repair"],
                 allowed_tools=["maintenance", "tests", "repo-health"],
+                background_policy="maintenance-only",
+                interruption_level=InterruptionLevel.NEVER.value,
             ),
         ]
 
@@ -282,6 +313,19 @@ class AgentRegistry:
 
     def by_id(self) -> dict[str, AgentDefinition]:
         return {agent.agent_id: agent for agent in self._agents}
+
+    def contract_snapshot(self) -> dict[str, Any]:
+        try:
+            bundle = load_contract_bundle(validate=True)
+        except Exception as exc:
+            return {
+                "ok": False,
+                "error": str(exc),
+            }
+        return {
+            "ok": True,
+            **bundle.snapshot(),
+        }
 
 
 class LifeAgentStudioStore:
@@ -1978,9 +2022,16 @@ class MemoryCurator:
 
 
 class BackgroundTaskScheduler:
-    def __init__(self, store: BackgroundStateStore, registry: AgentRegistry) -> None:
+    def __init__(
+        self,
+        store: BackgroundStateStore,
+        registry: AgentRegistry,
+        kernel: AgentRuntimeKernel | None = None,
+    ) -> None:
         self.store = store
         self.registry = registry
+        self.kernel = kernel
+        self.event_store = DurableEventStore(store.root)
 
     def tick(
         self,
@@ -1989,13 +2040,132 @@ class BackgroundTaskScheduler:
         integration_status: list[dict],
         recent_activity: list[dict],
         quiet_hours: tuple[str, str],
+        external_events: list[dict] | None = None,
+        presence: dict | None = None,
+        now: datetime | None = None,
     ) -> dict:
-        now = _now()
-        state = self.store.load()
-        agents_state = state.get("agents", {})
+        now = now or _now()
         recent_modules = [str(item.get("module", "")).strip() for item in recent_activity[:10]]
         integration_map = self._integration_map(integration_status)
         quiet_now = self._within_quiet_hours(now, *quiet_hours)
+        presence_snapshot = self._presence_snapshot(
+            active_mode=active_mode,
+            quiet_now=quiet_now,
+            recent_modules=recent_modules,
+            override=presence,
+            now=now,
+        )
+        if self.kernel is not None:
+            kernel_snapshot = self.kernel.snapshot(
+                active_mode=active_mode,
+                integration_status=integration_status,
+                recent_activity=recent_activity,
+                quiet_hours=quiet_hours,
+                observed_at=now,
+            )
+            statuses = [dict(item) for item in list(kernel_snapshot.get("status_rows", []))]
+            agents_state = {
+                str(item.get("agent_id", "")): {
+                    "state": str(item.get("state", "")),
+                    "desired_state": str(item.get("desired_state", "")),
+                    "last_run_at": str(item.get("last_run_at", "")),
+                    "next_run_at": str(item.get("next_run_at", "")),
+                    "heartbeat_status": str(item.get("heartbeat_status", "")),
+                    "health_status": str(item.get("health_status", "")),
+                    "execution_lane": str(item.get("execution_lane", "")),
+                    "attention_required": bool(item.get("attention_required", False)),
+                }
+                for item in statuses
+                if str(item.get("agent_id", "")).strip()
+            }
+            ingested_events: list[EventEnvelope] = []
+            for event in self._cadence_events(now=now, agents_state=agents_state):
+                published = self.event_store.publish(event, dedupe_window_seconds=int(event.payload.get("dedupe_window_seconds", 0)))
+                if published is not None:
+                    ingested_events.append(published)
+            for payload in list(external_events or []):
+                published = self.publish_event(payload, now=now)
+                if published is not None:
+                    ingested_events.append(published)
+            wake_decisions: list[WakeDecision] = []
+            for event in self.event_store.pending(now=now):
+                decisions = self._wake_agents_for_event(
+                    event=event,
+                    now=now,
+                    active_mode=active_mode,
+                    quiet_now=quiet_now,
+                    recent_modules=recent_modules,
+                    integration_map=integration_map,
+                    presence_snapshot=presence_snapshot,
+                )
+                self.event_store.mark_processed(event.event_id, [asdict(item) for item in decisions], processed_at=now)
+                wake_decisions.extend(decisions)
+            decisions_by_agent: dict[str, WakeDecision] = {}
+            for decision in wake_decisions:
+                current = decisions_by_agent.get(decision.agent_id)
+                if current is None or self._attention_rank(decision.attention) > self._attention_rank(current.attention):
+                    decisions_by_agent[decision.agent_id] = decision
+            for row in statuses:
+                decision = decisions_by_agent.get(str(row.get("agent_id", "")))
+                row["attention_mode"] = decision.attention.value if decision is not None else (
+                    AttentionDisposition.INTERRUPT.value if row.get("attention_required") else AttentionDisposition.SILENT.value
+                )
+                row["wake_triggers"] = [decision.trigger_type.value, decision.source_topic] if decision is not None else []
+                agent_entry = agents_state.get(str(row.get("agent_id", "")))
+                if agent_entry is not None:
+                    agent_entry["attention_mode"] = row["attention_mode"]
+                    agent_entry["wake_triggers"] = list(row["wake_triggers"])
+            snapshot = {
+                "last_tick_at": now.isoformat(),
+                "quiet_hours_active": bool(kernel_snapshot.get("quiet_hours_active", False)),
+                "active_mode": active_mode,
+                "agents": agents_state,
+                "awake_count": sum(1 for item in statuses if item.get("state") in {"running", "waking"}),
+                "idle_count": sum(1 for item in statuses if item.get("state") == "idle"),
+                "blocked_count": sum(1 for item in statuses if item.get("state") == "blocked"),
+                "presence": asdict(presence_snapshot),
+                "statuses": statuses,
+                "kernel": kernel_snapshot,
+                "event_bus": self.event_store.summary(limit=18),
+                "event_bus_ingested": [asdict(item) for item in ingested_events[-12:]],
+                "wake_decisions": [asdict(item) for item in wake_decisions[-24:]],
+                "attention": self._attention_groups(wake_decisions),
+            }
+            self.store.save(snapshot)
+            self.store.log_tick(snapshot)
+            return snapshot
+
+        state = self.store.load()
+        agents_state = state.get("agents", {})
+
+        ingested_events: list[EventEnvelope] = []
+        for event in self._cadence_events(now=now, agents_state=agents_state):
+            published = self.event_store.publish(event, dedupe_window_seconds=int(event.payload.get("dedupe_window_seconds", 0)))
+            if published is not None:
+                ingested_events.append(published)
+        for payload in list(external_events or []):
+            published = self.publish_event(payload, now=now)
+            if published is not None:
+                ingested_events.append(published)
+
+        wake_decisions: list[WakeDecision] = []
+        for event in self.event_store.pending(now=now):
+            decisions = self._wake_agents_for_event(
+                event=event,
+                now=now,
+                active_mode=active_mode,
+                quiet_now=quiet_now,
+                recent_modules=recent_modules,
+                integration_map=integration_map,
+                presence_snapshot=presence_snapshot,
+            )
+            self.event_store.mark_processed(event.event_id, [asdict(item) for item in decisions], processed_at=now)
+            wake_decisions.extend(decisions)
+        decisions_by_agent: dict[str, WakeDecision] = {}
+        for decision in wake_decisions:
+            current = decisions_by_agent.get(decision.agent_id)
+            if current is None or self._attention_rank(decision.attention) > self._attention_rank(current.attention):
+                decisions_by_agent[decision.agent_id] = decision
 
         statuses: list[AgentStatus] = []
         for definition in self.registry.list():
@@ -2009,31 +2179,52 @@ class BackgroundTaskScheduler:
             blocked_dependencies = [
                 dep for dep in definition.dependencies if not integration_map.get(dep, False)
             ]
+            decision = decisions_by_agent.get(definition.agent_id)
 
             if blocked_dependencies:
                 agent_state = "blocked"
                 reason = "Waiting on " + ", ".join(blocked_dependencies)
                 priority = "hold"
-            elif definition.agent_id == "ambient-router":
+                attention_mode = AttentionDisposition.SILENT.value
+                wake_triggers: list[str] = []
+            elif decision is not None:
                 agent_state = "awake"
-                reason = "Front-door routing stays available."
-                priority = "high"
+                reason = decision.reason
+                priority = "high" if decision.attention in {AttentionDisposition.FOREGROUND, AttentionDisposition.INTERRUPT} else "medium"
+                attention_mode = decision.attention.value
+                wake_triggers = [decision.trigger_type.value, decision.source_topic]
+                last_run = now
+                next_run = now.fromtimestamp(now.timestamp() + cadence_seconds, tz=UTC)
+            elif definition.agent_id == "ambient-router":
+                agent_state = "awake" if presence_snapshot.attention_state == UserAttentionState.FOREGROUND else "idle"
+                reason = "Front-door routing stays available when the user is engaged."
+                priority = "high" if agent_state == "awake" else "low"
+                attention_mode = AttentionDisposition.FOREGROUND.value if agent_state == "awake" else AttentionDisposition.SILENT.value
+                wake_triggers = ["presence"]
             elif quiet_now and definition.quiet_hours_behavior == "idle":
                 agent_state = "idle"
                 reason = "Quiet hours posture in effect."
                 priority = "low"
+                attention_mode = AttentionDisposition.SILENT.value
+                wake_triggers = []
             elif definition.agent_id == "memory-curator" and any(module for module in recent_modules):
                 agent_state = "awake" if due_now or recent_modules else "idle"
                 reason = "Recent activity gives the curator something to sort."
                 priority = "medium"
+                attention_mode = AttentionDisposition.SILENT.value
+                wake_triggers = ["curation-window"] if agent_state == "awake" else []
             elif any(owner in recent_modules for owner in definition.owns) or self._mode_match(active_mode, definition.agent_id):
                 agent_state = "awake"
                 reason = f"Current mode '{active_mode}' or recent work makes this agent relevant."
                 priority = "high" if due_now else "medium"
+                attention_mode = AttentionDisposition.FOREGROUND.value if presence_snapshot.attention_state == UserAttentionState.FOREGROUND else AttentionDisposition.STAGED.value
+                wake_triggers = ["mode-match", active_mode]
             else:
                 agent_state = "idle"
                 reason = "Standing by until its next useful window."
                 priority = "low" if not due_now else "medium"
+                attention_mode = AttentionDisposition.SILENT.value
+                wake_triggers = []
 
             status = AgentStatus(
                 agent_id=definition.agent_id,
@@ -2049,6 +2240,8 @@ class BackgroundTaskScheduler:
                 next_run_at=next_run.isoformat(),
                 due_now=due_now,
                 priority=priority,
+                attention_mode=attention_mode,
+                wake_triggers=wake_triggers,
             )
             statuses.append(status)
 
@@ -2056,6 +2249,8 @@ class BackgroundTaskScheduler:
                 "state": agent_state,
                 "last_run_at": status.last_run_at if agent_state == "awake" else persisted.get("last_run_at", status.last_run_at),
                 "next_run_at": status.next_run_at,
+                "attention_mode": attention_mode,
+                "wake_triggers": wake_triggers,
             }
 
         snapshot = {
@@ -2066,11 +2261,44 @@ class BackgroundTaskScheduler:
             "awake_count": sum(1 for item in statuses if item.state == "awake"),
             "idle_count": sum(1 for item in statuses if item.state == "idle"),
             "blocked_count": sum(1 for item in statuses if item.state == "blocked"),
+            "presence": asdict(presence_snapshot),
+            "event_bus": self.event_store.summary(limit=18),
+            "event_bus_ingested": [asdict(item) for item in ingested_events[-12:]],
+            "wake_decisions": [asdict(item) for item in wake_decisions[-24:]],
+            "attention": self._attention_groups(wake_decisions),
             "statuses": [asdict(item) for item in statuses],
         }
         self.store.save(snapshot)
         self.store.log_tick(snapshot)
         return snapshot
+
+    def publish_event(self, payload: dict[str, object], *, now: datetime | None = None) -> EventEnvelope | None:
+        current = now or _now()
+        event = EventEnvelope(
+            event_id=str(payload.get("event_id", "")) or str(uuid.uuid4()),
+            trigger_type=TriggerType(str(payload.get("trigger_type", TriggerType.SIGNAL.value))),
+            topic=str(payload.get("topic", payload.get("signal", "signal"))),
+            source=str(payload.get("source", "external")),
+            occurred_at=str(payload.get("occurred_at", "")) or current.isoformat(),
+            available_at=str(payload.get("available_at", "")) or str(payload.get("occurred_at", "")) or current.isoformat(),
+            status="pending",
+            lane=str(payload.get("lane", "system")),
+            urgency=max(1, min(10, int(payload.get("urgency", 5)))),
+            attention_hint=AttentionDisposition(str(payload.get("attention_hint", AttentionDisposition.STAGED.value))),
+            dedupe_key=str(payload.get("dedupe_key", "")),
+            target_agents=[str(item) for item in list(payload.get("target_agents", []) or [])],
+            payload=dict(payload.get("payload") or {}),
+        )
+        return self.event_store.publish(event, dedupe_window_seconds=int(payload.get("dedupe_window_seconds", 0) or 0))
+
+    def scheduler_fabric_snapshot(self, *, limit: int = 20) -> dict:
+        snapshot = self.store.load()
+        return {
+            "last_tick_at": str(snapshot.get("last_tick_at", "")),
+            "presence": dict(snapshot.get("presence") or {}),
+            "attention": dict(snapshot.get("attention") or {}),
+            "event_bus": self.event_store.summary(limit=limit),
+        }
 
     def _integration_map(self, integration_status: list[dict]) -> dict[str, bool]:
         mapping = {}
@@ -2084,6 +2312,217 @@ class BackgroundTaskScheduler:
             if "openai" in name or "api" in name:
                 mapping["openai"] = ok
         return mapping
+
+    def _presence_snapshot(
+        self,
+        *,
+        active_mode: str,
+        quiet_now: bool,
+        recent_modules: list[str],
+        override: dict | None,
+        now: datetime,
+    ) -> PresenceSnapshot:
+        payload = dict(override or {})
+        raw_state = str(payload.get("attention_state", "")).strip().lower()
+        if not raw_state:
+            if quiet_now:
+                raw_state = UserAttentionState.DO_NOT_DISTURB.value
+            elif any(recent_modules):
+                raw_state = UserAttentionState.FOREGROUND.value
+            else:
+                raw_state = UserAttentionState.PASSIVE.value
+        return PresenceSnapshot(
+            attention_state=UserAttentionState(raw_state),
+            active_mode=active_mode,
+            quiet_hours_active=quiet_now,
+            focus_mode=bool(payload.get("focus_mode", False)),
+            conversation_active=bool(payload.get("conversation_active", False)),
+            source=str(payload.get("source", "scheduler")),
+            observed_at=now.isoformat(),
+        )
+
+    def _cadence_events(self, *, now: datetime, agents_state: dict[str, dict]) -> list[EventEnvelope]:
+        events: list[EventEnvelope] = []
+        for definition in self.registry.list():
+            persisted = agents_state.get(definition.agent_id, {})
+            last_run = _parse_iso(str(persisted.get("last_run_at", ""))) or now
+            cadence_seconds = max(60, definition.cadence_minutes * 60)
+            due_at = last_run.fromtimestamp(last_run.timestamp() + cadence_seconds, tz=UTC)
+            if now < due_at:
+                continue
+            slot = int(now.timestamp()) // cadence_seconds
+            events.append(
+                EventEnvelope(
+                    event_id=str(uuid.uuid4()),
+                    trigger_type=TriggerType.CADENCE,
+                    topic=f"{definition.agent_id}:cadence",
+                    source="scheduler",
+                    occurred_at=now.isoformat(),
+                    available_at=now.isoformat(),
+                    status="pending",
+                    lane=definition.primary_domain,
+                    urgency=4,
+                    attention_hint=AttentionDisposition.SILENT,
+                    dedupe_key=f"cadence:{definition.agent_id}:{slot}",
+                    target_agents=[definition.agent_id],
+                    payload={
+                        "agent_id": definition.agent_id,
+                        "scheduled_for": due_at.isoformat(),
+                        "dedupe_window_seconds": cadence_seconds,
+                    },
+                )
+            )
+        return events
+
+    def _wake_agents_for_event(
+        self,
+        *,
+        event: EventEnvelope,
+        now: datetime,
+        active_mode: str,
+        quiet_now: bool,
+        recent_modules: list[str],
+        integration_map: dict[str, bool],
+        presence_snapshot: PresenceSnapshot,
+    ) -> list[WakeDecision]:
+        decisions: list[WakeDecision] = []
+        for definition in self.registry.list():
+            if event.target_agents and definition.agent_id not in event.target_agents:
+                continue
+            if any(dep for dep in definition.dependencies if not integration_map.get(dep, False)):
+                continue
+            if not self._agent_matches_event(definition, event, active_mode=active_mode, recent_modules=recent_modules):
+                continue
+            attention = self._attention_for(
+                definition=definition,
+                event=event,
+                presence_snapshot=presence_snapshot,
+                quiet_now=quiet_now,
+            )
+            decisions.append(
+                WakeDecision(
+                    agent_id=definition.agent_id,
+                    label=definition.label,
+                    trigger_type=event.trigger_type,
+                    event_id=event.event_id,
+                    reason=self._wake_reason(definition, event, attention, active_mode),
+                    urgency=event.urgency,
+                    attention=attention,
+                    interrupt=attention == AttentionDisposition.INTERRUPT,
+                    staged=attention == AttentionDisposition.STAGED,
+                    silent=attention == AttentionDisposition.SILENT,
+                    source_topic=event.topic,
+                    occurred_at=now.isoformat(),
+                )
+            )
+        return decisions
+
+    def _agent_matches_event(
+        self,
+        definition: AgentDefinition,
+        event: EventEnvelope,
+        *,
+        active_mode: str,
+        recent_modules: list[str],
+    ) -> bool:
+        if event.trigger_type == TriggerType.CADENCE:
+            return definition.agent_id in event.target_agents
+        if event.trigger_type == TriggerType.HUMAN_INTERRUPT:
+            return definition.agent_id == "ambient-router" or definition.agent_id in event.target_agents
+        if definition.agent_id in event.target_agents:
+            return True
+        event_text = " ".join(
+            [
+                event.topic.lower(),
+                event.source.lower(),
+                event.lane.lower(),
+                " ".join(str(item).lower() for item in list(event.payload.get("changed_fields", []))),
+                " ".join(str(item).lower() for item in list(event.payload.get("tags", []))),
+            ]
+        )
+        if any(trigger.lower() in event_text for trigger in definition.triggers):
+            return True
+        if event.trigger_type == TriggerType.STATE_CHANGE and self._mode_match(active_mode, definition.agent_id):
+            return True
+        if any(owner.lower() in event_text for owner in definition.owns):
+            return True
+        if definition.agent_id == "memory-curator" and recent_modules:
+            return True
+        return False
+
+    def _attention_for(
+        self,
+        *,
+        definition: AgentDefinition,
+        event: EventEnvelope,
+        presence_snapshot: PresenceSnapshot,
+        quiet_now: bool,
+    ) -> AttentionDisposition:
+        interruption_level = InterruptionLevel(definition.interruption_level)
+        if event.attention_hint == AttentionDisposition.INTERRUPT and interruption_level == InterruptionLevel.URGENT:
+            return AttentionDisposition.INTERRUPT if not quiet_now else AttentionDisposition.STAGED
+        if quiet_now:
+            if event.urgency >= 9 and interruption_level in {InterruptionLevel.IMPORTANT, InterruptionLevel.URGENT}:
+                return AttentionDisposition.INTERRUPT
+            return AttentionDisposition.STAGED if event.urgency >= 7 else AttentionDisposition.SILENT
+        if presence_snapshot.attention_state == UserAttentionState.DO_NOT_DISTURB:
+            return AttentionDisposition.INTERRUPT if event.urgency >= 9 and interruption_level == InterruptionLevel.URGENT else AttentionDisposition.STAGED
+        if presence_snapshot.attention_state == UserAttentionState.AWAY:
+            return AttentionDisposition.INTERRUPT if event.urgency >= 9 and interruption_level in {InterruptionLevel.IMPORTANT, InterruptionLevel.URGENT} else AttentionDisposition.STAGED
+        if presence_snapshot.attention_state == UserAttentionState.FOREGROUND:
+            if definition.foreground_policy == "always-front-door":
+                return AttentionDisposition.FOREGROUND
+            if event.trigger_type == TriggerType.HUMAN_INTERRUPT:
+                return AttentionDisposition.FOREGROUND
+            if event.urgency >= 8 and interruption_level in {InterruptionLevel.IMPORTANT, InterruptionLevel.URGENT}:
+                return AttentionDisposition.INTERRUPT
+            if definition.foreground_policy.startswith("foreground") or event.attention_hint == AttentionDisposition.FOREGROUND:
+                return AttentionDisposition.FOREGROUND
+            return AttentionDisposition.STAGED
+        if event.attention_hint == AttentionDisposition.FOREGROUND:
+            return AttentionDisposition.FOREGROUND
+        if event.attention_hint == AttentionDisposition.STAGED:
+            return AttentionDisposition.STAGED
+        return AttentionDisposition.STAGED if event.urgency >= 6 else AttentionDisposition.SILENT
+
+    def _wake_reason(
+        self,
+        definition: AgentDefinition,
+        event: EventEnvelope,
+        attention: AttentionDisposition,
+        active_mode: str,
+    ) -> str:
+        if event.trigger_type == TriggerType.CADENCE:
+            return f"{definition.label} is due for its scheduled background loop."
+        if event.trigger_type == TriggerType.HANDOFF:
+            return f"{definition.label} picked up a delegated handoff from {event.source}."
+        if event.trigger_type == TriggerType.HUMAN_INTERRUPT:
+            return f"{definition.label} is being pulled forward by direct human interruption."
+        if event.trigger_type == TriggerType.THRESHOLD:
+            return f"{definition.label} saw a threshold crossing and will {attention.value} it."
+        if event.trigger_type == TriggerType.STATE_CHANGE:
+            return f"{definition.label} is reacting to a state change while mode '{active_mode}' is active."
+        return f"{definition.label} matched the '{event.topic}' signal."
+
+    def _attention_groups(self, wake_decisions: list[WakeDecision]) -> dict[str, list[dict]]:
+        groups = {
+            AttentionDisposition.SILENT.value: [],
+            AttentionDisposition.STAGED.value: [],
+            AttentionDisposition.FOREGROUND.value: [],
+            AttentionDisposition.INTERRUPT.value: [],
+        }
+        for decision in wake_decisions:
+            groups[decision.attention.value].append(asdict(decision))
+        return groups
+
+    def _attention_rank(self, attention: AttentionDisposition) -> int:
+        order = {
+            AttentionDisposition.SILENT: 0,
+            AttentionDisposition.STAGED: 1,
+            AttentionDisposition.FOREGROUND: 2,
+            AttentionDisposition.INTERRUPT: 3,
+        }
+        return order.get(attention, 0)
 
     def _mode_match(self, active_mode: str, agent_id: str) -> bool:
         lowered = active_mode.lower()

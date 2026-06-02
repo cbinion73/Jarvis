@@ -1,0 +1,180 @@
+{
+  "host": {
+    "alias": "jarvis-core",
+    "role": "always-on orchestrator host",
+    "serviceManager": "launchd",
+    "trustZone": "trusted-admin",
+    "repoRoot": "/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS"
+  },
+  "runtime": {
+    "summary": "JARVIS runs as an always-on local orchestrator with launchd-managed runtime, guardian, autonomy, and optional OpenViking support.",
+    "services": [
+      {
+        "label": "com.jarvis.runtime",
+        "required": true,
+        "health_url": "http://127.0.0.1:8787/health",
+        "template": "ops/launchd/com.jarvis.runtime.plist.template",
+        "purpose": "Primary FastAPI runtime for orchestration and device surfaces."
+      },
+      {
+        "label": "com.jarvis.guardian",
+        "required": true,
+        "template": "ops/launchd/com.jarvis.guardian.plist.template",
+        "purpose": "Watchdog loop that records runtime truth and attempts recovery."
+      },
+      {
+        "label": "com.jarvis.assistant-autonomy",
+        "required": true,
+        "template": "ops/launchd/com.jarvis.assistant-autonomy.plist.template",
+        "purpose": "Background delegation loop for persistent agent work."
+      },
+      {
+        "label": "com.jarvis.openviking",
+        "required": false,
+        "health_url": "http://127.0.0.1:1933/health",
+        "template": "ops/launchd/com.jarvis.openviking.plist.template",
+        "purpose": "Optional local context backend for longer-running memory and ambient support."
+      }
+    ]
+  },
+  "freshness": {
+    "guardian_warn_after_seconds": 180,
+    "guardian_fail_after_seconds": 900,
+    "reminder_warn_after_days": 7,
+    "reminder_fail_after_days": 30,
+    "perception_warn_after_hours": 24,
+    "perception_fail_after_hours": 72,
+    "workshop_warn_after_days": 14,
+    "workshop_fail_after_days": 45,
+    "health_warn_after_hours": 24,
+    "health_fail_after_hours": 72
+  },
+  "durability": {
+    "power": {
+      "minimumUpsRuntimeMinutes": 30,
+      "criticalLoads": [
+        "jarvis-core host",
+        "router",
+        "switch",
+        "home assistant host"
+      ],
+      "degradeOrder": [
+        "voice edges",
+        "shared displays",
+        "non-essential background jobs"
+      ]
+    },
+    "network": {
+      "primaryAccess": "Tailscale/VPN",
+      "segments": [
+        "trusted-admin",
+        "iot-home",
+        "guest"
+      ],
+      "operatorRule": "JARVIS and Home Assistant stay off the public internet."
+    },
+    "storage": {
+      "authoritativeRoots": [
+        "data/",
+        "docs/",
+        "household/"
+      ],
+      "encryptedBackupTargets": [
+        "data/chronicle",
+        "data/family",
+        "data/security",
+        "data/workshop",
+        "docs"
+      ],
+      "scratchExcludes": [
+        ".venv",
+        "__pycache__",
+        "JarvisApple/.build"
+      ]
+    },
+    "recovery": {
+      "guardianState": "data/system/guardian_state.json",
+      "guardianEvents": "data/system/guardian_events.jsonl",
+      "operatorChecks": [
+        "python3 -m jarvis runtime-posture",
+        "curl http://127.0.0.1:8787/health",
+        "curl http://127.0.0.1:8787/api/runtime/posture"
+      ]
+    }
+  },
+  "push_path": {
+    "default": "push from the working checkout",
+    "fallback": "/tmp/jarvis-push-helper",
+    "useFallbackWhen": "git push stalls in pack-objects or receive-pack with no forward progress"
+  },
+  "integrations": {
+    "calendars": {
+      "primaryTruth": "family ICS feed plus connected Google/Microsoft accounts when present",
+      "targetPosture": "live family agenda visibility and account-aware calendar routing"
+    },
+    "reminders": {
+      "primaryTruth": "persistent local reminder queue until mirrored provider sync is explicitly wired",
+      "targetPosture": "truthful queue state, bounded snooze/complete actions, and eventual provider mirrors"
+    },
+    "home_automation": {
+      "primaryTruth": "Home Assistant is the actuator boundary",
+      "priorityDomains": [
+        "garage",
+        "climate",
+        "lighting",
+        "leak sensors",
+        "locks"
+      ]
+    },
+    "perception": {
+      "primaryTruth": "privacy-governed local event feeds",
+      "priorityFeeds": [
+        "phone presence",
+        "camera events",
+        "microphone events",
+        "environmental anomalies"
+      ]
+    },
+    "workshop": {
+      "primaryTruth": "profile-backed machine and safety posture until live adapters are fully wired",
+      "priorityMachines": [
+        "Creality K2 Pro Combo",
+        "HALOT-ONE",
+        "Falcon 5W",
+        "Titoe 4540 CNC",
+        "Cricut Joy Xtra"
+      ]
+    },
+    "health_sync": {
+      "primaryTruth": "Apple Health daily snapshots ingested through the iPhone bridge",
+      "operatorRule": "stale health sync should be surfaced as stale, not implied healthy"
+    }
+  },
+  "devices": {
+    "phones": [
+      "Chris iPhone",
+      "Rebekah iPhone",
+      "Caleb iPhone",
+      "Anna iPhone"
+    ],
+    "wearables": [
+      "Apple Watch"
+    ],
+    "voiceEdges": [
+      "Alexa Dots",
+      "office microphone",
+      "workshop headset"
+    ],
+    "displayEdges": [
+      "Apple TV",
+      "browser dashboard"
+    ],
+    "workshopHardware": [
+      "Creality K2 Pro Combo",
+      "HALOT-ONE (CL-60)",
+      "Falcon 5W",
+      "Titoe 4540 CNC",
+      "Cricut Joy Xtra"
+    ]
+  }
+}

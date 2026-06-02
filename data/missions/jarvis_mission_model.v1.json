@@ -1,0 +1,141 @@
+{
+  "schema_version": "1.0",
+  "model_id": "jarvis-core-mission-model",
+  "generated_at": "2026-06-01T00:00:00Z",
+  "canonical_posture": {
+    "system_mode": "always-on-orchestrator",
+    "interaction_mode": "oversight-and-steering",
+    "voice_mode": "voice-enabled-not-primary",
+    "registry_mode": "operational-contract"
+  },
+  "operator_principals": [
+    {
+      "principal_id": "chris-binion",
+      "display_name": "Chris Binion",
+      "role": "human-owner"
+    }
+  ],
+  "authority_stages": [
+    {
+      "stage_id": "observe",
+      "sequence": 0,
+      "summary": "Observe and classify only.",
+      "human_approval_required": true
+    },
+    {
+      "stage_id": "draft",
+      "sequence": 1,
+      "summary": "Prepare recommendations and staged work without external execution.",
+      "human_approval_required": true
+    },
+    {
+      "stage_id": "stage_alert",
+      "sequence": 2,
+      "summary": "Stage outbound or higher-risk work and alert the human for review.",
+      "human_approval_required": true
+    },
+    {
+      "stage_id": "sandbox_live",
+      "sequence": 3,
+      "summary": "Act inside bounded internal lanes with strong audit and rollback posture.",
+      "human_approval_required": false
+    },
+    {
+      "stage_id": "mature_live",
+      "sequence": 4,
+      "summary": "Reserved for proven mature autonomy under explicit doctrine.",
+      "human_approval_required": false
+    },
+    {
+      "stage_id": "suspended",
+      "sequence": 5,
+      "summary": "No execution until human review restores trust.",
+      "human_approval_required": true
+    }
+  ],
+  "mission_statuses": [
+    "proposed",
+    "active",
+    "blocked",
+    "awaiting-approval",
+    "completed",
+    "retired"
+  ],
+  "ownership_roles": [
+    "orchestrator",
+    "domain-owner",
+    "guardian",
+    "archivist",
+    "maintainer"
+  ],
+  "escalation_targets": [
+    "human-operator",
+    "ambient-router",
+    "system-steward"
+  ],
+  "escalation_reasons": [
+    "authority-limit",
+    "boundary-crossing",
+    "dependency-degraded",
+    "external-commitment",
+    "family-risk",
+    "human-interrupt",
+    "mission-stall",
+    "physical-risk",
+    "privacy-boundary",
+    "runtime-failure"
+  ],
+  "lane_taxonomy": [
+    "alerts",
+    "anomaly triage",
+    "briefs",
+    "Chronicle entries",
+    "alert surfacing",
+    "core routines",
+    "curation rules",
+    "departure checklists",
+    "devotional staging",
+    "family plans",
+    "family warning posture",
+    "follow-ups",
+    "forecast posture",
+    "forget posture",
+    "home actions",
+    "incident review",
+    "live weather retrieval",
+    "maintenance posture",
+    "memory proposals",
+    "meal timing",
+    "model sync",
+    "outing readiness",
+    "overnight watch",
+    "print staging",
+    "repo health",
+    "research staging",
+    "request routing",
+    "scene posture",
+    "self-improvement jobs",
+    "signal triage",
+    "theme summaries",
+    "travel weather routing",
+    "vendor prep",
+    "voice shell",
+    "wake-word posture",
+    "workflow runs",
+    "workshop plans",
+    "briefing recommendations"
+  ],
+  "handoff_kinds": [
+    "delegate",
+    "escalate",
+    "review",
+    "resume",
+    "stage-for-approval"
+  ],
+  "registry_invariants": [
+    "Registry entries describe operational contracts, not personalities.",
+    "Voice is enabled but never assumed as the primary path.",
+    "Agents exist to maintain continuity and delegated work, not just answer prompts.",
+    "Every agent must declare ownership, authority, and escalation before it is treated as active."
+  ]
+}

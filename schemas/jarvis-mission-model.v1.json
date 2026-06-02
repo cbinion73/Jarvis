@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/jarvis-mission-model.v1.json",
+  "title": "JarvisMissionModelV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "model_id",
+    "generated_at",
+    "canonical_posture",
+    "operator_principals",
+    "authority_stages",
+    "mission_statuses",
+    "ownership_roles",
+    "escalation_targets",
+    "escalation_reasons",
+    "lane_taxonomy",
+    "handoff_kinds",
+    "registry_invariants"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "model_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9._-]+$"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "canonical_posture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["system_mode", "interaction_mode", "voice_mode", "registry_mode"],
+      "properties": {
+        "system_mode": {
+          "type": "string",
+          "const": "always-on-orchestrator"
+        },
+        "interaction_mode": {
+          "type": "string",
+          "const": "oversight-and-steering"
+        },
+        "voice_mode": {
+          "type": "string",
+          "const": "voice-enabled-not-primary"
+        },
+        "registry_mode": {
+          "type": "string",
+          "const": "operational-contract"
+        }
+      }
+    },
+    "operator_principals": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["principal_id", "display_name", "role"],
+        "properties": {
+          "principal_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9._-]+$"
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "authority_stages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stage_id", "sequence", "summary", "human_approval_required"],
+        "properties": {
+          "stage_id": {
+            "type": "string",
+            "enum": ["observe", "draft", "stage_alert", "sandbox_live", "mature_live", "suspended"]
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "human_approval_required": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "mission_statuses": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ownership_roles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "escalation_targets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "escalation_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "lane_taxonomy": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "handoff_kinds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "registry_invariants": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

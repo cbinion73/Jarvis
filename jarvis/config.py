@@ -75,6 +75,7 @@ class AppConfig:
     perception_profile_path: Path
     memory_profile_path: Path
     catalyst_profile_path: Path
+    runtime_profile_path: Path
     google_client_secret_path: Path
     google_token_path: Path
     microsoft_client_id: str
@@ -92,6 +93,7 @@ class AppConfig:
     openviking_memory_uri_root: str
     autonomous_workstreams_enabled: bool
     autonomous_workstream_lanes: tuple[str, ...]
+    default_trust_owner_principal: str
 
     @classmethod
     def from_env(cls) -> "AppConfig":
@@ -218,6 +220,12 @@ class AppConfig:
                     "household/jarvis_catalyst_profile.example.json",
                 )
             ),
+            runtime_profile_path=Path(
+                os.getenv(
+                    "JARVIS_RUNTIME_PROFILE",
+                    "household/jarvis_runtime_profile.example.json",
+                )
+            ),
             google_client_secret_path=Path(
                 os.getenv(
                     "JARVIS_GOOGLE_CLIENT_SECRET",
@@ -256,6 +264,7 @@ class AppConfig:
             ).strip(),
             autonomous_workstreams_enabled=_bool_env("JARVIS_AUTONOMOUS_WORKSTREAMS_ENABLED", True),
             autonomous_workstream_lanes=_csv_env("JARVIS_AUTONOMOUS_WORKSTREAM_LANES", ("passive-income", "market-intelligence")),
+            default_trust_owner_principal=os.getenv("JARVIS_DEFAULT_TRUST_OWNER_PRINCIPAL", "").strip().lower(),
         )
 
     def load_household(self) -> HouseholdProfile:

@@ -890,6 +890,27 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             raise HTTPException(status_code=404, detail="Storm dashboard is unavailable.")
         return FileResponse(storm_path, media_type="text/html")
 
+    @app.get("/health-desktop-storyboard")
+    async def health_desktop_storyboard() -> Response:
+        storyboard_path = Path.cwd() / "artifacts" / "mockups" / "health-desktop-storyboard.html"
+        if not storyboard_path.exists():
+            raise HTTPException(status_code=404, detail="Health desktop storyboard is unavailable.")
+        return FileResponse(storyboard_path, media_type="text/html")
+
+    @app.get("/health-desktop")
+    async def health_desktop() -> Response:
+        storyboard_path = Path.cwd() / "artifacts" / "mockups" / "health-desktop-storyboard.html"
+        if not storyboard_path.exists():
+            raise HTTPException(status_code=404, detail="Health desktop is unavailable.")
+        return FileResponse(storyboard_path, media_type="text/html")
+
+    @app.get("/implementation-outline")
+    async def implementation_outline() -> Response:
+        outline_path = Path.cwd() / "artifacts" / "mockups" / "jarvis-numbered-outline-checklist.html"
+        if not outline_path.exists():
+            raise HTTPException(status_code=404, detail="Implementation outline is unavailable.")
+        return FileResponse(outline_path, media_type="text/html")
+
     @app.get("/storm-assets/{filename}")
     async def storm_asset(filename: str) -> Response:
         assets_root = (Path.cwd() / "artifacts" / "weather-assets").resolve()
@@ -1023,6 +1044,105 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/missions/{mission_id}/agents")
     async def api_mission_agents(mission_id: str) -> JSONResponse:
         return _json(await asyncio.to_thread(runtime.mission_agents, mission_id))
+
+    @app.get("/api/missions/{mission_id}/work-state")
+    async def api_mission_work_state(mission_id: str) -> JSONResponse:
+        try:
+            snapshot = await asyncio.to_thread(runtime.mission_work_state_snapshot, mission_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(snapshot)
+
+    @app.post("/api/missions/{mission_id}/agents/{agent_id}/work-state")
+    async def api_update_agent_work_state(mission_id: str, agent_id: str, payload: dict[str, Any]) -> JSONResponse:
+        try:
+            updated = await asyncio.to_thread(
+                runtime.update_agent_work_state,
+                mission_id,
+                agent_id,
+                status=str(payload.get("status", "")).strip(),
+                current_focus=str(payload.get("current_focus", "")).strip(),
+                ownership_mode=str(payload.get("ownership_mode", "")).strip(),
+                note=str(payload.get("note", "")).strip(),
+                decision=str(payload.get("decision", "")).strip(),
+                rationale=str(payload.get("rationale", "")).strip(),
+                hypothesis=str(payload.get("hypothesis", "")).strip(),
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(updated)
+
+    @app.post("/api/missions/{mission_id}/handoffs")
+    async def api_create_agent_handoff(mission_id: str, payload: dict[str, Any]) -> JSONResponse:
+        try:
+            updated = await asyncio.to_thread(
+                runtime.create_agent_handoff,
+                mission_id,
+                from_agent=str(payload.get("from_agent", "")).strip(),
+                to_agent=str(payload.get("to_agent", "")).strip(),
+                task_title=str(payload.get("task_title", "")).strip(),
+                summary=str(payload.get("summary", "")).strip(),
+                context=str(payload.get("context", "")).strip(),
+                partial_work=str(payload.get("partial_work", "")).strip(),
+                delegation_reason=str(payload.get("delegation_reason", "")).strip(),
+                expected_result=str(payload.get("expected_result", "")).strip(),
+                transfer_ownership=bool(payload.get("transfer_ownership", False)),
+                duplicate_key=str(payload.get("duplicate_key", "")).strip(),
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(updated, status_code=201)
+
+    @app.post("/api/missions/{mission_id}/handoffs/{handoff_id}/acknowledge")
+    async def api_acknowledge_agent_handoff(mission_id: str, handoff_id: str, payload: dict[str, Any]) -> JSONResponse:
+        try:
+            updated = await asyncio.to_thread(
+                runtime.acknowledge_agent_handoff,
+                mission_id,
+                handoff_id,
+                receiving_agent=str(payload.get("receiving_agent", "")).strip(),
+                accepted=bool(payload.get("accepted", True)),
+                note=str(payload.get("note", "")).strip(),
+            )
+        except (KeyError, ValueError) as exc:
+            detail = str(exc)
+            status_code = 404 if isinstance(exc, KeyError) else 400
+            raise HTTPException(status_code=status_code, detail=detail) from exc
+        return _json(updated)
+
+    @app.post("/api/missions/{mission_id}/escalations")
+    async def api_record_agent_escalation(mission_id: str, payload: dict[str, Any]) -> JSONResponse:
+        try:
+            updated = await asyncio.to_thread(
+                runtime.record_agent_escalation,
+                mission_id,
+                from_agent=str(payload.get("from_agent", "")).strip(),
+                to_agent=str(payload.get("to_agent", "")).strip(),
+                severity=str(payload.get("severity", "moderate")).strip(),
+                rationale=str(payload.get("rationale", "")).strip(),
+                requested_action=str(payload.get("requested_action", "")).strip(),
+                task_id=str(payload.get("task_id", "")).strip(),
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(updated, status_code=201)
+
+    @app.post("/api/missions/{mission_id}/duplicate-suppressions")
+    async def api_suppress_duplicate_work(mission_id: str, payload: dict[str, Any]) -> JSONResponse:
+        try:
+            updated = await asyncio.to_thread(
+                runtime.suppress_duplicate_work,
+                mission_id,
+                duplicate_key=str(payload.get("duplicate_key", "")).strip(),
+                winning_agent=str(payload.get("winning_agent", "")).strip(),
+                suppressed_agent=str(payload.get("suppressed_agent", "")).strip(),
+                rationale=str(payload.get("rationale", "")).strip(),
+                task_title=str(payload.get("task_title", "")).strip(),
+                task_id=str(payload.get("task_id", "")).strip(),
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(updated, status_code=201)
 
     @app.post("/api/agents/spawn")
     async def api_spawn_task_agent(payload: dict[str, Any]) -> JSONResponse:
@@ -1838,6 +1958,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_guardian_status() -> JSONResponse:
         return _json(runtime.guardian_status_snapshot())
 
+    @app.get("/api/runtime/posture")
+    async def api_runtime_posture() -> JSONResponse:
+        return _json(runtime.runtime_posture_snapshot())
+
     @app.get("/api/chamber-home")
     async def api_chamber_home(actor: str = "Chris") -> JSONResponse:
         return _json(await asyncio.to_thread(runtime.chamber_home_snapshot, actor))
@@ -1902,6 +2026,50 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/agents")
     async def api_agents() -> JSONResponse:
         return _json(runtime.background_agent_status())
+
+    @app.get("/api/agent-runtime")
+    async def api_agent_runtime() -> JSONResponse:
+        return _json(runtime.agent_runtime_snapshot())
+
+    @app.post("/api/agent-runtime/control")
+    async def api_agent_runtime_control(payload: dict[str, Any]) -> JSONResponse:
+        agent_id = str(payload.get("agent_id", "")).strip()
+        action = str(payload.get("action", "")).strip()
+        if not agent_id:
+            raise HTTPException(status_code=400, detail="agent_id is required")
+        if not action:
+            raise HTTPException(status_code=400, detail="action is required")
+        try:
+            result = runtime.control_agent_runtime(
+                agent_id,
+                action,
+                actor_name=str(payload.get("actor", "Chris")).strip() or "Chris",
+                reason=str(payload.get("reason", "")).strip(),
+                execution_lane=str(payload.get("execution_lane", "")).strip(),
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _json(result)
+
+    @app.post("/api/agent-runtime/heartbeat")
+    async def api_agent_runtime_heartbeat(payload: dict[str, Any]) -> JSONResponse:
+        agent_id = str(payload.get("agent_id", "")).strip()
+        if not agent_id:
+            raise HTTPException(status_code=400, detail="agent_id is required")
+        try:
+            result = runtime.record_agent_runtime_heartbeat(
+                agent_id,
+                actor_name=str(payload.get("actor", "system")).strip() or "system",
+                note=str(payload.get("note", "")).strip(),
+                run_id=str(payload.get("run_id", "")).strip(),
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _json(result)
 
     @app.get("/api/agent-registry")
     async def api_agent_registry() -> JSONResponse:
@@ -2202,6 +2370,54 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/approval-history")
     async def api_approval_history() -> JSONResponse:
         return _json(runtime.approval_history())
+
+    @app.get("/api/stewardship-lanes")
+    async def api_stewardship_lanes() -> JSONResponse:
+        return _json({"lanes": runtime.list_stewardship_lanes()})
+
+    @app.get("/api/agent-supervision/contracts")
+    async def api_agent_supervision_contracts() -> JSONResponse:
+        return _json({"contracts": runtime.list_agent_supervision_contracts()})
+
+    @app.get("/api/agent-supervision/traces")
+    async def api_agent_supervision_traces(limit: int = 50) -> JSONResponse:
+        return _json({"items": runtime.list_supervision_traces(limit=limit)})
+
+    @app.get("/api/agent-supervision/reviews")
+    async def api_agent_supervision_reviews(limit: int = 50) -> JSONResponse:
+        return _json({"items": runtime.list_supervision_reviews(limit=limit)})
+
+    @app.post("/api/agent-supervision/assess")
+    async def api_agent_supervision_assess(payload: dict[str, Any]) -> JSONResponse:
+        return _json(
+            runtime.assess_supervised_action(
+                agent_id=str(payload.get("agent_id", "")),
+                action_type=str(payload.get("action_type", "")),
+                requested_outcome=str(payload.get("requested_outcome", "")),
+                trust_zone_id=str(payload.get("trust_zone_id", "")),
+                lane_id=str(payload.get("lane_id", "")),
+                arena_id=str(payload.get("arena_id", "")),
+                context=dict(payload.get("context", {})),
+            )
+        )
+
+    @app.post("/api/agent-supervision/review")
+    async def api_agent_supervision_review(payload: dict[str, Any]) -> JSONResponse:
+        return _json(
+            runtime.record_supervision_review(
+                decision_id=str(payload.get("decision_id", "")),
+                reviewer=str(payload.get("reviewer", "")),
+                outcome=str(payload.get("outcome", "")),
+                notes=str(payload.get("notes", "")),
+                rollback_executed=bool(payload.get("rollback_executed", False)),
+                doctrine_ready=payload.get("doctrine_ready"),
+            )
+        )
+
+    @app.post("/api/agent-supervision/doctrine/refresh")
+    async def api_agent_supervision_doctrine_refresh(payload: dict[str, Any] | None = None) -> JSONResponse:
+        payload = payload or {}
+        return _json(runtime.refresh_supervision_doctrine(synthesized_by=str(payload.get("synthesized_by", "system-steward"))))
 
     @app.get("/api/mode")
     async def api_mode() -> JSONResponse:
