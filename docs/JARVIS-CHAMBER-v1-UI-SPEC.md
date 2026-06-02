@@ -6,6 +6,8 @@ This document turns the Interaction Bible into an implementation-facing product 
 
 This is not a generic dashboard redesign.
 
+This chamber spec inherits the shared shell, navigation, density, and component rules in `docs/JARVIS-FRONTEND-DESIGN-SYSTEM-v1.md`.
+
 It is the visible expression of the doctrine:
 
 - JARVIS is a private intelligence chamber
@@ -501,6 +503,14 @@ The chamber spec is working when:
 - the user can talk immediately without hunting for the input
 - the user sees evidence that JARVIS has already been helping
 - the user is never forced to parse a dashboard wall
+
+## Shared Design-System References
+
+Use these alongside this chamber spec:
+
+- `docs/JARVIS-FRONTEND-DESIGN-SYSTEM-v1.md`
+- `artifacts/mockups/jarvis-command-center-unified.html`
+- `artifacts/mockups/jarvis-numbered-outline-checklist.html`
 
 ## Implementation Sequence
 
