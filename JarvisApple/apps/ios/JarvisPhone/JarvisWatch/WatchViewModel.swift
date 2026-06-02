@@ -1,7 +1,10 @@
 import Foundation
 import WatchConnectivity
-import WatchKit
 import WidgetKit
+
+#if canImport(WatchKit)
+import WatchKit
+#endif
 
 /// Receives briefing and needs data from the paired iPhone via WatchConnectivity.
 /// Also persists the latest snapshot to UserDefaults so complications can read it.
@@ -52,7 +55,7 @@ final class WatchViewModel: NSObject, ObservableObject {
     /// Buzz the wrist if there are pending needs on first load.
     func playHapticIfNeeded() {
         if needsCount > 0 {
-            WKInterfaceDevice.current().play(.notification)
+            playWatchHaptic(.notification)
         }
     }
 
@@ -139,6 +142,27 @@ final class WatchViewModel: NSObject, ObservableObject {
     }
 }
 
+enum JarvisWatchHaptic {
+    case click
+    case success
+    case notification
+}
+
+func playWatchHaptic(_ haptic: JarvisWatchHaptic) {
+#if canImport(WatchKit)
+    let watchHaptic: WKHapticType
+    switch haptic {
+    case .click:
+        watchHaptic = .click
+    case .success:
+        watchHaptic = .success
+    case .notification:
+        watchHaptic = .notification
+    }
+    WKInterfaceDevice.current().play(watchHaptic)
+#endif
+}
+
 // MARK: - WCSessionDelegate
 
 extension WatchViewModel: @preconcurrency WCSessionDelegate {
@@ -166,4 +190,5 @@ extension WatchViewModel: @preconcurrency WCSessionDelegate {
             self.applyContext(dict)
         }
     }
+
 }
