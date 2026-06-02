@@ -2193,34 +2193,76 @@ struct SettingsView: View {
         isRefreshing = true
         defer { isRefreshing = false }
         await refreshNotificationStatus()
+
+        var essentialIssues: [String] = []
+
         do {
-            async let status = AppleAPIClient.shared.fetchStatus()
-            async let state = AppleAPIClient.shared.fetchAppState()
-            async let calendar = AppleAPIClient.shared.fetchCalendarState()
-            async let reminders = AppleAPIClient.shared.fetchRemindersState()
-            async let focus = AppleAPIClient.shared.fetchFocusState()
-            async let sound = AppleAPIClient.shared.fetchSoundHistory()
-            async let vision = AppleAPIClient.shared.fetchVisionHistory()
-            async let nowPlaying = AppleAPIClient.shared.fetchNowPlayingState()
-            async let control = AppleAPIClient.shared.fetchControlPlaneState()
-            async let admin = AppleAPIClient.shared.fetchSystemsAdminSummary()
-            watchStatus = try await status
-            appState = try await state
-            calendarState = try await calendar
-            remindersState = try await reminders
-            focusState = try await focus
-            soundHistory = try await sound
-            visionHistory = try await vision
-            nowPlayingState = try await nowPlaying
-            controlPlane = try await control
-            adminSummary = try await admin
-            serverOK = true
-            pingError = nil
+            watchStatus = try await AppleAPIClient.shared.fetchStatus()
+        } catch {
+            watchStatus = nil
+            essentialIssues.append("Status: \(error.localizedDescription)")
+        }
+
+        do {
+            appState = try await AppleAPIClient.shared.fetchAppState()
+        } catch {
+            appState = nil
+            essentialIssues.append("App State: \(error.localizedDescription)")
+        }
+
+        do {
+            calendarState = try await AppleAPIClient.shared.fetchCalendarState()
+        } catch {
+            calendarState = nil
+        }
+
+        do {
+            remindersState = try await AppleAPIClient.shared.fetchRemindersState()
+        } catch {
+            remindersState = nil
+        }
+
+        do {
+            focusState = try await AppleAPIClient.shared.fetchFocusState()
+        } catch {
+            focusState = nil
+        }
+
+        do {
+            soundHistory = try await AppleAPIClient.shared.fetchSoundHistory()
+        } catch {
+            soundHistory = nil
+        }
+
+        do {
+            visionHistory = try await AppleAPIClient.shared.fetchVisionHistory()
+        } catch {
+            visionHistory = nil
+        }
+
+        do {
+            nowPlayingState = try await AppleAPIClient.shared.fetchNowPlayingState()
+        } catch {
+            nowPlayingState = nil
+        }
+
+        do {
+            controlPlane = try await AppleAPIClient.shared.fetchControlPlaneState()
+        } catch {
+            controlPlane = nil
+        }
+
+        do {
+            adminSummary = try await AppleAPIClient.shared.fetchSystemsAdminSummary()
+        } catch {
+            adminSummary = nil
+        }
+
+        serverOK = essentialIssues.isEmpty
+        pingError = essentialIssues.isEmpty ? nil : essentialIssues.joined(separator: "  ")
+        if serverOK {
             calendarWorkflowError = ""
             reminderWorkflowError = ""
-        } catch {
-            serverOK = false
-            pingError = error.localizedDescription
         }
     }
 
