@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Desktop Command Center</title>
+  <style>
+    :root {
+      --bg: #071019;
+      --panel: rgba(10, 18, 29, 0.9);
+      --panel-soft: rgba(255, 255, 255, 0.03);
+      --line: rgba(108, 177, 212, 0.18);
+      --line-strong: rgba(108, 177, 212, 0.3);
+      --text: #eff8ff;
+      --muted: #8ca8bf;
+      --cyan: #72d8e6;
+      --blue: #8ebaff;
+      --green: #6bdd9f;
+      --amber: #f1bb6d;
+      --red: #ff9098;
+      --shadow: 0 28px 80px rgba(0, 0, 0, 0.34);
+      --radius-xl: 26px;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --font-ui: "SF Pro Display", "Segoe UI", sans-serif;
+      --font-mono: "SF Mono", "JetBrains Mono", "Menlo", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: var(--font-ui);
+      background:
+        radial-gradient(circle at 0% 0%, rgba(114, 216, 230, 0.16), transparent 26%),
+        radial-gradient(circle at 100% 0%, rgba(142, 186, 255, 0.16), transparent 24%),
+        linear-gradient(180deg, var(--bg) 0%, #040b12 100%);
+    }
+
+    button { font: inherit; color: inherit; }
+    h1, h2, h3, p { margin: 0; }
+    .muted, .panel-copy, .section-note, .meta { color: var(--muted); }
+    .shell { padding: 22px; display: grid; gap: 18px; }
+    .topbar, .summary-bar, .panel, .dock {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: linear-gradient(180deg, rgba(11, 20, 32, 0.96), rgba(8, 16, 27, 0.92));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+    .topbar {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr auto;
+      gap: 16px;
+      align-items: center;
+      padding: 18px 20px;
+    }
+    .headline { display: grid; gap: 10px; }
+    h1 { font-size: 30px; letter-spacing: -0.04em; line-height: 0.98; }
+    .body-copy { line-height: 1.55; max-width: 68ch; color: var(--muted); }
+    .eyebrow, .pill, .lane-badge, .state-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .eyebrow {
+      color: var(--cyan);
+      border-color: rgba(114, 216, 230, 0.24);
+      background: rgba(114, 216, 230, 0.06);
+    }
+    .top-actions, .mode-switch, .queue-actions, .dock-actions, .scenario-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .top-actions, .mode-switch { justify-content: flex-end; }
+    .ghost-btn, .action-btn, .scenario-btn, .queue-btn {
+      cursor: pointer;
+      padding: 10px 13px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+    }
+    .ghost-btn:hover, .action-btn:hover, .scenario-btn:hover, .queue-btn:hover,
+    .ghost-btn:focus-visible, .action-btn:focus-visible, .scenario-btn:focus-visible, .queue-btn:focus-visible {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--line-strong);
+      transform: translateY(-1px);
+      outline: none;
+    }
+    .primary {
+      background: rgba(114, 216, 230, 0.12);
+      border-color: rgba(114, 216, 230, 0.34);
+      color: var(--cyan);
+    }
+    .summary-bar { padding: 18px 20px; display: grid; gap: 16px; }
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .panel h2 { font-size: 21px; letter-spacing: -0.03em; }
+    .panel h3 { font-size: 16px; line-height: 1.3; }
+    .panel-copy { max-width: 52ch; line-height: 1.5; }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .summary-card, .digest-item, .attention-item, .decision-item, .resume-item, .inspector-item, .agent-card, .command-card, .compare-card {
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: var(--panel-soft);
+    }
+    .summary-card strong, .digest-item strong, .attention-item strong, .decision-item strong, .resume-item strong, .inspector-item strong, .command-card strong, .compare-card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+    .summary-card strong {
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .metric {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 28px;
+      line-height: 1;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 290px minmax(0, 1fr) 360px;
+      gap: 18px;
+      align-items: start;
+    }
+    .stack, .digest-list, .attention-list, .decision-list, .resume-list, .inspector-list, .signal-list, .command-grid, .compare-grid { display: grid; gap: 12px; }
+    .panel { padding: 18px; }
+    .agent-grid, .command-grid, .compare-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .agent-card header, .resume-item header, .decision-item header, .attention-item header {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: start;
+      margin-bottom: 10px;
+    }
+    .agent-state, .priority-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+      margin-right: 8px;
+      box-shadow: 0 0 18px currentColor;
+    }
+    .ok { color: var(--green); }
+    .warn { color: var(--amber); }
+    .alert { color: var(--red); }
+    .info { color: var(--cyan); }
+    .lane-badge {
+      font-size: 11px;
+      color: var(--blue);
+      background: rgba(142, 186, 255, 0.08);
+      border-color: rgba(142, 186, 255, 0.22);
+    }
+    .state-badge.awaiting {
+      color: var(--amber);
+      background: rgba(241, 187, 109, 0.1);
+      border-color: rgba(241, 187, 109, 0.26);
+    }
+    .state-badge.blocked {
+      color: var(--red);
+      background: rgba(255, 144, 152, 0.1);
+      border-color: rgba(255, 144, 152, 0.24);
+    }
+    .state-badge.active {
+      color: var(--cyan);
+      background: rgba(114, 216, 230, 0.1);
+      border-color: rgba(114, 216, 230, 0.24);
+    }
+    .state-badge.ready {
+      color: var(--green);
+      background: rgba(107, 221, 159, 0.1);
+      border-color: rgba(107, 221, 159, 0.24);
+    }
+    .meta-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .attention-item[data-selected="true"], .decision-item[data-selected="true"], .resume-item[data-selected="true"] {
+      background: rgba(114, 216, 230, 0.08);
+      border-color: rgba(114, 216, 230, 0.24);
+      box-shadow: inset 0 0 0 1px rgba(114, 216, 230, 0.12);
+    }
+    .queue-btn { padding: 8px 10px; border-radius: 999px; font-size: 12px; }
+    .dock {
+      padding: 16px 18px;
+      display: grid;
+      gap: 14px;
+      position: sticky;
+      bottom: 18px;
+    }
+    .dock-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+    code {
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--blue);
+      font-family: var(--font-mono);
+      font-size: 0.95em;
+    }
+    @media (max-width: 1280px) {
+      .layout, .summary-grid, .agent-grid, .compare-grid, .command-grid, .topbar {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 760px) {
+      .shell { padding: 14px; }
+      .topbar, .summary-bar, .panel, .dock { border-radius: 20px; }
+      h1 { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="topbar">
+      <div class="headline">
+        <span class="eyebrow">Desktop Command Center</span>
+        <h1>Supervise the agent society without turning JARVIS into a dashboard wall.</h1>
+        <p class="body-copy">Desktop is the calm oversight surface: return to context, inspect what changed, process approvals, redirect lanes, and resume unfinished supervision without dropping into a chat shell.</p>
+      </div>
+      <div class="mode-switch">
+        <button class="scenario-btn primary" type="button" data-scenario="overview">Overview</button>
+        <button class="scenario-btn" type="button" data-scenario="away">While Away</button>
+        <button class="scenario-btn" type="button" data-scenario="approvals">Decision Queue</button>
+        <button class="scenario-btn" type="button" data-scenario="redirect">Inspect + Redirect</button>
+      </div>
+      <div class="top-actions">
+        <span class="pill">Silent First</span>
+        <span class="pill">Voice Enabled</span>
+        <span class="pill">Oversight First</span>
+      </div>
+    </section>
+
+    <section class="summary-bar">
+      <div class="panel-head">
+        <div>
+          <h2>Return Brief</h2>
+          <p class="panel-copy">The desktop home state should immediately tell you what changed while you were away, what needs judgment, and where continuity can resume.</p>
+        </div>
+        <div class="scenario-row">
+          <span class="pill">Away 3h 18m</span>
+          <span class="pill">4 agents active</span>
+          <span class="pill">2 decisions waiting</span>
+        </div>
+      </div>
+      <div class="summary-grid" id="summary-grid"></div>
+    </section>
+
+    <section class="layout">
+      <div class="stack">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>While You Were Away</h2>
+              <p class="panel-copy">A synthesized absence digest, not a raw event feed.</p>
+            </div>
+            <span class="pill">Return Mode</span>
+          </div>
+          <ul class="digest-list" id="digest-list"></ul>
+        </section>
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Resume Stack</h2>
+              <p class="panel-copy">Continuity states that can be reopened without reconstructing context from scratch.</p>
+            </div>
+            <span class="pill">3 resumable</span>
+          </div>
+          <ul class="resume-list">
+            <li class="resume-item" data-selected="true">
+              <header><strong>Catalyst launch packet review</strong><span class="lane-badge">Build Lane</span></header>
+              <p class="muted">Resume at the evidence summary with the draft release note and risk review already open.</p>
+              <div class="queue-actions"><button class="queue-btn primary" type="button">Resume Review</button><button class="queue-btn" type="button">Defer</button></div>
+            </li>
+            <li class="resume-item">
+              <header><strong>Evening family conflict triage</strong><span class="lane-badge">Family Lane</span></header>
+              <p class="muted">Resume at the comparison between the two schedule resolutions that Household Associate prepared.</p>
+            </li>
+            <li class="resume-item">
+              <header><strong>Chronicle reflection continuity</strong><span class="lane-badge">Faith Lane</span></header>
+              <p class="muted">Resume at the last reviewed note stack instead of re-entering the reading flow from the top.</p>
+            </li>
+          </ul>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Attention Queue</h2>
+              <p class="panel-copy">The main desktop triage lane. Only items requiring review, approval, redirection, or continuity should surface here.</p>
+            </div>
+            <div class="queue-actions"><button class="queue-btn primary" type="button">Review All</button><button class="queue-btn" type="button">Quiet Ambient</button></div>
+          </div>
+          <ul class="attention-list">
+            <li class="attention-item" data-selected="true">
+              <header>
+                <div>
+                  <strong><span class="priority-dot warn"></span>Budget approval needed for staged launch window</strong>
+                  <p class="muted">Catalyst prepared the packet. Publishing remains bounded until you release or redirect it.</p>
+                </div>
+                <span class="state-badge awaiting">Approval</span>
+              </header>
+              <div class="meta-line"><span>Owner: Catalyst</span><span>Scope: External publish</span><span>Delay cost: Misses this evening window</span></div>
+            </li>
+            <li class="attention-item">
+              <header>
+                <div>
+                  <strong><span class="priority-dot alert"></span>Household Associate is blocked on tonight's schedule conflict</strong>
+                  <p class="muted">Two viable paths are ready, but the lane cannot proceed without your preference.</p>
+                </div>
+                <span class="state-badge blocked">Blocked</span>
+              </header>
+              <div class="meta-line"><span>Owner: Household Associate</span><span>Scope: Family lane</span><span>Delay cost: Late notices to family</span></div>
+            </li>
+            <li class="attention-item">
+              <header>
+                <div>
+                  <strong><span class="priority-dot info"></span>Chronicle reflection can be resumed</strong>
+                  <p class="muted">No urgency, but the reflective thread is still warm and ready to continue.</p>
+                </div>
+                <span class="state-badge active">Resume</span>
+              </header>
+              <div class="meta-line"><span>Owner: Chronicle</span><span>Scope: Faith lane</span><span>Delay cost: Low</span></div>
+            </li>
+          </ul>
+        </section>
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Agent Society Board</h2>
+              <p class="panel-copy">Make the active staff legible: who is working, what they own, and whether they are progressing, waiting, or drifting.</p>
+            </div>
+            <span class="pill">Supervision Board</span>
+          </div>
+          <div class="agent-grid">
+            <article class="agent-card">
+              <header><div><strong><span class="agent-state info"></span>Catalyst</strong><p class="muted">Staging launch review packet</p></div><span class="state-badge awaiting">Waiting</span></header>
+              <div class="meta-line"><span>Lane: Build</span><span>Mission: Release prep</span><span>Next: Await decision</span></div>
+            </article>
+            <article class="agent-card">
+              <header><div><strong><span class="agent-state alert"></span>Household Associate</strong><p class="muted">Resolving evening conflict</p></div><span class="state-badge blocked">Blocked</span></header>
+              <div class="meta-line"><span>Lane: Family</span><span>Mission: Coordination</span><span>Next: Needs preference</span></div>
+            </article>
+            <article class="agent-card">
+              <header><div><strong><span class="agent-state ok"></span>Scout</strong><p class="muted">Monitoring ambient commitments</p></div><span class="state-badge ready">Autonomous</span></header>
+              <div class="meta-line"><span>Lane: Day</span><span>Mission: Monitoring</span><span>Next: Digest later</span></div>
+            </article>
+            <article class="agent-card">
+              <header><div><strong><span class="agent-state info"></span>Chronicle</strong><p class="muted">Holding reflection continuity</p></div><span class="state-badge active">Ready</span></header>
+              <div class="meta-line"><span>Lane: Faith</span><span>Mission: Continuity</span><span>Next: Resume when called</span></div>
+            </article>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Inspector Drawer</h2>
+              <p class="panel-copy">Desktop should let you inspect evidence before steering. This is where decisions and redirects become grounded.</p>
+            </div>
+            <span class="pill" id="inspector-badge">Approval Packet</span>
+          </div>
+          <ul class="inspector-list" id="inspector-list"></ul>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Decision Queue</h2>
+              <p class="panel-copy">Approvals and decisions should be explicit, evidence-aware, and redirectable.</p>
+            </div>
+            <span class="pill">2 waiting</span>
+          </div>
+          <ul class="decision-list">
+            <li class="decision-item" data-selected="true">
+              <header><div><strong>Release the Catalyst launch packet</strong><p class="muted">External publish boundary crossed. JARVIS prepared everything except the final release call.</p></div><span class="state-badge awaiting">Awaiting Approval</span></header>
+              <div class="queue-actions"><button class="queue-btn primary" type="button">Approve</button><button class="queue-btn" type="button">Redirect</button><button class="queue-btn" type="button">Defer</button></div>
+            </li>
+            <li class="decision-item">
+              <header><div><strong>Choose tonight's family schedule resolution</strong><p class="muted">Household Associate prepared two viable plans and held execution at the preference boundary.</p></div><span class="state-badge blocked">Decision Needed</span></header>
+              <div class="queue-actions"><button class="queue-btn primary" type="button">Review Options</button><button class="queue-btn" type="button">Defer</button></div>
+            </li>
+          </ul>
+        </section>
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Command Surfaces</h2>
+              <p class="panel-copy">Supervisory verbs, not a chat prompt pretending to be structure.</p>
+            </div>
+            <span class="pill">Silent Steering</span>
+          </div>
+          <div class="command-grid">
+            <article class="command-card"><strong>Review + Triage</strong><p class="muted">Pull the highest-signal items forward without expanding the whole system into noise.</p></article>
+            <article class="command-card"><strong>Inspect + Compare</strong><p class="muted">Open evidence, compare options, and understand consequences before acting.</p></article>
+            <article class="command-card"><strong>Redirect + Bound</strong><p class="muted">Change lane direction, narrow scope, or impose quieter execution without losing continuity.</p></article>
+            <article class="command-card"><strong>Approve + Defer</strong><p class="muted">Release, postpone, or hold bounded actions without context switching into another surface.</p></article>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Desktop Versus Mobile</h2>
+              <p class="panel-copy">Desktop is for supervision and continuity recovery. Mobile is for interruption-safe quick action.</p>
+            </div>
+          </div>
+          <div class="compare-grid">
+            <article class="compare-card"><strong>Desktop</strong><ul class="signal-list"><li>Parallel lane awareness</li><li>Evidence inspection</li><li>Decision batching</li><li>Resume stack</li><li>Agent society visibility</li></ul></article>
+            <article class="compare-card"><strong>Mobile</strong><ul class="signal-list"><li>Interrupt approvals</li><li>Voice capture</li><li>One-step defer or resume</li><li>Heads-up updates</li><li>Fast bounded commands</li></ul></article>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="dock">
+      <div class="dock-head">
+        <div>
+          <h2>Command Dock</h2>
+          <p class="section-note">Always reachable. Short silent verbs for supervision, not a catch-all prompt box.</p>
+        </div>
+        <span class="pill" id="dock-mode">Review Mode</span>
+      </div>
+      <div class="dock-actions">
+        <button class="action-btn primary" type="button">Review</button>
+        <button class="action-btn" type="button">Triage</button>
+        <button class="action-btn" type="button">Inspect</button>
+        <button class="action-btn" type="button">Redirect</button>
+        <button class="action-btn" type="button">Approve</button>
+        <button class="action-btn" type="button">Defer</button>
+        <button class="action-btn" type="button">Resume</button>
+        <button class="action-btn" type="button">Quiet</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const scenarios = {
+      overview: {
+        dockMode: "Review Mode",
+        inspectorBadge: "Approval Packet",
+        summary: [
+          { title: "Changed While Away", metric: "7", copy: "Three completed tasks, two blockers, one risk drift, one newly resumable thread." },
+          { title: "Needs You", metric: "2", copy: "Budget approval for Catalyst and a family-calendar conflict needing a decision." },
+          { title: "Agent Posture", metric: "4 / 1 / 1", copy: "Active, blocked, and escalated counts across the currently visible lanes." },
+          { title: "Resume Context", metric: "3", copy: "Three supervision sessions can be reopened exactly where you left them." }
+        ],
+        digest: [
+          ["Catalyst staged a launch review packet.", "Evidence is ready, but final release timing was held for your approval because the blast radius crosses external publishing lanes."],
+          ["Household Associate found a calendar conflict tonight.", "The system prepared two resolution paths and marked the lane as waiting for human preference."],
+          ["Chronicle can resume from the exact reflection breakpoint.", "The last reviewed passage, note trail, and next suggested step are still intact."]
+        ],
+        inspector: [
+          ["Why this surfaced", "Catalyst crossed the boundary from preparation into external action, so the packet paused at the bounded approval stage."],
+          ["Evidence summary", "Launch draft complete, dependencies green, but release timing overlaps with a likely household interruption window."],
+          ["Recommended next supervisory move", "Approve for tomorrow morning, or redirect Catalyst to compress the packet into a lower-risk quiet-hours release."]
+        ]
+      },
+      away: {
+        dockMode: "Return Mode",
+        inspectorBadge: "Absence Digest",
+        summary: [
+          { title: "Away Duration", metric: "3h 18m", copy: "Long enough for meaningful background work to complete and queue new decisions." },
+          { title: "New Decisions", metric: "2", copy: "One approval and one lane-preference decision surfaced during the absence window." },
+          { title: "Resolved Quietly", metric: "5", copy: "Five bounded tasks completed without needing review." },
+          { title: "Resume Threads", metric: "3", copy: "Three previously open contexts were preserved rather than collapsed." }
+        ],
+        digest: [
+          ["Scout quietly cleared five ambient commitments.", "Nothing in that set needed review, so they stay compressed instead of filling the home surface."],
+          ["Catalyst paused at a governed release boundary.", "The system did the preparation work, then waited for your supervisory choice."],
+          ["Household Associate escalated only after finding a real preference conflict.", "The lane stayed autonomous until a human judgment call actually mattered."]
+        ],
+        inspector: [
+          ["Absence synthesis rule", "Desktop should summarize the return state with high signal, not replay every event that occurred while you were gone."],
+          ["Urgency distinction", "Only blockers, approvals, and true preference boundaries graduate into the attention queue."],
+          ["Continuity outcome", "Everything else should be resumable later without demanding immediate reading."]
+        ]
+      },
+      approvals: {
+        dockMode: "Decision Mode",
+        inspectorBadge: "Decision Evidence",
+        summary: [
+          { title: "Decisions Waiting", metric: "2", copy: "Both are bounded and evidence-backed. Neither should require opening a separate app." },
+          { title: "Approve Now", metric: "1", copy: "Catalyst can move immediately if you release the packet." },
+          { title: "Redirectable", metric: "2", copy: "Both decisions can be deferred or redirected instead of forced into yes/no." },
+          { title: "Quiet Until", metric: "10 PM", copy: "The queue can stay calm until the next review window if you choose to defer." }
+        ],
+        digest: [
+          ["Approvals belong in a dedicated queue.", "Desktop should collect decisions into a reviewable lane instead of scattering them through cards and modals."],
+          ["Every decision needs scope and consequence.", "The user should understand what happens if they approve, defer, or redirect."],
+          ["Redirect is first-class.", "Bounded autonomy gets better when the user can steer, not just accept or deny."]
+        ],
+        inspector: [
+          ["Decision packet", "Source agent, reason now, evidence summary, blast radius, and recommended next move all belong in the same inspection frame."],
+          ["Redirect path", "A release can be approved for later, narrowed in scope, or sent back for revision without losing continuity."],
+          ["Desktop difference", "This is where stacked decisions are processed in batches, unlike mobile's quick interrupt path."]
+        ]
+      },
+      redirect: {
+        dockMode: "Redirect Mode",
+        inspectorBadge: "Lane Redirect",
+        summary: [
+          { title: "Lane In Review", metric: "Family", copy: "The current inspection focus is a blocked family-lane coordination issue." },
+          { title: "Prepared Options", metric: "2", copy: "Household Associate already framed two paths for review." },
+          { title: "Need To Decide", metric: "Preference", copy: "The blocker is not missing data. It is a human choice boundary." },
+          { title: "Resume Safety", metric: "Preserved", copy: "You can inspect now, redirect, and come back later without losing the evidence slice." }
+        ],
+        digest: [
+          ["Desktop should prefer inspect then steer.", "The user should see the lane, options, and consequence before issuing direction."],
+          ["Redirect beats re-prompting.", "Command-center behavior is changing the workstream, not starting over with a chat request."],
+          ["Continuity stays intact.", "Redirects should preserve rationale and the review history for later supervision."]
+        ],
+        inspector: [
+          ["Blocked reason", "Two valid family schedule resolutions exist, but each implies a different tradeoff in pickup timing and evening calm."],
+          ["Possible redirects", "Favor lower-stress timing, prefer shortest travel, or hold action until a spouse confirmation arrives."],
+          ["Supervisory action", "Select the preferred operating principle once, and let Household Associate execute the rest."]
+        ]
+      }
+    };
+
+    const summaryGrid = document.getElementById("summary-grid");
+    const digestList = document.getElementById("digest-list");
+    const inspectorList = document.getElementById("inspector-list");
+    const inspectorBadge = document.getElementById("inspector-badge");
+    const dockMode = document.getElementById("dock-mode");
+    const scenarioButtons = Array.from(document.querySelectorAll("[data-scenario]"));
+
+    function renderSummary(items) {
+      summaryGrid.innerHTML = items.map((item) => `<article class="summary-card"><strong>${item.title}</strong><span class="metric">${item.metric}</span><p class="muted">${item.copy}</p></article>`).join("");
+    }
+    function renderDigest(items) {
+      digestList.innerHTML = items.map(([title, copy]) => `<li class="digest-item"><strong>${title}</strong><p class="muted">${copy}</p></li>`).join("");
+    }
+    function renderInspector(items) {
+      inspectorList.innerHTML = items.map(([title, copy]) => `<li class="inspector-item"><strong>${title}</strong><p class="muted">${copy}</p></li>`).join("");
+    }
+    function setScenario(name) {
+      const config = scenarios[name];
+      if (!config) return;
+      renderSummary(config.summary);
+      renderDigest(config.digest);
+      renderInspector(config.inspector);
+      inspectorBadge.textContent = config.inspectorBadge;
+      dockMode.textContent = config.dockMode;
+      scenarioButtons.forEach((button) => button.classList.toggle("primary", button.dataset.scenario === name));
+    }
+    scenarioButtons.forEach((button) => button.addEventListener("click", () => setScenario(button.dataset.scenario)));
+    setScenario("overview");
+  </script>
+</body>
+</html>
