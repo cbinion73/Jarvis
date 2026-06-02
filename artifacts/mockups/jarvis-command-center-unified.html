@@ -1,0 +1,941 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Unified Command Center Design System</title>
+  <style>
+    :root {
+      --bg: #071019;
+      --bg-2: #091522;
+      --panel: rgba(10, 18, 29, 0.92);
+      --panel-2: rgba(14, 24, 37, 0.94);
+      --panel-3: rgba(18, 31, 46, 0.96);
+      --line: rgba(132, 185, 214, 0.16);
+      --line-strong: rgba(132, 185, 214, 0.3);
+      --text: #edf6fd;
+      --muted: #90a9be;
+      --cyan: #67d3de;
+      --blue: #8eb8ff;
+      --green: #69d99e;
+      --amber: #efb761;
+      --red: #ff8e89;
+      --shadow: 0 28px 80px rgba(0, 0, 0, 0.34);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+      --font-ui: "SF Pro Display", "Segoe UI", sans-serif;
+      --font-mono: "SF Mono", "JetBrains Mono", "Menlo", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font-ui);
+      color: var(--text);
+      background:
+        radial-gradient(circle at 0% 0%, rgba(103, 211, 222, 0.14), transparent 26%),
+        radial-gradient(circle at 100% 0%, rgba(142, 184, 255, 0.12), transparent 24%),
+        radial-gradient(circle at 50% 100%, rgba(105, 217, 158, 0.07), transparent 28%),
+        linear-gradient(180deg, var(--bg) 0%, #040a12 100%);
+    }
+
+    h1, h2, h3, p {
+      margin: 0;
+    }
+
+    p,
+    .muted,
+    .meta,
+    .note {
+      color: var(--muted);
+    }
+
+    .page {
+      width: min(1460px, calc(100vw - 28px));
+      margin: 18px auto 40px;
+    }
+
+    .hero,
+    .surface,
+    .frame,
+    .phone-shell {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: linear-gradient(180deg, rgba(10, 18, 29, 0.94), rgba(8, 14, 23, 0.92));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .hero {
+      padding: 28px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -50px -70px auto;
+      width: 260px;
+      height: 260px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(103, 211, 222, 0.18), transparent 68%);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(103, 211, 222, 0.3);
+      background: rgba(103, 211, 222, 0.07);
+      color: var(--cyan);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: currentColor;
+      box-shadow: 0 0 12px currentColor;
+    }
+
+    .hero-title {
+      margin-top: 14px;
+      font-size: 36px;
+      line-height: 0.96;
+      letter-spacing: -0.04em;
+      max-width: 760px;
+    }
+
+    .hero-copy {
+      max-width: 860px;
+      margin-top: 12px;
+      line-height: 1.6;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .hero-card {
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .hero-card strong,
+    .section-label,
+    .pill-title {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .metric {
+      display: block;
+      font-size: 24px;
+      line-height: 1;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .principles {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+
+    .surface {
+      padding: 22px;
+    }
+
+    .list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .list li {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.03);
+      line-height: 1.5;
+    }
+
+    .rule-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .rule {
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .frames {
+      display: grid;
+      grid-template-columns: 1.3fr 0.9fr;
+      gap: 18px;
+      margin-bottom: 20px;
+      align-items: start;
+    }
+
+    .frame {
+      padding: 18px;
+    }
+
+    .frame-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .frame-head h2 {
+      font-size: 26px;
+      letter-spacing: -0.03em;
+    }
+
+    .desktop-shell {
+      display: grid;
+      grid-template-columns: 232px minmax(0, 1.15fr) 320px;
+      min-height: 760px;
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      background:
+        radial-gradient(circle at top right, rgba(103, 211, 222, 0.08), transparent 24%),
+        linear-gradient(180deg, rgba(6, 11, 18, 0.98), rgba(8, 15, 24, 0.98));
+    }
+
+    .rail,
+    .context-rail {
+      padding: 18px 16px;
+      background: linear-gradient(180deg, rgba(7, 13, 21, 0.98), rgba(9, 16, 25, 0.96));
+    }
+
+    .rail {
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .context-rail {
+      border-left: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .brand {
+      margin-bottom: 18px;
+      font-size: 18px;
+      letter-spacing: 0.04em;
+      font-weight: 650;
+    }
+
+    .posture-strip {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+      font-size: 12px;
+    }
+
+    .nav-group,
+    .support-stack,
+    .right-stack,
+    .brief-stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .nav-group {
+      margin-top: 16px;
+    }
+
+    .nav-item,
+    .workstream,
+    .command-chip {
+      padding: 11px 12px;
+      border-radius: 14px;
+      border: 1px solid transparent;
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .nav-item.active {
+      border-color: rgba(103, 211, 222, 0.26);
+      background: rgba(103, 211, 222, 0.09);
+      color: var(--text);
+    }
+
+    .nav-label {
+      display: block;
+      font-weight: 620;
+    }
+
+    .main {
+      padding: 18px;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 14px;
+    }
+
+    .briefing {
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid rgba(103, 211, 222, 0.16);
+      background:
+        radial-gradient(circle at top right, rgba(103, 211, 222, 0.08), transparent 30%),
+        linear-gradient(180deg, rgba(10, 18, 29, 0.94), rgba(12, 20, 31, 0.92));
+    }
+
+    .briefing h3 {
+      font-size: 28px;
+      letter-spacing: -0.04em;
+      margin-bottom: 10px;
+    }
+
+    .brief-list,
+    .mini-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .brief-list li,
+    .mini-card,
+    .support-card,
+    .command-dock,
+    .right-card,
+    .phone-card,
+    .phone-command,
+    .phone-nav {
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .brief-list li {
+      padding: 12px 13px;
+      border-radius: 16px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+    }
+
+    .brief-no {
+      color: var(--cyan);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding-top: 2px;
+    }
+
+    .support-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .support-card,
+    .right-card,
+    .phone-card {
+      padding: 14px;
+      border-radius: 18px;
+    }
+
+    .mini-card {
+      padding: 12px;
+      border-radius: 14px;
+    }
+
+    .mini-card .meta,
+    .support-card .meta,
+    .right-card .meta,
+    .phone-card .meta {
+      margin-top: 6px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .command-dock,
+    .phone-command {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 18px;
+    }
+
+    .command-input {
+      flex: 1;
+      padding: 11px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .btn,
+    .chip {
+      padding: 9px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .btn.primary {
+      color: #08131d;
+      background: linear-gradient(180deg, #83e4ef, var(--cyan));
+      border-color: transparent;
+      font-weight: 650;
+    }
+
+    .context-rail .right-card + .right-card {
+      margin-top: 10px;
+    }
+
+    .phone-wrap {
+      display: grid;
+      gap: 16px;
+    }
+
+    .phone-shell {
+      padding: 14px;
+    }
+
+    .phone-device {
+      max-width: 390px;
+      margin: 0 auto;
+      padding: 12px;
+      border-radius: 32px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background:
+        radial-gradient(circle at top, rgba(103, 211, 222, 0.08), transparent 24%),
+        linear-gradient(180deg, rgba(4, 9, 15, 0.98), rgba(7, 13, 21, 0.99));
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02), var(--shadow);
+    }
+
+    .notch {
+      width: 138px;
+      height: 28px;
+      margin: 0 auto 12px;
+      border-radius: 999px;
+      background: #02060a;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .phone-screen {
+      display: grid;
+      gap: 12px;
+    }
+
+    .phone-posture {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.025);
+      font-size: 12px;
+    }
+
+    .phone-brief {
+      padding: 16px;
+      border-radius: 22px;
+      border: 1px solid rgba(103, 211, 222, 0.16);
+      background:
+        radial-gradient(circle at top right, rgba(103, 211, 222, 0.08), transparent 30%),
+        linear-gradient(180deg, rgba(10, 18, 29, 0.94), rgba(12, 20, 31, 0.92));
+    }
+
+    .phone-brief h3 {
+      font-size: 23px;
+      letter-spacing: -0.04em;
+      margin-bottom: 8px;
+    }
+
+    .phone-list {
+      list-style: none;
+      margin: 12px 0 0;
+      padding: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .phone-list li {
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.03);
+      line-height: 1.45;
+    }
+
+    .phone-row {
+      display: grid;
+      gap: 12px;
+    }
+
+    .phone-nav {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      padding: 10px;
+      border-radius: 18px;
+    }
+
+    .phone-nav div {
+      padding: 10px 6px;
+      border-radius: 12px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .phone-nav .active {
+      color: var(--text);
+      background: rgba(103, 211, 222, 0.1);
+      border: 1px solid rgba(103, 211, 222, 0.22);
+    }
+
+    .tokens {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .token {
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .swatch {
+      width: 100%;
+      height: 56px;
+      border-radius: 14px;
+      margin-bottom: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .footer {
+      margin-top: 18px;
+      padding: 16px 18px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.025);
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1160px) {
+      .principles,
+      .frames {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-grid,
+      .support-grid,
+      .tokens {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 860px) {
+      .page {
+        width: min(100%, calc(100vw - 16px));
+      }
+
+      .hero,
+      .surface,
+      .frame,
+      .phone-shell {
+        border-radius: 22px;
+      }
+
+      .hero-title {
+        font-size: 30px;
+      }
+
+      .desktop-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .rail,
+      .context-rail {
+        border: 0;
+      }
+
+      .support-grid,
+      .hero-grid,
+      .rule-grid,
+      .tokens {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <span class="eyebrow">Unified Frontend System</span>
+      <h1 class="hero-title">JARVIS should feel like a briefing-led command center, not a dashboard or a chat shell.</h1>
+      <p class="hero-copy">This artifact shows one shared design language across desktop and iPhone: posture strip, dominant briefing field, decision lane, quiet stewardship, contained drift visibility, and a stable command dock with optional voice. The goal is oversight, continuity, prioritization, review, triage, and one-tap command.</p>
+
+      <div class="hero-grid">
+        <div class="hero-card">
+          <strong>Shared Posture</strong>
+          <span class="metric">1 shell</span>
+          <p class="meta">Both platforms inherit the same hierarchy and vocabulary.</p>
+        </div>
+        <div class="hero-card">
+          <strong>Command Model</strong>
+          <span class="metric">Silent-first</span>
+          <p class="meta">Type, tap, approve, defer, redirect, then use voice when it helps.</p>
+        </div>
+        <div class="hero-card">
+          <strong>Navigation</strong>
+          <span class="metric">5 roots</span>
+          <p class="meta">Small stable root navigation with grouped workstreams underneath.</p>
+        </div>
+        <div class="hero-card">
+          <strong>Continuity</strong>
+          <span class="metric">Always near</span>
+          <p class="meta">Command and prior context stay close without taking over the screen.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="principles">
+      <div class="surface">
+        <h2>Shared Rules</h2>
+        <ul class="list" style="margin-top: 14px;">
+          <li><strong>Briefing before browsing.</strong> The first read should explain reality before exposing deeper tools.</li>
+          <li><strong>Voice-enabled, not voice-first.</strong> The shell must work beautifully when the user never speaks.</li>
+          <li><strong>Command over exploration.</strong> Navigation is for steering an active system, not wandering feature silos.</li>
+          <li><strong>Prepared action beats blank composition.</strong> JARVIS should more often stage good choices than ask the user to start from zero.</li>
+          <li><strong>One coherent presence.</strong> Agent society stays mostly hidden until visibility improves trust or review.</li>
+        </ul>
+      </div>
+
+      <div class="surface">
+        <h2>Platform Split</h2>
+        <div class="rule-grid">
+          <div class="rule">
+            <span class="section-label">Desktop</span>
+            <p>Parallel visibility. Briefing, decisions, and command can coexist in one steady frame.</p>
+          </div>
+          <div class="rule">
+            <span class="section-label">iPhone</span>
+            <p>Thumb-reachable orientation. One dominant narrative with compressed support lanes and one-tap decisions.</p>
+          </div>
+          <div class="rule">
+            <span class="section-label">Shared</span>
+            <p>Same vocabulary, same color meanings, same recommendation framing, same command semantics.</p>
+          </div>
+          <div class="rule">
+            <span class="section-label">Never</span>
+            <p>No long root tab strip of equal-weight domains, no blank chat-first home, no generic KPI dashboard wall.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="frames">
+      <div class="frame">
+        <div class="frame-head">
+          <div>
+            <h2>Desktop Command Center</h2>
+            <p class="meta">Left rail for root navigation, center gravity in the briefing field, right rail for quiet decisions and carry-forward context.</p>
+          </div>
+          <div class="chip">Desktop favors parallel oversight</div>
+        </div>
+
+        <div class="desktop-shell">
+          <aside class="rail">
+            <div class="brand">JARVIS</div>
+            <div class="posture-strip">
+              <span>Monday posture</span>
+              <span>Calm Ready</span>
+            </div>
+
+            <div class="nav-group">
+              <div class="nav-item active">
+                <span class="nav-label">Home</span>
+                <span class="meta">Briefing and command</span>
+              </div>
+              <div class="nav-item">
+                <span class="nav-label">Decisions</span>
+                <span class="meta">Held for review</span>
+              </div>
+              <div class="nav-item">
+                <span class="nav-label">Workstreams</span>
+                <span class="meta">Grouped domain depth</span>
+              </div>
+              <div class="nav-item">
+                <span class="nav-label">Chronicle</span>
+                <span class="meta">Continuity and memory</span>
+              </div>
+              <div class="nav-item">
+                <span class="nav-label">Command</span>
+                <span class="meta">Typed and voice entry</span>
+              </div>
+              <div class="nav-item">
+                <span class="nav-label">Systems</span>
+                <span class="meta">Trust and settings</span>
+              </div>
+            </div>
+
+            <div class="nav-group">
+              <span class="section-label">Workstreams</span>
+              <div class="workstream">Household</div>
+              <div class="workstream">Health</div>
+              <div class="workstream">Catalyst</div>
+              <div class="workstream">Forge</div>
+              <div class="workstream">Publish</div>
+            </div>
+          </aside>
+
+          <main class="main">
+            <div class="posture-strip">
+              <span>Good morning, Chris. I reviewed the day.</span>
+              <span>2 held · 3 preparing · 1 drift</span>
+            </div>
+
+            <section class="briefing">
+              <span class="section-label">Briefing Field</span>
+              <h3>Three things matter. I already prepared the first pass on two of them.</h3>
+              <p class="meta">The school-week schedule is stable, publishing needs one approval, and health has a recovery gap by Thursday afternoon. My recommendation is to clear the launch review before lunch and protect one recovery block now.</p>
+
+              <ol class="brief-list">
+                <li>
+                  <span class="brief-no">01</span>
+                  <div>
+                    <strong>Approve the launch review packet.</strong>
+                    <div class="meta">JARVIS staged the edits and held final publication routing for your sign-off.</div>
+                  </div>
+                </li>
+                <li>
+                  <span class="brief-no">02</span>
+                  <div>
+                    <strong>Protect Thursday recovery space.</strong>
+                    <div class="meta">A drift pattern is forming across meetings, movement, and evening margin.</div>
+                  </div>
+                </li>
+                <li>
+                  <span class="brief-no">03</span>
+                  <div>
+                    <strong>Review the family timing conflict.</strong>
+                    <div class="meta">JARVIS prepared two options with tradeoffs instead of a raw calendar list.</div>
+                  </div>
+                </li>
+              </ol>
+            </section>
+
+            <section class="support-grid">
+              <div class="support-card">
+                <span class="section-label">Needs You</span>
+                <div class="mini-list">
+                  <div class="mini-card">
+                    <strong>Approve Thursday change</strong>
+                    <div class="meta">One tap to accept the revised family schedule.</div>
+                  </div>
+                  <div class="mini-card">
+                    <strong>Choose book cover direction</strong>
+                    <div class="meta">Two staged options already narrowed.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="support-card">
+                <span class="section-label">Already Working</span>
+                <div class="mini-list">
+                  <div class="mini-card">
+                    <strong>Preparing Friday follow-up</strong>
+                    <div class="meta">Draft and context bundle in progress.</div>
+                  </div>
+                  <div class="mini-card">
+                    <strong>Reviewing school-week friction</strong>
+                    <div class="meta">Family timing summary due this afternoon.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="support-card">
+                <span class="section-label">Drift / Risk</span>
+                <div class="mini-list">
+                  <div class="mini-card">
+                    <strong>Recovery margin is thinning</strong>
+                    <div class="meta">This matters by Thursday, not yet a crisis.</div>
+                  </div>
+                  <div class="mini-card">
+                    <strong>Book work went quiet for 9 days</strong>
+                    <div class="meta">Recommend either recommit or pause explicitly.</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <div class="command-dock">
+              <div class="command-input">Show me what changed since lunch and hold anything non-urgent until tomorrow.</div>
+              <div class="btn">Voice</div>
+              <div class="btn primary">Send</div>
+            </div>
+          </main>
+
+          <aside class="context-rail">
+            <div class="right-stack">
+              <div class="right-card">
+                <span class="section-label">Command Context</span>
+                <strong>Resume thread: Publishing launch review</strong>
+                <p class="meta">Held 18 minutes ago with source notes, risk summary, and prepared final copy.</p>
+              </div>
+
+              <div class="right-card">
+                <span class="section-label">Decision Discipline</span>
+                <strong>2 items require you</strong>
+                <p class="meta">Everything else remains under standing permission or can wait.</p>
+              </div>
+
+              <div class="right-card">
+                <span class="section-label">Optional Voice</span>
+                <strong>Hands-free command is near, not dominant</strong>
+                <p class="meta">The same command model works by tap, typing, or speech without changing the shell.</p>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      <div class="phone-wrap">
+        <section class="phone-shell">
+          <div class="frame-head">
+            <div>
+              <h2>iPhone Command Center</h2>
+              <p class="meta">The same hierarchy, compressed for one-hand orientation, triage, and command.</p>
+            </div>
+            <div class="chip">Mobile favors decisive compression</div>
+          </div>
+
+          <div class="phone-device">
+            <div class="notch"></div>
+            <div class="phone-screen">
+              <div class="phone-posture">
+                <span>Morning review</span>
+                <span>2 held · 1 drift</span>
+              </div>
+
+              <section class="phone-brief">
+                <span class="section-label">Briefing</span>
+                <h3>Three things matter today.</h3>
+                <p class="meta">Launch review needs approval, recovery space is thinning, and the family timing conflict already has two prepared options.</p>
+
+                <ol class="phone-list">
+                  <li><strong>Approve launch review.</strong> Final routing is staged and waiting.</li>
+                  <li><strong>Protect Thursday recovery.</strong> JARVIS recommends blocking one hour now.</li>
+                  <li><strong>Choose family timing option.</strong> Compare two prepared paths, not the whole calendar.</li>
+                </ol>
+              </section>
+
+              <div class="phone-row">
+                <div class="phone-card">
+                  <span class="section-label">Needs You</span>
+                  <strong>Approve Thursday change</strong>
+                  <p class="meta">One-tap decision with a quiet drill-in if you want context.</p>
+                </div>
+                <div class="phone-card">
+                  <span class="section-label">Already Working</span>
+                  <strong>Preparing Friday follow-up</strong>
+                  <p class="meta">Draft and source bundle underway.</p>
+                </div>
+                <div class="phone-card">
+                  <span class="section-label">Drift</span>
+                  <strong>Recovery margin is thinning</strong>
+                  <p class="meta">Important soon, not yet urgent.</p>
+                </div>
+              </div>
+
+              <div class="phone-command">
+                <div class="command-input">Hold non-urgent items until tomorrow.</div>
+                <div class="btn">Mic</div>
+              </div>
+
+              <div class="phone-nav">
+                <div class="active">Home</div>
+                <div>Decisions</div>
+                <div>Workstreams</div>
+                <div>Command</div>
+                <div>Systems</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="surface">
+          <h2>Reusable Tokens</h2>
+          <div class="tokens">
+            <div class="token">
+              <div class="swatch" style="background: linear-gradient(180deg, #0d1825, #071019);"></div>
+              <strong>Base Surface</strong>
+              <p class="meta">Dark, private, atmospheric. Never flat white dashboard chrome.</p>
+            </div>
+            <div class="token">
+              <div class="swatch" style="background: linear-gradient(180deg, rgba(103,211,222,0.88), rgba(103,211,222,0.45));"></div>
+              <strong>Trust / Readiness</strong>
+              <p class="meta">Cyan for live preparedness, command availability, and calm system confidence.</p>
+            </div>
+            <div class="token">
+              <div class="swatch" style="background: linear-gradient(180deg, rgba(239,183,97,0.92), rgba(239,183,97,0.5));"></div>
+              <strong>Decision / Attention</strong>
+              <p class="meta">Amber for held approvals, consequence-aware action, and recommendation emphasis.</p>
+            </div>
+            <div class="token">
+              <div class="swatch" style="background: linear-gradient(180deg, rgba(255,142,137,0.92), rgba(255,142,137,0.5));"></div>
+              <strong>Risk / Drift</strong>
+              <p class="meta">Reserved for material drift or escalating consequence, never casual noise.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="footer">
+      Future mockups and implementation should keep these invariants: one dominant briefing field, small stable root navigation, command always near, silent-first completion paths, and workstream depth grouped beneath a shared shell. JARVIS should feel like it has already been carrying the mission before the user says a word.
+    </section>
+  </div>
+</body>
+</html>

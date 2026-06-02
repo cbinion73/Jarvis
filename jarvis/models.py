@@ -64,6 +64,36 @@ class WorkLifecycleStage(StrEnum):
     OUTCOME = "outcome"
 
 
+class TriggerType(StrEnum):
+    CADENCE = "cadence"
+    STATE_CHANGE = "state-change"
+    SIGNAL = "signal"
+    THRESHOLD = "threshold"
+    HANDOFF = "handoff"
+    HUMAN_INTERRUPT = "human-interrupt"
+
+
+class UserAttentionState(StrEnum):
+    AWAY = "away"
+    PASSIVE = "passive"
+    FOREGROUND = "foreground"
+    DO_NOT_DISTURB = "do-not-disturb"
+
+
+class AttentionDisposition(StrEnum):
+    SILENT = "silent"
+    STAGED = "staged"
+    FOREGROUND = "foreground"
+    INTERRUPT = "interrupt"
+
+
+class InterruptionLevel(StrEnum):
+    NEVER = "never"
+    PASSIVE = "passive"
+    IMPORTANT = "important"
+    URGENT = "urgent"
+
+
 @dataclass(slots=True)
 class UserProfile:
     user_id: str
@@ -298,6 +328,7 @@ class TrustZone:
     zone_id: str
     name: str
     zone_type: str
+    authority_stage: str
     resource_scope: dict[str, object]
     allowed_actions: list[str]
     approval_mode: str
@@ -378,6 +409,22 @@ class StagedActionQueueItem:
 
 
 @dataclass(slots=True)
+class PromotionRecord:
+    record_id: str
+    event_type: str
+    subject_kind: str
+    subject_id: str
+    status: str
+    actor: str
+    basis: str
+    trust_zone: str = ""
+    arena_id: str = ""
+    authority_stage: str = ""
+    evidence: dict[str, object] = field(default_factory=dict)
+    created_at: str = ""
+
+
+@dataclass(slots=True)
 class MissionActionDecision:
     action_type: str
     trust_zone: str
@@ -427,6 +474,149 @@ class MissionOutput:
 
 
 @dataclass(slots=True)
+class AgentTaskRef:
+    task_id: str
+    title: str
+    status: str
+    summary: str = ""
+    source: str = ""
+    updated_at: str = ""
+    dependencies: list[str] = field(default_factory=list)
+    handoff_id: str = ""
+
+
+@dataclass(slots=True)
+class AgentMessage:
+    entry_id: str
+    kind: str
+    status: str
+    from_agent: str
+    to_agent: str
+    subject: str
+    summary: str
+    task_id: str = ""
+    created_at: str = ""
+    acknowledged_at: str = ""
+
+
+@dataclass(slots=True)
+class AgentDecisionRecord:
+    decision_id: str
+    summary: str
+    rationale: str
+    task_id: str = ""
+    created_at: str = ""
+
+
+@dataclass(slots=True)
+class AgentHypothesisRecord:
+    hypothesis_id: str
+    summary: str
+    confidence: str = "working"
+    status: str = "active"
+    task_id: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+
+
+@dataclass(slots=True)
+class AgentWorkState:
+    agent_id: str
+    mission_id: str
+    role: str
+    status: str
+    ownership_mode: str = "supporting"
+    current_focus: str = ""
+    inbox: list[AgentMessage] = field(default_factory=list)
+    outbox: list[AgentMessage] = field(default_factory=list)
+    active_tasks: list[AgentTaskRef] = field(default_factory=list)
+    blocked_tasks: list[AgentTaskRef] = field(default_factory=list)
+    pending_reviews: list[AgentTaskRef] = field(default_factory=list)
+    recent_decisions: list[AgentDecisionRecord] = field(default_factory=list)
+    current_hypotheses: list[AgentHypothesisRecord] = field(default_factory=list)
+    last_handoff_at: str = ""
+    updated_at: str = ""
+
+
+@dataclass(slots=True)
+class AgentHandoffRecord:
+    handoff_id: str
+    mission_id: str
+    from_agent: str
+    to_agent: str
+    task_id: str
+    handoff_kind: str
+    status: str
+    summary: str
+    context: str
+    partial_work: str = ""
+    duplicate_key: str = ""
+    requires_acceptance: bool = True
+    created_at: str = ""
+    acknowledged_at: str = ""
+    completed_at: str = ""
+
+
+@dataclass(slots=True)
+class AgentDelegationRecord:
+    delegation_id: str
+    mission_id: str
+    delegator_agent: str
+    delegate_agent: str
+    task_id: str
+    scope: str
+    rationale: str
+    expected_result: str
+    status: str = "active"
+    handoff_id: str = ""
+    created_at: str = ""
+    resolved_at: str = ""
+
+
+@dataclass(slots=True)
+class AgentEscalationRecord:
+    escalation_id: str
+    mission_id: str
+    from_agent: str
+    to_agent: str
+    task_id: str
+    severity: str
+    rationale: str
+    requested_action: str
+    status: str = "open"
+    created_at: str = ""
+    resolved_at: str = ""
+
+
+@dataclass(slots=True)
+class OwnershipTransferRecord:
+    transfer_id: str
+    mission_id: str
+    task_id: str
+    from_agent: str
+    to_agent: str
+    reason: str
+    status: str = "pending-acceptance"
+    safe_to_release: bool = False
+    continuity_notes: str = ""
+    created_at: str = ""
+    accepted_at: str = ""
+
+
+@dataclass(slots=True)
+class DuplicateWorkSuppressionRecord:
+    suppression_id: str
+    mission_id: str
+    duplicate_key: str
+    task_id: str
+    winning_agent: str
+    suppressed_agent: str
+    rationale: str
+    status: str = "suppressed"
+    created_at: str = ""
+
+
+@dataclass(slots=True)
 class TaskAgentProfile:
     agent_id: str
     label: str
@@ -473,6 +663,12 @@ class MissionDossier:
     approvals: list[str] = field(default_factory=list)
     outputs: list[MissionOutput] = field(default_factory=list)
     follow_ups: list[str] = field(default_factory=list)
+    agent_work_states: dict[str, AgentWorkState] = field(default_factory=dict)
+    handoffs: list[AgentHandoffRecord] = field(default_factory=list)
+    delegations: list[AgentDelegationRecord] = field(default_factory=list)
+    escalations: list[AgentEscalationRecord] = field(default_factory=list)
+    ownership_transfers: list[OwnershipTransferRecord] = field(default_factory=list)
+    duplicate_suppressions: list[DuplicateWorkSuppressionRecord] = field(default_factory=list)
     memory_snapshot: dict[str, object] = field(default_factory=dict)
     family_impact: list[str] = field(default_factory=list)
     created_at: str = ""
@@ -537,6 +733,15 @@ class VendorPrep:
     status: str
     timestamp: str
     work_id: str = ""
+    updated_at: str = ""
+    review_level: str = ""
+    sandbox_status: str = ""
+    sandbox_run_id: str = ""
+    sandbox_message: str = ""
+    sandbox_report_path: str = ""
+    sandbox_patch_bundle_path: str = ""
+    sandbox_workspace_path: str = ""
+    sandbox_generated_at: str = ""
 
 
 @dataclass(slots=True)

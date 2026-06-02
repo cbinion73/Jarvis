@@ -71,13 +71,19 @@ enum JARVISTab: Int, CaseIterable, Identifiable {
 
 struct RootTabView: View {
 
-    @State  private var selectedTab: JARVISTab = .brief
+    @State  private var selectedTab: JARVISTab
 
     @StateObject private var briefingVM = BriefingViewModel()
     @StateObject private var needsVM    = NeedsViewModel()
     @StateObject private var healthVM   = HealthViewModel()
+    @ObservedObject private var voiceVM = VoiceViewModel.shared
+    @ObservedObject private var voiceLaunchCenter = VoiceConversationLaunchCenter.shared
     @ObservedObject private var weatherMgr = WeatherManager.shared
     @ObservedObject private var weatherLoc = WeatherLocationProvider.shared
+
+    init() {
+        _selectedTab = State(initialValue: Self.initialSelectedTab())
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -109,11 +115,44 @@ struct RootTabView: View {
             await briefingVM.load()
             await needsVM.load()
             await healthVM.load()
+            handlePendingVoiceLaunchIfNeeded()
         }
         .onChange(of: weatherMgr.current) { _, cur in
             guard let cur else { return }
             WatchSessionManager.shared.sendWeather(cur, forecast: weatherMgr.forecast)
         }
+        .onChange(of: voiceLaunchCenter.pendingLaunch) { _, launch in
+            guard launch != nil else { return }
+            handlePendingVoiceLaunchIfNeeded()
+        }
+    }
+
+    private func handlePendingVoiceLaunchIfNeeded() {
+        guard let launch = voiceLaunchCenter.consumePendingLaunch() else { return }
+        selectedTab = .voice
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(250))
+            voiceVM.activateConversation(launch: launch)
+        }
+    }
+
+    private static func initialSelectedTab() -> JARVISTab {
+        let args = ProcessInfo.processInfo.arguments
+        if let index = args.firstIndex(of: "--jarvis-tab"), args.indices.contains(index + 1) {
+            let requested = args[index + 1].trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if let match = JARVISTab.allCases.first(where: { $0.label.lowercased() == requested }) {
+                return match
+            }
+        }
+
+        if let requested = ProcessInfo.processInfo.environment["JARVIS_INITIAL_TAB"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased(),
+           let match = JARVISTab.allCases.first(where: { $0.label.lowercased() == requested }) {
+            return match
+        }
+
+        return .brief
     }
 }
 

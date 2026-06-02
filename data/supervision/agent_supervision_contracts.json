@@ -1,0 +1,244 @@
+[
+  {
+    "agent_id": "pepper",
+    "label": "Pepper",
+    "lane_id": "family-stewardship",
+    "mission": "Prepare and stage household coordination work.",
+    "stewardship_role": "lane-anchor",
+    "trust_zone_id": "household_schedule",
+    "authority_stage": "sandbox_live",
+    "sandbox_class": "household.workflow",
+    "approval_mode": "stage_and_alert",
+    "allowed_without_approval": [
+      "observe",
+      "classify"
+    ],
+    "must_stage_actions": [
+      "draft",
+      "stage",
+      "calendar_route",
+      "alert"
+    ],
+    "must_sandbox_actions": [
+      "calendar_route"
+    ],
+    "must_escalate_actions": [
+      "home_control"
+    ],
+    "forbidden_actions": [
+      "spawn_agent_in_zone",
+      "retire_agent_in_zone"
+    ],
+    "reversible_actions": [
+      "calendar_route",
+      "draft",
+      "stage",
+      "alert"
+    ],
+    "doctrine_scope": {
+      "min_reviewed_successes": 3,
+      "max_reversals": 0,
+      "min_success_rate": 0.95
+    },
+    "supervision_cadence": "event_driven",
+    "escalation_target": "chris",
+    "quiet_hours_behavior": "defer-non-urgent",
+    "status": "active",
+    "created_at": "2026-06-02T02:08:00.331016+00:00",
+    "updated_at": "2026-06-02T02:08:00.331016+00:00"
+  },
+  {
+    "agent_id": "herald",
+    "label": "Herald",
+    "lane_id": "executive-calendar",
+    "mission": "Prepare executive decision context and route bounded schedule actions.",
+    "stewardship_role": "lane-anchor",
+    "trust_zone_id": "household_schedule",
+    "authority_stage": "sandbox_live",
+    "sandbox_class": "calendar-routing",
+    "approval_mode": "stage_and_alert",
+    "allowed_without_approval": [
+      "observe",
+      "classify",
+      "recommend"
+    ],
+    "must_stage_actions": [
+      "draft",
+      "stage",
+      "alert"
+    ],
+    "must_sandbox_actions": [
+      "calendar_route"
+    ],
+    "must_escalate_actions": [
+      "send",
+      "deploy",
+      "publish"
+    ],
+    "forbidden_actions": [
+      "home_control"
+    ],
+    "reversible_actions": [
+      "calendar_route",
+      "draft",
+      "stage",
+      "alert"
+    ],
+    "doctrine_scope": {
+      "min_reviewed_successes": 4,
+      "max_reversals": 0,
+      "min_success_rate": 0.97
+    },
+    "supervision_cadence": "event_driven",
+    "escalation_target": "chris",
+    "quiet_hours_behavior": "defer-non-urgent",
+    "status": "active",
+    "created_at": "2026-06-02T02:08:00.331016+00:00",
+    "updated_at": "2026-06-02T02:08:00.331016+00:00"
+  },
+  {
+    "agent_id": "watcher",
+    "label": "Watcher",
+    "lane_id": "watcher-continuity",
+    "mission": "Synthesize background patterns and queue doctrine candidates.",
+    "stewardship_role": "observer",
+    "trust_zone_id": "household_attention",
+    "authority_stage": "stage_alert",
+    "sandbox_class": "memory-review",
+    "approval_mode": "boundary_escalation_only",
+    "allowed_without_approval": [
+      "observe",
+      "classify",
+      "infer",
+      "recommend"
+    ],
+    "must_stage_actions": [
+      "alert",
+      "notification_workflow"
+    ],
+    "must_sandbox_actions": [],
+    "must_escalate_actions": [
+      "spawn_agent_in_zone"
+    ],
+    "forbidden_actions": [
+      "home_control",
+      "calendar_route"
+    ],
+    "reversible_actions": [
+      "alert",
+      "notification_workflow"
+    ],
+    "doctrine_scope": {
+      "min_reviewed_successes": 5,
+      "max_reversals": 1,
+      "min_success_rate": 0.98
+    },
+    "supervision_cadence": "hourly",
+    "escalation_target": "system-steward",
+    "quiet_hours_behavior": "defer-non-urgent",
+    "status": "active",
+    "created_at": "2026-06-02T02:08:00.331016+00:00",
+    "updated_at": "2026-06-02T02:08:00.331016+00:00"
+  },
+  {
+    "agent_id": "black-panther",
+    "label": "Black Panther",
+    "lane_id": "wealth-opportunity",
+    "mission": "Stage diligence and reversible opportunity work only.",
+    "stewardship_role": "diligence-lead",
+    "trust_zone_id": "publication_review",
+    "authority_stage": "stage_alert",
+    "sandbox_class": "diligence-sandbox",
+    "approval_mode": "stage_and_alert",
+    "allowed_without_approval": [
+      "observe",
+      "classify",
+      "recommend"
+    ],
+    "must_stage_actions": [
+      "draft",
+      "stage",
+      "publishing_review",
+      "alert"
+    ],
+    "must_sandbox_actions": [
+      "simulate",
+      "execute_in_zone"
+    ],
+    "must_escalate_actions": [
+      "purchase",
+      "send_message",
+      "deploy"
+    ],
+    "forbidden_actions": [
+      "home_control"
+    ],
+    "reversible_actions": [
+      "draft",
+      "stage",
+      "alert",
+      "simulate"
+    ],
+    "doctrine_scope": {
+      "min_reviewed_successes": 4,
+      "max_reversals": 0,
+      "min_success_rate": 0.99
+    },
+    "supervision_cadence": "daily",
+    "escalation_target": "chris",
+    "quiet_hours_behavior": "defer-non-urgent",
+    "status": "active",
+    "created_at": "2026-06-02T02:08:00.331016+00:00",
+    "updated_at": "2026-06-02T02:08:00.331016+00:00"
+  },
+  {
+    "agent_id": "system-steward",
+    "label": "System Steward",
+    "lane_id": "chamber-operations",
+    "mission": "Supervise runtime health and bounded orchestration posture.",
+    "stewardship_role": "supervisor",
+    "trust_zone_id": "household_huddle",
+    "authority_stage": "stage_alert",
+    "sandbox_class": "ops-sandbox",
+    "approval_mode": "boundary_escalation_only",
+    "allowed_without_approval": [
+      "observe",
+      "classify",
+      "infer",
+      "recommend"
+    ],
+    "must_stage_actions": [
+      "huddle_workflow",
+      "alert"
+    ],
+    "must_sandbox_actions": [
+      "simulate",
+      "execute_in_zone",
+      "spawn_agent_in_zone"
+    ],
+    "must_escalate_actions": [
+      "retire_agent_in_zone",
+      "deploy"
+    ],
+    "forbidden_actions": [
+      "home_control",
+      "calendar_route"
+    ],
+    "reversible_actions": [
+      "simulate",
+      "alert",
+      "huddle_workflow"
+    ],
+    "doctrine_scope": {
+      "min_reviewed_successes": 5,
+      "max_reversals": 0,
+      "min_success_rate": 0.99
+    },
+    "supervision_cadence": "hourly",
+    "escalation_target": "chris",
+    "quiet_hours_behavior": "defer-non-urgent",
+    "status": "active",
+    "created_at": "2026-06-02T02:08:00.331016+00:00",
+    "updated_at": "2026-06-02T02:08:00.331016+00:00"
+  }
+]

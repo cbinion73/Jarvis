@@ -10,12 +10,22 @@ from typing import Any
 from .agentic import AgentDefinition, AgentRegistry
 from .audit import ApprovalStore
 from .models import (
+    AgentDecisionRecord,
+    AgentDelegationRecord,
+    AgentEscalationRecord,
+    AgentHandoffRecord,
+    AgentHypothesisRecord,
+    AgentMessage,
+    AgentTaskRef,
+    AgentWorkState,
+    DuplicateWorkSuppressionRecord,
     ApprovalRequest,
     MissionActionDecision,
     MissionDossier,
     MissionEvidence,
     MissionOutput,
     MissionSubtask,
+    OwnershipTransferRecord,
     TaskAgentProfile,
     TrustZone,
 )
@@ -134,6 +144,7 @@ class MissionSupport:
             zone_type="local",
             resource_scope={"systems": ["jarvis"], "data_classes": ["personal_context", "local_notes"]},
             allowed_actions=["observe", "classify", "draft", "brief", "reminder"],
+            authority_stage="draft",
             approval_mode="bounded-autonomy",
             audit_mode="standard",
             promotion_rules={"eligible_next_stages": ["sandbox_live"], "minimum_success_rate": 0.97, "minimum_review_count": 15},
@@ -148,6 +159,7 @@ class MissionSupport:
             zone_type="household",
             resource_scope={"systems": ["jarvis", "weather", "calendar"], "data_classes": ["household", "weather", "family_schedule"]},
             allowed_actions=["observe", "classify", "draft", "brief", "alert", "route-check", "reminder"],
+            authority_stage="draft",
             approval_mode="bounded-autonomy",
             audit_mode="standard",
             promotion_rules={"eligible_next_stages": ["sandbox_live"], "minimum_success_rate": 0.98, "minimum_review_count": 20},
@@ -162,6 +174,7 @@ class MissionSupport:
             zone_type="communications",
             resource_scope={"systems": ["gmail", "calendar"], "data_classes": ["messages", "meeting_context"]},
             allowed_actions=["observe", "classify", "draft", "stage", "alert", "send-approved-contact-email"],
+            authority_stage="stage_alert",
             approval_mode="stage_and_alert",
             audit_mode="detailed",
             promotion_rules={"eligible_next_stages": ["stage_alert"], "minimum_success_rate": 0.99, "minimum_review_count": 30},
@@ -176,6 +189,7 @@ class MissionSupport:
             zone_type="finance",
             resource_scope={"systems": ["finance"], "data_classes": ["financial", "household_budget"]},
             allowed_actions=["observe", "classify", "draft", "brief"],
+            authority_stage="draft",
             approval_mode="explicit-approval",
             audit_mode="detailed",
             promotion_rules={"eligible_next_stages": ["draft"], "minimum_success_rate": 1.0, "minimum_review_count": 50},
@@ -190,6 +204,7 @@ class MissionSupport:
             zone_type="external",
             resource_scope={"systems": ["gmail", "calendar", "travel"], "data_classes": ["external_commitments", "public_commitments"]},
             allowed_actions=["observe", "classify", "draft", "stage", "alert"],
+            authority_stage="stage_alert",
             approval_mode="stage_and_alert",
             audit_mode="detailed",
             promotion_rules={"eligible_next_stages": ["stage_alert"], "minimum_success_rate": 0.99, "minimum_review_count": 40},
@@ -223,8 +238,257 @@ class MissionSupport:
             payload["updated_at"] = now
             self.trust_support.upsert_trust_zone(TrustZone(**payload))
 
-    def list_missions(self, *, actor: str = "", include_completed: bool = True, limit: int = 20) -> list[dict[str, Any]]:
+    def _agent_display_payload(self, agent_id: str) -> dict[str, Any]:
+        task_agent = self.get_task_agent(agent_id)
+        if task_agent is not None:
+            return {
+                "agent_id": str(task_agent.get("agent_id", "")).strip(),
+                "label": str(task_agent.get("label", agent_id)).strip() or agent_id,
+                "class_type": str(task_agent.get("class_type", "task-agent")).strip() or "task-agent",
+                "domain": str(task_agent.get("domain", "general")).strip() or "general",
+                "trust_zone": str(task_agent.get("trust_zone", "family-bmad.personal-local")).strip() or "family-bmad.personal-local",
+                "promotion_status": str(task_agent.get("promotion_status", "ephemeral")).strip() or "ephemeral",
+                "mission_roles": list(task_agent.get("mission_roles", [])),
+                "allowed_tools": list(task_agent.get("allowed_tools", [])),
+                "autonomy_posture": str(task_agent.get("autonomy_level", "bounded-autonomy")).strip() or "bounded-autonomy",
+                "purpose": str(task_agent.get("purpose", "")).strip(),
+            }
+        core_agent = self.agent_registry.by_id().get(agent_id)
+        if core_agent is None:
+            return {
+                "agent_id": agent_id,
+                "label": agent_id,
+                "class_type": "unknown-agent",
+                "domain": "general",
+                "trust_zone": "family-bmad.personal-local",
+                "promotion_status": "unknown",
+                "mission_roles": [],
+                "allowed_tools": [],
+                "autonomy_posture": "bounded-autonomy",
+                "purpose": "",
+            }
+        return {
+            "agent_id": core_agent.agent_id,
+            "label": core_agent.label,
+            "class_type": core_agent.agent_class,
+            "domain": core_agent.primary_domain,
+            "trust_zone": core_agent.trust_zone,
+            "promotion_status": core_agent.promotion_status,
+            "mission_roles": list(core_agent.mission_roles),
+            "allowed_tools": list(core_agent.allowed_tools),
+            "autonomy_posture": core_agent.autonomy_posture,
+            "purpose": core_agent.purpose,
+        }
+
+    def _trim_records(self, items: list[Any], limit: int = 8) -> list[Any]:
+        return items[-max(1, int(limit)) :]
+
+    def _message(
+        self,
+        *,
+        kind: str,
+        from_agent: str,
+        to_agent: str,
+        subject: str,
+        summary: str,
+        task_id: str = "",
+        status: str = "pending",
+        created_at: str = "",
+    ) -> dict[str, Any]:
+        return asdict(
+            AgentMessage(
+                entry_id=str(uuid.uuid4()),
+                kind=kind,
+                status=status,
+                from_agent=from_agent,
+                to_agent=to_agent,
+                subject=subject,
+                summary=summary,
+                task_id=task_id,
+                created_at=created_at or _now_iso(),
+            )
+        )
+
+    def _task_ref(
+        self,
+        *,
+        title: str,
+        status: str,
+        summary: str,
+        source: str,
+        updated_at: str,
+        task_id: str = "",
+        dependencies: list[str] | None = None,
+        handoff_id: str = "",
+    ) -> dict[str, Any]:
+        return asdict(
+            AgentTaskRef(
+                task_id=task_id or f"task-{uuid.uuid4().hex[:10]}",
+                title=title,
+                status=status,
+                summary=summary,
+                source=source,
+                updated_at=updated_at,
+                dependencies=list(dependencies or []),
+                handoff_id=handoff_id,
+            )
+        )
+
+    def _decision(self, *, summary: str, rationale: str, task_id: str = "", created_at: str = "") -> dict[str, Any]:
+        return asdict(
+            AgentDecisionRecord(
+                decision_id=str(uuid.uuid4()),
+                summary=summary,
+                rationale=rationale,
+                task_id=task_id,
+                created_at=created_at or _now_iso(),
+            )
+        )
+
+    def _hypothesis(
+        self,
+        *,
+        summary: str,
+        task_id: str = "",
+        confidence: str = "working",
+        status: str = "active",
+        timestamp: str = "",
+    ) -> dict[str, Any]:
+        when = timestamp or _now_iso()
+        return asdict(
+            AgentHypothesisRecord(
+                hypothesis_id=str(uuid.uuid4()),
+                summary=summary,
+                confidence=confidence,
+                status=status,
+                task_id=task_id,
+                created_at=when,
+                updated_at=when,
+            )
+        )
+
+    def _new_workspace(
+        self,
+        *,
+        mission_id: str,
+        agent_id: str,
+        role: str,
+        ownership_mode: str,
+        status: str,
+        current_focus: str,
+        inbox: list[dict[str, Any]] | None = None,
+        active_tasks: list[dict[str, Any]] | None = None,
+        pending_reviews: list[dict[str, Any]] | None = None,
+        decisions: list[dict[str, Any]] | None = None,
+        hypotheses: list[dict[str, Any]] | None = None,
+        updated_at: str = "",
+    ) -> dict[str, Any]:
+        return asdict(
+            AgentWorkState(
+                agent_id=agent_id,
+                mission_id=mission_id,
+                role=role,
+                status=status,
+                ownership_mode=ownership_mode,
+                current_focus=current_focus,
+                inbox=list(inbox or []),
+                active_tasks=list(active_tasks or []),
+                pending_reviews=list(pending_reviews or []),
+                recent_decisions=list(decisions or []),
+                current_hypotheses=list(hypotheses or []),
+                updated_at=updated_at or _now_iso(),
+            )
+        )
+
+    def _normalize_work_states(self, dossier: dict[str, Any]) -> dict[str, Any]:
+        now = str(dossier.get("updated_at", "")).strip() or _now_iso()
+        work_states = dict(dossier.get("agent_work_states") or {})
+        title = str(dossier.get("title", "Mission")).strip() or "Mission"
+        mission_id = str(dossier.get("mission_id", "")).strip()
+        selected = [str(agent_id).strip() for agent_id in list(dossier.get("selected_agents", [])) if str(agent_id).strip()]
+        for index, agent_id in enumerate(selected):
+            details = self._agent_display_payload(agent_id)
+            default_task = self._task_ref(
+                title="Support mission continuity",
+                status="active" if index == 0 else "queued",
+                summary=f"Advance {title.lower()} without losing partial work or ownership clarity.",
+                source="mission-bootstrap",
+                updated_at=now,
+            )
+            default_review = self._task_ref(
+                title="Review mission brief",
+                status="pending",
+                summary="Inspect the mission frame, constraints, and current evidence.",
+                source="mission-bootstrap",
+                updated_at=now,
+            )
+            initial_message = self._message(
+                kind="mission-brief",
+                from_agent="jarvis-orchestrator",
+                to_agent=agent_id,
+                subject=title,
+                summary=f"You are attached to {title}. Keep continuity, ownership, and review posture explicit.",
+                created_at=now,
+                status="delivered",
+            )
+            state = dict(work_states.get(agent_id) or {})
+            if not state:
+                work_states[agent_id] = self._new_workspace(
+                    mission_id=mission_id,
+                    agent_id=agent_id,
+                    role=str((details.get("mission_roles") or ["support"])[0]),
+                    ownership_mode="lead" if index == 0 else "supporting",
+                    status="active" if index == 0 else "ready",
+                    current_focus=title,
+                    inbox=[initial_message],
+                    active_tasks=[default_task] if index == 0 else [],
+                    pending_reviews=[] if index == 0 else [default_review],
+                    decisions=[self._decision(summary="Mission accepted into workspace", rationale="Mission dossier created and assigned.", created_at=now)],
+                    hypotheses=[self._hypothesis(summary=f"{title} likely needs {details.get('label', agent_id)} on {details.get('domain', 'general')} continuity.", timestamp=now)],
+                    updated_at=now,
+                )
+                continue
+            state.setdefault("mission_id", mission_id)
+            state.setdefault("agent_id", agent_id)
+            state.setdefault("role", str((details.get("mission_roles") or ["support"])[0]))
+            state.setdefault("status", "ready")
+            state.setdefault("ownership_mode", "lead" if index == 0 else "supporting")
+            state.setdefault("current_focus", title)
+            state["inbox"] = list(state.get("inbox") or []) or [initial_message]
+            state["outbox"] = list(state.get("outbox") or [])
+            state["active_tasks"] = list(state.get("active_tasks") or [])
+            state["blocked_tasks"] = list(state.get("blocked_tasks") or [])
+            state["pending_reviews"] = list(state.get("pending_reviews") or [])
+            state["recent_decisions"] = self._trim_records(list(state.get("recent_decisions") or []))
+            state["current_hypotheses"] = self._trim_records(list(state.get("current_hypotheses") or []))
+            state.setdefault("last_handoff_at", "")
+            state["updated_at"] = str(state.get("updated_at", "")).strip() or now
+            work_states[agent_id] = state
+        dossier["agent_work_states"] = work_states
+        dossier["handoffs"] = list(dossier.get("handoffs") or [])
+        dossier["delegations"] = list(dossier.get("delegations") or [])
+        dossier["escalations"] = list(dossier.get("escalations") or [])
+        dossier["ownership_transfers"] = list(dossier.get("ownership_transfers") or [])
+        dossier["duplicate_suppressions"] = list(dossier.get("duplicate_suppressions") or [])
+        return dossier
+
+    def _load_mission(self, mission_id: str) -> dict[str, Any] | None:
+        mission_key = mission_id.strip()
+        if not mission_key:
+            return None
         records = self.store.list_dossiers()
+        for index, item in enumerate(records):
+            if str(item.get("mission_id", "")).strip() != mission_key:
+                continue
+            normalized = self._normalize_work_states(dict(item))
+            if normalized != item:
+                records[index] = normalized
+                self.store.save_dossiers(records)
+            return normalized
+        return None
+
+    def list_missions(self, *, actor: str = "", include_completed: bool = True, limit: int = 20) -> list[dict[str, Any]]:
+        records = [self._normalize_work_states(dict(item)) for item in self.store.list_dossiers() if isinstance(item, dict)]
         actor_key = actor.strip().lower()
         if actor_key:
             records = [item for item in records if str(item.get("actor", "")).strip().lower() == actor_key]
@@ -234,16 +498,11 @@ class MissionSupport:
         return records[:limit]
 
     def get_mission(self, mission_id: str) -> dict[str, Any] | None:
-        mission_key = mission_id.strip()
-        if not mission_key:
-            return None
-        for item in self.store.list_dossiers():
-            if str(item.get("mission_id", "")).strip() == mission_key:
-                return item
-        return None
+        return self._load_mission(mission_id)
 
     def save_mission(self, payload: dict[str, Any]) -> dict[str, Any]:
         records = self.store.list_dossiers()
+        payload = self._normalize_work_states(dict(payload))
         mission_id = str(payload.get("mission_id", "")).strip()
         if not mission_id:
             raise ValueError("mission_id is required")
@@ -262,7 +521,8 @@ class MissionSupport:
         dossier = self.get_mission(mission_id)
         if dossier is None:
             raise KeyError(f"Unknown mission: {mission_id}")
-        dossier["status"] = status.strip() or dossier.get("status", "active")
+        resolved_status = status.strip() or dossier.get("status", "active")
+        dossier["status"] = resolved_status
         dossier["updated_at"] = _now_iso()
         if note.strip():
             evidence = list(dossier.get("evidence", []))
@@ -281,15 +541,480 @@ class MissionSupport:
                 )
             )
             dossier["evidence"] = evidence
+        work_states = dict(dossier.get("agent_work_states") or {})
+        for agent_id, state in work_states.items():
+            state = dict(state or {})
+            state["updated_at"] = dossier["updated_at"]
+            if resolved_status.lower() == "completed":
+                state["status"] = "completed"
+                state["pending_reviews"] = []
+            elif resolved_status.lower() in {"blocked", "abandoned"} and str(state.get("status", "")).strip().lower() != "completed":
+                state["status"] = "blocked"
+            work_states[agent_id] = state
+        dossier["agent_work_states"] = work_states
         task_agents = {item["agent_id"]: item for item in self.list_task_agents(limit=200)}
-        if str(status).strip().lower() == "completed":
+        if resolved_status.lower() == "completed":
             for agent_id in list(dossier.get("selected_agents", [])):
                 if agent_id in task_agents:
                     self.record_task_agent_outcome(agent_id, succeeded=True)
-        elif str(status).strip().lower() in {"blocked", "abandoned"}:
+        elif resolved_status.lower() in {"blocked", "abandoned"}:
             for agent_id in list(dossier.get("selected_agents", [])):
                 if agent_id in task_agents:
                     self.record_task_agent_outcome(agent_id, succeeded=False)
+        return self.save_mission(dossier)
+
+    def mission_work_state(self, mission_id: str) -> dict[str, Any]:
+        dossier = self.get_mission(mission_id)
+        if dossier is None:
+            raise KeyError(f"Unknown mission: {mission_id}")
+        work_states = dict(dossier.get("agent_work_states") or {})
+        handoffs = list(dossier.get("handoffs") or [])
+        ownership_transfers = list(dossier.get("ownership_transfers") or [])
+        pending_handoffs = [
+            item
+            for item in handoffs
+            if str(item.get("status", "")).strip().lower() in {"pending", "pending-acceptance", "accepted"}
+        ]
+        pending_transfers = [
+            item
+            for item in ownership_transfers
+            if str(item.get("status", "")).strip().lower() in {"pending", "pending-acceptance"}
+        ]
+        return {
+            "mission_id": str(dossier.get("mission_id", "")).strip(),
+            "title": str(dossier.get("title", "")).strip(),
+            "status": str(dossier.get("status", "")).strip(),
+            "generated_at": _now_iso(),
+            "summary": {
+                "agents": len(work_states),
+                "active_tasks": sum(len(list((state or {}).get("active_tasks") or [])) for state in work_states.values()),
+                "blocked_tasks": sum(len(list((state or {}).get("blocked_tasks") or [])) for state in work_states.values()),
+                "pending_reviews": sum(len(list((state or {}).get("pending_reviews") or [])) for state in work_states.values()),
+                "pending_handoffs": len(pending_handoffs),
+                "pending_transfers": len(pending_transfers),
+                "escalations": len([item for item in list(dossier.get("escalations") or []) if str(item.get("status", "")).strip().lower() == "open"]),
+                "duplicate_suppressions": len(list(dossier.get("duplicate_suppressions") or [])),
+            },
+            "agent_work_states": work_states,
+            "handoffs": handoffs,
+            "delegations": list(dossier.get("delegations") or []),
+            "escalations": list(dossier.get("escalations") or []),
+            "ownership_transfers": ownership_transfers,
+            "duplicate_suppressions": list(dossier.get("duplicate_suppressions") or []),
+        }
+
+    def update_agent_work_state(
+        self,
+        mission_id: str,
+        agent_id: str,
+        *,
+        status: str = "",
+        current_focus: str = "",
+        ownership_mode: str = "",
+        note: str = "",
+        decision: str = "",
+        rationale: str = "",
+        hypothesis: str = "",
+    ) -> dict[str, Any]:
+        dossier = self.get_mission(mission_id)
+        if dossier is None:
+            raise KeyError(f"Unknown mission: {mission_id}")
+        work_states = dict(dossier.get("agent_work_states") or {})
+        if agent_id not in work_states:
+            raise KeyError(f"Unknown mission agent: {agent_id}")
+        state = dict(work_states.get(agent_id) or {})
+        now = _now_iso()
+        if status.strip():
+            state["status"] = status.strip()
+        if current_focus.strip():
+            state["current_focus"] = current_focus.strip()
+        if ownership_mode.strip():
+            state["ownership_mode"] = ownership_mode.strip()
+        if note.strip():
+            state["inbox"] = self._trim_records(
+                list(state.get("inbox") or [])
+                + [
+                    self._message(
+                        kind="mission-note",
+                        from_agent="jarvis-orchestrator",
+                        to_agent=agent_id,
+                        subject=str(dossier.get("title", "Mission")).strip() or "Mission",
+                        summary=note.strip(),
+                        created_at=now,
+                        status="delivered",
+                    )
+                ]
+            )
+        if decision.strip():
+            state["recent_decisions"] = self._trim_records(
+                list(state.get("recent_decisions") or [])
+                + [self._decision(summary=decision.strip(), rationale=rationale.strip() or decision.strip(), created_at=now)]
+            )
+        if hypothesis.strip():
+            state["current_hypotheses"] = self._trim_records(
+                list(state.get("current_hypotheses") or [])
+                + [self._hypothesis(summary=hypothesis.strip(), timestamp=now)]
+            )
+        state["updated_at"] = now
+        work_states[agent_id] = state
+        dossier["agent_work_states"] = work_states
+        dossier["updated_at"] = now
+        return self.save_mission(dossier)
+
+    def create_agent_handoff(
+        self,
+        mission_id: str,
+        *,
+        from_agent: str,
+        to_agent: str,
+        task_title: str,
+        summary: str,
+        context: str = "",
+        partial_work: str = "",
+        delegation_reason: str = "",
+        expected_result: str = "",
+        transfer_ownership: bool = False,
+        duplicate_key: str = "",
+    ) -> dict[str, Any]:
+        dossier = self.get_mission(mission_id)
+        if dossier is None:
+            raise KeyError(f"Unknown mission: {mission_id}")
+        work_states = dict(dossier.get("agent_work_states") or {})
+        if from_agent not in work_states or to_agent not in work_states:
+            raise KeyError("Both from_agent and to_agent must be attached to the mission.")
+        now = _now_iso()
+        from_state = dict(work_states[from_agent] or {})
+        to_state = dict(work_states[to_agent] or {})
+        task = self._task_ref(
+            title=task_title.strip() or "Delegated task",
+            status="handoff-pending" if transfer_ownership else "delegated",
+            summary=summary.strip() or "Continue the delegated task carefully.",
+            source=from_agent,
+            updated_at=now,
+        )
+        handoff = asdict(
+            AgentHandoffRecord(
+                handoff_id=str(uuid.uuid4()),
+                mission_id=mission_id,
+                from_agent=from_agent,
+                to_agent=to_agent,
+                task_id=str(task.get("task_id", "")).strip(),
+                handoff_kind="ownership-transfer" if transfer_ownership else "delegation",
+                status="pending-acceptance" if transfer_ownership else "pending",
+                summary=summary.strip() or "Continue the delegated task carefully.",
+                context=context.strip(),
+                partial_work=partial_work.strip(),
+                duplicate_key=duplicate_key.strip(),
+                requires_acceptance=transfer_ownership,
+                created_at=now,
+            )
+        )
+        delegation = asdict(
+            AgentDelegationRecord(
+                delegation_id=str(uuid.uuid4()),
+                mission_id=mission_id,
+                delegator_agent=from_agent,
+                delegate_agent=to_agent,
+                task_id=str(task.get("task_id", "")).strip(),
+                scope=task_title.strip() or "Delegated task",
+                rationale=delegation_reason.strip() or summary.strip() or "Shift this work to the better-positioned agent.",
+                expected_result=expected_result.strip() or "Return clean progress without duplicating work.",
+                status="pending-acceptance" if transfer_ownership else "active",
+                handoff_id=str(handoff.get("handoff_id", "")).strip(),
+                created_at=now,
+            )
+        )
+        dossier["handoffs"] = list(dossier.get("handoffs") or []) + [handoff]
+        dossier["delegations"] = list(dossier.get("delegations") or []) + [delegation]
+        from_state["outbox"] = self._trim_records(
+            list(from_state.get("outbox") or [])
+            + [
+                self._message(
+                    kind="handoff-outbound",
+                    from_agent=from_agent,
+                    to_agent=to_agent,
+                    subject=task_title.strip() or "Delegated task",
+                    summary=summary.strip() or "Delegated task sent.",
+                    task_id=str(task.get("task_id", "")).strip(),
+                    created_at=now,
+                    status="sent",
+                )
+            ]
+        )
+        to_state["inbox"] = self._trim_records(
+            list(to_state.get("inbox") or [])
+            + [
+                self._message(
+                    kind="handoff-inbound",
+                    from_agent=from_agent,
+                    to_agent=to_agent,
+                    subject=task_title.strip() or "Delegated task",
+                    summary=summary.strip() or "New delegated task waiting.",
+                    task_id=str(task.get("task_id", "")).strip(),
+                    created_at=now,
+                    status="pending-acceptance" if transfer_ownership else "delivered",
+                )
+            ]
+        )
+        to_state["pending_reviews"] = self._trim_records(list(to_state.get("pending_reviews") or []) + [task])
+        if transfer_ownership:
+            transfer = asdict(
+                OwnershipTransferRecord(
+                    transfer_id=str(uuid.uuid4()),
+                    mission_id=mission_id,
+                    task_id=str(task.get("task_id", "")).strip(),
+                    from_agent=from_agent,
+                    to_agent=to_agent,
+                    reason=delegation_reason.strip() or summary.strip() or "Ownership moved to the better-positioned agent.",
+                    status="pending-acceptance",
+                    continuity_notes=partial_work.strip() or context.strip(),
+                    created_at=now,
+                )
+            )
+            dossier["ownership_transfers"] = list(dossier.get("ownership_transfers") or []) + [transfer]
+            from_state["blocked_tasks"] = self._trim_records(
+                list(from_state.get("blocked_tasks") or [])
+                + [
+                    self._task_ref(
+                        title=task_title.strip() or "Delegated task",
+                        status="awaiting-transfer-acceptance",
+                        summary="Ownership is not released until the receiving agent acknowledges the handoff.",
+                        source=to_agent,
+                        updated_at=now,
+                        task_id=str(task.get("task_id", "")).strip(),
+                        handoff_id=str(handoff.get("handoff_id", "")).strip(),
+                    )
+                ]
+            )
+        else:
+            from_state["active_tasks"] = self._trim_records(list(from_state.get("active_tasks") or []) + [task])
+        from_state["last_handoff_at"] = now
+        to_state["last_handoff_at"] = now
+        from_state["updated_at"] = now
+        to_state["updated_at"] = now
+        work_states[from_agent] = from_state
+        work_states[to_agent] = to_state
+        dossier["agent_work_states"] = work_states
+        dossier["updated_at"] = now
+        return self.save_mission(dossier)
+
+    def acknowledge_agent_handoff(
+        self,
+        mission_id: str,
+        handoff_id: str,
+        *,
+        receiving_agent: str,
+        accepted: bool = True,
+        note: str = "",
+    ) -> dict[str, Any]:
+        dossier = self.get_mission(mission_id)
+        if dossier is None:
+            raise KeyError(f"Unknown mission: {mission_id}")
+        work_states = dict(dossier.get("agent_work_states") or {})
+        if receiving_agent not in work_states:
+            raise KeyError(f"Unknown mission agent: {receiving_agent}")
+        now = _now_iso()
+        target_handoff: dict[str, Any] | None = None
+        handoffs: list[dict[str, Any]] = []
+        for item in list(dossier.get("handoffs") or []):
+            record = dict(item or {})
+            if str(record.get("handoff_id", "")).strip() == handoff_id.strip():
+                target_handoff = record
+            handoffs.append(record)
+        if target_handoff is None:
+            raise KeyError(f"Unknown handoff: {handoff_id}")
+        if str(target_handoff.get("to_agent", "")).strip() != receiving_agent:
+            raise ValueError("Only the receiving agent may acknowledge this handoff.")
+        target_handoff["status"] = "accepted" if accepted else "rejected"
+        target_handoff["acknowledged_at"] = now
+        if accepted:
+            target_handoff["completed_at"] = now
+        for index, item in enumerate(handoffs):
+            if str(item.get("handoff_id", "")).strip() == handoff_id.strip():
+                handoffs[index] = target_handoff
+                break
+        dossier["handoffs"] = handoffs
+        to_state = dict(work_states[receiving_agent] or {})
+        from_agent = str(target_handoff.get("from_agent", "")).strip()
+        from_state = dict(work_states.get(from_agent) or {})
+        task_id = str(target_handoff.get("task_id", "")).strip()
+        if accepted:
+            accepted_task = self._task_ref(
+                title=str(target_handoff.get("summary", "Accepted handoff")).strip(),
+                status="active",
+                summary=note.strip() or str(target_handoff.get("partial_work", "")).strip() or str(target_handoff.get("context", "")).strip(),
+                source=from_agent,
+                updated_at=now,
+                task_id=task_id,
+                handoff_id=handoff_id.strip(),
+            )
+            to_state["active_tasks"] = self._trim_records(list(to_state.get("active_tasks") or []) + [accepted_task])
+            to_state["pending_reviews"] = [
+                item for item in list(to_state.get("pending_reviews") or []) if str((item or {}).get("task_id", "")).strip() != task_id
+            ]
+            to_state["recent_decisions"] = self._trim_records(
+                list(to_state.get("recent_decisions") or [])
+                + [self._decision(summary="Accepted handoff", rationale=note.strip() or "Receiving agent accepted delegated partial work.", task_id=task_id, created_at=now)]
+            )
+            for transfer in list(dossier.get("ownership_transfers") or []):
+                if str(transfer.get("task_id", "")).strip() != task_id or str(transfer.get("to_agent", "")).strip() != receiving_agent:
+                    continue
+                transfer["status"] = "accepted"
+                transfer["safe_to_release"] = True
+                transfer["accepted_at"] = now
+                from_state["blocked_tasks"] = [
+                    item for item in list(from_state.get("blocked_tasks") or []) if str((item or {}).get("task_id", "")).strip() != task_id
+                ]
+                from_state["ownership_mode"] = "supporting"
+                to_state["ownership_mode"] = "lead"
+            for delegation in list(dossier.get("delegations") or []):
+                if str(delegation.get("handoff_id", "")).strip() == handoff_id.strip():
+                    delegation["status"] = "accepted"
+                    delegation["resolved_at"] = now
+        else:
+            to_state["pending_reviews"] = [
+                item for item in list(to_state.get("pending_reviews") or []) if str((item or {}).get("task_id", "")).strip() != task_id
+            ]
+            from_state["recent_decisions"] = self._trim_records(
+                list(from_state.get("recent_decisions") or [])
+                + [self._decision(summary="Handoff rejected", rationale=note.strip() or "Receiving agent rejected the proposed handoff.", task_id=task_id, created_at=now)]
+            )
+            for transfer in list(dossier.get("ownership_transfers") or []):
+                if str(transfer.get("task_id", "")).strip() == task_id and str(transfer.get("to_agent", "")).strip() == receiving_agent:
+                    transfer["status"] = "rejected"
+            for delegation in list(dossier.get("delegations") or []):
+                if str(delegation.get("handoff_id", "")).strip() == handoff_id.strip():
+                    delegation["status"] = "rejected"
+                    delegation["resolved_at"] = now
+        to_state["updated_at"] = now
+        from_state["updated_at"] = now
+        work_states[receiving_agent] = to_state
+        if from_agent:
+            work_states[from_agent] = from_state
+        dossier["agent_work_states"] = work_states
+        dossier["updated_at"] = now
+        return self.save_mission(dossier)
+
+    def record_agent_escalation(
+        self,
+        mission_id: str,
+        *,
+        from_agent: str,
+        to_agent: str,
+        severity: str,
+        rationale: str,
+        requested_action: str,
+        task_id: str = "",
+    ) -> dict[str, Any]:
+        dossier = self.get_mission(mission_id)
+        if dossier is None:
+            raise KeyError(f"Unknown mission: {mission_id}")
+        work_states = dict(dossier.get("agent_work_states") or {})
+        if from_agent not in work_states or to_agent not in work_states:
+            raise KeyError("Both escalation agents must be attached to the mission.")
+        now = _now_iso()
+        escalation = asdict(
+            AgentEscalationRecord(
+                escalation_id=str(uuid.uuid4()),
+                mission_id=mission_id,
+                from_agent=from_agent,
+                to_agent=to_agent,
+                task_id=task_id.strip(),
+                severity=severity.strip() or "moderate",
+                rationale=rationale.strip(),
+                requested_action=requested_action.strip(),
+                created_at=now,
+            )
+        )
+        dossier["escalations"] = list(dossier.get("escalations") or []) + [escalation]
+        to_state = dict(work_states[to_agent] or {})
+        to_state["inbox"] = self._trim_records(
+            list(to_state.get("inbox") or [])
+            + [
+                self._message(
+                    kind="escalation",
+                    from_agent=from_agent,
+                    to_agent=to_agent,
+                    subject=requested_action.strip() or "Escalation",
+                    summary=rationale.strip() or "Escalation requested.",
+                    task_id=task_id.strip(),
+                    created_at=now,
+                    status="delivered",
+                )
+            ]
+        )
+        to_state["pending_reviews"] = self._trim_records(
+            list(to_state.get("pending_reviews") or [])
+            + [
+                self._task_ref(
+                    title=requested_action.strip() or "Review escalation",
+                    status="pending",
+                    summary=rationale.strip() or "Escalation requested.",
+                    source=from_agent,
+                    updated_at=now,
+                    task_id=task_id.strip(),
+                )
+            ]
+        )
+        to_state["updated_at"] = now
+        work_states[to_agent] = to_state
+        dossier["agent_work_states"] = work_states
+        dossier["updated_at"] = now
+        return self.save_mission(dossier)
+
+    def suppress_duplicate_work(
+        self,
+        mission_id: str,
+        *,
+        duplicate_key: str,
+        winning_agent: str,
+        suppressed_agent: str,
+        rationale: str,
+        task_title: str = "",
+        task_id: str = "",
+    ) -> dict[str, Any]:
+        dossier = self.get_mission(mission_id)
+        if dossier is None:
+            raise KeyError(f"Unknown mission: {mission_id}")
+        work_states = dict(dossier.get("agent_work_states") or {})
+        if winning_agent not in work_states or suppressed_agent not in work_states:
+            raise KeyError("Both winning_agent and suppressed_agent must be attached to the mission.")
+        now = _now_iso()
+        suppression = asdict(
+            DuplicateWorkSuppressionRecord(
+                suppression_id=str(uuid.uuid4()),
+                mission_id=mission_id,
+                duplicate_key=duplicate_key.strip() or f"dup-{uuid.uuid4().hex[:8]}",
+                task_id=task_id.strip(),
+                winning_agent=winning_agent,
+                suppressed_agent=suppressed_agent,
+                rationale=rationale.strip(),
+                created_at=now,
+            )
+        )
+        dossier["duplicate_suppressions"] = list(dossier.get("duplicate_suppressions") or []) + [suppression]
+        suppressed_state = dict(work_states[suppressed_agent] or {})
+        suppressed_state["blocked_tasks"] = self._trim_records(
+            list(suppressed_state.get("blocked_tasks") or [])
+            + [
+                self._task_ref(
+                    title=task_title.strip() or "Duplicate work suppressed",
+                    status="suppressed-duplicate",
+                    summary=rationale.strip() or "This work was suppressed to avoid duplicate effort.",
+                    source=winning_agent,
+                    updated_at=now,
+                    task_id=task_id.strip(),
+                )
+            ]
+        )
+        suppressed_state["current_hypotheses"] = self._trim_records(
+            list(suppressed_state.get("current_hypotheses") or [])
+            + [self._hypothesis(summary="Stand down and wait for the owning agent's next artifact before resuming.", task_id=task_id.strip(), timestamp=now)]
+        )
+        suppressed_state["updated_at"] = now
+        work_states[suppressed_agent] = suppressed_state
+        dossier["agent_work_states"] = work_states
+        dossier["updated_at"] = now
         return self.save_mission(dossier)
 
     def list_task_agents(self, *, status: str = "", limit: int = 50) -> list[dict[str, Any]]:
@@ -509,12 +1234,18 @@ class MissionSupport:
             approvals=approval_ids,
             outputs=[],
             follow_ups=self._follow_ups(primary_domain, request),
+            agent_work_states={},
+            handoffs=[],
+            delegations=[],
+            escalations=[],
+            ownership_transfers=[],
+            duplicate_suppressions=[],
             memory_snapshot=dict(memory_snapshot or {}),
             family_impact=family_impact,
             created_at=now,
             updated_at=now,
         )
-        payload = asdict(dossier)
+        payload = self._normalize_work_states(asdict(dossier))
         self.save_mission(payload)
         return payload
 
@@ -539,30 +1270,19 @@ class MissionSupport:
         dossier = self.get_mission(mission_id)
         if dossier is None:
             return []
-        task_agents = {item["agent_id"]: item for item in self.store.list_task_agents() if isinstance(item, dict) and str(item.get("agent_id", "")).strip()}
-        core_agents = {agent.agent_id: agent for agent in self.agent_registry.list()}
+        work_states = dict(dossier.get("agent_work_states") or {})
         result: list[dict[str, Any]] = []
         for agent_id in list(dossier.get("selected_agents", [])):
-            if agent_id in task_agents:
-                result.append(task_agents[agent_id])
-                continue
-            agent = core_agents.get(agent_id)
-            if agent is None:
-                continue
-            result.append(
-                {
-                    "agent_id": agent.agent_id,
-                    "label": agent.label,
-                    "class_type": agent.agent_class,
-                    "domain": agent.primary_domain,
-                    "trust_zone": agent.trust_zone,
-                    "promotion_status": agent.promotion_status,
-                    "mission_roles": list(agent.mission_roles),
-                    "allowed_tools": list(agent.allowed_tools),
-                    "autonomy_posture": agent.autonomy_posture,
-                    "purpose": agent.purpose,
-                }
-            )
+            profile = self._agent_display_payload(str(agent_id).strip())
+            workspace = dict(work_states.get(str(agent_id).strip()) or {})
+            profile["workspace_summary"] = {
+                "status": str(workspace.get("status", "")).strip(),
+                "ownership_mode": str(workspace.get("ownership_mode", "")).strip(),
+                "active_tasks": len(list(workspace.get("active_tasks") or [])),
+                "blocked_tasks": len(list(workspace.get("blocked_tasks") or [])),
+                "pending_reviews": len(list(workspace.get("pending_reviews") or [])),
+            }
+            result.append(profile)
         return result
 
     def mission_control_summary(self, *, actor: str = "", limit: int = 12) -> dict[str, Any]:
@@ -573,6 +1293,18 @@ class MissionSupport:
         for mission in active:
             approvals.extend(self.mission_approvals(str(mission.get("mission_id", ""))))
             family_alerts.extend(list(mission.get("family_impact", [])))
+        workspaces = [dict(state or {}) for mission in active for state in dict(mission.get("agent_work_states") or {}).values()]
+        ownership_conflicts = [
+            state
+            for state in workspaces
+            if str(state.get("ownership_mode", "")).strip().lower() == "lead"
+        ]
+        pending_handoffs = [
+            item
+            for mission in active
+            for item in list(mission.get("handoffs") or [])
+            if str(item.get("status", "")).strip().lower() in {"pending", "pending-acceptance", "accepted"}
+        ]
         return {
             "generated_at": _now_iso(),
             "summary": {
@@ -580,6 +1312,10 @@ class MissionSupport:
                 "pending_approvals": len([item for item in approvals if str(item.get("status", "")).strip() == "pending"]),
                 "task_agents": len([item for item in self.list_task_agents(limit=200) if str(item.get("status", "")).strip().lower() == "active"]),
                 "promoted_agents": len([item for item in self.list_task_agents(limit=200) if str(item.get("promotion_status", "")).strip().lower() == "promoted"]),
+                "blocked_tasks": sum(len(list(state.get("blocked_tasks") or [])) for state in workspaces),
+                "pending_reviews": sum(len(list(state.get("pending_reviews") or [])) for state in workspaces),
+                "pending_handoffs": len(pending_handoffs),
+                "ownership_conflicts": max(0, len(ownership_conflicts) - len(active)),
             },
             "active_missions": active,
             "pending_approvals": approvals[:10],

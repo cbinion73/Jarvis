@@ -5,6 +5,7 @@ import asyncio
 import json
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 try:
     from dotenv import load_dotenv
@@ -12,11 +13,13 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for cold systems
     def load_dotenv() -> None:
         return None
 
-from .runtime import JarvisRuntime
+from .agent_registry_contract import contract_paths, load_contract_bundle
 from .openclaw_bridge import build_openclaw_envelope, envelope_to_json
 from .speech import voice_stack_status
-from .service import serve
 from .fresh_start import FreshStartProtocol
+
+if TYPE_CHECKING:
+    from .runtime import JarvisRuntime
 
 try:
     from .scheduler import init_scheduler as _init_scheduler
@@ -209,11 +212,20 @@ def build_parser() -> argparse.ArgumentParser:
     fresh_start.add_argument("--execute", action="store_true", help="Actually wipe derived user state and rebuild from preserved sources.")
     fresh_start.add_argument("--no-backup", action="store_true", help="Skip the backup snapshot before deleting reset targets.")
     subparsers.add_parser("status", help="Check integration status")
+    subparsers.add_parser("runtime-posture", help="Show always-on runtime posture and real-device integration truth")
     subparsers.add_parser("approvals", help="List pending approvals")
     subparsers.add_parser("voice-stack", help="Show configured STT/TTS provider order and readiness")
     subparsers.add_parser("brain-status", help="Show primary and second-brain status plus active graph state")
     subparsers.add_parser("agent-registry", help="Show the configured background agent registry")
+    subparsers.add_parser("agent-registry-contract", help="Validate and show the canonical agent registry contract")
     subparsers.add_parser("agent-status", help="Show the current awake, idle, or blocked state of background agents")
+    subparsers.add_parser("agent-runtime", help="Show the durable lifecycle and heartbeat state of the agent runtime kernel")
+    agent_runtime_control = subparsers.add_parser("agent-runtime-control", help="Apply a lifecycle control action to a runtime agent")
+    agent_runtime_control.add_argument("--agent-id", required=True)
+    agent_runtime_control.add_argument("--action", required=True, choices=["wake", "pause", "resume", "interrupt", "escalate", "retire", "retire-now"])
+    agent_runtime_control.add_argument("--actor", default="Chris")
+    agent_runtime_control.add_argument("--reason", default="")
+    agent_runtime_control.add_argument("--execution-lane", default="")
     subparsers.add_parser("memory-curator", help="Show memory curator rules and current curation candidates")
     assistant_notifications = subparsers.add_parser("assistant-notifications", help="Show assistant notifications for an actor")
     assistant_notifications.add_argument("--actor", default="Chris")
@@ -812,6 +824,8 @@ def _ensure_ollama_running() -> None:
 
 
 def command_serve(runtime: JarvisRuntime, host: str, port: int) -> int:
+    from .service import serve
+
     # Initialise Being Known memory layer before the HTTP server
     if _KNOWN_FACTS_IMPORT_OK:
         try:
@@ -1069,6 +1083,11 @@ def command_status(runtime: JarvisRuntime) -> int:
     return 0
 
 
+def command_runtime_posture(runtime: JarvisRuntime) -> int:
+    print(json.dumps(runtime.runtime_posture_snapshot(), indent=2))
+    return 0
+
+
 def command_approvals(runtime: JarvisRuntime) -> int:
     records = runtime.list_pending_approvals()
     if not records:
@@ -1096,8 +1115,64 @@ def command_agent_registry(runtime: JarvisRuntime) -> int:
     return 0
 
 
+def command_agent_registry_contract() -> int:
+    try:
+        bundle = load_contract_bundle(validate=True)
+    except Exception as exc:
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "paths": contract_paths(),
+                    "error": str(exc),
+                },
+                indent=2,
+            )
+        )
+        return 1
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "paths": contract_paths(),
+                "summary": bundle.snapshot(),
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
 def command_agent_status(runtime: JarvisRuntime) -> int:
     print(json.dumps(runtime.background_agent_status(), indent=2))
+    return 0
+
+
+def command_agent_runtime(runtime: JarvisRuntime) -> int:
+    print(json.dumps(runtime.agent_runtime_snapshot(), indent=2))
+    return 0
+
+
+def command_agent_runtime_control(
+    runtime: JarvisRuntime,
+    agent_id: str,
+    action: str,
+    actor: str,
+    reason: str,
+    execution_lane: str,
+) -> int:
+    print(
+        json.dumps(
+            runtime.control_agent_runtime(
+                agent_id,
+                action,
+                actor_name=actor,
+                reason=reason,
+                execution_lane=execution_lane,
+            ),
+            indent=2,
+        )
+    )
     return 0
 
 
@@ -2032,6 +2107,12 @@ def main() -> int:
     load_dotenv()
     parser = build_parser()
     args = parser.parse_args()
+
+    if args.command == "agent-registry-contract":
+        return command_agent_registry_contract()
+
+    from .runtime import JarvisRuntime
+
     runtime = JarvisRuntime.from_env()
 
     if args.command == "summary":
@@ -2042,6 +2123,8 @@ def main() -> int:
         return command_serve(runtime, args.host, args.port)
     if args.command == "status":
         return command_status(runtime)
+    if args.command == "runtime-posture":
+        return command_runtime_posture(runtime)
     if args.command == "approvals":
         return command_approvals(runtime)
     if args.command == "voice-stack":
@@ -2052,6 +2135,10 @@ def main() -> int:
         return command_agent_registry(runtime)
     if args.command == "agent-status":
         return command_agent_status(runtime)
+    if args.command == "agent-runtime":
+        return command_agent_runtime(runtime)
+    if args.command == "agent-runtime-control":
+        return command_agent_runtime_control(runtime, args.agent_id, args.action, args.actor, args.reason, args.execution_lane)
     if args.command == "memory-curator":
         return command_memory_curator(runtime)
     if args.command == "assistant-notifications":

@@ -33,22 +33,26 @@ from copy import deepcopy
 import json
 import logging
 import os
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.parse import quote
 
 from fastapi import FastAPI, HTTPException
 
 from .nav_bridge import NavBridge, haversine, min_distance_to_route, sample_route_points
-from .settings import LOCATION_SETTINGS_PATH
+from .settings import LOCATION_SETTINGS_PATH, VoiceSettingsStore
 
 logger = logging.getLogger(__name__)
 _NAVIGATION_STATE_PATH = Path("data/settings/navigation_state.json")
 _EVENT_LOG_PATH = Path("data/state/event_log.jsonl")
 _NOTIFICATION_CENTER_PATH = Path("data/state/notification_center.json")
+_STEWARDSHIP_REVIEW_QUEUE_PATH = Path("data/state/stewardship_reviews.json")
 _SIGNAL_RESOLUTIONS_PATH = Path("data/state/signal_resolutions.json")
+_CHRONICLE_PRAYER_ACTIVITY_PATH = Path.home() / ".jarvis" / "chronicle" / "prayer_activity.json"
+_CHRONICLE_ANSWERED_PRAYERS_PATH = Path.home() / ".jarvis" / "chronicle" / "answered_prayers.jsonl"
 
 _NAV_STOP_LABELS = {
     "food": "Food",
@@ -82,6 +86,587 @@ def _ts() -> str:
 
 def _ok(data: Any) -> dict:
     return {"ok": True, "data": data, "error": None, "ts": _ts()}
+
+
+def _boolish(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "ready", "connected", "available", "ok"}
+    return False
+
+
+def _slugify_label(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", str(value or "").strip().lower()).strip("-")
+    return slug
+
+
+def _publishing_platform_focus(platform: str, project_type: str) -> str:
+    normalized_platform = str(platform or "").strip().lower()
+    normalized_type = str(project_type or "").strip().lower()
+    if "kdp" in normalized_platform or "amazon" in normalized_platform:
+        return "KDP metadata, proof review, and marketplace copy readiness."
+    if "gumroad" in normalized_platform:
+        return "Landing page, checkout assets, and bonus delivery readiness."
+    if "udemy" in normalized_platform or "coursera" in normalized_platform:
+        return "Curriculum packaging, preview lessons, and platform listing readiness."
+    if "wordpress" in normalized_platform or "substack" in normalized_platform:
+        return "Web publishing flow, distribution copy, and traffic handoff readiness."
+    if normalized_type == "course":
+        return "Course resources, preview assets, and launch copy readiness."
+    if normalized_type == "book":
+        return "Manuscript packaging, metadata, and launch asset readiness."
+    return "Platform handoff, review queue, and launch materials readiness."
+
+
+def _publishing_launch_slug_candidates(project: dict[str, Any] | None, strategy: dict[str, Any] | None) -> list[str]:
+    candidates: list[str] = []
+    if isinstance(project, dict):
+        for raw in (
+            project.get("project_id"),
+            project.get("title"),
+            project.get("url"),
+            project.get("notes"),
+        ):
+            text = str(raw or "").strip()
+            if not text:
+                continue
+            candidates.append(text)
+            if "/" in text:
+                candidates.extend(segment for segment in text.split("/") if segment)
+    if isinstance(strategy, dict):
+        for raw in (
+            strategy.get("slug"),
+            strategy.get("book_slug"),
+            strategy.get("project_slug"),
+            strategy.get("book_title"),
+        ):
+            text = str(raw or "").strip()
+            if text:
+                candidates.append(text)
+
+    ordered: list[str] = []
+    seen: set[str] = set()
+    for value in candidates:
+        for candidate in (value, _slugify_label(value)):
+            normalized = str(candidate or "").strip().strip("/")
+            if not normalized or normalized in seen:
+                continue
+            seen.add(normalized)
+            ordered.append(normalized)
+    return ordered
+
+
+def _publishing_asset_summary(launch_assets: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not isinstance(launch_assets, dict):
+        return []
+    assets = launch_assets.get("assets")
+    if not isinstance(assets, dict):
+        return []
+
+    twitter = assets.get("twitter") if isinstance(assets.get("twitter"), list) else []
+    linkedin = assets.get("linkedin") if isinstance(assets.get("linkedin"), list) else []
+    emails = assets.get("emails") if isinstance(assets.get("emails"), list) else []
+    amazon_copy = assets.get("amazon_copy") if isinstance(assets.get("amazon_copy"), dict) else {}
+    podcast_points = assets.get("podcast_talking_points") if isinstance(assets.get("podcast_talking_points"), list) else []
+
+    amazon_items = 0
+    if str(amazon_copy.get("description") or "").strip():
+        amazon_items += 1
+    subtitles = amazon_copy.get("subtitles")
+    if isinstance(subtitles, list):
+        amazon_items += len([item for item in subtitles if str(item or "").strip()])
+    keywords = amazon_copy.get("keywords")
+    if isinstance(keywords, list):
+        amazon_items += len([item for item in keywords if str(item or "").strip()])
+
+    outreach_count = 0
+    for key in ("press_release", "goodreads", "podcast_pitch", "newsletter_blurb", "review_request"):
+        if str(assets.get(key) or "").strip():
+            outreach_count += 1
+    outreach_count += len(podcast_points)
+
+    bundles = [
+        {
+            "key": "social",
+            "title": "Social Launch Series",
+            "status": "ready" if (len(twitter) + len(linkedin)) > 0 else "missing",
+            "item_count": len(twitter) + len(linkedin),
+            "detail": f"{len(twitter)} X posts and {len(linkedin)} LinkedIn posts generated.",
+        },
+        {
+            "key": "email",
+            "title": "Email Sequence",
+            "status": "ready" if emails else "missing",
+            "item_count": len(emails),
+            "detail": f"{len(emails)} launch emails staged for pre-launch, launch day, and follow-up.",
+        },
+        {
+            "key": "marketplace",
+            "title": "KDP / Marketplace Copy",
+            "status": "ready" if amazon_items else "missing",
+            "item_count": amazon_items,
+            "detail": f"{len(subtitles) if isinstance(subtitles, list) else 0} subtitle options and {len(keywords) if isinstance(keywords, list) else 0} keyword phrases prepared.",
+        },
+        {
+            "key": "outreach",
+            "title": "Press And Outreach",
+            "status": "ready" if outreach_count else "missing",
+            "item_count": outreach_count,
+            "detail": "Press release, newsletter, podcast, and review-request assets are packaged together.",
+        },
+    ]
+
+    status = str(launch_assets.get("status") or "").strip().lower()
+    if status == "partial":
+        for bundle in bundles:
+            if bundle["status"] == "missing":
+                bundle["status"] = "partial"
+    return bundles
+
+
+def _publishing_launch_workspace(
+    *,
+    project: dict[str, Any] | None,
+    strategy: dict[str, Any] | None,
+    checklist: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    candidates = _publishing_launch_slug_candidates(project, strategy)
+    assets_blob = None
+    launch_slug = ""
+    if candidates:
+        from .book_launch import load_assets
+
+        for candidate in candidates:
+            loaded = load_assets(candidate)
+            if isinstance(loaded, dict):
+                assets_blob = loaded
+                launch_slug = candidate
+                break
+
+    assets = _publishing_asset_summary(assets_blob)
+    checklist_items = [item for item in checklist if isinstance(item, dict)]
+    completed_steps = sum(1 for item in checklist_items if _boolish(item.get("completed")))
+    total_steps = len(checklist_items)
+    checklist_progress = f"{completed_steps}/{total_steps}" if total_steps else ""
+    checklist_percent = round((completed_steps / total_steps) * 100) if total_steps else 0
+    next_step = next((str(item.get("label") or "") for item in checklist_items if not _boolish(item.get("completed"))), "")
+
+    if not checklist_items and not assets:
+        return None
+
+    platform = str((project or {}).get("platform") or "")
+    project_type = str((project or {}).get("project_type") or "")
+    title = str((project or {}).get("title") or (strategy or {}).get("book_title") or launch_slug or "")
+
+    return {
+        "project_id": str((project or {}).get("project_id") or ""),
+        "title": title,
+        "platform": platform,
+        "platform_focus": _publishing_platform_focus(platform, project_type),
+        "checklist_progress": checklist_progress,
+        "checklist_percent": checklist_percent,
+        "next_checklist_step": next_step,
+        "launch_slug": launch_slug,
+        "asset_status": str((assets_blob or {}).get("status") or ("ready" if assets else "missing")),
+        "generated_at": str((assets_blob or {}).get("generated_at") or ""),
+        "checklist": checklist_items,
+        "assets": assets,
+    }
+
+
+def _apple_voice_should_speak(text: str) -> bool:
+    normalized = str(text or "").strip()
+    if not normalized:
+        return False
+    try:
+        from .voice_pipeline import get_pipeline
+
+        pipeline = get_pipeline()
+        if pipeline is not None:
+            return bool(pipeline.should_speak(normalized, {"surface": "apple_voice"}))
+    except Exception as exc:
+        logger.debug("apple_voice_should_speak fallback: %s", exc)
+
+    if normalized.startswith("```"):
+        return False
+    if len(normalized) > 3000:
+        return False
+    return True
+
+
+def _build_apple_voice_payload(*, response_text: str, agent_name: str) -> dict[str, Any]:
+    display_text = str(response_text or "").strip() or "Understood."
+    spoken_text = " ".join(display_text.split())
+    speak = _apple_voice_should_speak(spoken_text)
+    presentation_mode = "spoken_reply" if speak else "text_only"
+    return {
+        "response": display_text,
+        "agent": str(agent_name or "JARVIS").strip() or "JARVIS",
+        "speak": speak,
+        "display_text": display_text,
+        "spoken_text": spoken_text,
+        "presentation_mode": presentation_mode,
+        "surface": "apple_voice",
+    }
+
+
+def _build_apple_voice_followups(text: str) -> list[str]:
+    normalized = str(text or "").strip().lower()
+    if not normalized:
+        return [
+            "Summarize what matters this morning",
+            "What needs my approval right now?",
+            "Walk me through today's calendar",
+        ]
+    if "calendar" in normalized or "meeting" in normalized or "today" in normalized:
+        return [
+            "Stage prep for my next event",
+            "What should I leave for now?",
+            "Any route-sensitive meetings today?",
+        ]
+    if "home" in normalized or "lights" in normalized or "door" in normalized:
+        return [
+            "Review home alerts",
+            "What does the house need right now?",
+            "Stage the next home action",
+        ]
+    if "approval" in normalized or "need" in normalized:
+        return [
+            "Show the highest-priority request",
+            "What happens if I wait?",
+            "Summarize the queue in one sentence",
+        ]
+    return [
+        "What should I handle next?",
+        "Give me the short version",
+        "Turn this into an action plan",
+    ]
+
+
+def _build_apple_voice_state(actor_id: str = "chris", conversation_id: str = "") -> dict[str, Any]:
+    snapshot = runtime.chat_state_snapshot(actor_id, conversation_id, "office")
+    active = snapshot.get("active_conversation") if isinstance(snapshot, dict) else {}
+    if not isinstance(active, dict):
+        active = {}
+
+    turns = [item for item in active.get("turns", []) if isinstance(item, dict)]
+    recent_turns: list[dict[str, Any]] = []
+    for turn in turns[-6:]:
+        role = str(turn.get("role") or "").strip() or "assistant"
+        text = str(turn.get("text") or "").strip()
+        if not text:
+            continue
+        metadata = turn.get("metadata") if isinstance(turn.get("metadata"), dict) else {}
+        recent_turns.append(
+            {
+                "role": role,
+                "text": text,
+                "created_at": str(turn.get("created_at") or ""),
+                "agent": str(metadata.get("provider") or "JARVIS") if role == "assistant" else str(turn.get("actor") or actor_id),
+            }
+        )
+
+    memory_overview = snapshot.get("memory_overview") if isinstance(snapshot, dict) else {}
+    if not isinstance(memory_overview, dict):
+        memory_overview = {}
+    try:
+        viewer = runtime.get_actor(actor_id)
+        learning_snapshot = runtime.learning_review_snapshot(viewer.display_name, viewer.user_id) or {}
+        memory_graph = runtime.durable_memory_graph_snapshot(viewer.display_name, viewer.user_id) or {}
+    except Exception:
+        learning_snapshot = {}
+        memory_graph = {}
+    if not isinstance(learning_snapshot, dict):
+        learning_snapshot = {}
+    if not isinstance(memory_graph, dict):
+        memory_graph = {}
+    learning_profile = learning_snapshot.get("profile") if isinstance(learning_snapshot.get("profile"), dict) else {}
+    learning_personalization = learning_snapshot.get("personalization") if isinstance(learning_snapshot.get("personalization"), dict) else {}
+    learning_facts = learning_snapshot.get("profile_facts") if isinstance(learning_snapshot.get("profile_facts"), list) else []
+    learning_first_light = learning_snapshot.get("first_light_history") if isinstance(learning_snapshot.get("first_light_history"), list) else []
+
+    guidance_lines: list[str] = []
+    for line in learning_personalization.get("rhythms", []) if isinstance(learning_personalization.get("rhythms"), list) else []:
+        cleaned = str(line).strip()
+        if cleaned and cleaned not in guidance_lines:
+            guidance_lines.append(cleaned)
+    for line in learning_personalization.get("learned_preferences", []) if isinstance(learning_personalization.get("learned_preferences"), list) else []:
+        cleaned = str(line).strip()
+        if cleaned and cleaned not in guidance_lines:
+            guidance_lines.append(cleaned)
+
+    recent_profile_facts: list[dict[str, Any]] = []
+    for item in learning_facts[:3]:
+        if not isinstance(item, dict):
+            continue
+        recent_profile_facts.append(
+            {
+                "id": str(item.get("fact_id") or item.get("id") or ""),
+                "title": str(item.get("title") or item.get("summary") or "Voice continuity fact"),
+                "summary": str(item.get("summary") or ""),
+            }
+        )
+
+    recent_first_light: list[dict[str, Any]] = []
+    for index, item in enumerate(list(reversed(learning_first_light))[:3]):
+        if not isinstance(item, dict):
+            continue
+        first_20 = item.get("first_20_minutes") if isinstance(item.get("first_20_minutes"), list) else []
+        summary = str(item.get("watch_line") or "").strip()
+        if not summary and first_20:
+            summary = "; ".join(str(step).strip() for step in first_20[:2] if str(step).strip())
+        if not summary:
+            summary = "First Light continuity packet recorded."
+        recent_first_light.append(
+            {
+                "id": str(item.get("packet_id") or item.get("date") or item.get("local_time") or f"voice-fl-{index}"),
+                "label": str(item.get("date") or item.get("local_time") or "Recent First Light"),
+                "summary": summary,
+            }
+        )
+
+    recent_threads = snapshot.get("recent_conversations") if isinstance(snapshot, dict) else []
+    if not isinstance(recent_threads, list):
+        recent_threads = []
+    recent_conversations: list[dict[str, Any]] = []
+    for thread in recent_threads[:5]:
+        if not isinstance(thread, dict):
+            continue
+        recent_conversations.append(
+            {
+                "conversation_id": str(thread.get("conversation_id") or ""),
+                "title": str(thread.get("title") or "Conversation"),
+                "updated_at": str(thread.get("updated_at") or thread.get("last_activity_at") or ""),
+                "turn_count": int(thread.get("turn_count") or 0),
+            }
+        )
+
+    voice_store = VoiceSettingsStore(runtime.config)
+    voice_settings = voice_store.describe()
+    stack_status = voice_settings.get("stack_status") if isinstance(voice_settings, dict) else {}
+    if not isinstance(stack_status, dict):
+        stack_status = {}
+    selected_voice_label = str(
+        voice_settings.get("selected_elevenlabs_label")
+        or voice_settings.get("selected_piper_label")
+        or voice_settings.get("tts_provider")
+        or "Auto"
+    )
+    local_ready = any(
+        _boolish(stack_status.get(key))
+        for key in ("ollama_available", "piper_ready", "system_voice_available", "localai_available")
+    )
+    cloud_ready = any(
+        _boolish(stack_status.get(key))
+        for key in ("elevenlabs_ready", "openai_ready", "azure_ready")
+    )
+
+    latest_user_text = str(active.get("latest_user_text") or "").strip()
+
+    return {
+        "conversation": {
+            "conversation_id": str(active.get("conversation_id") or ""),
+            "title": str(active.get("title") or "Voice Session"),
+            "updated_at": str(active.get("updated_at") or active.get("last_activity_at") or ""),
+            "turn_count": int(active.get("turn_count") or len(turns)),
+            "latest_user_text": latest_user_text,
+            "latest_assistant_text": str(active.get("latest_assistant_text") or "").strip(),
+            "recent_turns": recent_turns,
+        },
+        "recent_conversations": recent_conversations,
+        "memory_overview": {
+            "profile_fact_count": int(memory_overview.get("profile_fact_count") or 0),
+            "pending_proposals": int(memory_overview.get("pending_proposals") or 0),
+            "preferred_voice": str(learning_profile.get("preferred_voice") or ""),
+            "briefing_style": str(learning_profile.get("briefing_style") or ""),
+            "guidance_lines": guidance_lines[:4],
+            "recent_profile_facts": recent_profile_facts,
+            "recent_first_light": recent_first_light,
+            "long_horizon_lines": _memory_graph_long_horizon_lines(memory_graph),
+            "active_threads": _memory_graph_thread_titles(memory_graph),
+        },
+        "voice_stack": {
+            "provider": str(voice_settings.get("tts_provider") or "auto"),
+            "provider_label": str(voice_settings.get("selected_provider_label") or "Auto"),
+            "voice_label": selected_voice_label,
+            "local_ready": local_ready,
+            "cloud_ready": cloud_ready,
+            "detail": (
+                f"{selected_voice_label} · "
+                f"{'local ready' if local_ready else 'local idle'} · "
+                f"{'cloud ready' if cloud_ready else 'cloud idle'}"
+            ),
+        },
+        "quick_commands": _build_apple_voice_followups(latest_user_text),
+    }
+
+
+def _apple_voice_extract_text(result: Any) -> str:
+    if result is None:
+        return ""
+    if isinstance(result, dict):
+        return str(
+            result.get("output_text")
+            or result.get("response")
+            or result.get("text")
+            or ""
+        ).strip()
+
+    for attr in ("output_text", "response", "text"):
+        value = getattr(result, attr, "")
+        if value:
+            return str(value).strip()
+    return str(result).strip()
+
+
+def _apple_voice_extract_agent(result: Any, default: str = "JARVIS") -> str:
+    if isinstance(result, dict):
+        return str(result.get("agent") or result.get("actor") or default).strip() or default
+    return str(getattr(result, "agent", default) or default).strip() or default
+
+
+_APPLE_VOICE_CALENDAR_RE = re.compile(
+    r"\b(schedule|calendar|agenda|events?)\b",
+    re.IGNORECASE,
+)
+_APPLE_VOICE_TODAY_RE = re.compile(r"\b(today|this\s+(morning|afternoon|evening))\b", re.IGNORECASE)
+
+
+def _apple_voice_local_schedule_summary(runtime: Any = None, actor_id: str = "chris") -> str:
+    try:
+        from .unified_inbox import get_unified_inbox
+
+        inbox = get_unified_inbox()
+        if inbox is not None:
+            agenda = inbox.get_todays_agenda()
+            events = agenda.get("events") or []
+            if events:
+                return _apple_voice_format_schedule_events(events)
+
+        if runtime is not None:
+            actor = runtime.get_actor(actor_id)
+            events = runtime._actor_calendar_events(actor, limit=8)
+            if events:
+                return _apple_voice_format_schedule_events(events)
+        return "You have nothing on your schedule today."
+    except Exception as exc:
+        logger.warning("apple_voice_local_schedule_summary failed: %s", exc)
+        return ""
+
+
+def _apple_voice_format_schedule_events(events: list[dict[str, Any]]) -> str:
+    if not events:
+        return "You have nothing on your schedule today."
+
+    summaries: list[str] = []
+    for event in events[:3]:
+        title = str(event.get("title") or event.get("summary") or "an event").strip()
+        start_raw = str(event.get("start_time") or event.get("start") or "").strip()
+        if start_raw:
+            try:
+                start_dt = datetime.fromisoformat(start_raw.replace("Z", "+00:00"))
+                time_label = start_dt.astimezone().strftime("%-I:%M %p")
+                summaries.append(f"{title} at {time_label}")
+            except Exception:
+                summaries.append(title)
+        else:
+            summaries.append(title)
+
+    opening = "You have 1 thing on your schedule today: " if len(events) == 1 else f"You have {len(events)} things on your schedule today. "
+    if len(events) == 1:
+        return opening + summaries[0] + "."
+
+    spoken = opening + "; ".join(summaries)
+    if len(events) > 3:
+        spoken += f"; plus {len(events) - 3} more"
+    return spoken + "."
+
+
+def _apple_voice_try_local_handler(runtime: Any, text: str, actor_id: str = "chris") -> tuple[str, str] | None:
+    try:
+        for handler_name in ("_try_handle_reminder", "_try_handle_task_creation", "_try_handle_calendar_event"):
+            handler = getattr(runtime, handler_name, None)
+            if callable(handler):
+                result = handler(text)
+                response_text = _apple_voice_extract_text(result)
+                if response_text:
+                    return response_text, _apple_voice_extract_agent(result)
+    except Exception as exc:
+        logger.warning("apple_voice_local_handler failed: %s", exc)
+
+    normalized = text.strip().lower()
+    if _APPLE_VOICE_CALENDAR_RE.search(normalized) and _APPLE_VOICE_TODAY_RE.search(normalized):
+        response_text = _apple_voice_local_schedule_summary(runtime, actor_id)
+        if response_text:
+            return response_text, "JARVIS"
+    return None
+
+
+def _apple_voice_local_llm(runtime: Any, *, actor_id: str, text: str) -> tuple[str, str]:
+    try:
+        from .llm_gateway import LLMMessage, get_gateway, init_gateway
+    except Exception as exc:
+        logger.warning("apple_voice_local_llm import failed: %s", exc)
+        return (
+            "The local reasoning system is not ready right now. If you want, I can escalate to a non-local model after you approve it.",
+            "JARVIS",
+        )
+
+    gateway = get_gateway() or init_gateway()
+    if gateway is None:
+        return (
+            "The local reasoning system is not initialized right now. If you want, I can escalate to a non-local model after you approve it.",
+            "JARVIS",
+        )
+
+    gateway_status = gateway.get_status()
+    if not gateway_status.get("ollama_available"):
+        return (
+            "My local models are unavailable right now. I can use a non-local model if you approve it.",
+            "JARVIS",
+        )
+
+    system_prompt = (
+        "You are JARVIS speaking on Apple voice surfaces. "
+        "Prefer short, direct spoken answers. "
+        "Do not mention tokens, providers, models, or internal routing."
+    )
+    response = gateway.complete(
+        [
+            LLMMessage(role="system", content=system_prompt),
+            LLMMessage(role="user", content=text),
+        ],
+        task_type="converse",
+        agent_id="jarvis-apple-voice",
+        actor_id=actor_id,
+        allow_escalation=False,
+    )
+
+    if response.backend != "ollama":
+        logger.warning(
+            "apple_voice_local_llm blocked non-local backend=%s model=%s",
+            response.backend,
+            response.model_used,
+        )
+        return (
+            "This request would need a non-local model. I can do that after you approve it.",
+            "JARVIS",
+        )
+
+    if response.error:
+        logger.warning("apple_voice_local_llm local error: %s", response.error)
+        return (
+            "My local models could not finish that request right now. I can use a non-local model if you approve it.",
+            "JARVIS",
+        )
+
+    response_text = str(response.text or "").strip()
+    if not response_text:
+        return ("I don't have a local answer for that yet.", "JARVIS")
+    return response_text, "JARVIS"
 
 
 def _err(message: str, status: int = 400) -> tuple[dict, int]:
@@ -342,6 +927,99 @@ def _chronicle_entry_date(entry: dict[str, Any]) -> str:
     return ""
 
 
+def _chronicle_entry_id(entry: dict[str, Any]) -> str:
+    return str(entry.get("entry_id") or entry.get("id") or uuid.uuid4())
+
+
+def _chronicle_bridge_entry_to_apple(entry: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": _chronicle_entry_id(entry),
+        "type": str(entry.get("entry_type") or entry.get("type") or entry.get("theme") or "reflection"),
+        "title": _truncate(str(entry.get("title") or entry.get("theme") or "Reflection"), 50),
+        "body": _truncate(str(entry.get("body") or entry.get("note") or entry.get("reflection") or ""), 200),
+        "scripture": entry.get("scripture_ref") or entry.get("passage") or None,
+        "timestamp": str(entry.get("created_at") or entry.get("timestamp") or entry.get("date") or ""),
+    }
+
+
+def _load_chronicle_prayer_activity() -> dict[str, dict[str, Any]]:
+    payload = _safe_read_json(_CHRONICLE_PRAYER_ACTIVITY_PATH, {})
+    if not isinstance(payload, dict):
+        return {}
+    normalized: dict[str, dict[str, Any]] = {}
+    for key, value in payload.items():
+        if not str(key).strip() or not isinstance(value, dict):
+            continue
+        normalized[str(key)] = {
+            "times_prayed": int(value.get("times_prayed") or 0),
+            "last_prayed_at": str(value.get("last_prayed_at") or ""),
+        }
+    return normalized
+
+
+def _persist_chronicle_prayer_activity(payload: dict[str, dict[str, Any]]) -> None:
+    _safe_write_json(_CHRONICLE_PRAYER_ACTIVITY_PATH, payload)
+
+
+def _load_chronicle_answered_prayers() -> dict[str, dict[str, Any]]:
+    items = _safe_read_jsonl(_CHRONICLE_ANSWERED_PRAYERS_PATH)
+    answered: dict[str, dict[str, Any]] = {}
+    for item in items:
+        prayer_id = str(item.get("id") or item.get("entry_id") or "").strip()
+        if prayer_id:
+            answered[prayer_id] = item
+    return answered
+
+
+def _enrich_chronicle_prayers(prayers: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    activity = _load_chronicle_prayer_activity()
+    answered = _load_chronicle_answered_prayers()
+    enriched: list[dict[str, Any]] = []
+    for prayer in prayers:
+        if not isinstance(prayer, dict):
+            continue
+        prayer_id = str(prayer.get("id") or uuid.uuid4())
+        activity_state = activity.get(prayer_id, {})
+        answered_state = answered.get(prayer_id, {})
+        enriched.append(
+            {
+                "id": prayer_id,
+                "text": str(prayer.get("text") or "").strip(),
+                "category": str(prayer.get("category") or "Prayer"),
+                "times_prayed": int(activity_state.get("times_prayed") or 0),
+                "last_prayed_at": str(activity_state.get("last_prayed_at") or ""),
+                "answered": True if answered_state else _boolish(prayer.get("answered")),
+                "answer_summary": str(answered_state.get("answerSummary") or answered_state.get("answer_summary") or ""),
+            }
+        )
+    return enriched
+
+
+def _chronicle_study_workspace(context: dict[str, Any]) -> dict[str, Any] | None:
+    study = context.get("study")
+    if not isinstance(study, dict):
+        return None
+    passage = str(study.get("passage") or "").strip()
+    title = str(study.get("title") or "").strip()
+    date = str(study.get("date") or "").strip()
+    top_themes = context.get("top_themes") if isinstance(context.get("top_themes"), list) else []
+    rhythm = context.get("todays_rhythm") if isinstance(context.get("todays_rhythm"), dict) else {}
+    focus_summary = str(rhythm.get("description") or "").strip()
+    theme_hint = str(top_themes[0] if top_themes else "today's formation")
+    prompts = [
+        f"What word or phrase stands out in {passage or 'this passage'}?",
+        f"How does this speak into {theme_hint}?",
+        "What is one faithful response you can carry into today?",
+    ]
+    return {
+        "passage": passage,
+        "title": title or passage or "Current Study",
+        "date": date,
+        "focus_summary": focus_summary,
+        "prompts": prompts,
+    }
+
+
 def _chronicle_fallback_entries(raw_entries: list[dict[str, Any]], actor: str) -> list[dict[str, Any]]:
     return [
         {
@@ -390,12 +1068,12 @@ def _chronicle_fallback_context(raw_entries: list[dict[str, Any]], actor: str) -
             "title": str(study_entry.get("title") or study_entry.get("theme") or ""),
             "date": _chronicle_entry_date(study_entry),
         } if study_entry else None,
-        "active_prayers": active_prayers,
+        "active_prayers": _enrich_chronicle_prayers(active_prayers),
         "todays_rhythm": None,
         "top_themes": top_themes,
         "total_entries": len(actor_entries),
-        "active_prayer_count": len(active_prayers),
-        "answered_prayer_count": 0,
+        "active_prayer_count": sum(1 for prayer in _enrich_chronicle_prayers(active_prayers) if not prayer.get("answered")),
+        "answered_prayer_count": sum(1 for prayer in _enrich_chronicle_prayers(active_prayers) if prayer.get("answered")),
     }
 
 
@@ -450,6 +1128,204 @@ def _chronicle_fallback_patterns(raw_entries: list[dict[str, Any]], actor: str) 
             "answered_recent": 0,
         },
         "writing_streak_days": streak,
+    }
+
+
+def _chronicle_continuity_signal_key(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", str(value or "").lower()).strip()
+
+
+_CHRONICLE_SITUATION_CATALOG: list[dict[str, Any]] = [
+    {
+        "id": "stress",
+        "label": "Pressure And Stress",
+        "keywords": {"pressure", "stress", "anxiety", "calm", "overwhelm", "steady", "meeting", "deadline"},
+    },
+    {
+        "id": "decision",
+        "label": "Discernment And Decisions",
+        "keywords": {"decision", "discernment", "wisdom", "clarity", "direction", "choose", "judgment"},
+    },
+    {
+        "id": "formation",
+        "label": "Formation And Prayer",
+        "keywords": {"prayer", "scripture", "formation", "study", "devotional", "faith", "intercession"},
+    },
+    {
+        "id": "health",
+        "label": "Health And Recovery",
+        "keywords": {"health", "recovery", "sleep", "energy", "rest", "wellness", "body"},
+    },
+    {
+        "id": "family",
+        "label": "Family And Stewardship",
+        "keywords": {"family", "household", "stewardship", "kids", "marriage", "home", "father"},
+    },
+]
+
+
+def _chronicle_detect_situations(
+    top_themes: list[str],
+    actor_entries: list[dict[str, Any]],
+    relevant_facts: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    recent_entries = list(reversed(actor_entries))[:6]
+    signal_source = " ".join(
+        [
+            *top_themes,
+            *[str(entry.get("title") or "") for entry in recent_entries],
+            *[str(entry.get("theme") or "") for entry in recent_entries],
+            *[str(entry.get("body") or entry.get("note") or entry.get("reflection") or "") for entry in recent_entries],
+            *[str(fact.get("title") or "") for fact in relevant_facts],
+            *[str(fact.get("summary") or "") for fact in relevant_facts],
+            *[" ".join(str(tag) for tag in (fact.get("tags") or [])) for fact in relevant_facts],
+        ]
+    )
+    signal_key = _chronicle_continuity_signal_key(signal_source)
+    situations: list[dict[str, Any]] = []
+    for situation in _CHRONICLE_SITUATION_CATALOG:
+        keywords = {str(keyword).strip().lower() for keyword in (situation.get("keywords") or set()) if str(keyword).strip()}
+        hits = [keyword for keyword in sorted(keywords) if keyword in signal_key]
+        if not hits:
+            continue
+        supporting_facts = [
+            fact
+            for fact in relevant_facts
+            if any(
+                keyword in _chronicle_continuity_signal_key(
+                    " ".join(
+                        [
+                            str(fact.get("title") or ""),
+                            str(fact.get("summary") or ""),
+                            " ".join(str(tag) for tag in (fact.get("tags") or [])),
+                        ]
+                    )
+                )
+                for keyword in hits
+            )
+        ]
+        situations.append(
+            {
+                "id": str(situation.get("id") or ""),
+                "label": str(situation.get("label") or "Situation"),
+                "summary": (
+                    f"JARVIS sees this as a {str(situation.get('label') or 'situation').lower()} moment"
+                    f" based on signals like {', '.join(hits[:3])}."
+                ),
+                "signals": hits[:4],
+                "matched_fact_count": len(supporting_facts),
+            }
+        )
+    situations.sort(key=lambda item: (-int(item.get("matched_fact_count") or 0), -len(item.get("signals") or []), str(item.get("label") or "")))
+    return situations[:3]
+
+
+def _chronicle_continuity_packet(
+    actor: str,
+    raw_entries: list[dict[str, Any]],
+    context: dict[str, Any] | None,
+) -> dict[str, Any]:
+    try:
+        viewer = runtime.get_actor(actor)
+        facts = runtime.memory_support.profile_facts(viewer, subject_user_id=viewer.user_id)
+    except Exception:
+        facts = []
+
+    top_themes = []
+    if isinstance(context, dict):
+        top_themes = [str(item).strip().lower() for item in (context.get("top_themes") or []) if str(item).strip()]
+    actor_entries = [entry for entry in raw_entries if _chronicle_actor_matches(entry, actor)]
+    recent_entries = list(reversed(actor_entries))[:6]
+    token_source = " ".join(
+        [
+            *top_themes,
+            *[str(entry.get("title") or "") for entry in recent_entries],
+            *[str(entry.get("theme") or "") for entry in recent_entries],
+            *[str(entry.get("scripture_ref") or entry.get("passage") or "") for entry in recent_entries],
+        ]
+    )
+    tokens = {
+        token
+        for token in re.findall(r"[a-z0-9]{4,}", token_source.lower())
+        if token not in {"that", "with", "have", "this", "from", "your", "what", "when", "into", "today", "over"}
+    }
+
+    scored_facts: list[tuple[int, dict[str, Any]]] = []
+    for item in facts:
+        summary = str(item.get("summary") or "").strip()
+        if not summary:
+            continue
+        haystack = _chronicle_continuity_signal_key(
+            " ".join(
+                [
+                    summary,
+                    str(item.get("title") or ""),
+                    " ".join(str(tag) for tag in (item.get("tags") or [])),
+                ]
+            )
+        )
+        score = sum(1 for token in tokens if token in haystack)
+        if top_themes and str(item.get("lane") or "") == "personal":
+            score += 1
+        if score:
+            scored_facts.append((score, item))
+    scored_facts.sort(key=lambda pair: (-pair[0], str(pair[1].get("updated_at") or "")))
+    relevant_facts = [
+        {
+            "fact_id": str(item.get("fact_id") or ""),
+            "title": str(item.get("title") or item.get("summary") or "Continuity fact"),
+            "summary": str(item.get("summary") or ""),
+            "lane": str(item.get("lane") or ""),
+            "updated_at": str(item.get("updated_at") or ""),
+            "tags": [str(tag) for tag in (item.get("tags") or [])[:4]],
+        }
+        for _, item in scored_facts[:4]
+    ]
+
+    matching_entries: list[dict[str, Any]] = []
+    for entry in reversed(actor_entries):
+        theme = str(entry.get("theme") or "").strip().lower()
+        title = str(entry.get("title") or "").strip()
+        body = str(entry.get("body") or entry.get("note") or entry.get("reflection") or "").strip()
+        scripture = str(entry.get("scripture_ref") or entry.get("passage") or "").strip()
+        haystack = _chronicle_continuity_signal_key(" ".join([theme, title, body, scripture]))
+        score = sum(1 for token in tokens if token in haystack)
+        if theme and theme in top_themes:
+            score += 2
+        if score <= 0:
+            continue
+        matching_entries.append(
+            {
+                "score": score,
+                "entry": {
+                    "id": str(entry.get("entry_id") or entry.get("id") or uuid.uuid4()),
+                    "type": str(entry.get("entry_type") or entry.get("type") or entry.get("theme") or "reflection"),
+                    "title": _truncate(title or entry.get("theme") or "Reflection", 50),
+                    "body": _truncate(body, 200),
+                    "scripture": scripture or None,
+                    "timestamp": str(entry.get("created_at") or entry.get("timestamp") or ""),
+                },
+            }
+        )
+    matching_entries.sort(key=lambda item: (-int(item.get("score") or 0), str(item["entry"].get("timestamp") or "")))
+    similar_entries = [item["entry"] for item in matching_entries[:3]]
+    situations = _chronicle_detect_situations(top_themes, actor_entries, relevant_facts)
+
+    prompt_bits = []
+    if top_themes:
+        prompt_bits.append(f"Recall how {actor.title()} has been walking through {top_themes[0]}.")
+    if situations:
+        prompt_bits.append(f"This looks most like a {str(situations[0].get('label') or 'continuity').lower()} moment.")
+    if relevant_facts:
+        prompt_bits.append(f"Carry forward: {relevant_facts[0]['summary']}")
+    if similar_entries:
+        prompt_bits.append(f"Similar prior entry: {similar_entries[0]['title']}")
+
+    return {
+        "relevant_facts": relevant_facts,
+        "similar_entries": similar_entries,
+        "situations": situations,
+        "recall_prompt": " ".join(prompt_bits).strip(),
     }
 
 
@@ -535,6 +1411,118 @@ def _build_home_context(*, needs_count: int = 0) -> dict[str, Any]:
         },
     }
 
+
+def _build_home_ops_summary() -> dict[str, Any]:
+    summary: dict[str, Any] = {
+        "email": {
+            "gmail_unread": 0,
+            "outlook_unread": 0,
+            "total_unread": 0,
+            "flagged_total": 0,
+        },
+        "tasks": {
+            "open_count": 0,
+            "overdue_count": 0,
+            "due_today_count": 0,
+            "due_this_week_count": 0,
+            "top_titles": [],
+        },
+        "calendar": {
+            "today_count": 0,
+            "upcoming_count": 0,
+            "next_title": "",
+            "next_start": "",
+            "next_location": "",
+        },
+        "projects": {
+            "active_count": 0,
+            "stalled_count": 0,
+            "total_count": 0,
+            "top_titles": [],
+            "unclassified_signal_count": 0,
+        },
+        "sync": {
+            "connected_sources": [],
+            "attention_sources": [],
+        },
+    }
+
+    try:
+        from .home_projects import get_home_db
+
+        db = get_home_db()
+        if db is None:
+            return summary
+
+        dashboard = db.get_dashboard_data() or {}
+        email_stats = db.get_email_stats() or {}
+        today_tasks = db.get_tasks_due_today() or []
+        overdue_tasks = db.get_overdue_tasks() or []
+        upcoming_events = db.get_upcoming_events(7) or []
+        active_projects = db.list_projects(status="active") or []
+        sync_states = db.get_all_sync_states() or []
+
+        gmail_stats = email_stats.get("gmail") if isinstance(email_stats, dict) else {}
+        outlook_stats = email_stats.get("outlook") if isinstance(email_stats, dict) else {}
+        dashboard_tasks = dashboard.get("tasks") if isinstance(dashboard, dict) else {}
+        dashboard_calendar = dashboard.get("calendar") if isinstance(dashboard, dict) else {}
+        dashboard_projects = dashboard.get("projects") if isinstance(dashboard, dict) else {}
+        dashboard_signals = dashboard.get("signals") if isinstance(dashboard, dict) else {}
+
+        summary["email"] = {
+            "gmail_unread": int((gmail_stats or {}).get("unread") or 0),
+            "outlook_unread": int((outlook_stats or {}).get("unread") or 0),
+            "total_unread": int(((gmail_stats or {}).get("unread") or 0) + ((outlook_stats or {}).get("unread") or 0)),
+            "flagged_total": int(((gmail_stats or {}).get("flagged") or 0) + ((outlook_stats or {}).get("flagged") or 0)),
+        }
+        summary["tasks"] = {
+            "open_count": int((dashboard_tasks or {}).get("total_open") or 0),
+            "overdue_count": int((dashboard_tasks or {}).get("overdue") or 0),
+            "due_today_count": int((dashboard_tasks or {}).get("due_today") or 0),
+            "due_this_week_count": int((dashboard_tasks or {}).get("due_this_week") or 0),
+            "top_titles": [
+                str(task.get("title") or "").strip()
+                for task in (today_tasks[:2] + overdue_tasks[:2])
+                if isinstance(task, dict) and str(task.get("title") or "").strip()
+            ][:4],
+        }
+        next_event = next((event for event in upcoming_events if isinstance(event, dict)), {})
+        summary["calendar"] = {
+            "today_count": int((dashboard_calendar or {}).get("today_count") or 0),
+            "upcoming_count": len([event for event in upcoming_events if isinstance(event, dict)]),
+            "next_title": str(next_event.get("title") or ""),
+            "next_start": str(next_event.get("start_time") or next_event.get("start") or ""),
+            "next_location": str(next_event.get("location") or ""),
+        }
+        summary["projects"] = {
+            "active_count": int((dashboard_projects or {}).get("active") or 0),
+            "stalled_count": int((dashboard_projects or {}).get("stalled") or 0),
+            "total_count": int((dashboard_projects or {}).get("total") or 0),
+            "top_titles": [
+                str(project.get("title") or "").strip()
+                for project in active_projects[:4]
+                if isinstance(project, dict) and str(project.get("title") or "").strip()
+            ],
+            "unclassified_signal_count": int((dashboard_signals or {}).get("unclassified_count") or 0),
+        }
+        summary["sync"] = {
+            "connected_sources": [
+                str(item.get("source") or "").strip()
+                for item in sync_states
+                if isinstance(item, dict) and str(item.get("status") or "").strip().lower() == "ok" and str(item.get("source") or "").strip()
+            ][:4],
+            "attention_sources": [
+                str(item.get("source") or "").strip()
+                for item in sync_states
+                if isinstance(item, dict) and str(item.get("status") or "").strip().lower() not in {"", "ok"} and str(item.get("source") or "").strip()
+            ][:4],
+        }
+    except Exception as exc:
+        logger.warning("apple_api.build_home_ops_summary: %s", exc)
+
+    return summary
+
+
 def _apple_calendar_events(payload: dict[str, Any]) -> list[dict[str, Any]]:
     events = payload.get("events") if isinstance(payload, dict) else []
     if not isinstance(events, list):
@@ -564,6 +1552,8 @@ def _apple_calendar_event_record(event: dict[str, Any]) -> dict[str, Any]:
         "end": str(event.get("end") or "").strip(),
         "location": str(event.get("location") or "").strip(),
         "calendar": str(event.get("calendar") or "").strip(),
+        "notes": str(event.get("notes") or "").strip(),
+        "url": str(event.get("url") or "").strip(),
         "all_day": bool(event.get("all_day")),
         "minutes_away": minutes_away,
         "prep_window_open": minutes_away is not None and -60 <= minutes_away <= 24 * 60,
@@ -648,6 +1638,7 @@ def _build_apple_calendar_state(payload: dict[str, Any]) -> dict[str, Any]:
         "attention_flags": attention_flags[:6],
     }
 
+
 def _apple_reminder_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
     reminders = payload.get("reminders") if isinstance(payload, dict) else []
     if not isinstance(reminders, list):
@@ -688,6 +1679,7 @@ def _apple_reminder_record(reminder: dict[str, Any]) -> dict[str, Any]:
         "minutes_away": minutes_away,
         "overdue": minutes_away is not None and minutes_away < 0,
         "due_soon": minutes_away is not None and 0 <= minutes_away <= 4 * 60,
+        "completed": bool(reminder.get("completed")),
         "available_actions": ["complete", "snooze_1h"],
     }
 
@@ -698,6 +1690,39 @@ def _build_apple_reminders_state(payload: dict[str, Any]) -> dict[str, Any]:
     overdue_items = [record for record in records if record["overdue"]][:6]
     due_soon_items = [record for record in records if record["due_soon"]][:6]
     priority_items = [record for record in records if record["priority"] >= 7][:6]
+    no_due_date_count = sum(1 for record in records if not str(record.get("due") or "").strip())
+
+    list_buckets: dict[str, dict[str, Any]] = {}
+    for record in records:
+        list_title = str(record.get("list") or "").strip() or "General"
+        bucket = list_buckets.setdefault(
+            list_title.lower(),
+            {
+                "id": list_title.lower().replace(" ", "-"),
+                "title": list_title,
+                "count": 0,
+                "overdue_count": 0,
+                "due_soon_count": 0,
+                "priority_count": 0,
+            },
+        )
+        bucket["count"] += 1
+        if record["overdue"]:
+            bucket["overdue_count"] += 1
+        if record["due_soon"]:
+            bucket["due_soon_count"] += 1
+        if record["priority"] >= 7:
+            bucket["priority_count"] += 1
+    list_summaries = sorted(
+        list_buckets.values(),
+        key=lambda item: (
+            -int(item.get("overdue_count") or 0),
+            -int(item.get("due_soon_count") or 0),
+            -int(item.get("priority_count") or 0),
+            -int(item.get("count") or 0),
+            str(item.get("title") or ""),
+        ),
+    )[:6]
 
     attention_flags: list[dict[str, Any]] = []
     if overdue_items:
@@ -740,12 +1765,21 @@ def _build_apple_reminders_state(payload: dict[str, Any]) -> dict[str, Any]:
         "synced": bool(payload),
         "synced_at": str(payload.get("synced_at") or "") if isinstance(payload, dict) else "",
         "count": int(payload.get("count") or len(reminders)) if isinstance(payload, dict) else len(reminders),
+        "summary": {
+            "open_count": len(records),
+            "overdue_count": len(overdue_items),
+            "due_soon_count": len(due_soon_items),
+            "priority_count": len(priority_items),
+            "no_due_date_count": no_due_date_count,
+        },
+        "list_summaries": list_summaries,
         "open_items": records[:8],
         "overdue_items": overdue_items,
         "due_soon_items": due_soon_items,
         "priority_items": priority_items,
         "attention_flags": attention_flags[:6],
     }
+
 
 def _build_apple_focus_state(
     *,
@@ -755,6 +1789,9 @@ def _build_apple_focus_state(
     focus_active = bool(focus_payload.get("focus_active"))
     source = str(focus_payload.get("source") or "")
     updated_at = str(focus_payload.get("updated_at") or "")
+    jarvis_mode = str(focus_payload.get("jarvis_mode") or "morning_brief")
+    hold_approvals = bool(focus_payload.get("hold_approvals"))
+    silence_briefings = bool(focus_payload.get("silence_briefings"))
     recommended_delivery = str(posture.get("recommended_delivery") or "")
     posture_label = str(posture.get("label") or "")
     suppression_rules = [
@@ -783,19 +1820,115 @@ def _build_apple_focus_state(
             "active": recommended_delivery in {"badge_only", "quiet_store", "hold_for_brief"},
         },
     ]
+    routing_lanes = [
+        {
+            "id": "approvals_lane",
+            "title": "Approvals",
+            "detail": (
+                "Approvals stay visible without buzzing during focus."
+                if hold_approvals or recommended_delivery in {"badge_only", "quiet_store", "hold_for_brief"}
+                else "Approvals can flow normally during active hours."
+            ),
+            "delivery_mode": "badge_only" if hold_approvals or focus_active else recommended_delivery or "badge_only",
+            "active": hold_approvals or focus_active or bool(posture.get("quiet_hours")),
+        },
+        {
+            "id": "briefings_lane",
+            "title": "Briefings",
+            "detail": (
+                "Proactive briefings stay held for a calmer command surface."
+                if silence_briefings or bool(posture.get("quiet_hours"))
+                else "Briefings can surface normally."
+            ),
+            "delivery_mode": "hold_for_brief" if silence_briefings or bool(posture.get("quiet_hours")) else recommended_delivery or "badge_only",
+            "active": silence_briefings or bool(posture.get("quiet_hours")),
+        },
+        {
+            "id": "routine_lane",
+            "title": "Routine Notifications",
+            "detail": (
+                "Routine household items stay quiet while focus is active."
+                if focus_active
+                else "Routine household items follow the current household posture."
+            ),
+            "delivery_mode": recommended_delivery or "badge_only",
+            "active": True,
+        },
+        {
+            "id": "household_alert_lane",
+            "title": "Household Alerts",
+            "detail": "Urgent household alerts can break through quieter modes when needed.",
+            "delivery_mode": "deliver_now" if str(posture.get("mode") or "") == "household_alert" else "badge_only",
+            "active": True,
+        },
+    ]
+    presets = [
+        {
+            "id": "open_household",
+            "title": "Open Household",
+            "detail": "Normal delivery with no quieting overrides.",
+            "focus_active": False,
+            "jarvis_mode": "morning_brief",
+            "hold_approvals": False,
+            "silence_briefings": False,
+            "active": not focus_active and not hold_approvals and not silence_briefings,
+        },
+        {
+            "id": "work_focus",
+            "title": "Work Focus",
+            "detail": "Keep routine traffic quiet, but leave approvals visible.",
+            "focus_active": True,
+            "jarvis_mode": "work",
+            "hold_approvals": True,
+            "silence_briefings": False,
+            "active": focus_active and jarvis_mode == "work" and hold_approvals and not silence_briefings,
+        },
+        {
+            "id": "meeting_quiet",
+            "title": "Meeting Quiet",
+            "detail": "Hold approvals and proactive briefings during heads-down time.",
+            "focus_active": True,
+            "jarvis_mode": "personal",
+            "hold_approvals": True,
+            "silence_briefings": True,
+            "active": focus_active and jarvis_mode == "personal" and hold_approvals and silence_briefings,
+        },
+        {
+            "id": "sleep_guard",
+            "title": "Sleep Guard",
+            "detail": "Reserve interruptions for the household path only.",
+            "focus_active": True,
+            "jarvis_mode": "sleep",
+            "hold_approvals": True,
+            "silence_briefings": True,
+            "active": focus_active and jarvis_mode == "sleep" and hold_approvals and silence_briefings,
+        },
+    ]
     return {
         "focus_active": focus_active,
         "updated_at": updated_at,
         "source": source,
-        "source_fresh": bool(updated_at),
+        "source_fresh": _is_recent_timestamp(updated_at, minutes=180),
         "interruption_posture": posture,
         "suppression_rules": suppression_rules,
+        "filter": {
+            "jarvis_mode": jarvis_mode,
+            "hold_approvals": hold_approvals,
+            "silence_briefings": silence_briefings,
+            "source": source or "device",
+        },
+        "routing_lanes": routing_lanes,
+        "presets": presets,
         "summary": {
             "label": posture_label or ("Focus active" if focus_active else "Focus inactive"),
-            "detail": str(posture.get("reason") or "") or "JARVIS is using the current device posture to route interruptions.",
+            "detail": (
+                str(posture.get("reason") or "")
+                or "JARVIS is using the current device posture to route interruptions."
+            ),
             "recommended_delivery": recommended_delivery,
         },
     }
+
 
 def _build_apple_sound_state(rows: list[dict[str, Any]]) -> dict[str, Any]:
     resolved = _load_signal_resolutions().get("sound", {})
@@ -830,11 +1963,74 @@ def _build_apple_sound_state(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 "detail": first["detail"] or "High-confidence sound activity was captured.",
             }
         )
+    primary_label = str((high_confidence_items[0]["label"] if high_confidence_items else "") or "").lower()
+    primary_source = str((high_confidence_items[0]["source"] if high_confidence_items else "") or "").strip()
+    is_security_signal = any(token in primary_label for token in ("doorbell", "knock", "glass", "alarm", "siren", "smoke"))
+    is_household_signal = any(token in primary_label for token in ("baby", "cry", "dog"))
+    policy_rules = [
+        {
+            "id": "high_confidence_security_triage",
+            "title": "High-confidence security sounds stay visible",
+            "detail": "Door, glass, alarm, and siren detections should route into the security lane even during quieter command posture.",
+            "delivery_mode": "deliver_now" if is_security_signal else "badge_only",
+            "active": is_security_signal,
+        },
+        {
+            "id": "routine_sound_review_queue",
+            "title": "Routine sounds queue for review",
+            "detail": "Lower-risk sounds should be captured, tagged, and reviewed without creating unnecessary interruption noise.",
+            "delivery_mode": "badge_only",
+            "active": any(not bool(item.get("resolved")) for item in recent_items),
+        },
+        {
+            "id": "resolved_sounds_drop_out",
+            "title": "Resolved sounds drop out of the active queue",
+            "detail": "Once acknowledged, sound alerts stay visible in history but stop contributing to the active attention stack.",
+            "delivery_mode": "quiet_store",
+            "active": any(bool(item.get("resolved")) for item in recent_items),
+        },
+    ]
+    response_plans = [
+        {
+            "id": "sound-plan-security",
+            "title": "Security Follow-up",
+            "detail": (
+                f"Route this sound through security review and camera context for {primary_source or 'the affected zone'}."
+                if is_security_signal
+                else "Keep the next security-related sound ready for camera or lock review if confidence stays high."
+            ),
+            "target": "security",
+            "priority": "high" if is_security_signal else "medium",
+            "active": is_security_signal,
+        },
+        {
+            "id": "sound-plan-household",
+            "title": "Household Follow-up",
+            "detail": (
+                "Treat the current sound as a household support event and keep it visible without escalating to an alarm posture."
+                if is_household_signal
+                else "Use the household lane for comfort, child, or pet-related sounds when they appear."
+            ),
+            "target": "household",
+            "priority": "medium",
+            "active": is_household_signal,
+        },
+        {
+            "id": "sound-plan-review-brief",
+            "title": "Brief Queue Review",
+            "detail": "Any unresolved sound should stay in the next command review until it is either resolved or escalated.",
+            "target": "brief",
+            "priority": "medium" if high_confidence_items else "low",
+            "active": any(not bool(item.get("resolved")) for item in recent_items),
+        },
+    ]
     return {
         "count": len(recent_rows),
         "recent_items": recent_items,
         "high_confidence_items": high_confidence_items,
         "attention_flags": attention_flags,
+        "policy_rules": policy_rules,
+        "response_plans": response_plans,
     }
 
 
@@ -872,16 +2068,106 @@ def _build_apple_vision_state(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 "detail": first["text_preview"] or "A new vision scan was captured.",
             }
         )
+    primary_context = str((unresolved_items[0]["context"] if unresolved_items else "") or "").lower()
+    primary_source = str((unresolved_items[0]["source"] if unresolved_items else "") or "").strip()
+    preview_text = str((unresolved_items[0]["text_preview"] if unresolved_items else "") or "").lower()
+    is_entryway_context = any(token in primary_context for token in ("porch", "door", "entry", "garage", "driveway"))
+    is_package_signal = "package" in preview_text
+    is_document_signal = any(token in preview_text for token in ("invoice", "label", "receipt", "bill", "tracking"))
+    policy_rules = [
+        {
+            "id": "entryway_captures_escalate",
+            "title": "Entryway captures stay reviewable",
+            "detail": "Porch, door, garage, and driveway captures should stay visible until someone reviews or resolves them.",
+            "delivery_mode": "badge_only",
+            "active": is_entryway_context,
+        },
+        {
+            "id": "package_context_routes_household",
+            "title": "Package context routes into household follow-up",
+            "detail": "Package-like captures should route into the household lane so delivery context is easy to review.",
+            "delivery_mode": "hold_for_brief" if is_package_signal else "badge_only",
+            "active": is_package_signal,
+        },
+        {
+            "id": "document_text_routes_review",
+            "title": "Readable document captures queue for review",
+            "detail": "OCR-like captures with labels, receipts, or bills should stay queued for a later command review.",
+            "delivery_mode": "hold_for_brief",
+            "active": is_document_signal,
+        },
+    ]
+    response_plans = [
+        {
+            "id": "vision-plan-security",
+            "title": "Security Follow-up",
+            "detail": (
+                f"Keep {primary_source or 'this camera'} visible in the security lane until the entryway capture is reviewed."
+                if is_entryway_context
+                else "Use the security lane for porch, driveway, or entry captures when they appear."
+            ),
+            "target": "security",
+            "priority": "high" if is_entryway_context else "medium",
+            "active": is_entryway_context,
+        },
+        {
+            "id": "vision-plan-household",
+            "title": "Household Follow-up",
+            "detail": (
+                "Treat this as a household delivery capture and keep it visible in the next brief until someone acknowledges it."
+                if is_package_signal
+                else "Use the household lane for delivery-style captures and home context reviews."
+            ),
+            "target": "household",
+            "priority": "medium",
+            "active": is_package_signal,
+        },
+        {
+            "id": "vision-plan-review-brief",
+            "title": "Review Queue",
+            "detail": "Any unresolved vision capture should stay available in the next command review until it is resolved or promoted.",
+            "target": "brief",
+            "priority": "medium" if unresolved_items else "low",
+            "active": bool(unresolved_items),
+        },
+    ]
     return {
         "count": len(recent_rows),
         "recent_items": recent_items,
         "recent_contexts": contexts[:6],
         "attention_flags": attention_flags,
+        "policy_rules": policy_rules,
+        "response_plans": response_plans,
     }
 
 
-def _build_apple_now_playing_state(payload: dict[str, Any], recent_events: list[dict[str, Any]]) -> dict[str, Any]:
+def _build_apple_now_playing_state(
+    payload: dict[str, Any],
+    recent_events: list[dict[str, Any]],
+    *,
+    posture: dict[str, Any],
+    focus_payload: dict[str, Any],
+) -> dict[str, Any]:
     rows = [row for row in recent_events if isinstance(row, dict)]
+    normalized_payload = payload if isinstance(payload, dict) else {}
+    title = str(normalized_payload.get("title") or "").strip()
+    artist = str(normalized_payload.get("artist") or "").strip()
+    album = str(normalized_payload.get("album") or "").strip()
+    is_playing = bool(normalized_payload.get("is_playing"))
+    updated_at = str(normalized_payload.get("updated_at") or "")
+    combined = " ".join(part for part in (title, artist, album) if part).lower()
+    focus_active = bool((focus_payload or {}).get("focus_active"))
+    quiet_hours = bool(posture.get("quiet_hours"))
+    posture_mode = str(posture.get("mode") or "active_hours")
+    jarvis_mode = str((focus_payload or {}).get("jarvis_mode") or "")
+    looks_ambient = any(
+        token in combined
+        for token in ("ambient", "focus", "lofi", "instrumental", "sleep", "calm", "brown noise", "white noise", "rain")
+    )
+    looks_spoken = any(
+        token in combined
+        for token in ("podcast", "audiobook", "news", "talk", "brief")
+    )
     recent_items = [
         {
             "id": str(row.get("id") or f"media-{index}"),
@@ -894,13 +2180,132 @@ def _build_apple_now_playing_state(payload: dict[str, Any], recent_events: list[
         }
         for index, row in enumerate(rows[:10])
     ]
+    routing_rules = [
+        {
+            "id": "focus_media_quiet_lane",
+            "title": "Focus media stays non-disruptive",
+            "detail": (
+                "When focus is active, ambient or instrumental playback should stay steady while spoken interruptions route elsewhere."
+                if is_playing
+                else "When focus is active, new spoken media should wait until JARVIS leaves heads-down mode."
+            ),
+            "delivery_mode": "quiet_store" if focus_active else "badge_only",
+            "active": focus_active,
+        },
+        {
+            "id": "quiet_hours_media_hold",
+            "title": "Quiet-hours playback should stay gentle",
+            "detail": (
+                "Quiet-hours playback should favor calm, low-interruption media and keep louder follow-ups for the next Brief."
+                if quiet_hours
+                else "Outside quiet hours, media can follow the normal household pace."
+            ),
+            "delivery_mode": "hold_for_brief" if quiet_hours else "badge_only",
+            "active": quiet_hours,
+        },
+        {
+            "id": "household_alert_media_duck",
+            "title": "Household alerts can override media",
+            "detail": "If the home enters an alert posture, media should duck behind the household alert lane until the alert clears.",
+            "delivery_mode": "deliver_now" if posture_mode == "household_alert" else "badge_only",
+            "active": posture_mode == "household_alert",
+        },
+    ]
+    response_plans = [
+        {
+            "id": "media-plan-preserve-focus",
+            "title": "Preserve Focus Session",
+            "detail": (
+                "Keep the current ambient session running as the backdrop for focus work."
+                if is_playing and looks_ambient
+                else "When focus is active, prefer resuming an ambient or instrumental session instead of spoken media."
+            ),
+            "target": "focus",
+            "priority": "high" if focus_active and (is_playing or looks_ambient) else "medium",
+            "active": focus_active,
+        },
+        {
+            "id": "media-plan-brief-handoff",
+            "title": "Brief Handoff",
+            "detail": (
+                "Queue media changes and spoken updates for the next Brief so they do not fragment the current household posture."
+                if quiet_hours or looks_spoken
+                else "Keep the next Brief aware of meaningful media changes so JARVIS can resume context cleanly."
+            ),
+            "target": "brief",
+            "priority": "medium",
+            "active": quiet_hours or looks_spoken or not is_playing,
+        },
+        {
+            "id": "media-plan-household-scene",
+            "title": "Household Scene",
+            "detail": (
+                "Route this playback into the broader household scene so active rooms and routines stay coordinated."
+                if is_playing
+                else "Use household scene routing when media returns so rooms and routines stay coordinated."
+            ),
+            "target": "household",
+            "priority": "medium" if is_playing else "low",
+            "active": is_playing or posture_mode == "household_alert",
+        },
+    ]
+    suggested_controls = [
+        {
+            "id": "control-keep-session",
+            "title": "Keep Session Running" if is_playing else "Resume Ambient Session",
+            "detail": (
+                "Maintain the current playback as the active focus bed."
+                if is_playing
+                else "Resume a calm ambient session when you want the room to come back online."
+            ),
+            "style": "primary" if is_playing else "secondary",
+            "active": is_playing or looks_ambient or focus_active,
+        },
+        {
+            "id": "control-shift-to-quiet",
+            "title": "Shift to Quiet Mix",
+            "detail": "Favor a calmer, lower-interruption mix during quiet hours or meeting posture.",
+            "style": "secondary",
+            "active": quiet_hours or jarvis_mode in {"sleep", "personal"},
+        },
+        {
+            "id": "control-open-brief",
+            "title": "Open Media Brief",
+            "detail": "Use Brief to review media changes, spoken context, and what JARVIS should restore next.",
+            "style": "supporting",
+            "active": not is_playing or looks_spoken,
+        },
+    ]
     return {
-        "title": str(payload.get("title") or "") if isinstance(payload, dict) else "",
-        "artist": str(payload.get("artist") or "") if isinstance(payload, dict) else "",
-        "album": str(payload.get("album") or "") if isinstance(payload, dict) else "",
-        "is_playing": bool(payload.get("is_playing")) if isinstance(payload, dict) else False,
-        "updated_at": str(payload.get("updated_at") or "") if isinstance(payload, dict) else "",
+        "title": title,
+        "artist": artist,
+        "album": album,
+        "is_playing": is_playing,
+        "updated_at": updated_at,
         "artwork_available": Path("data/apple/now_playing_artwork.jpg").exists(),
+        "summary": {
+            "label": (
+                "Focus session active"
+                if focus_active and is_playing
+                else "Quiet-hours media posture"
+                if quiet_hours
+                else "Playback active"
+                if is_playing
+                else "Media idle"
+            ),
+            "detail": (
+                "JARVIS is treating current playback as part of the active focus environment."
+                if focus_active and is_playing
+                else "JARVIS is keeping media in a quieter household lane until active hours return."
+                if quiet_hours
+                else "Media is live and available to household orchestration."
+                if is_playing
+                else "No active playback is live, so JARVIS is holding continuity through recent media state."
+            ),
+        },
+        "routing_rules": routing_rules,
+        "response_plans": response_plans,
+        "suggested_controls": suggested_controls,
         "recent_items": recent_items,
     }
 
@@ -1190,6 +2595,858 @@ def _build_briefing_command_items(
         })
 
     return items[:5]
+
+
+def _memory_graph_long_horizon_lines(graph: dict[str, Any], limit: int = 3) -> list[str]:
+    lines: list[str] = []
+    horizons = graph.get("horizons") if isinstance(graph.get("horizons"), list) else []
+    for item in horizons[:2]:
+        if not isinstance(item, dict):
+            continue
+        summary = str(item.get("summary") or "").strip()
+        if summary and summary not in lines:
+            lines.append(summary)
+    threads = graph.get("active_threads") if isinstance(graph.get("active_threads"), list) else []
+    if threads:
+        first = threads[0] if isinstance(threads[0], dict) else {}
+        title = str(first.get("title") or "").strip()
+        signal_count = int(first.get("signal_count") or 0)
+        if title:
+            lines.append(f"Strongest durable thread: {title} ({signal_count} signals).")
+    return lines[:limit]
+
+
+def _memory_graph_thread_titles(graph: dict[str, Any], limit: int = 3) -> list[str]:
+    threads = graph.get("active_threads") if isinstance(graph.get("active_threads"), list) else []
+    titles: list[str] = []
+    for item in threads[:limit]:
+        if not isinstance(item, dict):
+            continue
+        title = str(item.get("title") or "").strip()
+        if title and title not in titles:
+            titles.append(title)
+    return titles[:limit]
+
+
+def _build_briefing_continuity(actor: str) -> dict[str, Any]:
+    try:
+        viewer = runtime.get_actor(actor)
+        snapshot = runtime.learning_review_snapshot(viewer.display_name, viewer.user_id) or {}
+        memory_graph = runtime.durable_memory_graph_snapshot(viewer.display_name, viewer.user_id) or {}
+    except Exception:
+        viewer = None
+        snapshot = {}
+        memory_graph = {}
+    if not isinstance(snapshot, dict):
+        snapshot = {}
+    if not isinstance(memory_graph, dict):
+        memory_graph = {}
+
+    profile = snapshot.get("profile") if isinstance(snapshot.get("profile"), dict) else {}
+    personalization = snapshot.get("personalization") if isinstance(snapshot.get("personalization"), dict) else {}
+    facts = snapshot.get("profile_facts") if isinstance(snapshot.get("profile_facts"), list) else []
+    proposals = snapshot.get("pending_proposals") if isinstance(snapshot.get("pending_proposals"), list) else []
+    first_light_history = snapshot.get("first_light_history") if isinstance(snapshot.get("first_light_history"), list) else []
+    persona_snapshot = snapshot.get("persona_snapshot") if isinstance(snapshot.get("persona_snapshot"), dict) else {}
+    digital_twin = persona_snapshot.get("digital_twin") if isinstance(persona_snapshot.get("digital_twin"), dict) else {}
+
+    guidance_lines: list[str] = []
+    for line in personalization.get("rhythms", []) if isinstance(personalization.get("rhythms"), list) else []:
+        cleaned = str(line).strip()
+        if cleaned:
+            guidance_lines.append(cleaned)
+    for line in personalization.get("learned_preferences", []) if isinstance(personalization.get("learned_preferences"), list) else []:
+        cleaned = str(line).strip()
+        if cleaned and cleaned not in guidance_lines:
+            guidance_lines.append(cleaned)
+    for line in digital_twin.get("likely_next_needs", []) if isinstance(digital_twin.get("likely_next_needs"), list) else []:
+        cleaned = str(line).strip()
+        if cleaned and cleaned not in guidance_lines:
+            guidance_lines.append(cleaned)
+
+    fact_rows = []
+    for item in facts[:3]:
+        if not isinstance(item, dict):
+            continue
+        fact_rows.append(
+            {
+                "id": str(item.get("fact_id") or item.get("id") or ""),
+                "title": str(item.get("title") or item.get("summary") or "Continuity fact"),
+                "summary": str(item.get("summary") or ""),
+            }
+        )
+
+    first_light_rows = []
+    for index, item in enumerate(list(reversed(first_light_history))[:3]):
+        if not isinstance(item, dict):
+            continue
+        first_20 = item.get("first_20_minutes") if isinstance(item.get("first_20_minutes"), list) else []
+        summary = str(item.get("watch_line") or "").strip()
+        if not summary and first_20:
+            summary = "; ".join(str(step).strip() for step in first_20[:2] if str(step).strip())
+        if not summary:
+            summary = "First Light continuity packet recorded."
+        first_light_rows.append(
+            {
+                "id": str(item.get("packet_id") or item.get("date") or item.get("local_time") or f"fl-{index}"),
+                "label": str(item.get("date") or item.get("local_time") or "Recent First Light"),
+                "summary": summary,
+            }
+        )
+
+    subject_name = str(snapshot.get("subject_display_name") or (viewer.display_name if viewer else "Chris"))
+    return {
+        "subject_display_name": subject_name,
+        "preferred_tone": str(profile.get("preferred_tone") or ""),
+        "briefing_style": str(profile.get("briefing_style") or ""),
+        "profile_fact_count": len(facts),
+        "pending_proposal_count": len(proposals),
+        "first_light_history_count": len(first_light_history),
+        "guidance_lines": guidance_lines[:4],
+        "recent_profile_facts": fact_rows,
+        "recent_first_light": first_light_rows,
+        "long_horizon_lines": _memory_graph_long_horizon_lines(memory_graph),
+        "active_threads": _memory_graph_thread_titles(memory_graph),
+    }
+
+
+def _build_while_you_were_away(actor: str) -> dict[str, Any]:
+    try:
+        report = runtime.while_you_were_away_snapshot(actor) or {}
+    except Exception:
+        report = {}
+    if not isinstance(report, dict):
+        report = {}
+
+    def _rows(value: object) -> list[dict[str, Any]]:
+        if not isinstance(value, list):
+            return []
+        rows: list[dict[str, Any]] = []
+        for item in value:
+            if not isinstance(item, dict):
+                continue
+            rows.append(
+                {
+                    "id": str(item.get("id") or ""),
+                    "lane": str(item.get("lane") or ""),
+                    "agent": str(item.get("agent") or ""),
+                    "title": str(item.get("title") or ""),
+                    "summary": str(item.get("summary") or ""),
+                    "timestamp": str(item.get("timestamp") or ""),
+                    "status": str(item.get("status") or ""),
+                }
+            )
+        return rows
+
+    def _stewardship_lanes(value: object) -> list[dict[str, Any]]:
+        if not isinstance(value, list):
+            return []
+        lanes: list[dict[str, Any]] = []
+        for item in value:
+            if not isinstance(item, dict):
+                continue
+            execution = item.get("execution_primitive") if isinstance(item.get("execution_primitive"), dict) else {}
+            lanes.append(
+                {
+                    "id": str(item.get("id") or ""),
+                    "title": str(item.get("title") or ""),
+                    "summary": str(item.get("summary") or ""),
+                    "report_summaries": _rows(item.get("report_summaries")),
+                    "prepared_work": _rows(item.get("prepared_work")),
+                    "decision_cards": _rows(item.get("decision_cards")),
+                    "drift_cards": _rows(item.get("drift_cards")),
+                    "quiet_completions": _rows(item.get("quiet_completions")),
+                    "blocked_work": _rows(item.get("blocked_work")),
+                    "execution_primitive": {
+                        "packet_target": str(execution.get("packet_target") or ""),
+                        "review_surface": str(execution.get("review_surface") or ""),
+                        "navigation_target": str(execution.get("navigation_target") or ""),
+                        "action_label": str(execution.get("action_label") or ""),
+                        "action_detail": str(execution.get("action_detail") or ""),
+                        "route_summary": str(execution.get("route_summary") or ""),
+                        "lane_status": str(execution.get("lane_status") or ""),
+                        "trust_zone": str(execution.get("trust_zone") or ""),
+                        "authority_stage": str(execution.get("authority_stage") or ""),
+                        "arena_status": str(execution.get("arena_status") or ""),
+                        "approval_mode": str(execution.get("approval_mode") or ""),
+                        "boundary_decision": str(execution.get("boundary_decision") or ""),
+                        "boundary_reason": str(execution.get("boundary_reason") or ""),
+                    },
+                }
+            )
+        return lanes
+
+    lane_reports = []
+    for item in report.get("lane_reports", []) if isinstance(report.get("lane_reports"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        lane_reports.append(
+            {
+                "id": str(item.get("id") or ""),
+                "title": str(item.get("title") or ""),
+                "summary": str(item.get("summary") or ""),
+            }
+        )
+
+    recommendation = report.get("recommendation") if isinstance(report.get("recommendation"), dict) else {}
+    return {
+        "headline": str(report.get("headline") or "While you were away, JARVIS kept the board moving."),
+        "summary": str(report.get("summary") or "JARVIS tracked quiet completions, blocked work, prepared next steps, and the most useful next move."),
+        "window_hours": int(report.get("window_hours") or 18),
+        "generated_at": str(report.get("generated_at") or _ts()),
+        "stewardship_lanes": _stewardship_lanes(report.get("stewardship_lanes")),
+        "lane_reports": lane_reports,
+        "quiet_completions": _rows(report.get("quiet_completions")),
+        "blocked_work": _rows(report.get("blocked_work")),
+        "prepared_work": _rows(report.get("prepared_work")),
+        "decision_cards": _rows(report.get("decision_cards")),
+        "drift_signals": _rows(report.get("drift_signals")),
+        "recommendation": {
+            "title": str(recommendation.get("title") or "Stay with the quiet work"),
+            "summary": str(recommendation.get("summary") or "No hard interruption is waiting."),
+            "action": str(recommendation.get("action") or "Start with the first prepared item."),
+        },
+    }
+
+
+def _build_home_continuity(actor: str) -> dict[str, Any]:
+    try:
+        viewer = runtime.get_actor(actor)
+        snapshot = runtime.learning_review_snapshot(viewer.display_name, viewer.user_id) or {}
+        memory_graph = runtime.durable_memory_graph_snapshot(viewer.display_name, viewer.user_id) or {}
+    except Exception:
+        viewer = None
+        snapshot = {}
+        memory_graph = {}
+    if not isinstance(snapshot, dict):
+        snapshot = {}
+    if not isinstance(memory_graph, dict):
+        memory_graph = {}
+
+    profile = snapshot.get("profile") if isinstance(snapshot.get("profile"), dict) else {}
+    personalization = snapshot.get("personalization") if isinstance(snapshot.get("personalization"), dict) else {}
+    facts = snapshot.get("profile_facts") if isinstance(snapshot.get("profile_facts"), list) else []
+    first_light_history = snapshot.get("first_light_history") if isinstance(snapshot.get("first_light_history"), list) else []
+    persona_snapshot = snapshot.get("persona_snapshot") if isinstance(snapshot.get("persona_snapshot"), dict) else {}
+    digital_twin = persona_snapshot.get("digital_twin") if isinstance(persona_snapshot.get("digital_twin"), dict) else {}
+
+    carry_forward_lines: list[str] = []
+    for line in personalization.get("rhythms", []) if isinstance(personalization.get("rhythms"), list) else []:
+        cleaned = str(line).strip()
+        if cleaned and cleaned not in carry_forward_lines:
+            carry_forward_lines.append(cleaned)
+    for line in digital_twin.get("likely_next_needs", []) if isinstance(digital_twin.get("likely_next_needs"), list) else []:
+        cleaned = str(line).strip()
+        if cleaned and cleaned not in carry_forward_lines:
+            carry_forward_lines.append(cleaned)
+
+    recent_facts = []
+    for item in facts[:3]:
+        if not isinstance(item, dict):
+            continue
+        recent_facts.append(
+            {
+                "id": str(item.get("fact_id") or item.get("id") or ""),
+                "title": str(item.get("title") or item.get("summary") or "Continuity fact"),
+                "summary": str(item.get("summary") or ""),
+            }
+        )
+
+    recent_first_light = []
+    for index, item in enumerate(list(reversed(first_light_history))[:3]):
+        if not isinstance(item, dict):
+            continue
+        first_20 = item.get("first_20_minutes") if isinstance(item.get("first_20_minutes"), list) else []
+        summary = str(item.get("watch_line") or "").strip()
+        if not summary and first_20:
+            summary = "; ".join(str(step).strip() for step in first_20[:2] if str(step).strip())
+        if not summary:
+            summary = "First Light continuity packet recorded."
+        recent_first_light.append(
+            {
+                "id": str(item.get("packet_id") or item.get("date") or item.get("local_time") or f"home-fl-{index}"),
+                "label": str(item.get("date") or item.get("local_time") or "Recent First Light"),
+                "summary": summary,
+            }
+        )
+
+    subject_name = str(snapshot.get("subject_display_name") or (viewer.display_name if viewer else "Chris"))
+    return {
+        "subject_display_name": subject_name,
+        "morning_room": str(profile.get("morning_room") or ""),
+        "active_mode": str(personalization.get("active_mode") or ""),
+        "primary_rooms": [str(item).strip() for item in (profile.get("primary_rooms") or []) if str(item).strip()],
+        "guidance_lines": carry_forward_lines[:4],
+        "profile_fact_count": len(facts),
+        "recent_profile_facts": recent_facts,
+        "recent_first_light": recent_first_light,
+        "long_horizon_lines": _memory_graph_long_horizon_lines(memory_graph),
+        "active_threads": _memory_graph_thread_titles(memory_graph),
+    }
+
+
+def _build_catalyst_continuity(
+    actor: str,
+    *,
+    active_work: list[dict[str, Any]],
+    workflow_counts: dict[str, int],
+) -> dict[str, Any]:
+    try:
+        viewer = runtime.get_actor(actor)
+        snapshot = runtime.learning_review_snapshot(viewer.display_name, viewer.user_id) or {}
+    except Exception:
+        viewer = None
+        snapshot = {}
+    if not isinstance(snapshot, dict):
+        snapshot = {}
+
+    profile = snapshot.get("profile") if isinstance(snapshot.get("profile"), dict) else {}
+    personalization = snapshot.get("personalization") if isinstance(snapshot.get("personalization"), dict) else {}
+    facts = snapshot.get("profile_facts") if isinstance(snapshot.get("profile_facts"), list) else []
+    first_light_history = snapshot.get("first_light_history") if isinstance(snapshot.get("first_light_history"), list) else []
+
+    guidance_lines: list[str] = []
+    for line in personalization.get("rhythms", []) if isinstance(personalization.get("rhythms"), list) else []:
+        cleaned = str(line).strip()
+        if cleaned and cleaned not in guidance_lines:
+            guidance_lines.append(cleaned)
+    for line in personalization.get("learned_preferences", []) if isinstance(personalization.get("learned_preferences"), list) else []:
+        cleaned = str(line).strip()
+        if cleaned and cleaned not in guidance_lines:
+            guidance_lines.append(cleaned)
+
+    active_domains: list[str] = []
+    for item in active_work:
+        if not isinstance(item, dict):
+            continue
+        domain = str(item.get("domain") or "").strip()
+        if domain and domain not in active_domains:
+            active_domains.append(domain)
+
+    recent_profile_facts = []
+    for item in facts[:3]:
+        if not isinstance(item, dict):
+            continue
+        recent_profile_facts.append(
+            {
+                "id": str(item.get("fact_id") or item.get("id") or ""),
+                "title": str(item.get("title") or item.get("summary") or "Catalyst continuity fact"),
+                "summary": str(item.get("summary") or ""),
+            }
+        )
+
+    recent_first_light = []
+    for index, item in enumerate(list(reversed(first_light_history))[:3]):
+        if not isinstance(item, dict):
+            continue
+        first_20 = item.get("first_20_minutes") if isinstance(item.get("first_20_minutes"), list) else []
+        summary = str(item.get("watch_line") or "").strip()
+        if not summary and first_20:
+            summary = "; ".join(str(step).strip() for step in first_20[:2] if str(step).strip())
+        if not summary:
+            summary = "First Light continuity packet recorded."
+        recent_first_light.append(
+            {
+                "id": str(item.get("packet_id") or item.get("date") or item.get("local_time") or f"catalyst-fl-{index}"),
+                "label": str(item.get("date") or item.get("local_time") or "Recent First Light"),
+                "summary": summary,
+            }
+        )
+
+    hottest_workflow = ""
+    if workflow_counts and any(workflow_counts.values()):
+        hottest_workflow = max(workflow_counts.items(), key=lambda item: item[1])[0]
+
+    return {
+        "subject_display_name": str(snapshot.get("subject_display_name") or (viewer.display_name if viewer else "Chris")),
+        "briefing_style": str(profile.get("briefing_style") or ""),
+        "active_domains": active_domains[:4],
+        "guidance_lines": guidance_lines[:4],
+        "profile_fact_count": len(facts),
+        "hottest_workflow": hottest_workflow,
+        "recent_profile_facts": recent_profile_facts,
+        "recent_first_light": recent_first_light,
+    }
+
+
+def _build_health_continuity(
+    actor: str,
+    *,
+    readiness: str,
+    readiness_factors: list[dict[str, Any]],
+    watchlist: list[dict[str, Any]],
+    next_actions: list[str],
+) -> dict[str, Any]:
+    try:
+        viewer = runtime.get_actor(actor)
+        snapshot = runtime.learning_review_snapshot(viewer.display_name, viewer.user_id) or {}
+    except Exception:
+        viewer = None
+        snapshot = {}
+    if not isinstance(snapshot, dict):
+        snapshot = {}
+
+    personalization = snapshot.get("personalization") if isinstance(snapshot.get("personalization"), dict) else {}
+    facts = snapshot.get("profile_facts") if isinstance(snapshot.get("profile_facts"), list) else []
+    first_light_history = snapshot.get("first_light_history") if isinstance(snapshot.get("first_light_history"), list) else []
+    persona_snapshot = snapshot.get("persona_snapshot") if isinstance(snapshot.get("persona_snapshot"), dict) else {}
+    digital_twin = persona_snapshot.get("digital_twin") if isinstance(persona_snapshot.get("digital_twin"), dict) else {}
+
+    guidance_lines: list[str] = []
+    for line in personalization.get("rhythms", []) if isinstance(personalization.get("rhythms"), list) else []:
+        cleaned = str(line).strip()
+        if cleaned and cleaned not in guidance_lines:
+            guidance_lines.append(cleaned)
+    for line in digital_twin.get("likely_next_needs", []) if isinstance(digital_twin.get("likely_next_needs"), list) else []:
+        cleaned = str(line).strip()
+        if cleaned and cleaned not in guidance_lines:
+            guidance_lines.append(cleaned)
+    for line in next_actions:
+        cleaned = str(line).strip()
+        if cleaned and cleaned not in guidance_lines:
+            guidance_lines.append(cleaned)
+
+    active_conditions: list[str] = []
+    for item in watchlist:
+        if not isinstance(item, dict):
+            continue
+        title = str(item.get("title") or "").strip()
+        if title and title not in active_conditions:
+            active_conditions.append(title)
+
+    recovery_focus = ""
+    weakest_score: float | None = None
+    for factor in readiness_factors:
+        if not isinstance(factor, dict):
+            continue
+        label = str(factor.get("label") or factor.get("metric") or "").strip()
+        if not label:
+            continue
+        if bool(factor.get("missing")):
+            recovery_focus = label
+            weakest_score = -1
+            break
+        score = factor.get("score")
+        if isinstance(score, (int, float)):
+            value = float(score)
+            if weakest_score is None or value < weakest_score:
+                weakest_score = value
+                recovery_focus = label
+
+    recent_profile_facts = []
+    for item in facts[:3]:
+        if not isinstance(item, dict):
+            continue
+        recent_profile_facts.append(
+            {
+                "id": str(item.get("fact_id") or item.get("id") or ""),
+                "title": str(item.get("title") or item.get("summary") or "Health continuity fact"),
+                "summary": str(item.get("summary") or ""),
+            }
+        )
+
+    recent_first_light = []
+    for index, item in enumerate(list(reversed(first_light_history))[:3]):
+        if not isinstance(item, dict):
+            continue
+        first_20 = item.get("first_20_minutes") if isinstance(item.get("first_20_minutes"), list) else []
+        summary = str(item.get("watch_line") or "").strip()
+        if not summary and first_20:
+            summary = "; ".join(str(step).strip() for step in first_20[:2] if str(step).strip())
+        if not summary:
+            summary = "First Light continuity packet recorded."
+        recent_first_light.append(
+            {
+                "id": str(item.get("packet_id") or item.get("date") or item.get("local_time") or f"health-fl-{index}"),
+                "label": str(item.get("date") or item.get("local_time") or "Recent First Light"),
+                "summary": summary,
+            }
+        )
+
+    return {
+        "subject_display_name": str(snapshot.get("subject_display_name") or (viewer.display_name if viewer else "Chris")),
+        "readiness_lane": str(readiness or ""),
+        "recovery_focus": recovery_focus,
+        "active_conditions": active_conditions[:4],
+        "guidance_lines": guidance_lines[:4],
+        "profile_fact_count": len(facts),
+        "recent_profile_facts": recent_profile_facts,
+        "recent_first_light": recent_first_light,
+    }
+
+
+def _build_publishing_continuity(
+    actor: str,
+    *,
+    projects: list[dict[str, Any]],
+    pending_reviews: list[dict[str, Any]],
+    action_items: list[dict[str, Any]],
+    launch_workspace: dict[str, Any] | None,
+) -> dict[str, Any]:
+    try:
+        viewer = runtime.get_actor(actor)
+        snapshot = runtime.learning_review_snapshot(viewer.display_name, viewer.user_id) or {}
+    except Exception:
+        viewer = None
+        snapshot = {}
+    if not isinstance(snapshot, dict):
+        snapshot = {}
+
+    profile = snapshot.get("profile") if isinstance(snapshot.get("profile"), dict) else {}
+    personalization = snapshot.get("personalization") if isinstance(snapshot.get("personalization"), dict) else {}
+    facts = snapshot.get("profile_facts") if isinstance(snapshot.get("profile_facts"), list) else []
+    first_light_history = snapshot.get("first_light_history") if isinstance(snapshot.get("first_light_history"), list) else []
+
+    guidance_lines: list[str] = []
+    for line in personalization.get("learned_preferences", []) if isinstance(personalization.get("learned_preferences"), list) else []:
+        cleaned = str(line).strip()
+        if cleaned and cleaned not in guidance_lines:
+            guidance_lines.append(cleaned)
+    for line in personalization.get("rhythms", []) if isinstance(personalization.get("rhythms"), list) else []:
+        cleaned = str(line).strip()
+        if cleaned and cleaned not in guidance_lines:
+            guidance_lines.append(cleaned)
+    for item in action_items[:2]:
+        if not isinstance(item, dict):
+            continue
+        detail = str(item.get("detail") or "").strip()
+        if detail and detail not in guidance_lines:
+            guidance_lines.append(detail)
+
+    active_platforms: list[str] = []
+    for project in projects:
+        if not isinstance(project, dict):
+            continue
+        platform = str(project.get("platform") or "").strip()
+        if platform and platform not in active_platforms:
+            active_platforms.append(platform)
+
+    launch_focus = ""
+    if isinstance(launch_workspace, dict):
+        launch_focus = str(launch_workspace.get("platform_focus") or "").strip()
+    if not launch_focus and projects:
+        launch_focus = str(projects[0].get("platform_focus") or "").strip()
+
+    recent_profile_facts = []
+    for item in facts[:3]:
+        if not isinstance(item, dict):
+            continue
+        recent_profile_facts.append(
+            {
+                "id": str(item.get("fact_id") or item.get("id") or ""),
+                "title": str(item.get("title") or item.get("summary") or "Publishing continuity fact"),
+                "summary": str(item.get("summary") or ""),
+            }
+        )
+
+    recent_first_light = []
+    for index, item in enumerate(list(reversed(first_light_history))[:3]):
+        if not isinstance(item, dict):
+            continue
+        first_20 = item.get("first_20_minutes") if isinstance(item.get("first_20_minutes"), list) else []
+        summary = str(item.get("watch_line") or "").strip()
+        if not summary and first_20:
+            summary = "; ".join(str(step).strip() for step in first_20[:2] if str(step).strip())
+        if not summary:
+            summary = "First Light continuity packet recorded."
+        recent_first_light.append(
+            {
+                "id": str(item.get("packet_id") or item.get("date") or item.get("local_time") or f"publishing-fl-{index}"),
+                "label": str(item.get("date") or item.get("local_time") or "Recent First Light"),
+                "summary": summary,
+            }
+        )
+
+    return {
+        "subject_display_name": str(snapshot.get("subject_display_name") or (viewer.display_name if viewer else "Chris")),
+        "briefing_style": str(profile.get("briefing_style") or ""),
+        "launch_focus": launch_focus,
+        "active_platforms": active_platforms[:4],
+        "pending_review_pressure": len(pending_reviews),
+        "profile_fact_count": len(facts),
+        "guidance_lines": guidance_lines[:4],
+        "recent_profile_facts": recent_profile_facts,
+        "recent_first_light": recent_first_light,
+    }
+
+
+def _build_faith_continuity(
+    actor: str,
+    *,
+    morning_context: dict[str, Any],
+    formation_prompts: list[str],
+    agents: list[dict[str, Any]],
+    daily_word: dict[str, Any],
+) -> dict[str, Any]:
+    try:
+        viewer = runtime.get_actor(actor)
+        snapshot = runtime.learning_review_snapshot(viewer.display_name, viewer.user_id) or {}
+    except Exception:
+        viewer = None
+        snapshot = {}
+    if not isinstance(snapshot, dict):
+        snapshot = {}
+
+    personalization = snapshot.get("personalization") if isinstance(snapshot.get("personalization"), dict) else {}
+    facts = snapshot.get("profile_facts") if isinstance(snapshot.get("profile_facts"), list) else []
+    first_light_history = snapshot.get("first_light_history") if isinstance(snapshot.get("first_light_history"), list) else []
+
+    guidance_lines: list[str] = []
+    for line in personalization.get("rhythms", []) if isinstance(personalization.get("rhythms"), list) else []:
+        cleaned = str(line).strip()
+        if cleaned and cleaned not in guidance_lines:
+            guidance_lines.append(cleaned)
+    for prompt in formation_prompts[:2]:
+        cleaned = str(prompt).strip()
+        if cleaned and cleaned not in guidance_lines:
+            guidance_lines.append(cleaned)
+
+    council_domains: list[str] = []
+    for item in agents:
+        if not isinstance(item, dict):
+            continue
+        domain = str(item.get("domain") or "").strip()
+        if domain and domain not in council_domains:
+            council_domains.append(domain)
+
+    recent_profile_facts = []
+    for item in facts[:3]:
+        if not isinstance(item, dict):
+            continue
+        recent_profile_facts.append(
+            {
+                "id": str(item.get("fact_id") or item.get("id") or ""),
+                "title": str(item.get("title") or item.get("summary") or "Faith continuity fact"),
+                "summary": str(item.get("summary") or ""),
+            }
+        )
+
+    recent_first_light = []
+    for index, item in enumerate(list(reversed(first_light_history))[:3]):
+        if not isinstance(item, dict):
+            continue
+        first_20 = item.get("first_20_minutes") if isinstance(item.get("first_20_minutes"), list) else []
+        summary = str(item.get("watch_line") or "").strip()
+        if not summary and first_20:
+            summary = "; ".join(str(step).strip() for step in first_20[:2] if str(step).strip())
+        if not summary:
+            summary = "First Light continuity packet recorded."
+        recent_first_light.append(
+            {
+                "id": str(item.get("packet_id") or item.get("date") or item.get("local_time") or f"faith-fl-{index}"),
+                "label": str(item.get("date") or item.get("local_time") or "Recent First Light"),
+                "summary": summary,
+            }
+        )
+
+    return {
+        "subject_display_name": str(snapshot.get("subject_display_name") or (viewer.display_name if viewer else "Chris")),
+        "theme": str(morning_context.get("theme") or ""),
+        "focus": str(morning_context.get("focus") or ""),
+        "passage": str(daily_word.get("passage") or ""),
+        "council_domains": council_domains[:4],
+        "guidance_lines": guidance_lines[:4],
+        "profile_fact_count": len(facts),
+        "recent_profile_facts": recent_profile_facts,
+        "recent_first_light": recent_first_light,
+    }
+
+
+def _build_forge_continuity(
+    actor: str,
+    *,
+    active_project: dict[str, Any] | None,
+    projects: list[dict[str, Any]],
+    recent_jobs: list[dict[str, Any]],
+) -> dict[str, Any]:
+    try:
+        viewer = runtime.get_actor(actor)
+        snapshot = runtime.learning_review_snapshot(viewer.display_name, viewer.user_id) or {}
+    except Exception:
+        viewer = None
+        snapshot = {}
+    if not isinstance(snapshot, dict):
+        snapshot = {}
+
+    personalization = snapshot.get("personalization") if isinstance(snapshot.get("personalization"), dict) else {}
+    facts = snapshot.get("profile_facts") if isinstance(snapshot.get("profile_facts"), list) else []
+    first_light_history = snapshot.get("first_light_history") if isinstance(snapshot.get("first_light_history"), list) else []
+
+    guidance_lines: list[str] = []
+    for line in personalization.get("learned_preferences", []) if isinstance(personalization.get("learned_preferences"), list) else []:
+        cleaned = str(line).strip()
+        if cleaned and cleaned not in guidance_lines:
+            guidance_lines.append(cleaned)
+    for line in personalization.get("rhythms", []) if isinstance(personalization.get("rhythms"), list) else []:
+        cleaned = str(line).strip()
+        if cleaned and cleaned not in guidance_lines:
+            guidance_lines.append(cleaned)
+
+    active_workshop_lanes: list[str] = []
+    for project in projects:
+        if not isinstance(project, dict):
+            continue
+        intake_type = str(project.get("intake_type") or "").strip()
+        if intake_type and intake_type not in active_workshop_lanes:
+            active_workshop_lanes.append(intake_type)
+
+    workshop_focus = ""
+    if isinstance(active_project, dict):
+        workshop_focus = str(active_project.get("notes") or "").strip()
+        if not workshop_focus:
+            missing = active_project.get("missing_views") if isinstance(active_project.get("missing_views"), list) else []
+            if missing:
+                workshop_focus = "Missing views: " + ", ".join(str(item).strip() for item in missing if str(item).strip())
+
+    if recent_jobs:
+        next_job = recent_jobs[0]
+        detail = f"Recent job: {str(next_job.get('name') or 'Forge job')} is {str(next_job.get('status') or 'active')}."
+        if detail not in guidance_lines:
+            guidance_lines.append(detail)
+
+    recent_profile_facts = []
+    for item in facts[:3]:
+        if not isinstance(item, dict):
+            continue
+        recent_profile_facts.append(
+            {
+                "id": str(item.get("fact_id") or item.get("id") or ""),
+                "title": str(item.get("title") or item.get("summary") or "Forge continuity fact"),
+                "summary": str(item.get("summary") or ""),
+            }
+        )
+
+    recent_first_light = []
+    for index, item in enumerate(list(reversed(first_light_history))[:3]):
+        if not isinstance(item, dict):
+            continue
+        first_20 = item.get("first_20_minutes") if isinstance(item.get("first_20_minutes"), list) else []
+        summary = str(item.get("watch_line") or "").strip()
+        if not summary and first_20:
+            summary = "; ".join(str(step).strip() for step in first_20[:2] if str(step).strip())
+        if not summary:
+            summary = "First Light continuity packet recorded."
+        recent_first_light.append(
+            {
+                "id": str(item.get("packet_id") or item.get("date") or item.get("local_time") or f"forge-fl-{index}"),
+                "label": str(item.get("date") or item.get("local_time") or "Recent First Light"),
+                "summary": summary,
+            }
+        )
+
+    return {
+        "subject_display_name": str(snapshot.get("subject_display_name") or (viewer.display_name if viewer else "Chris")),
+        "workshop_focus": workshop_focus,
+        "active_workshop_lanes": active_workshop_lanes[:4],
+        "queued_job_count": len(recent_jobs),
+        "profile_fact_count": len(facts),
+        "guidance_lines": guidance_lines[:4],
+        "recent_profile_facts": recent_profile_facts,
+        "recent_first_light": recent_first_light,
+    }
+
+
+def _build_huddle_continuity(
+    actor: str,
+    *,
+    reports: list[dict[str, Any]],
+    blockers: list[str],
+    party_status: dict[str, Any],
+    dossiers: list[dict[str, Any]],
+) -> dict[str, Any]:
+    try:
+        viewer = runtime.get_actor(actor)
+        snapshot = runtime.learning_review_snapshot(viewer.display_name, viewer.user_id) or {}
+    except Exception:
+        viewer = None
+        snapshot = {}
+    if not isinstance(snapshot, dict):
+        snapshot = {}
+
+    personalization = snapshot.get("personalization") if isinstance(snapshot.get("personalization"), dict) else {}
+    facts = snapshot.get("profile_facts") if isinstance(snapshot.get("profile_facts"), list) else []
+    first_light_history = snapshot.get("first_light_history") if isinstance(snapshot.get("first_light_history"), list) else []
+
+    guidance_lines: list[str] = []
+    for line in personalization.get("rhythms", []) if isinstance(personalization.get("rhythms"), list) else []:
+        cleaned = str(line).strip()
+        if cleaned and cleaned not in guidance_lines:
+            guidance_lines.append(cleaned)
+    for line in personalization.get("learned_preferences", []) if isinstance(personalization.get("learned_preferences"), list) else []:
+        cleaned = str(line).strip()
+        if cleaned and cleaned not in guidance_lines:
+            guidance_lines.append(cleaned)
+
+    active_domains: list[str] = []
+    for report in reports:
+        if not isinstance(report, dict):
+            continue
+        domain = str(report.get("domain") or "").strip()
+        if domain and domain not in active_domains:
+            active_domains.append(domain)
+
+    council_focus = ""
+    if blockers:
+        council_focus = str(blockers[0]).strip()
+    if not council_focus:
+        last_log = str(party_status.get("last_log") or "").strip()
+        if last_log:
+            council_focus = last_log
+    if not council_focus and dossiers:
+        first_dossier = dossiers[0] if isinstance(dossiers[0], dict) else {}
+        council_focus = str(first_dossier.get("executive_summary") or first_dossier.get("first_action") or "").strip()
+
+    if dossiers:
+        dossier_line = f"{len(dossiers)} ready dossiers are waiting for the next council pass."
+        if dossier_line not in guidance_lines:
+            guidance_lines.append(dossier_line)
+    if party_status:
+        session_state = str(party_status.get("status") or "").strip()
+        if session_state:
+            session_line = f"Party mode is currently {session_state.replace('_', ' ')}."
+            if session_line not in guidance_lines:
+                guidance_lines.append(session_line)
+
+    recent_profile_facts = []
+    for item in facts[:3]:
+        if not isinstance(item, dict):
+            continue
+        recent_profile_facts.append(
+            {
+                "id": str(item.get("fact_id") or item.get("id") or ""),
+                "title": str(item.get("title") or item.get("summary") or "Huddle continuity fact"),
+                "summary": str(item.get("summary") or ""),
+            }
+        )
+
+    recent_first_light = []
+    for index, item in enumerate(list(reversed(first_light_history))[:3]):
+        if not isinstance(item, dict):
+            continue
+        first_20 = item.get("first_20_minutes") if isinstance(item.get("first_20_minutes"), list) else []
+        summary = str(item.get("watch_line") or "").strip()
+        if not summary and first_20:
+            summary = "; ".join(str(step).strip() for step in first_20[:2] if str(step).strip())
+        if not summary:
+            summary = "First Light continuity packet recorded."
+        recent_first_light.append(
+            {
+                "id": str(item.get("packet_id") or item.get("date") or item.get("local_time") or f"huddle-fl-{index}"),
+                "label": str(item.get("date") or item.get("local_time") or "Recent First Light"),
+                "summary": summary,
+            }
+        )
+
+    return {
+        "subject_display_name": str(snapshot.get("subject_display_name") or (viewer.display_name if viewer else "Chris")),
+        "council_focus": council_focus,
+        "active_domains": active_domains[:5],
+        "ready_dossier_count": len(dossiers),
+        "profile_fact_count": len(facts),
+        "guidance_lines": guidance_lines[:4],
+        "recent_profile_facts": recent_profile_facts,
+        "recent_first_light": recent_first_light,
+    }
 
 
 def _build_home_action_items(*, state: dict[str, Any], home_context: dict[str, Any], needs_count: int) -> list[dict[str, Any]]:
@@ -1673,6 +3930,121 @@ class _EventLogStore:
         return rows
 
 
+class _StewardshipReviewStore:
+    def __init__(self, path: Path) -> None:
+        self._path = path
+
+    def _load(self) -> dict[str, Any]:
+        payload = _safe_read_json(self._path, {})
+        reviews = payload.get("reviews") if isinstance(payload, dict) else []
+        if not isinstance(reviews, list):
+            reviews = []
+        return {"reviews": [item for item in reviews if isinstance(item, dict)]}
+
+    def _save(self, payload: dict[str, Any]) -> None:
+        _safe_write_json(self._path, payload)
+
+    def upsert(
+        self,
+        *,
+        lane_id: str,
+        lane_title: str,
+        review_surface: str,
+        packet_target: str,
+        boundary_decision: str,
+        boundary_reason: str,
+        trust_zone: str,
+        authority_stage: str,
+        arena_status: str,
+        approval_mode: str,
+        actor: str,
+        note: str = "",
+        event_id: str = "",
+        notification_id: str = "",
+    ) -> dict[str, Any]:
+        store = self._load()
+        now = _ts()
+        for item in store["reviews"]:
+            if str(item.get("lane_id") or "") != lane_id:
+                continue
+            if str(item.get("status") or "") in {"approved", "retired"}:
+                continue
+            item.update(
+                {
+                    "lane_title": lane_title,
+                    "review_surface": review_surface,
+                    "packet_target": packet_target,
+                    "boundary_decision": boundary_decision,
+                    "boundary_reason": boundary_reason,
+                    "trust_zone": trust_zone,
+                    "authority_stage": authority_stage,
+                    "arena_status": arena_status,
+                    "approval_mode": approval_mode,
+                    "status": "blocked_by_boundary" if boundary_decision == "deny" else "review_staged",
+                    "updated_at": now,
+                    "last_actor": actor,
+                    "note": note,
+                    "event_id": event_id or str(item.get("event_id") or ""),
+                    "notification_id": notification_id or str(item.get("notification_id") or ""),
+                }
+            )
+            self._save(store)
+            return deepcopy(item)
+
+        review = {
+            "id": f"stewardship-review::{lane_id}::{uuid.uuid4()}",
+            "lane_id": lane_id,
+            "lane_title": lane_title,
+            "review_surface": review_surface,
+            "packet_target": packet_target,
+            "boundary_decision": boundary_decision,
+            "boundary_reason": boundary_reason,
+            "trust_zone": trust_zone,
+            "authority_stage": authority_stage,
+            "arena_status": arena_status,
+            "approval_mode": approval_mode,
+            "status": "blocked_by_boundary" if boundary_decision == "deny" else "review_staged",
+            "created_at": now,
+            "updated_at": now,
+            "last_actor": actor,
+            "note": note,
+            "event_id": event_id,
+            "notification_id": notification_id,
+        }
+        store["reviews"].append(review)
+        self._save(store)
+        return deepcopy(review)
+
+    def list(self, *, include_closed: bool = False, limit: int = 0) -> list[dict[str, Any]]:
+        items = self._load()["reviews"]
+        if not include_closed:
+            items = [
+                item for item in items
+                if str(item.get("status") or "") not in {"approved", "retired"}
+            ]
+        items.sort(key=lambda item: str(item.get("updated_at") or item.get("created_at") or ""), reverse=True)
+        if limit > 0:
+            items = items[:limit]
+        return deepcopy(items)
+
+    def get(self, review_id: str) -> dict[str, Any] | None:
+        for item in self._load()["reviews"]:
+            if str(item.get("id") or "") == review_id:
+                return deepcopy(item)
+        return None
+
+    def update(self, review_id: str, updates: dict[str, Any]) -> dict[str, Any] | None:
+        store = self._load()
+        for item in store["reviews"]:
+            if str(item.get("id") or "") != review_id:
+                continue
+            item.update({key: value for key, value in updates.items()})
+            item["updated_at"] = _ts()
+            self._save(store)
+            return deepcopy(item)
+        return None
+
+
 class _NotificationCenterStore:
     def __init__(self, path: Path, event_log: _EventLogStore) -> None:
         self._path = path
@@ -1871,6 +4243,7 @@ class _NotificationCenterStore:
 
 
 _event_log = _EventLogStore(_EVENT_LOG_PATH)
+_stewardship_reviews = _StewardshipReviewStore(_STEWARDSHIP_REVIEW_QUEUE_PATH)
 _notification_center = _NotificationCenterStore(_NOTIFICATION_CENTER_PATH, _event_log)
 _notification_store = _NotificationStore()
 _health_store = HealthSampleStore()
@@ -2130,6 +4503,207 @@ def _apple_snooze_reminder(reminder_id: str, *, minutes: int = 60) -> dict[str, 
     return {"ok": True, "reminder_id": reminder_id, "status": "snoozed", "due": new_due}
 
 
+def _current_apple_reminder_item(reminder_id: str) -> dict[str, Any] | None:
+    state = _build_apple_reminders_state(_payload_store.apple_state())
+    for item in state.get("open_items") or []:
+        if isinstance(item, dict) and str(item.get("id") or "") == reminder_id:
+            return item
+    for lane in ("overdue_items", "due_soon_items", "priority_items"):
+        for item in state.get(lane) or []:
+            if isinstance(item, dict) and str(item.get("id") or "") == reminder_id:
+                return item
+    return None
+
+
+def _governed_reminder_mutation(reminder_id: str, *, action_label: str, minutes: int = 60) -> dict[str, Any]:
+    item = _current_apple_reminder_item(reminder_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Reminder not found")
+    request_id = str(uuid.uuid4())
+    boundary = runtime.assess_action_boundary(
+        zone_id="household_tasks",
+        arena_id="household.tasks.workflow",
+        action_type="reminder_workflow",
+        requested_stage="sandbox_live",
+    )
+    boundary_decision = str(boundary.get("decision") or "stage")
+    boundary_reason = str(boundary.get("reason") or "")
+    trust_zone = str(boundary.get("trust_zone") or "household_tasks")
+    authority_stage = str(boundary.get("authority_stage") or "stage_alert")
+    approval_mode = str(boundary.get("approval_mode") or "stage_and_alert")
+    arena_status = str(boundary.get("arena_status") or "active")
+
+    if boundary_decision == "deny":
+        return {
+            "request_id": request_id,
+            "status": "blocked_by_boundary",
+            "reminder": item,
+            "performed_action": action_label,
+            "boundary_decision": boundary_decision,
+            "boundary_reason": boundary_reason,
+            "trust_zone": trust_zone,
+            "authority_stage": authority_stage,
+            "arena_status": arena_status,
+            "approval_mode": approval_mode,
+        }
+
+    if boundary_decision != "allow":
+        from .models import StagedActionQueueItem
+
+        runtime.trust_support.enqueue_stage_action(
+            StagedActionQueueItem(
+                request_id=request_id,
+                arena_id="household.tasks.workflow",
+                action_type=f"reminder_{action_label}_review",
+                status="awaiting_principal_review",
+                created_at=_ts(),
+                principal_id="chris",
+            )
+        )
+        staged_item = dict(item)
+        staged_item["decision_reason"] = boundary_reason
+        return {
+            "request_id": request_id,
+            "status": "staged_for_review",
+            "reminder": staged_item,
+            "performed_action": action_label,
+            "boundary_decision": boundary_decision,
+            "boundary_reason": boundary_reason,
+            "trust_zone": trust_zone,
+            "authority_stage": authority_stage,
+            "arena_status": arena_status,
+            "approval_mode": approval_mode,
+        }
+
+    if action_label == "complete":
+        result = _apple_complete_reminder(reminder_id)
+    else:
+        result = _apple_snooze_reminder(reminder_id, minutes=minutes)
+    updated_item = _current_apple_reminder_item(reminder_id) or item
+    status = str(result.get("status") or action_label)
+    if action_label == "complete":
+        updated_item = dict(updated_item)
+        updated_item["completed"] = True
+    return {
+        "request_id": request_id,
+        "status": status,
+        "reminder": updated_item,
+        "performed_action": action_label,
+        "boundary_decision": boundary_decision,
+        "boundary_reason": boundary_reason,
+        "trust_zone": trust_zone,
+        "authority_stage": authority_stage,
+        "arena_status": arena_status,
+        "approval_mode": approval_mode,
+    }
+
+
+def _apply_focus_record(payload: dict[str, Any]) -> dict[str, Any]:
+    out_path = Path("data/apple/focus_state.json")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    record = {**payload, "updated_at": _ts()}
+    out_path.write_text(json.dumps(record, indent=2))
+
+    try:
+        from .service import broadcast_event
+
+        broadcast_event("apple.focus", record)
+    except Exception:
+        pass
+
+    _record_shared_event(
+        domain="system",
+        kind="info",
+        title="Focus state updated",
+        detail=f"Focus is {'active' if bool(payload.get('focus_active')) else 'inactive'}.",
+        severity="low",
+        actor=str(payload.get("actor_id") or "iphone"),
+        source="apple.focus",
+        source_id=str(payload.get("source") or "focus"),
+        navigation_target="systems",
+        actions=["open"],
+        trust_zone="household_focus",
+        authority_stage="live",
+        why_now="Focus posture affects interruption behavior.",
+        metadata=record,
+    )
+    return record
+
+
+def _governed_focus_mutation(payload: dict[str, Any]) -> dict[str, Any]:
+    request_id = str(uuid.uuid4())
+    boundary = runtime.assess_action_boundary(
+        zone_id="household_focus",
+        arena_id="household.focus.workflow",
+        action_type="focus_workflow",
+        requested_stage="sandbox_live",
+    )
+    boundary_decision = str(boundary.get("decision") or "stage")
+    boundary_reason = str(boundary.get("reason") or "")
+    trust_zone = str(boundary.get("trust_zone") or "household_focus")
+    authority_stage = str(boundary.get("authority_stage") or "stage_alert")
+    approval_mode = str(boundary.get("approval_mode") or "stage_and_alert")
+    arena_status = str(boundary.get("arena_status") or "active")
+    focus_active = bool(payload.get("focus_active"))
+
+    if boundary_decision == "deny":
+        return {
+            "request_id": request_id,
+            "status": "blocked_by_boundary",
+            "stored": False,
+            "focus_active": focus_active,
+            "performed_action": "apply_preset",
+            "boundary_decision": boundary_decision,
+            "boundary_reason": boundary_reason,
+            "trust_zone": trust_zone,
+            "authority_stage": authority_stage,
+            "arena_status": arena_status,
+            "approval_mode": approval_mode,
+        }
+
+    if boundary_decision != "allow":
+        from .models import StagedActionQueueItem
+
+        runtime.trust_support.enqueue_stage_action(
+            StagedActionQueueItem(
+                request_id=request_id,
+                arena_id="household.focus.workflow",
+                action_type="focus_apply_preset_review",
+                status="awaiting_principal_review",
+                created_at=_ts(),
+                principal_id="chris",
+            )
+        )
+        return {
+            "request_id": request_id,
+            "status": "staged_for_review",
+            "stored": False,
+            "focus_active": focus_active,
+            "performed_action": "apply_preset",
+            "boundary_decision": boundary_decision,
+            "boundary_reason": boundary_reason,
+            "trust_zone": trust_zone,
+            "authority_stage": authority_stage,
+            "arena_status": arena_status,
+            "approval_mode": approval_mode,
+        }
+
+    _apply_focus_record(payload)
+    return {
+        "request_id": request_id,
+        "status": "stored",
+        "stored": True,
+        "focus_active": focus_active,
+        "performed_action": "apply_preset",
+        "boundary_decision": boundary_decision,
+        "boundary_reason": boundary_reason,
+        "trust_zone": trust_zone,
+        "authority_stage": authority_stage,
+        "arena_status": arena_status,
+        "approval_mode": approval_mode,
+    }
+
+
 def _apple_stage_calendar_prep(title: str, *, start: str = "", location: str = "") -> dict[str, Any]:
     event_title = title.strip() or "Upcoming event"
     event_start = start.strip()
@@ -2186,6 +4760,187 @@ def _create_notification_from_event(
         event=event,
         metadata={"event_id": str(event.get("id") or "")},
     )
+
+
+def _serialize_stewardship_review(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": str(item.get("id") or ""),
+        "lane_id": str(item.get("lane_id") or ""),
+        "lane_title": str(item.get("lane_title") or ""),
+        "status": str(item.get("status") or ""),
+        "review_surface": str(item.get("review_surface") or ""),
+        "packet_target": str(item.get("packet_target") or ""),
+        "boundary_decision": str(item.get("boundary_decision") or ""),
+        "boundary_reason": str(item.get("boundary_reason") or ""),
+        "approval_mode": str(item.get("approval_mode") or ""),
+        "timestamp": str(item.get("updated_at") or item.get("created_at") or ""),
+    }
+
+
+def _governance_proposal_domains(lane_id: str, packet_targets: list[str], review_surfaces: list[str]) -> list[str]:
+    values = [str(lane_id).strip().lower(), *[str(item).strip().lower() for item in packet_targets], *[str(item).strip().lower() for item in review_surfaces]]
+    domains: list[str] = []
+    for value in values:
+        if not value:
+            continue
+        if "family" in value or "home" in value:
+            domain = "family"
+        elif "executive" in value or "brief" in value:
+            domain = "growth"
+        elif "system" in value or "admin" in value:
+            domain = "approvals"
+        else:
+            domain = value.split("-")[0]
+        if domain and domain not in domains:
+            domains.append(domain)
+    return domains or ["approvals"]
+
+
+def _build_governance_proposal_rows(reviews: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _dominant_value(counts: dict[str, int]) -> str:
+        ranked = [
+            (value, int(total or 0))
+            for value, total in counts.items()
+            if str(value).strip() and int(total or 0) > 0
+        ]
+        if not ranked:
+            return ""
+        ranked.sort(key=lambda item: (item[1], item[0]), reverse=True)
+        return str(ranked[0][0]).strip()
+
+    groups: dict[str, dict[str, Any]] = {}
+    for index, item in enumerate(reviews):
+        if not isinstance(item, dict):
+            continue
+        status = str(item.get("status") or "").strip().lower()
+        if status not in {"approved", "retired", "rerouted"}:
+            continue
+        lane_id = str(item.get("lane_id") or "").strip() or f"lane-{index}"
+        lane_title = str(item.get("lane_title") or "Stewardship Lane").strip() or "Stewardship Lane"
+        group = groups.setdefault(
+            lane_id,
+            {
+                "lane_id": lane_id,
+                "lane_title": lane_title,
+                "approved": 0,
+                "retired": 0,
+                "rerouted": 0,
+                "review_surface_counts": {},
+                "packet_target_counts": {},
+                "latest_timestamp": "",
+            },
+        )
+        group[status] = int(group.get(status) or 0) + 1
+        review_surface = str(item.get("review_surface") or "").strip()
+        if review_surface:
+            counts = cast(dict[str, int], group["review_surface_counts"])
+            counts[review_surface] = int(counts.get(review_surface) or 0) + 1
+        packet_target = str(item.get("packet_target") or "").strip()
+        if packet_target:
+            counts = cast(dict[str, int], group["packet_target_counts"])
+            counts[packet_target] = int(counts.get(packet_target) or 0) + 1
+        timestamp = str(item.get("updated_at") or item.get("created_at") or "").strip()
+        if timestamp and timestamp > str(group.get("latest_timestamp") or ""):
+            group["latest_timestamp"] = timestamp
+
+    rows: list[dict[str, Any]] = []
+    ranked_groups = sorted(
+        groups.values(),
+        key=lambda item: (
+            int(item.get("approved") or 0) + int(item.get("retired") or 0) + int(item.get("rerouted") or 0),
+            str(item.get("latest_timestamp") or ""),
+        ),
+        reverse=True,
+    )
+    for index, group in enumerate(ranked_groups[:3]):
+        lane_id = str(group.get("lane_id") or f"lane-{index}")
+        lane_title = str(group.get("lane_title") or "Stewardship Lane").strip() or "Stewardship Lane"
+        approved = int(group.get("approved") or 0)
+        retired = int(group.get("retired") or 0)
+        rerouted = int(group.get("rerouted") or 0)
+        total = approved + retired + rerouted
+        if total <= 0:
+            continue
+        review_surface = _dominant_value(cast(dict[str, int], group.get("review_surface_counts") or {}))
+        packet_target = _dominant_value(cast(dict[str, int], group.get("packet_target_counts") or {}))
+        domains = _governance_proposal_domains(
+            lane_id,
+            [packet_target] if packet_target else [],
+            [review_surface] if review_surface else [],
+        )
+        if (rerouted + retired) > approved:
+            summary = (
+                f"{lane_title} has been rerouted or retired {rerouted + retired} of {total} reviewed times, "
+                f"which suggests its rollout posture is still narrower than a live lane."
+            )
+            recommendation = (
+                f"Keep {lane_title} staged through "
+                f"{review_surface.title() if review_surface else 'review surfaces'} "
+                f"until a cleaner approval pattern emerges."
+            )
+            confidence = "high" if total >= 3 else "emerging"
+            policy_effects: dict[str, Any] = {
+                "queue_bias": 1,
+                "require_explicit_approval": True,
+                "preferred_review_surface": review_surface or "briefing",
+                "preferred_packet_target": packet_target or "review",
+                "boundary_decision_override": "stage",
+                "approval_mode_override": "stage_and_alert",
+            }
+        elif approved >= 2:
+            summary = (
+                f"{lane_title} has been approved {approved} of {total} reviewed times into "
+                f"{packet_target or 'shared'} without repeated fallback."
+            )
+            recommendation = (
+                f"Shape the next governance proposal around promoting {lane_title} toward a lighter review posture "
+                f"for {packet_target or 'the current target lane'}."
+            )
+            confidence = "high" if approved >= 3 else "medium"
+            policy_effects = {
+                "queue_bias": 0,
+                "require_explicit_approval": False,
+                "preferred_review_surface": review_surface or "briefing",
+                "preferred_packet_target": packet_target or "briefing",
+                "boundary_decision_override": "allow",
+                "approval_mode_override": "notify_only",
+            }
+        else:
+            summary = (
+                f"{lane_title} shows a mixed review pattern across {total} decisions, so JARVIS should keep "
+                f"learning from how you route and retire this lane."
+            )
+            recommendation = (
+                f"Keep {lane_title} under review and watch whether "
+                f"{packet_target or 'the target lane'} becomes consistently approvable."
+            )
+            confidence = "emerging"
+            policy_effects = {
+                "queue_bias": 0,
+                "require_explicit_approval": False,
+                "preferred_review_surface": review_surface or "briefing",
+                "preferred_packet_target": packet_target or "briefing",
+                "boundary_decision_override": "stage",
+                "approval_mode_override": "review_as_needed",
+            }
+        rows.append(
+            {
+                "id": f"governance-{lane_id}",
+                "title": f"{lane_title} rollout posture should be codified",
+                "kind": "rollout-posture",
+                "status": "trusted" if confidence in {"high", "medium"} else "candidate",
+                "summary": summary,
+                "promotion_reason": recommendation,
+                "confidence": confidence,
+                "lane_id": lane_id,
+                "lane_title": lane_title,
+                "review_surface": review_surface,
+                "packet_target": packet_target,
+                "domains": domains,
+                "policy_effects": policy_effects,
+            }
+        )
+    return rows
 
 
 def _reconcile_shared_notifications(
@@ -2470,6 +5225,16 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         raw_needs     = packet.get("needs_items")     or packet.get("needs_you",   [])
         raw_drift     = packet.get("drift_items")     or packet.get("drift",       [])
 
+        while_you_were_away = _build_while_you_were_away(actor)
+        home_aggregate = runtime.chamber_home_aggregate(
+            actor,
+            chamber_packet=packet if isinstance(packet, dict) else {},
+            home_state=home_state if isinstance(home_state, dict) else {},
+            home_context=home_context if isinstance(home_context, dict) else {},
+            watch_status=watch_status if isinstance(watch_status, dict) else {},
+            while_you_were_away=while_you_were_away,
+        )
+
         data = {
             "briefing_items": [
                 _normalise_briefing_item(i)
@@ -2494,13 +5259,453 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             "greeting":       packet.get("greeting") or greeting,
             "mode":           packet.get("mode")     or mode,
             "generated_at":   packet.get("generated_at") or _ts(),
-            "command_items":  _build_briefing_command_items(
+            "continuity":     _build_briefing_continuity(actor),
+            "while_you_were_away": while_you_were_away,
+            "command_items":  list(home_aggregate.get("command_items") or []) or _build_briefing_command_items(
                 home_context=home_context,
                 home_state=home_state,
                 watch_status=watch_status,
             ),
+            "home_aggregate": home_aggregate,
         }
         return _ok(data)
+
+    @app.get("/api/apple/while-you-were-away")
+    async def apple_while_you_were_away(actor: str = "chris"):
+        return _ok(_build_while_you_were_away(actor))
+
+    @app.post("/api/apple/stewardship-lanes/{lane_id}/stage-review")
+    async def apple_stage_stewardship_lane_review(lane_id: str, payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        note = str(payload.get("note") or "").strip()
+
+        lane_contracts = runtime.stewardship_lane_contracts(actor)
+        lane = next((item for item in lane_contracts if str(item.get("id") or "").strip() == lane_id), None)
+        if lane is None:
+            raise HTTPException(status_code=404, detail="Stewardship lane not found")
+
+        primitive = lane.get("execution_primitive") if isinstance(lane.get("execution_primitive"), dict) else {}
+        request_id = f"lane-review::{lane_id}::{uuid.uuid4()}"
+        boundary_decision = str(primitive.get("boundary_decision") or "stage")
+        boundary_reason = str(primitive.get("boundary_reason") or "This lane should be surfaced as a deliberate review before execution widens.")
+        trust_zone = str(primitive.get("trust_zone") or "household_attention")
+        authority_stage = str(primitive.get("authority_stage") or "draft")
+        arena_status = str(primitive.get("arena_status") or "active")
+        approval_mode = str(primitive.get("approval_mode") or "stage_and_alert")
+        review_surface = str(primitive.get("review_surface") or "briefing")
+        packet_target = str(primitive.get("packet_target") or "briefing")
+        lane_title = str(lane.get("title") or "Stewardship Lane").strip() or "Stewardship Lane"
+        lane_summary = str(primitive.get("route_summary") or lane.get("summary") or "").strip()
+
+        detail = lane_summary or f"{lane_title} is ready to return for deliberate review."
+        if note:
+            detail = f"{detail} Note: {note}"
+
+        event = _record_shared_event(
+            domain="stewardship",
+            kind="review_stage",
+            title=f"{lane_title} review staged",
+            detail=detail,
+            severity="medium" if boundary_decision != "deny" else "high",
+            actor=actor,
+            source="apple.stewardship_lane",
+            source_id=request_id,
+            navigation_target=review_surface,
+            actions=["open", "dismiss"],
+            trust_zone=trust_zone,
+            authority_stage=authority_stage,
+            why_now=f"The {lane_title} lane was deliberately staged for review from the Apple client.",
+            metadata={
+                "lane_id": lane_id,
+                "packet_target": packet_target,
+                "review_surface": review_surface,
+                "boundary_decision": boundary_decision,
+                "boundary_reason": boundary_reason,
+                "approval_mode": approval_mode,
+                "note": note,
+            },
+        )
+        notification = _create_notification_from_event(
+            event,
+            category="assistant",
+            delivery_mode="badge_only",
+            available_actions=["open", "dismiss", "resolve"],
+            source_summary="Stewardship lane review",
+        )
+        review = _stewardship_reviews.upsert(
+            lane_id=lane_id,
+            lane_title=lane_title,
+            review_surface=review_surface,
+            packet_target=packet_target,
+            boundary_decision=boundary_decision,
+            boundary_reason=boundary_reason,
+            trust_zone=trust_zone,
+            authority_stage=authority_stage,
+            arena_status=arena_status,
+            approval_mode=approval_mode,
+            actor=actor,
+            note=note,
+            event_id=str(event.get("id") or ""),
+            notification_id=str(notification.get("id") or ""),
+        )
+
+        return _ok(
+            {
+                "request_id": request_id,
+                "review_id": str(review.get("id") or ""),
+                "status": "review_staged" if boundary_decision != "deny" else "blocked_by_boundary",
+                "performed_action": "stage_lane_review",
+                "lane_id": lane_id,
+                "lane_title": lane_title,
+                "review_surface": review_surface,
+                "packet_target": packet_target,
+                "boundary_decision": boundary_decision,
+                "boundary_reason": boundary_reason,
+                "trust_zone": trust_zone,
+                "authority_stage": authority_stage,
+                "arena_status": arena_status,
+                "approval_mode": approval_mode,
+            }
+        )
+
+    @app.post("/api/apple/stewardship-reviews/{review_id}/approve")
+    async def apple_approve_stewardship_review(review_id: str, payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        review = _stewardship_reviews.get(review_id)
+        if review is None:
+            raise HTTPException(status_code=404, detail="Stewardship review not found")
+
+        updated = _stewardship_reviews.update(
+            review_id,
+            {
+                "status": "approved",
+                "last_actor": actor,
+            },
+        )
+        if updated is None:
+            raise HTTPException(status_code=404, detail="Stewardship review not found")
+        notification_id = str(updated.get("notification_id") or "")
+        if notification_id:
+            _notification_center.update_status(
+                notification_id,
+                "resolved",
+                reason="Stewardship review was approved from Systems/Admin.",
+            )
+        event = _record_shared_event(
+            domain="stewardship",
+            kind="resolved",
+            title=f"{str(updated.get('lane_title') or 'Stewardship lane')} approved",
+            detail=str(updated.get("boundary_reason") or ""),
+            severity="medium",
+            actor=actor,
+            source="apple.stewardship_review.approve",
+            source_id=review_id,
+            navigation_target=str(updated.get("review_surface") or ""),
+            actions=["open"],
+            trust_zone=str(updated.get("trust_zone") or "household_attention"),
+            authority_stage=str(updated.get("authority_stage") or "live"),
+            why_now="A staged stewardship review was approved from Systems/Admin.",
+            metadata={"review_id": review_id, "lane_id": str(updated.get("lane_id") or ""), "status": "approved"},
+        )
+        _create_notification_from_event(
+            event,
+            category="assistant",
+            delivery_mode="badge_only",
+            available_actions=["open", "resolve"],
+            source_summary="Stewardship lane rollout",
+        )
+        return _ok(
+            {
+                "request_id": review_id,
+                "review_id": review_id,
+                "status": "approved",
+                "performed_action": "approve_stewardship_review",
+                "lane_id": str(updated.get("lane_id") or ""),
+                "lane_title": str(updated.get("lane_title") or ""),
+                "review_surface": str(updated.get("review_surface") or ""),
+                "packet_target": str(updated.get("packet_target") or ""),
+                "boundary_decision": str(updated.get("boundary_decision") or ""),
+                "boundary_reason": str(updated.get("boundary_reason") or ""),
+                "approval_mode": str(updated.get("approval_mode") or ""),
+            }
+        )
+
+    @app.post("/api/apple/stewardship-reviews/{review_id}/route")
+    async def apple_route_stewardship_review(review_id: str, payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        review_surface = str(payload.get("review_surface") or "").strip().lower()
+        packet_target = str(payload.get("packet_target") or "").strip().lower()
+        review = _stewardship_reviews.get(review_id)
+        if review is None:
+            raise HTTPException(status_code=404, detail="Stewardship review not found")
+
+        current_surface = str(review.get("review_surface") or "brief")
+        current_target = str(review.get("packet_target") or "briefing")
+        next_surface = review_surface or ("home" if current_surface == "brief" else "brief")
+        next_target = packet_target or ("family" if next_surface == "home" else "executive")
+        updated = _stewardship_reviews.update(
+            review_id,
+            {
+                "review_surface": next_surface,
+                "packet_target": next_target,
+                "status": "review_staged",
+                "last_actor": actor,
+            },
+        )
+        if updated is None:
+            raise HTTPException(status_code=404, detail="Stewardship review not found")
+        event = _record_shared_event(
+            domain="stewardship",
+            kind="routed",
+            title=f"{str(updated.get('lane_title') or 'Stewardship lane')} rerouted",
+            detail=f"Review rerouted to {next_surface}.",
+            severity="low",
+            actor=actor,
+            source="apple.stewardship_review.route",
+            source_id=review_id,
+            navigation_target=next_surface,
+            actions=["open"],
+            trust_zone=str(updated.get("trust_zone") or "household_attention"),
+            authority_stage=str(updated.get("authority_stage") or "draft"),
+            why_now="A staged stewardship review was rerouted from Systems/Admin.",
+            metadata={"review_id": review_id, "lane_id": str(updated.get("lane_id") or ""), "review_surface": next_surface, "packet_target": next_target},
+        )
+        _create_notification_from_event(
+            event,
+            category="assistant",
+            delivery_mode="badge_only",
+            available_actions=["open", "dismiss"],
+            source_summary="Stewardship lane reroute",
+        )
+        return _ok(
+            {
+                "request_id": review_id,
+                "review_id": review_id,
+                "status": "rerouted",
+                "performed_action": "route_stewardship_review",
+                "lane_id": str(updated.get("lane_id") or ""),
+                "lane_title": str(updated.get("lane_title") or ""),
+                "review_surface": str(updated.get("review_surface") or ""),
+                "packet_target": str(updated.get("packet_target") or ""),
+                "boundary_decision": str(updated.get("boundary_decision") or ""),
+                "boundary_reason": str(updated.get("boundary_reason") or ""),
+                "approval_mode": str(updated.get("approval_mode") or ""),
+            }
+        )
+
+    @app.post("/api/apple/stewardship-reviews/{review_id}/retire")
+    async def apple_retire_stewardship_review(review_id: str, payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        reason = str(payload.get("reason") or "Stewardship review retired from Systems/Admin.").strip()
+        review = _stewardship_reviews.get(review_id)
+        if review is None:
+            raise HTTPException(status_code=404, detail="Stewardship review not found")
+
+        updated = _stewardship_reviews.update(
+            review_id,
+            {
+                "status": "retired",
+                "last_actor": actor,
+                "boundary_reason": reason or str(review.get("boundary_reason") or ""),
+            },
+        )
+        if updated is None:
+            raise HTTPException(status_code=404, detail="Stewardship review not found")
+        notification_id = str(updated.get("notification_id") or "")
+        if notification_id:
+            _notification_center.update_status(
+                notification_id,
+                "dismissed",
+                reason="Stewardship review was retired from Systems/Admin.",
+            )
+        event = _record_shared_event(
+            domain="stewardship",
+            kind="retired",
+            title=f"{str(updated.get('lane_title') or 'Stewardship lane')} retired",
+            detail=reason,
+            severity="low",
+            actor=actor,
+            source="apple.stewardship_review.retire",
+            source_id=review_id,
+            navigation_target=str(updated.get("review_surface") or ""),
+            actions=["open"],
+            trust_zone=str(updated.get("trust_zone") or "household_attention"),
+            authority_stage=str(updated.get("authority_stage") or "draft"),
+            why_now="A staged stewardship review was retired from Systems/Admin.",
+            metadata={"review_id": review_id, "lane_id": str(updated.get("lane_id") or ""), "status": "retired"},
+        )
+        return _ok(
+            {
+                "request_id": review_id,
+                "review_id": review_id,
+                "status": "retired",
+                "performed_action": "retire_stewardship_review",
+                "lane_id": str(updated.get("lane_id") or ""),
+                "lane_title": str(updated.get("lane_title") or ""),
+                "review_surface": str(updated.get("review_surface") or ""),
+                "packet_target": str(updated.get("packet_target") or ""),
+                "boundary_decision": str(updated.get("boundary_decision") or ""),
+                "boundary_reason": str(updated.get("boundary_reason") or ""),
+                "approval_mode": str(updated.get("approval_mode") or ""),
+            }
+        )
+
+    @app.post("/api/apple/governance-proposals/{proposal_id}/promote")
+    async def apple_promote_governance_proposal(proposal_id: str, payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        basis_override = str(payload.get("basis") or "").strip()
+
+        reviews = _stewardship_reviews.list(include_closed=True, limit=0)
+        proposal = next(
+            (
+                dict(item)
+                for item in _build_governance_proposal_rows(reviews)
+                if str(item.get("id") or "").strip() == proposal_id
+            ),
+            None,
+        )
+        if proposal is None:
+            raise HTTPException(status_code=404, detail="Governance proposal not found")
+
+        lane_id = str(proposal.get("lane_id") or "").strip()
+        lane_title = str(proposal.get("lane_title") or "Governance Proposal").strip()
+        domains = [str(item).strip() for item in list(proposal.get("domains", [])) if str(item).strip()]
+        domain = domains[0] if domains else _governance_proposal_domains(
+            lane_id,
+            [str(proposal.get("packet_target") or "").strip()],
+            [str(proposal.get("review_surface") or "").strip()],
+        )[0]
+        candidate = {
+            "candidate_id": proposal_id,
+            "rule_id": f"rule-{proposal_id}",
+            "title": str(proposal.get("title") or f"{lane_title} rollout posture should be codified").strip(),
+            "summary": str(proposal.get("summary") or f"{lane_title} has enough reviewed history to shape a reusable rollout rule.").strip(),
+            "kind": "rollout-posture",
+            "status": "candidate",
+            "domains": domains or _governance_proposal_domains(
+                lane_id,
+                [str(proposal.get("packet_target") or "").strip()],
+                [str(proposal.get("review_surface") or "").strip()],
+            ),
+            "actors": ["Chris"],
+            "agent_ids": runtime._agent_ids_for_domain(domain),
+            "evidence": {
+                "source": "governance-learning",
+                "lane_id": lane_id,
+                "review_surface": str(proposal.get("review_surface") or ""),
+                "packet_target": str(proposal.get("packet_target") or ""),
+            },
+            "policy_effects": dict(proposal.get("policy_effects") or {}),
+            "promotion_reason": basis_override or f"Codify the learned rollout posture for {lane_title}.",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        doctrine_state = runtime.doctrine_store.load()
+        candidates = [dict(item) for item in list(doctrine_state.get("candidates", [])) if isinstance(item, dict)]
+        existing_index = next((index for index, item in enumerate(candidates) if str(item.get("candidate_id") or "").strip() == proposal_id), None)
+        if existing_index is None:
+            candidates.append(candidate)
+        else:
+            candidates[existing_index] = {**candidates[existing_index], **candidate}
+        doctrine_state["candidates"] = candidates
+        runtime.doctrine_store.save(doctrine_state)
+        promoted = runtime.promote_doctrine_candidate(
+            proposal_id,
+            promoted_by=actor,
+            basis=basis_override or candidate["promotion_reason"],
+        )
+        return _ok(
+            {
+                "proposal_id": proposal_id,
+                "candidate_id": proposal_id,
+                "title": candidate["title"],
+                "status": "promoted",
+                "performed_action": "promote_governance_proposal",
+                "message": f"{lane_title} was promoted into shared doctrine.",
+                "rule_id": str(((promoted.get("rule") or {}) if isinstance(promoted, dict) else {}).get("rule_id") or ""),
+            }
+        )
+
+    @app.post("/api/apple/governance-proposals/{proposal_id}/dismiss")
+    async def apple_dismiss_governance_proposal(proposal_id: str, payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        reason = str(payload.get("reason") or "Dismissed from Systems/Admin.").strip()
+
+        reviews = _stewardship_reviews.list(include_closed=True, limit=0)
+        proposal = next(
+            (
+                dict(item)
+                for item in _build_governance_proposal_rows(reviews)
+                if str(item.get("id") or "").strip() == proposal_id
+            ),
+            None,
+        )
+        if proposal is None:
+            raise HTTPException(status_code=404, detail="Governance proposal not found")
+
+        lane_id = str(proposal.get("lane_id") or "").strip()
+        lane_title = str(proposal.get("lane_title") or "Governance Proposal").strip()
+        domains = [str(item).strip() for item in list(proposal.get("domains", [])) if str(item).strip()]
+        domain = domains[0] if domains else _governance_proposal_domains(
+            lane_id,
+            [str(proposal.get("packet_target") or "").strip()],
+            [str(proposal.get("review_surface") or "").strip()],
+        )[0]
+        candidate = {
+            "candidate_id": proposal_id,
+            "rule_id": f"rule-{proposal_id}",
+            "title": str(proposal.get("title") or f"{lane_title} rollout posture should be codified").strip(),
+            "summary": str(proposal.get("summary") or f"{lane_title} has enough reviewed history to shape a reusable rollout rule.").strip(),
+            "kind": "rollout-posture",
+            "status": "candidate",
+            "domains": domains or _governance_proposal_domains(
+                lane_id,
+                [str(proposal.get("packet_target") or "").strip()],
+                [str(proposal.get("review_surface") or "").strip()],
+            ),
+            "actors": ["Chris"],
+            "agent_ids": runtime._agent_ids_for_domain(domain),
+            "evidence": {
+                "source": "governance-learning",
+                "lane_id": lane_id,
+                "review_surface": str(proposal.get("review_surface") or ""),
+                "packet_target": str(proposal.get("packet_target") or ""),
+            },
+            "policy_effects": dict(proposal.get("policy_effects") or {}),
+            "promotion_reason": reason or f"Codify the learned rollout posture for {lane_title}.",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        doctrine_state = runtime.doctrine_store.load()
+        candidates = [dict(item) for item in list(doctrine_state.get("candidates", [])) if isinstance(item, dict)]
+        existing_index = next((index for index, item in enumerate(candidates) if str(item.get("candidate_id") or "").strip() == proposal_id), None)
+        if existing_index is None:
+            candidates.append(candidate)
+        else:
+            candidates[existing_index] = {**candidates[existing_index], **candidate}
+        doctrine_state["candidates"] = candidates
+        runtime.doctrine_store.save(doctrine_state)
+        dismissed = runtime.dismiss_doctrine_candidate(
+            proposal_id,
+            dismissed_by=actor,
+            reason=reason or f"{lane_title} does not need a rollout rule yet.",
+        )
+        candidate_row = ((dismissed.get("candidate") or {}) if isinstance(dismissed, dict) else {})
+        return _ok(
+            {
+                "proposal_id": proposal_id,
+                "candidate_id": proposal_id,
+                "title": candidate["title"],
+                "status": "dismissed",
+                "performed_action": "dismiss_governance_proposal",
+                "message": f"{lane_title} governance proposal was dismissed.",
+                "rule_id": str(candidate_row.get("rule_id") or ""),
+            }
+        )
 
     # ------------------------------------------------------------------
     # GET /api/apple/status  (Watch complication data)
@@ -2747,6 +5952,14 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         current = current if isinstance(current, dict) else {}
         hourly = snapshot.get("hourly") if isinstance(snapshot, dict) else []
         hourly = hourly if isinstance(hourly, list) else []
+        daily = snapshot.get("daily") if isinstance(snapshot, dict) else []
+        daily = daily if isinstance(daily, list) else []
+        near_term = snapshot.get("near_term") if isinstance(snapshot, dict) else {}
+        near_term = near_term if isinstance(near_term, dict) else {}
+        radar = snapshot.get("radar") if isinstance(snapshot, dict) else {}
+        radar = radar if isinstance(radar, dict) else {}
+        alerts = snapshot.get("alerts") if isinstance(snapshot, dict) else []
+        alerts = alerts if isinstance(alerts, list) else []
 
         data = {
             "available": bool(snapshot.get("available")) if isinstance(snapshot, dict) else False,
@@ -2781,7 +5994,48 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 for item in hourly[:8]
                 if isinstance(item, dict)
             ],
-            "alerts_count": len(snapshot.get("alerts") or []) if isinstance(snapshot, dict) else 0,
+            "daily": [
+                {
+                    "name": str(item.get("name") or ""),
+                    "icon": str(item.get("icon") or ""),
+                    "high": item.get("high"),
+                    "low": item.get("low"),
+                    "rain_pct": item.get("rain_pct"),
+                    "forecast": str(item.get("forecast") or ""),
+                }
+                for item in daily[:7]
+                if isinstance(item, dict)
+            ],
+            "near_term": {
+                "window_minutes": int(near_term.get("window_minutes") or 15),
+                "summary": str(near_term.get("summary") or ""),
+                "hazard_active": bool(near_term.get("hazard_active")),
+                "rain_risk_pct": int(near_term.get("rain_risk_pct") or 0),
+            },
+            "radar": {
+                "available": bool(radar.get("available")),
+                "source": str(radar.get("source") or ""),
+                "station": str(radar.get("station") or ""),
+                "viewer_url": str(radar.get("viewer_url") or ""),
+                "loop_image_url": str(radar.get("loop_image_url") or ""),
+                "base_velocity_loop_url": str(radar.get("base_velocity_loop_url") or ""),
+                "posture": {
+                    "mode": str(((radar.get("posture") or {}).get("mode")) or ""),
+                    "summary": str(((radar.get("posture") or {}).get("summary")) or ""),
+                    "should_open": bool(((radar.get("posture") or {}).get("should_open"))),
+                } if isinstance(radar.get("posture"), dict) else None,
+            },
+            "alerts": [
+                {
+                    "event": str(item.get("event") or ""),
+                    "severity": str(item.get("severity") or ""),
+                    "headline": str(item.get("headline") or ""),
+                    "description": str(item.get("description") or ""),
+                }
+                for item in alerts[:4]
+                if isinstance(item, dict)
+            ],
+            "alerts_count": len(alerts),
         }
         return _ok(data)
 
@@ -3015,6 +6269,8 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                     if risk in {"medium", "high", "critical"}:
                         actions.append("reject")
                     actions.append("cancel")
+                    payload = item.get("payload") if isinstance(item.get("payload"), dict) else {}
+                    context_lines = _approval_context_lines(payload if isinstance(payload, dict) else {})
                     items.append({
                         "id": str(item.get("id") or item.get("request_id") or uuid.uuid4()),
                         "text": _truncate(str(item.get("text") or item.get("title") or ""), 80),
@@ -3026,6 +6282,12 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                         "status": "pending",
                         "allowed_actions": actions,
                         "request_type": str(item.get("action_type") or ""),
+                        "priority": int(item.get("priority") or 5),
+                        "tags": item.get("tags") if isinstance(item.get("tags"), list) else [],
+                        "requires_confirmation": bool(item.get("requires_confirmation")),
+                        "confirmation_phrase": str(item.get("confirmation_phrase") or ""),
+                        "target_summary": _approval_target_summary(payload if isinstance(payload, dict) else {}),
+                        "context_lines": context_lines,
                     })
             else:
                 pending = runtime.list_pending_approvals()
@@ -3033,6 +6295,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 for item in raw:
                     if not isinstance(item, dict):
                         continue
+                    payload = item.get("payload") if isinstance(item.get("payload"), dict) else {}
                     items.append({
                         "id": str(item.get("id") or item.get("request_id") or uuid.uuid4()),
                         "text": _truncate(str(item.get("title") or item.get("text") or ""), 80),
@@ -3044,6 +6307,12 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                         "status": str(item.get("status") or "pending"),
                         "allowed_actions": ["approve", "reject", "cancel"],
                         "request_type": str(item.get("action_type") or ""),
+                        "priority": int(item.get("priority") or 5),
+                        "tags": item.get("tags") if isinstance(item.get("tags"), list) else [],
+                        "requires_confirmation": bool(item.get("requires_confirmation")),
+                        "confirmation_phrase": str(item.get("confirmation_phrase") or ""),
+                        "target_summary": _approval_target_summary(payload if isinstance(payload, dict) else {}),
+                        "context_lines": _approval_context_lines(payload if isinstance(payload, dict) else {}),
                     })
         except Exception as exc:
             logger.warning("apple_needs: %s", exc)
@@ -3055,39 +6324,70 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
     @app.post("/api/apple/speak")
     async def apple_speak(payload: dict):
         """
-        Route a text command from Phone / Siri through the JARVIS agent router.
+        Route a text command from Phone / Siri through local-first JARVIS voice handling.
+        Apple surfaces own capture and playback; JARVIS returns the decision payload.
         """
         text = str(payload.get("text") or "").strip()
         actor_id = str(payload.get("actor_id") or payload.get("actor") or "chris").strip()
+        conversation_id = str(payload.get("conversation_id") or "").strip()
         if not text:
             raise HTTPException(status_code=400, detail="text is required")
 
-        response_text = ""
         agent_name = "JARVIS"
-        speak = True
+        response_text = ""
 
-        # Try the main respond path
         try:
-            result = runtime.respond(actor_id, "apple", text)
-            if isinstance(result, dict):
-                response_text = str(
-                    result.get("output_text")
-                    or result.get("response")
-                    or result.get("text")
-                    or ""
-                )
-                agent_name = str(result.get("agent") or result.get("actor") or "JARVIS")
+            local_handler_result = _apple_voice_try_local_handler(runtime, text, actor_id)
+            if local_handler_result is not None:
+                response_text, agent_name = local_handler_result
             else:
-                response_text = str(result)
+                response_text, agent_name = _apple_voice_local_llm(
+                    runtime,
+                    actor_id=actor_id,
+                    text=text,
+                )
         except Exception as exc:
-            logger.warning("apple_speak: respond failed: %s", exc)
-            response_text = "I'm working on that for you, Sir."
+            logger.warning("apple_speak local-first flow failed: %s", exc)
+            response_text = (
+                "The local voice path hit a problem. If you want, I can use a non-local model after you approve it."
+            )
 
-        return _ok({
-            "response": response_text or "Understood.",
-            "agent": agent_name,
-            "speak": speak,
-        })
+        resolved_conversation_id = conversation_id
+        try:
+            thread = runtime.conversation_store.ensure(actor_id, "office", conversation_id, source="apple_voice")
+            resolved_conversation_id = str(thread.get("conversation_id") or resolved_conversation_id)
+            runtime.conversation_store.append_turn(
+                resolved_conversation_id,
+                role="user",
+                text=text,
+                actor=actor_id,
+                room="office",
+                source="apple_voice",
+            )
+            runtime.conversation_store.append_turn(
+                resolved_conversation_id,
+                role="assistant",
+                text=response_text,
+                actor=actor_id,
+                room="office",
+                source="apple_voice",
+                metadata={"provider": "apple_voice", "model": "local-first"},
+            )
+            runtime._invalidate_snapshot_cache(actor_id, surfaces=("chat_state",))
+        except Exception as exc:
+            logger.warning("apple_speak conversation capture failed: %s", exc)
+
+        response_payload = _build_apple_voice_payload(response_text=response_text, agent_name=agent_name)
+        response_payload["conversation_id"] = resolved_conversation_id
+        response_payload["follow_up_suggestions"] = _build_apple_voice_followups(text)
+        return _ok(response_payload)
+
+    # ------------------------------------------------------------------
+    # GET /api/apple/voice/state
+    # ------------------------------------------------------------------
+    @app.get("/api/apple/voice/state")
+    async def apple_voice_state(actor: str = "chris", conversation_id: str = ""):
+        return _ok(_build_apple_voice_state(actor, conversation_id))
 
     # ------------------------------------------------------------------
     # GET /api/apple/health/summary
@@ -3123,9 +6423,21 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             readiness = "low"
 
         daily_score: dict[str, Any] | None = None
+        readiness_factors: list[dict[str, Any]] = []
+        thor_snapshot: dict[str, Any] | None = None
+        completeness_summary: dict[str, Any] | None = None
+        watchlist: list[dict[str, Any]] = []
         protocol_items: list[dict[str, Any]] = []
         alerts: list[dict[str, Any]] = []
         next_actions: list[str] = []
+
+        try:
+            from .growth_intelligence import GrowthIntelligenceOrchestrator, GrowthStore
+
+            thor_snapshot = GrowthIntelligenceOrchestrator(GrowthStore()).thor.get_health_snapshot(actor)
+            thor_note = str(thor_snapshot.get("thor_note") or thor_note)
+        except Exception:
+            pass
 
         try:
             from .health_bridge import compute_readiness, get_latest
@@ -3138,6 +6450,17 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                     "message": str(readiness_detail.get("message") or ""),
                     "estimated": bool(readiness_detail.get("data_incomplete")),
                 }
+            readiness_factors = [
+                {
+                    "metric": str(factor.get("metric") or ""),
+                    "label": str(factor.get("label") or factor.get("metric") or "Metric"),
+                    "value": factor.get("value"),
+                    "score": int(factor.get("score")) if isinstance(factor.get("score"), (int, float)) else None,
+                    "missing": bool(factor.get("missing")),
+                }
+                for factor in (readiness_detail.get("factors") or [])
+                if isinstance(factor, dict)
+            ]
 
             for factor in readiness_detail.get("factors") or []:
                 if not isinstance(factor, dict):
@@ -3164,6 +6487,12 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         if isinstance(completeness, dict):
             total_score = completeness.get("total_score")
             grade = completeness.get("grade")
+            completeness_summary = {
+                "total_score": int(round(float(total_score))) if isinstance(total_score, (int, float)) else 0,
+                "grade": str(grade or ""),
+                "critical_gaps": [str(gap) for gap in (completeness.get("critical_gaps") or [])[:4] if gap],
+                "quick_wins": [str(item) for item in (completeness.get("quick_wins") or [])[:4] if item],
+            }
             if daily_score is None and isinstance(total_score, (int, float)):
                 daily_score = {
                     "value": int(round(float(total_score))),
@@ -3195,21 +6524,39 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                         "detail": key_finding,
                         "severity": "high",
                     })
+                if key_finding:
+                    watchlist.append({
+                        "kind": "condition",
+                        "title": str(condition.get("name") or "Condition"),
+                        "detail": key_finding,
+                        "severity": "high" if isinstance(risk_score, (int, float)) and float(risk_score) >= 85 else "medium",
+                    })
             meds = ((health_state.get("current_care_state") or {}).get("medications") or [])[:8]
             for med in meds:
-                if not isinstance(med, dict) or not med.get("high_risk"):
+                if not isinstance(med, dict):
                     continue
-                monitoring = str(med.get("monitoring") or "").strip()
-                if monitoring:
-                    protocol_items.append({
-                        "title": f"Monitor {med.get('name') or 'medication'}",
-                        "detail": monitoring,
-                        "emphasis": "medium",
+                if med.get("high_risk"):
+                    monitoring = str(med.get("monitoring") or "").strip()
+                    if monitoring:
+                        protocol_items.append({
+                            "title": f"Monitor {med.get('name') or 'medication'}",
+                            "detail": monitoring,
+                            "emphasis": "medium",
+                        })
+                notes = str(med.get("notes") or "").strip()
+                if notes:
+                    watchlist.append({
+                        "kind": "medication",
+                        "title": str(med.get("name") or "Medication"),
+                        "detail": notes,
+                        "severity": "medium" if med.get("high_risk") else "low",
                     })
 
         protocol_items = protocol_items[:4]
         next_actions = next_actions[:4]
         alerts = alerts[:4]
+        watchlist = watchlist[:6]
+        readiness_factors = readiness_factors[:4]
 
         data = {
             "steps_today": agg["steps"],
@@ -3222,9 +6569,20 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             "thor_note": thor_note,
             "last_sync": agg["last_sync"],
             "daily_score": daily_score,
+            "readiness_factors": readiness_factors,
+            "thor_snapshot": thor_snapshot,
+            "completeness": completeness_summary,
+            "watchlist": watchlist,
             "protocol_items": protocol_items,
             "alerts": alerts,
             "next_actions": next_actions,
+            "continuity": _build_health_continuity(
+                actor,
+                readiness=readiness,
+                readiness_factors=readiness_factors,
+                watchlist=watchlist,
+                next_actions=next_actions,
+            ),
         }
         return _ok(data)
 
@@ -3270,12 +6628,24 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         if isinstance(state, dict):
             state = dict(state)
             home_context = _build_home_context(needs_count=needs_count)
+            while_you_were_away = _build_while_you_were_away("chris")
+            home_aggregate = runtime.chamber_home_aggregate(
+                "chris",
+                home_state=state,
+                home_context=home_context,
+                watch_status=status if isinstance(status, dict) else {},
+                while_you_were_away=while_you_were_away,
+            )
             state["home_context"] = home_context
-            state["action_items"] = _build_home_action_items(
+            state["home_ops"] = _build_home_ops_summary()
+            state["continuity"] = _build_home_continuity("chris")
+            state["while_you_were_away"] = while_you_were_away
+            state["action_items"] = list(home_aggregate.get("action_items") or []) or _build_home_action_items(
                 state=state,
                 home_context=home_context,
                 needs_count=needs_count,
             )
+            state["home_aggregate"] = home_aggregate
         return _ok(state)
 
     # ------------------------------------------------------------------
@@ -3294,6 +6664,110 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             raise HTTPException(status_code=400, detail="command is required")
 
         request_id = str(uuid.uuid4())
+        boundary = runtime.assess_action_boundary(
+            zone_id="household_home",
+            arena_id="household.home.manual",
+            action_type="home_control",
+            requested_stage="sandbox_live",
+        )
+        boundary_decision = str(boundary.get("decision") or "stage")
+        boundary_reason = str(boundary.get("reason") or "")
+        trust_zone = str(boundary.get("trust_zone") or "household_home")
+        authority_stage = str(boundary.get("authority_stage") or "draft")
+        approval_mode = str(boundary.get("approval_mode") or "stage_and_alert")
+        arena_status = str(boundary.get("arena_status") or "active")
+
+        if boundary_decision == "deny":
+            event = _record_shared_event(
+                domain="home",
+                kind="blocked",
+                title=command,
+                detail=f"Home command blocked by boundary: {boundary_reason}",
+                severity="high",
+                actor="chris",
+                source="apple.home_command",
+                source_id=request_id,
+                navigation_target="systems",
+                actions=["open"],
+                trust_zone=trust_zone,
+                authority_stage=authority_stage,
+                why_now="A home command hit a trust boundary and was denied before execution.",
+                metadata={
+                    "command": command,
+                    "entity_id": entity_id,
+                    "service": service,
+                    "boundary_decision": boundary_decision,
+                    "arena_status": arena_status,
+                },
+            )
+            _create_notification_from_event(
+                event,
+                category="household",
+                delivery_mode="badge_only",
+                available_actions=["open", "resolve"],
+                source_summary="Blocked home command",
+            )
+            return _ok(
+                {
+                    "request_id": request_id,
+                    "status": "blocked_by_boundary",
+                    "boundary_decision": boundary_decision,
+                    "boundary_reason": boundary_reason,
+                    "trust_zone": trust_zone,
+                    "authority_stage": authority_stage,
+                    "arena_status": arena_status,
+                    "approval_mode": approval_mode,
+                }
+            )
+
+        if boundary_decision == "allow":
+            executed = False
+            try:
+                from .data_connectors import get_ha
+                ha = get_ha()
+                if ha is not None and service and entity_id:
+                    executed = bool(ha.call_service(service, command, entity_id))
+            except Exception as exc:
+                logger.warning("apple_home_command: live execution failed: %s", exc)
+                executed = False
+
+            if executed:
+                event = _record_shared_event(
+                    domain="home",
+                    kind="executed",
+                    title=command,
+                    detail=f"Home command executed live: {service or 'service'} on {entity_id or 'target'}.",
+                    severity="medium",
+                    actor="chris",
+                    source="apple.home_command",
+                    source_id=request_id,
+                    navigation_target="home",
+                    actions=["open", "resolve"],
+                    trust_zone=trust_zone,
+                    authority_stage=authority_stage,
+                    why_now="A home command was cleared by the trust boundary and executed live.",
+                    metadata={"command": command, "entity_id": entity_id, "service": service},
+                )
+                _create_notification_from_event(
+                    event,
+                    category="household",
+                    delivery_mode="badge_only",
+                    available_actions=["open", "resolve"],
+                    source_summary="Executed home command",
+                )
+                return _ok(
+                    {
+                        "request_id": request_id,
+                        "status": "executed_live",
+                        "boundary_decision": boundary_decision,
+                        "boundary_reason": boundary_reason,
+                        "trust_zone": trust_zone,
+                        "authority_stage": authority_stage,
+                        "arena_status": arena_status,
+                        "approval_mode": approval_mode,
+                    }
+                )
+
         try:
             from .approvals import get_approval_guard
             guard = get_approval_guard()
@@ -3318,10 +6792,16 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             source_id=request_id,
             navigation_target="home",
             actions=["open", "stage", "dismiss"],
-            trust_zone="household_home",
-            authority_stage="draft",
+            trust_zone=trust_zone,
+            authority_stage=authority_stage,
             why_now="A home command was requested from the Apple client and now awaits approval.",
-            metadata={"command": command, "entity_id": entity_id, "service": service},
+            metadata={
+                "command": command,
+                "entity_id": entity_id,
+                "service": service,
+                "boundary_decision": boundary_decision,
+                "approval_mode": approval_mode,
+            },
         )
         _create_notification_from_event(
             event,
@@ -3331,7 +6811,18 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             source_summary="Staged home command",
         )
 
-        return _ok({"request_id": request_id, "status": "pending_approval"})
+        return _ok(
+            {
+                "request_id": request_id,
+                "status": "pending_approval",
+                "boundary_decision": boundary_decision,
+                "boundary_reason": boundary_reason,
+                "trust_zone": trust_zone,
+                "authority_stage": authority_stage,
+                "arena_status": arena_status,
+                "approval_mode": approval_mode,
+            }
+        )
 
     # ------------------------------------------------------------------
     # POST /api/apple/presence
@@ -3417,7 +6908,6 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             }
         )
 
-
     @app.get("/api/apple/control-plane/state")
     async def apple_control_plane_state():
         data_root = Path("data/apple")
@@ -3426,29 +6916,1049 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             now_playing_payload=now_playing_payload if isinstance(now_playing_payload, dict) else {},
         ))
 
+    @app.get("/api/apple/systems/admin-summary")
+    @app.post("/api/apple/systems/admin-summary")
+    async def apple_systems_admin_summary():
+        from .llm_gateway import usage_summary
+
+        voice_store = VoiceSettingsStore(runtime.config)
+        voice_settings = voice_store.describe()
+        stack_status = voice_settings.get("stack_status") if isinstance(voice_settings, dict) else {}
+        if not isinstance(stack_status, dict):
+            stack_status = {}
+
+        identity = runtime.identity_overview() or {}
+        account_snapshot = runtime.account_registry_snapshot() or {}
+        devices_snapshot = runtime.connected_devices_snapshot() or {}
+        service_status = runtime.runtime_service_status() or {}
+        google_summary = runtime.google_workspace_summary() or {}
+        microsoft_summary = runtime.microsoft_graph_summary() or {}
+
+        now = datetime.now(timezone.utc)
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        window_hours = max(1, int((now - month_start).total_seconds() // 3600) + 1)
+        llm_costs = usage_summary(hours=window_hours)
+
+        accounts = account_snapshot.get("accounts") if isinstance(account_snapshot, dict) else []
+        if not isinstance(accounts, list):
+            accounts = []
+        account_items: list[dict[str, Any]] = []
+        connected_accounts = 0
+        planned_accounts = 0
+        for item in accounts:
+            if not isinstance(item, dict):
+                continue
+            status = str(item.get("status") or item.get("auth_status") or "planned").strip().lower()
+            if status in {"connected", "ready", "active"}:
+                connected_accounts += 1
+            else:
+                planned_accounts += 1
+            account_items.append(
+                {
+                    "id": str(item.get("account_id") or item.get("id") or ""),
+                    "label": str(item.get("label") or item.get("owner_display_name") or item.get("account_id") or "Account"),
+                    "provider": str(item.get("provider") or "unknown"),
+                    "status": status or "planned",
+                    "login_hint": str(item.get("login_hint") or ""),
+                    "detail": str(item.get("service_scope") or item.get("login_hint") or "Awaiting configuration"),
+                }
+            )
+
+        raw_members = identity.get("members") if isinstance(identity, dict) else []
+        if not isinstance(raw_members, list):
+            raw_members = []
+        raw_devices = devices_snapshot.get("devices") if isinstance(devices_snapshot, dict) else []
+        if not isinstance(raw_devices, list):
+            raw_devices = []
+        member_rows: list[dict[str, Any]] = []
+        online_members = 0
+        for member in raw_members:
+            if not isinstance(member, dict):
+                continue
+            member_id = str(member.get("user_id") or member.get("id") or "").strip().lower()
+            member_devices = [
+                device for device in raw_devices
+                if isinstance(device, dict) and str(device.get("owner_user_id") or "").strip().lower() == member_id
+            ]
+            online_device_count = sum(1 for device in member_devices if _boolish(device.get("online")))
+            if online_device_count:
+                online_members += 1
+            member_rows.append(
+                {
+                    "id": member_id or str(member.get("display_name") or "member").lower(),
+                    "display_name": str(member.get("display_name") or member.get("name") or member_id or "Member"),
+                    "role": str(member.get("role") or ""),
+                    "permissions": str(member.get("permissions") or ""),
+                    "device_count": len(member_devices),
+                    "online_device_count": online_device_count,
+                    "status": "Online" if online_device_count else ("Offline" if member_devices else "No Device"),
+                }
+            )
+
+        device_rows: list[dict[str, Any]] = []
+        for device in raw_devices:
+            if not isinstance(device, dict):
+                continue
+            device_rows.append(
+                {
+                    "id": str(device.get("device_id") or device.get("id") or ""),
+                    "label": str(device.get("label") or device.get("device_name") or device.get("device_id") or "Device"),
+                    "owner_name": str(device.get("owner_display_name") or device.get("owner_user_id") or "Unclaimed"),
+                    "last_seen_at": str(device.get("last_seen_at") or ""),
+                    "mapped": bool(device.get("mapped")),
+                    "shared": bool(device.get("shared")),
+                    "status": "Online" if _boolish(device.get("online")) else ("Mapped" if device.get("mapped") else "Unclaimed"),
+                }
+            )
+
+        selected_voice_label = str(
+            voice_settings.get("selected_elevenlabs_label")
+            or voice_settings.get("selected_piper_label")
+            or voice_settings.get("tts_provider")
+            or "Default"
+        )
+        local_ready = any(
+            _boolish(stack_status.get(key))
+            for key in ("ollama_available", "piper_ready", "system_voice_available", "localai_available")
+        )
+        cloud_ready = any(
+            _boolish(stack_status.get(key))
+            for key in ("elevenlabs_ready", "openai_ready")
+        )
+
+        google_accounts = google_summary.get("accounts") if isinstance(google_summary, dict) else []
+        if not isinstance(google_accounts, list):
+            google_accounts = []
+        microsoft_accounts = microsoft_summary.get("accounts") if isinstance(microsoft_summary, dict) else []
+        if not isinstance(microsoft_accounts, list):
+            microsoft_accounts = []
+
+        def _connected_count(items: list[Any]) -> int:
+            total = 0
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                status = item.get("status")
+                if isinstance(status, dict):
+                    if _boolish(status.get("connected")) or str(status.get("state") or "").lower() == "connected":
+                        total += 1
+                elif str(status or "").lower() == "connected":
+                    total += 1
+            return total
+
+        by_model = llm_costs.get("by_model") if isinstance(llm_costs, dict) else {}
+        if not isinstance(by_model, dict):
+            by_model = {}
+        model_rows = []
+        for model_name, info in sorted(by_model.items(), key=lambda item: float(item[1].get("cost_usd", 0.0)), reverse=True)[:3]:
+            if not isinstance(info, dict):
+                continue
+            model_rows.append(
+                {
+                    "id": str(model_name),
+                    "name": str(model_name),
+                    "backend": str(info.get("backend") or ""),
+                    "calls": int(info.get("calls") or 0),
+                    "cost_usd": round(float(info.get("cost_usd") or 0.0), 4),
+                }
+            )
+
+        trust_zones = runtime.list_trust_zones() or []
+        if not isinstance(trust_zones, list):
+            trust_zones = []
+        resource_arenas = runtime.list_resource_arenas() or []
+        if not isinstance(resource_arenas, list):
+            resource_arenas = []
+        authority_stages = runtime.list_authority_stages() or []
+        if not isinstance(authority_stages, list):
+            authority_stages = []
+        stage_queue = runtime.list_stage_queue(limit=8) or []
+        if not isinstance(stage_queue, list):
+            stage_queue = []
+        promotion_records = runtime.list_promotion_records(limit=8) or []
+        if not isinstance(promotion_records, list):
+            promotion_records = []
+
+        governance_zones = []
+        active_zone_count = 0
+        for zone in trust_zones[:4]:
+            if not isinstance(zone, dict):
+                continue
+            status = str(zone.get("status") or "unknown")
+            if status.strip().lower() == "active":
+                active_zone_count += 1
+            allowed_actions = zone.get("allowed_actions") if isinstance(zone.get("allowed_actions"), list) else []
+            governance_zones.append(
+                {
+                    "id": str(zone.get("zone_id") or ""),
+                    "name": str(zone.get("name") or zone.get("zone_id") or "Zone"),
+                    "zone_type": str(zone.get("zone_type") or ""),
+                    "authority_stage": str(zone.get("authority_stage") or "observe"),
+                    "approval_mode": str(zone.get("approval_mode") or ""),
+                    "status": status,
+                    "action_count": len([item for item in allowed_actions if str(item).strip()]),
+                }
+            )
+
+        governance_arenas = []
+        active_arena_count = 0
+        for arena in resource_arenas[:4]:
+            if not isinstance(arena, dict):
+                continue
+            status = str(arena.get("status") or "unknown")
+            if status.strip().lower() == "active":
+                active_arena_count += 1
+            governance_arenas.append(
+                {
+                    "id": str(arena.get("arena_id") or ""),
+                    "name": str(arena.get("name") or arena.get("arena_id") or "Arena"),
+                    "resource_type": str(arena.get("resource_type") or ""),
+                    "linked_zone_id": str(arena.get("linked_zone_id") or ""),
+                    "risk_class": str(arena.get("risk_class") or ""),
+                    "status": status,
+                }
+            )
+
+        governance_stages = []
+        for stage in sorted(
+            [item for item in authority_stages if isinstance(item, dict)],
+            key=lambda item: int(item.get("sequence") or 0),
+        )[:5]:
+            requirements = stage.get("approval_requirements") if isinstance(stage.get("approval_requirements"), dict) else {}
+            actions = stage.get("allowed_action_types") if isinstance(stage.get("allowed_action_types"), list) else []
+            governance_stages.append(
+                {
+                    "id": str(stage.get("stage_id") or ""),
+                    "name": str(stage.get("name") or stage.get("stage_id") or "Stage"),
+                    "sequence": int(stage.get("sequence") or 0),
+                    "status": str(stage.get("status") or ""),
+                    "action_type_count": len([item for item in actions if str(item).strip()]),
+                    "boundary_mode": str(requirements.get("boundary_crossing") or requirements.get("pre_action") or ""),
+                }
+            )
+
+        queue_rows = []
+        pending_queue_count = 0
+        for item in stage_queue:
+            if not isinstance(item, dict):
+                continue
+            status = str(item.get("status") or "queued")
+            if status.strip().lower() in {"queued", "pending", "staged", "ready_for_review"}:
+                pending_queue_count += 1
+            queue_rows.append(
+                {
+                    "id": str(item.get("request_id") or item.get("draft_id") or ""),
+                    "arena_id": str(item.get("arena_id") or ""),
+                    "action_type": str(item.get("action_type") or ""),
+                    "status": status,
+                    "created_at": str(item.get("created_at") or ""),
+                    "principal_id": str(item.get("principal_id") or ""),
+                    "draft_id": str(item.get("draft_id") or ""),
+                }
+            )
+
+        promotion_rows = []
+        promotion_record_count = 0
+        for item in promotion_records:
+            if not isinstance(item, dict):
+                continue
+            promotion_record_count += 1
+            promotion_rows.append(
+                {
+                    "id": str(item.get("record_id") or item.get("id") or ""),
+                    "event_type": str(item.get("event_type") or ""),
+                    "subject_kind": str(item.get("subject_kind") or ""),
+                    "subject_id": str(item.get("subject_id") or ""),
+                    "status": str(item.get("status") or ""),
+                    "actor": str(item.get("actor") or ""),
+                    "basis": str(item.get("basis") or ""),
+                    "trust_zone": str(item.get("trust_zone") or ""),
+                    "arena_id": str(item.get("arena_id") or ""),
+                    "authority_stage": str(item.get("authority_stage") or ""),
+                    "created_at": str(item.get("created_at") or ""),
+                }
+            )
+
+        stewardship_review_history = _stewardship_reviews.list(include_closed=True, limit=0)
+        for index, item in enumerate(stewardship_review_history):
+            if not isinstance(item, dict):
+                continue
+            status = str(item.get("status") or "").strip().lower()
+            if status not in {"approved", "retired", "rerouted"}:
+                continue
+            promotion_record_count += 1
+            promotion_rows.append(
+                {
+                    "id": str(item.get("id") or f"stewardship-history-{index}"),
+                    "event_type": {
+                        "approved": "stewardship_review_approved",
+                        "retired": "stewardship_review_retired",
+                    }.get(status, "stewardship_review_rerouted"),
+                    "subject_kind": "stewardship_review",
+                    "subject_id": str(item.get("lane_id") or ""),
+                    "status": status,
+                    "actor": str(item.get("last_actor") or "system"),
+                    "basis": str(item.get("boundary_reason") or item.get("note") or item.get("lane_title") or ""),
+                    "trust_zone": str(item.get("trust_zone") or ""),
+                    "arena_id": str(item.get("packet_target") or ""),
+                    "authority_stage": str(item.get("authority_stage") or ""),
+                    "created_at": str(item.get("updated_at") or item.get("created_at") or ""),
+                }
+            )
+
+        approvals = runtime.approval_history() or []
+        if not isinstance(approvals, list):
+            approvals = []
+        pending_approvals = []
+        pending_approval_count = 0
+        rejected_approval_count = 0
+        for index, item in enumerate(approvals):
+            if not isinstance(item, dict):
+                continue
+            status = str(item.get("status") or "").strip().lower()
+            if status == "pending":
+                pending_approval_count += 1
+                if len(pending_approvals) < 4:
+                    pending_approvals.append(
+                        {
+                            "id": str(item.get("request_id") or item.get("id") or f"approval-{index}"),
+                            "actor": str(item.get("actor") or ""),
+                            "request": str(item.get("request") or ""),
+                            "status": str(item.get("status") or "pending"),
+                            "rationale": str(item.get("rationale") or ""),
+                            "timestamp": str(item.get("timestamp") or item.get("created_at") or ""),
+                        }
+                    )
+            elif status in {"rejected", "denied"}:
+                rejected_approval_count += 1
+
+        explainability = runtime.explainability_snapshot("Chris") or {}
+        if not isinstance(explainability, dict):
+            explainability = {}
+        action_summary = explainability.get("assistant_action_summary") if isinstance(explainability.get("assistant_action_summary"), dict) else {}
+        assistant_actions = explainability.get("assistant_actions") if isinstance(explainability.get("assistant_actions"), list) else []
+        recent_actions = []
+        for index, item in enumerate(assistant_actions[:4]):
+            if not isinstance(item, dict):
+                continue
+            recent_actions.append(
+                {
+                    "id": str(item.get("item_id") or f"action-{index}"),
+                    "domain": str(item.get("domain") or ""),
+                    "action": str(item.get("action") or ""),
+                    "decision": str(item.get("decision") or ""),
+                    "mode": str(item.get("mode") or ""),
+                    "succeeded": bool(item.get("succeeded")),
+                    "caused_friction": bool(item.get("caused_friction")),
+                    "why_now": str(item.get("why_now") or ""),
+                    "timestamp": str(item.get("timestamp") or ""),
+                }
+            )
+
+        stewardship_reviews = _stewardship_reviews.list(limit=0)
+        recent_stewardship_reviews = [_serialize_stewardship_review(item) for item in stewardship_reviews[:4]]
+        staged_stewardship_review_count = len(stewardship_reviews)
+
+        doctrine_state = runtime.shared_doctrine_snapshot(actor_name="Chris", refresh=False) or {}
+        if not isinstance(doctrine_state, dict):
+            doctrine_state = {}
+        if not str(doctrine_state.get("generated_at") or "").strip():
+            doctrine_state = runtime.synthesize_shared_doctrine(auto_promote=False, promoted_by="system") or {}
+            if not isinstance(doctrine_state, dict):
+                doctrine_state = {}
+            doctrine_state = runtime.shared_doctrine_snapshot(actor_name="Chris", refresh=False) or {}
+            if not isinstance(doctrine_state, dict):
+                doctrine_state = {}
+        if not promotion_rows:
+            doctrine_history = doctrine_state.get("history") if isinstance(doctrine_state.get("history"), list) else []
+            for index, item in enumerate(reversed(doctrine_history[-4:])):
+                if not isinstance(item, dict):
+                    continue
+                promotion_rows.append(
+                    {
+                        "id": str(item.get("id") or item.get("candidate_id") or f"history-{index}"),
+                        "event_type": str(item.get("event") or "history"),
+                        "subject_kind": "doctrine_candidate" if str(item.get("candidate_id") or "").strip() else "doctrine_rule",
+                        "subject_id": str(item.get("candidate_id") or item.get("rule_id") or ""),
+                        "status": str(item.get("status") or ""),
+                        "actor": str(item.get("actor") or item.get("promoted_by") or item.get("dismissed_by") or "system"),
+                        "basis": str(item.get("basis") or item.get("reason") or item.get("event") or ""),
+                        "trust_zone": "shared-doctrine",
+                        "arena_id": "",
+                        "authority_stage": "policy",
+                        "created_at": str(item.get("timestamp") or item.get("created_at") or ""),
+                    }
+                )
+            promotion_record_count = len(promotion_rows)
+        doctrine_candidates = doctrine_state.get("candidates") if isinstance(doctrine_state.get("candidates"), list) else []
+        doctrine_summary = doctrine_state.get("summary") if isinstance(doctrine_state.get("summary"), dict) else {}
+        candidate_rows = []
+        for index, item in enumerate(doctrine_candidates[:4]):
+            if not isinstance(item, dict):
+                continue
+            candidate_rows.append(
+                {
+                    "id": str(item.get("candidate_id") or f"candidate-{index}"),
+                    "title": str(item.get("title") or ""),
+                    "kind": str(item.get("kind") or ""),
+                    "status": str(item.get("status") or ""),
+                    "summary": str(item.get("summary") or ""),
+                    "promotion_reason": str(item.get("promotion_reason") or ""),
+                }
+            )
+
+        sandbox_overview = runtime.sandbox_operations_overview() or {}
+        if not isinstance(sandbox_overview, dict):
+            sandbox_overview = {}
+        sandbox_queue = sandbox_overview.get("queue") if isinstance(sandbox_overview.get("queue"), dict) else {}
+        sandbox_job_rows = sandbox_overview.get("jobs") if isinstance(sandbox_overview.get("jobs"), list) else []
+        sandbox_active_run_rows = sandbox_overview.get("active_runs") if isinstance(sandbox_overview.get("active_runs"), list) else []
+        sandbox_recent_run_rows = sandbox_overview.get("recent_runs") if isinstance(sandbox_overview.get("recent_runs"), list) else []
+        sandbox_lane_rows = sandbox_overview.get("lane_summaries") if isinstance(sandbox_overview.get("lane_summaries"), list) else []
+
+        reflective_snapshot = runtime.learning_review_snapshot("Chris") or {}
+        if not isinstance(reflective_snapshot, dict):
+            reflective_snapshot = {}
+        reflective_memory_graph = runtime.durable_memory_graph_snapshot("Chris") or {}
+        if not isinstance(reflective_memory_graph, dict):
+            reflective_memory_graph = {}
+        reflective_profile = reflective_snapshot.get("profile") if isinstance(reflective_snapshot.get("profile"), dict) else {}
+        reflective_personalization = (
+            reflective_snapshot.get("personalization")
+            if isinstance(reflective_snapshot.get("personalization"), dict)
+            else {}
+        )
+        reflective_facts = (
+            reflective_snapshot.get("profile_facts")
+            if isinstance(reflective_snapshot.get("profile_facts"), list)
+            else []
+        )
+        reflective_proposals = (
+            reflective_snapshot.get("pending_proposals")
+            if isinstance(reflective_snapshot.get("pending_proposals"), list)
+            else []
+        )
+        reflective_first_light = (
+            reflective_snapshot.get("first_light_history")
+            if isinstance(reflective_snapshot.get("first_light_history"), list)
+            else []
+        )
+        reflective_profile_fact_rows = []
+        for item in reflective_facts[:3]:
+            if not isinstance(item, dict):
+                continue
+            reflective_profile_fact_rows.append(
+                {
+                    "id": str(item.get("fact_id") or item.get("id") or ""),
+                    "title": str(item.get("title") or item.get("summary") or "Profile fact"),
+                    "summary": str(item.get("summary") or ""),
+                    "tags": [str(tag) for tag in (item.get("tags") or [])[:4]],
+                    "updated_at": str(item.get("updated_at") or ""),
+                }
+            )
+
+        reflective_proposal_rows = []
+        for item in reflective_proposals[:3]:
+            if not isinstance(item, dict):
+                continue
+            reflective_proposal_rows.append(
+                {
+                    "id": str(item.get("proposal_id") or item.get("id") or ""),
+                    "title": str(item.get("title") or item.get("summary") or "Memory proposal"),
+                    "summary": str(item.get("summary") or ""),
+                    "status": str(item.get("status") or "pending"),
+                    "memory_type": str(item.get("memory_type") or ""),
+                    "confidence": str(item.get("confidence") or "confirmed"),
+                }
+            )
+
+        recent_first_light_rows = []
+        for index, item in enumerate(list(reversed(reflective_first_light))[:3]):
+            if not isinstance(item, dict):
+                continue
+            first_20 = item.get("first_20_minutes") if isinstance(item.get("first_20_minutes"), list) else []
+            summary = str(item.get("watch_line") or "").strip()
+            if not summary and first_20:
+                summary = "; ".join(str(step).strip() for step in first_20[:2] if str(step).strip())
+            if not summary:
+                summary = "First Light continuity packet recorded."
+            recent_first_light_rows.append(
+                {
+                    "id": str(item.get("packet_id") or item.get("date") or item.get("local_time") or f"first-light-{index}"),
+                    "label": str(item.get("date") or item.get("local_time") or "Recent First Light"),
+                    "summary": summary,
+                }
+            )
+
+        reflective_insights = (
+            reflective_personalization.get("insights")
+            if isinstance(reflective_personalization.get("insights"), list)
+            else []
+        )
+        active_insight_count = len(
+            [
+                item for item in reflective_insights
+                if isinstance(item, dict) and str(item.get("status") or "").strip().lower() == "active"
+            ]
+        )
+        guidance_lines: list[str] = []
+        for line in reflective_personalization.get("rhythms", []) if isinstance(reflective_personalization.get("rhythms"), list) else []:
+            cleaned = str(line).strip()
+            if cleaned:
+                guidance_lines.append(cleaned)
+        for line in reflective_personalization.get("learned_preferences", []) if isinstance(reflective_personalization.get("learned_preferences"), list) else []:
+            cleaned = str(line).strip()
+            if cleaned and cleaned not in guidance_lines:
+                guidance_lines.append(cleaned)
+        digital_twin = reflective_snapshot.get("persona_snapshot") if isinstance(reflective_snapshot.get("persona_snapshot"), dict) else {}
+        digital_twin_block = digital_twin.get("digital_twin") if isinstance(digital_twin.get("digital_twin"), dict) else {}
+        for line in digital_twin_block.get("likely_next_needs", []) if isinstance(digital_twin_block.get("likely_next_needs"), list) else []:
+            cleaned = str(line).strip()
+            if cleaned and cleaned not in guidance_lines:
+                guidance_lines.append(cleaned)
+        for line in reflective_memory_graph.get("guidance_lines", []) if isinstance(reflective_memory_graph.get("guidance_lines"), list) else []:
+            cleaned = str(line).strip()
+            if cleaned and cleaned not in guidance_lines:
+                guidance_lines.append(cleaned)
+
+        stewardship_decision_rows = []
+        stewardship_decision_count = 0
+        stewardship_decision_groups: dict[str, dict[str, Any]] = {}
+        for index, item in enumerate(stewardship_review_history):
+            if not isinstance(item, dict):
+                continue
+            status = str(item.get("status") or "").strip().lower()
+            if status not in {"approved", "retired", "rerouted"}:
+                continue
+            stewardship_decision_count += 1
+            lane_id = str(item.get("lane_id") or "").strip() or f"lane-{index}"
+            lane_title = str(item.get("lane_title") or "Stewardship Lane")
+            group = stewardship_decision_groups.setdefault(
+                lane_id,
+                {
+                    "lane_id": lane_id,
+                    "lane_title": lane_title,
+                    "approved": 0,
+                    "retired": 0,
+                    "rerouted": 0,
+                    "review_surfaces": set(),
+                    "packet_targets": set(),
+                    "latest_timestamp": "",
+                },
+            )
+            group[status] = int(group.get(status) or 0) + 1
+            review_surface = str(item.get("review_surface") or "").strip()
+            if review_surface:
+                cast(set[str], group["review_surfaces"]).add(review_surface)
+            packet_target = str(item.get("packet_target") or "").strip()
+            if packet_target:
+                cast(set[str], group["packet_targets"]).add(packet_target)
+            timestamp = str(item.get("updated_at") or item.get("created_at") or "").strip()
+            if timestamp and timestamp > str(group.get("latest_timestamp") or ""):
+                group["latest_timestamp"] = timestamp
+            if len(stewardship_decision_rows) >= 3:
+                continue
+            review_surface = str(item.get("review_surface") or "")
+            packet_target = str(item.get("packet_target") or "")
+            summary = str(item.get("boundary_reason") or "").strip()
+            if not summary:
+                if status == "approved":
+                    summary = f"{lane_title} was approved into the {packet_target or 'shared'} lane."
+                elif status == "retired":
+                    summary = f"{lane_title} was retired instead of widening into the live flow."
+                else:
+                    summary = f"{lane_title} was rerouted to {review_surface or 'another'} review surface."
+            stewardship_decision_rows.append(
+                {
+                    "id": str(item.get("id") or f"stewardship-decision-{index}"),
+                    "label": lane_title,
+                    "summary": summary,
+                }
+            )
+        governance_learning_rows = []
+        governance_proposal_rows = []
+        governance_learning_groups = sorted(
+            stewardship_decision_groups.values(),
+            key=lambda item: (
+                int(item.get("approved") or 0) + int(item.get("retired") or 0) + int(item.get("rerouted") or 0),
+                str(item.get("latest_timestamp") or ""),
+            ),
+            reverse=True,
+        )
+        for index, group in enumerate(governance_learning_groups[:3]):
+            lane_title = str(group.get("lane_title") or "Stewardship Lane")
+            approved = int(group.get("approved") or 0)
+            retired = int(group.get("retired") or 0)
+            rerouted = int(group.get("rerouted") or 0)
+            total = approved + retired + rerouted
+            review_surfaces = sorted(str(item) for item in cast(set[str], group.get("review_surfaces") or set()) if str(item).strip())
+            packet_targets = sorted(str(item) for item in cast(set[str], group.get("packet_targets") or set()) if str(item).strip())
+            if total <= 0:
+                continue
+            if (rerouted + retired) > approved:
+                title = f"{lane_title} still prefers bounded review"
+                summary = (
+                    f"{lane_title} has been rerouted or retired {rerouted + retired} of {total} reviewed times, "
+                    f"which suggests its rollout posture is still narrower than a live lane."
+                )
+                recommendation = (
+                    f"Keep {lane_title} staged through "
+                    f"{', '.join(surface.title() for surface in review_surfaces) or 'review surfaces'} "
+                    f"until a cleaner approval pattern emerges."
+                )
+                confidence = "high" if total >= 3 else "emerging"
+            elif approved >= 2:
+                title = f"{lane_title} is forming a stable approval pattern"
+                summary = (
+                    f"{lane_title} has been approved {approved} of {total} reviewed times into "
+                    f"{', '.join(packet_targets) or 'shared'} without repeated fallback."
+                )
+                recommendation = (
+                    f"Shape the next governance proposal around promoting {lane_title} toward a lighter review posture "
+                    f"for {', '.join(packet_targets) or 'the current target lane'}."
+                )
+                confidence = "high" if approved >= 3 else "medium"
+            else:
+                title = f"{lane_title} is still teaching the control plane"
+                summary = (
+                    f"{lane_title} shows a mixed review pattern across {total} decisions, so JARVIS should keep "
+                    f"learning from how you route and retire this lane."
+                )
+                recommendation = (
+                    f"Keep {lane_title} under review and watch whether "
+                    f"{', '.join(packet_targets) or 'the target lane'} becomes consistently approvable."
+                )
+                confidence = "emerging"
+            governance_learning_rows.append(
+                {
+                    "id": str(group.get("lane_id") or f"governance-learning-{index}"),
+                    "title": title,
+                    "summary": summary,
+                    "recommendation": recommendation,
+                    "confidence": confidence,
+                }
+            )
+        governance_proposal_rows = _build_governance_proposal_rows(stewardship_review_history)
+        if stewardship_decision_count:
+            decision_line = f"{stewardship_decision_count} stewardship rollout decision" + ("s are" if stewardship_decision_count != 1 else " is") + " now part of the learning record."
+            if decision_line not in guidance_lines:
+                guidance_lines.append(decision_line)
+        for item in governance_learning_rows[:2]:
+            recommendation = str(item.get("recommendation") or "").strip()
+            if recommendation and recommendation not in guidance_lines:
+                guidance_lines.append(recommendation)
+
+        return _ok(
+            {
+                "accounts": {
+                    "total": len(account_items),
+                    "connected": connected_accounts,
+                    "planned": planned_accounts,
+                    "items": account_items,
+                },
+                "family": {
+                    "member_count": len(member_rows),
+                    "online_count": online_members,
+                    "members": member_rows,
+                },
+                "devices": {
+                    "total": len(device_rows),
+                    "mapped_count": int(devices_snapshot.get("mapped_count") or 0),
+                    "shared_count": int(devices_snapshot.get("shared_count") or 0),
+                    "items": device_rows[:6],
+                },
+                "voice": {
+                    "provider": str(voice_settings.get("tts_provider") or "auto"),
+                    "provider_label": str(voice_settings.get("selected_provider_label") or "Auto"),
+                    "voice_label": selected_voice_label,
+                    "local_ready": local_ready,
+                    "cloud_ready": cloud_ready,
+                    "detail": (
+                        f"{selected_voice_label} · "
+                        f"{'local ready' if local_ready else 'local idle'} · "
+                        f"{'cloud ready' if cloud_ready else 'cloud idle'}"
+                    ),
+                },
+                "service": {
+                    "hostname": str(service_status.get("hostname") or "jarvis.local"),
+                    "lan_url": str(service_status.get("lan_url") or ""),
+                    "deployment_mode": str(service_status.get("deployment_mode") or "hybrid"),
+                    "mode_label": str(service_status.get("mode_label") or ""),
+                    "hosted_base_url": str(service_status.get("hosted_base_url") or ""),
+                    "hosted_provider": str(service_status.get("hosted_provider") or "Hetzner"),
+                    "edge_provider": str(service_status.get("edge_provider") or "Cloudflare Tunnel"),
+                    "remote_admin_host": str(service_status.get("remote_admin_host") or ""),
+                    "cloudflare_access_enabled": bool(service_status.get("cloudflare_access_enabled", True)),
+                    "tunnel_enabled": bool(service_status.get("tunnel_enabled", True)),
+                    "public_route_count": len(service_status.get("public_routes") or []),
+                    "compose_service_count": len(service_status.get("compose_services") or []),
+                    "runtime_loaded": bool(service_status.get("runtime", {}).get("loaded")),
+                    "openviking_loaded": bool(service_status.get("openviking", {}).get("loaded")),
+                    "assistant_loaded": bool(service_status.get("assistant_autonomy", {}).get("loaded")),
+                },
+                "integrations": {
+                    "google_ready": bool(google_summary.get("client_secret", {}).get("present")),
+                    "google_connected_count": _connected_count(google_accounts),
+                    "google_client_secret_present": bool(google_summary.get("client_secret", {}).get("present")),
+                    "microsoft_ready": bool(microsoft_summary.get("config", {}).get("client_id_present")),
+                    "microsoft_connected_count": _connected_count(microsoft_accounts),
+                },
+                "costs": {
+                    "window_hours": window_hours,
+                    "month_total_usd": round(float(llm_costs.get("estimated_cost_usd") or 0.0), 4),
+                    "total_calls": int(llm_costs.get("total_calls") or 0),
+                    "paid_calls": int(llm_costs.get("paid_calls") or 0),
+                    "prompt_tokens": int(llm_costs.get("prompt_tokens") or 0),
+                    "completion_tokens": int(llm_costs.get("completion_tokens") or 0),
+                    "models": model_rows,
+                },
+                "governance": {
+                    "zone_count": len([item for item in trust_zones if isinstance(item, dict)]),
+                    "active_zone_count": active_zone_count,
+                    "arena_count": len([item for item in resource_arenas if isinstance(item, dict)]),
+                    "active_arena_count": active_arena_count,
+                    "stage_count": len([item for item in authority_stages if isinstance(item, dict)]),
+                    "pending_queue_count": pending_queue_count,
+                    "promotion_record_count": promotion_record_count,
+                    "zones": governance_zones,
+                    "arenas": governance_arenas,
+                    "stages": governance_stages,
+                    "queue": queue_rows[:5],
+                    "promotion_records": promotion_rows[:5],
+                },
+                "sandbox_operations": {
+                    "queue": {
+                        "active_count": int(sandbox_queue.get("active_count") or 0),
+                        "queued_job_count": int(sandbox_queue.get("queued_job_count") or 0),
+                        "review_ready_count": int(sandbox_queue.get("review_ready_count") or 0),
+                        "failed_run_count": int(sandbox_queue.get("failed_run_count") or 0),
+                        "active_jobs": [
+                            str(item) for item in sandbox_queue.get("active_jobs", [])
+                            if str(item).strip()
+                        ],
+                        "lane_count": int(sandbox_queue.get("lane_count") or 0),
+                    },
+                    "jobs": sandbox_job_rows,
+                    "active_runs": sandbox_active_run_rows,
+                    "recent_runs": sandbox_recent_run_rows,
+                    "lane_summaries": sandbox_lane_rows,
+                },
+                "reflective_memory": {
+                    "subject_display_name": str(reflective_snapshot.get("subject_display_name") or "Chris"),
+                    "profile_fact_count": len(reflective_facts),
+                    "pending_proposal_count": len(reflective_proposals),
+                    "first_light_history_count": len(reflective_first_light),
+                    "insight_count": len(reflective_insights),
+                    "active_insight_count": active_insight_count,
+                    "stewardship_decision_count": stewardship_decision_count,
+                    "governance_learning_count": len(governance_learning_rows),
+                    "preferred_tone": str(reflective_profile.get("preferred_tone") or ""),
+                    "briefing_style": str(reflective_profile.get("briefing_style") or ""),
+                    "preferred_voice": str(reflective_profile.get("preferred_voice") or ""),
+                    "guidance_lines": guidance_lines[:5],
+                    "profile_facts": reflective_profile_fact_rows,
+                    "pending_proposals": reflective_proposal_rows,
+                    "recent_first_light": recent_first_light_rows,
+                    "recent_stewardship_decisions": stewardship_decision_rows,
+                    "governance_learning": governance_learning_rows,
+                    "memory_graph": reflective_memory_graph,
+                },
+                "governed_workflows": {
+                    "pending_approval_count": pending_approval_count,
+                    "rejected_approval_count": rejected_approval_count,
+                    "automatic_action_count": int(action_summary.get("automatic") or 0),
+                    "friction_action_count": int(action_summary.get("friction") or 0),
+                    "doctrine_candidate_count": int(doctrine_summary.get("candidate_count") or len(doctrine_candidates)),
+                    "governance_proposal_count": len(governance_proposal_rows),
+                    "active_rule_count": int(doctrine_summary.get("active_rule_count") or 0),
+                    "staged_stewardship_review_count": staged_stewardship_review_count,
+                    "pending_approvals": pending_approvals,
+                    "recent_actions": recent_actions,
+                    "recent_stewardship_reviews": recent_stewardship_reviews,
+                    "governance_proposals": governance_proposal_rows,
+                    "doctrine_candidates": candidate_rows,
+                },
+            }
+        )
+
+    @app.post("/api/apple/systems/self-improvement/jobs/{job_id}/sandbox-execute")
+    async def apple_execute_sandbox_job(job_id: str, payload: dict = {}):
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        triggered_by = str(payload.get("triggered_by") or "apple-systems").strip() or "apple-systems"
+        try:
+            result = runtime.execute_sandbox_job(actor, job_id, triggered_by=triggered_by)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        job = result.get("job") if isinstance(result.get("job"), dict) else {}
+        active_run = result.get("active_run") if isinstance(result.get("active_run"), dict) else {}
+        queue = result.get("queue") if isinstance(result.get("queue"), dict) else {}
+        return _ok(
+            {
+                "ok": bool(result.get("ok")),
+                "accepted": bool(result.get("accepted")),
+                "job_id": str(job.get("job_id") or job_id),
+                "status": str(job.get("status") or ""),
+                "message": str(result.get("message") or ""),
+                "active_run_id": str(active_run.get("run_id") or ""),
+                "queue_active_count": int(queue.get("active_count") or 0),
+            }
+        )
+
+    @app.post("/api/apple/systems/self-improvement/jobs/{job_id}/sandbox-cancel")
+    async def apple_cancel_sandbox_job(job_id: str, payload: dict = {}):
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        reason = str(payload.get("reason") or "manual stop from Apple Systems").strip() or "manual stop from Apple Systems"
+        try:
+            result = runtime.cancel_sandbox_job(actor, job_id, reason=reason)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        job = result.get("job") if isinstance(result.get("job"), dict) else {}
+        active_run = result.get("active_run") if isinstance(result.get("active_run"), dict) else {}
+        queue = result.get("queue") if isinstance(result.get("queue"), dict) else {}
+        return _ok(
+            {
+                "ok": bool(result.get("ok")),
+                "accepted": bool(result.get("accepted")),
+                "mode": str(result.get("mode") or ""),
+                "job_id": str(job.get("job_id") or job_id),
+                "status": str(job.get("status") or ""),
+                "message": str(result.get("message") or ""),
+                "active_run_id": str(active_run.get("run_id") or ""),
+                "queue_active_count": int(queue.get("active_count") or 0),
+            }
+        )
+
+    @app.post("/api/apple/systems/self-improvement/jobs/{job_id}/sandbox-recover")
+    async def apple_recover_sandbox_job(job_id: str, payload: dict = {}):
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        reason = str(payload.get("reason") or "manual recovery reset from Apple Systems").strip() or "manual recovery reset from Apple Systems"
+        try:
+            result = runtime.recover_sandbox_job(actor, job_id, reason=reason)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        job = result.get("job") if isinstance(result.get("job"), dict) else {}
+        queue = result.get("queue") if isinstance(result.get("queue"), dict) else {}
+        return _ok(
+            {
+                "ok": bool(result.get("ok")),
+                "accepted": bool(result.get("accepted")),
+                "mode": str(result.get("mode") or ""),
+                "job_id": str(job.get("job_id") or job_id),
+                "status": str(job.get("status") or ""),
+                "message": str(result.get("message") or ""),
+                "active_run_id": "",
+                "queue_active_count": int(queue.get("active_count") or 0),
+            }
+        )
+
+    @app.post("/api/apple/systems/trust-zones/{zone_id}/promote")
+    async def apple_promote_trust_zone(zone_id: str, payload: dict = {}):
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        basis = str(payload.get("basis") or "manual promotion from Apple Systems").strip()
+        try:
+            updated = runtime.promote_trust_zone(zone_id, actor=actor, basis=basis)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _ok(
+            {
+                "status": "promoted",
+                "zone_id": str(updated.get("zone_id") or zone_id),
+                "authority_stage": str(updated.get("authority_stage") or ""),
+                "approval_mode": str(updated.get("approval_mode") or ""),
+            }
+        )
+
+    @app.post("/api/apple/systems/trust-zones/{zone_id}/demote")
+    async def apple_demote_trust_zone(zone_id: str, payload: dict = {}):
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        reason = str(payload.get("reason") or "manual demotion from Apple Systems").strip()
+        try:
+            updated = runtime.demote_trust_zone(zone_id, actor=actor, reason=reason)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _ok(
+            {
+                "status": "demoted",
+                "zone_id": str(updated.get("zone_id") or zone_id),
+                "authority_stage": str(updated.get("authority_stage") or ""),
+                "approval_mode": str(updated.get("approval_mode") or ""),
+            }
+        )
+
+    @app.post("/api/apple/systems/resource-arenas/{arena_id}/suspend")
+    async def apple_suspend_resource_arena(arena_id: str, payload: dict = {}):
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        reason = str(payload.get("reason") or "manual suspension from Apple Systems").strip()
+        try:
+            updated = runtime.suspend_resource_arena(arena_id, actor=actor, reason=reason)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _ok(
+            {
+                "status": str(updated.get("status") or "suspended"),
+                "arena_id": str(updated.get("arena_id") or arena_id),
+                "linked_zone_id": str(updated.get("linked_zone_id") or ""),
+            }
+        )
+
+    @app.post("/api/apple/systems/resource-arenas/{arena_id}/resume")
+    async def apple_resume_resource_arena(arena_id: str, payload: dict = {}):
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        reason = str(payload.get("reason") or "manual resume from Apple Systems").strip()
+        try:
+            updated = runtime.resume_resource_arena(arena_id, actor=actor, reason=reason)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _ok(
+            {
+                "status": str(updated.get("status") or "active"),
+                "arena_id": str(updated.get("arena_id") or arena_id),
+                "linked_zone_id": str(updated.get("linked_zone_id") or ""),
+            }
+        )
+
+    def _build_apple_notification_center_overview(
+        *,
+        notifications: list[dict[str, Any]],
+        all_notifications: list[dict[str, Any]],
+        events: list[dict[str, Any]],
+        posture: dict[str, Any],
+    ) -> dict[str, Any]:
+        status_counts = Counter(
+            str(item.get("status") or "unknown")
+            for item in all_notifications
+            if isinstance(item, dict)
+        )
+        category_counts = Counter(
+            str(item.get("category") or "unknown")
+            for item in all_notifications
+            if isinstance(item, dict)
+        )
+        domain_counts = Counter(
+            str(item.get("domain") or "unknown")
+            for item in events
+            if isinstance(item, dict)
+        )
+        severity_counts = Counter(
+            str(item.get("severity") or "unknown")
+            for item in events
+            if isinstance(item, dict)
+        )
+        last_notification_at = (
+            str(all_notifications[0].get("updated_at") or all_notifications[0].get("created_at") or "")
+            if all_notifications
+            else ""
+        )
+        last_event_at = str(events[0].get("ts") or "") if events else ""
+        recommended_delivery = str(posture.get("recommended_delivery") or "badge_only")
+        routing_mode = str(posture.get("mode") or "active_hours")
+        routing_lanes = [
+            {
+                "id": "household_alert_override",
+                "title": "Household alert override",
+                "detail": "Live household alerts can break through quieter delivery modes.",
+                "active": routing_mode == "household_alert",
+            },
+            {
+                "id": "focus_quiet_store",
+                "title": "Focus routes non-urgent items quietly",
+                "detail": "When Focus is active, lower-priority notifications stay quiet instead of interrupting.",
+                "active": bool(posture.get("focus_active")) and recommended_delivery == "quiet_store",
+            },
+            {
+                "id": "quiet_hours_hold_for_brief",
+                "title": "Quiet hours hold lower-priority items for Brief",
+                "detail": "Overnight and quiet-hour delivery should wait for the next command surface unless urgency rises.",
+                "active": bool(posture.get("quiet_hours")) and recommended_delivery == "hold_for_brief",
+            },
+            {
+                "id": "approvals_stay_visible",
+                "title": "Approvals remain visible in quieter modes",
+                "detail": "Needs and approvals stay visible even when JARVIS is suppressing noisier interruptions.",
+                "active": recommended_delivery in {"badge_only", "quiet_store", "hold_for_brief"},
+            },
+        ]
+        return {
+            "notifications": notifications,
+            "summary": {
+                "total": len(all_notifications),
+                "pending": status_counts.get("pending", 0),
+                "seen": status_counts.get("seen", 0),
+                "snoozed": status_counts.get("snoozed", 0),
+                "resolved": status_counts.get("resolved", 0),
+                "dismissed": status_counts.get("dismissed", 0),
+                "categories": dict(category_counts),
+                "last_updated_at": last_notification_at,
+            },
+            "routing": {
+                "mode": routing_mode,
+                "label": str(posture.get("label") or "Active hours"),
+                "reason": str(posture.get("reason") or ""),
+                "recommended_delivery": recommended_delivery,
+                "focus_active": bool(posture.get("focus_active")),
+                "quiet_hours": bool(posture.get("quiet_hours")),
+                "hour_local": int(posture.get("hour_local") or 0),
+                "needs_count": int(posture.get("needs_count") or 0),
+                "alert_count": int(posture.get("alert_count") or 0),
+                "present_members": [
+                    str(member).strip()
+                    for member in (posture.get("present_members") or [])
+                    if str(member).strip()
+                ],
+                "updated_at": str(posture.get("updated_at") or ""),
+                "lanes": routing_lanes,
+            },
+            "event_summary": {
+                "recent_count": len(events),
+                "domains": dict(domain_counts),
+                "severities": dict(severity_counts),
+                "last_event_at": last_event_at,
+            },
+        }
+
     # ------------------------------------------------------------------
     # GET /api/apple/notifications
     # ------------------------------------------------------------------
     @app.get("/api/apple/notifications")
     async def apple_notifications(status: str = "", category: str = "", limit: int = 50):
         data_root = Path("data/apple")
+        watch_status = (await apple_status()).get("data") or {}
+        home_state = (await apple_home_state()).get("data") or {}
+        focus_payload = _safe_read_json(data_root / "focus_state.json", {})
         _reconcile_shared_notifications(
-            watch_status=(await apple_status()).get("data") or {},
-            home_state=(await apple_home_state()).get("data") or {},
+            watch_status=watch_status,
+            home_state=home_state,
             calendar_payload=_safe_read_json(data_root / "calendar_events.json", {}),
             reminders_payload=_safe_read_json(data_root / "reminders.json", {}),
-            focus_payload=_safe_read_json(data_root / "focus_state.json", {}),
+            focus_payload=focus_payload,
             latest_sound=((_safe_read_jsonl_tail(data_root / "sound_alerts.jsonl", limit=1) or [{}])[0]),
             latest_scan=((_safe_read_jsonl_tail(data_root / "vision_scans.jsonl", limit=1) or [{}])[0]),
         )
+        posture = _compute_interruption_posture(
+            watch_status=watch_status if isinstance(watch_status, dict) else {},
+            home_state=home_state if isinstance(home_state, dict) else {},
+            focus_payload=focus_payload if isinstance(focus_payload, dict) else {},
+        )
+        notifications = _notification_center.list(
+            status=status or None,
+            category=category or None,
+            limit=max(1, min(limit, 200)),
+        )
+        all_notifications = _notification_center.list(limit=0)
+        recent_events = _event_log.recent(limit=50)
         return _ok(
-            {
-                "notifications": _notification_center.list(
-                    status=status or None,
-                    category=category or None,
-                    limit=max(1, min(limit, 200)),
-                )
-            }
+            _build_apple_notification_center_overview(
+                notifications=notifications,
+                all_notifications=all_notifications,
+                events=recent_events,
+                posture=posture,
+            )
         )
 
     async def _notification_action(notification_id: str, status: str, reason: str) -> dict:
@@ -3456,6 +7966,87 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         if item is None:
             raise HTTPException(status_code=404, detail="Notification not found")
         return _ok({"notification": item, "status": status})
+
+    async def _governed_notification_mutation(notification_id: str, *, target_status: str, reason: str, action_label: str) -> dict:
+        item = _notification_center.get(notification_id)
+        if item is None:
+            raise HTTPException(status_code=404, detail="Notification not found")
+        request_id = str(uuid.uuid4())
+        boundary = runtime.assess_action_boundary(
+            zone_id="household_attention",
+            arena_id="household.attention.workflow",
+            action_type="notification_workflow",
+            requested_stage="sandbox_live",
+        )
+        boundary_decision = str(boundary.get("decision") or "stage")
+        boundary_reason = str(boundary.get("reason") or "")
+        trust_zone = str(boundary.get("trust_zone") or "household_attention")
+        authority_stage = str(boundary.get("authority_stage") or "stage_alert")
+        approval_mode = str(boundary.get("approval_mode") or "stage_and_alert")
+        arena_status = str(boundary.get("arena_status") or "active")
+
+        if boundary_decision == "deny":
+            return _ok(
+                {
+                    "request_id": request_id,
+                    "status": "blocked_by_boundary",
+                    "notification": item,
+                    "performed_action": action_label,
+                    "boundary_decision": boundary_decision,
+                    "boundary_reason": boundary_reason,
+                    "trust_zone": trust_zone,
+                    "authority_stage": authority_stage,
+                    "arena_status": arena_status,
+                    "approval_mode": approval_mode,
+                }
+            )
+
+        if boundary_decision != "allow":
+            from .models import StagedActionQueueItem
+            runtime.trust_support.enqueue_stage_action(
+                StagedActionQueueItem(
+                    request_id=request_id,
+                    arena_id="household.attention.workflow",
+                    action_type=f"notification_{action_label}_review",
+                    status="awaiting_principal_review",
+                    created_at=_ts(),
+                    principal_id="chris",
+                )
+            )
+            staged_item = dict(item)
+            staged_item["decision_reason"] = boundary_reason
+            return _ok(
+                {
+                    "request_id": request_id,
+                    "status": "staged_for_review",
+                    "notification": staged_item,
+                    "performed_action": action_label,
+                    "boundary_decision": boundary_decision,
+                    "boundary_reason": boundary_reason,
+                    "trust_zone": trust_zone,
+                    "authority_stage": authority_stage,
+                    "arena_status": arena_status,
+                    "approval_mode": approval_mode,
+                }
+            )
+
+        updated = _notification_center.update_status(notification_id, target_status, reason=reason)
+        if updated is None:
+            raise HTTPException(status_code=404, detail="Notification not found")
+        return _ok(
+            {
+                "request_id": request_id,
+                "status": target_status,
+                "notification": updated,
+                "performed_action": action_label,
+                "boundary_decision": boundary_decision,
+                "boundary_reason": boundary_reason,
+                "trust_zone": trust_zone,
+                "authority_stage": authority_stage,
+                "arena_status": arena_status,
+                "approval_mode": approval_mode,
+            }
+        )
 
     @app.post("/api/apple/notifications/{notification_id}/seen")
     async def apple_notification_seen(notification_id: str):
@@ -3467,11 +8058,21 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
 
     @app.post("/api/apple/notifications/{notification_id}/resolve")
     async def apple_notification_resolve(notification_id: str):
-        return await _notification_action(notification_id, "resolved", "Resolved from Apple client.")
+        return await _governed_notification_mutation(
+            notification_id,
+            target_status="resolved",
+            reason="Resolved from Apple client.",
+            action_label="resolve",
+        )
 
     @app.post("/api/apple/notifications/{notification_id}/snooze")
     async def apple_notification_snooze(notification_id: str):
-        return await _notification_action(notification_id, "snoozed", "Snoozed from Apple client.")
+        return await _governed_notification_mutation(
+            notification_id,
+            target_status="snoozed",
+            reason="Snoozed from Apple client.",
+            action_label="snooze",
+        )
 
     @app.post("/api/apple/notifications/{notification_id}/action")
     async def apple_notification_workflow_action(notification_id: str, payload: dict):
@@ -3681,12 +8282,119 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         event = _apple_find_calendar_event(payload if isinstance(payload, dict) else {}, event_id)
         if event is None:
             raise HTTPException(status_code=404, detail="Calendar event not found")
+        request_id = str(uuid.uuid4())
         title = str(event.get("title") or "").strip() or "Upcoming event"
         location = str(event.get("location") or "").strip()
         if not location:
             raise HTTPException(status_code=400, detail="Calendar event has no location")
+        boundary = runtime.assess_action_boundary(
+            zone_id="household_schedule",
+            arena_id="household.schedule.routing",
+            action_type="calendar_route",
+            requested_stage="sandbox_live",
+        )
+        boundary_decision = str(boundary.get("decision") or "stage")
+        boundary_reason = str(boundary.get("reason") or "")
+        trust_zone = str(boundary.get("trust_zone") or "household_schedule")
+        authority_stage = str(boundary.get("authority_stage") or "stage_alert")
+        approval_mode = str(boundary.get("approval_mode") or "stage_and_alert")
+        arena_status = str(boundary.get("arena_status") or "active")
         query = quote(location, safe="")
         maps_url = f"http://maps.apple.com/?daddr={query}&dirflg=d"
+
+        if boundary_decision == "deny":
+            event_payload = _record_shared_event(
+                domain="calendar",
+                kind="blocked",
+                title="Calendar route blocked",
+                detail=f"Route for {title} was blocked by boundary: {boundary_reason}",
+                severity="medium",
+                actor="chris",
+                source="apple.calendar.route",
+                source_id=request_id,
+                navigation_target="systems",
+                actions=["open"],
+                trust_zone=trust_zone,
+                authority_stage=authority_stage,
+                why_now="A schedule routing request hit a trust boundary before a live Maps handoff.",
+                metadata={"event_id": event_id, "location": location, "maps_url": maps_url, "arena_status": arena_status},
+            )
+            _create_notification_from_event(
+                event_payload,
+                category="calendar",
+                delivery_mode="badge_only",
+                available_actions=["open", "resolve"],
+                source_summary="Blocked route handoff",
+            )
+            return _ok(
+                {
+                    "request_id": request_id,
+                    "status": "blocked_by_boundary",
+                    "event_id": event_id,
+                    "title": title,
+                    "location": location,
+                    "maps_url": "",
+                    "boundary_decision": boundary_decision,
+                    "boundary_reason": boundary_reason,
+                    "trust_zone": trust_zone,
+                    "authority_stage": authority_stage,
+                    "arena_status": arena_status,
+                    "approval_mode": approval_mode,
+                }
+            )
+
+        if boundary_decision != "allow":
+            from .models import StagedActionQueueItem
+            runtime.trust_support.enqueue_stage_action(
+                StagedActionQueueItem(
+                    request_id=request_id,
+                    arena_id="household.schedule.routing",
+                    action_type="calendar_route_review",
+                    status="awaiting_principal_review",
+                    created_at=_ts(),
+                    principal_id="chris",
+                )
+            )
+            event_payload = _record_shared_event(
+                domain="calendar",
+                kind="stage_ready",
+                title="Calendar route staged",
+                detail=f"Route for {title} was staged for review before a live Maps handoff.",
+                severity="low",
+                actor="chris",
+                source="apple.calendar.route",
+                source_id=request_id,
+                navigation_target="systems",
+                actions=["open", "stage"],
+                trust_zone=trust_zone,
+                authority_stage=authority_stage,
+                why_now="A schedule routing request requires review before leaving the sandbox lane.",
+                metadata={"event_id": event_id, "location": location, "maps_url": maps_url, "approval_mode": approval_mode},
+            )
+            _create_notification_from_event(
+                event_payload,
+                category="calendar",
+                delivery_mode="badge_only",
+                available_actions=["open", "dismiss"],
+                source_summary="Staged route handoff",
+            )
+            return _ok(
+                {
+                    "request_id": request_id,
+                    "status": "staged_for_review",
+                    "event_id": event_id,
+                    "title": title,
+                    "location": location,
+                    "maps_url": maps_url,
+                    "boundary_decision": boundary_decision,
+                    "boundary_reason": boundary_reason,
+                    "trust_zone": trust_zone,
+                    "authority_stage": authority_stage,
+                    "arena_status": arena_status,
+                    "approval_mode": approval_mode,
+                }
+            )
+
         _record_shared_event(
             domain="calendar",
             kind="info",
@@ -3694,24 +8402,30 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             detail=f"Route prepared for {title}",
             severity="low",
             source="apple.calendar",
-            source_id=event_id,
+            source_id=request_id,
             navigation_target="navigate",
             actions=["open"],
-            trust_zone="household_schedule",
-            authority_stage="live",
-            why_now="The household asked JARVIS to route to a calendar event location.",
-            metadata={"event_id": event_id, "location": location, "maps_url": maps_url},
+            trust_zone=trust_zone,
+            authority_stage=authority_stage,
+            why_now="The household asked JARVIS to route to a calendar event location and the trust lane allowed a live handoff.",
+            metadata={"event_id": event_id, "location": location, "maps_url": maps_url, "boundary_decision": boundary_decision},
         )
         return _ok(
             {
+                "request_id": request_id,
                 "status": "ready",
                 "event_id": event_id,
                 "title": title,
                 "location": location,
                 "maps_url": maps_url,
+                "boundary_decision": boundary_decision,
+                "boundary_reason": boundary_reason,
+                "trust_zone": trust_zone,
+                "authority_stage": authority_stage,
+                "arena_status": arena_status,
+                "approval_mode": approval_mode,
             }
         )
-
 
     # ── EventKit: Reminders ───────────────────────────────────────────────────
 
@@ -3754,48 +8468,21 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
 
     @app.post("/api/apple/reminders/{reminder_id}/complete")
     async def apple_reminder_complete(reminder_id: str):
-        return _ok(_apple_complete_reminder(reminder_id))
+        return _ok(_governed_reminder_mutation(reminder_id, action_label="complete"))
 
     @app.post("/api/apple/reminders/{reminder_id}/snooze")
     async def apple_reminder_snooze(reminder_id: str, payload: dict | None = None):
         minutes = _coerce_int((payload or {}).get("minutes"), 60)
         if minutes <= 0:
             minutes = 60
-        return _ok(_apple_snooze_reminder(reminder_id, minutes=minutes))
+        return _ok(_governed_reminder_mutation(reminder_id, action_label="snooze", minutes=minutes))
 
     # ── Focus Filter ─────────────────────────────────────────────────────────
 
     @app.post("/api/apple/focus")
     async def apple_focus(payload: dict):
         """Receives iOS Focus Filter state so JARVIS can adjust notification behavior."""
-        out_path = Path("data/apple/focus_state.json")
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        record = {**payload, "updated_at": _ts()}
-        out_path.write_text(json.dumps(record, indent=2))
-
-        try:
-            from .service import broadcast_event
-            broadcast_event("apple.focus", record)
-        except Exception:
-            pass
-
-        event = _record_shared_event(
-            domain="system",
-            kind="info",
-            title="Focus state updated",
-            detail=f"Focus is {'active' if bool(payload.get('focus_active')) else 'inactive'}.",
-            severity="low",
-            actor=str(payload.get("actor_id") or "iphone"),
-            source="apple.focus",
-            source_id=str(payload.get("source") or "focus"),
-            navigation_target="systems",
-            actions=["open"],
-            trust_zone="household_attention",
-            authority_stage="live",
-            why_now="Focus posture affects interruption behavior.",
-            metadata=record,
-        )
-        return _ok({"stored": True, "focus_active": bool(payload.get("focus_active"))})
+        return _ok(_governed_focus_mutation(payload))
 
     # ── Sound Analysis ───────────────────────────────────────────────────────
 
@@ -3816,6 +8503,109 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         )
         if target is None:
             raise HTTPException(status_code=404, detail="Sound alert not found")
+        request_id = str(uuid.uuid4())
+        boundary = runtime.assess_action_boundary(
+            zone_id="household_safety",
+            arena_id="household.safety.signal-resolution",
+            action_type="signal_resolution",
+            requested_stage="sandbox_live",
+        )
+        boundary_decision = str(boundary.get("decision") or "stage")
+        boundary_reason = str(boundary.get("reason") or "")
+        trust_zone = str(boundary.get("trust_zone") or "household_safety")
+        authority_stage = str(boundary.get("authority_stage") or "stage_alert")
+        approval_mode = str(boundary.get("approval_mode") or "stage_and_alert")
+        arena_status = str(boundary.get("arena_status") or "active")
+
+        if boundary_decision == "deny":
+            event = _record_shared_event(
+                domain="sound",
+                kind="blocked",
+                title=str(target.get("classification") or target.get("label") or "Sound alert blocked"),
+                detail=f"Sound alert resolution blocked by boundary: {boundary_reason}",
+                severity="medium",
+                actor="jarvis",
+                source="apple.sound_alert.resolve",
+                source_id=request_id,
+                navigation_target="systems",
+                actions=["open"],
+                trust_zone=trust_zone,
+                authority_stage=authority_stage,
+                why_now="A household sound alert resolution hit a trust boundary before it could execute live.",
+                metadata={"alert_id": alert_id, "arena_status": arena_status},
+            )
+            _create_notification_from_event(
+                event,
+                category="household",
+                delivery_mode="badge_only",
+                available_actions=["open", "resolve"],
+                source_summary="Blocked sound resolution",
+            )
+            return _ok(
+                {
+                    "request_id": request_id,
+                    "status": "blocked_by_boundary",
+                    "id": str(alert_id),
+                    "resolved_at": "",
+                    "boundary_decision": boundary_decision,
+                    "boundary_reason": boundary_reason,
+                    "trust_zone": trust_zone,
+                    "authority_stage": authority_stage,
+                    "arena_status": arena_status,
+                    "approval_mode": approval_mode,
+                }
+            )
+
+        if boundary_decision != "allow":
+            from .models import StagedActionQueueItem
+            runtime.trust_support.enqueue_stage_action(
+                StagedActionQueueItem(
+                    request_id=request_id,
+                    arena_id="household.safety.signal-resolution",
+                    action_type="sound_resolution_review",
+                    status="awaiting_principal_review",
+                    created_at=_ts(),
+                    principal_id="chris",
+                )
+            )
+            event = _record_shared_event(
+                domain="sound",
+                kind="stage_ready",
+                title=str(target.get("classification") or target.get("label") or "Sound alert staged"),
+                detail="Sound alert resolution staged for review before marking it resolved.",
+                severity="low",
+                actor="jarvis",
+                source="apple.sound_alert.resolve",
+                source_id=request_id,
+                navigation_target="systems",
+                actions=["open", "stage"],
+                trust_zone=trust_zone,
+                authority_stage=authority_stage,
+                why_now="A household sound alert resolution requires review before leaving the sandbox lane.",
+                metadata={"alert_id": alert_id, "approval_mode": approval_mode},
+            )
+            _create_notification_from_event(
+                event,
+                category="household",
+                delivery_mode="badge_only",
+                available_actions=["open", "dismiss"],
+                source_summary="Staged sound resolution",
+            )
+            return _ok(
+                {
+                    "request_id": request_id,
+                    "status": "staged_for_review",
+                    "id": str(alert_id),
+                    "resolved_at": "",
+                    "boundary_decision": boundary_decision,
+                    "boundary_reason": boundary_reason,
+                    "trust_zone": trust_zone,
+                    "authority_stage": authority_stage,
+                    "arena_status": arena_status,
+                    "approval_mode": approval_mode,
+                }
+            )
+
         resolved_at = _mark_signal_resolved("sound", alert_id)
         _record_shared_event(
             domain="sound",
@@ -3825,15 +8615,28 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             severity="low",
             actor="jarvis",
             source="apple.sound_alert.resolve",
-            source_id=str(alert_id),
+            source_id=request_id,
             navigation_target="systems",
             actions=["open"],
-            trust_zone="household_safety",
-            authority_stage="live",
+            trust_zone=trust_zone,
+            authority_stage=authority_stage,
             why_now="A household sound alert was resolved from the Apple client.",
-            metadata={"resolved_at": resolved_at},
+            metadata={"resolved_at": resolved_at, "boundary_decision": boundary_decision},
         )
-        return _ok({"status": "resolved", "id": str(alert_id), "resolved_at": resolved_at})
+        return _ok(
+            {
+                "request_id": request_id,
+                "status": "resolved",
+                "id": str(alert_id),
+                "resolved_at": resolved_at,
+                "boundary_decision": boundary_decision,
+                "boundary_reason": boundary_reason,
+                "trust_zone": trust_zone,
+                "authority_stage": authority_stage,
+                "arena_status": arena_status,
+                "approval_mode": approval_mode,
+            }
+        )
 
     @app.post("/api/apple/sound-alert")
     async def apple_sound_alert(payload: dict):
@@ -3895,6 +8698,109 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         )
         if target is None:
             raise HTTPException(status_code=404, detail="Vision scan not found")
+        request_id = str(uuid.uuid4())
+        boundary = runtime.assess_action_boundary(
+            zone_id="household_perception",
+            arena_id="household.perception.signal-resolution",
+            action_type="signal_resolution",
+            requested_stage="sandbox_live",
+        )
+        boundary_decision = str(boundary.get("decision") or "stage")
+        boundary_reason = str(boundary.get("reason") or "")
+        trust_zone = str(boundary.get("trust_zone") or "household_perception")
+        authority_stage = str(boundary.get("authority_stage") or "sandbox_live")
+        approval_mode = str(boundary.get("approval_mode") or "stage_and_alert")
+        arena_status = str(boundary.get("arena_status") or "active")
+
+        if boundary_decision == "deny":
+            event = _record_shared_event(
+                domain="vision",
+                kind="blocked",
+                title=str(target.get("context") or "Vision scan blocked"),
+                detail=f"Vision scan resolution blocked by boundary: {boundary_reason}",
+                severity="medium",
+                actor="jarvis",
+                source="apple.vision_scan.resolve",
+                source_id=request_id,
+                navigation_target="systems",
+                actions=["open"],
+                trust_zone=trust_zone,
+                authority_stage=authority_stage,
+                why_now="A household vision resolution hit a trust boundary before it could execute live.",
+                metadata={"scan_id": scan_id, "arena_status": arena_status},
+            )
+            _create_notification_from_event(
+                event,
+                category="household",
+                delivery_mode="badge_only",
+                available_actions=["open", "resolve"],
+                source_summary="Blocked vision resolution",
+            )
+            return _ok(
+                {
+                    "request_id": request_id,
+                    "status": "blocked_by_boundary",
+                    "id": str(scan_id),
+                    "resolved_at": "",
+                    "boundary_decision": boundary_decision,
+                    "boundary_reason": boundary_reason,
+                    "trust_zone": trust_zone,
+                    "authority_stage": authority_stage,
+                    "arena_status": arena_status,
+                    "approval_mode": approval_mode,
+                }
+            )
+
+        if boundary_decision != "allow":
+            from .models import StagedActionQueueItem
+            runtime.trust_support.enqueue_stage_action(
+                StagedActionQueueItem(
+                    request_id=request_id,
+                    arena_id="household.perception.signal-resolution",
+                    action_type="vision_resolution_review",
+                    status="awaiting_principal_review",
+                    created_at=_ts(),
+                    principal_id="chris",
+                )
+            )
+            event = _record_shared_event(
+                domain="vision",
+                kind="stage_ready",
+                title=str(target.get("context") or "Vision scan staged"),
+                detail="Vision scan resolution staged for review before marking it resolved.",
+                severity="low",
+                actor="jarvis",
+                source="apple.vision_scan.resolve",
+                source_id=request_id,
+                navigation_target="systems",
+                actions=["open", "stage"],
+                trust_zone=trust_zone,
+                authority_stage=authority_stage,
+                why_now="A household vision resolution requires review before leaving the sandbox lane.",
+                metadata={"scan_id": scan_id, "approval_mode": approval_mode},
+            )
+            _create_notification_from_event(
+                event,
+                category="household",
+                delivery_mode="badge_only",
+                available_actions=["open", "dismiss"],
+                source_summary="Staged vision resolution",
+            )
+            return _ok(
+                {
+                    "request_id": request_id,
+                    "status": "staged_for_review",
+                    "id": str(scan_id),
+                    "resolved_at": "",
+                    "boundary_decision": boundary_decision,
+                    "boundary_reason": boundary_reason,
+                    "trust_zone": trust_zone,
+                    "authority_stage": authority_stage,
+                    "arena_status": arena_status,
+                    "approval_mode": approval_mode,
+                }
+            )
+
         resolved_at = _mark_signal_resolved("vision", scan_id)
         _record_shared_event(
             domain="vision",
@@ -3904,15 +8810,28 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             severity="low",
             actor="jarvis",
             source="apple.vision_scan.resolve",
-            source_id=str(scan_id),
+            source_id=request_id,
             navigation_target="systems",
             actions=["open"],
-            trust_zone="household_perception",
-            authority_stage="live",
+            trust_zone=trust_zone,
+            authority_stage=authority_stage,
             why_now="A household vision scan was resolved from the Apple client.",
-            metadata={"resolved_at": resolved_at},
+            metadata={"resolved_at": resolved_at, "boundary_decision": boundary_decision},
         )
-        return _ok({"status": "resolved", "id": str(scan_id), "resolved_at": resolved_at})
+        return _ok(
+            {
+                "request_id": request_id,
+                "status": "resolved",
+                "id": str(scan_id),
+                "resolved_at": resolved_at,
+                "boundary_decision": boundary_decision,
+                "boundary_reason": boundary_reason,
+                "trust_zone": trust_zone,
+                "authority_stage": authority_stage,
+                "arena_status": arena_status,
+                "approval_mode": approval_mode,
+            }
+        )
 
     @app.post("/api/apple/vision/scan")
     async def apple_vision_scan(payload: dict):
@@ -3955,11 +8874,22 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
 
     @app.get("/api/apple/now-playing/state")
     async def apple_now_playing_state():
+        data_root = Path("data/apple")
         payload = _safe_read_json(Path("data/apple/now_playing.json"), {})
+        focus_payload = _safe_read_json(data_root / "focus_state.json", {})
+        watch_status = (await apple_status()).get("data") or {}
+        home_state = (await apple_home_state()).get("data") or {}
+        posture = _compute_interruption_posture(
+            watch_status=watch_status if isinstance(watch_status, dict) else {},
+            home_state=home_state if isinstance(home_state, dict) else {},
+            focus_payload=focus_payload if isinstance(focus_payload, dict) else {},
+        )
         events = _event_log.recent(limit=20, domain="media")
         return _ok(_build_apple_now_playing_state(
             payload if isinstance(payload, dict) else {},
             events,
+            posture=posture,
+            focus_payload=focus_payload if isinstance(focus_payload, dict) else {},
         ))
 
     @app.post("/api/apple/now-playing")
@@ -4039,8 +8969,9 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
     async def apple_catalyst():
         """Lightweight Catalyst workspace overview for the iPhone Catalyst tab."""
         try:
+            overview = runtime.catalyst_overview()
+
             data_root = Path("data/catalyst")
-            # Work lifecycle — active / in-review items
             wl_path = data_root / "work_lifecycle.json"
             wl_raw = json.loads(wl_path.read_text()) if wl_path.exists() else {}
             wl_items = list(wl_raw.values()) if isinstance(wl_raw, dict) else wl_raw
@@ -4049,6 +8980,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                     "work_id":  str(i.get("work_id") or ""),
                     "title":    _truncate(str(i.get("title") or ""), 60),
                     "domain":   str(i.get("domain") or ""),
+                    "lane":     str(i.get("lane") or ""),
                     "stage":    str(i.get("current_stage") or i.get("status") or ""),
                     "updated":  str(i.get("updated_at") or i.get("created_at") or ""),
                 }
@@ -4056,7 +8988,6 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 if str(i.get("status") or "").lower() not in ("done", "archived", "cancelled")
             ][:10]
 
-            # Recent signals
             sig_path = data_root / "signals.json"
             sig_raw = json.loads(sig_path.read_text()) if sig_path.exists() else {}
             sig_items = list(sig_raw.values()) if isinstance(sig_raw, dict) else sig_raw
@@ -4071,22 +9002,125 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 for s in (sig_items[-8:] if sig_items else [])
             ]
 
-            # Pipeline portfolio summary
-            pipeline_path = data_root / "pipeline_state.json"
-            portfolio = {}
-            if pipeline_path.exists():
-                ps = json.loads(pipeline_path.read_text())
-                portfolio = ps.get("portfolio") or {}
+            portfolio = dict(overview.get("live_workspace", {}).get("portfolio") or {})
+            if not portfolio:
+                pipeline_path = data_root / "pipeline_state.json"
+                if pipeline_path.exists():
+                    ps = json.loads(pipeline_path.read_text())
+                    portfolio = ps.get("portfolio") or {}
+
+            lanes = [
+                {
+                    "id": str(item.get("id") or ""),
+                    "label": str(item.get("label") or item.get("title") or ""),
+                    "description": str(item.get("description") or ""),
+                    "status": str(item.get("status") or ""),
+                }
+                for item in (overview.get("portfolio_lanes") or [])
+                if isinstance(item, dict)
+            ]
+            connectors = [
+                {
+                    "id": str(item.get("id") or ""),
+                    "label": str(item.get("label") or ""),
+                    "status": str(item.get("status") or ""),
+                    "notes": str(item.get("notes") or ""),
+                }
+                for item in (overview.get("connectors") or [])
+                if isinstance(item, dict)
+            ]
+            counts = overview.get("counts") if isinstance(overview.get("counts"), dict) else {}
+            workflow_counts = {
+                key: int(counts.get(key) or 0)
+                for key in (
+                    "signals",
+                    "email_triage",
+                    "meeting_extractions",
+                    "briefings",
+                    "drafts",
+                    "project_briefs",
+                    "implementation_plans",
+                    "hypotheses",
+                )
+            }
+            live_workspace = overview.get("live_workspace") if isinstance(overview.get("live_workspace"), dict) else {}
+            catalyst_live = {
+                "available": bool(live_workspace.get("available")),
+                "live": bool(live_workspace.get("live")),
+                "projects_count": len((live_workspace.get("projects") or {}).get("items") or []),
+                "tasks_count": len((live_workspace.get("tasks") or {}).get("items") or []),
+                "calendar_count": len((live_workspace.get("calendar") or {}).get("items") or []),
+                "email_count": len((live_workspace.get("email") or {}).get("items") or []),
+                "retrieved_at": str(live_workspace.get("retrievedAt") or ""),
+            }
+            recent_runs = overview.get("latest_runs") if isinstance(overview.get("latest_runs"), dict) else {}
+            latest_runs = []
+            for key, label in (
+                ("briefing", "Briefing"),
+                ("project_brief", "Project Brief"),
+                ("hypothesis", "Hypothesis"),
+                ("meeting_extraction", "Meeting Extraction"),
+                ("email_triage", "Email Triage"),
+            ):
+                item = recent_runs.get(key)
+                if not isinstance(item, dict) or not item:
+                    continue
+                latest_runs.append(
+                    {
+                        "id": str(item.get("run_id") or item.get("id") or key),
+                        "label": label,
+                        "title": _truncate(str(item.get("title") or item.get("opportunity") or item.get("recommendation") or item.get("summary") or label), 60),
+                        "timestamp": str(item.get("timestamp") or item.get("created_at") or item.get("updated_at") or ""),
+                    }
+                )
 
             return _ok({
                 "active_work": active_work,
                 "signals":     signals,
                 "portfolio":   portfolio,
+                "lanes":       lanes,
+                "connectors":  connectors,
+                "workflow_counts": workflow_counts,
+                "live_workspace": catalyst_live,
+                "latest_runs": latest_runs,
+                "continuity": _build_catalyst_continuity(
+                    "chris",
+                    active_work=active_work,
+                    workflow_counts=workflow_counts,
+                ),
                 "updated_at":  _ts(),
             })
         except Exception as exc:
             logger.exception("apple_catalyst failed: %s", exc)
-            return _ok({"active_work": [], "signals": [], "portfolio": {}, "updated_at": _ts()})
+            return _ok({
+                "active_work": [],
+                "signals": [],
+                "portfolio": {},
+                "lanes": [],
+                "connectors": [],
+                "workflow_counts": {},
+                "live_workspace": {
+                    "available": False,
+                    "live": False,
+                    "projects_count": 0,
+                    "tasks_count": 0,
+                    "calendar_count": 0,
+                    "email_count": 0,
+                    "retrieved_at": "",
+                },
+                "latest_runs": [],
+                "continuity": {
+                    "subject_display_name": "Chris",
+                    "briefing_style": "",
+                    "active_domains": [],
+                    "guidance_lines": [],
+                    "profile_fact_count": 0,
+                    "hottest_workflow": "",
+                    "recent_profile_facts": [],
+                    "recent_first_light": [],
+                },
+                "updated_at": _ts(),
+            })
 
     # ── Chronicle overview ────────────────────────────────────────────────────
 
@@ -4114,16 +9148,34 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
 
                 bridge = get_chronicle_bridge()
                 if bridge is not None:
+                    bridge_entries = await asyncio.to_thread(
+                        lambda: [entry.to_dict() for entry in bridge.get_recent_entries(limit=12)]
+                    )
+                    merged_entries: list[dict[str, Any]] = []
+                    seen_entry_ids: set[str] = set()
+                    for source_entry in list(bridge_entries) + list(raw_entries):
+                        if not isinstance(source_entry, dict):
+                            continue
+                        entry_id = _chronicle_entry_id(source_entry)
+                        if entry_id in seen_entry_ids:
+                            continue
+                        seen_entry_ids.add(entry_id)
+                        merged_entries.append(source_entry)
+                    entries = [_chronicle_bridge_entry_to_apple(entry) for entry in merged_entries[:12] if _chronicle_actor_matches(entry, actor)]
+
                     bridge_context = await asyncio.to_thread(bridge.get_context)
                     if isinstance(bridge_context, dict) and bridge_context.get("ok"):
+                        enriched_prayers = _enrich_chronicle_prayers(bridge_context.get("active_prayers") or [])
                         context = {
                             "study": bridge_context.get("study"),
-                            "active_prayers": bridge_context.get("active_prayers") or [],
+                            "active_prayers": enriched_prayers,
                             "todays_rhythm": bridge_context.get("todays_rhythm"),
                             "top_themes": bridge_context.get("top_themes") or [],
                             "total_entries": int(bridge_context.get("total_entries") or len(entries)),
-                            "active_prayer_count": int(bridge_context.get("active_prayer_count") or 0),
-                            "answered_prayer_count": int(bridge_context.get("answered_prayer_count") or 0),
+                            "active_prayer_count": sum(1 for prayer in enriched_prayers if not prayer.get("answered")),
+                            "answered_prayer_count": int(bridge_context.get("answered_prayer_count") or 0) + sum(
+                                1 for prayer in enriched_prayers if prayer.get("answered")
+                            ),
                         }
                     bridge_patterns = await asyncio.to_thread(bridge.get_patterns)
                     if isinstance(bridge_patterns, dict) and bridge_patterns.get("ok"):
@@ -4146,6 +9198,8 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 "entries": entries,
                 "context": context,
                 "patterns": patterns,
+                "continuity": _chronicle_continuity_packet(actor, raw_entries, context if isinstance(context, dict) else {}),
+                "study_workspace": _chronicle_study_workspace(context if isinstance(context, dict) else {}),
                 "updated_at": _ts(),
             })
         except Exception as exc:
@@ -4169,6 +9223,12 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                     "prayer_arc": {"total_active": 0, "answered_total": 0, "answered_recent": 0},
                     "writing_streak_days": 0,
                 },
+                "continuity": {
+                    "relevant_facts": [],
+                    "similar_entries": [],
+                    "recall_prompt": "",
+                },
+                "study_workspace": None,
                 "updated_at": _ts(),
             })
 
@@ -4200,6 +9260,115 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         except Exception as exc:
             return _ok({"captured": False, "reason": str(exc)})
 
+    @app.post("/api/apple/chronicle/prayers/{prayer_id}/pray")
+    async def apple_chronicle_prayer_prayed(prayer_id: str, payload: dict):
+        actor = str(payload.get("actor_id") or "chris").strip() or "chris"
+        note = str(payload.get("note") or "").strip()
+        today = datetime.now(timezone.utc).date().isoformat()
+
+        activity = _load_chronicle_prayer_activity()
+        state = activity.get(prayer_id, {"times_prayed": 0, "last_prayed_at": ""})
+        state["times_prayed"] = int(state.get("times_prayed") or 0) + 1
+        state["last_prayed_at"] = today
+        activity[prayer_id] = state
+        _persist_chronicle_prayer_activity(activity)
+
+        if note:
+            entry = {
+                "entry_id": str(uuid.uuid4()),
+                "entry_type": "prayer",
+                "title": "Prayer note",
+                "body": note,
+                "note": note,
+                "actor": actor,
+                "timestamp": _ts(),
+                "created_at": _ts(),
+                "source": "apple_chronicle_prayer",
+            }
+            entries_path = Path("data/chronicle/entries.jsonl")
+            entries_path.parent.mkdir(parents=True, exist_ok=True)
+            with entries_path.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(entry) + "\n")
+
+        return _ok(
+            {
+                "status": "prayed",
+                "prayer_id": prayer_id,
+                "times_prayed": int(state.get("times_prayed") or 0),
+                "last_prayed_at": str(state.get("last_prayed_at") or ""),
+            }
+        )
+
+    @app.post("/api/apple/chronicle/prayers/{prayer_id}/answer")
+    async def apple_chronicle_prayer_answered(prayer_id: str, payload: dict):
+        actor = str(payload.get("actor_id") or "chris").strip() or "chris"
+        note = str(payload.get("note") or "").strip()
+        answered_at = _ts()
+        _append_jsonl(
+            _CHRONICLE_ANSWERED_PRAYERS_PATH,
+            {
+                "id": prayer_id,
+                "actor_id": actor,
+                "answerSummary": note or "Marked answered from JarvisPhone.",
+                "answered_at": answered_at,
+                "received_at": answered_at,
+                "surfaced": False,
+            },
+        )
+        if note:
+            entry = {
+                "entry_id": str(uuid.uuid4()),
+                "entry_type": "milestone",
+                "title": "Answered prayer",
+                "body": note,
+                "note": note,
+                "actor": actor,
+                "timestamp": answered_at,
+                "created_at": answered_at,
+                "source": "apple_chronicle_answered_prayer",
+            }
+            entries_path = Path("data/chronicle/entries.jsonl")
+            entries_path.parent.mkdir(parents=True, exist_ok=True)
+            with entries_path.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(entry) + "\n")
+        return _ok(
+            {
+                "status": "answered",
+                "prayer_id": prayer_id,
+                "answered_at": answered_at,
+            }
+        )
+
+    @app.post("/api/apple/chronicle/study/save")
+    async def apple_chronicle_study_save(payload: dict):
+        actor = str(payload.get("actor_id") or "chris").strip() or "chris"
+        title = str(payload.get("title") or "").strip()
+        passage = str(payload.get("passage") or "").strip()
+        notes = str(payload.get("notes") or "").strip()
+        if not notes:
+            return _ok({"captured": False, "entry_id": ""})
+
+        entry_id = str(uuid.uuid4())
+        entry = {
+            "entry_id": entry_id,
+            "entry_type": "study",
+            "title": title or (f"Bible Study — {passage}" if passage else "Bible Study"),
+            "body": notes,
+            "note": notes,
+            "actor": actor,
+            "timestamp": _ts(),
+            "created_at": _ts(),
+            "source": "apple_chronicle_study",
+        }
+        if passage:
+            entry["passage"] = passage
+            entry["scripture_ref"] = passage
+        entries_path = Path("data/chronicle/entries.jsonl")
+        entries_path.parent.mkdir(parents=True, exist_ok=True)
+        with entries_path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(entry) + "\n")
+        return _ok({"captured": True, "entry_id": entry_id})
+
     # ── Faith daily word ──────────────────────────────────────────────────────
 
     @app.get("/api/apple/faith")
@@ -4219,21 +9388,75 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             except Exception:
                 pass
 
+            agents: list[dict] = []
+            try:
+                from .faith_agents import get_agents
+                agents = await asyncio.to_thread(get_agents)
+            except Exception:
+                pass
+
+            passage_prompt = str(fw.get("passage") or "today's passage")
+            theme_prompt = str(morning_context.get("theme") or "the next faithful step")
+            focus_prompt = str(morning_context.get("focus") or "what God is forming today")
+            formation_prompts = [
+                f"Ask about {passage_prompt} with the faith council.",
+                f"Pray into {theme_prompt}.",
+                f"Seek counsel on {focus_prompt}.",
+            ]
+
+            daily_word = {
+                "agent":      str(fw.get("agent_name") or "JARVIS"),
+                "agent_title": str(fw.get("agent_title") or ""),
+                "word":       str(fw.get("word") or ""),
+                "passage":    str(fw.get("passage") or ""),
+                "domain":     str(fw.get("domain") or ""),
+                "generated_at": str(fw.get("generated_at") or ""),
+            }
+
             return _ok({
-                "daily_word": {
-                    "agent":      str(fw.get("agent_name") or "JARVIS"),
-                    "agent_title": str(fw.get("agent_title") or ""),
-                    "word":       str(fw.get("word") or ""),
-                    "passage":    str(fw.get("passage") or ""),
-                    "domain":     str(fw.get("domain") or ""),
-                    "generated_at": str(fw.get("generated_at") or ""),
-                },
+                "daily_word": daily_word,
                 "morning_context": morning_context,
+                "agents": agents,
+                "formation_prompts": formation_prompts,
+                "continuity": _build_faith_continuity(
+                    actor,
+                    morning_context=morning_context if isinstance(morning_context, dict) else {},
+                    formation_prompts=formation_prompts,
+                    agents=agents,
+                    daily_word=daily_word,
+                ),
                 "updated_at": _ts(),
             })
         except Exception as exc:
             logger.exception("apple_faith failed: %s", exc)
-            return _ok({"daily_word": {"agent": "JARVIS", "word": "", "passage": "", "domain": "", "agent_title": "", "generated_at": ""}, "morning_context": {}, "updated_at": _ts()})
+            return _ok({"daily_word": {"agent": "JARVIS", "word": "", "passage": "", "domain": "", "agent_title": "", "generated_at": ""}, "morning_context": {}, "agents": [], "formation_prompts": [], "continuity": {"subject_display_name": "Chris", "theme": "", "focus": "", "passage": "", "council_domains": [], "guidance_lines": [], "profile_fact_count": 0, "recent_profile_facts": [], "recent_first_light": []}, "updated_at": _ts()})
+
+    @app.post("/api/apple/faith/chat")
+    async def apple_faith_chat(payload: dict):
+        """Agent chat for the iPhone Faith tab."""
+        try:
+            from .faith_agents import chat as faith_chat, get_agent
+
+            agent_id = str(payload.get("agent_id") or "").strip().lower()
+            messages = payload.get("messages") or []
+            passage = str(payload.get("passage") or "").strip()
+            if not agent_id:
+                raise HTTPException(status_code=400, detail="agent_id is required")
+            if not isinstance(messages, list) or not messages:
+                raise HTTPException(status_code=400, detail="messages are required")
+
+            reply = await faith_chat(agent_id=agent_id, messages=messages, runtime=runtime, passage=passage)
+            agent = get_agent(agent_id) or {}
+            return _ok({
+                "reply": str(reply or ""),
+                "agent_id": agent_id,
+                "agent_name": str(agent.get("name") or agent_id.title()),
+            })
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.exception("apple_faith_chat failed: %s", exc)
+            raise HTTPException(status_code=500, detail="Faith chat unavailable") from exc
 
     # ── Publishing dashboard ──────────────────────────────────────────────────
 
@@ -4241,7 +9464,11 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
     async def apple_publishing():
         """Publishing overview for the iPhone Publish tab."""
         try:
+            from .publishing_suite import PublishingStore, RobbieRobertsonAgent
+
             pub_root = Path.home() / ".jarvis" / "publishing"
+            publishing_store = PublishingStore(root=pub_root)
+            publishing_agent = RobbieRobertsonAgent(publishing_store)
 
             # Projects
             proj_path = pub_root / "projects.json"
@@ -4255,20 +9482,36 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 key=lambda project: str(project.get("updated_at") or project.get("created_at") or ""),
                 reverse=True,
             )
-            projects  = [
-                {
-                    "project_id": str(p.get("project_id") or ""),
-                    "title":      str(p.get("title") or ""),
-                    "type":       str(p.get("project_type") or ""),
-                    "status":     str(p.get("status") or ""),
-                    "platform":   str(p.get("platform") or ""),
-                    "url":        p.get("url") or None,
-                    "description": str(p.get("description") or ""),
-                    "notes": str(p.get("notes") or ""),
-                    "updated_at": str(p.get("updated_at") or p.get("created_at") or ""),
-                }
-                for p in active_projects[:8]
-            ]
+            projects: list[dict[str, Any]] = []
+            for p in active_projects[:8]:
+                project_id = str(p.get("project_id") or "")
+                project_model = publishing_store.get_project(project_id) if project_id else None
+                checklist = publishing_agent.get_publishing_checklist(project_model) if project_model else []
+                checklist_items = [item for item in checklist if isinstance(item, dict)]
+                completed_steps = sum(1 for item in checklist_items if _boolish(item.get("completed")))
+                total_steps = len(checklist_items)
+                checklist_progress = f"{completed_steps}/{total_steps}" if total_steps else ""
+                checklist_percent = round((completed_steps / total_steps) * 100) if total_steps else 0
+
+                projects.append(
+                    {
+                        "project_id": project_id,
+                        "title": str(p.get("title") or ""),
+                        "type": str(p.get("project_type") or ""),
+                        "status": str(p.get("status") or ""),
+                        "platform": str(p.get("platform") or ""),
+                        "url": p.get("url") or None,
+                        "description": str(p.get("description") or ""),
+                        "notes": str(p.get("notes") or ""),
+                        "checklist_progress": checklist_progress,
+                        "checklist_percent": checklist_percent,
+                        "platform_focus": _publishing_platform_focus(
+                            str(p.get("platform") or ""),
+                            str(p.get("project_type") or ""),
+                        ),
+                        "updated_at": str(p.get("updated_at") or p.get("created_at") or ""),
+                    }
+                )
             project_lookup = {
                 str(project.get("project_id") or ""): project
                 for project in active_projects
@@ -4360,6 +9603,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 active_project_raw = active_projects[0]
 
             active_project_id = str((active_project_raw or {}).get("project_id") or launch_project_id or "")
+            active_project_model = publishing_store.get_project(active_project_id) if active_project_id else None
             launch_posts = posts_by_project.get(launch_project_id) if launch_project_id else []
             scheduled_posts = [post for post in launch_posts if str(post.get("scheduled_at") or "").strip()]
             draft_posts = [post for post in launch_posts if str(post.get("status") or "").lower() == "draft"]
@@ -4397,6 +9641,12 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                     ),
                 }
 
+            launch_workspace = _publishing_launch_workspace(
+                project=active_project_raw,
+                strategy=strategy if isinstance(strategy, dict) else None,
+                checklist=publishing_agent.get_publishing_checklist(active_project_model) if active_project_model else [],
+            )
+
             action_items: list[dict[str, Any]] = []
             if pending_reviews:
                 top_review = pending_reviews[0]
@@ -4430,7 +9680,15 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 "pending_reviews": pending_reviews,
                 "pending_reviews_count": len(pending_reviews),
                 "launch_control": active_project,
+                "launch_workspace": launch_workspace,
                 "action_items": action_items,
+                "continuity": _build_publishing_continuity(
+                    "chris",
+                    projects=projects,
+                    pending_reviews=pending_reviews,
+                    action_items=action_items,
+                    launch_workspace=launch_workspace if isinstance(launch_workspace, dict) else None,
+                ),
                 "updated_at":      _ts(),
             })
         except Exception as exc:
@@ -4442,31 +9700,147 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 "pending_reviews": [],
                 "pending_reviews_count": 0,
                 "launch_control": None,
+                "launch_workspace": None,
                 "action_items": [],
+                "continuity": {
+                    "subject_display_name": "Chris",
+                    "briefing_style": "",
+                    "launch_focus": "",
+                    "active_platforms": [],
+                    "pending_review_pressure": 0,
+                    "profile_fact_count": 0,
+                    "guidance_lines": [],
+                    "recent_profile_facts": [],
+                    "recent_first_light": [],
+                },
                 "updated_at": _ts(),
             })
+
+    def _review_record(row: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "review_id": str(row.get("review_id") or ""),
+            "title": str(row.get("title") or ""),
+            "slug": str(row.get("slug") or ""),
+            "stage_key": str(row.get("stage_key") or ""),
+            "stage_display": str(row.get("stage_display") or ""),
+            "content_preview": str(row.get("content_preview") or ""),
+            "word_count": _coerce_int(row.get("word_count")),
+            "ready_since": str(row.get("ready_since") or ""),
+            "approval_id": str(row.get("approval_id") or ""),
+        }
+
+    def _governed_publication_review_mutation(
+        review_id: str,
+        *,
+        target_status: str,
+        action_label: str,
+        feedback: str = "",
+    ) -> dict[str, Any]:
+        pub_root = Path.home() / ".jarvis" / "publishing"
+        reviews_path = pub_root / "ghostwritr_reviews.jsonl"
+        rows = _safe_read_jsonl(reviews_path)
+        selected_row = next((row for row in rows if str(row.get("review_id") or "") == review_id), None)
+        if not isinstance(selected_row, dict):
+            raise HTTPException(status_code=404, detail=f"Review {review_id} not found")
+        review = _review_record(selected_row)
+        request_id = str(uuid.uuid4())
+        boundary = runtime.assess_action_boundary(
+            zone_id="publication_review",
+            arena_id="publication.review.workflow",
+            action_type="publishing_review",
+            requested_stage="sandbox_live",
+        )
+        boundary_decision = str(boundary.get("decision") or "stage")
+        boundary_reason = str(boundary.get("reason") or "")
+        trust_zone = str(boundary.get("trust_zone") or "publication_review")
+        authority_stage = str(boundary.get("authority_stage") or "stage_alert")
+        approval_mode = str(boundary.get("approval_mode") or "stage_and_alert")
+        arena_status = str(boundary.get("arena_status") or "active")
+
+        if boundary_decision == "deny":
+            return {
+                "request_id": request_id,
+                "status": "blocked_by_boundary",
+                "review": review,
+                "performed_action": action_label,
+                "boundary_decision": boundary_decision,
+                "boundary_reason": boundary_reason,
+                "trust_zone": trust_zone,
+                "authority_stage": authority_stage,
+                "arena_status": arena_status,
+                "approval_mode": approval_mode,
+                "feedback": feedback,
+            }
+
+        if boundary_decision != "allow":
+            from .models import StagedActionQueueItem
+
+            runtime.trust_support.enqueue_stage_action(
+                StagedActionQueueItem(
+                    request_id=request_id,
+                    arena_id="publication.review.workflow",
+                    action_type=f"publishing_{action_label}_review",
+                    status="awaiting_principal_review",
+                    created_at=_ts(),
+                    principal_id="chris",
+                )
+            )
+            staged_review = dict(review)
+            staged_review["decision_reason"] = boundary_reason
+            return {
+                "request_id": request_id,
+                "status": "staged_for_review",
+                "review": staged_review,
+                "performed_action": action_label,
+                "boundary_decision": boundary_decision,
+                "boundary_reason": boundary_reason,
+                "trust_zone": trust_zone,
+                "authority_stage": authority_stage,
+                "arena_status": arena_status,
+                "approval_mode": approval_mode,
+                "feedback": feedback,
+            }
+
+        now = _ts()
+        for row in rows:
+            if str(row.get("review_id") or "") == review_id:
+                row["jarvis_status"] = target_status
+                row["feedback"] = feedback if action_label == "revise" else str(row.get("feedback") or "")
+                row["reviewed_at"] = now
+                break
+        reviews_path.write_text(
+            "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + ("\n" if rows else ""),
+            encoding="utf-8",
+        )
+        updated_row = next((row for row in rows if str(row.get("review_id") or "") == review_id), selected_row)
+        return {
+            "request_id": request_id,
+            "status": "approved" if action_label == "approve" else "needs_revision",
+            "review": _review_record(updated_row),
+            "performed_action": action_label,
+            "boundary_decision": boundary_decision,
+            "boundary_reason": boundary_reason,
+            "trust_zone": trust_zone,
+            "authority_stage": authority_stage,
+            "arena_status": arena_status,
+            "approval_mode": approval_mode,
+            "feedback": feedback,
+        }
 
     @app.post("/api/apple/publishing/reviews/{review_id}/approve")
     async def apple_publishing_approve_review(review_id: str):
         pub_root = Path.home() / ".jarvis" / "publishing"
         reviews_path = pub_root / "ghostwritr_reviews.jsonl"
         rows = _safe_read_jsonl(reviews_path)
-        updated = False
-        now = _ts()
-        for row in rows:
-            if str(row.get("review_id") or "") == review_id:
-                row["jarvis_status"] = "approved"
-                row["feedback"] = str(row.get("feedback") or "")
-                row["reviewed_at"] = now
-                updated = True
-                break
-        if not updated:
+        if not any(str(row.get("review_id") or "") == review_id for row in rows):
             raise HTTPException(status_code=404, detail=f"Review {review_id} not found")
-        reviews_path.write_text(
-            "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + ("\n" if rows else ""),
-            encoding="utf-8",
+        return _ok(
+            _governed_publication_review_mutation(
+                review_id,
+                target_status="approved",
+                action_label="approve",
+            )
         )
-        return _ok({"status": "approved", "review_id": review_id})
 
     @app.post("/api/apple/publishing/reviews/{review_id}/revise")
     async def apple_publishing_revise_review(review_id: str, payload: dict[str, Any]):
@@ -4474,22 +9848,16 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         reviews_path = pub_root / "ghostwritr_reviews.jsonl"
         rows = _safe_read_jsonl(reviews_path)
         feedback = str(payload.get("feedback") or "").strip() or "Needs revision from JarvisPhone."
-        updated = False
-        now = _ts()
-        for row in rows:
-            if str(row.get("review_id") or "") == review_id:
-                row["jarvis_status"] = "needs_revision"
-                row["feedback"] = feedback
-                row["reviewed_at"] = now
-                updated = True
-                break
-        if not updated:
+        if not any(str(row.get("review_id") or "") == review_id for row in rows):
             raise HTTPException(status_code=404, detail=f"Review {review_id} not found")
-        reviews_path.write_text(
-            "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + ("\n" if rows else ""),
-            encoding="utf-8",
+        return _ok(
+            _governed_publication_review_mutation(
+                review_id,
+                target_status="needs_revision",
+                action_label="revise",
+                feedback=feedback,
+            )
         )
-        return _ok({"status": "needs_revision", "review_id": review_id, "feedback": feedback})
 
     # ── Huddle ────────────────────────────────────────────────────────────────
 
@@ -4497,8 +9865,21 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
     async def apple_huddle():
         """Agent standup huddle for the iPhone Huddle tab."""
         try:
+            from .dossier import get_dossier_store
+            from .party_mode import get_party_controller
             from .standup import collect_all_standups
             from dataclasses import asdict
+
+            runtime_snapshot = runtime.background_agent_status()
+            party_controller = get_party_controller(runtime)
+            party_status = party_controller.get_status()
+            dossier_store = get_dossier_store()
+            ready_dossiers = [
+                item for item in dossier_store.get_all()
+                if str(getattr(item, "status", "") or "").strip().lower() != "presented"
+            ]
+            ready_dossiers.sort(key=lambda item: str(getattr(item, "updated_at", "") or ""), reverse=True)
+
             huddle = await asyncio.to_thread(
                 collect_all_standups,
                 None,
@@ -4532,6 +9913,34 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                     "proposal": _truncate(str(item.get("proposal") or item.get("idea") or ""), 160),
                     "domain": str(item.get("domain") or ""),
                 })
+            runtime_statuses = []
+            for item in (runtime_snapshot.get("statuses") or [])[:6]:
+                if not isinstance(item, dict):
+                    continue
+                runtime_statuses.append({
+                    "agent_id": str(item.get("agent_id") or ""),
+                    "label": str(item.get("label") or item.get("agent_id") or ""),
+                    "state": str(item.get("state") or "idle"),
+                    "reason": _truncate(str(item.get("reason") or ""), 120),
+                    "last_run_at": str(item.get("last_run_at") or ""),
+                    "next_run_at": str(item.get("next_run_at") or ""),
+                    "due_now": bool(item.get("due_now")),
+                    "priority": int(item.get("priority") or 0),
+                })
+            dossiers = []
+            for dossier in ready_dossiers[:4]:
+                dossiers.append({
+                    "dossier_id": str(getattr(dossier, "dossier_id", "") or ""),
+                    "title": _truncate(str(getattr(dossier, "title", "") or "Untitled"), 80),
+                    "status": str(getattr(dossier, "status", "") or ""),
+                    "executive_summary": _truncate(str(getattr(dossier, "executive_summary", "") or getattr(dossier, "market_opportunity", "") or ""), 160),
+                    "first_action": _truncate(str(getattr(dossier, "first_action", "") or ""), 120),
+                    "confidence_score": float(getattr(dossier, "confidence_score", 0.0) or 0.0),
+                    "revenue_estimate_low": int(getattr(dossier, "revenue_estimate_low", 0) or 0),
+                    "revenue_estimate_high": int(getattr(dossier, "revenue_estimate_high", 0) or 0),
+                    "effort_hours": int(getattr(dossier, "effort_hours", 0) or 0),
+                    "updated_at": str(getattr(dossier, "updated_at", "") or getattr(dossier, "created_at", "") or ""),
+                })
             return _ok({
                 "reports": reports[:15],
                 "blockers": [str(b)[:80] for b in (h.get("blockers") or [])[:5]],
@@ -4539,6 +9948,34 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 "approvals": approvals[:8],
                 "approvals_count": int(len(h.get("approvals_needed") or [])),
                 "total_active_work": int(h.get("total_active_work") or 0),
+                "runtime": {
+                    "active_mode": str(runtime_snapshot.get("active_mode") or ""),
+                    "quiet_hours_active": bool(runtime_snapshot.get("quiet_hours_active")),
+                    "awake_count": int(runtime_snapshot.get("awake_count") or 0),
+                    "idle_count": int(runtime_snapshot.get("idle_count") or 0),
+                    "blocked_count": int(runtime_snapshot.get("blocked_count") or 0),
+                    "last_tick_at": str(runtime_snapshot.get("last_tick_at") or ""),
+                    "statuses": runtime_statuses,
+                },
+                "party_mode": {
+                    "status": str(party_status.get("status") or "idle"),
+                    "triggered_by": str(party_status.get("triggered_by") or ""),
+                    "dossiers_built_count": len(party_status.get("dossiers_built") or []),
+                    "dossiers_attempted": int(party_status.get("dossiers_attempted") or 0),
+                    "items_dreamed": int(party_status.get("items_dreamed") or 0),
+                    "items_researched": int(party_status.get("items_researched") or 0),
+                    "last_log": _truncate(str(party_status.get("last_log") or ""), 140),
+                    "started_at": str(party_status.get("started_at") or ""),
+                    "ended_at": str(party_status.get("ended_at") or ""),
+                },
+                "dossiers": dossiers,
+                "continuity": _build_huddle_continuity(
+                    "chris",
+                    reports=reports[:15],
+                    blockers=[str(b)[:80] for b in (h.get("blockers") or [])[:5]],
+                    party_status=party_status if isinstance(party_status, dict) else {},
+                    dossiers=dossiers,
+                ),
                 "updated_at": _ts(),
             })
         except Exception as exc:
@@ -4550,30 +9987,336 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 "approvals": [],
                 "approvals_count": 0,
                 "total_active_work": 0,
+                "runtime": None,
+                "party_mode": None,
+                "dossiers": [],
+                "continuity": {
+                    "subject_display_name": "Chris",
+                    "council_focus": "",
+                    "active_domains": [],
+                    "ready_dossier_count": 0,
+                    "profile_fact_count": 0,
+                    "guidance_lines": [],
+                    "recent_profile_facts": [],
+                    "recent_first_light": [],
+                },
                 "updated_at": _ts(),
             })
+
+    @app.post("/api/apple/huddle/party-mode/start")
+    async def apple_huddle_start_party_mode():
+        from .party_mode import get_party_controller
+
+        ctrl = get_party_controller(runtime)
+        status = ctrl.get_status()
+        if status.get("status") == "running":
+            return _ok(
+                {
+                    "status": "already_running",
+                    "request_id": "",
+                    "performed_action": "start_party_mode",
+                    "boundary_decision": "allow",
+                    "boundary_reason": "Party mode is already running.",
+                    "trust_zone": "household_huddle",
+                    "authority_stage": "sandbox_live",
+                    "arena_status": "active",
+                    "approval_mode": "stage_and_alert",
+                }
+            )
+        request_id = str(uuid.uuid4())
+        boundary = runtime.assess_action_boundary(
+            zone_id="household_huddle",
+            arena_id="household.huddle.workflow",
+            action_type="huddle_workflow",
+            requested_stage="sandbox_live",
+        )
+        boundary_decision = str(boundary.get("decision") or "stage")
+        boundary_reason = str(boundary.get("reason") or "")
+        trust_zone = str(boundary.get("trust_zone") or "household_huddle")
+        authority_stage = str(boundary.get("authority_stage") or "stage_alert")
+        approval_mode = str(boundary.get("approval_mode") or "stage_and_alert")
+        arena_status = str(boundary.get("arena_status") or "active")
+
+        if boundary_decision == "deny":
+            return _ok(
+                {
+                    "request_id": request_id,
+                    "status": "blocked_by_boundary",
+                    "performed_action": "start_party_mode",
+                    "boundary_decision": boundary_decision,
+                    "boundary_reason": boundary_reason,
+                    "trust_zone": trust_zone,
+                    "authority_stage": authority_stage,
+                    "arena_status": arena_status,
+                    "approval_mode": approval_mode,
+                }
+            )
+
+        if boundary_decision != "allow":
+            from .models import StagedActionQueueItem
+
+            runtime.trust_support.enqueue_stage_action(
+                StagedActionQueueItem(
+                    request_id=request_id,
+                    arena_id="household.huddle.workflow",
+                    action_type="huddle_start_party_mode_review",
+                    status="awaiting_principal_review",
+                    created_at=_ts(),
+                    principal_id="chris",
+                )
+            )
+            return _ok(
+                {
+                    "request_id": request_id,
+                    "status": "staged_for_review",
+                    "performed_action": "start_party_mode",
+                    "boundary_decision": boundary_decision,
+                    "boundary_reason": boundary_reason,
+                    "trust_zone": trust_zone,
+                    "authority_stage": authority_stage,
+                    "arena_status": arena_status,
+                    "approval_mode": approval_mode,
+                }
+            )
+
+        await asyncio.to_thread(ctrl.start, True)
+        return _ok(
+            {
+                "request_id": request_id,
+                "status": "started",
+                "performed_action": "start_party_mode",
+                "boundary_decision": boundary_decision,
+                "boundary_reason": boundary_reason,
+                "trust_zone": trust_zone,
+                "authority_stage": authority_stage,
+                "arena_status": arena_status,
+                "approval_mode": approval_mode,
+            }
+        )
 
     # ── Forge 3-D models ──────────────────────────────────────────────────────
 
     _FORGE_DB = Path("data/forge/models.jsonl")
 
+    def _load_forge_model_records() -> list[dict]:
+        records: list[dict] = []
+        if _FORGE_DB.exists():
+            for line in _FORGE_DB.read_text().splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    records.append(json.loads(line))
+                except Exception:
+                    continue
+        return list(reversed(records[-20:]))
+
+    def _load_forge_queue_records() -> list[dict]:
+        queue_path = Path("data/forge/queue.jsonl")
+        queue_records: list[dict] = []
+        if queue_path.exists():
+            for line in queue_path.read_text().splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    queue_records.append(json.loads(line))
+                except Exception:
+                    continue
+        return list(reversed(queue_records[-10:]))
+
+    def _forge_missing_views(capture_session: dict | None) -> list[str]:
+        if not isinstance(capture_session, dict):
+            return []
+        frames = capture_session.get("frames") or []
+        seen = {
+            str(frame.get("view_type", "")).strip().lower()
+            for frame in frames
+            if isinstance(frame, dict)
+        }
+        expected = ["front", "back", "left", "right", "top"]
+        return [view for view in expected if view not in seen]
+
+    def _forge_project_summary(project: dict) -> dict:
+        capture_sessions = project.get("capture_sessions") or []
+        latest_capture = capture_sessions[-1] if capture_sessions else {}
+        confidence = latest_capture.get("confidence") if isinstance(latest_capture, dict) else {}
+        generated_models = project.get("generated_models") or []
+        latest_model = generated_models[-1] if generated_models else {}
+        return {
+            "id": str(project.get("id") or ""),
+            "title": str(project.get("title") or "Untitled project"),
+            "status": str(project.get("status") or "idea"),
+            "intake_type": str(project.get("intake_type") or "file_upload"),
+            "updated_at": str(project.get("updated_at") or project.get("created_at") or _ts()),
+            "source_file_count": len(project.get("source_files") or []),
+            "capture_frame_count": sum(
+                len(session.get("frames") or [])
+                for session in capture_sessions
+                if isinstance(session, dict)
+            ),
+            "measurement_count": len(project.get("measurements") or []),
+            "generated_model_count": len(generated_models),
+            "approval_count": len(project.get("approvals") or []),
+            "latest_capture_status": str(latest_capture.get("status") or "") or None,
+            "print_readiness": str(confidence.get("print_readiness") or "") or None,
+            "latest_model_name": str(latest_model.get("title") or latest_model.get("filename") or "") or None,
+        }
+
+    def _forge_project_detail(project: dict) -> dict:
+        summary = _forge_project_summary(project)
+        capture_sessions = project.get("capture_sessions") or []
+        latest_capture = capture_sessions[-1] if capture_sessions else {}
+        confidence = latest_capture.get("confidence") if isinstance(latest_capture, dict) else None
+        generated_models = project.get("generated_models") or []
+        return {
+            **summary,
+            "description": str(project.get("description") or ""),
+            "notes": str(project.get("notes") or ""),
+            "capture_confidence": confidence if isinstance(confidence, dict) else None,
+            "missing_views": _forge_missing_views(latest_capture),
+            "generated_models": [
+                {
+                    "model_id": str(model.get("model_id") or ""),
+                    "title": str(model.get("title") or model.get("filename") or "Generated model"),
+                    "format": str(model.get("format") or ""),
+                    "created_at": str(model.get("created_at") or project.get("updated_at") or _ts()),
+                    "source_image": model.get("source_image"),
+                    "notes": str(model.get("notes") or ""),
+                }
+                for model in generated_models[-3:]
+                if isinstance(model, dict)
+            ],
+        }
+
     @app.get("/api/apple/forge")
     async def apple_forge():
-        """Return saved photogrammetry model records for the Forge tab."""
+        """Return workshop, project, and photogrammetry state for the Forge tab."""
         try:
-            records = []
-            if _FORGE_DB.exists():
-                for line in _FORGE_DB.read_text().splitlines():
-                    line = line.strip()
-                    if line:
-                        try:
-                            records.append(json.loads(line))
-                        except Exception:
-                            pass
-            return _ok({"models": list(reversed(records[-20:]))})
+            records = _load_forge_model_records()
+            queue_records = _load_forge_queue_records()
+
+            project_details: list[dict] = []
+            try:
+                from .forge import ForgeStore
+
+                store = ForgeStore()
+                index = await asyncio.to_thread(store.list_projects, False)
+                index = sorted(
+                    index,
+                    key=lambda item: str(item.get("updated_at") or item.get("created_at") or ""),
+                    reverse=True,
+                )
+                for entry in index[:12]:
+                    project_id = str(entry.get("id") or "")
+                    if not project_id:
+                        continue
+                    project = await asyncio.to_thread(store.get_project, project_id)
+                    if isinstance(project, dict):
+                        project_details.append(project)
+            except Exception:
+                logger.exception("apple_forge project summary load failed")
+
+            projects = [_forge_project_summary(project) for project in project_details]
+            active_project = _forge_project_detail(project_details[0]) if project_details else None
+            statuses = [str(project.get("status") or "") for project in project_details]
+            summary = {
+                "total_projects": len(project_details),
+                "active_projects": sum(
+                    1
+                    for status in statuses
+                    if status not in {"completed", "failed", "archived"}
+                ),
+                "capture_projects": sum(
+                    1
+                    for status in statuses
+                    if status in {"reference_uploaded", "capture_in_progress", "needs_more_views", "needs_measurements"}
+                ),
+                "ready_models": sum(
+                    1
+                    for project in project_details
+                    if (project.get("generated_models") or [])
+                    or str(project.get("status") or "") in {"model_ready", "print_ready", "slice_ready", "approval_required", "sent_to_printer", "printing", "completed"}
+                ),
+                "approval_queue": sum(len(project.get("approvals") or []) for project in project_details),
+                "queued_jobs": sum(1 for job in queue_records if str(job.get("status") or "") == "queued"),
+            }
+            recent_jobs = [
+                {
+                    "job_id": str(job.get("job_id") or ""),
+                    "name": str(job.get("name") or "Model"),
+                    "status": str(job.get("status") or "queued"),
+                    "photo_count": int(job.get("photo_count") or 0),
+                    "created_at": str(job.get("created_at") or _ts()),
+                }
+                for job in queue_records
+                if isinstance(job, dict)
+            ]
+            return _ok(
+                {
+                    "summary": summary,
+                    "active_project": active_project,
+                    "projects": projects,
+                    "models": records,
+                    "recent_jobs": recent_jobs,
+                    "continuity": _build_forge_continuity(
+                        "chris",
+                        active_project=active_project if isinstance(active_project, dict) else None,
+                        projects=projects,
+                        recent_jobs=recent_jobs,
+                    ),
+                }
+            )
         except Exception as exc:
             logger.exception("apple_forge failed: %s", exc)
-            return _ok({"models": []})
+            return _ok(
+                {
+                    "summary": {
+                        "total_projects": 0,
+                        "active_projects": 0,
+                        "capture_projects": 0,
+                        "ready_models": 0,
+                        "approval_queue": 0,
+                        "queued_jobs": 0,
+                    },
+                    "active_project": None,
+                    "projects": [],
+                    "models": [],
+                    "recent_jobs": [],
+                    "continuity": {
+                        "subject_display_name": "Chris",
+                        "workshop_focus": "",
+                        "active_workshop_lanes": [],
+                        "queued_job_count": 0,
+                        "profile_fact_count": 0,
+                        "guidance_lines": [],
+                        "recent_profile_facts": [],
+                        "recent_first_light": [],
+                    },
+                }
+            )
+
+    @app.post("/api/apple/forge/projects")
+    async def apple_forge_create_project(payload: dict):
+        """Create a Forge workshop project from the phone."""
+        title = str(payload.get("title") or "").strip()
+        if not title:
+            raise HTTPException(status_code=400, detail="title is required")
+        description = str(payload.get("description") or "").strip()
+        try:
+            from .forge import ForgeStore
+
+            store = ForgeStore()
+            project = await asyncio.to_thread(
+                store.create_project,
+                title,
+                description,
+                "phone_capture",
+            )
+            return _ok(_forge_project_detail(project))
+        except Exception as exc:
+            logger.exception("apple_forge_create_project failed: %s", exc)
+            raise HTTPException(status_code=500, detail="Failed to create Forge project") from exc
 
     @app.post("/api/apple/forge/submit")
     async def apple_forge_submit(payload: dict):
@@ -4740,6 +10483,65 @@ def _truncate(text: str, max_len: int) -> str:
     return text if len(text) <= max_len else text[: max_len - 1] + "…"
 
 
+def _approval_target_summary(payload: dict[str, Any]) -> str:
+    ordered_keys = (
+        "entity_id",
+        "recipient",
+        "to",
+        "location",
+        "title",
+        "event_title",
+        "document_title",
+        "filename",
+        "path",
+        "url",
+        "target",
+        "vendor",
+    )
+    parts: list[str] = []
+    for key in ordered_keys:
+        value = str(payload.get(key) or "").strip()
+        if value:
+            parts.append(value)
+        if len(parts) >= 2:
+            break
+    return " · ".join(parts)
+
+
+def _approval_context_lines(payload: dict[str, Any]) -> list[str]:
+    lines: list[str] = []
+    field_pairs = [
+        ("channel", "Channel"),
+        ("service", "Service"),
+        ("ha_service", "Action"),
+        ("amount_usd", "Amount"),
+        ("start", "Start"),
+        ("end", "End"),
+        ("location", "Location"),
+        ("subject", "Subject"),
+        ("body", "Body"),
+        ("description", "Description"),
+    ]
+    for key, label in field_pairs:
+        value = payload.get(key)
+        if value in (None, "", [], {}):
+            continue
+        text = str(value).strip()
+        if not text:
+            continue
+        if key == "amount_usd":
+            try:
+                text = f"${float(value):.2f}"
+            except (TypeError, ValueError):
+                text = str(value)
+        if key in {"body", "description"}:
+            text = _truncate(" ".join(text.split()), 88)
+        lines.append(f"{label}: {text}")
+        if len(lines) >= 3:
+            break
+    return lines
+
+
 def _mock_home_state() -> dict:
     """Stub home state returned when HomeAssistant is not configured."""
     return {
@@ -4748,5 +10550,6 @@ def _mock_home_state() -> dict:
         "temperature": {"inside": 70.0, "target": 72.0, "mode": "cool"},
         "lights_on": [],
         "alerts": [],
+        "home_ops": _build_home_ops_summary(),
         "source": "mock",
     }

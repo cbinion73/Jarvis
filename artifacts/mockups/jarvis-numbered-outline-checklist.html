@@ -1,0 +1,1538 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Numbered Outline Checklist</title>
+  <style>
+    :root {
+      --bg: #06111b;
+      --bg-2: #091827;
+      --panel: rgba(10, 19, 31, 0.9);
+      --panel-2: rgba(16, 28, 43, 0.86);
+      --line: rgba(128, 187, 221, 0.16);
+      --line-strong: rgba(128, 187, 221, 0.28);
+      --text: #eff7fd;
+      --muted: #8ca6be;
+      --cyan: #67d3de;
+      --blue: #8eb8ff;
+      --green: #66d89f;
+      --amber: #efb761;
+      --red: #ff8f8f;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+      --radius-xl: 26px;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+      --font-ui: "SF Pro Display", "Segoe UI", sans-serif;
+      --font-mono: "SF Mono", "JetBrains Mono", "Menlo", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font-ui);
+      color: var(--text);
+      background:
+        radial-gradient(circle at 0% 0%, rgba(103, 211, 222, 0.18), transparent 25%),
+        radial-gradient(circle at 100% 0%, rgba(142, 184, 255, 0.16), transparent 24%),
+        radial-gradient(circle at 50% 100%, rgba(102, 216, 159, 0.07), transparent 26%),
+        linear-gradient(180deg, var(--bg) 0%, #040a12 100%);
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 26px 22px 28px;
+      overflow: auto;
+      border-right: 1px solid var(--line);
+      background:
+        linear-gradient(180deg, rgba(7, 15, 24, 0.98), rgba(7, 15, 24, 0.9)),
+        radial-gradient(circle at top left, rgba(103, 211, 222, 0.12), transparent 36%);
+      backdrop-filter: blur(18px);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(103, 211, 222, 0.26);
+      color: var(--cyan);
+      background: rgba(103, 211, 222, 0.06);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: currentColor;
+      box-shadow: 0 0 14px currentColor;
+    }
+
+    h1 {
+      margin: 14px 0 10px;
+      font-size: 32px;
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+    }
+
+    h2, h3, p {
+      margin: 0;
+    }
+
+    p,
+    .muted,
+    .note,
+    .helper {
+      color: var(--muted);
+    }
+
+    .sidebar-copy {
+      margin-bottom: 20px;
+      line-height: 1.55;
+    }
+
+    .stats {
+      display: grid;
+      gap: 10px;
+      margin: 22px 0 16px;
+    }
+
+    .stat {
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.035);
+      box-shadow: var(--shadow);
+    }
+
+    .stat strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 24px;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .nav {
+      display: grid;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .anchor-note {
+      margin-top: 18px;
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(103, 211, 222, 0.18);
+      background: rgba(103, 211, 222, 0.05);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .nav a {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      text-decoration: none;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.025);
+      transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+    }
+
+    .nav a:hover,
+    .nav a:focus-visible {
+      border-color: var(--line);
+      background: rgba(255, 255, 255, 0.045);
+      transform: translateX(2px);
+      outline: none;
+    }
+
+    .nav-count {
+      min-width: 26px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    main {
+      padding: 30px;
+    }
+
+    .hero,
+    .toolbar,
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: linear-gradient(180deg, rgba(11, 20, 33, 0.94), rgba(10, 17, 28, 0.9));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -60px -80px auto;
+      width: 280px;
+      height: 280px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(103, 211, 222, 0.16), transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-title {
+      margin-top: 12px;
+      font-size: 34px;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .hero-copy {
+      max-width: 820px;
+      margin-top: 12px;
+      line-height: 1.6;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .hero-card {
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+      min-height: 132px;
+    }
+
+    .hero-card strong {
+      display: block;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .hero-card .metric {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 26px;
+      line-height: 1;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 18px;
+      z-index: 10;
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+      margin-bottom: 24px;
+    }
+
+    .toolbar-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) auto auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .search {
+      width: 100%;
+      padding: 13px 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      outline: none;
+    }
+
+    .search::placeholder {
+      color: #70869a;
+    }
+
+    .search:focus {
+      border-color: rgba(103, 211, 222, 0.4);
+      box-shadow: 0 0 0 4px rgba(103, 211, 222, 0.08);
+    }
+
+    .chip-row,
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chip,
+    .ghost-btn,
+    .row-action,
+    .section-toggle {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.035);
+      color: var(--text);
+      transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+    }
+
+    .chip,
+    .ghost-btn,
+    .section-toggle {
+      padding: 10px 13px;
+      cursor: pointer;
+    }
+
+    .chip:hover,
+    .ghost-btn:hover,
+    .row-action:hover,
+    .section-toggle:hover,
+    .chip:focus-visible,
+    .ghost-btn:focus-visible,
+    .row-action:focus-visible,
+    .section-toggle:focus-visible {
+      border-color: var(--line-strong);
+      background: rgba(255, 255, 255, 0.07);
+      transform: translateY(-1px);
+      outline: none;
+    }
+
+    .chip.active {
+      border-color: rgba(103, 211, 222, 0.42);
+      background: rgba(103, 211, 222, 0.1);
+      color: var(--cyan);
+    }
+
+    .ghost-btn {
+      white-space: nowrap;
+    }
+
+    .helper {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .section {
+      margin-bottom: 24px;
+      scroll-margin-top: 124px;
+    }
+
+    .section.hidden {
+      display: none;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section h2 {
+      font-size: 24px;
+      letter-spacing: -0.03em;
+    }
+
+    .anchor-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .anchor-item {
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(103, 211, 222, 0.12);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .anchor-title {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text);
+      font-weight: 650;
+    }
+
+    .section-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .badge.done { background: rgba(102, 216, 159, 0.12); color: var(--green); }
+    .badge.active { background: rgba(239, 183, 97, 0.12); color: var(--amber); }
+    .badge.next { background: rgba(142, 184, 255, 0.12); color: var(--blue); }
+
+    .panel {
+      padding: 18px;
+    }
+
+    .tree {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 12px;
+    }
+
+    .row {
+      position: relative;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 14px;
+      align-items: start;
+      padding: 14px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.055);
+      transition: opacity 140ms ease, transform 140ms ease, border-color 140ms ease;
+    }
+
+    .row:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .row.hidden {
+      display: none;
+    }
+
+    .row.highlight {
+      margin: 0 -14px;
+      padding: 14px;
+      border-radius: 18px;
+      border-top-color: transparent;
+      background: rgba(103, 211, 222, 0.08);
+      box-shadow: inset 0 0 0 1px rgba(103, 211, 222, 0.14);
+    }
+
+    .row.done .toggle {
+      accent-color: var(--green);
+    }
+
+    .row.active .toggle {
+      accent-color: var(--amber);
+    }
+
+    .row.next .toggle {
+      accent-color: var(--blue);
+    }
+
+    .toggle {
+      width: 19px;
+      height: 19px;
+      margin-top: 5px;
+    }
+
+    .row-body {
+      min-width: 0;
+    }
+
+    .label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 16px;
+      font-weight: 650;
+      line-height: 1.3;
+    }
+
+    .id {
+      margin-right: 8px;
+      color: var(--cyan);
+      font-family: var(--font-mono);
+      font-size: 0.95em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .note {
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .row-tools {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .row-action {
+      padding: 8px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .row-action.is-copied {
+      color: var(--green);
+      border-color: rgba(102, 216, 159, 0.3);
+      background: rgba(102, 216, 159, 0.1);
+    }
+
+    .empty-state {
+      display: none;
+      padding: 28px;
+      border: 1px dashed var(--line);
+      border-radius: var(--radius-lg);
+      color: var(--muted);
+      text-align: center;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .empty-state.visible {
+      display: block;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    code {
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--blue);
+      font-family: var(--font-mono);
+      font-size: 0.95em;
+    }
+
+    @media (max-width: 1100px) {
+      .layout,
+      .hero-grid,
+      .toolbar-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .toolbar {
+        top: 0;
+      }
+    }
+
+    @media (max-width: 760px) {
+      main {
+        padding: 18px;
+      }
+
+      .hero,
+      .toolbar,
+      .panel {
+        border-radius: 20px;
+      }
+
+      .hero-title {
+        font-size: 28px;
+      }
+
+      .row {
+        grid-template-columns: auto 1fr;
+      }
+
+      .row-tools {
+        grid-column: 2;
+        justify-content: flex-start;
+      }
+
+      .helper {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <span class="eyebrow">Temporary Codex Board</span>
+      <h1>Numbered Outline</h1>
+      <p class="sidebar-copy">A shared front-end board for the current JARVIS checklist so we can refer to the same item IDs, filter the open work, and keep the board usable as the roadmap shifts.</p>
+
+      <div class="stats">
+        <div class="stat">
+          <strong id="sidebar-active-id">3.4</strong>
+          <span class="muted">Current active build item</span>
+        </div>
+        <div class="stat">
+          <strong id="sidebar-done-count">0</strong>
+          <span class="muted">Checked items on this board</span>
+        </div>
+        <div class="stat">
+          <strong id="sidebar-open-count">0</strong>
+          <span class="muted">Open items still in play</span>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a href="#section-0"><span>0. Non-Negotiables</span><span class="nav-count" data-nav-count="section-0">0</span></a>
+        <a href="#section-1"><span>1. Verified Done</span><span class="nav-count" data-nav-count="section-1">0</span></a>
+        <a href="#section-2"><span>2. Active Queue</span><span class="nav-count" data-nav-count="section-2">0</span></a>
+        <a href="#section-3"><span>3. Open Platform Work</span><span class="nav-count" data-nav-count="section-3">0</span></a>
+        <a href="#section-4"><span>4. Later Civilizational Work</span><span class="nav-count" data-nav-count="section-4">0</span></a>
+        <a href="#section-5"><span>5. Already Covered</span><span class="nav-count" data-nav-count="section-5">0</span></a>
+      </nav>
+
+      <div class="anchor-note">
+        Canonical anchors: <code>docs/jarvis-canonical-operating-model.md</code> and <code>docs/jarvis-desktop-command-center-model.md</code>. This board is subordinate to those operating rules, not the other way around.
+      </div>
+    </aside>
+
+    <main>
+      <section class="hero">
+        <span class="eyebrow">Shared Reference</span>
+        <h2 class="hero-title">Checklist Outline We Can Talk Through Together</h2>
+        <p class="hero-copy muted">Completed items are pre-checked. Open items stay visible and searchable. The numbering matches the structure we aligned on, so if you say “let’s do 3.7 next” this board can immediately isolate it, deep-link it, and persist local board tweaks in the browser. But the board now sits under a stronger rule: JARVIS is an always-on orchestrator with voice enabled, not voice-first.</p>
+
+        <div class="hero-grid">
+          <div class="hero-card">
+            <strong>Board Completion</strong>
+            <span class="metric" id="hero-percent">0%</span>
+            <span class="muted">Live percentage across all checklist rows, recalculated from the current check state.</span>
+          </div>
+          <div class="hero-card">
+            <strong>Open Right Now</strong>
+            <span class="metric" id="hero-open">0</span>
+            <span class="muted">Remaining unchecked items after any local board changes or quick closeouts.</span>
+          </div>
+          <div class="hero-card">
+            <strong>Current Focus</strong>
+            <span class="metric" id="hero-focus">3.4</span>
+            <span class="muted">The current highlighted build target. Use Focus to jump straight to it from anywhere on the board.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="section-0">
+        <div class="section-head">
+          <div class="section-title">
+            <h2>0. Non-Negotiables</h2>
+            <button class="section-toggle" type="button" data-target="section-0">Collapse</button>
+          </div>
+          <div class="section-meta">
+            <span class="badge active">Canonical</span>
+          </div>
+        </div>
+        <div class="panel">
+          <ul class="anchor-list">
+            <li class="anchor-item">
+              <span class="anchor-title">JARVIS is an always-on multi-agent orchestrator.</span>
+              It is not primarily a reactive assistant or a chat shell. Specialists keep working on your behalf even when you are not directly engaged.
+            </li>
+            <li class="anchor-item">
+              <span class="anchor-title">JARVIS is voice-enabled, not voice-first.</span>
+              Voice matters, but silent command, scanning, review, approvals, and touch-first operation must work beautifully without speech.
+            </li>
+            <li class="anchor-item">
+              <span class="anchor-title">The main user experience is oversight, continuity, and steering.</span>
+              JARVIS should surface what changed, what matters now, what agents are doing, and what needs your judgment.
+            </li>
+            <li class="anchor-item">
+              <span class="anchor-title">Backend work must strengthen the agent society.</span>
+              Runtime, handoffs, scheduling, work state, supervision, and attention routing matter more than isolated request/response features.
+            </li>
+            <li class="anchor-item">
+              <span class="anchor-title">Frontend work must strengthen command and continuity.</span>
+              If a design drifts toward generic dashboards, feature menus, or chat-first flows, it is drifting from the product.
+            </li>
+            <li class="anchor-item">
+              <span class="anchor-title">Desktop is the supervision plane for an active agent society.</span>
+              It should prioritize what changed while you were away, what agents are doing, what needs approval or redirection, and what context can be resumed silently.
+            </li>
+            <li class="anchor-item">
+              <span class="anchor-title">Parallel branches do not outrank the operating model.</span>
+              Returning work must pass the branch integration rubric in <code>docs/branch-integration-rubric.md</code> before it is treated as canonical or merged by default.
+            </li>
+          </ul>
+          <div class="footer-note">Short canonical reference: <code>docs/jarvis-canonical-operating-model.md</code>. Desktop oversight rules now also live in <code>docs/jarvis-desktop-command-center-model.md</code>, with a companion mockup in <code>artifacts/mockups/jarvis-desktop-command-center.html</code>. Merge gate reference: <code>docs/branch-integration-rubric.md</code>. If another roadmap, branch, or mockup conflicts with those anchors, this section should be treated as the correction, not the exception.</div>
+        </div>
+      </section>
+
+      <section class="toolbar" aria-label="Checklist controls">
+        <div class="toolbar-grid">
+          <input id="search-input" class="search" type="search" placeholder="Search by item ID, title, or note. Example: 3.7 or memory">
+          <div class="action-row">
+            <button class="ghost-btn" id="focus-active-btn" type="button">Focus 3.4</button>
+            <button class="ghost-btn" id="reset-board-btn" type="button">Reset local board state</button>
+          </div>
+          <div class="action-row">
+            <button class="ghost-btn" id="collapse-all-btn" type="button">Collapse sections</button>
+          </div>
+        </div>
+
+        <div class="chip-row" id="filter-row">
+          <button class="chip active" data-filter="all" type="button">All Items</button>
+          <button class="chip" data-filter="open" type="button">Open Only</button>
+          <button class="chip" data-filter="done" type="button">Done Only</button>
+          <button class="chip" data-filter="active" type="button">Current Active</button>
+          <button class="chip" data-filter="next" type="button">Next / Future</button>
+        </div>
+
+        <div class="helper">
+          <span id="results-copy">Showing the full board.</span>
+          <span>Local checkbox changes are stored in this browser only, so we can use the board operationally without pretending it is the source of truth for the repo.</span>
+        </div>
+      </section>
+
+      <div class="empty-state" id="empty-state">No checklist items match the current search and filter settings.</div>
+
+      <section class="section" id="section-1">
+        <div class="section-head">
+          <div class="section-title">
+            <h2>1. Verified Done</h2>
+            <button class="section-toggle" type="button" data-target="section-1">Collapse</button>
+          </div>
+          <div class="section-meta">
+            <span class="badge done">Complete</span>
+          </div>
+        </div>
+        <div class="panel">
+          <ul class="tree">
+            <li class="row done" data-id="1.1" data-status="done" id="item-1-1">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">1.1</span>Phone parity closeout</span>
+                <div class="note">The parity matrix is effectively full across the phone surfaces.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row done" data-id="1.1a" data-status="done" id="item-1-1a">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">1.1a</span>Phone parity is not the mobile end state</span>
+                <div class="note">The next mobile pass should pivot from equal-weight tab parity toward a silent-first command system centered on Today, Focus, Decisions, Family, Navigate, and continuity-aware resume.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row done" data-id="1.2" data-status="done" id="item-1-2">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">1.2</span>Governed workflow foundations</span>
+                <div class="note">Trust controls, review visibility, and core control-plane actions are already live.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row done" data-id="1.3" data-status="done" id="item-1-3">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">1.3</span>Cross-domain workflow boundaries</span>
+                <div class="note">Calendar, signal, notification, reminder, publishing, focus, and huddle boundaries are already governed.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row done" data-id="1.4" data-status="done" id="item-1-4">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">1.4</span>While You Were Away synthesis</span>
+                <div class="note">The absence report is synthesized and reused across Brief, Home, and chamber paths.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row done" data-id="1.5" data-status="done" id="item-1-5">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">1.5</span>Stewardship review loop</span>
+                <div class="note">Lane contracts, review convergence, rollout controls, governance history, learning synthesis, and proposal convergence are already implemented.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row done" data-id="1.6" data-status="done" id="item-1-6">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">1.6</span>Sandbox operations foundation</span>
+                <div class="note">The first bounded execution lanes, stop controls, recovery controls, and reporting surfaces are already real.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row done" data-id="1.7" data-status="done" id="item-1-7">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">1.7</span>Memory and continuity slices</span>
+                <div class="note">Chronicle continuity, retrieval-by-situation, reflective memory review, and continuity across major surfaces are live.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section" id="section-2">
+        <div class="section-head">
+          <div class="section-title">
+            <h2>2. Active Queue</h2>
+            <button class="section-toggle" type="button" data-target="section-2">Collapse</button>
+          </div>
+          <div class="section-meta">
+            <span class="badge done">Complete</span>
+          </div>
+        </div>
+        <div class="panel">
+          <ul class="tree">
+            <li class="row done" data-id="2.1" data-status="done" id="item-2-1">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">2.1</span>Governance rollout posture automation</span>
+                <div class="note">Completed green. Accepted rollout-posture doctrine now changes stewardship lane defaults, including packet target, review surface, action framing, and bounded review behavior.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row done" data-id="2.2" data-status="done" id="item-2-2">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">2.2</span>Sandbox agency closeout</span>
+                <div class="note">Completed green. Sandbox operations now run through a unified multi-lane runtime router with richer lane summaries and a third bounded stewardship-review lane alongside self-improvement and vendor-prep.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row done" data-id="2.3" data-status="done" id="item-2-3">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">2.3</span>Memory and continuity engine closeout</span>
+                <div class="note">Completed green. The durable memory graph now feeds Brief, Home, Voice, and Systems/Admin with longer-horizon continuity, shared thread recall, and reflective-memory graph coverage.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section" id="section-3">
+        <div class="section-head">
+          <div class="section-title">
+            <h2>3. Open Platform Work</h2>
+            <button class="section-toggle" type="button" data-target="section-3">Collapse</button>
+          </div>
+          <div class="section-meta">
+            <span class="badge next">Open</span>
+          </div>
+        </div>
+        <div class="panel">
+          <ul class="tree">
+            <li class="row done" data-id="3.1" data-status="done" id="item-3-1">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">3.1</span>Voice full duplex closeout</span>
+                <div class="note">Completed green. The phone voice loop now keeps a duplex-safe speech session with interruptible reply playback, live partial transcript handling, and continuous turn-taking.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row done" data-id="3.2" data-status="done" id="item-3-2">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">3.2</span>Web chamber refactor</span>
+                <div class="note">Completed green. The chamber shell now uses a derived home signal model, scene-native renderers, one overlay authority for modal and scene transitions, and packet-strip suppression on default home so packet chrome becomes secondary.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row done" data-id="3.3" data-status="done" id="item-3-3">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">3.3</span>Always-on hardware deployment</span>
+                <div class="note">Completed green. The service identity and runtime status now model the real hybrid deployment: local always-on posture plus the Hetzner and Cloudflare hosted edge, discovered compose services and public routes, Cloudflare Access-protected hosted probes, and surfaced deployment visibility in the chamber and phone admin views.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row active" data-id="3.4" data-status="active" id="item-3-4">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">3.4</span>Real device integrations</span>
+                <div class="note">Finish real HA mapping, live calendars and reminders, push path, focus state, perception feeds, workshop hardware, and health sync hardening.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row active" data-id="3.4a" data-status="active" id="item-3-4a">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">3.4a</span>iPhone mobile command system refactor</span>
+                <div class="note">Reduce the primary phone model to Today, Focus, Decisions, Family, and Navigate, then turn continuity/resume into a shared layer instead of adding more equal-weight tabs.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row next" data-id="3.5" data-status="next" id="item-3-5">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">3.5</span>Stewardship lane framework expansion</span>
+                <div class="note">Deepen lane coverage, triggers, cadence, and more of the missing operational lanes.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row next" data-id="3.6" data-status="next" id="item-3-6">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">3.6</span>Intent routing layer</span>
+                <div class="note">Implement the classifier, capability manifests, standard handoff envelopes, and routed session tracking.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row next" data-id="3.7" data-status="next" id="item-3-7">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">3.7</span>SQLite migration</span>
+                <div class="note">Finish the planned hot-state migration for approvals, memory metadata, conversation sessions, router sessions, and related stores.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row next" data-id="3.8" data-status="next" id="item-3-8">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">3.8</span>Approvals executor stub replacements</span>
+                <div class="note">Replace the remaining real-world action stubs in <code>jarvis/approvals.py</code>.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row next" data-id="3.9" data-status="next" id="item-3-9">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">3.9</span>CLI and operator command closeout</span>
+                <div class="note">Finish the remaining operator-grade flows like away-report and related runtime commands.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row next" data-id="3.10" data-status="next" id="item-3-10">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">3.10</span>Memory publishing and Obsidian-facing layer</span>
+                <div class="note">Add the human-facing publishing and export layer on top of the memory engine.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row done" data-id="3.11" data-status="done" id="item-3-11">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">3.11</span>Always-on agent backend blueprint</span>
+                <div class="note">Completed. The backend target state is now defined as an always-on multi-agent operating system in <code>docs/always-on-agent-backend-blueprint.md</code>, with concrete layers for runtime, scheduling, supervision, memory, and attention routing.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row next" data-id="3.12" data-status="next" id="item-3-12">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">3.12</span>Agent runtime kernel</span>
+                <div class="note">Add durable agent lifecycle control for wake, pause, resume, interrupt, escalate, and retire behavior across all always-on agents.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row next" data-id="3.13" data-status="next" id="item-3-13">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">3.13</span>Agent registry and mission model</span>
+                <div class="note">Create the canonical registry for agent identity, mission, lane ownership, cadence, authority, trust zone, and escalation targets.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row next" data-id="3.14" data-status="next" id="item-3-14">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">3.14</span>Event bus and scheduler fabric</span>
+                <div class="note">Let agents wake from time, state change, thresholds, handoffs, and direct user interruption through a durable background orchestration fabric.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row next" data-id="3.15" data-status="next" id="item-3-15">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">3.15</span>Foreground and background attention router</span>
+                <div class="note">Route agents cleanly between autonomous background work and human-facing foreground focus, with interruption-safe handoff behavior.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row next" data-id="3.16" data-status="next" id="item-3-16">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">3.16</span>Agent inbox, outbox, and worklog state</span>
+                <div class="note">Give each agent durable inbox, outbox, active task, blocked task, pending review, and working-memory state instead of only shared global storage.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row next" data-id="3.17" data-status="next" id="item-3-17">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">3.17</span>Cross-agent handoff and delegation fabric</span>
+                <div class="note">Add explicit delegation, escalation, duplicate-work suppression, and safe cross-agent handoff records so the system behaves like a coordinated staff.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row next" data-id="3.18" data-status="next" id="item-3-18">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">3.18</span>Observability and operator health plane</span>
+                <div class="note">Surface active agents, blocked agents, stale runs, overloaded lanes, review queues, and drift signals as first-class operational telemetry.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row next" data-id="3.19" data-status="next" id="item-3-19">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">3.19</span>Governance, doctrine, and supervision loop</span>
+                <div class="note">Extend the current trust and stewardship foundations into a universal multi-agent supervision loop for doctrine, rollback, and bounded autonomy.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row next" data-id="3.20" data-status="next" id="item-3-20">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">3.20</span>Budgeting, arbitration, and interruption engine</span>
+                <div class="note">Add resource arbitration for compute, tokens, attention, urgency, and quiet-hours discipline so always-on agents stay useful without becoming noisy.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section" id="section-4">
+        <div class="section-head">
+          <div class="section-title">
+            <h2>4. Later Civilizational Work</h2>
+            <button class="section-toggle" type="button" data-target="section-4">Collapse</button>
+          </div>
+          <div class="section-meta">
+            <span class="badge next">Long Horizon</span>
+          </div>
+        </div>
+        <div class="panel">
+          <ul class="tree">
+            <li class="row next" data-id="4.1" data-status="next" id="item-4-1">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">4.1</span>Ambient JARVIS</span>
+                <div class="note">Presence-aware watch, phone, car, and home routing with room and quiet-hours discipline.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row next" data-id="4.2" data-status="next" id="item-4-2">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">4.2</span>Recursive foundry and specialist-agent generation</span>
+                <div class="note">Builder-agent workflow for proposing, creating, and governing new agents.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row next" data-id="4.3" data-status="next" id="item-4-3">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">4.3</span>Growth and stewardship formation systems</span>
+                <div class="note">Tutoring, parenting, health loops, faith orchestration, and values-aligned formation.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row next" data-id="4.4" data-status="next" id="item-4-4">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">4.4</span>Family civilization layer</span>
+                <div class="note">Season-of-life detection, overload and conflict sensing, legacy archive, and intergenerational memory bundles.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row next" data-id="4.5" data-status="next" id="item-4-5">
+              <input class="toggle" type="checkbox">
+              <div class="row-body">
+                <span class="label"><span class="id">4.5</span>Interaction Bible agent universe expansion</span>
+                <div class="note">The remaining later-domain agents that are defined but not yet built.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section" id="section-5">
+        <div class="section-head">
+          <div class="section-title">
+            <h2>5. Already Covered</h2>
+            <button class="section-toggle" type="button" data-target="section-5">Collapse</button>
+          </div>
+          <div class="section-meta">
+            <span class="badge done">Leave Checked</span>
+          </div>
+        </div>
+        <div class="panel">
+          <ul class="tree">
+            <li class="row done" data-id="5.1" data-status="done" id="item-5-1">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">5.1</span><code>SystemsAdminSummary</code> missing model</span>
+                <div class="note">Already exists and is wired.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row done" data-id="5.2" data-status="done" id="item-5-2">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">5.2</span><code>book_launch.load_assets()</code> blocker</span>
+                <div class="note">Already exists and should stay off the open list.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row done" data-id="5.3" data-status="done" id="item-5-3">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">5.3</span>Missing Apple governance routes</span>
+                <div class="note">Already present in the current contract surface.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row done" data-id="5.4" data-status="done" id="item-5-4">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">5.4</span>Hardcoded trust owner cleanup</span>
+                <div class="note">Already addressed.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row done" data-id="5.5" data-status="done" id="item-5-5">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">5.5</span>Apple guardrail and decode coverage</span>
+                <div class="note">Already part of the verified foundation.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+            <li class="row done" data-id="5.6" data-status="done" id="item-5-6">
+              <input class="toggle" type="checkbox" checked>
+              <div class="row-body">
+                <span class="label"><span class="id">5.6</span>Missing <code>fresh-start</code> command</span>
+                <div class="note">The command already exists, so it should remain checked off.</div>
+              </div>
+              <div class="row-tools">
+                <button class="row-action focus-btn" type="button">Focus</button>
+                <button class="row-action copy-btn" type="button">Copy ID</button>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="footer-note">Temporary HTML checklist for shared reference. This is now front-end usable: searchable, filterable, deep-linkable, and locally stateful without pretending to be the canonical source of truth.</div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      const storageKey = "jarvis-numbered-outline-checklist:v1";
+      const rows = Array.from(document.querySelectorAll(".row"));
+      const sections = Array.from(document.querySelectorAll(".section"));
+      const filterButtons = Array.from(document.querySelectorAll(".chip"));
+      const searchInput = document.getElementById("search-input");
+      const emptyState = document.getElementById("empty-state");
+      const resultsCopy = document.getElementById("results-copy");
+      const collapseAllBtn = document.getElementById("collapse-all-btn");
+      const focusActiveBtn = document.getElementById("focus-active-btn");
+      const resetBoardBtn = document.getElementById("reset-board-btn");
+      const activeId = "3.4";
+      let activeFilter = "all";
+      let collapsedAll = false;
+
+      function loadState() {
+        try {
+          return JSON.parse(localStorage.getItem(storageKey) || "{}");
+        } catch (_) {
+          return {};
+        }
+      }
+
+      function saveState(state) {
+        localStorage.setItem(storageKey, JSON.stringify(state));
+      }
+
+      const persisted = loadState();
+
+      rows.forEach((row) => {
+        const id = row.dataset.id;
+        const toggle = row.querySelector(".toggle");
+        if (Object.prototype.hasOwnProperty.call(persisted, id)) {
+          toggle.checked = Boolean(persisted[id]);
+        }
+      });
+
+      function statusForRow(row) {
+        const toggle = row.querySelector(".toggle");
+        if (toggle.checked) return "done";
+        return row.dataset.status || "next";
+      }
+
+      function rowMatchesFilter(row, filter) {
+        const status = statusForRow(row);
+        if (filter === "all") return true;
+        if (filter === "open") return status !== "done";
+        if (filter === "done") return status === "done";
+        if (filter === "active") return row.dataset.id === activeId;
+        if (filter === "next") return status === "next";
+        return true;
+      }
+
+      function rowMatchesSearch(row, query) {
+        if (!query) return true;
+        const haystack = [
+          row.dataset.id,
+          row.querySelector(".label")?.textContent || "",
+          row.querySelector(".note")?.textContent || "",
+        ].join(" ").toLowerCase();
+        return haystack.includes(query);
+      }
+
+      function refreshCounts() {
+        const doneCount = rows.filter((row) => row.querySelector(".toggle").checked).length;
+        const openCount = rows.length - doneCount;
+        const percent = Math.round((doneCount / rows.length) * 100);
+
+        document.getElementById("sidebar-active-id").textContent = activeId;
+        document.getElementById("sidebar-done-count").textContent = String(doneCount);
+        document.getElementById("sidebar-open-count").textContent = String(openCount);
+        document.getElementById("hero-percent").textContent = percent + "%";
+        document.getElementById("hero-open").textContent = String(openCount);
+        document.getElementById("hero-focus").textContent = activeId;
+      }
+
+      function refreshNavCounts() {
+        sections.forEach((section) => {
+          const sectionId = section.id;
+          const countNode = document.querySelector(`[data-nav-count="${sectionId}"]`);
+          const visibleRows = Array.from(section.querySelectorAll(".row")).filter((row) => !row.classList.contains("hidden"));
+          if (countNode) countNode.textContent = String(visibleRows.length);
+        });
+      }
+
+      function applyFilters() {
+        const query = searchInput.value.trim().toLowerCase();
+        let visibleRowCount = 0;
+
+        rows.forEach((row) => {
+          row.classList.remove("highlight");
+          const visible = rowMatchesFilter(row, activeFilter) && rowMatchesSearch(row, query);
+          row.classList.toggle("hidden", !visible);
+          if (visible) visibleRowCount += 1;
+        });
+
+        sections.forEach((section) => {
+          const hasVisibleRows = Array.from(section.querySelectorAll(".row")).some((row) => !row.classList.contains("hidden"));
+          section.classList.toggle("hidden", !hasVisibleRows);
+        });
+
+        emptyState.classList.toggle("visible", visibleRowCount === 0);
+
+        const queryCopy = query ? ` matching "${searchInput.value.trim()}"` : "";
+        const filterCopy = activeFilter === "all" ? "full board" : `${activeFilter} items`;
+        resultsCopy.textContent = visibleRowCount === 0
+          ? "No visible items. Try widening the search or filter."
+          : `Showing ${visibleRowCount} ${filterCopy}${queryCopy}.`;
+
+        refreshCounts();
+        refreshNavCounts();
+        focusHashIfPresent(false);
+      }
+
+      function focusRow(row, updateHash = true) {
+        if (!row) return;
+        rows.forEach((candidate) => candidate.classList.remove("highlight"));
+        row.classList.add("highlight");
+        row.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (updateHash) {
+          history.replaceState(null, "", "#" + row.id);
+        }
+      }
+
+      function focusHashIfPresent(scroll = true) {
+        const { hash } = window.location;
+        if (!hash) return;
+        const target = document.querySelector(hash);
+        if (target && target.classList.contains("row") && !target.classList.contains("hidden")) {
+          rows.forEach((candidate) => candidate.classList.remove("highlight"));
+          target.classList.add("highlight");
+          if (scroll) target.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }
+
+      function collapseSection(section, collapse) {
+        const panel = section.querySelector(".panel");
+        const footer = section.querySelector(".footer-note");
+        const toggle = section.querySelector(".section-toggle");
+        if (!panel || !toggle) return;
+        panel.style.display = collapse ? "none" : "";
+        if (footer) footer.style.display = collapse ? "none" : "";
+        toggle.textContent = collapse ? "Expand" : "Collapse";
+      }
+
+      rows.forEach((row) => {
+        const id = row.dataset.id;
+        const toggle = row.querySelector(".toggle");
+        toggle.addEventListener("change", () => {
+          const nextState = loadState();
+          nextState[id] = toggle.checked;
+          saveState(nextState);
+          applyFilters();
+        });
+
+        row.querySelector(".focus-btn").addEventListener("click", () => focusRow(row));
+
+        row.querySelector(".copy-btn").addEventListener("click", async (event) => {
+          const button = event.currentTarget;
+          const text = row.dataset.id;
+          try {
+            await navigator.clipboard.writeText(text);
+            button.textContent = "Copied";
+            button.classList.add("is-copied");
+            setTimeout(() => {
+              button.textContent = "Copy ID";
+              button.classList.remove("is-copied");
+            }, 1200);
+          } catch (_) {
+            button.textContent = text;
+            setTimeout(() => {
+              button.textContent = "Copy ID";
+            }, 1600);
+          }
+        });
+      });
+
+      filterButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          activeFilter = button.dataset.filter || "all";
+          filterButtons.forEach((candidate) => candidate.classList.toggle("active", candidate === button));
+          applyFilters();
+        });
+      });
+
+      searchInput.addEventListener("input", applyFilters);
+
+      collapseAllBtn.addEventListener("click", () => {
+        collapsedAll = !collapsedAll;
+        sections.forEach((section) => collapseSection(section, collapsedAll));
+        collapseAllBtn.textContent = collapsedAll ? "Expand sections" : "Collapse sections";
+      });
+
+      document.querySelectorAll(".section-toggle").forEach((button) => {
+        button.addEventListener("click", () => {
+          const section = document.getElementById(button.dataset.target || "");
+          if (!section) return;
+          const panel = section.querySelector(".panel");
+          const collapse = panel && panel.style.display !== "none";
+          collapseSection(section, collapse);
+        });
+      });
+
+      focusActiveBtn.addEventListener("click", () => {
+        const activeRow = document.querySelector(`[data-id="${activeId}"]`);
+        if (!activeRow) return;
+        activeFilter = "all";
+        filterButtons.forEach((button) => button.classList.toggle("active", button.dataset.filter === "all"));
+        applyFilters();
+        focusRow(activeRow);
+      });
+
+      resetBoardBtn.addEventListener("click", () => {
+        localStorage.removeItem(storageKey);
+        rows.forEach((row) => {
+          const toggle = row.querySelector(".toggle");
+          toggle.checked = row.dataset.status === "done";
+        });
+        activeFilter = "all";
+        searchInput.value = "";
+        filterButtons.forEach((button) => button.classList.toggle("active", button.dataset.filter === "all"));
+        applyFilters();
+      });
+
+      window.addEventListener("hashchange", () => focusHashIfPresent(true));
+
+      applyFilters();
+      focusHashIfPresent(false);
+    })();
+  </script>
+</body>
+</html>

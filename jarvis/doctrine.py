@@ -68,6 +68,52 @@ class SharedDoctrineStore:
         self.save(state)
         return state
 
+    def merge_candidates(
+        self,
+        candidates: list[dict[str, Any]],
+        *,
+        synthesis_meta: dict[str, Any],
+        source: str = "",
+    ) -> dict[str, Any]:
+        state = self.load()
+        merged: list[dict[str, Any]] = []
+        incoming = [dict(item) for item in candidates if isinstance(item, dict)]
+        source_key = str(source).strip().lower()
+        incoming_ids = {
+            str(item.get("candidate_id", "")).strip()
+            for item in incoming
+            if str(item.get("candidate_id", "")).strip()
+        }
+        for item in list(state.get("candidates", [])):
+            if not isinstance(item, dict):
+                continue
+            item_source = str(item.get("source", "")).strip().lower()
+            item_id = str(item.get("candidate_id", "")).strip()
+            if source_key and item_source == source_key:
+                if item_id and item_id in incoming_ids:
+                    continue
+                if not item_id:
+                    continue
+            merged.append(dict(item))
+        merged.extend(incoming)
+        state["generated_at"] = _now_iso()
+        state["candidates"] = merged[-240:]
+        state["last_synthesis"] = dict(synthesis_meta)
+        history = list(state.get("history", []))
+        history.append(
+            {
+                "timestamp": state["generated_at"],
+                "event": "merged_candidates",
+                "candidate_count": len(incoming),
+                "total_candidate_count": len(state["candidates"]),
+                "source": source_key,
+                "meta": dict(synthesis_meta),
+            }
+        )
+        state["history"] = history[-120:]
+        self.save(state)
+        return state
+
     def list_candidates(self, *, status: str = "") -> list[dict[str, Any]]:
         candidates = list(self.load().get("candidates", []))
         normalized = str(status).strip().lower()
