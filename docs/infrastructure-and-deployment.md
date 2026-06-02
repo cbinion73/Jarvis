@@ -30,25 +30,35 @@ The current recommended host is a small always-on macOS box or an existing alway
 
 Runtime assumptions:
 
-- repo root: `/Users/chris/Desktop/CODE/JARVIS`
-- Python entrypoint: `/Users/chris/Desktop/CODE/JARVIS/.venv/bin/python`
+- repo root: `/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS`
+- Python entrypoint: `/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/.venv/bin/python`
 - dashboard command: `python -m jarvis serve --host 127.0.0.1 --port 8787`
 - voice shell command: `python -m jarvis voice --text-loop`
 
 Packaged service artifacts:
 
-- [start_jarvis_dashboard.sh](/Users/chris/Desktop/CODE/JARVIS/infra/scripts/start_jarvis_dashboard.sh)
-- [start_jarvis_voice_shell.sh](/Users/chris/Desktop/CODE/JARVIS/infra/scripts/start_jarvis_voice_shell.sh)
-- [com.chris.jarvis.dashboard.plist](/Users/chris/Desktop/CODE/JARVIS/infra/launchd/com.chris.jarvis.dashboard.plist)
-- [com.chris.jarvis.voice-shell.plist](/Users/chris/Desktop/CODE/JARVIS/infra/launchd/com.chris.jarvis.voice-shell.plist)
-- [install_launchd_services.sh](/Users/chris/Desktop/CODE/JARVIS/infra/scripts/install_launchd_services.sh)
+- [com.jarvis.runtime.plist.template](/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/ops/launchd/com.jarvis.runtime.plist.template)
+- [com.jarvis.guardian.plist.template](/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/ops/launchd/com.jarvis.guardian.plist.template)
+- [com.jarvis.assistant-autonomy.plist.template](/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/ops/launchd/com.jarvis.assistant-autonomy.plist.template)
+- [com.jarvis.openviking.plist.template](/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/ops/launchd/com.jarvis.openviking.plist.template)
+- [install_launchd_services.sh](/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/ops/install_launchd_services.sh)
 
 Recommended service posture:
 
-- dashboard service: auto-start, keep alive
-- voice shell service: opt-in template, not auto-started by default
-- OpenClaw gateway: keep as a separate service boundary
+- runtime service: auto-start, keep alive, and remain the primary truth surface
+- guardian service: auto-start, record freshness, and restart the runtime when bounded checks fail
+- assistant autonomy service: auto-start, separate from the request/response runtime
+- OpenViking: optional support service, not a prerequisite for core liveness
+- OpenClaw gateway: separate service boundary
 - Home Assistant: separate host/process boundary
+
+Truth surfaces:
+
+- `python3 -m jarvis runtime-posture`
+- `curl http://127.0.0.1:8787/api/runtime/posture`
+- `curl http://127.0.0.1:8787/api/guardian-status`
+
+The always-on posture document is [always-on-runtime-posture.md](/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/docs/always-on-runtime-posture.md:1).
 
 ## Voice Satellite Plan
 
@@ -167,5 +177,7 @@ Still separate from this epic:
 - live Bambu adapter
 - production-grade wake-word and speaker ID
 - finished perception hardware/privacy rollout
+- mirrored reminder-provider sync beyond the persistent local queue
+- fuller workshop live telemetry adapters beyond the truthful profile-backed posture
 
 Those remain real next steps, but the deployment architecture is no longer undefined.

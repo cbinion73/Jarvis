@@ -25,7 +25,8 @@ data/settings/apns_config.json
 CloudflareConfig.swift
 
 # ── Runtime data — changes every server tick, not source ────────────────────
-data/agents/
+data/agents/*
+!data/agents/jarvis_agent_registry.v1.json
 data/cache/
 data/conversations/
 data/camera_hls/

@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
@@ -44,7 +45,7 @@ from .interfaces import InterfaceRouterStore, InterfaceRouterSupport
 from .memory import MemoryStore, MemorySupport
 from .missions import MissionStore, MissionSupport
 from .microsoft_graph import MicrosoftGraphSupport
-from .models import ApprovalRequest, AuthorityStage, AutonomyMode, AutonomyPolicy, EmailDraftStagingRequest, EmailDraftStagingResponse, HouseholdProfile, PrivacyLevel, RequestPlan, ResourceArena, RiskLevel, RoutingTier, StagedActionQueueItem, TrustZone, UserProfile, WorkLifecycleRecord, WorkLifecycleStage
+from .models import ApprovalRequest, AuthorityStage, AutonomyMode, AutonomyPolicy, EmailDraftStagingRequest, EmailDraftStagingResponse, HouseholdProfile, PrivacyLevel, PromotionRecord, RequestPlan, ResourceArena, RiskLevel, RoutingTier, StagedActionQueueItem, TrustZone, UserProfile, WorkLifecycleRecord, WorkLifecycleStage
 from .models import HouseholdSnapshot
 from .models import WeatherAdvisory
 from .openai_tasks import JarvisOpenAIClient, OpenAIResult
@@ -52,8 +53,11 @@ from .orchestrator import JarvisOrchestrator
 from .openviking_context import OpenVikingSupport
 from .perception import PerceptionStore, PerceptionSupport
 from .permissions import PermissionEngine
+from .runtime_kernel import AgentRuntimeKernel, AgentRuntimeKernelStore
+from .runtime_posture import build_runtime_posture_snapshot
 from .security import SecurityStore, SecuritySupport
 from .self_improvement import SelfImprovementStore
+from .supervision import SupervisionStore, SupervisionSupport
 from .tutoring import TutoringStore, TutoringSupport
 from .trust import TrustStore, TrustSupport
 from .wealth import WealthLeverageStore, WealthLeverageSupport
@@ -87,6 +91,24 @@ def _strip_greeting_lead(text: object) -> str:
     if not value:
         return ""
     return re.sub(r"^\s*Good\s+(morning|afternoon|evening)\s*,?\s+[^.?!]+[.?!-:]\s*", "", value, count=1, flags=re.IGNORECASE).strip()
+
+
+def _default_trust_owner_principal(config: AppConfig, household: HouseholdProfile) -> str:
+    configured = str(getattr(config, "default_trust_owner_principal", "") or "").strip().lower()
+    if configured:
+        return configured
+    adults = [
+        user.user_id.strip().lower()
+        for user in household.users.values()
+        if user.user_id.strip() and str(user.permissions or "").strip().lower() == "adult"
+    ]
+    if adults:
+        return adults[0]
+    for user in household.users.values():
+        candidate = user.user_id.strip().lower()
+        if candidate:
+            return candidate
+    return "primary"
 
 
 def _access_method_for_host(host: str) -> tuple[str, str]:
@@ -165,11 +187,13 @@ class JarvisRuntime:
     agent_registry: AgentRegistry
     life_agent_store: LifeAgentStudioStore
     background_scheduler: BackgroundTaskScheduler
+    agent_runtime_kernel: AgentRuntimeKernel
     memory_curator: MemoryCurator
     first_light_store: FirstLightStore
     adaptation_store: AdaptationStore
     assistant_core_store: AssistantCoreStore
     doctrine_store: SharedDoctrineStore
+    supervision_support: SupervisionSupport
     conversation_store: ConversationStore
     trust_support: TrustSupport
     mission_support: MissionSupport
@@ -238,9 +262,20 @@ class JarvisRuntime:
             WealthLeverageStore(data_root / "wealth"),
             openai_client,
         )
-        trust_support = TrustSupport(TrustStore(data_root / "trust"))
+        trust_support = TrustSupport(
+            TrustStore(data_root / "trust"),
+            default_owner_principal=_default_trust_owner_principal(config, household),
+        )
         agent_registry = AgentRegistry()
         approval_store = ApprovalStore(data_root / "approvals")
+        audit_log = AuditLog(data_root / "logs")
+        doctrine_store = SharedDoctrineStore()
+        supervision_support = SupervisionSupport(
+            SupervisionStore(data_root / "supervision"),
+            trust_support=trust_support,
+            doctrine_store=doctrine_store,
+            audit_log=audit_log,
+        )
         mission_support = MissionSupport(
             MissionStore(data_root / "missions"),
             trust_support=trust_support,
@@ -248,16 +283,23 @@ class JarvisRuntime:
             agent_registry=agent_registry,
         )
         life_agent_store = LifeAgentStudioStore(data_root / "agents")
-        background_scheduler = BackgroundTaskScheduler(
-            BackgroundStateStore(data_root / "agents"),
+        background_state_store = BackgroundStateStore(data_root / "agents")
+        agent_runtime_kernel = AgentRuntimeKernel(
+            AgentRuntimeKernelStore(data_root / "agents"),
             agent_registry,
+        )
+        agent_runtime_kernel.migrate_legacy_background_state(background_state_store.load())
+        background_scheduler = BackgroundTaskScheduler(
+            background_state_store,
+            agent_registry,
+            kernel=agent_runtime_kernel,
         )
         runtime = cls(
             config=config,
             household=household,
             snapshot=config.load_snapshot(),
             orchestrator=orchestrator,
-            audit_log=AuditLog(data_root / "logs"),
+            audit_log=audit_log,
             approval_store=approval_store,
             openai_client=openai_client,
             executive_support=ExecutiveSupport(config, openai_client),
@@ -288,11 +330,13 @@ class JarvisRuntime:
             agent_registry=agent_registry,
             life_agent_store=life_agent_store,
             background_scheduler=background_scheduler,
+            agent_runtime_kernel=agent_runtime_kernel,
             memory_curator=MemoryCurator(),
             first_light_store=FirstLightStore(),
             adaptation_store=AdaptationStore(),
             assistant_core_store=AssistantCoreStore(),
-            doctrine_store=SharedDoctrineStore(),
+            doctrine_store=doctrine_store,
+            supervision_support=supervision_support,
             conversation_store=ConversationStore(data_root / "conversations"),
             service_role=os.getenv("JARVIS_SERVICE_ROLE", "interactive").strip().lower() or "interactive",
             mission_support=mission_support,
@@ -1641,6 +1685,64 @@ class JarvisRuntime:
         totals["queue_bias"] = max(0, min(3, totals["queue_bias"]))
         return totals
 
+    def _stewardship_lane_rollout_posture(
+        self,
+        actor_name: str,
+        *,
+        lane_id: str,
+        packet_target: str = "",
+        review_surface: str = "",
+    ) -> dict[str, Any]:
+        actor = self.get_actor(actor_name)
+        rules = self.doctrine_store.rules_for(actor=actor.display_name, active_only=True)
+        matches: list[dict[str, Any]] = []
+        lane_key = str(lane_id or "").strip().lower()
+        packet_key = str(packet_target or "").strip().lower()
+        surface_key = str(review_surface or "").strip().lower()
+        for rule in rules:
+            if str(rule.get("kind") or "").strip().lower() != "rollout-posture":
+                continue
+            evidence = dict(rule.get("evidence") or {})
+            evidence_lane = str(evidence.get("lane_id") or "").strip().lower()
+            evidence_packet = str(evidence.get("packet_target") or "").strip().lower()
+            evidence_surface = str(evidence.get("review_surface") or "").strip().lower()
+            if lane_key and evidence_lane == lane_key:
+                matches.append(dict(rule))
+                continue
+            # Do not let a rule for one stewardship lane steer another lane merely
+            # because they currently share a review surface or packet target.
+            if lane_key:
+                continue
+            if packet_key and evidence_packet and evidence_packet == packet_key:
+                matches.append(dict(rule))
+                continue
+            if surface_key and evidence_surface and evidence_surface == surface_key:
+                matches.append(dict(rule))
+                continue
+        if not matches:
+            return {}
+        matches.sort(
+            key=lambda item: (
+                str(item.get("promoted_at") or ""),
+                str(item.get("rule_id") or ""),
+            ),
+            reverse=True,
+        )
+        selected = dict(matches[0])
+        effects = dict(selected.get("policy_effects") or {})
+        return {
+            "rule_id": str(selected.get("rule_id") or ""),
+            "title": str(selected.get("title") or ""),
+            "summary": str(selected.get("summary") or ""),
+            "preferred_packet_target": str(effects.get("preferred_packet_target") or packet_target or "").strip(),
+            "preferred_review_surface": str(effects.get("preferred_review_surface") or review_surface or "").strip(),
+            "boundary_decision_override": str(effects.get("boundary_decision_override") or "").strip().lower(),
+            "approval_mode_override": str(effects.get("approval_mode_override") or "").strip(),
+            "require_explicit_approval": bool(effects.get("require_explicit_approval")),
+            "queue_bias": int(effects.get("queue_bias", 0) or 0),
+            "promoted_at": str(selected.get("promoted_at") or ""),
+        }
+
     def _synthesize_doctrine_candidates(self) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         outcomes = self.assistant_core_store.outcome_history(limit=500)
         approvals = self.approval_history()[-200:]
@@ -2131,6 +2233,21 @@ class JarvisRuntime:
         rule = self.doctrine_store.promote_candidate(candidate_id, promoted_by=promoted_by, basis=basis)
         if rule is None:
             raise KeyError(f"Unknown doctrine candidate: {candidate_id}")
+        self._append_promotion_record(
+            event_type="promotion",
+            subject_kind="doctrine_rule",
+            subject_id=str(rule.get("rule_id") or candidate_id),
+            status=str(rule.get("status") or "active"),
+            actor=promoted_by,
+            basis=basis,
+            trust_zone=str(rule.get("domain") or "shared-doctrine"),
+            authority_stage="policy",
+            evidence={
+                "candidate_id": candidate_id,
+                "title": str(rule.get("title") or ""),
+                "summary": str(rule.get("summary") or ""),
+            },
+        )
         self._invalidate_snapshot_cache(surfaces=("shared_doctrine", "dashboard", "shell_state", "proactive_state"))
         return {"ok": True, "rule": rule}
 
@@ -2138,6 +2255,20 @@ class JarvisRuntime:
         candidate = self.doctrine_store.dismiss_candidate(candidate_id, dismissed_by=dismissed_by, reason=reason)
         if candidate is None:
             raise KeyError(f"Unknown doctrine candidate: {candidate_id}")
+        self._append_promotion_record(
+            event_type="dismissal",
+            subject_kind="doctrine_candidate",
+            subject_id=str(candidate.get("candidate_id") or candidate_id),
+            status=str(candidate.get("status") or "dismissed"),
+            actor=dismissed_by,
+            basis=reason or "dismissed-by-user",
+            trust_zone=str(candidate.get("kind") or "shared-doctrine"),
+            authority_stage="policy",
+            evidence={
+                "title": str(candidate.get("title") or ""),
+                "summary": str(candidate.get("summary") or ""),
+            },
+        )
         self._invalidate_snapshot_cache(surfaces=("shared_doctrine", "dashboard", "shell_state", "proactive_state"))
         return {"ok": True, "candidate": candidate}
 
@@ -2222,18 +2353,62 @@ class JarvisRuntime:
             "recent_events": recent_events,
         }
 
-    def _service_probe(self, url: str) -> dict[str, object]:
+    def runtime_posture_snapshot(self) -> dict[str, Any]:
+        return build_runtime_posture_snapshot(self)
+
+    def _service_http_probe(
+        self,
+        url: str,
+        *,
+        expect_json: bool = False,
+        timeout: int = 12,
+    ) -> dict[str, object]:
         target = str(url).strip()
         if not target:
             return {"ok": False, "url": "", "detail": "No target configured."}
         try:
             request = urllib.request.Request(target, method="GET")
             with urllib.request.urlopen(request, timeout=12) as response:
-                payload = json.loads(response.read().decode("utf-8"))
+                body = response.read()
+                content_type = str(response.headers.get("Content-Type", ""))
+                body_text = body.decode("utf-8", errors="replace")
+                result: dict[str, object] = {
+                    "ok": True,
+                    "url": target,
+                    "status_code": int(getattr(response, "status", 200) or 200),
+                    "content_type": content_type,
+                    "headers": {
+                        "server": str(response.headers.get("Server", "")),
+                        "www_authenticate": str(response.headers.get("WWW-Authenticate", "")),
+                        "cf_access_domain": str(response.headers.get("cf-access-domain", "")),
+                        "location": str(response.headers.get("Location", "")),
+                    },
+                    "body_preview": body_text[:240].strip(),
+                }
+                if expect_json:
+                    payload = json.loads(body_text)
+                    result["payload"] = payload
+                return result
+        except urllib.error.HTTPError as exc:
+            content_type = str(exc.headers.get("Content-Type", "")) if exc.headers else ""
+            body_text = ""
+            try:
+                body_text = exc.read().decode("utf-8", errors="replace")
+            except Exception:
+                body_text = ""
             return {
-                "ok": True,
+                "ok": False,
                 "url": target,
-                "payload": payload,
+                "status_code": int(exc.code),
+                "content_type": content_type,
+                "headers": {
+                    "server": str(exc.headers.get("Server", "")) if exc.headers else "",
+                    "www_authenticate": str(exc.headers.get("WWW-Authenticate", "")) if exc.headers else "",
+                    "cf_access_domain": str(exc.headers.get("cf-access-domain", "")) if exc.headers else "",
+                    "location": str(exc.headers.get("Location", "")) if exc.headers else "",
+                },
+                "body_preview": body_text[:240].strip(),
+                "detail": str(exc),
             }
         except Exception as exc:
             return {
@@ -2241,6 +2416,165 @@ class JarvisRuntime:
                 "url": target,
                 "detail": str(exc),
             }
+
+    def _service_probe(self, url: str) -> dict[str, object]:
+        target = str(url).strip()
+        probe = self._service_http_probe(target, expect_json=True)
+        if not probe.get("ok"):
+            return probe
+        payload = probe.get("payload")
+        if not isinstance(payload, dict):
+            return {
+                **probe,
+                "ok": False,
+                "detail": "Expected JSON object payload from service health probe.",
+            }
+        return probe
+
+    def _deployment_compose_services(self) -> list[dict[str, str]]:
+        compose_path = self._repo_root() / "deploy" / "docker-compose.yml"
+        if not compose_path.exists():
+            return []
+        rows: list[dict[str, str]] = []
+        in_services = False
+        for line in compose_path.read_text(encoding="utf-8").splitlines():
+            stripped = line.rstrip()
+            if stripped == "services:":
+                in_services = True
+                continue
+            if in_services and re.match(r"^[A-Za-z0-9_-]+:\s*$", stripped):
+                break
+            if not in_services:
+                continue
+            match = re.match(r"^\s{2}([a-z0-9_-]+):\s*$", stripped)
+            if not match:
+                continue
+            service_id = match.group(1)
+            rows.append(
+                {
+                    "id": service_id,
+                    "label": service_id.replace("-", " ").replace("_", " ").title(),
+                }
+            )
+        return rows
+
+    def _deployment_public_routes(self) -> list[dict[str, str]]:
+        nginx_path = self._repo_root() / "deploy" / "nginx.conf"
+        if not nginx_path.exists():
+            return []
+        routes: list[dict[str, str]] = []
+        current_domain = ""
+        for line in nginx_path.read_text(encoding="utf-8").splitlines():
+            domain_match = re.search(r"server_name\s+([^;]+);", line)
+            if domain_match:
+                current_domain = domain_match.group(1).strip()
+                continue
+            proxy_match = re.search(r"proxy_pass\s+http://([^;]+);", line)
+            if not proxy_match or not current_domain:
+                continue
+            upstream = proxy_match.group(1).strip()
+            service_id = upstream.split(":", 1)[0].strip()
+            routes.append(
+                {
+                    "domain": current_domain,
+                    "url": f"https://{current_domain}",
+                    "service_id": service_id,
+                    "upstream": upstream,
+                }
+            )
+            current_domain = ""
+        return routes
+
+    def _deployment_mode_label(self, mode: str, *, local_enabled: bool, hosted_enabled: bool) -> str:
+        normalized = str(mode or "").strip().lower()
+        if normalized == "hosted":
+            return "Hosted edge"
+        if normalized == "local":
+            return "Local household"
+        if normalized == "hybrid":
+            return "Hybrid household plus hosted edge"
+        if hosted_enabled and local_enabled:
+            return "Hybrid household plus hosted edge"
+        if hosted_enabled:
+            return "Hosted edge"
+        if local_enabled:
+            return "Local household"
+        return "Deployment plan not configured"
+
+    def _deployment_topology_snapshot(self, service_plan: dict[str, Any]) -> dict[str, Any]:
+        compose_services = self._deployment_compose_services()
+        public_routes = self._deployment_public_routes()
+        route_by_service = {
+            str(item.get("service_id") or ""): item
+            for item in public_routes
+            if str(item.get("service_id") or "").strip()
+        }
+        compose_rows: list[dict[str, Any]] = []
+        for item in compose_services:
+            service_id = str(item.get("id") or "").strip()
+            route = route_by_service.get(service_id, {})
+            compose_rows.append(
+                {
+                    "id": service_id,
+                    "label": str(item.get("label") or service_id),
+                    "public_domain": str(route.get("domain") or ""),
+                    "public_url": str(route.get("url") or ""),
+                    "upstream": str(route.get("upstream") or ""),
+                    "edge_exposed": bool(route),
+                }
+            )
+        deployment_mode = str(service_plan.get("deployment_mode") or "").strip().lower() or "hybrid"
+        hosted_base_url = str(service_plan.get("hosted_base_url") or "").strip()
+        if not hosted_base_url:
+            jarvis_route = route_by_service.get("jarvis", {})
+            hosted_base_url = str(jarvis_route.get("url") or "")
+        local_enabled = bool(service_plan.get("always_on_enabled")) or bool(str(service_plan.get("lan_url") or "").strip())
+        hosted_enabled = bool(hosted_base_url or public_routes or str(service_plan.get("remote_admin_host") or "").strip())
+        mode_label = self._deployment_mode_label(
+            deployment_mode,
+            local_enabled=local_enabled,
+            hosted_enabled=hosted_enabled,
+        )
+        remote_admin_host = str(service_plan.get("remote_admin_host") or "").strip()
+        remote_admin_user = str(service_plan.get("remote_admin_user") or "root").strip() or "root"
+        provider = str(service_plan.get("hosted_provider") or "Hetzner").strip() or "Hetzner"
+        edge_provider = str(service_plan.get("edge_provider") or "Cloudflare Tunnel").strip() or "Cloudflare Tunnel"
+        return {
+            "deployment_mode": deployment_mode,
+            "mode_label": mode_label,
+            "local_enabled": local_enabled,
+            "hosted_enabled": hosted_enabled,
+            "local": {
+                "host_label": str(service_plan.get("host_label") or "Primary JARVIS host"),
+                "host_type": str(service_plan.get("host_type") or "desktop"),
+                "lan_url": str(service_plan.get("lan_url") or ""),
+                "hostname": str(service_plan.get("hostname") or "jarvis.local"),
+                "launch_on_boot": bool(service_plan.get("launch_on_boot")),
+                "watchdog_enabled": bool(service_plan.get("watchdog_enabled")),
+            },
+            "hosted": {
+                "host_label": str(service_plan.get("hosted_host_label") or "Hetzner family stack"),
+                "provider": provider,
+                "base_url": hosted_base_url,
+                "remote_admin_host": remote_admin_host,
+                "remote_admin_user": remote_admin_user,
+                "ssh_target": (
+                    f"{remote_admin_user}@{remote_admin_host}"
+                    if remote_admin_host
+                    else ""
+                ),
+                "compose_project": str(service_plan.get("compose_project") or "jarvis-family"),
+            },
+            "edge": {
+                "provider": edge_provider,
+                "cloudflare_access_enabled": bool(service_plan.get("cloudflare_access_enabled", True)),
+                "tunnel_enabled": bool(service_plan.get("tunnel_enabled", True)),
+                "route_count": len(public_routes),
+                "chain_summary": f"{edge_provider} -> nginx -> compose services",
+            },
+            "public_routes": public_routes,
+            "compose_services": compose_rows,
+        }
 
     def service_runtime_snapshot(self, *, include_probe: bool = True) -> dict:
         current_build = self._service_build_snapshot()
@@ -2255,6 +2589,14 @@ class JarvisRuntime:
         service_plan = dict(self.identity_overview().get("service", {}))
         probe_url = str(service_plan.get("lan_url", "")).strip() or "http://127.0.0.1:8787/health"
         live_probe = self._service_probe(probe_url) if include_probe else {"ok": False, "url": probe_url, "detail": "probe skipped"}
+        topology = self._deployment_topology_snapshot(service_plan)
+        hosted_url = str(topology.get("hosted", {}).get("base_url") or "").strip()
+        hosted_health_url = f"{hosted_url.rstrip('/')}/health" if hosted_url else ""
+        hosted_probe = (
+            self._service_http_probe(hosted_health_url, expect_json=False)
+            if include_probe and hosted_health_url
+            else {"ok": False, "url": hosted_health_url, "detail": "probe skipped"}
+        )
         live_payload = dict(live_probe.get("payload", {})) if isinstance(live_probe.get("payload"), dict) else {}
         live_runtime = dict(live_payload.get("runtime", {})) if isinstance(live_payload.get("runtime"), dict) else {}
         live_fingerprint = str(live_runtime.get("build_fingerprint", ""))
@@ -2285,9 +2627,11 @@ class JarvisRuntime:
                 "runtime": live_runtime,
                 "detail": str(live_probe.get("detail", "")),
             },
+            "hosted_probe": hosted_probe,
             "roles": role_records,
             "restart_history": history,
             "guardian": self.guardian_status_snapshot(),
+            "deployment_topology": topology,
         }
 
     def identity_overview(self) -> dict:
@@ -2332,6 +2676,8 @@ class JarvisRuntime:
         openviking_plist = launch_agents_root / "com.jarvis.openviking.plist"
         assistant_plist = launch_agents_root / "com.jarvis.assistant-autonomy.plist"
         runtime_snapshot = self.service_runtime_snapshot()
+        topology = dict(runtime_snapshot.get("deployment_topology", {})) if isinstance(runtime_snapshot.get("deployment_topology"), dict) else self._deployment_topology_snapshot(service_plan)
+        hosted_probe = dict(runtime_snapshot.get("hosted_probe", {})) if isinstance(runtime_snapshot.get("hosted_probe"), dict) else {}
 
         def plist_status(path: Path, label: str) -> dict:
             installed = path.exists()
@@ -2389,6 +2735,19 @@ class JarvisRuntime:
             },
             "lan_url": service_plan.get("lan_url", ""),
             "hostname": service_plan.get("hostname", "jarvis.local"),
+            "deployment_mode": str(topology.get("deployment_mode") or service_plan.get("deployment_mode") or "hybrid"),
+            "mode_label": str(topology.get("mode_label") or ""),
+            "hosted_base_url": str(topology.get("hosted", {}).get("base_url") or service_plan.get("hosted_base_url") or ""),
+            "hosted_provider": str(topology.get("hosted", {}).get("provider") or service_plan.get("hosted_provider") or "Hetzner"),
+            "edge_provider": str(topology.get("edge", {}).get("provider") or service_plan.get("edge_provider") or "Cloudflare Tunnel"),
+            "remote_admin_host": str(topology.get("hosted", {}).get("remote_admin_host") or service_plan.get("remote_admin_host") or ""),
+            "remote_admin_user": str(topology.get("hosted", {}).get("remote_admin_user") or service_plan.get("remote_admin_user") or "root"),
+            "cloudflare_access_enabled": bool(topology.get("edge", {}).get("cloudflare_access_enabled") if isinstance(topology.get("edge"), dict) else service_plan.get("cloudflare_access_enabled", True)),
+            "tunnel_enabled": bool(topology.get("edge", {}).get("tunnel_enabled") if isinstance(topology.get("edge"), dict) else service_plan.get("tunnel_enabled", True)),
+            "public_routes": topology.get("public_routes", []),
+            "compose_services": topology.get("compose_services", []),
+            "edge_chain": str(topology.get("edge", {}).get("chain_summary") or ""),
+            "hosted_probe": hosted_probe,
         }
 
     def connected_devices_snapshot(self, current_device_id: str = "", current_host: str = "", current_origin: str = "") -> dict:
@@ -6350,6 +6709,7 @@ class JarvisRuntime:
         return {
             "actor": actor.display_name,
             "generated_at": datetime.now(timezone.utc).isoformat(),
+            "background_attention": self.background_scheduler.scheduler_fabric_snapshot(limit=8),
             "assistant_surface": {
                 "signal_chips": list(open_loops.get("surface_chips", [])),
                 "briefing_lines": list(open_loops.get("briefing_lines", [])),
@@ -7725,6 +8085,7 @@ class JarvisRuntime:
             if not str(item.get("actor", "")).strip()
             or str(item.get("actor", "")).strip().lower() in actor_keys
         ]
+        while_you_were_away = self.while_you_were_away_snapshot(actor.display_name)
         normalized_approvals: list[dict[str, Any]] = []
         for item in approvals:
             normalized = dict(item)
@@ -8091,6 +8452,25 @@ class JarvisRuntime:
             chips.append(f"{unread} assistant item(s)")
         if drift_risk:
             chips.append(f"{len(drift_risk[:3])} drift signal(s)")
+        quiet_completion_count = len(list((while_you_were_away or {}).get("quiet_completions", [])))
+        if quiet_completion_count:
+            chips.append(f"{quiet_completion_count} quiet completion(s)")
+
+        home_aggregate = self.chamber_home_aggregate(
+            actor.display_name,
+            chamber_packet={
+                "briefing_items": briefing_items,
+                "already_working": already_working,
+                "needs_you": needs_you,
+                "drift_risk": drift_risk[:3],
+                "recommendation": recommendation,
+                "state_line": state_line,
+            },
+            while_you_were_away=while_you_were_away,
+        )
+        command_items = list(home_aggregate.get("command_items", []))
+        if command_items:
+            chips.append(f"{len(command_items)} command lane(s)")
 
         return {
             "actor": actor.display_name,
@@ -8120,6 +8500,10 @@ class JarvisRuntime:
                 "actor_aware": actor_aware,
                 "mobile_remote_variant": mobile_remote_variant,
             },
+            "while_you_were_away": while_you_were_away,
+            "stewardship_lanes": list((while_you_were_away or {}).get("stewardship_lanes", [])),
+            "command_items": command_items,
+            "home_aggregate": home_aggregate,
             "chips": chips,
             "summary": {
                 "briefing_count": len(briefing_items),
@@ -8128,6 +8512,915 @@ class JarvisRuntime:
                 "drift_count": len(drift_risk[:3]),
                 "pending_approvals": len(approvals),
                 "active_runs": len(active_runs),
+            },
+        }
+
+    def chamber_home_aggregate(
+        self,
+        actor_name: str = "Chris",
+        *,
+        chamber_packet: dict[str, Any] | None = None,
+        home_state: dict[str, Any] | None = None,
+        home_context: dict[str, Any] | None = None,
+        watch_status: dict[str, Any] | None = None,
+        while_you_were_away: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        generated_at = datetime.now(timezone.utc).isoformat()
+        packet = chamber_packet if isinstance(chamber_packet, dict) else {}
+        state = home_state if isinstance(home_state, dict) else {}
+        context = home_context if isinstance(home_context, dict) else {}
+        watch = watch_status if isinstance(watch_status, dict) else {}
+        report = while_you_were_away if isinstance(while_you_were_away, dict) else {}
+
+        def _clean(value: object, fallback: str = "") -> str:
+            text = re.sub(r"\s+", " ", str(value or "")).strip()
+            return text or fallback
+
+        def _priority(value: object) -> str:
+            normalized = str(value or "").strip().lower()
+            return normalized if normalized in {"high", "normal", "low"} else "normal"
+
+        def _command_row(
+            *,
+            row_id: object,
+            title: object,
+            detail: object,
+            priority: object = "normal",
+            kind: object = "general",
+            packet_name: object = "",
+        ) -> dict[str, Any]:
+            return {
+                "id": _clean(row_id, str(uuid.uuid4())),
+                "title": _clean(title, "Command"),
+                "detail": _clean(detail, "JARVIS has a next move ready."),
+                "priority": _priority(priority),
+                "kind": _clean(kind, "general"),
+                "packet": _clean(packet_name, "briefing"),
+            }
+
+        def _action_row(
+            *,
+            row_id: object,
+            title: object,
+            detail: object,
+            command: object,
+            service: object,
+            entity_id: object = "",
+            emphasis: object = "low",
+        ) -> dict[str, Any]:
+            return {
+                "id": _clean(row_id, str(uuid.uuid4())),
+                "title": _clean(title, "Action"),
+                "detail": _clean(detail, "JARVIS staged the next household action."),
+                "command": _clean(command, "Review household posture"),
+                "entity_id": _clean(entity_id),
+                "service": _clean(service, "jarvis.review_home_posture"),
+                "emphasis": _priority(emphasis),
+            }
+
+        briefing_items = [item for item in list(packet.get("briefing_items") or []) if isinstance(item, dict)]
+        working_items = [item for item in list(packet.get("already_working") or []) if isinstance(item, dict)]
+        needs_items = [item for item in list(packet.get("needs_you") or []) if isinstance(item, dict)]
+        drift_items = [item for item in list(packet.get("drift_risk") or []) if isinstance(item, dict)]
+        recommendation = packet.get("recommendation") if isinstance(packet.get("recommendation"), dict) else {}
+
+        alerts = [item for item in list(state.get("alerts") or []) if isinstance(item, dict)]
+        lights_on = [str(item).strip() for item in (state.get("lights_on") or []) if str(item).strip()]
+        present_members = [str(item).strip() for item in (state.get("present_members") or []) if str(item).strip()]
+        doors = state.get("doors") if isinstance(state.get("doors"), dict) else {}
+        open_doors = [
+            str(name).strip()
+            for name, value in doors.items()
+            if str(name).strip() and str(value).strip().lower() not in {"closed", "locked", "secure"}
+        ]
+
+        agenda = context.get("agenda") if isinstance(context.get("agenda"), dict) else {}
+        attention = context.get("attention") if isinstance(context.get("attention"), dict) else {}
+        projects = context.get("projects") if isinstance(context.get("projects"), dict) else {}
+
+        needs_count = int(attention.get("needs_count") or watch.get("needs_count") or len(needs_items))
+        reminder_count = int(attention.get("reminder_count") or 0)
+        notification_count = int(attention.get("notification_count") or 0)
+        unread_email_count = int(attention.get("unread_email_count") or 0)
+        active_work_items_count = int(projects.get("active_work_items_count") or 0)
+        publishing_project_count = int(projects.get("publishing_project_count") or 0)
+        next_event_title = _clean(agenda.get("next_event_title"))
+        next_event_start = _clean(agenda.get("next_event_start"))
+        next_event_location = _clean(agenda.get("next_event_location"))
+        focus_active = bool(attention.get("focus_active"))
+        drift_active = bool(watch.get("drift")) or bool(drift_items)
+        weather_summary = _clean(watch.get("weather"))
+
+        command_items: list[dict[str, Any]] = []
+
+        if needs_count > 0:
+            top_need = needs_items[0] if needs_items else {}
+            command_items.append(
+                _command_row(
+                    row_id="command-needs",
+                    title=f"Resolve {needs_count} pending decision" + ("s" if needs_count != 1 else ""),
+                    detail=_clean(
+                        top_need.get("body"),
+                        "JARVIS is waiting on approvals before it can move the household forward.",
+                    ),
+                    priority="high",
+                    kind="needs",
+                    packet_name="approvals",
+                )
+            )
+
+        if alerts:
+            first_alert = alerts[0]
+            command_items.append(
+                _command_row(
+                    row_id="command-home-alerts",
+                    title=f"Review {len(alerts)} home alert" + ("s" if len(alerts) != 1 else ""),
+                    detail=_clean(first_alert.get("message"), "The home stack surfaced a live alert."),
+                    priority="high",
+                    kind="home",
+                    packet_name="family",
+                )
+            )
+
+        if next_event_title:
+            detail_parts = [part for part in [next_event_start, next_event_location] if part]
+            command_items.append(
+                _command_row(
+                    row_id="command-next-event",
+                    title=f"Prepare for {next_event_title}",
+                    detail=" · ".join(detail_parts) if detail_parts else "Your next calendar event is already on the board.",
+                    priority="high" if not present_members else "normal",
+                    kind="calendar",
+                    packet_name="today",
+                )
+            )
+
+        if reminder_count > 0:
+            command_items.append(
+                _command_row(
+                    row_id="command-reminders",
+                    title=f"Clear {reminder_count} active reminder" + ("s" if reminder_count != 1 else ""),
+                    detail="Outstanding reminders are part of today's attention load.",
+                    priority="normal",
+                    kind="reminders",
+                    packet_name="today",
+                )
+            )
+
+        if notification_count > 0 or unread_email_count > 0:
+            detail_parts: list[str] = []
+            if notification_count > 0:
+                detail_parts.append(f"{notification_count} notification" + ("s" if notification_count != 1 else ""))
+            if unread_email_count > 0:
+                detail_parts.append(f"{unread_email_count} unread email" + ("s" if unread_email_count != 1 else ""))
+            command_items.append(
+                _command_row(
+                    row_id="command-attention",
+                    title="Triage incoming attention",
+                    detail=" · ".join(detail_parts),
+                    priority="normal",
+                    kind="attention",
+                    packet_name="briefing",
+                )
+            )
+
+        if active_work_items_count > 0 or publishing_project_count > 0:
+            detail_parts: list[str] = []
+            if active_work_items_count > 0:
+                detail_parts.append(f"{active_work_items_count} active work item" + ("s" if active_work_items_count != 1 else ""))
+            if publishing_project_count > 0:
+                detail_parts.append(f"{publishing_project_count} publishing project" + ("s" if publishing_project_count != 1 else ""))
+            top_titles = [str(title).strip() for title in (projects.get("top_titles") or []) if str(title).strip()]
+            detail = " · ".join(detail_parts)
+            if top_titles:
+                detail = f"{detail} · {', '.join(top_titles[:2])}" if detail else ", ".join(top_titles[:2])
+            command_items.append(
+                _command_row(
+                    row_id="command-projects",
+                    title="Keep active projects moving",
+                    detail=detail or "JARVIS sees active work in motion.",
+                    priority="normal",
+                    kind="projects",
+                    packet_name="today",
+                )
+            )
+
+        if focus_active or drift_active or weather_summary:
+            detail_parts: list[str] = []
+            if focus_active:
+                detail_parts.append("Focus mode is active")
+            if drift_active:
+                detail_parts.append("Drift signals are live")
+            if weather_summary:
+                detail_parts.append(weather_summary)
+            command_items.append(
+                _command_row(
+                    row_id="command-posture",
+                    title="Set the household posture",
+                    detail=" · ".join(detail_parts),
+                    priority="normal",
+                    kind="posture",
+                    packet_name="family",
+                )
+            )
+
+        if present_members:
+            command_items.append(
+                _command_row(
+                    row_id="command-presence",
+                    title="Household presence is live",
+                    detail=", ".join(present_members[:3]),
+                    priority="normal",
+                    kind="presence",
+                    packet_name="family",
+                )
+            )
+
+        if not command_items:
+            fallback_command = recommendation.get("label") or "Household is clear"
+            fallback_detail = recommendation.get("body") or packet.get("state_line") or "No urgent actions are blocking JARVIS right now."
+            fallback_packet = recommendation.get("packet") or "briefing"
+            command_items.append(
+                _command_row(
+                    row_id="command-clear",
+                    title=fallback_command,
+                    detail=fallback_detail,
+                    priority="normal",
+                    kind="clear",
+                    packet_name=fallback_packet,
+                )
+            )
+
+        action_items: list[dict[str, Any]] = []
+        if alerts:
+            first_alert = alerts[0]
+            action_items.append(
+                _action_row(
+                    row_id="home-action-alert",
+                    title="Stage a response to live home alerts",
+                    detail=_clean(first_alert.get("message"), "JARVIS detected a live home alert."),
+                    command="Review and resolve live home alerts",
+                    service="jarvis.review_home_alerts",
+                    emphasis="high",
+                )
+            )
+
+        if lights_on:
+            action_items.append(
+                _action_row(
+                    row_id="home-action-lights",
+                    title="Stage all lights off",
+                    detail=f"{len(lights_on)} light" + ("s are" if len(lights_on) != 1 else " is") + " currently on.",
+                    command="Turn all lights off",
+                    service="jarvis.all_lights_off",
+                    emphasis="medium",
+                )
+            )
+
+        if open_doors:
+            action_items.append(
+                _action_row(
+                    row_id="home-action-secure",
+                    title="Stage a home security sweep",
+                    detail=", ".join(open_doors[:3]),
+                    command="Secure the home",
+                    service="jarvis.secure_home",
+                    emphasis="high",
+                )
+            )
+
+        if notification_count > 0 or needs_count > 0:
+            action_items.append(
+                _action_row(
+                    row_id="home-action-attention",
+                    title="Stage household attention review",
+                    detail=f"{needs_count} needs · {notification_count} alerts",
+                    command="Review household attention queue",
+                    service="jarvis.review_attention",
+                    emphasis="medium",
+                )
+            )
+
+        if next_event_title:
+            action_items.append(
+                _action_row(
+                    row_id="home-action-agenda",
+                    title="Stage next-event preparation",
+                    detail=next_event_title,
+                    command=f"Prepare the household for {next_event_title}",
+                    service="jarvis.prepare_next_event",
+                    emphasis="medium",
+                )
+            )
+
+        if present_members:
+            action_items.append(
+                _action_row(
+                    row_id="home-action-presence",
+                    title="Stage a household status check",
+                    detail=", ".join(present_members[:3]),
+                    command="Review household presence and home posture",
+                    service="jarvis.review_presence",
+                    emphasis="low",
+                )
+            )
+
+        if not action_items:
+            action_items.append(
+                _action_row(
+                    row_id="home-action-clear",
+                    title="Home is steady",
+                    detail="No urgent household actions are waiting right now.",
+                    command="Review household posture",
+                    service="jarvis.review_home_posture",
+                    emphasis="low",
+                )
+            )
+
+        lane_reports = [item for item in list(report.get("lane_reports") or []) if isinstance(item, dict)]
+        summary = {
+            "command_count": len(command_items),
+            "action_count": len(action_items),
+            "needs_count": needs_count,
+            "prepared_count": len(working_items),
+            "drift_count": len(drift_items),
+            "while_away_lane_count": len(lane_reports),
+            "quiet_completion_count": len(list(report.get("quiet_completions") or [])),
+        }
+
+        return {
+            "generated_at": generated_at,
+            "command_items": command_items[:5],
+            "action_items": action_items[:4],
+            "summary": summary,
+        }
+
+    def stewardship_lane_contracts(self, actor_name: str = "Chris") -> list[dict[str, Any]]:
+        actor = self.get_actor(actor_name)
+        generated_at = datetime.now(timezone.utc)
+        report_window_start = generated_at - timedelta(hours=18)
+
+        def _recent_enough(timestamp: object) -> bool:
+            parsed = self._parse_timestamp(str(timestamp or "").strip())
+            if parsed is None:
+                return False
+            return parsed.astimezone(timezone.utc) >= report_window_start
+
+        def _lane_label(value: object) -> str:
+            text = str(value or "").strip()
+            if not text:
+                return "General Operations"
+            return text.replace("-", " ").replace("_", " ").title()
+
+        def _truncate(value: object, fallback: str, *, limit: int = 160) -> str:
+            text = re.sub(r"\s+", " ", str(value or "")).strip()
+            if not text:
+                text = fallback
+            if len(text) <= limit:
+                return text
+            return f"{text[: max(0, limit - 1)].rstrip(' ,;:.')}…"
+
+        def _row(
+            *,
+            row_id: object,
+            lane: object,
+            agent: object,
+            title: object,
+            summary: object,
+            timestamp: object,
+            status: object = "",
+        ) -> dict[str, Any]:
+            resolved_id = str(row_id or "").strip() or str(uuid.uuid4())
+            resolved_timestamp = str(timestamp or "").strip() or generated_at.isoformat()
+            return {
+                "id": resolved_id,
+                "lane": _lane_label(lane),
+                "agent": str(agent or "").strip() or "JARVIS",
+                "title": _truncate(title, "Untitled activity", limit=96),
+                "summary": _truncate(summary, "JARVIS carried the work quietly.", limit=180),
+                "timestamp": resolved_timestamp,
+                "status": str(status or "").strip(),
+            }
+
+        lane_execution_defaults: dict[str, dict[str, str]] = {
+            "family-stewardship": {
+                "packet_target": "family",
+                "review_surface": "home",
+                "navigation_target": "home",
+                "trust_zone": "household_home",
+                "arena_id": "household.home.manual",
+                "action_label": "Stage household review",
+                "action_detail": "Queue the family and household lane for explicit review before anything escalates.",
+            },
+            "executive-calendar": {
+                "packet_target": "today",
+                "review_surface": "briefing",
+                "navigation_target": "calendar",
+                "trust_zone": "household_schedule",
+                "arena_id": "household.schedule.routing",
+                "action_label": "Stage executive review",
+                "action_detail": "Queue the calendar and executive lane for the next deliberate review pass.",
+            },
+            "watcher-continuity": {
+                "packet_target": "review",
+                "review_surface": "briefing",
+                "navigation_target": "notifications",
+                "trust_zone": "household_attention",
+                "arena_id": "household.attention.workflow",
+                "action_label": "Stage continuity review",
+                "action_detail": "Queue the Watcher lane so surfaced drift and continuity pressure come back in one calmer review loop.",
+            },
+            "chamber-operations": {
+                "packet_target": "systems",
+                "review_surface": "systems",
+                "navigation_target": "systems",
+                "trust_zone": "household_attention",
+                "arena_id": "household.attention.workflow",
+                "action_label": "Stage systems review",
+                "action_detail": "Queue chamber operations for explicit review before sandbox or maintenance work widens.",
+            },
+        }
+
+        def _lane_execution_primitive(
+            lane_id: str,
+            lane_title: object,
+            *,
+            prepared_count: int,
+            decision_count: int,
+            blocked_count: int,
+            drift_count: int,
+        ) -> dict[str, Any]:
+            config = lane_execution_defaults.get(lane_id, {})
+            trust_zone = str(config.get("trust_zone") or "household_attention")
+            arena_id = str(config.get("arena_id") or "household.attention.workflow")
+            boundary = self.assess_action_boundary(
+                zone_id=trust_zone,
+                arena_id=arena_id,
+                action_type="stewardship_lane_review",
+                requested_stage="stage_live",
+            )
+            lane_status = (
+                "blocked"
+                if blocked_count > 0
+                else "decision-heavy"
+                if decision_count > 0
+                else "drift-active"
+                if drift_count > 0
+                else "prepared"
+                if prepared_count > 0
+                else "quiet"
+            )
+            route_summary_parts: list[str] = []
+            if prepared_count > 0:
+                route_summary_parts.append(f"{prepared_count} prepared")
+            if decision_count > 0:
+                route_summary_parts.append(f"{decision_count} decision" + ("s" if decision_count != 1 else ""))
+            if blocked_count > 0:
+                route_summary_parts.append(f"{blocked_count} blocked")
+            if drift_count > 0:
+                route_summary_parts.append(f"{drift_count} drift")
+            route_summary = " · ".join(route_summary_parts) if route_summary_parts else "Lane is quiet right now."
+            doctrine = self._stewardship_lane_rollout_posture(
+                actor.display_name,
+                lane_id=lane_id,
+                packet_target=str(config.get("packet_target") or "briefing"),
+                review_surface=str(config.get("review_surface") or "briefing"),
+            )
+            packet_target = str(doctrine.get("preferred_packet_target") or config.get("packet_target") or "briefing")
+            review_surface = str(doctrine.get("preferred_review_surface") or config.get("review_surface") or "briefing")
+            boundary_decision = str(boundary.get("decision") or "stage")
+            approval_mode = str(boundary.get("approval_mode") or "stage_and_alert")
+            action_label = str(config.get("action_label") or f"Stage {str(lane_title or 'lane')} review")
+            action_detail = str(config.get("action_detail") or "Queue this lane for review.")
+
+            doctrine_boundary_override = str(doctrine.get("boundary_decision_override") or "").strip().lower()
+            doctrine_approval_override = str(doctrine.get("approval_mode_override") or "").strip()
+            doctrine_summary = str(doctrine.get("summary") or "").strip()
+            if boundary_decision != "deny":
+                if bool(doctrine.get("require_explicit_approval")) or doctrine_boundary_override == "stage":
+                    boundary_decision = "stage"
+                    approval_mode = doctrine_approval_override or "stage_and_alert"
+                    action_label = f"Keep {str(lane_title or 'lane')} staged"
+                    action_detail = (
+                        doctrine_summary
+                        or f"Keep this lane routed through {review_surface or 'review'} until the newer posture is proven further."
+                    )
+                elif doctrine_boundary_override == "allow":
+                    boundary_decision = "allow"
+                    approval_mode = doctrine_approval_override or approval_mode or "notify_only"
+                    action_label = f"Route {str(lane_title or 'lane')} directly"
+                    action_detail = (
+                        doctrine_summary
+                        or f"The codified rollout posture now favors routing this lane through {packet_target or 'the live packet'} with lighter review."
+                    )
+                    if "codified posture" not in route_summary.lower():
+                        route_summary = f"{route_summary} · codified posture" if route_summary else "Codified posture is active."
+            return {
+                "packet_target": packet_target,
+                "review_surface": review_surface,
+                "navigation_target": str(config.get("navigation_target") or "briefing"),
+                "action_label": action_label,
+                "action_detail": action_detail,
+                "route_summary": route_summary,
+                "lane_status": lane_status,
+                "trust_zone": str(boundary.get("trust_zone") or trust_zone),
+                "authority_stage": str(boundary.get("authority_stage") or "draft"),
+                "arena_status": str(boundary.get("arena_status") or "active"),
+                "approval_mode": approval_mode,
+                "boundary_decision": boundary_decision,
+                "boundary_reason": str(boundary.get("reason") or ""),
+                "doctrine_rule_id": str(doctrine.get("rule_id") or ""),
+            }
+
+        lifecycle = self.work_lifecycle_snapshot(actor.display_name, limit=60)
+        lifecycle_records = [
+            dict(item)
+            for item in list(lifecycle.get("records", []))
+            if isinstance(item, dict)
+        ]
+        open_loops = self.unified_open_loops(actor.display_name, limit=40)
+        open_loop_items = [
+            dict(item)
+            for item in list(open_loops.get("items", []))
+            if isinstance(item, dict)
+        ]
+        today_board = self.today_board(actor.display_name, open_loops=open_loops)
+        notifications = self.assistant_notifications(actor.display_name, limit=12, unread_only=False)
+        notification_items = [
+            dict(item)
+            for item in list(notifications.get("items", []))
+            if isinstance(item, dict)
+        ]
+        approvals = [dict(item) for item in self.list_pending_approvals() if isinstance(item, dict)]
+        missions = self.mission_control_snapshot(actor.display_name)
+        mission_alerts = [
+            dict(item)
+            for item in list(missions.get("family_alerts", []))
+            if isinstance(item, dict)
+        ]
+        self_improvement = self.self_improvement_snapshot()
+        queued_jobs = [
+            dict(item)
+            for item in list(self_improvement.get("jobs", []))
+            if isinstance(item, dict)
+            and str(item.get("status", "")).strip() in {"queued", "sandbox-queued", "sandbox-running", "sandbox-stop-requested", "blocked"}
+        ]
+        calendar_events = [
+            dict(item)
+            for item in self.merged_calendar_events(limit=8)
+            if isinstance(item, dict)
+        ]
+        try:
+            learning_review = self.learning_review_snapshot(actor.display_name, actor.user_id) or {}
+        except Exception:
+            learning_review = {}
+        if not isinstance(learning_review, dict):
+            learning_review = {}
+
+        quiet_completions: list[dict[str, Any]] = []
+        for record in lifecycle_records:
+            if str(record.get("stage", "")).strip() != WorkLifecycleStage.OUTCOME.value:
+                continue
+            if not _recent_enough(record.get("updated_at") or record.get("created_at")):
+                continue
+            status = str(record.get("status", "")).strip().lower()
+            if status in {"failed", "cancelled", "canceled"}:
+                continue
+            quiet_completions.append(
+                _row(
+                    row_id=record.get("work_id"),
+                    lane=record.get("lane") or record.get("domain"),
+                    agent=record.get("owner_agent"),
+                    title=record.get("title"),
+                    summary=record.get("rationale") or "JARVIS completed a useful background pass.",
+                    timestamp=record.get("updated_at") or record.get("created_at"),
+                    status=status or "completed",
+                )
+            )
+        quiet_completions = quiet_completions[:6]
+
+        blocked_work: list[dict[str, Any]] = []
+        for item in open_loop_items:
+            status = str(item.get("status", "")).strip().lower()
+            threshold = item.get("approval_threshold") if isinstance(item.get("approval_threshold"), dict) else {}
+            level = str(threshold.get("level", "")).strip().lower()
+            if item.get("domain") == "approvals" or status in {"pending", "blocked", "staged", "waiting", "needs-review", "needs_review"} or level in {"decision-required", "manual-review"}:
+                blocked_work.append(
+                    _row(
+                        row_id=item.get("item_id"),
+                        lane=item.get("task_lane") or item.get("domain"),
+                        agent=item.get("owner_agent"),
+                        title=item.get("title"),
+                        summary=item.get("summary") or threshold.get("summary") or "This work is staged until JARVIS gets a decision.",
+                        timestamp=item.get("timestamp"),
+                        status=status or "blocked",
+                    )
+                )
+        blocked_work = blocked_work[:6]
+
+        prepared_work: list[dict[str, Any]] = []
+        for record in lifecycle_records:
+            stage = str(record.get("stage", "")).strip()
+            if stage not in {
+                WorkLifecycleStage.HYPOTHESIS.value,
+                WorkLifecycleStage.IMPLEMENTATION_PLAN.value,
+                WorkLifecycleStage.REVIEW.value,
+            }:
+                continue
+            if not _recent_enough(record.get("updated_at") or record.get("created_at")):
+                continue
+            prepared_work.append(
+                _row(
+                    row_id=record.get("work_id"),
+                    lane=record.get("lane") or record.get("domain"),
+                    agent=record.get("owner_agent"),
+                    title=record.get("title"),
+                    summary=record.get("rationale") or "JARVIS prepared the next useful pass so you do not have to start cold.",
+                    timestamp=record.get("updated_at") or record.get("created_at"),
+                    status=stage,
+                )
+            )
+        if calendar_events:
+            next_event = calendar_events[0]
+            prepared_work.insert(
+                0,
+                _row(
+                    row_id=next_event.get("id") or next_event.get("event_id") or "calendar-next",
+                    lane="Executive And Calendar",
+                    agent="Herald",
+                    title=next_event.get("summary") or "Upcoming calendar pressure",
+                    summary=f"{str(next_event.get('start', '')).strip() or 'Soon'} · {str(next_event.get('location', '')).strip() or str(next_event.get('source_label', 'Calendar')).strip()}",
+                    timestamp=next_event.get("start") or generated_at.isoformat(),
+                    status="prepared",
+                )
+            )
+        prepared_work = prepared_work[:6]
+
+        decision_cards: list[dict[str, Any]] = []
+        for item in approvals[:3]:
+            decision_cards.append(
+                _row(
+                    row_id=item.get("request_id"),
+                    lane=item.get("domain") or "Needs You",
+                    agent=item.get("agent") or item.get("owner_agent") or "JARVIS",
+                    title=item.get("request") or "Decision needed",
+                    summary=item.get("rationale") or "JARVIS is paused on this until you decide.",
+                    timestamp=item.get("timestamp") or item.get("updated_at"),
+                    status=item.get("status") or "pending",
+                )
+            )
+
+        drift_signals: list[dict[str, Any]] = []
+        for item in notification_items:
+            if not _recent_enough(item.get("updated_at") or item.get("created_at") or item.get("surfaced_at")):
+                continue
+            drift_signals.append(
+                _row(
+                    row_id=item.get("notification_id") or item.get("id"),
+                    lane=item.get("category") or item.get("domain") or "Continuity",
+                    agent=item.get("agent") or "Watcher",
+                    title=item.get("title") or "Attention surfaced",
+                    summary=item.get("why_this_surfaced_now") or item.get("detail") or item.get("body") or "Watcher surfaced something that may need a calmer second look.",
+                    timestamp=item.get("updated_at") or item.get("created_at") or item.get("surfaced_at"),
+                    status=item.get("status") or "surfaced",
+                )
+            )
+        for index, line in enumerate(list(today_board.get("carry", []))[:2]):
+            drift_signals.append(
+                _row(
+                    row_id=f"carry-{index}",
+                    lane="Watcher And Continuity",
+                    agent="Watcher",
+                    title="Carry-forward pressure",
+                    summary=line,
+                    timestamp=today_board.get("generated_at") or generated_at.isoformat(),
+                    status="observed",
+                )
+            )
+        drift_signals = drift_signals[:6]
+
+        family_items = [
+            item for item in open_loop_items
+            if str(item.get("domain", "")).strip().lower() in {"family", "approvals", "home"}
+        ]
+        executive_items = [
+            item for item in lifecycle_records
+            if str(item.get("domain", "")).strip().lower() in {"calendar", "growth", "pipeline", "content", "work"}
+        ]
+        profile_facts = learning_review.get("profile_facts") if isinstance(learning_review.get("profile_facts"), list) else []
+        lane_contracts: list[dict[str, Any]] = [
+            {
+                "id": "family-stewardship",
+                "title": "Family Stewardship",
+                "summary": f"{len(family_items)} family or home item(s) stayed in view" + (f", with {len(mission_alerts)} home alert(s) watched." if mission_alerts else "."),
+                "report_summaries": [
+                    _row(
+                        row_id="family-summary",
+                        lane="Family Stewardship",
+                        agent="Pepper",
+                        title="Family stewardship stayed active",
+                        summary=f"{len(family_items)} family or home item(s) stayed in view" + (f", with {len(mission_alerts)} home alert(s) watched." if mission_alerts else "."),
+                        timestamp=generated_at.isoformat(),
+                        status="summary",
+                    )
+                ],
+                "prepared_work": [item for item in prepared_work if str(item.get("lane", "")).strip().lower() in {"family stewardship", "family", "home"}][:2],
+                "decision_cards": [item for item in decision_cards if str(item.get("lane", "")).strip().lower() in {"family", "approvals", "needs you"}][:2],
+                "drift_cards": [item for item in drift_signals if str(item.get("lane", "")).strip().lower() in {"watcher and continuity", "family stewardship"}][:2],
+                "quiet_completions": [item for item in quiet_completions if str(item.get("lane", "")).strip().lower() in {"family stewardship", "family", "home"}][:2],
+                "blocked_work": [item for item in blocked_work if str(item.get("lane", "")).strip().lower() in {"family", "approvals", "needs you"}][:2],
+            },
+            {
+                "id": "executive-calendar",
+                "title": "Executive And Calendar",
+                "summary": f"{len(calendar_events)} upcoming calendar event(s) and {len(executive_items)} active work record(s) informed the prepared posture.",
+                "report_summaries": [
+                    _row(
+                        row_id="executive-summary",
+                        lane="Executive And Calendar",
+                        agent="Herald",
+                        title="Executive and calendar posture is staged",
+                        summary=f"{len(calendar_events)} upcoming calendar event(s) and {len(executive_items)} active work record(s) informed the prepared posture.",
+                        timestamp=generated_at.isoformat(),
+                        status="summary",
+                    )
+                ],
+                "prepared_work": [item for item in prepared_work if str(item.get("lane", "")).strip().lower() in {"executive and calendar", "general operations"}][:3],
+                "decision_cards": [item for item in decision_cards if str(item.get("lane", "")).strip().lower() in {"approvals", "needs you"}][:1],
+                "drift_cards": [item for item in drift_signals if str(item.get("lane", "")).strip().lower() in {"watcher and continuity", "continuity"}][:1],
+                "quiet_completions": [item for item in quiet_completions if str(item.get("lane", "")).strip().lower() in {"executive and calendar", "general operations"}][:3],
+                "blocked_work": [item for item in blocked_work if str(item.get("lane", "")).strip().lower() in {"approvals", "needs you"}][:1],
+            },
+            {
+                "id": "watcher-continuity",
+                "title": "Watcher And Continuity",
+                "summary": f"{len(notification_items)} surfaced attention item(s) and {len(profile_facts)} durable continuity fact(s) shaped the report.",
+                "report_summaries": [
+                    _row(
+                        row_id="watcher-summary",
+                        lane="Watcher And Continuity",
+                        agent="Watcher",
+                        title="Watcher kept continuity pressure visible",
+                        summary=f"{len(notification_items)} surfaced attention item(s) and {len(profile_facts)} durable continuity fact(s) shaped the report.",
+                        timestamp=generated_at.isoformat(),
+                        status="summary",
+                    )
+                ],
+                "prepared_work": [item for item in prepared_work if str(item.get("agent", "")).strip().lower() == "watcher"][:1],
+                "decision_cards": [],
+                "drift_cards": drift_signals[:3],
+                "quiet_completions": [item for item in quiet_completions if str(item.get("agent", "")).strip().lower() == "watcher"][:2],
+                "blocked_work": [],
+            },
+        ]
+        if queued_jobs:
+            lane_contracts.append(
+                {
+                    "id": "chamber-operations",
+                    "title": "Chamber Operations",
+                    "summary": f"{len(queued_jobs)} system maintenance or sandbox job(s) stayed staged while you were away.",
+                    "report_summaries": [
+                        _row(
+                            row_id="chamber-ops-summary",
+                            lane="Chamber Operations",
+                            agent="Autoforge",
+                            title="Chamber operations kept system work staged",
+                            summary=f"{len(queued_jobs)} system maintenance or sandbox job(s) stayed staged while you were away.",
+                            timestamp=generated_at.isoformat(),
+                            status="summary",
+                        )
+                    ],
+                    "prepared_work": [
+                        _row(
+                            row_id=item.get("job_id"),
+                            lane="Chamber Operations",
+                            agent="Autoforge",
+                            title=item.get("title") or "Self-improvement lane",
+                            summary=item.get("summary") or "Sandbox work is staged for reviewed execution.",
+                            timestamp=item.get("updated_at") or item.get("created_at") or generated_at.isoformat(),
+                            status=item.get("status") or "queued",
+                        )
+                        for item in queued_jobs[:2]
+                    ],
+                    "decision_cards": [],
+                    "drift_cards": [],
+                    "quiet_completions": [],
+                    "blocked_work": [
+                        _row(
+                            row_id=item.get("job_id"),
+                            lane="Chamber Operations",
+                            agent="Autoforge",
+                            title=item.get("title") or "Self-improvement lane",
+                            summary=item.get("summary") or "System work is staged until the sandbox lane clears it.",
+                            timestamp=item.get("updated_at") or item.get("created_at") or generated_at.isoformat(),
+                            status=item.get("status") or "blocked",
+                        )
+                        for item in queued_jobs[:2]
+                        if str(item.get("status", "")).strip() in {"blocked", "sandbox-stop-requested"}
+                    ],
+                }
+            )
+
+        for contract in lane_contracts:
+            contract["report_summaries"] = [item for item in list(contract.get("report_summaries", [])) if isinstance(item, dict)]
+            contract["prepared_work"] = [item for item in list(contract.get("prepared_work", [])) if isinstance(item, dict)]
+            contract["decision_cards"] = [item for item in list(contract.get("decision_cards", [])) if isinstance(item, dict)]
+            contract["drift_cards"] = [item for item in list(contract.get("drift_cards", [])) if isinstance(item, dict)]
+            contract["quiet_completions"] = [item for item in list(contract.get("quiet_completions", [])) if isinstance(item, dict)]
+            contract["blocked_work"] = [item for item in list(contract.get("blocked_work", [])) if isinstance(item, dict)]
+            contract["execution_primitive"] = _lane_execution_primitive(
+                str(contract.get("id", "")).strip(),
+                contract.get("title"),
+                prepared_count=len(contract["prepared_work"]),
+                decision_count=len(contract["decision_cards"]),
+                blocked_count=len(contract["blocked_work"]),
+                drift_count=len(contract["drift_cards"]),
+            )
+
+        return lane_contracts[:4]
+
+    def while_you_were_away_snapshot(self, actor_name: str = "Chris") -> dict[str, Any]:
+        actor = self.get_actor(actor_name)
+        generated_at = datetime.now(timezone.utc)
+        lane_contracts = self.stewardship_lane_contracts(actor.display_name)
+
+        lane_reports = [
+            {
+                "id": str(item.get("id", "")).strip(),
+                "title": str(item.get("title", "")).strip(),
+                "summary": str(item.get("summary", "")).strip(),
+            }
+            for item in lane_contracts
+            if str(item.get("summary", "")).strip()
+        ]
+
+        def _collect(key: str, limit: int = 4) -> list[dict[str, Any]]:
+            rows: list[dict[str, Any]] = []
+            seen: set[str] = set()
+            for lane in lane_contracts:
+                for item in list(lane.get(key, [])):
+                    if not isinstance(item, dict):
+                        continue
+                    row_id = str(item.get("id", "")).strip()
+                    dedupe_key = row_id or f"{str(item.get('title', '')).strip().lower()}::{str(item.get('lane', '')).strip().lower()}::{str(item.get('agent', '')).strip().lower()}"
+                    if dedupe_key in seen:
+                        continue
+                    seen.add(dedupe_key)
+                    rows.append(dict(item))
+                    if len(rows) >= limit:
+                        return rows
+            return rows
+
+        recommendation_title = "Stay with the quiet work"
+        recommendation_summary = "No hard interruption is waiting. Start with the prepared artifact JARVIS set closest to the next live pressure."
+        recommendation_action = "Open the Brief and take the first prepared item."
+        quiet_completions = _collect("quiet_completions")
+        blocked_work = _collect("blocked_work")
+        prepared_work = _collect("prepared_work")
+        decision_cards = _collect("decision_cards", limit=3)
+        drift_signals = _collect("drift_cards")
+        if decision_cards:
+            first_decision = decision_cards[0]
+            recommendation_title = "Clear the first decision gate"
+            recommendation_summary = f"{first_decision.get('title', 'A pending decision')} is holding up downstream work."
+            recommendation_action = f"Resolve {first_decision.get('title', 'the first decision')} first."
+        elif blocked_work:
+            first_block = blocked_work[0]
+            recommendation_title = "Unblock the oldest staged work"
+            recommendation_summary = f"{first_block.get('title', 'A staged item')} is ready to move once you give JARVIS one clear answer."
+            recommendation_action = f"Review {first_block.get('title', 'the blocked item')} next."
+        elif prepared_work:
+            first_prepared = prepared_work[0]
+            recommendation_title = "Start from prepared posture"
+            recommendation_summary = f"JARVIS already staged {first_prepared.get('title', 'the next move')} so you do not have to begin from scratch."
+            recommendation_action = f"Use {first_prepared.get('title', 'the prepared item')} as your first move."
+        elif drift_signals:
+            first_drift = drift_signals[0]
+            recommendation_title = "Reduce drift before adding more load"
+            recommendation_summary = f"{first_drift.get('summary', 'A drift signal is warming.')} JARVIS recommends settling that before broadening the day."
+            recommendation_action = "Trim the highest-pressure drift signal first."
+
+        total_lane_count = len([item for item in lane_reports if str(item.get("summary", "")).strip()])
+        quiet_count = len(quiet_completions)
+        blocked_count = len(blocked_work)
+        prepared_count = len(prepared_work)
+        return {
+            "actor": actor.display_name,
+            "generated_at": generated_at.isoformat(),
+            "window_hours": 18,
+            "headline": f"While you were away, JARVIS kept {total_lane_count} lane" + ("s" if total_lane_count != 1 else "") + " moving.",
+            "summary": f"{quiet_count} quiet completion(s), {blocked_count} blocked item(s), and {prepared_count} prepared next step(s) are ready for review.",
+            "stewardship_lanes": lane_contracts,
+            "lane_reports": lane_reports[:4],
+            "quiet_completions": quiet_completions,
+            "blocked_work": blocked_work,
+            "prepared_work": prepared_work,
+            "decision_cards": decision_cards,
+            "drift_signals": drift_signals,
+            "recommendation": {
+                "title": recommendation_title,
+                "summary": recommendation_summary,
+                "action": recommendation_action,
             },
         }
 
@@ -12502,7 +13795,7 @@ class JarvisRuntime:
             "summary": {
                 "queued_jobs": len([item for item in jobs if str(item.get("status", "")).strip() == "queued"]),
                 "auto_runnable_jobs": len([item for item in jobs if str(item.get("status", "")).strip() == "queued" and item.get("auto_allowed")]),
-                "sandbox_jobs": len([item for item in jobs if str((item.get("mutation_route") or {}).get("route", "")).strip() == "sandbox/worktree-only" and str(item.get("status", "")).strip() in {"queued", "blocked", "sandbox-queued", "sandbox-running", "sandboxed"}]),
+                "sandbox_jobs": len([item for item in jobs if str((item.get("mutation_route") or {}).get("route", "")).strip() == "sandbox/worktree-only" and str(item.get("status", "")).strip() in {"queued", "blocked", "sandbox-queued", "sandbox-running", "sandbox-stop-requested", "sandboxed"}]),
                 "approval_jobs": len([item for item in jobs if str((item.get("mutation_route") or {}).get("route", "")).strip() == "approval-required" and str(item.get("status", "")).strip() in {"queued", "blocked"}]),
                 "blocked_jobs": len([item for item in jobs if str((item.get("mutation_route") or {}).get("route", "")).strip() == "constitutionally-blocked"]),
                 "synced_opportunities": len(synced_jobs),
@@ -12739,7 +14032,7 @@ class JarvisRuntime:
             "mutation_route": dict(job.get("mutation_route", {}) or {}),
             "metadata": {**dict(existing.get("metadata", {}) or {}), **dict(metadata or {})},
         }
-        if status in {"review-ready", "failed"}:
+        if status in {"review-ready", "failed", "cancelled"}:
             record["finished_at"] = now
         self.self_improvement_store.upsert_active_run(str(job.get("job_id", "")).strip(), record)
         return record
@@ -12754,7 +14047,9 @@ class JarvisRuntime:
             raise ValueError("This job is not routed to the sandbox/worktree executor.")
         status = str(job.get("status", "")).strip()
         existing_active_run = self.self_improvement_store.get_active_run(job_id)
-        if status == "sandbox-running" or (existing_active_run and str(existing_active_run.get("status", "")).strip() in {"queued", "running"}):
+        if status in {"sandbox-running", "sandbox-stop-requested"} or (
+            existing_active_run and str(existing_active_run.get("status", "")).strip() in {"queued", "running", "stop-requested"}
+        ):
             return {"ok": True, "accepted": False, "job": job, "queue": self._sandbox_queue_state(), "message": "Sandbox job is already running."}
         run_id = str(uuid.uuid4())
         queued = {
@@ -12796,6 +14091,259 @@ class JarvisRuntime:
                 future = self._sandbox_executor.submit(self._run_self_improvement_sandbox_job_background, actor_name, job_id, triggered_by)
                 self._sandbox_futures[job_id] = future
         return {"ok": True, "accepted": True, "job": queued, "active_run": active_run, "queue": self._sandbox_queue_state(), "message": "Sandbox job queued for background execution."}
+
+    def cancel_self_improvement_sandbox_job(self, actor_name: str, job_id: str, *, reason: str = "manual stop requested") -> dict[str, Any]:
+        job = self.self_improvement_store.get_job(job_id)
+        if job is None:
+            raise KeyError("Self-improvement job not found.")
+        mutation_route = dict(job.get("mutation_route", {}) or self._classify_self_mutation_route(job))
+        route_name = str(mutation_route.get("route", "")).strip() or "sandbox/worktree-only"
+        if route_name != "sandbox/worktree-only":
+            raise ValueError("This job is not routed to the sandbox/worktree executor.")
+
+        status = str(job.get("status", "")).strip()
+        if status in {"sandboxed", "completed", "failed", "sandbox-failed", "sandbox-cancelled", "cancelled"}:
+            return {
+                "ok": True,
+                "accepted": False,
+                "mode": "already-finished",
+                "job": job,
+                "queue": self._sandbox_queue_state(),
+                "message": "Sandbox job already finished.",
+            }
+
+        existing_active_run = self.self_improvement_store.get_active_run(job_id) or {}
+        run_id = str(existing_active_run.get("run_id", "")).strip() or str(job.get("active_run_id", "")).strip() or str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        cancelled_before_start = False
+
+        with self._sandbox_lock:
+            future = self._sandbox_futures.get(job_id)
+            if future is not None and future.cancel():
+                self._sandbox_futures.pop(job_id, None)
+                cancelled_before_start = True
+
+        if status == "sandbox-queued" or cancelled_before_start:
+            cancelled = {
+                **job,
+                "status": "sandbox-cancelled",
+                "updated_at": now,
+                "last_run_at": now,
+                "active_run_id": run_id,
+                "last_result": {
+                    "run_id": run_id,
+                    "job_id": str(job.get("job_id", "")).strip(),
+                    "job_title": str(job.get("title", "")).strip(),
+                    "generated_at": now,
+                    "mode": "sandbox-worktree",
+                    "status": "cancelled",
+                    "cancelled": True,
+                    "reason": reason,
+                },
+            }
+            self.self_improvement_store.upsert_job(cancelled)
+            active_run = self._upsert_active_sandbox_run(
+                cancelled,
+                run_id=run_id,
+                status="cancelled",
+                current_step="cancelled",
+                message="Sandbox execution was cancelled before background processing began.",
+                actor_name=actor_name,
+                metadata={"cancelled_by": actor_name, "cancel_reason": reason, "cancelled_at": now},
+            )
+            self.self_improvement_store.record_run(dict(cancelled.get("last_result") or {}))
+            self.catalyst_support.transition_work_item(
+                actor=actor_name,
+                title=str(cancelled.get("title", "")).strip() or "Self-improvement sandbox job",
+                domain="system",
+                lane="self-improvement-and-maintenance",
+                owner_agent="Autoforge",
+                stage=WorkLifecycleStage.REVIEW,
+                status="sandbox-cancelled",
+                artifact_type="self-improvement-sandbox-run",
+                source="sandbox-cancel",
+                review_level=str(cancelled.get("review_level", "review-before-code-change")).strip() or "review-before-code-change",
+                rationale="Sandbox execution was cancelled before it began.",
+                work_id=str(cancelled.get("job_id", "")).strip(),
+                record_id=run_id,
+                metadata={"job_type": str(cancelled.get("job_type", "")).strip(), "mutation_route": route_name},
+            )
+            return {"ok": True, "accepted": True, "mode": "cancelled", "job": cancelled, "active_run": active_run, "queue": self._sandbox_queue_state(), "message": "Sandbox job cancelled before it started."}
+
+        stop_requested = {
+            **job,
+            "status": "sandbox-stop-requested",
+            "updated_at": now,
+            "active_run_id": run_id,
+        }
+        self.self_improvement_store.upsert_job(stop_requested)
+        active_run = self._upsert_active_sandbox_run(
+            stop_requested,
+            run_id=run_id,
+            status="stop-requested",
+            current_step=str(existing_active_run.get("current_step", "")).strip() or "running",
+            message="Stop requested. JARVIS will halt this sandbox run at the next safe checkpoint.",
+            actor_name=actor_name,
+            worktree_path=str(existing_active_run.get("worktree_path", "")).strip(),
+            metadata={
+                "stop_requested": True,
+                "stop_requested_by": actor_name,
+                "stop_requested_at": now,
+                "stop_reason": reason,
+            },
+        )
+        return {"ok": True, "accepted": True, "mode": "stop-requested", "job": stop_requested, "active_run": active_run, "queue": self._sandbox_queue_state(), "message": "Stop requested for sandbox job."}
+
+    def recover_self_improvement_sandbox_job(self, actor_name: str, job_id: str, *, reason: str = "manual recovery reset") -> dict[str, Any]:
+        job = self.self_improvement_store.get_job(job_id)
+        if job is None:
+            raise KeyError("Self-improvement job not found.")
+        mutation_route = dict(job.get("mutation_route", {}) or self._classify_self_mutation_route(job))
+        route_name = str(mutation_route.get("route", "")).strip() or "sandbox/worktree-only"
+        if route_name != "sandbox/worktree-only":
+            raise ValueError("This job is not routed to the sandbox/worktree executor.")
+
+        status = str(job.get("status", "")).strip()
+        if status in {"sandbox-running", "sandbox-stop-requested", "sandbox-queued"}:
+            raise ValueError("Stop or cancel the sandbox job before resetting the lane.")
+
+        existing_active_run = self.self_improvement_store.get_active_run(job_id) or {}
+        worktree_text = str(job.get("sandbox_worktree_path", "")).strip() or str(existing_active_run.get("worktree_path", "")).strip()
+        removed_worktree = False
+        worktree_error = ""
+
+        if worktree_text:
+            worktree_path = Path(worktree_text)
+            if worktree_path.exists():
+                git_dir = worktree_path / ".git"
+                if git_dir.exists():
+                    result = self._run_maintenance_command(["git", "worktree", "remove", "--force", str(worktree_path)], timeout=120)
+                    removed_worktree = bool(result.get("ok"))
+                    if not removed_worktree:
+                        worktree_error = str(result.get("stderr") or result.get("stdout") or "").strip()
+                else:
+                    try:
+                        shutil.rmtree(worktree_path, ignore_errors=False)
+                        removed_worktree = True
+                    except Exception as exc:
+                        worktree_error = str(exc).strip()
+
+        now = datetime.now(timezone.utc).isoformat()
+        recovery_record = {
+            "run_id": str(uuid.uuid4()),
+            "job_id": str(job.get("job_id", "")).strip(),
+            "job_title": str(job.get("title", "")).strip(),
+            "generated_at": now,
+            "mode": "sandbox-recovery",
+            "status": "reset",
+            "reason": reason,
+            "removed_worktree": removed_worktree,
+            "worktree_path": worktree_text,
+            "worktree_error": worktree_error,
+        }
+        updated = {
+            **job,
+            "status": "sandbox-reset",
+            "updated_at": now,
+            "last_run_at": now,
+            "last_result": recovery_record,
+            "sandbox_worktree_path": "",
+            "active_run_id": "",
+        }
+        self.self_improvement_store.upsert_job(updated)
+        self.self_improvement_store.record_run(recovery_record)
+        self.self_improvement_store.clear_active_run(job_id)
+        self.catalyst_support.transition_work_item(
+            actor=actor_name,
+            title=str(updated.get("title", "")).strip() or "Self-improvement sandbox job",
+            domain="system",
+            lane="self-improvement-and-maintenance",
+            owner_agent="Autoforge",
+            stage=WorkLifecycleStage.REVIEW,
+            status="sandbox-reset",
+            artifact_type="self-improvement-sandbox-run",
+            source="sandbox-recovery",
+            review_level=str(updated.get("review_level", "review-before-code-change")).strip() or "review-before-code-change",
+            rationale="Sandbox lane was reset back to baseline after review or cancellation.",
+            work_id=str(updated.get("job_id", "")).strip(),
+            record_id=str(recovery_record.get("run_id", "")).strip(),
+            metadata={"job_type": str(updated.get("job_type", "")).strip(), "mutation_route": route_name, "removed_worktree": removed_worktree},
+        )
+        return {"ok": True, "accepted": True, "mode": "reset", "job": updated, "queue": self._sandbox_queue_state(), "message": "Sandbox lane reset to baseline."}
+
+    def _abort_sandbox_if_requested(
+        self,
+        job: dict[str, Any],
+        *,
+        actor_name: str,
+        run_id: str,
+        current_step: str,
+        worktree_path: str = "",
+    ) -> dict[str, Any] | None:
+        job_id = str(job.get("job_id", "")).strip()
+        active_run = self.self_improvement_store.get_active_run(job_id) or {}
+        metadata = active_run.get("metadata") if isinstance(active_run.get("metadata"), dict) else {}
+        stop_requested = bool(metadata.get("stop_requested")) or str(job.get("status", "")).strip() == "sandbox-stop-requested"
+        if not stop_requested:
+            return None
+
+        now = datetime.now(timezone.utc).isoformat()
+        reason = str(metadata.get("stop_reason") or "manual stop requested").strip() or "manual stop requested"
+        cancelled_report = {
+            "run_id": run_id,
+            "job_id": job_id,
+            "job_title": str(job.get("title", "")).strip(),
+            "generated_at": now,
+            "mode": "sandbox-worktree",
+            "status": "cancelled",
+            "cancelled": True,
+            "reason": reason,
+            "stopped_at_step": current_step,
+            "worktree_path": worktree_path,
+        }
+        cancelled = {
+            **job,
+            "status": "sandbox-cancelled",
+            "updated_at": now,
+            "last_run_at": now,
+            "last_result": cancelled_report,
+            "sandbox_worktree_path": worktree_path or str(job.get("sandbox_worktree_path", "")).strip(),
+            "active_run_id": run_id,
+        }
+        self.self_improvement_store.upsert_job(cancelled)
+        self.self_improvement_store.record_run(cancelled_report)
+        self._upsert_active_sandbox_run(
+            cancelled,
+            run_id=run_id,
+            status="cancelled",
+            current_step="cancelled",
+            message="Sandbox run was cancelled at a safe checkpoint.",
+            actor_name=actor_name,
+            worktree_path=worktree_path,
+            metadata={
+                **dict(metadata),
+                "cancelled_at": now,
+                "cancelled_reason": reason,
+                "stopped_at_step": current_step,
+            },
+        )
+        self.catalyst_support.transition_work_item(
+            actor=actor_name,
+            title=str(cancelled.get("title", "")).strip() or "Self-improvement sandbox job",
+            domain="system",
+            lane="self-improvement-and-maintenance",
+            owner_agent="Autoforge",
+            stage=WorkLifecycleStage.REVIEW,
+            status="sandbox-cancelled",
+            artifact_type="self-improvement-sandbox-run",
+            source="sandbox-cancel",
+            review_level=str(cancelled.get("review_level", "review-before-code-change")).strip() or "review-before-code-change",
+            rationale="Sandbox execution was cancelled at a safe checkpoint.",
+            work_id=job_id,
+            record_id=run_id,
+            metadata={"job_type": str(cancelled.get("job_type", "")).strip(), "mutation_route": str((cancelled.get("mutation_route") or {}).get("route", "")).strip()},
+        )
+        return {"ok": True, "cancelled": True, "job": cancelled, "sandbox_run": cancelled_report}
 
     def _run_self_improvement_sandbox_job_background(self, actor_name: str, job_id: str, triggered_by: str) -> dict[str, Any]:
         try:
@@ -12882,6 +14430,9 @@ class JarvisRuntime:
             actor_name=actor_name,
             metadata={"triggered_by": triggered_by},
         )
+        cancelled = self._abort_sandbox_if_requested(running, actor_name=actor_name, run_id=run_id, current_step="creating-worktree")
+        if cancelled is not None:
+            return cancelled
         lane = self._ensure_self_improvement_worktree(job)
         if not lane.get("ok"):
             raise ValueError(str((lane.get("command_result") or {}).get("stderr", "")).strip() or "Unable to create sandbox worktree.")
@@ -12895,6 +14446,9 @@ class JarvisRuntime:
             actor_name=actor_name,
             worktree_path=str(worktree_path),
         )
+        cancelled = self._abort_sandbox_if_requested(running, actor_name=actor_name, run_id=run_id, current_step="syncing-workspace", worktree_path=str(worktree_path))
+        if cancelled is not None:
+            return cancelled
         sync_report = self._sync_workspace_state_into_worktree(worktree_path)
         self._upsert_active_sandbox_run(
             running,
@@ -12906,6 +14460,10 @@ class JarvisRuntime:
             worktree_path=str(worktree_path),
             metadata={"workspace_sync": sync_report},
         )
+        refreshed_running = self.self_improvement_store.get_job(job_id) or running
+        cancelled = self._abort_sandbox_if_requested(refreshed_running, actor_name=actor_name, run_id=run_id, current_step="compile-and-test", worktree_path=str(worktree_path))
+        if cancelled is not None:
+            return cancelled
         report = self._sandbox_report_for_job(job, worktree_path)
         report["workspace_sync"] = sync_report
         report_path = Path(str(report.get("report_path", "")).strip())
@@ -14805,6 +16363,9 @@ class JarvisRuntime:
                 "mission_roles": list(agent.mission_roles),
                 "allowed_tools": list(agent.allowed_tools),
                 "success_metrics": list(agent.success_metrics),
+                "foreground_policy": agent.foreground_policy,
+                "background_policy": agent.background_policy,
+                "interruption_level": agent.interruption_level,
                 "shared_doctrine": self.doctrine_store.rules_for(agent_id=agent.agent_id, active_only=True),
             }
             for agent in self.agent_registry.list()
@@ -14822,6 +16383,8 @@ class JarvisRuntime:
             "task_agents": len([item for item in task_agents if str(item.get("status", "")).strip().lower() == "active"]),
             "promoted_agents": len([item for item in task_agents if str(item.get("promotion_status", "")).strip().lower() == "promoted"]),
             "doctrine_summary": dict((doctrine.get("summary") or {})),
+            "contract": self.agent_registry.contract_snapshot(),
+            "scheduler_fabric": self.background_scheduler.scheduler_fabric_snapshot(limit=12),
         }
 
     def _mission_memory_snapshot(self, actor_name: str) -> dict[str, Any]:
@@ -14930,6 +16493,7 @@ class JarvisRuntime:
         refreshed = self.mission_support.get_mission(str(enriched.get("mission_id", "")).strip()) or enriched
         refreshed["approvals_detail"] = self.mission_support.mission_approvals(str(refreshed.get("mission_id", "")).strip())
         refreshed["agent_profiles"] = self.mission_support.mission_agents(str(refreshed.get("mission_id", "")).strip())
+        refreshed["work_state_summary"] = self.mission_support.mission_work_state(str(refreshed.get("mission_id", "")).strip()).get("summary", {})
         return refreshed
 
     def create_mission(self, actor_name: str, request: str, room: str = "office") -> dict[str, Any]:
@@ -14972,6 +16536,12 @@ class JarvisRuntime:
             "active_missions": active_missions,
             "pending_approvals": list(summary.get("pending_approvals", [])),
             "family_alerts": list(summary.get("family_alerts", [])),
+            "work_state_overview": {
+                "blocked_tasks": int((summary.get("summary") or {}).get("blocked_tasks", 0) or 0),
+                "pending_reviews": int((summary.get("summary") or {}).get("pending_reviews", 0) or 0),
+                "pending_handoffs": int((summary.get("summary") or {}).get("pending_handoffs", 0) or 0),
+                "ownership_conflicts": int((summary.get("summary") or {}).get("ownership_conflicts", 0) or 0),
+            },
             "trust_zones": self.list_trust_zones(),
             "agent_registry": {
                 "core_agents": self.agent_registry_snapshot().get("core_agents", 0),
@@ -14988,6 +16558,137 @@ class JarvisRuntime:
 
     def mission_agents(self, mission_id: str) -> list[dict[str, Any]]:
         return self.mission_support.mission_agents(mission_id)
+
+    def mission_work_state_snapshot(self, mission_id: str) -> dict[str, Any]:
+        return self.mission_support.mission_work_state(mission_id)
+
+    def update_agent_work_state(
+        self,
+        mission_id: str,
+        agent_id: str,
+        *,
+        status: str = "",
+        current_focus: str = "",
+        ownership_mode: str = "",
+        note: str = "",
+        decision: str = "",
+        rationale: str = "",
+        hypothesis: str = "",
+    ) -> dict[str, Any]:
+        updated = self.mission_support.update_agent_work_state(
+            mission_id,
+            agent_id,
+            status=status,
+            current_focus=current_focus,
+            ownership_mode=ownership_mode,
+            note=note,
+            decision=decision,
+            rationale=rationale,
+            hypothesis=hypothesis,
+        )
+        actor_name = str(updated.get("actor", "Chris")).strip() or "Chris"
+        self._invalidate_snapshot_cache(actor_name, surfaces=("dashboard", "shell_state", "today_board", "proactive_state", "cognitive"))
+        return self._enriched_mission(updated)
+
+    def create_agent_handoff(
+        self,
+        mission_id: str,
+        *,
+        from_agent: str,
+        to_agent: str,
+        task_title: str,
+        summary: str,
+        context: str = "",
+        partial_work: str = "",
+        delegation_reason: str = "",
+        expected_result: str = "",
+        transfer_ownership: bool = False,
+        duplicate_key: str = "",
+    ) -> dict[str, Any]:
+        updated = self.mission_support.create_agent_handoff(
+            mission_id,
+            from_agent=from_agent,
+            to_agent=to_agent,
+            task_title=task_title,
+            summary=summary,
+            context=context,
+            partial_work=partial_work,
+            delegation_reason=delegation_reason,
+            expected_result=expected_result,
+            transfer_ownership=transfer_ownership,
+            duplicate_key=duplicate_key,
+        )
+        actor_name = str(updated.get("actor", "Chris")).strip() or "Chris"
+        self._invalidate_snapshot_cache(actor_name, surfaces=("dashboard", "shell_state", "today_board", "proactive_state", "cognitive"))
+        return self._enriched_mission(updated)
+
+    def acknowledge_agent_handoff(
+        self,
+        mission_id: str,
+        handoff_id: str,
+        *,
+        receiving_agent: str,
+        accepted: bool = True,
+        note: str = "",
+    ) -> dict[str, Any]:
+        updated = self.mission_support.acknowledge_agent_handoff(
+            mission_id,
+            handoff_id,
+            receiving_agent=receiving_agent,
+            accepted=accepted,
+            note=note,
+        )
+        actor_name = str(updated.get("actor", "Chris")).strip() or "Chris"
+        self._invalidate_snapshot_cache(actor_name, surfaces=("dashboard", "shell_state", "today_board", "proactive_state", "cognitive"))
+        return self._enriched_mission(updated)
+
+    def record_agent_escalation(
+        self,
+        mission_id: str,
+        *,
+        from_agent: str,
+        to_agent: str,
+        severity: str,
+        rationale: str,
+        requested_action: str,
+        task_id: str = "",
+    ) -> dict[str, Any]:
+        updated = self.mission_support.record_agent_escalation(
+            mission_id,
+            from_agent=from_agent,
+            to_agent=to_agent,
+            severity=severity,
+            rationale=rationale,
+            requested_action=requested_action,
+            task_id=task_id,
+        )
+        actor_name = str(updated.get("actor", "Chris")).strip() or "Chris"
+        self._invalidate_snapshot_cache(actor_name, surfaces=("dashboard", "shell_state", "today_board", "proactive_state", "cognitive"))
+        return self._enriched_mission(updated)
+
+    def suppress_duplicate_work(
+        self,
+        mission_id: str,
+        *,
+        duplicate_key: str,
+        winning_agent: str,
+        suppressed_agent: str,
+        rationale: str,
+        task_title: str = "",
+        task_id: str = "",
+    ) -> dict[str, Any]:
+        updated = self.mission_support.suppress_duplicate_work(
+            mission_id,
+            duplicate_key=duplicate_key,
+            winning_agent=winning_agent,
+            suppressed_agent=suppressed_agent,
+            rationale=rationale,
+            task_title=task_title,
+            task_id=task_id,
+        )
+        actor_name = str(updated.get("actor", "Chris")).strip() or "Chris"
+        self._invalidate_snapshot_cache(actor_name, surfaces=("dashboard", "shell_state", "today_board", "proactive_state", "cognitive"))
+        return self._enriched_mission(updated)
 
     def update_mission_status(self, mission_id: str, status: str, *, note: str = "") -> dict[str, Any]:
         updated = self.mission_support.update_mission_status(mission_id, status, note=note)
@@ -15051,6 +16752,70 @@ class JarvisRuntime:
         snapshot["statuses"] = statuses
         snapshot["doctrine_summary"] = self.shared_doctrine_snapshot().get("summary", {})
         return snapshot
+
+    def agent_runtime_snapshot(
+        self,
+        *,
+        recent_activity: list[dict] | None = None,
+        integration_status: list[dict] | None = None,
+    ) -> dict[str, Any]:
+        activity = recent_activity if recent_activity is not None else self.recent_activity(limit=20)
+        status_items = integration_status if integration_status is not None else self.status()
+        active_mode = self.family_support.active_mode().mode
+        snapshot = self.agent_runtime_kernel.snapshot(
+            active_mode=active_mode,
+            integration_status=status_items,
+            recent_activity=activity,
+            quiet_hours=(self.household.quiet_start, self.household.quiet_end),
+        )
+        doctrine_by_agent = {
+            str(status.get("agent_id", "")).strip(): self.doctrine_store.rules_for(
+                agent_id=str(status.get("agent_id", "")).strip(),
+                active_only=True,
+            )
+            for status in list(snapshot.get("status_rows", []))
+            if str(status.get("agent_id", "")).strip()
+        }
+        for status in list(snapshot.get("status_rows", [])):
+            status["shared_doctrine"] = doctrine_by_agent.get(str(status.get("agent_id", "")).strip(), [])
+        snapshot["doctrine_summary"] = self.shared_doctrine_snapshot().get("summary", {})
+        return snapshot
+
+    def control_agent_runtime(
+        self,
+        agent_id: str,
+        action: str,
+        *,
+        actor_name: str = "Chris",
+        reason: str = "",
+        execution_lane: str = "",
+    ) -> dict[str, Any]:
+        result = self.agent_runtime_kernel.apply_control(
+            agent_id,
+            action,
+            actor=actor_name,
+            reason=reason,
+            execution_lane=execution_lane,
+        )
+        self._invalidate_snapshot_cache(actor_name, surfaces=("dashboard", "shell_state", "today_board", "proactive_state", "cognitive"))
+        return result
+
+    def record_agent_runtime_heartbeat(
+        self,
+        agent_id: str,
+        *,
+        actor_name: str = "system",
+        note: str = "",
+        run_id: str = "",
+    ) -> dict[str, Any]:
+        result = self.agent_runtime_kernel.record_heartbeat(
+            agent_id,
+            actor=actor_name,
+            note=note,
+            run_id=run_id,
+        )
+        self._invalidate_snapshot_cache(actor_name, surfaces=("dashboard", "shell_state", "today_board", "proactive_state", "cognitive"))
+        return result
 
     def memory_curator_snapshot(self, *, recent_activity: list[dict] | None = None) -> dict:
         activity = recent_activity if recent_activity is not None else self.recent_activity(limit=20)
@@ -17075,6 +18840,271 @@ class JarvisRuntime:
             },
         }
 
+    def _load_stewardship_review_history(self) -> list[dict[str, Any]]:
+        path = self._repo_root() / "data" / "state" / "stewardship_reviews.json"
+        if not path.exists():
+            return []
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return []
+        reviews = payload.get("reviews") if isinstance(payload, dict) else []
+        if not isinstance(reviews, list):
+            return []
+        return [item for item in reviews if isinstance(item, dict)]
+
+    def _stewardship_reviews_for_subject(self, subject_name: str) -> list[dict[str, Any]]:
+        subject_key = str(subject_name or "").strip().lower()
+        if not subject_key:
+            return []
+        rows: list[dict[str, Any]] = []
+        for item in self._load_stewardship_review_history():
+            actor_values = {
+                str(item.get("last_actor") or "").strip().lower(),
+                str(item.get("actor") or "").strip().lower(),
+                str(item.get("owner_actor") or "").strip().lower(),
+            }
+            actor_values.discard("")
+            if subject_key in actor_values:
+                rows.append(item)
+        return rows
+
+    def durable_memory_graph_snapshot(self, viewer_name: str, subject_user_id: str = "") -> dict[str, Any]:
+        viewer, subject = self._personalization_subject(viewer_name, subject_user_id)
+        learning = self.learning_review_snapshot(viewer.display_name, subject.user_id)
+        profile = learning.get("profile") if isinstance(learning.get("profile"), dict) else {}
+        facts = learning.get("profile_facts") if isinstance(learning.get("profile_facts"), list) else []
+        proposals = learning.get("pending_proposals") if isinstance(learning.get("pending_proposals"), list) else []
+        first_light_history = learning.get("first_light_history") if isinstance(learning.get("first_light_history"), list) else []
+
+        chronicle_entries = [
+            item
+            for item in self.chronicle_support.store.list_recent(limit=40)
+            if isinstance(item, dict)
+            and str(item.get("actor") or "").strip().lower() == subject.display_name.strip().lower()
+        ]
+        stewardship_reviews = self._stewardship_reviews_for_subject(subject.display_name)
+
+        def parse_dt(value: Any) -> datetime | None:
+            raw = str(value or "").strip()
+            if not raw:
+                return None
+            for candidate in (raw, raw.replace("Z", "+00:00"), f"{raw}T00:00:00+00:00"):
+                try:
+                    parsed = datetime.fromisoformat(candidate)
+                except ValueError:
+                    continue
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=timezone.utc)
+                return parsed.astimezone(timezone.utc)
+            return None
+
+        def recent_count(items: list[dict[str, Any]], keys: tuple[str, ...], cutoff: datetime) -> int:
+            count = 0
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                timestamp = None
+                for key in keys:
+                    timestamp = parse_dt(item.get(key))
+                    if timestamp is not None:
+                        break
+                if timestamp is not None and timestamp >= cutoff:
+                    count += 1
+            return count
+
+        now = datetime.now(timezone.utc)
+        anchor_bucket: dict[str, dict[str, Any]] = {}
+
+        def register_anchor(anchor_id: str, title: str, summary: str, timestamp: datetime | None) -> None:
+            bucket = anchor_bucket.setdefault(
+                anchor_id,
+                {
+                    "id": anchor_id,
+                    "title": title,
+                    "summary": summary,
+                    "signal_count": 0,
+                    "last_signal_dt": None,
+                },
+            )
+            bucket["signal_count"] = int(bucket.get("signal_count") or 0) + 1
+            if timestamp is not None:
+                current = bucket.get("last_signal_dt")
+                if current is None or timestamp > current:
+                    bucket["last_signal_dt"] = timestamp
+
+        for item in facts:
+            if not isinstance(item, dict):
+                continue
+            timestamp = parse_dt(item.get("updated_at"))
+            lane = str(item.get("lane") or "").strip()
+            if lane:
+                title = lane.replace("-", " ").title()
+                register_anchor(
+                    f"lane:{lane}",
+                    title,
+                    f"{title} continues to accumulate durable memory facts that shape future posture.",
+                    timestamp,
+                )
+            for tag in [str(tag).strip() for tag in (item.get("tags") or []) if str(tag).strip()][:2]:
+                register_anchor(
+                    f"theme:{tag.lower()}",
+                    tag.replace("-", " ").title(),
+                    f"{tag.replace('-', ' ').title()} remains a recurring thread across durable facts and continuity recall.",
+                    timestamp,
+                )
+
+        for entry in chronicle_entries:
+            if not isinstance(entry, dict):
+                continue
+            theme = str(entry.get("theme") or "").strip()
+            if not theme:
+                continue
+            register_anchor(
+                f"chronicle:{theme.lower()}",
+                theme,
+                f"Chronicle keeps returning to {theme.lower()}, so that formation thread stays in the recall graph.",
+                parse_dt(entry.get("timestamp")),
+            )
+
+        for review in stewardship_reviews:
+            if not isinstance(review, dict):
+                continue
+            lane_id = str(review.get("lane_id") or "").strip()
+            lane_title = str(review.get("lane_title") or "Stewardship Lane").strip()
+            if not lane_id:
+                continue
+            register_anchor(
+                f"stewardship:{lane_id}",
+                lane_title,
+                f"{lane_title} has governance and rollout history that now belongs in the durable memory graph.",
+                parse_dt(review.get("updated_at")) or parse_dt(review.get("created_at")),
+            )
+
+        for item in first_light_history:
+            if not isinstance(item, dict):
+                continue
+            register_anchor(
+                "first-light",
+                "First Light Rhythm",
+                "First Light packets still provide the most durable day-start rhythm signal in the memory graph.",
+                parse_dt(item.get("created_at")) or parse_dt(item.get("date")),
+            )
+
+        anchors = [
+            {
+                "id": str(item.get("id") or ""),
+                "title": str(item.get("title") or "Memory Anchor"),
+                "summary": str(item.get("summary") or ""),
+                "signal_count": int(item.get("signal_count") or 0),
+                "last_signal": (
+                    item.get("last_signal_dt").isoformat()
+                    if isinstance(item.get("last_signal_dt"), datetime)
+                    else ""
+                ),
+            }
+            for item in sorted(
+                anchor_bucket.values(),
+                key=lambda bucket: (
+                    int(bucket.get("signal_count") or 0),
+                    bucket.get("last_signal_dt") if isinstance(bucket.get("last_signal_dt"), datetime) else datetime.min.replace(tzinfo=timezone.utc),
+                    str(bucket.get("title") or ""),
+                ),
+                reverse=True,
+            )[:6]
+        ]
+
+        active_threads = []
+        for item in anchors[:4]:
+            last_signal = parse_dt(item.get("last_signal"))
+            age = (now - last_signal).days if last_signal is not None else 30
+            if age < 1:
+                horizon = "24h"
+            elif age < 7:
+                horizon = "7d"
+            else:
+                horizon = "30d"
+            active_threads.append(
+                {
+                    "id": str(item.get("id") or ""),
+                    "title": str(item.get("title") or "Thread"),
+                    "summary": str(item.get("summary") or ""),
+                    "horizon": horizon,
+                    "signal_count": int(item.get("signal_count") or 0),
+                }
+            )
+
+        horizons = []
+        for label, window_days in (("24h", 1), ("7d", 7), ("30d", 30)):
+            cutoff = now - timedelta(days=window_days)
+            horizon_profile_facts = recent_count(facts, ("updated_at",), cutoff)
+            horizon_chronicle = recent_count(chronicle_entries, ("timestamp",), cutoff)
+            horizon_first_light = recent_count(first_light_history, ("created_at", "date"), cutoff)
+            horizon_stewardship = recent_count(stewardship_reviews, ("updated_at", "created_at"), cutoff)
+            horizons.append(
+                {
+                    "id": label.lower(),
+                    "label": label,
+                    "window_days": window_days,
+                    "profile_fact_count": horizon_profile_facts,
+                    "chronicle_entry_count": horizon_chronicle,
+                    "first_light_count": horizon_first_light,
+                    "stewardship_decision_count": horizon_stewardship,
+                    "summary": (
+                        f"{label} continuity holds {horizon_profile_facts} durable facts, "
+                        f"{horizon_chronicle} Chronicle thread(s), {horizon_first_light} First Light packet(s), "
+                        f"and {horizon_stewardship} stewardship decision(s)."
+                    ),
+                }
+            )
+
+        surface_coverage = [
+            {"id": "brief", "title": "Brief", "status": "live", "detail": "Brief uses continuity horizon and While You Were Away synthesis."},
+            {"id": "home", "title": "Home", "status": "live", "detail": "Home carries carry-forward rhythm plus absence synthesis."},
+            {"id": "voice", "title": "Voice", "status": "live", "detail": "Voice keeps conversational carry-forward and preferred posture."},
+            {"id": "catalyst", "title": "Catalyst", "status": "live", "detail": "Catalyst reuses durable patterns and active domains."},
+            {"id": "health", "title": "Health", "status": "live", "detail": "Health continuity carries recovery focus and active watch conditions."},
+            {"id": "publish", "title": "Publish", "status": "live", "detail": "Publish continuity carries launch pressure and platform posture."},
+            {"id": "faith", "title": "Faith", "status": "live", "detail": "Faith continuity carries formation themes, passage, and council domains."},
+            {"id": "forge", "title": "Forge", "status": "live", "detail": "Forge continuity carries workshop pressure and queued job posture."},
+            {"id": "huddle", "title": "Huddle", "status": "live", "detail": "Huddle continuity carries council focus, domains, and dossiers."},
+            {"id": "chronicle", "title": "Chronicle", "status": "live", "detail": "Chronicle recall now includes relevant facts, similar entries, and situation matching."},
+            {"id": "while-you-were-away", "title": "While You Were Away", "status": "live", "detail": "Absence synthesis now serves as the shared continuity packet across surfaces."},
+            {"id": "systems-admin", "title": "Systems Admin", "status": "live", "detail": "Reflective memory and governance learning stay visible in the control plane."},
+        ]
+
+        guidance_lines: list[str] = []
+        if horizons:
+            guidance_lines.append(str(horizons[-1].get("summary") or "30d continuity is available for recall."))
+        if active_threads:
+            strongest = active_threads[0]
+            guidance_lines.append(
+                f"Strongest durable thread: {str(strongest.get('title') or 'continuity')} ({int(strongest.get('signal_count') or 0)} signals)."
+            )
+        if proposals:
+            guidance_lines.append(
+                f"{len(proposals)} pending memory proposal" + ("s are" if len(proposals) != 1 else " is") + " still shaping future recall."
+            )
+        guidance_lines.append(
+            f"Continuity coverage is live across {len(surface_coverage)} shared surfaces, not just one briefing path."
+        )
+
+        return {
+            "subject_display_name": subject.display_name,
+            "preferred_tone": str(profile.get("preferred_tone") or ""),
+            "briefing_style": str(profile.get("briefing_style") or ""),
+            "preferred_voice": str(profile.get("preferred_voice") or ""),
+            "anchor_count": len(anchors),
+            "thread_count": len(active_threads),
+            "coverage_count": len(surface_coverage),
+            "horizon_count": len(horizons),
+            "anchors": anchors,
+            "active_threads": active_threads,
+            "surface_coverage": surface_coverage,
+            "horizons": horizons,
+            "guidance_lines": guidance_lines[:5],
+        }
+
     def memory_proposals(self, status: str = "") -> list[dict]:
         return self.memory_support.proposals(status=status)
 
@@ -17317,6 +19347,7 @@ class JarvisRuntime:
             name=str(payload["name"]),
             description=str(payload.get("description", "")),
             zone_type=str(payload["zone_type"]),
+            authority_stage=str(payload.get("authority_stage", "observe")),
             resource_scope=dict(payload["resource_scope"]),
             allowed_actions=[str(item) for item in list(payload["allowed_actions"])],
             approval_mode=str(payload["approval_mode"]),
@@ -17328,7 +19359,24 @@ class JarvisRuntime:
             created_at=str(payload.get("created_at", now)),
             updated_at=now,
         )
-        return self.trust_support.upsert_trust_zone(zone)
+        created = self.trust_support.upsert_trust_zone(zone)
+        self._append_promotion_record(
+            event_type="registry_change",
+            subject_kind="trust_zone",
+            subject_id=zone.zone_id,
+            status=str(created.get("status") or zone.status),
+            actor=str(payload.get("actor") or payload.get("updated_by") or "system"),
+            basis=str(payload.get("change_reason") or "trust-zone-upsert"),
+            trust_zone=zone.zone_id,
+            authority_stage="registry",
+            evidence={
+                "zone_type": zone.zone_type,
+                "authority_stage": zone.authority_stage,
+                "approval_mode": zone.approval_mode,
+                "audit_mode": zone.audit_mode,
+            },
+        )
+        return created
 
     def list_resource_arenas(self) -> list[dict]:
         return self.trust_support.list_resource_arenas()
@@ -17351,13 +19399,339 @@ class JarvisRuntime:
             created_at=str(payload.get("created_at", now)),
             updated_at=now,
         )
-        return self.trust_support.upsert_resource_arena(arena)
+        created = self.trust_support.upsert_resource_arena(arena)
+        self._append_promotion_record(
+            event_type="registry_change",
+            subject_kind="resource_arena",
+            subject_id=arena.arena_id,
+            status=str(created.get("status") or arena.status),
+            actor=str(payload.get("actor") or payload.get("updated_by") or "system"),
+            basis=str(payload.get("change_reason") or "resource-arena-upsert"),
+            trust_zone=arena.linked_zone_id,
+            arena_id=arena.arena_id,
+            authority_stage="registry",
+            evidence={
+                "resource_type": arena.resource_type,
+                "risk_class": arena.risk_class,
+                "owner_principal": arena.owner_principal,
+            },
+        )
+        return created
 
     def list_authority_stages(self) -> list[dict]:
         return self.trust_support.list_authority_stages()
 
     def list_stage_queue(self, limit: int = 50) -> list[dict]:
         return self.trust_support.list_stage_queue(limit=limit)
+
+    def list_promotion_records(self, limit: int = 50) -> list[dict]:
+        return self.trust_support.list_promotion_records(limit=limit)
+
+    def promote_trust_zone(self, zone_id: str, *, actor: str = "Chris", basis: str = "manual-promotion") -> dict:
+        zone = self.trust_support.get_trust_zone(zone_id)
+        if zone is None:
+            raise KeyError(f"Unknown trust zone: {zone_id}")
+
+        stages = sorted(self.trust_support.list_authority_stages(), key=lambda item: int(item.get("sequence") or 0))
+        active_stages = [item for item in stages if isinstance(item, dict) and str(item.get("stage_id") or "").strip().lower() != "suspended"]
+        current_stage_id = str(zone.get("authority_stage") or "observe")
+        current_index = next((index for index, item in enumerate(active_stages) if str(item.get("stage_id") or "") == current_stage_id), 0)
+        target_index = min(current_index + 1, max(len(active_stages) - 1, 0))
+        target_stage = active_stages[target_index] if active_stages else {"stage_id": current_stage_id, "approval_requirements": {}}
+        target_stage_id = str(target_stage.get("stage_id") or current_stage_id)
+        requirements = target_stage.get("approval_requirements") if isinstance(target_stage.get("approval_requirements"), dict) else {}
+        updated = self.trust_support.update_trust_zone(
+            zone_id,
+            {
+                "authority_stage": target_stage_id,
+                "approval_mode": str(requirements.get("pre_action") or zone.get("approval_mode") or ""),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+        if updated is None:
+            raise KeyError(f"Unknown trust zone: {zone_id}")
+        self._append_promotion_record(
+            event_type="promotion",
+            subject_kind="trust_zone",
+            subject_id=zone_id,
+            status=str(updated.get("status") or "active"),
+            actor=actor,
+            basis=basis,
+            trust_zone=zone_id,
+            authority_stage=target_stage_id,
+            evidence={
+                "previous_stage": current_stage_id,
+                "approval_mode": str(updated.get("approval_mode") or ""),
+            },
+        )
+        return updated
+
+    def demote_trust_zone(self, zone_id: str, *, actor: str = "Chris", reason: str = "manual-demotion") -> dict:
+        zone = self.trust_support.get_trust_zone(zone_id)
+        if zone is None:
+            raise KeyError(f"Unknown trust zone: {zone_id}")
+
+        stages = sorted(self.trust_support.list_authority_stages(), key=lambda item: int(item.get("sequence") or 0))
+        active_stages = [item for item in stages if isinstance(item, dict) and str(item.get("stage_id") or "").strip().lower() != "suspended"]
+        demotion_rules = zone.get("demotion_rules") if isinstance(zone.get("demotion_rules"), dict) else {}
+        fallback_stage_id = str(demotion_rules.get("fallback_stage") or "").strip()
+        current_stage_id = str(zone.get("authority_stage") or "observe")
+        if fallback_stage_id:
+            target_stage = self.trust_support.get_authority_stage(fallback_stage_id) or {}
+        else:
+            current_index = next((index for index, item in enumerate(active_stages) if str(item.get("stage_id") or "") == current_stage_id), 0)
+            target_index = max(current_index - 1, 0)
+            target_stage = active_stages[target_index] if active_stages else {}
+        target_stage_id = str(target_stage.get("stage_id") or current_stage_id)
+        requirements = target_stage.get("approval_requirements") if isinstance(target_stage.get("approval_requirements"), dict) else {}
+        updated = self.trust_support.update_trust_zone(
+            zone_id,
+            {
+                "authority_stage": target_stage_id,
+                "approval_mode": str(requirements.get("pre_action") or zone.get("approval_mode") or ""),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+        if updated is None:
+            raise KeyError(f"Unknown trust zone: {zone_id}")
+        self._append_promotion_record(
+            event_type="demotion",
+            subject_kind="trust_zone",
+            subject_id=zone_id,
+            status=str(updated.get("status") or "active"),
+            actor=actor,
+            basis=reason,
+            trust_zone=zone_id,
+            authority_stage=target_stage_id,
+            evidence={
+                "previous_stage": current_stage_id,
+                "approval_mode": str(updated.get("approval_mode") or ""),
+            },
+        )
+        return updated
+
+    def suspend_resource_arena(self, arena_id: str, *, actor: str = "Chris", reason: str = "manual-suspension") -> dict:
+        arena = self.trust_support.get_resource_arena(arena_id)
+        if arena is None:
+            raise KeyError(f"Unknown resource arena: {arena_id}")
+        updated = self.trust_support.update_resource_arena(
+            arena_id,
+            {
+                "status": "suspended",
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+        if updated is None:
+            raise KeyError(f"Unknown resource arena: {arena_id}")
+        self._append_promotion_record(
+            event_type="suspension",
+            subject_kind="resource_arena",
+            subject_id=arena_id,
+            status="suspended",
+            actor=actor,
+            basis=reason,
+            trust_zone=str(updated.get("linked_zone_id") or ""),
+            arena_id=arena_id,
+            authority_stage="suspended",
+            evidence={"previous_status": str(arena.get("status") or "")},
+        )
+        return updated
+
+    def resume_resource_arena(self, arena_id: str, *, actor: str = "Chris", reason: str = "manual-resume") -> dict:
+        arena = self.trust_support.get_resource_arena(arena_id)
+        if arena is None:
+            raise KeyError(f"Unknown resource arena: {arena_id}")
+        updated = self.trust_support.update_resource_arena(
+            arena_id,
+            {
+                "status": "active",
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+        if updated is None:
+            raise KeyError(f"Unknown resource arena: {arena_id}")
+        self._append_promotion_record(
+            event_type="resumption",
+            subject_kind="resource_arena",
+            subject_id=arena_id,
+            status="active",
+            actor=actor,
+            basis=reason,
+            trust_zone=str(updated.get("linked_zone_id") or ""),
+            arena_id=arena_id,
+            authority_stage=str((updated.get("promotion_eligibility") or {}).get("target_stage") or "registry"),
+            evidence={"previous_status": str(arena.get("status") or "")},
+        )
+        return updated
+
+    def assess_action_boundary(
+        self,
+        *,
+        zone_id: str,
+        arena_id: str = "",
+        action_type: str,
+        requested_stage: str = "sandbox_live",
+    ) -> dict[str, object]:
+        zone = self.trust_support.get_trust_zone(zone_id)
+        if zone is None:
+            return {
+                "decision": "deny",
+                "reason": f"Unknown trust zone '{zone_id}'.",
+                "trust_zone": zone_id,
+                "authority_stage": "unknown",
+                "approval_mode": "deny",
+                "arena_status": "unknown",
+            }
+
+        arena = self.trust_support.get_resource_arena(arena_id) if arena_id else None
+        arena_status = str(arena.get("status") or "") if isinstance(arena, dict) else ""
+        if arena_id and arena is None:
+            return {
+                "decision": "deny",
+                "reason": f"Unknown resource arena '{arena_id}'.",
+                "trust_zone": zone_id,
+                "authority_stage": str(zone.get("authority_stage") or "unknown"),
+                "approval_mode": str(zone.get("approval_mode") or ""),
+                "arena_status": "unknown",
+            }
+
+        zone_status = str(zone.get("status") or "unknown").strip().lower()
+        if zone_status != "active":
+            return {
+                "decision": "deny",
+                "reason": f"Trust zone '{zone_id}' is not active.",
+                "trust_zone": zone_id,
+                "authority_stage": str(zone.get("authority_stage") or "unknown"),
+                "approval_mode": str(zone.get("approval_mode") or ""),
+                "arena_status": arena_status or "unknown",
+            }
+
+        if arena_status.strip().lower() in {"suspended", "paused"}:
+            return {
+                "decision": "deny",
+                "reason": f"Resource arena '{arena_id}' is {arena_status}.",
+                "trust_zone": zone_id,
+                "authority_stage": str(zone.get("authority_stage") or "unknown"),
+                "approval_mode": str(zone.get("approval_mode") or ""),
+                "arena_status": arena_status,
+            }
+
+        stages = [item for item in self.trust_support.list_authority_stages() if isinstance(item, dict)]
+        stage_lookup = {str(item.get("stage_id") or ""): item for item in stages}
+        current_stage_id = str(zone.get("authority_stage") or "observe")
+        current_stage = stage_lookup.get(current_stage_id, {})
+        requested_stage_id = requested_stage if requested_stage in stage_lookup else {
+            "live": "mature_live",
+            "staged": "stage_alert",
+            "draft": "draft",
+        }.get(requested_stage, requested_stage)
+        requested = stage_lookup.get(requested_stage_id, {})
+        current_sequence = int(current_stage.get("sequence") or 0)
+        requested_sequence = int(requested.get("sequence") or current_sequence)
+
+        if action_type in {"home_control", "calendar_route", "signal_resolution", "notification_workflow", "reminder_workflow", "publishing_review", "focus_workflow", "huddle_workflow"} and current_sequence < requested_sequence:
+            return {
+                "decision": "stage",
+                "reason": f"{zone_id} is at {current_stage_id} and must promote before live {action_type} actions.",
+                "trust_zone": zone_id,
+                "authority_stage": current_stage_id,
+                "approval_mode": str(zone.get("approval_mode") or ""),
+                "arena_status": arena_status or "active",
+            }
+
+        return {
+            "decision": "allow",
+            "reason": f"{zone_id} is cleared for {action_type}.",
+            "trust_zone": zone_id,
+            "authority_stage": current_stage_id,
+            "approval_mode": str(zone.get("approval_mode") or ""),
+            "arena_status": arena_status or "active",
+        }
+
+    def list_stewardship_lanes(self) -> list[dict]:
+        return self.supervision_support.list_stewardship_lanes()
+
+    def list_agent_supervision_contracts(self) -> list[dict]:
+        return self.supervision_support.list_agent_contracts()
+
+    def list_supervision_reviews(self, limit: int = 100) -> list[dict]:
+        return self.supervision_support.list_reviews(limit=limit)
+
+    def list_supervision_traces(self, limit: int = 100) -> list[dict]:
+        return self.supervision_support.list_traces(limit=limit)
+
+    def assess_supervised_action(
+        self,
+        *,
+        agent_id: str,
+        action_type: str,
+        requested_outcome: str,
+        trust_zone_id: str = "",
+        lane_id: str = "",
+        arena_id: str = "",
+        context: dict[str, object] | None = None,
+    ) -> dict[str, object]:
+        return self.supervision_support.evaluate_action(
+            agent_id=agent_id,
+            action_type=action_type,
+            requested_outcome=requested_outcome,
+            trust_zone_id=trust_zone_id,
+            lane_id=lane_id,
+            arena_id=arena_id,
+            context=dict(context or {}),
+        )
+
+    def record_supervision_review(
+        self,
+        *,
+        decision_id: str,
+        reviewer: str,
+        outcome: str,
+        notes: str = "",
+        rollback_executed: bool = False,
+        doctrine_ready: bool | None = None,
+    ) -> dict[str, object]:
+        return self.supervision_support.record_review(
+            decision_id=decision_id,
+            reviewer=reviewer,
+            outcome=outcome,
+            notes=notes,
+            rollback_executed=rollback_executed,
+            doctrine_ready=doctrine_ready,
+        )
+
+    def refresh_supervision_doctrine(self, *, synthesized_by: str = "system-steward") -> dict[str, object]:
+        return self.supervision_support.refresh_doctrine_candidates(synthesized_by=synthesized_by)
+
+    def _append_promotion_record(
+        self,
+        *,
+        event_type: str,
+        subject_kind: str,
+        subject_id: str,
+        status: str,
+        actor: str,
+        basis: str,
+        trust_zone: str = "",
+        arena_id: str = "",
+        authority_stage: str = "",
+        evidence: dict[str, object] | None = None,
+    ) -> dict:
+        record = PromotionRecord(
+            record_id=f"promo-{uuid.uuid4().hex[:12]}",
+            event_type=event_type,
+            subject_kind=subject_kind,
+            subject_id=subject_id,
+            status=status,
+            actor=actor,
+            basis=basis,
+            trust_zone=trust_zone,
+            arena_id=arena_id,
+            authority_stage=authority_stage,
+            evidence=dict(evidence or {}),
+            created_at=datetime.now(timezone.utc).isoformat(),
+        )
+        return self.trust_support.append_promotion_record(record)
 
     def stage_email_draft(self, payload: dict[str, object]) -> dict:
         request = EmailDraftStagingRequest(
@@ -17929,3 +20303,1214 @@ class JarvisRuntime:
                 self._mark_work_item_outcome(str(updated.get("actor", "Chris")).strip() or "Chris", {"work_id": work_id, "title": f"Vendor prep {prep_id}", "domain": "workshop", "lane": "fabrication-and-vendors", "owner_agent": "Rocket"}, status="abandoned", rationale="The vendor prep was archived instead of executed.", artifact_type="vendor-prep")
         self._invalidate_snapshot_cache(surfaces=("pipeline_review", "pipeline_state", "dashboard", "shell_state", "proactive_state"))
         return updated
+
+    def _vendor_prep_sandbox_job_id(self, prep_id: str) -> str:
+        return f"vendor-prep:{str(prep_id).strip()}"
+
+    def _stewardship_review_queue_path(self) -> Path:
+        return self._repo_root() / "data" / "state" / "stewardship_reviews.json"
+
+    def _load_stewardship_review_store(self) -> dict[str, Any]:
+        path = self._stewardship_review_queue_path()
+        if not path.exists():
+            return {"reviews": []}
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return {"reviews": []}
+        reviews = payload.get("reviews") if isinstance(payload, dict) else []
+        if not isinstance(reviews, list):
+            reviews = []
+        return {"reviews": [dict(item) for item in reviews if isinstance(item, dict)]}
+
+    def _save_stewardship_review_store(self, payload: dict[str, Any]) -> None:
+        path = self._stewardship_review_queue_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    def _stewardship_review_sandbox_job_id(self, review_id: str) -> str:
+        return f"stewardship-review:{str(review_id).strip()}"
+
+    def _stewardship_review_sandbox_workspace(self, review_id: str) -> Path:
+        slug = re.sub(r"[^a-z0-9]+", "-", str(review_id or "").strip().lower()).strip("-") or "review"
+        return self._repo_root() / "data" / "state" / "stewardship_review_sandbox" / slug
+
+    def _stewardship_review_sandbox_report_root(self) -> Path:
+        root = self._repo_root() / "data" / "system" / "stewardship_review_sandbox_reports"
+        root.mkdir(parents=True, exist_ok=True)
+        return root
+
+    def _stewardship_review_record(self, review_id: str) -> dict[str, Any] | None:
+        for item in self._load_stewardship_review_store().get("reviews", []):
+            if str(item.get("id", "")).strip() == str(review_id).strip():
+                return dict(item)
+        return None
+
+    def _save_stewardship_review_record(self, review: dict[str, Any]) -> dict[str, Any]:
+        store = self._load_stewardship_review_store()
+        review_id = str(review.get("id", "")).strip()
+        if not review_id:
+            raise ValueError("Stewardship review id is required")
+        records = list(store.get("reviews", []))
+        replaced = False
+        for index, item in enumerate(records):
+            if str(item.get("id", "")).strip() == review_id:
+                records[index] = dict(review)
+                replaced = True
+                break
+        if not replaced:
+            records.append(dict(review))
+        store["reviews"] = records
+        self._save_stewardship_review_store(store)
+        return dict(review)
+
+    def _vendor_prep_sandbox_workspace(self, prep_id: str) -> Path:
+        return self.workshop_support.store.vendor_preps_path.parent / "sandbox" / str(prep_id).strip()
+
+    def _vendor_prep_sandbox_report_root(self) -> Path:
+        root = Path("data") / "system" / "vendor_prep_sandbox_reports"
+        root.mkdir(parents=True, exist_ok=True)
+        return root
+
+    def _vendor_prep_record(self, prep_id: str) -> dict[str, Any] | None:
+        return next(
+            (dict(item) for item in self.list_vendor_preps(limit=200) if str(item.get("prep_id", "")).strip() == str(prep_id).strip()),
+            None,
+        )
+
+    def _save_vendor_prep_record(self, prep: dict[str, Any]) -> dict[str, Any]:
+        payload = dict(prep)
+        payload.setdefault("updated_at", datetime.now(timezone.utc).isoformat())
+        return self.workshop_support.save_vendor_prep(payload)
+
+    def vendor_prep_sandbox_jobs(self, limit: int = 8) -> list[dict[str, Any]]:
+        jobs: list[dict[str, Any]] = []
+        eligible_statuses = {
+            "pending-approval",
+            "staged",
+            "sandbox-queued",
+            "sandbox-running",
+            "sandbox-stop-requested",
+            "sandboxed",
+            "sandbox-cancelled",
+            "sandbox-failed",
+            "sandbox-reset",
+        }
+        for item in self.list_vendor_preps(limit=200):
+            status = str(item.get("status", "")).strip()
+            if status not in eligible_statuses:
+                continue
+            prep_id = str(item.get("prep_id", "")).strip()
+            if not prep_id:
+                continue
+            jobs.append(
+                {
+                    "job_id": self._vendor_prep_sandbox_job_id(prep_id),
+                    "title": f"Vendor package for {str(item.get('part_name', '')).strip() or 'part'}",
+                    "status": status,
+                    "job_type": "vendor-prep",
+                    "target": str(item.get("vendor_target", "")).strip(),
+                    "review_level": str(item.get("review_level", "")).strip() or "review-before-external",
+                    "summary": str(item.get("package_summary", "")).strip(),
+                    "auto_allowed": False,
+                    "updated_at": str(item.get("updated_at") or item.get("timestamp") or ""),
+                    "last_sandbox_run_id": str(item.get("sandbox_run_id") or ""),
+                    "prep_id": prep_id,
+                    "part_name": str(item.get("part_name", "")).strip(),
+                }
+            )
+            if len(jobs) >= max(1, int(limit)):
+                break
+        return jobs
+
+    def stewardship_review_sandbox_jobs(self, limit: int = 8) -> list[dict[str, Any]]:
+        jobs: list[dict[str, Any]] = []
+        eligible_statuses = {
+            "review_staged",
+            "blocked_by_boundary",
+            "sandbox-queued",
+            "sandbox-running",
+            "sandbox-stop-requested",
+            "sandboxed",
+            "sandbox-cancelled",
+            "sandbox-failed",
+            "sandbox-reset",
+        }
+        for item in self._load_stewardship_review_store().get("reviews", []):
+            if not isinstance(item, dict):
+                continue
+            status = str(item.get("status", "")).strip()
+            if status not in eligible_statuses:
+                continue
+            review_id = str(item.get("id", "")).strip()
+            if not review_id:
+                continue
+            jobs.append(
+                {
+                    "job_id": self._stewardship_review_sandbox_job_id(review_id),
+                    "title": f"Stewardship review package for {str(item.get('lane_title', '')).strip() or 'lane'}",
+                    "status": status,
+                    "job_type": "stewardship-review",
+                    "target": str(item.get("packet_target", "")).strip() or str(item.get("review_surface", "")).strip(),
+                    "review_level": str(item.get("approval_mode", "")).strip() or "stage_and_alert",
+                    "summary": str(item.get("boundary_reason", "")).strip() or str(item.get("lane_title", "")).strip(),
+                    "auto_allowed": True,
+                    "updated_at": str(item.get("updated_at") or item.get("created_at") or ""),
+                    "last_sandbox_run_id": str(item.get("sandbox_run_id") or ""),
+                    "review_id": review_id,
+                    "lane_id": str(item.get("lane_id", "")).strip(),
+                    "lane_title": str(item.get("lane_title", "")).strip(),
+                }
+            )
+            if len(jobs) >= max(1, int(limit)):
+                break
+        return jobs
+
+    def enqueue_vendor_prep_sandbox_job(self, actor_name: str, prep_id: str, *, triggered_by: str = "vendor-prep-sandbox") -> dict[str, Any]:
+        prep = self._vendor_prep_record(prep_id)
+        if prep is None:
+            raise KeyError("Vendor prep not found.")
+        job_id = self._vendor_prep_sandbox_job_id(prep_id)
+        existing_active_run = self.self_improvement_store.get_active_run(job_id) or {}
+        status = str(prep.get("status", "")).strip()
+        if status in {"sandbox-running", "sandbox-stop-requested"} or (
+            existing_active_run and str(existing_active_run.get("status", "")).strip() in {"queued", "running", "stop-requested"}
+        ):
+            return {
+                "ok": True,
+                "accepted": False,
+                "job": {
+                    "job_id": job_id,
+                    "title": f"Vendor package for {str(prep.get('part_name', '')).strip() or 'part'}",
+                    "status": status,
+                },
+                "queue": self._sandbox_queue_state(),
+                "message": "Vendor prep sandbox lane is already running.",
+            }
+        run_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        queued = {
+            **prep,
+            "status": "sandbox-queued",
+            "sandbox_status": "queued",
+            "sandbox_run_id": run_id,
+            "sandbox_message": "Vendor prep entered the bounded review lane.",
+            "updated_at": now,
+            "review_level": str(prep.get("review_level", "")).strip() or "review-before-external",
+        }
+        saved = self._save_vendor_prep_record(queued)
+        job = {
+            "job_id": job_id,
+            "title": f"Vendor package for {str(saved.get('part_name', '')).strip() or 'part'}",
+            "job_type": "vendor-prep",
+            "status": "sandbox-queued",
+        }
+        active_run = self._upsert_active_sandbox_run(
+            job,
+            run_id=run_id,
+            status="queued",
+            current_step="waiting-for-worker",
+            message="Vendor prep sandbox execution was accepted and queued.",
+            actor_name=actor_name,
+            metadata={"triggered_by": triggered_by, "prep_id": prep_id, "lane_kind": "vendor-prep"},
+        )
+        self.catalyst_support.transition_work_item(
+            actor=actor_name,
+            title=f"Vendor package for {str(saved.get('part_name', '')).strip() or 'part'}",
+            domain="workshop",
+            lane="fabrication-and-vendors",
+            owner_agent="Rocket",
+            stage=WorkLifecycleStage.STAGED_ACTION,
+            status="sandbox-queued",
+            artifact_type="vendor-prep-sandbox-run",
+            source=triggered_by,
+            review_level=str(saved.get("review_level", "")).strip() or "review-before-external",
+            rationale="JARVIS queued this vendor package inside a bounded review lane before any external send path.",
+            work_id=str(saved.get("work_id", "")).strip() or prep_id,
+            record_id=job_id,
+            metadata={"prep_id": prep_id, "vendor_target": str(saved.get("vendor_target", "")).strip()},
+        )
+        with self._sandbox_lock:
+            future = self._sandbox_futures.get(job_id)
+            if future is None or future.done():
+                future = self._sandbox_executor.submit(self._run_vendor_prep_sandbox_job_background, actor_name, prep_id, triggered_by)
+                self._sandbox_futures[job_id] = future
+        return {"ok": True, "accepted": True, "job": job, "active_run": active_run, "queue": self._sandbox_queue_state(), "message": "Vendor prep queued for sandbox review."}
+
+    def cancel_vendor_prep_sandbox_job(self, actor_name: str, prep_id: str, *, reason: str = "manual stop requested") -> dict[str, Any]:
+        prep = self._vendor_prep_record(prep_id)
+        if prep is None:
+            raise KeyError("Vendor prep not found.")
+        job_id = self._vendor_prep_sandbox_job_id(prep_id)
+        status = str(prep.get("status", "")).strip()
+        existing_active_run = self.self_improvement_store.get_active_run(job_id) or {}
+        run_id = str(existing_active_run.get("run_id", "")).strip() or str(prep.get("sandbox_run_id", "")).strip() or str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        cancelled_before_start = False
+        with self._sandbox_lock:
+            future = self._sandbox_futures.get(job_id)
+            if future is not None and future.cancel():
+                self._sandbox_futures.pop(job_id, None)
+                cancelled_before_start = True
+
+        if status == "sandbox-queued" or cancelled_before_start:
+            cancelled = {
+                **prep,
+                "status": "sandbox-cancelled",
+                "sandbox_status": "cancelled",
+                "sandbox_run_id": run_id,
+                "sandbox_message": "Vendor prep sandbox execution was cancelled before it began.",
+                "updated_at": now,
+            }
+            saved = self._save_vendor_prep_record(cancelled)
+            active_run = self._upsert_active_sandbox_run(
+                {"job_id": job_id, "title": f"Vendor package for {str(saved.get('part_name', '')).strip() or 'part'}", "job_type": "vendor-prep"},
+                run_id=run_id,
+                status="cancelled",
+                current_step="cancelled",
+                message="Vendor prep sandbox execution was cancelled before it began.",
+                actor_name=actor_name,
+                metadata={"cancelled_by": actor_name, "cancel_reason": reason, "prep_id": prep_id, "lane_kind": "vendor-prep"},
+            )
+            self.self_improvement_store.record_run(
+                {
+                    "run_id": run_id,
+                    "job_id": job_id,
+                    "job_title": f"Vendor package for {str(saved.get('part_name', '')).strip() or 'part'}",
+                    "generated_at": now,
+                    "mode": "vendor-prep-sandbox",
+                    "status": "cancelled",
+                    "compile": {"ok": False},
+                    "tests": {"ok": False},
+                    "patch_bundle": {"path": str(saved.get("sandbox_patch_bundle_path", "")).strip()},
+                    "reason": reason,
+                }
+            )
+            return {"ok": True, "accepted": True, "mode": "cancelled", "job": {"job_id": job_id, "status": "sandbox-cancelled"}, "active_run": active_run, "queue": self._sandbox_queue_state(), "message": "Vendor prep sandbox job cancelled before it started."}
+
+        stop_requested = {
+            **prep,
+            "status": "sandbox-stop-requested",
+            "sandbox_status": "stop-requested",
+            "sandbox_run_id": run_id,
+            "sandbox_message": "Stop requested. JARVIS will halt this vendor prep lane at the next safe checkpoint.",
+            "updated_at": now,
+        }
+        saved = self._save_vendor_prep_record(stop_requested)
+        active_run = self._upsert_active_sandbox_run(
+            {"job_id": job_id, "title": f"Vendor package for {str(saved.get('part_name', '')).strip() or 'part'}", "job_type": "vendor-prep"},
+            run_id=run_id,
+            status="stop-requested",
+            current_step=str(existing_active_run.get("current_step", "")).strip() or "running",
+            message="Stop requested. JARVIS will halt this vendor prep lane at the next safe checkpoint.",
+            actor_name=actor_name,
+            worktree_path=str(saved.get("sandbox_workspace_path", "")).strip(),
+            metadata={"stop_requested": True, "stop_requested_by": actor_name, "stop_reason": reason, "prep_id": prep_id, "lane_kind": "vendor-prep"},
+        )
+        return {"ok": True, "accepted": True, "mode": "stop-requested", "job": {"job_id": job_id, "status": "sandbox-stop-requested"}, "active_run": active_run, "queue": self._sandbox_queue_state(), "message": "Stop requested for vendor prep sandbox job."}
+
+    def recover_vendor_prep_sandbox_job(self, actor_name: str, prep_id: str, *, reason: str = "manual recovery reset") -> dict[str, Any]:
+        prep = self._vendor_prep_record(prep_id)
+        if prep is None:
+            raise KeyError("Vendor prep not found.")
+        status = str(prep.get("status", "")).strip()
+        if status in {"sandbox-running", "sandbox-stop-requested", "sandbox-queued"}:
+            raise ValueError("Stop or cancel the vendor prep sandbox job before resetting the lane.")
+        workspace = self._vendor_prep_sandbox_workspace(prep_id)
+        removed_workspace = False
+        workspace_error = ""
+        if workspace.exists():
+            try:
+                shutil.rmtree(workspace, ignore_errors=False)
+                removed_workspace = True
+            except Exception as exc:
+                workspace_error = str(exc).strip()
+        now = datetime.now(timezone.utc).isoformat()
+        job_id = self._vendor_prep_sandbox_job_id(prep_id)
+        run_id = str(uuid.uuid4())
+        reset = {
+            **prep,
+            "status": "staged",
+            "sandbox_status": "reset",
+            "sandbox_run_id": "",
+            "sandbox_message": "",
+            "sandbox_report_path": "",
+            "sandbox_patch_bundle_path": "",
+            "sandbox_workspace_path": "",
+            "sandbox_generated_at": "",
+            "updated_at": now,
+        }
+        saved = self._save_vendor_prep_record(reset)
+        self.self_improvement_store.clear_active_run(job_id)
+        self.self_improvement_store.record_run(
+            {
+                "run_id": run_id,
+                "job_id": job_id,
+                "job_title": f"Vendor package for {str(saved.get('part_name', '')).strip() or 'part'}",
+                "generated_at": now,
+                "mode": "vendor-prep-sandbox-recovery",
+                "status": "reset",
+                "compile": {"ok": True},
+                "tests": {"ok": True},
+                "patch_bundle": {"path": ""},
+                "reason": reason,
+                "removed_workspace": removed_workspace,
+                "workspace_error": workspace_error,
+            }
+        )
+        return {"ok": True, "accepted": True, "mode": "reset", "job": {"job_id": job_id, "status": "staged"}, "queue": self._sandbox_queue_state(), "message": "Vendor prep sandbox lane reset to staged baseline."}
+
+    def _abort_vendor_prep_sandbox_if_requested(
+        self,
+        prep: dict[str, Any],
+        *,
+        actor_name: str,
+        run_id: str,
+        current_step: str,
+        workspace_path: str = "",
+    ) -> dict[str, Any] | None:
+        prep_id = str(prep.get("prep_id", "")).strip()
+        job_id = self._vendor_prep_sandbox_job_id(prep_id)
+        active_run = self.self_improvement_store.get_active_run(job_id) or {}
+        metadata = active_run.get("metadata") if isinstance(active_run.get("metadata"), dict) else {}
+        stop_requested = bool(metadata.get("stop_requested")) or str(prep.get("status", "")).strip() == "sandbox-stop-requested"
+        if not stop_requested:
+            return None
+        now = datetime.now(timezone.utc).isoformat()
+        reason = str(metadata.get("stop_reason") or "manual stop requested").strip() or "manual stop requested"
+        cancelled = {
+            **prep,
+            "status": "sandbox-cancelled",
+            "sandbox_status": "cancelled",
+            "sandbox_run_id": run_id,
+            "sandbox_message": "Vendor prep sandbox run was cancelled at a safe checkpoint.",
+            "sandbox_workspace_path": workspace_path or str(prep.get("sandbox_workspace_path", "")).strip(),
+            "updated_at": now,
+        }
+        saved = self._save_vendor_prep_record(cancelled)
+        self._upsert_active_sandbox_run(
+            {"job_id": job_id, "title": f"Vendor package for {str(saved.get('part_name', '')).strip() or 'part'}", "job_type": "vendor-prep"},
+            run_id=run_id,
+            status="cancelled",
+            current_step="cancelled",
+            message="Vendor prep sandbox run was cancelled at a safe checkpoint.",
+            actor_name=actor_name,
+            worktree_path=workspace_path,
+            metadata={**dict(metadata), "cancelled_at": now, "cancelled_reason": reason, "prep_id": prep_id, "lane_kind": "vendor-prep"},
+        )
+        self.self_improvement_store.record_run(
+            {
+                "run_id": run_id,
+                "job_id": job_id,
+                "job_title": f"Vendor package for {str(saved.get('part_name', '')).strip() or 'part'}",
+                "generated_at": now,
+                "mode": "vendor-prep-sandbox",
+                "status": "cancelled",
+                "compile": {"ok": False},
+                "tests": {"ok": False},
+                "patch_bundle": {"path": str(saved.get("sandbox_patch_bundle_path", "")).strip()},
+                "reason": reason,
+            }
+        )
+        return {"ok": True, "cancelled": True, "job": {"job_id": job_id, "status": "sandbox-cancelled"}}
+
+    def _run_vendor_prep_sandbox_job_background(self, actor_name: str, prep_id: str, triggered_by: str) -> dict[str, Any]:
+        try:
+            return self.run_vendor_prep_sandbox_job(actor_name, prep_id, triggered_by=triggered_by)
+        except Exception as exc:
+            prep = self._vendor_prep_record(prep_id) or {"prep_id": prep_id, "part_name": "part"}
+            now = datetime.now(timezone.utc).isoformat()
+            job_id = self._vendor_prep_sandbox_job_id(prep_id)
+            failed = {
+                **prep,
+                "status": "sandbox-failed",
+                "sandbox_status": "failed",
+                "sandbox_message": str(exc).strip() or "Vendor prep sandbox job failed.",
+                "updated_at": now,
+            }
+            saved = self._save_vendor_prep_record(failed)
+            self._upsert_active_sandbox_run(
+                {"job_id": job_id, "title": f"Vendor package for {str(saved.get('part_name', '')).strip() or 'part'}", "job_type": "vendor-prep"},
+                run_id=str(saved.get("sandbox_run_id", "")).strip() or str(uuid.uuid4()),
+                status="failed",
+                current_step="failed",
+                message=str(exc).strip() or "Vendor prep sandbox job failed.",
+                actor_name=actor_name,
+                worktree_path=str(saved.get("sandbox_workspace_path", "")).strip(),
+                metadata={"error": str(exc).strip(), "prep_id": prep_id, "lane_kind": "vendor-prep"},
+            )
+            self.self_improvement_store.record_run(
+                {
+                    "run_id": str(uuid.uuid4()),
+                    "job_id": job_id,
+                    "job_title": f"Vendor package for {str(saved.get('part_name', '')).strip() or 'part'}",
+                    "generated_at": now,
+                    "mode": "vendor-prep-sandbox",
+                    "status": "failed",
+                    "compile": {"ok": False},
+                    "tests": {"ok": False},
+                    "patch_bundle": {"path": str(saved.get("sandbox_patch_bundle_path", "")).strip()},
+                    "error": str(exc).strip(),
+                }
+            )
+            return {"ok": False, "job": {"job_id": job_id, "status": "sandbox-failed"}, "error": str(exc).strip()}
+
+    def run_vendor_prep_sandbox_job(self, actor_name: str, prep_id: str, *, triggered_by: str = "vendor-prep-sandbox") -> dict[str, Any]:
+        prep = self._vendor_prep_record(prep_id)
+        if prep is None:
+            raise KeyError("Vendor prep not found.")
+        job_id = self._vendor_prep_sandbox_job_id(prep_id)
+        active_run = self.self_improvement_store.get_active_run(job_id) or {}
+        run_id = str(active_run.get("run_id", "")).strip() or str(prep.get("sandbox_run_id", "")).strip() or str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        running = {
+            **prep,
+            "status": "sandbox-running",
+            "sandbox_status": "running",
+            "sandbox_run_id": run_id,
+            "sandbox_message": "Assembling a bounded vendor review package.",
+            "updated_at": now,
+        }
+        saved = self._save_vendor_prep_record(running)
+        workspace = self._vendor_prep_sandbox_workspace(prep_id)
+        workspace.mkdir(parents=True, exist_ok=True)
+        self._upsert_active_sandbox_run(
+            {"job_id": job_id, "title": f"Vendor package for {str(saved.get('part_name', '')).strip() or 'part'}", "job_type": "vendor-prep"},
+            run_id=run_id,
+            status="running",
+            current_step="assembling-package",
+            message="Assembling a bounded vendor review package.",
+            actor_name=actor_name,
+            worktree_path=str(workspace),
+            metadata={"triggered_by": triggered_by, "prep_id": prep_id, "lane_kind": "vendor-prep"},
+        )
+        cancelled = self._abort_vendor_prep_sandbox_if_requested(saved, actor_name=actor_name, run_id=run_id, current_step="assembling-package", workspace_path=str(workspace))
+        if cancelled is not None:
+            return cancelled
+        review_bundle_path = workspace / "vendor_package_review.md"
+        report_path = self._vendor_prep_sandbox_report_root() / f"{run_id}.json"
+        review_bundle_path.write_text(
+            "\n".join(
+                [
+                    f"# Vendor Package Review: {str(saved.get('part_name', '')).strip() or 'Part'}",
+                    "",
+                    f"- Vendor target: {str(saved.get('vendor_target', '')).strip() or 'Unknown'}",
+                    f"- Process: {str(saved.get('process', '')).strip() or 'Not specified'}",
+                    f"- Material: {str(saved.get('material', '')).strip() or 'Not specified'}",
+                    f"- Review level: {str(saved.get('review_level', '')).strip() or 'review-before-external'}",
+                    "",
+                    "## Package Summary",
+                    str(saved.get("package_summary", "")).strip() or "No package summary was available.",
+                    "",
+                    "## Bounded Lane Outcome",
+                    "JARVIS prepared this package for review without sending anything externally.",
+                ]
+            ) + "\n",
+            encoding="utf-8",
+        )
+        self._upsert_active_sandbox_run(
+            {"job_id": job_id, "title": f"Vendor package for {str(saved.get('part_name', '')).strip() or 'part'}", "job_type": "vendor-prep"},
+            run_id=run_id,
+            status="running",
+            current_step="writing-report",
+            message="Writing the sandbox review report and attachment bundle.",
+            actor_name=actor_name,
+            worktree_path=str(workspace),
+            metadata={"prep_id": prep_id, "lane_kind": "vendor-prep"},
+        )
+        refreshed = self._vendor_prep_record(prep_id) or saved
+        cancelled = self._abort_vendor_prep_sandbox_if_requested(refreshed, actor_name=actor_name, run_id=run_id, current_step="writing-report", workspace_path=str(workspace))
+        if cancelled is not None:
+            return cancelled
+        report = {
+            "run_id": run_id,
+            "job_id": job_id,
+            "job_title": f"Vendor package for {str(saved.get('part_name', '')).strip() or 'part'}",
+            "generated_at": now,
+            "mode": "vendor-prep-sandbox",
+            "status": "review-ready",
+            "compile": {"ok": True, "mode": "artifact-review"},
+            "tests": {"ok": True, "mode": "checklist-review"},
+            "patch_bundle": {"path": str(review_bundle_path)},
+            "report_path": str(report_path),
+            "workspace_path": str(workspace),
+            "vendor_target": str(saved.get("vendor_target", "")).strip(),
+            "part_name": str(saved.get("part_name", "")).strip(),
+        }
+        report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        completed = {
+            **saved,
+            "status": "sandboxed",
+            "sandbox_status": "review-ready",
+            "sandbox_run_id": run_id,
+            "sandbox_message": "Vendor review package is ready inside the bounded lane.",
+            "sandbox_report_path": str(report_path),
+            "sandbox_patch_bundle_path": str(review_bundle_path),
+            "sandbox_workspace_path": str(workspace),
+            "sandbox_generated_at": now,
+            "updated_at": now,
+        }
+        final = self._save_vendor_prep_record(completed)
+        self.self_improvement_store.record_run(report)
+        self._upsert_active_sandbox_run(
+            {"job_id": job_id, "title": f"Vendor package for {str(final.get('part_name', '')).strip() or 'part'}", "job_type": "vendor-prep"},
+            run_id=run_id,
+            status="review-ready",
+            current_step="review-ready",
+            message="Vendor prep sandbox run finished. Review the package before any external send path.",
+            actor_name=actor_name,
+            worktree_path=str(workspace),
+            metadata={"report_path": str(report_path), "prep_id": prep_id, "lane_kind": "vendor-prep"},
+        )
+        self.catalyst_support.transition_work_item(
+            actor=actor_name,
+            title=f"Vendor package for {str(final.get('part_name', '')).strip() or 'part'}",
+            domain="workshop",
+            lane="fabrication-and-vendors",
+            owner_agent="Rocket",
+            stage=WorkLifecycleStage.REVIEW,
+            status="ready-for-review",
+            artifact_type="vendor-prep-sandbox-run",
+            source=triggered_by,
+            review_level=str(final.get("review_level", "")).strip() or "review-before-external",
+            rationale="Sandbox lane finished preparing the vendor review package without sending anything externally.",
+            work_id=str(final.get("work_id", "")).strip() or prep_id,
+            record_id=run_id,
+            metadata={"prep_id": prep_id, "report_path": str(report_path), "bundle_path": str(review_bundle_path)},
+        )
+        return {"ok": True, "job": {"job_id": job_id, "status": "sandboxed"}, "sandbox_run": report}
+
+    def enqueue_stewardship_review_sandbox_job(
+        self,
+        actor_name: str,
+        review_id: str,
+        *,
+        triggered_by: str = "stewardship-review-sandbox",
+    ) -> dict[str, Any]:
+        review = self._stewardship_review_record(review_id)
+        if review is None:
+            raise KeyError("Stewardship review not found.")
+        job_id = self._stewardship_review_sandbox_job_id(review_id)
+        existing_active_run = self.self_improvement_store.get_active_run(job_id) or {}
+        status = str(review.get("status", "")).strip()
+        if status in {"sandbox-running", "sandbox-stop-requested"} or (
+            existing_active_run and str(existing_active_run.get("status", "")).strip() in {"queued", "running", "stop-requested"}
+        ):
+            return {
+                "ok": True,
+                "accepted": False,
+                "job": {"job_id": job_id, "title": f"Stewardship review package for {str(review.get('lane_title', '')).strip() or 'lane'}", "status": status},
+                "queue": self._sandbox_queue_state(),
+                "message": "Stewardship review sandbox lane is already running.",
+            }
+        run_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        queued = {
+            **review,
+            "status": "sandbox-queued",
+            "pre_sandbox_status": status or "review_staged",
+            "sandbox_status": "queued",
+            "sandbox_run_id": run_id,
+            "sandbox_message": "Stewardship review entered the bounded packaging lane.",
+            "updated_at": now,
+        }
+        saved = self._save_stewardship_review_record(queued)
+        job = {
+            "job_id": job_id,
+            "title": f"Stewardship review package for {str(saved.get('lane_title', '')).strip() or 'lane'}",
+            "job_type": "stewardship-review",
+            "status": "sandbox-queued",
+        }
+        active_run = self._upsert_active_sandbox_run(
+            job,
+            run_id=run_id,
+            status="queued",
+            current_step="waiting-for-worker",
+            message="Stewardship review sandbox execution was accepted and queued.",
+            actor_name=actor_name,
+            metadata={"triggered_by": triggered_by, "review_id": review_id, "lane_kind": "stewardship-review"},
+        )
+        with self._sandbox_lock:
+            future = self._sandbox_futures.get(job_id)
+            if future is None or future.done():
+                future = self._sandbox_executor.submit(self._run_stewardship_review_sandbox_job_background, actor_name, review_id, triggered_by)
+                self._sandbox_futures[job_id] = future
+        return {"ok": True, "accepted": True, "job": job, "active_run": active_run, "queue": self._sandbox_queue_state(), "message": "Stewardship review queued for sandbox packaging."}
+
+    def cancel_stewardship_review_sandbox_job(self, actor_name: str, review_id: str, *, reason: str = "manual stop requested") -> dict[str, Any]:
+        review = self._stewardship_review_record(review_id)
+        if review is None:
+            raise KeyError("Stewardship review not found.")
+        job_id = self._stewardship_review_sandbox_job_id(review_id)
+        status = str(review.get("status", "")).strip()
+        existing_active_run = self.self_improvement_store.get_active_run(job_id) or {}
+        run_id = str(existing_active_run.get("run_id", "")).strip() or str(review.get("sandbox_run_id", "")).strip() or str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        cancelled_before_start = False
+        with self._sandbox_lock:
+            future = self._sandbox_futures.get(job_id)
+            if future is not None and future.cancel():
+                self._sandbox_futures.pop(job_id, None)
+                cancelled_before_start = True
+        if status == "sandbox-queued" or cancelled_before_start:
+            fallback_status = str(review.get("pre_sandbox_status") or "review_staged").strip() or "review_staged"
+            cancelled = {
+                **review,
+                "status": "sandbox-cancelled",
+                "pre_sandbox_status": fallback_status,
+                "sandbox_status": "cancelled",
+                "sandbox_run_id": run_id,
+                "sandbox_message": "Stewardship review sandbox execution was cancelled before it began.",
+                "updated_at": now,
+            }
+            saved = self._save_stewardship_review_record(cancelled)
+            active_run = self._upsert_active_sandbox_run(
+                {"job_id": job_id, "title": f"Stewardship review package for {str(saved.get('lane_title', '')).strip() or 'lane'}", "job_type": "stewardship-review"},
+                run_id=run_id,
+                status="cancelled",
+                current_step="cancelled",
+                message="Stewardship review sandbox execution was cancelled before it began.",
+                actor_name=actor_name,
+                metadata={"cancelled_by": actor_name, "cancel_reason": reason, "review_id": review_id, "lane_kind": "stewardship-review"},
+            )
+            self.self_improvement_store.record_run(
+                {
+                    "run_id": run_id,
+                    "job_id": job_id,
+                    "job_title": f"Stewardship review package for {str(saved.get('lane_title', '')).strip() or 'lane'}",
+                    "generated_at": now,
+                    "mode": "stewardship-review-sandbox",
+                    "status": "cancelled",
+                    "compile": {"ok": True, "mode": "package-review"},
+                    "tests": {"ok": True, "mode": "package-review"},
+                    "patch_bundle": {"path": str(saved.get("sandbox_patch_bundle_path", "")).strip()},
+                    "reason": reason,
+                }
+            )
+            return {"ok": True, "accepted": True, "mode": "cancelled", "job": {"job_id": job_id, "status": "sandbox-cancelled"}, "active_run": active_run, "queue": self._sandbox_queue_state(), "message": "Stewardship review sandbox job cancelled before it started."}
+        stop_requested = {
+            **review,
+            "status": "sandbox-stop-requested",
+            "sandbox_status": "stop-requested",
+            "sandbox_run_id": run_id,
+            "sandbox_message": "Stop requested. JARVIS will halt this stewardship review lane at the next safe checkpoint.",
+            "updated_at": now,
+        }
+        saved = self._save_stewardship_review_record(stop_requested)
+        active_run = self._upsert_active_sandbox_run(
+            {"job_id": job_id, "title": f"Stewardship review package for {str(saved.get('lane_title', '')).strip() or 'lane'}", "job_type": "stewardship-review"},
+            run_id=run_id,
+            status="stop-requested",
+            current_step=str(existing_active_run.get("current_step", "")).strip() or "running",
+            message="Stop requested. JARVIS will halt this stewardship review lane at the next safe checkpoint.",
+            actor_name=actor_name,
+            worktree_path=str(saved.get("sandbox_workspace_path", "")).strip(),
+            metadata={"stop_requested": True, "stop_requested_by": actor_name, "stop_reason": reason, "review_id": review_id, "lane_kind": "stewardship-review"},
+        )
+        return {"ok": True, "accepted": True, "mode": "stop-requested", "job": {"job_id": job_id, "status": "sandbox-stop-requested"}, "active_run": active_run, "queue": self._sandbox_queue_state(), "message": "Stop requested for stewardship review sandbox job."}
+
+    def recover_stewardship_review_sandbox_job(self, actor_name: str, review_id: str, *, reason: str = "manual recovery reset") -> dict[str, Any]:
+        review = self._stewardship_review_record(review_id)
+        if review is None:
+            raise KeyError("Stewardship review not found.")
+        status = str(review.get("status", "")).strip()
+        if status in {"sandbox-running", "sandbox-stop-requested", "sandbox-queued"}:
+            raise ValueError("Stop or cancel the stewardship review sandbox job before resetting the lane.")
+        workspace = self._stewardship_review_sandbox_workspace(review_id)
+        removed_workspace = False
+        workspace_error = ""
+        if workspace.exists():
+            try:
+                shutil.rmtree(workspace, ignore_errors=False)
+                removed_workspace = True
+            except Exception as exc:
+                workspace_error = str(exc).strip()
+        now = datetime.now(timezone.utc).isoformat()
+        job_id = self._stewardship_review_sandbox_job_id(review_id)
+        run_id = str(uuid.uuid4())
+        fallback_status = str(review.get("pre_sandbox_status") or "review_staged").strip() or "review_staged"
+        reset = {
+            **review,
+            "status": fallback_status,
+            "sandbox_status": "reset",
+            "sandbox_run_id": "",
+            "sandbox_message": "",
+            "sandbox_report_path": "",
+            "sandbox_patch_bundle_path": "",
+            "sandbox_workspace_path": "",
+            "sandbox_generated_at": "",
+            "updated_at": now,
+        }
+        saved = self._save_stewardship_review_record(reset)
+        self.self_improvement_store.clear_active_run(job_id)
+        self.self_improvement_store.record_run(
+            {
+                "run_id": run_id,
+                "job_id": job_id,
+                "job_title": f"Stewardship review package for {str(saved.get('lane_title', '')).strip() or 'lane'}",
+                "generated_at": now,
+                "mode": "stewardship-review-sandbox-recovery",
+                "status": "reset",
+                "compile": {"ok": True},
+                "tests": {"ok": True},
+                "patch_bundle": {"path": ""},
+                "reason": reason,
+                "removed_workspace": removed_workspace,
+                "workspace_error": workspace_error,
+            }
+        )
+        return {"ok": True, "accepted": True, "mode": "reset", "job": {"job_id": job_id, "status": fallback_status}, "queue": self._sandbox_queue_state(), "message": "Stewardship review sandbox lane reset to staged baseline."}
+
+    def _abort_stewardship_review_sandbox_if_requested(
+        self,
+        review: dict[str, Any],
+        *,
+        actor_name: str,
+        run_id: str,
+        current_step: str,
+        workspace_path: str = "",
+    ) -> dict[str, Any] | None:
+        review_id = str(review.get("id", "")).strip()
+        job_id = self._stewardship_review_sandbox_job_id(review_id)
+        active_run = self.self_improvement_store.get_active_run(job_id) or {}
+        metadata = active_run.get("metadata") if isinstance(active_run.get("metadata"), dict) else {}
+        stop_requested = bool(metadata.get("stop_requested")) or str(review.get("status", "")).strip() == "sandbox-stop-requested"
+        if not stop_requested:
+            return None
+        now = datetime.now(timezone.utc).isoformat()
+        reason = str(metadata.get("stop_reason") or "manual stop requested").strip() or "manual stop requested"
+        cancelled = {
+            **review,
+            "status": "sandbox-cancelled",
+            "sandbox_status": "cancelled",
+            "sandbox_run_id": run_id,
+            "sandbox_message": "Stewardship review sandbox run was cancelled at a safe checkpoint.",
+            "sandbox_workspace_path": workspace_path or str(review.get("sandbox_workspace_path", "")).strip(),
+            "updated_at": now,
+        }
+        saved = self._save_stewardship_review_record(cancelled)
+        self._upsert_active_sandbox_run(
+            {"job_id": job_id, "title": f"Stewardship review package for {str(saved.get('lane_title', '')).strip() or 'lane'}", "job_type": "stewardship-review"},
+            run_id=run_id,
+            status="cancelled",
+            current_step="cancelled",
+            message="Stewardship review sandbox run was cancelled at a safe checkpoint.",
+            actor_name=actor_name,
+            worktree_path=workspace_path,
+            metadata={**dict(metadata), "cancelled_at": now, "cancelled_reason": reason, "review_id": review_id, "lane_kind": "stewardship-review"},
+        )
+        self.self_improvement_store.record_run(
+            {
+                "run_id": run_id,
+                "job_id": job_id,
+                "job_title": f"Stewardship review package for {str(saved.get('lane_title', '')).strip() or 'lane'}",
+                "generated_at": now,
+                "mode": "stewardship-review-sandbox",
+                "status": "cancelled",
+                "compile": {"ok": True, "mode": "package-review"},
+                "tests": {"ok": True, "mode": "package-review"},
+                "patch_bundle": {"path": str(saved.get("sandbox_patch_bundle_path", "")).strip()},
+                "reason": reason,
+            }
+        )
+        return {"ok": True, "cancelled": True, "job": {"job_id": job_id, "status": "sandbox-cancelled"}}
+
+    def _run_stewardship_review_sandbox_job_background(self, actor_name: str, review_id: str, triggered_by: str) -> dict[str, Any]:
+        try:
+            return self.run_stewardship_review_sandbox_job(actor_name, review_id, triggered_by=triggered_by)
+        except Exception as exc:
+            review = self._stewardship_review_record(review_id) or {"id": review_id, "lane_title": "lane"}
+            now = datetime.now(timezone.utc).isoformat()
+            job_id = self._stewardship_review_sandbox_job_id(review_id)
+            failed = {
+                **review,
+                "status": "sandbox-failed",
+                "sandbox_status": "failed",
+                "sandbox_message": str(exc).strip() or "Stewardship review sandbox job failed.",
+                "updated_at": now,
+            }
+            saved = self._save_stewardship_review_record(failed)
+            self._upsert_active_sandbox_run(
+                {"job_id": job_id, "title": f"Stewardship review package for {str(saved.get('lane_title', '')).strip() or 'lane'}", "job_type": "stewardship-review"},
+                run_id=str(saved.get("sandbox_run_id", "")).strip() or str(uuid.uuid4()),
+                status="failed",
+                current_step="failed",
+                message=str(exc).strip() or "Stewardship review sandbox job failed.",
+                actor_name=actor_name,
+                worktree_path=str(saved.get("sandbox_workspace_path", "")).strip(),
+                metadata={"error": str(exc).strip(), "review_id": review_id, "lane_kind": "stewardship-review"},
+            )
+            self.self_improvement_store.record_run(
+                {
+                    "run_id": str(uuid.uuid4()),
+                    "job_id": job_id,
+                    "job_title": f"Stewardship review package for {str(saved.get('lane_title', '')).strip() or 'lane'}",
+                    "generated_at": now,
+                    "mode": "stewardship-review-sandbox",
+                    "status": "failed",
+                    "compile": {"ok": False},
+                    "tests": {"ok": False},
+                    "patch_bundle": {"path": str(saved.get("sandbox_patch_bundle_path", "")).strip()},
+                    "error": str(exc).strip(),
+                }
+            )
+            return {"ok": False, "job": {"job_id": job_id, "status": "sandbox-failed"}, "error": str(exc).strip()}
+
+    def run_stewardship_review_sandbox_job(self, actor_name: str, review_id: str, *, triggered_by: str = "stewardship-review-sandbox") -> dict[str, Any]:
+        review = self._stewardship_review_record(review_id)
+        if review is None:
+            raise KeyError("Stewardship review not found.")
+        job_id = self._stewardship_review_sandbox_job_id(review_id)
+        active_run = self.self_improvement_store.get_active_run(job_id) or {}
+        run_id = str(active_run.get("run_id", "")).strip() or str(review.get("sandbox_run_id", "")).strip() or str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        running = {
+            **review,
+            "status": "sandbox-running",
+            "sandbox_status": "running",
+            "sandbox_run_id": run_id,
+            "sandbox_message": "Assembling a bounded stewardship review package.",
+            "updated_at": now,
+        }
+        saved = self._save_stewardship_review_record(running)
+        workspace = self._stewardship_review_sandbox_workspace(review_id)
+        workspace.mkdir(parents=True, exist_ok=True)
+        self._upsert_active_sandbox_run(
+            {"job_id": job_id, "title": f"Stewardship review package for {str(saved.get('lane_title', '')).strip() or 'lane'}", "job_type": "stewardship-review"},
+            run_id=run_id,
+            status="running",
+            current_step="assembling-package",
+            message="Assembling a bounded stewardship review package.",
+            actor_name=actor_name,
+            worktree_path=str(workspace),
+            metadata={"triggered_by": triggered_by, "review_id": review_id, "lane_kind": "stewardship-review"},
+        )
+        cancelled = self._abort_stewardship_review_sandbox_if_requested(saved, actor_name=actor_name, run_id=run_id, current_step="assembling-package", workspace_path=str(workspace))
+        if cancelled is not None:
+            return cancelled
+        bundle_path = workspace / "stewardship_review_package.md"
+        report_path = self._stewardship_review_sandbox_report_root() / f"{run_id}.json"
+        doctrine = self._stewardship_lane_rollout_posture(
+            actor_name,
+            lane_id=str(saved.get("lane_id", "")).strip(),
+            packet_target=str(saved.get("packet_target", "")).strip(),
+            review_surface=str(saved.get("review_surface", "")).strip(),
+        )
+        bundle_path.write_text(
+            "\n".join(
+                [
+                    f"# Stewardship Review Package: {str(saved.get('lane_title', '')).strip() or 'Lane'}",
+                    "",
+                    f"- Lane ID: {str(saved.get('lane_id', '')).strip() or 'Unknown'}",
+                    f"- Packet target: {str(saved.get('packet_target', '')).strip() or 'Unknown'}",
+                    f"- Review surface: {str(saved.get('review_surface', '')).strip() or 'Unknown'}",
+                    f"- Boundary decision: {str(saved.get('boundary_decision', '')).strip() or 'stage'}",
+                    f"- Approval mode: {str(saved.get('approval_mode', '')).strip() or 'stage_and_alert'}",
+                    "",
+                    "## Boundary Reason",
+                    str(saved.get("boundary_reason", "")).strip() or "No boundary reason was recorded.",
+                    "",
+                    "## Operator Note",
+                    str(saved.get("note", "")).strip() or "No note was attached.",
+                    "",
+                    "## Doctrine Context",
+                    str(doctrine.get("summary", "")).strip() or "No codified rollout doctrine was attached to this lane yet.",
+                    "",
+                    "## Bounded Lane Outcome",
+                    "JARVIS prepared this stewardship review packet without widening the lane or executing the underlying action.",
+                ]
+            ) + "\n",
+            encoding="utf-8",
+        )
+        self._upsert_active_sandbox_run(
+            {"job_id": job_id, "title": f"Stewardship review package for {str(saved.get('lane_title', '')).strip() or 'lane'}", "job_type": "stewardship-review"},
+            run_id=run_id,
+            status="running",
+            current_step="writing-report",
+            message="Writing the stewardship sandbox report and review packet.",
+            actor_name=actor_name,
+            worktree_path=str(workspace),
+            metadata={"review_id": review_id, "lane_kind": "stewardship-review"},
+        )
+        refreshed = self._stewardship_review_record(review_id) or saved
+        cancelled = self._abort_stewardship_review_sandbox_if_requested(refreshed, actor_name=actor_name, run_id=run_id, current_step="writing-report", workspace_path=str(workspace))
+        if cancelled is not None:
+            return cancelled
+        report = {
+            "run_id": run_id,
+            "job_id": job_id,
+            "job_title": f"Stewardship review package for {str(saved.get('lane_title', '')).strip() or 'lane'}",
+            "generated_at": now,
+            "mode": "stewardship-review-sandbox",
+            "status": "review-ready",
+            "compile": {"ok": True, "mode": "package-review"},
+            "tests": {"ok": True, "mode": "package-review"},
+            "patch_bundle": {"path": str(bundle_path)},
+            "report_path": str(report_path),
+            "workspace_path": str(workspace),
+            "review_id": review_id,
+            "lane_id": str(saved.get("lane_id", "")).strip(),
+            "lane_title": str(saved.get("lane_title", "")).strip(),
+        }
+        report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        completed = {
+            **saved,
+            "status": "sandboxed",
+            "sandbox_status": "review-ready",
+            "sandbox_run_id": run_id,
+            "sandbox_message": "Stewardship review package is ready inside the bounded lane.",
+            "sandbox_report_path": str(report_path),
+            "sandbox_patch_bundle_path": str(bundle_path),
+            "sandbox_workspace_path": str(workspace),
+            "sandbox_generated_at": now,
+            "updated_at": now,
+        }
+        final = self._save_stewardship_review_record(completed)
+        self.self_improvement_store.record_run(report)
+        self._upsert_active_sandbox_run(
+            {"job_id": job_id, "title": f"Stewardship review package for {str(final.get('lane_title', '')).strip() or 'lane'}", "job_type": "stewardship-review"},
+            run_id=run_id,
+            status="review-ready",
+            current_step="review-ready",
+            message="Stewardship review sandbox run finished. Review the packet before widening the lane.",
+            actor_name=actor_name,
+            worktree_path=str(workspace),
+            metadata={"report_path": str(report_path), "review_id": review_id, "lane_kind": "stewardship-review"},
+        )
+        return {"ok": True, "job": {"job_id": job_id, "status": "sandboxed"}, "sandbox_run": report}
+
+    def sandbox_operations_overview(self) -> dict[str, Any]:
+        sandbox_snapshot = self.self_improvement_snapshot() or {}
+        jobs = sandbox_snapshot.get("jobs") if isinstance(sandbox_snapshot.get("jobs"), list) else []
+        active_runs = sandbox_snapshot.get("active_runs") if isinstance(sandbox_snapshot.get("active_runs"), list) else []
+        recent_runs = sandbox_snapshot.get("recent_runs") if isinstance(sandbox_snapshot.get("recent_runs"), list) else []
+        queue = sandbox_snapshot.get("sandbox_queue") if isinstance(sandbox_snapshot.get("sandbox_queue"), dict) else {}
+
+        job_rows: list[dict[str, Any]] = []
+        for item in jobs:
+            if not isinstance(item, dict):
+                continue
+            route = item.get("mutation_route") if isinstance(item.get("mutation_route"), dict) else {}
+            if str(route.get("route") or "").strip() != "sandbox/worktree-only":
+                continue
+            job_rows.append(
+                {
+                    "id": str(item.get("job_id") or item.get("id") or ""),
+                    "title": str(item.get("title") or "Self-improvement sandbox job"),
+                    "status": str(item.get("status") or ""),
+                    "job_type": str(item.get("job_type") or "self-improvement"),
+                    "target": str(item.get("target") or ""),
+                    "review_level": str(item.get("review_level") or ""),
+                    "summary": str(item.get("summary") or ""),
+                    "auto_allowed": bool(item.get("auto_allowed")),
+                    "updated_at": str(item.get("updated_at") or ""),
+                    "last_sandbox_run_id": str(item.get("last_sandbox_run_id") or ""),
+                }
+            )
+        job_rows.extend(self.vendor_prep_sandbox_jobs(limit=6))
+        job_rows.extend(self.stewardship_review_sandbox_jobs(limit=6))
+        deduped_jobs: list[dict[str, Any]] = []
+        seen_job_ids: set[str] = set()
+        for item in sorted(job_rows, key=lambda row: str(row.get("updated_at") or ""), reverse=True):
+            job_id = str(item.get("job_id") or item.get("id") or "").strip()
+            if not job_id or job_id in seen_job_ids:
+                continue
+            seen_job_ids.add(job_id)
+            deduped_jobs.append(item)
+        active_run_rows = [
+            {
+                "id": str(item.get("run_id") or item.get("id") or ""),
+                "job_id": str(item.get("job_id") or ""),
+                "title": str(item.get("title") or "Sandbox job"),
+                "status": str(item.get("status") or ""),
+                "current_step": str(item.get("current_step") or ""),
+                "message": str(item.get("message") or ""),
+                "updated_at": str(item.get("updated_at") or ""),
+                "worktree_path": str(item.get("worktree_path") or ""),
+            }
+            for item in active_runs[:8]
+            if isinstance(item, dict)
+        ]
+        recent_rows = [
+            {
+                "id": str(item.get("run_id") or item.get("id") or ""),
+                "job_id": str(item.get("job_id") or ""),
+                "title": str(item.get("job_title") or item.get("title") or "Sandbox run"),
+                "generated_at": str(item.get("generated_at") or ""),
+                "mode": str(item.get("mode") or ""),
+                "compile_ok": bool(((item.get("compile") or {}) if isinstance(item.get("compile"), dict) else {}).get("ok")),
+                "tests_ok": bool(((item.get("tests") or {}) if isinstance(item.get("tests"), dict) else {}).get("ok")),
+                "report_path": str(item.get("report_path") or ""),
+                "patch_bundle_path": str(((item.get("patch_bundle") or {}) if isinstance(item.get("patch_bundle"), dict) else {}).get("path") or ""),
+            }
+            for item in recent_runs[:12]
+            if isinstance(item, dict)
+        ]
+        review_ready_statuses = {"review-ready", "sandboxed"}
+        failed_statuses = {"failed", "sandbox-failed"}
+        review_ready_job_ids = {
+            str(item.get("job_id") or item.get("id") or "").strip()
+            for item in deduped_jobs
+            if str(item.get("job_id") or item.get("id") or "").strip()
+            and str(item.get("status") or "").strip().lower() in review_ready_statuses
+        }
+        review_ready_job_ids.update(
+            str(item.get("job_id") or "").strip()
+            for item in active_run_rows
+            if str(item.get("job_id") or "").strip()
+            and str(item.get("status") or "").strip().lower() == "review-ready"
+        )
+        failed_job_ids = {
+            str(item.get("job_id") or item.get("id") or "").strip()
+            for item in deduped_jobs
+            if str(item.get("job_id") or item.get("id") or "").strip()
+            and str(item.get("status") or "").strip().lower() in failed_statuses
+        }
+        failed_job_ids.update(
+            str(item.get("job_id") or "").strip()
+            for item in active_run_rows
+            if str(item.get("job_id") or "").strip()
+            and str(item.get("status") or "").strip().lower() == "failed"
+        )
+        lane_groups: dict[str, dict[str, Any]] = {}
+        for item in deduped_jobs:
+            job_type = str(item.get("job_type") or "sandbox").strip() or "sandbox"
+            group = lane_groups.setdefault(
+                job_type,
+                {
+                    "id": job_type,
+                    "title": job_type.replace("-", " ").title(),
+                    "job_type": job_type,
+                    "queued_count": 0,
+                    "active_run_count": 0,
+                    "review_ready_count": 0,
+                    "failed_run_count": 0,
+                    "last_job_id": "",
+                    "status": "staged",
+                    "detail": "",
+                    "updated_at": "",
+                },
+            )
+            group["queued_count"] = int(group.get("queued_count") or 0) + 1
+            if str(item.get("status") or "").strip().lower() in {"sandboxed", "review-ready"}:
+                group["review_ready_count"] = int(group.get("review_ready_count") or 0) + 1
+            updated_at = str(item.get("updated_at") or "").strip()
+            if updated_at >= str(group.get("updated_at") or ""):
+                group["last_job_id"] = str(item.get("job_id") or item.get("id") or "")
+                group["status"] = str(item.get("status") or "staged")
+                summary = str(item.get("summary") or "").strip()
+                target = str(item.get("target") or "").strip()
+                review_level = str(item.get("review_level") or "").strip().replace("-", " ")
+                if summary:
+                    group["detail"] = summary
+                elif target:
+                    group["detail"] = (
+                        f"Latest target {target} is still bounded through {review_level or 'review'}."
+                    )
+                else:
+                    group["detail"] = f"{group['title']} is still moving through bounded execution."
+                group["updated_at"] = updated_at
+        for item in active_run_rows:
+            job_type = ""
+            for job in deduped_jobs:
+                if str(job.get("job_id") or job.get("id") or "").strip() == str(item.get("job_id") or "").strip():
+                    job_type = str(job.get("job_type") or "").strip()
+                    break
+            if job_type:
+                group = lane_groups.setdefault(
+                    job_type,
+                    {
+                        "id": job_type,
+                        "title": job_type.replace("-", " ").title(),
+                        "job_type": job_type,
+                        "queued_count": 0,
+                        "active_run_count": 0,
+                        "review_ready_count": 0,
+                        "failed_run_count": 0,
+                        "last_job_id": "",
+                        "status": "staged",
+                        "detail": "",
+                        "updated_at": "",
+                    },
+                )
+                group["active_run_count"] = int(group.get("active_run_count") or 0) + 1
+                status = str(item.get("status") or "").strip().lower()
+                if status == "failed":
+                    group["failed_run_count"] = int(group.get("failed_run_count") or 0) + 1
+                if str(item.get("job_id") or "").strip():
+                    group["last_job_id"] = str(item.get("job_id") or "")
+                if status in {"running", "sandbox-running"}:
+                    group["status"] = "active"
+                elif status == "review-ready":
+                    group["status"] = "review-ready"
+                elif status == "failed":
+                    group["status"] = "failed"
+                message = str(item.get("message") or "").strip()
+                if message:
+                    group["detail"] = message
+        lane_rows = [
+            {
+                "id": str(item.get("id") or item.get("job_type") or "sandbox"),
+                "title": str(item.get("title") or item.get("label") or "Sandbox Lane"),
+                "queued_count": int(item.get("queued_count") or 0),
+                "active_run_count": int(item.get("active_run_count") or 0),
+                "review_ready_count": int(item.get("review_ready_count") or 0),
+                "failed_run_count": int(item.get("failed_run_count") or 0),
+                "last_job_id": str(item.get("last_job_id") or ""),
+                "status": str(item.get("status") or "staged"),
+                "detail": str(item.get("detail") or f"{str(item.get('title') or 'Sandbox lane')} is available for bounded work."),
+            }
+            for item in sorted(
+                lane_groups.values(),
+                key=lambda row: (
+                    int(row.get("active_run_count") or 0),
+                    int(row.get("queued_count") or 0),
+                    str(row.get("title") or ""),
+                ),
+                reverse=True,
+            )
+        ]
+        return {
+            "queue": {
+                "active_count": int(queue.get("active_count") or 0),
+                "queued_job_count": len(
+                    [
+                        item for item in deduped_jobs
+                        if str(item.get("status") or "").strip().lower() in {"pending-approval", "staged", "review_staged", "sandbox-queued", "sandbox-running", "sandbox-stop-requested", "sandboxed"}
+                    ]
+                ),
+                "review_ready_count": len(
+                    [item for item in review_ready_job_ids if item]
+                ),
+                "failed_run_count": len(
+                    [item for item in failed_job_ids if item]
+                ),
+                "active_jobs": [str(item) for item in queue.get("active_jobs", []) if str(item).strip()],
+                "lane_count": len(lane_rows),
+            },
+            "jobs": deduped_jobs[:8],
+            "active_runs": active_run_rows[:8],
+            "recent_runs": recent_rows[:10],
+            "lane_summaries": lane_rows[:6],
+        }
+
+    def execute_sandbox_job(self, actor_name: str, job_id: str, *, triggered_by: str = "apple-systems") -> dict[str, Any]:
+        if job_id.startswith("vendor-prep:"):
+            return self.enqueue_vendor_prep_sandbox_job(actor_name, job_id.split(":", 1)[1], triggered_by=triggered_by)
+        if job_id.startswith("stewardship-review:"):
+            return self.enqueue_stewardship_review_sandbox_job(actor_name, job_id.split(":", 1)[1], triggered_by=triggered_by)
+        return self.enqueue_self_improvement_sandbox_job(actor_name, job_id, triggered_by=triggered_by)
+
+    def cancel_sandbox_job(self, actor_name: str, job_id: str, *, reason: str = "manual stop requested") -> dict[str, Any]:
+        if job_id.startswith("vendor-prep:"):
+            return self.cancel_vendor_prep_sandbox_job(actor_name, job_id.split(":", 1)[1], reason=reason)
+        if job_id.startswith("stewardship-review:"):
+            return self.cancel_stewardship_review_sandbox_job(actor_name, job_id.split(":", 1)[1], reason=reason)
+        return self.cancel_self_improvement_sandbox_job(actor_name, job_id, reason=reason)
+
+    def recover_sandbox_job(self, actor_name: str, job_id: str, *, reason: str = "manual recovery reset") -> dict[str, Any]:
+        if job_id.startswith("vendor-prep:"):
+            return self.recover_vendor_prep_sandbox_job(actor_name, job_id.split(":", 1)[1], reason=reason)
+        if job_id.startswith("stewardship-review:"):
+            return self.recover_stewardship_review_sandbox_job(actor_name, job_id.split(":", 1)[1], reason=reason)
+        return self.recover_self_improvement_sandbox_job(actor_name, job_id, reason=reason)

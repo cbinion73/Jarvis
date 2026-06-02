@@ -63,7 +63,9 @@ Installed launchd services:
 Quick checks:
   launchctl list | rg jarvis
   curl http://127.0.0.1:8787/health
+  curl http://127.0.0.1:8787/api/runtime/posture
   curl http://127.0.0.1:1933/health
+  python3 -m jarvis runtime-posture
 
 Logs:
   ${REPO_ROOT}/data/logs/jarvis-runtime.stdout.log

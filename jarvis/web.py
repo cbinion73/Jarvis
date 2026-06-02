@@ -179,6 +179,18 @@ def create_handler(runtime: JarvisRuntime) -> type[BaseHTTPRequestHandler]:
             if parsed.path == "/api/trust-zones":
                 self._send_json({"zones": runtime.list_trust_zones()})
                 return
+            if parsed.path == "/api/stewardship-lanes":
+                self._send_json({"lanes": runtime.list_stewardship_lanes()})
+                return
+            if parsed.path == "/api/agent-supervision/contracts":
+                self._send_json({"contracts": runtime.list_agent_supervision_contracts()})
+                return
+            if parsed.path == "/api/agent-supervision/traces":
+                self._send_json({"items": runtime.list_supervision_traces()})
+                return
+            if parsed.path == "/api/agent-supervision/reviews":
+                self._send_json({"items": runtime.list_supervision_reviews()})
+                return
             if parsed.path == "/api/resource-arenas":
                 self._send_json({"arenas": runtime.list_resource_arenas()})
                 return

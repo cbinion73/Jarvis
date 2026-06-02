@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/jarvis-agent-registry.v1.json",
+  "title": "JarvisAgentRegistryV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "registry_id",
+    "mission_model_id",
+    "mission_model_version",
+    "generated_at",
+    "canonical_posture",
+    "ownership_defaults",
+    "agents"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "registry_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9._-]+$"
+    },
+    "mission_model_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9._-]+$"
+    },
+    "mission_model_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "canonical_posture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["system_mode", "interaction_mode", "voice_mode", "registry_mode"],
+      "properties": {
+        "system_mode": {
+          "type": "string",
+          "const": "always-on-orchestrator"
+        },
+        "interaction_mode": {
+          "type": "string",
+          "const": "oversight-and-steering"
+        },
+        "voice_mode": {
+          "type": "string",
+          "const": "voice-enabled-not-primary"
+        },
+        "registry_mode": {
+          "type": "string",
+          "const": "operational-contract"
+        }
+      }
+    },
+    "ownership_defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["principal_id", "operator_role", "default_escalation_target"],
+      "properties": {
+        "principal_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9._-]+$"
+        },
+        "operator_role": {
+          "type": "string"
+        },
+        "default_escalation_target": {
+          "type": "string"
+        }
+      }
+    },
+    "agents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "agent_id",
+          "label",
+          "title",
+          "agent_class",
+          "status",
+          "promotion_status",
+          "operating_domain",
+          "purpose",
+          "mission_statement",
+          "lane_ownership",
+          "primary_lane",
+          "mission_roles",
+          "cadence_minutes",
+          "triggers",
+          "dependencies",
+          "memory_scope",
+          "trust_zone",
+          "authority_stage",
+          "autonomy_posture",
+          "quiet_hours_behavior",
+          "allowed_tools",
+          "success_metrics",
+          "ownership",
+          "escalation"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9._-]+$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "agent_class": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "paused", "retired"]
+          },
+          "promotion_status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "operating_domain": {
+            "type": "string",
+            "minLength": 1
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mission_statement": {
+            "type": "string",
+            "minLength": 1
+          },
+          "lane_ownership": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "primary_lane": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mission_roles": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "cadence_minutes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "triggers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "memory_scope": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "trust_zone": {
+            "type": "string",
+            "pattern": "^[a-z0-9._-]+$"
+          },
+          "authority_stage": {
+            "type": "string",
+            "enum": ["observe", "draft", "stage_alert", "sandbox_live", "mature_live", "suspended"]
+          },
+          "autonomy_posture": {
+            "type": "string",
+            "enum": ["bounded-autonomy", "approval-required", "observe-only"]
+          },
+          "quiet_hours_behavior": {
+            "type": "string",
+            "minLength": 1
+          },
+          "allowed_tools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "success_metrics": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ownership": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["principal_id", "role", "steward_agent_id"],
+            "properties": {
+              "principal_id": {
+                "type": "string",
+                "pattern": "^[a-z0-9._-]+$"
+              },
+              "role": {
+                "type": "string",
+                "minLength": 1
+              },
+              "steward_agent_id": {
+                "type": "string",
+                "pattern": "^[a-z0-9._-]+$"
+              }
+            }
+          },
+          "escalation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["supervisor_agent_id", "default_target", "immediate_reasons", "review_reasons"],
+            "properties": {
+              "supervisor_agent_id": {
+                "type": "string",
+                "pattern": "^[a-z0-9._-]+$"
+              },
+              "default_target": {
+                "type": "string",
+                "minLength": 1
+              },
+              "immediate_reasons": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "review_reasons": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
