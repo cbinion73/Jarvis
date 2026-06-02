@@ -2078,6 +2078,14 @@ struct SettingsView: View {
                                         .foregroundStyle(.white)
                                 }
                             }
+
+                            Button {
+                                handleLocationAccessAction()
+                            } label: {
+                                Label(locationActionLabel, systemImage: locationActionSystemImage)
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
                         }
 
                         // ── App info ────────────────────────────────
@@ -2515,6 +2523,58 @@ struct SettingsView: View {
             return "bell"
         @unknown default:
             return "bell"
+        }
+    }
+
+    private var locationActionLabel: String {
+        switch weatherLocation.authorizationStatus {
+        case .notDetermined:
+            return "Enable Location Access"
+        case .authorizedWhenInUse:
+            return "Upgrade Presence to Always"
+        case .authorizedAlways:
+            return geofence.homeCoordinate == nil ? "Set Home Geofence" : "Refresh Presence Monitoring"
+        case .denied, .restricted:
+            return "Open Location Settings"
+        @unknown default:
+            return "Review Location Access"
+        }
+    }
+
+    private var locationActionSystemImage: String {
+        switch weatherLocation.authorizationStatus {
+        case .notDetermined:
+            return "location"
+        case .authorizedWhenInUse:
+            return "location.badge.plus"
+        case .authorizedAlways:
+            return geofence.homeCoordinate == nil ? "house.badge.plus" : "location.circle"
+        case .denied, .restricted:
+            return "gearshape"
+        @unknown default:
+            return "location"
+        }
+    }
+
+    @MainActor
+    private func handleLocationAccessAction() {
+        switch weatherLocation.authorizationStatus {
+        case .notDetermined:
+            weatherLocation.requestPermission()
+        case .authorizedWhenInUse:
+            geofence.requestPermission()
+        case .authorizedAlways:
+            if geofence.homeCoordinate == nil {
+                geofence.setHomeToCurrentLocation()
+            } else {
+                geofence.startMonitoring()
+            }
+        case .denied, .restricted:
+            if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                openURL(settingsURL)
+            }
+        @unknown default:
+            break
         }
     }
 
