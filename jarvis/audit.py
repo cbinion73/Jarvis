@@ -356,6 +356,144 @@ class ProgressFocusStore:
         }
 
 
+class SeamTrackerStore:
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self.root.mkdir(parents=True, exist_ok=True)
+        self.current_path = self.root / "seam_tracker.json"
+        self.history_path = self.root / "seam_tracker_log.jsonl"
+        self.history_state_log_path = self.root / "seam_tracker_state_log.jsonl"
+
+    def _load_history(self) -> list[dict]:
+        if not self.history_path.exists():
+            return self._load_history_from_state_log()
+        try:
+            lines = self.history_path.read_text(encoding="utf-8").splitlines()
+            records = [json.loads(line) for line in lines if line.strip()]
+        except (OSError, json.JSONDecodeError):
+            return self._load_history_from_state_log()
+        return [dict(item) for item in records if isinstance(item, dict)] or self._load_history_from_state_log()
+
+    def _load_history_from_state_log(self) -> list[dict]:
+        if not self.history_state_log_path.exists():
+            return []
+        latest: list[dict] = []
+        try:
+            for line in self.history_state_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return []
+        return latest
+
+    def _load_current_records(self) -> list[dict]:
+        if self.current_path.exists():
+            try:
+                payload = json.loads(self.current_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                payload = {}
+            records = payload.get("records") if isinstance(payload, dict) else None
+            if isinstance(records, list):
+                return [dict(item) for item in records if isinstance(item, dict)]
+        latest_by_name: dict[str, dict] = {}
+        for item in self._load_history():
+            name = str(item.get("name", "")).strip()
+            if name:
+                latest_by_name[name] = dict(item)
+        return list(latest_by_name.values())
+
+    def _status_class(self, status: str) -> str:
+        normalized = str(status).strip().lower()
+        if normalized in {"useful", "durable", "compounding"}:
+            return "accepted"
+        return "steady"
+
+    def save_seam_state(
+        self,
+        *,
+        name: str,
+        module: str,
+        status: str,
+        note: str,
+        actor: str,
+        route: str = "/progress-center",
+        linked_mission: dict | None = None,
+    ) -> dict:
+        seam_name = str(name).strip() or "Unnamed Seam"
+        normalized_status = str(status).strip().title() or "Wired"
+        if normalized_status not in {"Wired", "Useful", "Durable", "Compounding"}:
+            raise ValueError("Unsupported seam status.")
+
+        history = self._load_history()
+        records = self._load_current_records()
+        now = datetime.now(timezone.utc).isoformat()
+        mission = dict(linked_mission or {})
+        entry = {
+            "entry_type": "seam-state",
+            "saved_at": now,
+            "name": seam_name,
+            "module": str(module).strip() or "Progress",
+            "status": normalized_status,
+            "status_class": self._status_class(normalized_status),
+            "maturity": normalized_status,
+            "operator_note": str(note).strip() or "No operator seam note recorded.",
+            "actor": str(actor).strip() or "Chris",
+            "route": str(route).strip() or "/progress-center",
+            "linked_mission": {
+                "mission_id": str(mission.get("mission_id", "")).strip(),
+                "title": str(mission.get("title", "")).strip(),
+                "lane": str(mission.get("lane", "")).strip(),
+                "route": str(mission.get("route", "")).strip() or "/mission-board",
+            } if mission else {},
+        }
+
+        updated_records = [dict(item) for item in records if str(item.get("name", "")).strip() != seam_name]
+        updated_records.append(entry)
+        updated_records.sort(key=lambda item: str(item.get("name", "")).lower())
+        atomic_write_json(
+            self.current_path,
+            {
+                "saved_at": now,
+                "records": updated_records,
+            },
+        )
+
+        history.append(entry)
+        history = history[-80:]
+        atomic_write_jsonl(self.history_path, history)
+        append_jsonl(
+            self.history_state_log_path,
+            {
+                "saved_at": now,
+                "records": history,
+            },
+        )
+        return entry
+
+    def summary(self, limit: int = 6) -> dict:
+        history = self._load_history()
+        records = self._load_current_records()
+        current_saved_at = str(records[-1].get("saved_at", "")) if records else ""
+        recent = list(reversed(history[-max(1, limit):]))
+        return {
+            "latest": {
+                "saved_at": current_saved_at,
+                "records": records,
+            },
+            "records": records,
+            "history_count": len(history),
+            "recent": recent,
+            "proof_paths": {
+                "current": str(self.current_path),
+                "history": str(self.history_path),
+            },
+        }
+
+
 class RecoveryActionStore:
     def __init__(self, root: Path) -> None:
         self.root = root

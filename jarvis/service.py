@@ -40,7 +40,7 @@ except Exception:  # pragma: no cover
     def _render_glass_shell(runtime, initial_packet=""):  # type: ignore[misc]
         return render_voice_shell(runtime, initial_packet=initial_packet)
 from .apple_api import _register_apple_api
-from .audit import AuditLog, ProgressFocusStore, ProgressSnapshotStore, RecoveryActionStore
+from .audit import AuditLog, ProgressFocusStore, ProgressSnapshotStore, RecoveryActionStore, SeamTrackerStore
 from . import layout_engine as _layout_engine
 from .recovery_cases import RecoveryCaseStore
 
@@ -1961,13 +1961,14 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             next_focus=next_focus,
         )
         persistence_summary = progress_store.summary(limit=6)
+        seam_persistence = SeamTrackerStore(DEFAULT_AUDIT_ROOT).summary(limit=6)
         return {
             "generated_at": command_center.get("generated_at", ""),
             "available": True,
             "status": "Useful",
-            "summary": "Progress now has a dedicated module route with live readiness rows, seam posture, lane state, and failure evidence inside JARVIS.",
-            "what_became_real": "Progress is now represented as a standalone app module instead of only a command-center panel.",
-            "remains_partial": "Richer route-to-route progress actions and deeper per-module mutation flows still need follow-on slices, but progress history now persists durably.",
+            "summary": "Progress now has a dedicated module route with live readiness rows, seam posture, lane state, failure evidence, and durable seam records inside JARVIS.",
+            "what_became_real": "Progress is now represented as a standalone app module instead of only a command-center panel, and seam state can now persist durably through the app layer.",
+            "remains_partial": "Richer route-to-route progress actions and deeper per-module mutation flows still need follow-on slices, but progress and seam history now persist durably.",
             "progress_dashboard": progress_dashboard,
             "seam_tracker": seam_tracker,
             "level3_checklist": level3_checklist,
@@ -1976,6 +1977,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "hosted_deployment": hosted_deployment,
             "core_modules": core_modules,
             "progress_persistence": persistence_summary,
+            "seam_persistence": seam_persistence,
             "focus_control": focus_summary,
             "counts": {
                 "useful": int(counts.get("useful", 0) or 0),
@@ -1985,6 +1987,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "seam_count": int(seam_tracker.get("item_count", 0) or 0),
                 "history_count": int(persistence_summary.get("history_count", 0) or 0),
                 "focus_history_count": int(focus_summary.get("history_count", 0) or 0),
+                "seam_history_count": int(seam_persistence.get("history_count", 0) or 0),
             },
             "progress_next_focus": next_focus or "No next progress focus recorded yet.",
             "latest_progress_snapshot": persisted_snapshot,
@@ -1992,6 +1995,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "module_route": "/progress-center",
                 "module_api": "/api/progress/module",
                 "focus_api": "/api/progress/focus",
+                "seam_api_prefix": "/api/progress/seams/",
                 "command_center_api": "/api/command-center",
                 "agent_registry_api": "/api/agent-registry",
                 "open_loops_api": "/api/open-loops?actor=Chris",
@@ -2002,6 +2006,8 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "progress_snapshot_history": str((DEFAULT_AUDIT_ROOT / "progress_snapshot_log.jsonl")),
                 "progress_focus_json": str((DEFAULT_AUDIT_ROOT / "progress_focus.json")),
                 "progress_focus_history": str((DEFAULT_AUDIT_ROOT / "progress_focus_log.jsonl")),
+                "seam_tracker_json": str((DEFAULT_AUDIT_ROOT / "seam_tracker.json")),
+                "seam_tracker_history": str((DEFAULT_AUDIT_ROOT / "seam_tracker_log.jsonl")),
             },
         }
 
@@ -2042,6 +2048,64 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             },
         )
         return _json({"status": "recorded", "focus": focus_entry})
+
+    @app.post("/api/progress/seams/{seam_name}")
+    async def api_progress_seam_update(seam_name: str, payload: dict[str, Any]) -> JSONResponse:
+        name = str(seam_name or "").strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="seam name is required")
+        module = str(payload.get("module") or "Progress").strip() or "Progress"
+        status = str(payload.get("status") or "Useful").strip().title() or "Useful"
+        actor = str(payload.get("actor") or "Chris").strip() or "Chris"
+        note = str(payload.get("note") or "").strip() or f"Progress recorded seam state for {name}."
+        mission_id = str(payload.get("mission_id") or "").strip()
+        linked_mission = {}
+        if mission_id:
+            linked_mission = {
+                "mission_id": mission_id,
+                "title": str(payload.get("mission_title") or mission_id).strip() or mission_id,
+                "lane": str(payload.get("mission_lane") or "next").strip() or "next",
+                "route": str(payload.get("mission_route") or "/mission-board").strip() or "/mission-board",
+            }
+        store = SeamTrackerStore(DEFAULT_AUDIT_ROOT)
+        try:
+            seam_entry = store.save_seam_state(
+                name=name,
+                module=module,
+                status=status,
+                note=note,
+                actor=actor,
+                route="/progress-center",
+                linked_mission=linked_mission,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": "progress",
+                "action": "Update Seam State",
+                "title": name,
+                "detail": note,
+                "why_now": "Progress center promoted durable seam posture through the app layer.",
+                "result_summary": f"Seam {name} now recorded as {status}.",
+                "related_route": "/progress-center",
+                "route_label": "Open Progress Center",
+                "related_kind": "progress-seam",
+                "related_label": name,
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        focus_entry = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module=module,
+            reason=note,
+            route="/progress-center",
+            actor=actor,
+        )
+        return _json({"status": "recorded", "seam": seam_entry, "focus": focus_entry})
 
     def _recovery_related_routes(target_kind: str, *, route: str = "/recovery-center") -> list[dict[str, str]]:
         normalized = str(target_kind).strip().lower() or "recovery"

@@ -6333,6 +6333,19 @@ def render_progress_module_page(payload: dict) -> str:
         <button type="button" id="save-progress-focus">Save Next Focus</button>
       </div>
       <p class="status-note" id="progress-focus-note">Persist the next Level 3 focus so progress history and shared activity stay aligned.</p>
+      <div class="controls" style="margin-top:16px;">
+        <select id="progress-seam-name"></select>
+        <select id="progress-seam-status">
+          <option value="Wired">Wired</option>
+          <option value="Useful">Useful</option>
+          <option value="Durable">Durable</option>
+          <option value="Compounding">Compounding</option>
+        </select>
+        <select id="progress-seam-mission"></select>
+        <input id="progress-seam-note" placeholder="What changed for this seam" />
+        <button type="button" id="save-progress-seam">Save Seam State</button>
+      </div>
+      <p class="status-note" id="progress-seam-note-status">Persist seam posture and an optional linked mission so seam continuity survives refreshes.</p>
     </section>
     <div class="layout">
       <section class="panel span-4">
@@ -6387,6 +6400,11 @@ def render_progress_module_page(payload: dict) -> str:
     const focusSelect = document.getElementById("progress-focus-module");
     const focusReason = document.getElementById("progress-focus-reason");
     const focusNote = document.getElementById("progress-focus-note");
+    const seamSelect = document.getElementById("progress-seam-name");
+    const seamStatus = document.getElementById("progress-seam-status");
+    const seamMission = document.getElementById("progress-seam-mission");
+    const seamNote = document.getElementById("progress-seam-note");
+    const seamNoteStatus = document.getElementById("progress-seam-note-status");
     const moduleStatusList = document.getElementById("module-status-list");
     const progressItemsList = document.getElementById("progress-items-list");
     const level3ChecklistList = document.getElementById("level3-checklist-list");
@@ -6413,12 +6431,57 @@ def render_progress_module_page(payload: dict) -> str:
       return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
     }}
 
+    function missionRouteLinks(missions) {{
+      const items = Array.isArray(missions) ? missions : [];
+      return items.map((mission) => `
+        <a href="${{esc(mission.route || "/mission-board")}}">${{esc(mission.title || mission.mission_id || "Mission")}}</a>
+      `).join("");
+    }}
+
     function moduleOptionsMarkup(items, selected) {{
       return (Array.isArray(items) ? items : []).map((item) => {{
         const moduleName = String(item.module || item.title || "").trim() || "Progress";
         const chosen = moduleName === selected ? " selected" : "";
         return `<option value="${{esc(moduleName)}}"${{chosen}}>${{esc(moduleName)}}</option>`;
       }}).join("");
+    }}
+
+    function seamOptionsMarkup(items, selected) {{
+      return (Array.isArray(items) ? items : []).map((item) => {{
+        const seamName = String(item.name || "").trim() || "Unnamed Seam";
+        const chosen = seamName === selected ? " selected" : "";
+        return `<option value="${{esc(seamName)}}"${{chosen}}>${{esc(seamName)}}</option>`;
+      }}).join("");
+    }}
+
+    function seamMissionOptionsMarkup(item) {{
+      const missions = Array.isArray(item?.related_missions) ? item.related_missions : [];
+      const linkedMission = item?.linked_mission || {{}};
+      const selectedMissionId = String(linkedMission.mission_id || "").trim();
+      const rows = ['<option value="">No linked mission</option>'];
+      missions.forEach((mission) => {{
+        const missionId = String(mission.mission_id || "").trim();
+        if (!missionId) return;
+        const chosen = missionId === selectedMissionId ? " selected" : "";
+        rows.push(`<option value="${{esc(missionId)}}"${{chosen}} data-title="${{esc(mission.title || missionId)}}" data-lane="${{esc(mission.lane || "next")}}" data-route="${{esc(mission.route || "/mission-board")}}">${{esc((mission.title || missionId) + " · " + (mission.lane || "next"))}}</option>`);
+      }});
+      return rows.join("");
+    }}
+
+    function selectedSeamItem(payload) {{
+      const tracker = payload.seam_tracker || {{}};
+      const items = Array.isArray(tracker.items) ? tracker.items : [];
+      const seamName = String(seamSelect.value || "").trim();
+      return items.find((item) => String(item.name || "").trim() === seamName) || items[0] || null;
+    }}
+
+    function syncSeamMissionOptions(payload) {{
+      const seamItem = selectedSeamItem(payload);
+      seamMission.innerHTML = seamMissionOptionsMarkup(seamItem);
+      if (seamItem) {{
+        seamStatus.value = String(seamItem.status || "Wired").trim() || "Wired";
+        seamNote.value = String(seamItem.operator_note || seamItem.remains_partial || "").trim();
+      }}
     }}
 
     function progressRow(item, index) {{
@@ -6498,6 +6561,8 @@ def render_progress_module_page(payload: dict) -> str:
 
       focusSelect.innerHTML = moduleOptionsMarkup(board.items || [], payload.progress_next_focus || "");
       focusReason.value = latestFocus.reason || "";
+      seamSelect.innerHTML = seamOptionsMarkup(seamTracker.items || [], String(seamSelect.value || "").trim());
+      syncSeamMissionOptions(payload);
 
       progressItemsList.innerHTML = (Array.isArray(board.items) ? board.items : []).map((item, index) => progressRow(item, index)).join("") || '<li><strong>No progress rows loaded.</strong><span>The dedicated progress module will surface readiness rows here.</span></li>';
 
@@ -6508,7 +6573,9 @@ def render_progress_module_page(payload: dict) -> str:
         <li>
           <strong>${{esc(item.name || "Seam")}}</strong>
           <span>${{esc(item.what_became_real || item.module || "No seam outcome recorded.")}}</span>
+          <span>${{esc(item.operator_note || "")}}</span>
           <span>${{esc(item.remains_partial || item.commit_status || "")}}</span>
+          <span>${{esc(item.seam_state_saved_at ? `Saved by ${{item.seam_state_actor || "Chris"}} at ${{item.seam_state_saved_at}}` : "")}}</span>
           <div class="route-links">${{missionRouteLinks(item.related_missions || [])}}</div>
         </li>
       `).join("") || '<li><strong>No seam highlights loaded.</strong><span>Seam tracker evidence will appear here.</span></li>';
@@ -6529,6 +6596,7 @@ def render_progress_module_page(payload: dict) -> str:
         li("History Count", String(payload.counts?.history_count ?? progressPersistence.history_count ?? 0), payload.proof_paths?.progress_snapshot_history || "No history proof path recorded."),
         li("Latest Snapshot", progressPersistence.latest?.saved_at || "No snapshot recorded yet.", progressPersistence.latest?.next_focus || "No next focus recorded yet."),
         li("Focus History", String(payload.counts?.focus_history_count ?? focusControl.history_count ?? 0), payload.proof_paths?.progress_focus_history || "No focus history proof path recorded."),
+        li("Seam History", String(payload.counts?.seam_history_count ?? payload.seam_persistence?.history_count ?? 0), payload.proof_paths?.seam_tracker_history || "No seam history proof path recorded."),
         ...(Array.isArray(progressPersistence.recent) ? progressPersistence.recent.slice(0, 4).map((entry) => li(
           `${{entry.branch || "unknown branch"}} @ ${{entry.head || "unknown head"}}`,
           `Dirty: ${{entry.dirty_count ?? 0}} · Next Focus: ${{entry.next_focus || "none"}}`,
@@ -6537,6 +6605,11 @@ def render_progress_module_page(payload: dict) -> str:
         ...(Array.isArray(focusControl.recent) ? focusControl.recent.slice(0, 3).map((entry) => li(
           `Operator Focus: ${{entry.module || "Progress"}}`,
           entry.reason || "No operator rationale recorded.",
+          `${{entry.actor || "Chris"}} · ${{entry.saved_at || "unknown time"}}`
+        )) : []),
+        ...(Array.isArray(payload.seam_persistence?.recent) ? payload.seam_persistence.recent.slice(0, 3).map((entry) => li(
+          `Seam Update: ${{entry.name || "Seam"}}`,
+          `${{entry.status || "Wired"}} · ${{entry.operator_note || "No operator note recorded."}}`,
           `${{entry.actor || "Chris"}} · ${{entry.saved_at || "unknown time"}}`
         )) : []),
         ...(Array.isArray(progressPersistence.latest?.seam_items) ? progressPersistence.latest.seam_items.slice(0, 3).map((entry) => `
@@ -6589,6 +6662,43 @@ def render_progress_module_page(payload: dict) -> str:
       }}
     }}
 
+    async function saveProgressSeam() {{
+      const seamItem = selectedSeamItem(currentPayload);
+      const seamName = String(seamSelect.value || "").trim();
+      const status = String(seamStatus.value || "").trim();
+      const note = String(seamNote.value || "").trim();
+      if (!seamName || !seamItem) {{
+        seamNoteStatus.textContent = "Choose a seam before saving seam state.";
+        return;
+      }}
+      seamNoteStatus.textContent = `Saving seam state for ${{seamName}}…`;
+      const selectedMissionOption = seamMission.options[seamMission.selectedIndex] || null;
+      try {{
+        const response = await fetch(`/api/progress/seams/${{encodeURIComponent(seamName)}}`, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            actor: "Chris",
+            module: seamItem.module || "Progress",
+            status,
+            note: note || `Progress recorded seam state for ${{seamName}}.`,
+            mission_id: String(seamMission.value || "").trim(),
+            mission_title: selectedMissionOption ? String(selectedMissionOption.dataset.title || "").trim() : "",
+            mission_lane: selectedMissionOption ? String(selectedMissionOption.dataset.lane || "").trim() : "",
+            mission_route: selectedMissionOption ? String(selectedMissionOption.dataset.route || "").trim() : "",
+          }}),
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Seam state save failed");
+        }}
+        seamNoteStatus.textContent = `Seam state saved for ${{payload.seam?.name || seamName}} as ${{payload.seam?.status || status}}.`;
+        await refreshProgressState();
+      }} catch (error) {{
+        seamNoteStatus.textContent = `Save failed: ${{String(error)}}`;
+      }}
+    }}
+
     async function refreshProgressState() {{
       statusNote.textContent = "Refreshing progress module state…";
       try {{
@@ -6610,6 +6720,14 @@ def render_progress_module_page(payload: dict) -> str:
       saveProgressFocus().catch((error) => {{
         focusNote.textContent = `Save failed: ${{String(error)}}`;
       }});
+    }});
+    document.getElementById("save-progress-seam").addEventListener("click", () => {{
+      saveProgressSeam().catch((error) => {{
+        seamNoteStatus.textContent = `Save failed: ${{String(error)}}`;
+      }});
+    }});
+    seamSelect.addEventListener("change", () => {{
+      syncSeamMissionOptions(currentPayload);
     }});
 
     window.setInterval(() => {{

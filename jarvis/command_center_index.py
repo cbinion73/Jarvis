@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .audit import AuditLog, ProgressSnapshotStore
+from .audit import AuditLog, ProgressSnapshotStore, SeamTrackerStore
 from .agent_registry_contract import load_contract_bundle
 from .approval_queue_surface import build_approval_queue_snapshot
 from .recovery_cases import RecoveryCaseStore
@@ -2356,6 +2356,34 @@ def _seam_tracker(
             "commit_status": recent_commits[0] if recent_commits else commit_posture,
         },
     ]
+    seam_summary = SeamTrackerStore(DEFAULT_AUDIT_ROOT).summary(limit=6)
+    persisted_by_name = {
+        str(item.get("name", "")).strip(): dict(item)
+        for item in list(seam_summary.get("records") or [])
+        if isinstance(item, dict) and str(item.get("name", "")).strip()
+    }
+    for item in seams:
+        persisted = persisted_by_name.get(str(item.get("name", "")).strip())
+        if not persisted:
+            continue
+        item["status"] = str(persisted.get("status") or item.get("status") or "Wired").strip() or "Wired"
+        item["status_class"] = str(persisted.get("status_class") or item.get("status_class") or "steady").strip() or "steady"
+        item["maturity"] = str(persisted.get("maturity") or item.get("maturity") or item.get("status") or "Wired").strip() or "Wired"
+        operator_note = str(persisted.get("operator_note") or "").strip()
+        if operator_note:
+            item["operator_note"] = operator_note
+        linked_mission = dict(persisted.get("linked_mission") or {})
+        if str(linked_mission.get("mission_id", "")).strip():
+            existing_ids = {
+                str(mission.get("mission_id", "")).strip()
+                for mission in list(item.get("related_missions") or [])
+                if isinstance(mission, dict)
+            }
+            if str(linked_mission.get("mission_id", "")).strip() not in existing_ids:
+                item["related_missions"] = [linked_mission, *list(item.get("related_missions") or [])][:3]
+        item["seam_state_saved_at"] = str(persisted.get("saved_at", "")).strip()
+        item["seam_state_actor"] = str(persisted.get("actor", "")).strip()
+
     counts = {
         "Useful": sum(1 for item in seams if item["status"] == "Useful"),
         "Wired": sum(1 for item in seams if item["status"] == "Wired"),
@@ -2363,10 +2391,11 @@ def _seam_tracker(
         "Compounding": sum(1 for item in seams if item["status"] == "Compounding"),
     }
     return {
-        "summary": f"{counts['Useful']} useful seam(s), {counts['Wired']} wired seam(s), branch {branch}, head {head}.",
+        "summary": f"{counts['Useful']} useful seam(s), {counts['Wired']} wired seam(s), {counts['Durable']} durable seam(s), branch {branch}, head {head}.",
         "item_count": len(seams),
         "counts": counts,
         "items": seams,
+        "persistence": seam_summary,
     }
 
 

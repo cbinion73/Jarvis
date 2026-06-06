@@ -525,6 +525,7 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Durable Progress History", progress_html)
         self.assertIn("Seam History:", progress_html)
         self.assertIn("Save Next Focus", progress_html)
+        self.assertIn("Save Seam State", progress_html)
         self.assertIn("deploy/deploy.sh", progress_html)
         self.assertIn("https://jarvis.teambinion.org", progress_html)
         self.assertIn("Inspect Readiness", progress_html)
@@ -536,9 +537,11 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("seam_tracker", progress_snapshot)
         self.assertIn("level3_checklist", progress_snapshot)
         self.assertIn("progress_persistence", progress_snapshot)
+        self.assertIn("seam_persistence", progress_snapshot)
         self.assertIn("focus_control", progress_snapshot)
         self.assertIn("history_count", progress_snapshot["counts"])
         self.assertIn("focus_history_count", progress_snapshot["counts"])
+        self.assertIn("seam_history_count", progress_snapshot["counts"])
         self.assertIn("latest", progress_snapshot["progress_persistence"])
         self.assertIn("recent", progress_snapshot["progress_persistence"])
         self.assertTrue(any(item.get("related_missions") for item in progress_snapshot["seam_tracker"]["items"]))
@@ -556,6 +559,9 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("progress_snapshot_history", progress_snapshot["proof_paths"])
         self.assertIn("progress_focus_json", progress_snapshot["proof_paths"])
         self.assertIn("progress_focus_history", progress_snapshot["proof_paths"])
+        self.assertIn("seam_api_prefix", progress_snapshot["proof_paths"])
+        self.assertIn("seam_tracker_json", progress_snapshot["proof_paths"])
+        self.assertIn("seam_tracker_history", progress_snapshot["proof_paths"])
         self.assertIn("JARVIS Failure &amp; Recovery", recovery_html)
         self.assertIn("Refresh Failure State", recovery_html)
         self.assertIn("Inspect Recovery Item", recovery_html)
@@ -1513,6 +1519,42 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertTrue(any(item.get("title") == "Set Progress Focus" for item in activity_payload))
         self.assertTrue(any(item.get("related_label") == "Recovery" for item in activity_payload))
         self.assertTrue(any(item.get("related_kind") == "progress-focus" for item in activity_payload))
+
+    def test_progress_seam_mutation_persists_into_progress_and_activity(self) -> None:
+        progress_snapshot = self._json_body(asyncio.run(self._route("/api/progress/module", "GET")()))
+        seam_item = next(item for item in progress_snapshot["seam_tracker"]["items"] if item.get("name") == "Progress Module Standalone Surface")
+        mission = (seam_item.get("related_missions") or [])[0]
+
+        response = asyncio.run(
+            self._route("/api/progress/seams/{seam_name}", "POST")(
+                "Progress Module Standalone Surface",
+                {
+                    "actor": "Chris",
+                    "module": seam_item["module"],
+                    "status": "Durable",
+                    "note": "Progress seam is now durable and pinned to the hosted closure mission.",
+                    "mission_id": mission.get("mission_id"),
+                    "mission_title": mission.get("title"),
+                    "mission_lane": mission.get("lane"),
+                    "mission_route": mission.get("route"),
+                }
+            )
+        )
+        seam_payload = self._json_body(response)
+        refreshed_progress = self._json_body(asyncio.run(self._route("/api/progress/module", "GET")()))
+        activity_payload = self._json_body(asyncio.run(self._route("/api/activity", "GET")()))
+
+        self.assertEqual(seam_payload["status"], "recorded")
+        self.assertEqual(seam_payload["seam"]["status"], "Durable")
+        self.assertEqual(seam_payload["seam"]["linked_mission"]["mission_id"], mission.get("mission_id"))
+        self.assertEqual(seam_payload["focus"]["module"], seam_item["module"])
+
+        updated_seam = next(item for item in refreshed_progress["seam_tracker"]["items"] if item.get("name") == "Progress Module Standalone Surface")
+        self.assertEqual(updated_seam["status"], "Durable")
+        self.assertEqual(updated_seam["related_missions"][0]["mission_id"], mission.get("mission_id"))
+        self.assertTrue(any(item.get("name") == "Progress Module Standalone Surface" for item in refreshed_progress["seam_persistence"]["records"]))
+        self.assertTrue(any(item.get("related_kind") == "progress-seam" for item in activity_payload))
+        self.assertTrue(any(item.get("related_label") == "Progress Module Standalone Surface" for item in activity_payload))
 
 
 if __name__ == "__main__":
