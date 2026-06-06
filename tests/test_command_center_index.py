@@ -1083,6 +1083,8 @@ class CommandCenterIndexTests(unittest.TestCase):
         self.assertIn("Approve local rollout", html)
         self.assertIn("Today at a Glance", html)
         self.assertIn("Last Home Action", html)
+        self.assertIn("Continuity is live", html)
+        self.assertIn("Command Dock", html)
         self.assertIn("Hosted Edge", html)
         self.assertIn("https://jarvis.teambinion.org", html)
         self.assertIn("/progress-center#level3-checklist", html)

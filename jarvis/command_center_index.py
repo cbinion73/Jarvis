@@ -4488,35 +4488,99 @@ def render_command_center_index_html(payload: dict[str, Any]) -> str:
   <title>JARVIS Command Center Index</title>
   <style>
     :root {{
-      --bg: #051019;
-      --panel: #0d1724;
-      --panel-2: #142334;
-      --line: rgba(143, 185, 255, 0.16);
-      --text: #edf6fc;
-      --muted: #95aabb;
-      --cyan: #76d7df;
+      --bg: #040b12;
+      --bg-2: #081520;
+      --panel: rgba(10, 18, 29, 0.9);
+      --panel-strong: rgba(8, 16, 26, 0.96);
+      --panel-2: rgba(17, 29, 44, 0.88);
+      --line: rgba(132, 181, 222, 0.14);
+      --line-strong: rgba(132, 181, 222, 0.24);
+      --text: #eef7fc;
+      --muted: #90a7ba;
+      --cyan: #72d9de;
+      --blue: #8cb8ff;
+      --green: #76d6a1;
       --font-ui: "SF Pro Display", "Segoe UI", sans-serif;
       --font-mono: "SF Mono", "JetBrains Mono", monospace;
     }}
     * {{ box-sizing: border-box; }}
     body {{
       margin: 0;
-      background: radial-gradient(circle at top, #14253a 0%, var(--bg) 44%, #02070d 100%);
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(114, 217, 222, 0.16), transparent 22%),
+        radial-gradient(circle at top right, rgba(140, 184, 255, 0.16), transparent 20%),
+        radial-gradient(circle at 50% 100%, rgba(118, 214, 161, 0.08), transparent 28%),
+        linear-gradient(180deg, #07111b 0%, var(--bg) 48%, #02070d 100%);
       color: var(--text);
       font-family: var(--font-ui);
     }}
-    .shell {{ width: min(1240px, calc(100% - 32px)); margin: 0 auto; padding: 28px 0 48px; }}
+    body::before {{
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.025), transparent 36%),
+        radial-gradient(circle at 20% 20%, rgba(114, 217, 222, 0.06), transparent 18%);
+      opacity: 0.9;
+    }}
+    .shell {{ position: relative; width: min(1340px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0 56px; }}
+    .topbar {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+      padding: 14px 18px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: rgba(7, 14, 23, 0.72);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 16px 44px rgba(0, 0, 0, 0.22);
+    }}
+    .topbar-brand {{
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }}
+    .topbar-brand strong {{
+      font-size: 0.82rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--cyan);
+    }}
+    .topbar-brand span {{
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.45;
+    }}
+    .topbar-links {{
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 10px;
+    }}
     .hero, .panel {{
       border: 1px solid var(--line);
-      border-radius: 24px;
-      background: rgba(13, 23, 36, 0.94);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(10, 18, 29, 0.96), rgba(7, 13, 22, 0.94));
       box-shadow: 0 24px 72px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(18px);
     }}
-    .hero {{ padding: 24px; }}
-    .hero h1 {{ margin: 0; font-size: clamp(2rem, 4vw, 3.2rem); }}
-    .hero p {{ margin: 12px 0 0; color: var(--muted); max-width: 76ch; line-height: 1.65; }}
+    .hero {{
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.86fr);
+      gap: 18px;
+      padding: 26px;
+    }}
+    .hero-copy h1 {{ margin: 0; font-size: clamp(2.4rem, 4vw, 4rem); line-height: 0.95; letter-spacing: -0.05em; }}
+    .hero-copy p {{ margin: 14px 0 0; color: var(--muted); max-width: 68ch; line-height: 1.68; font-size: 1.02rem; }}
     .eyebrow {{
       display: inline-flex;
+      align-items: center;
+      gap: 9px;
       padding: 7px 10px;
       border-radius: 999px;
       border: 1px solid rgba(118, 215, 223, 0.26);
@@ -4524,19 +4588,115 @@ def render_command_center_index_html(payload: dict[str, Any]) -> str:
       font-size: 12px;
       text-transform: uppercase;
       letter-spacing: 0.08em;
+      background: rgba(118, 215, 223, 0.07);
     }}
-    .stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-top: 18px; }}
-    .stat {{ padding: 16px; border-radius: 18px; border: 1px solid var(--line); background: var(--panel-2); }}
-    .stat strong {{ display: block; margin-bottom: 6px; font-size: 1.6rem; }}
-    .layout {{ display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 18px; margin-top: 18px; }}
+    .eyebrow::before {{
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: currentColor;
+      box-shadow: 0 0 16px currentColor;
+    }}
+    .stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-top: 22px; }}
+    .stat {{
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(180deg, rgba(17, 29, 44, 0.92), rgba(10, 18, 29, 0.98)),
+        radial-gradient(circle at top right, rgba(140, 184, 255, 0.14), transparent 35%);
+    }}
+    .stat span {{
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }}
+    .stat strong {{ display: block; margin-bottom: 4px; font-size: 1.55rem; line-height: 1.05; }}
+    .stat small {{ color: var(--muted); font-size: 0.88rem; }}
+    .hero-side {{
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }}
+    .hero-note {{
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+    }}
+    .hero-note strong,
+    .section-label {{
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }}
+    .hero-note p {{
+      margin: 0;
+      line-height: 1.6;
+      color: var(--text);
+    }}
+    .hero-note ul {{
+      margin-top: 10px;
+    }}
+    .command-dock {{
+      display: grid;
+      gap: 10px;
+    }}
+    .command-dock a {{
+      justify-content: space-between;
+      border-radius: 18px;
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.04);
+    }}
+    .command-dock a span {{
+      color: var(--muted);
+      font-size: 0.88rem;
+    }}
+    .glance-grid {{
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+      gap: 18px;
+      margin-top: 18px;
+    }}
+    .layout {{
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }}
     .panel {{ padding: 22px; }}
-    .panel h2 {{ margin: 0 0 12px; }}
+    .panel h2 {{ margin: 0 0 12px; font-size: 1.25rem; letter-spacing: -0.03em; }}
+    .panel p {{ color: var(--muted); line-height: 1.58; }}
+    .panel-head {{
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 14px;
+      margin-bottom: 14px;
+    }}
+    .panel-head h2,
+    .panel-head p {{
+      margin: 0;
+    }}
     .surface-grid {{ display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }}
     .surface-card {{
       border: 1px solid var(--line);
-      border-radius: 18px;
-      background: rgba(255,255,255,0.03);
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
       padding: 18px;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+    }}
+    .surface-card:hover {{
+      transform: translateY(-2px);
+      border-color: var(--line-strong);
+      background: linear-gradient(180deg, rgba(114, 217, 222, 0.08), rgba(255,255,255,0.03));
     }}
     .surface-card h3 {{ margin: 8px 0; }}
     .surface-card p {{ margin: 0; color: var(--muted); line-height: 1.55; }}
@@ -4563,15 +4723,17 @@ def render_command_center_index_html(payload: dict[str, Any]) -> str:
     a {{
       display: inline-flex;
       align-items: center;
+      gap: 10px;
       padding: 10px 14px;
       border-radius: 999px;
       border: 1px solid var(--line);
       color: var(--text);
       text-decoration: none;
-      background: rgba(255,255,255,0.03);
+      background: rgba(255,255,255,0.035);
     }}
+    a:hover {{ border-color: var(--line-strong); background: rgba(118, 215, 223, 0.08); }}
     ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
-    li {{ padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,0.03); }}
+    li {{ padding: 13px 14px; border-radius: 16px; border: 1px solid var(--line); background: rgba(255,255,255,0.03); }}
     li strong {{ display: block; margin-bottom: 4px; }}
     li span {{ color: var(--muted); display: block; }}
     .action-row {{
@@ -4582,14 +4744,14 @@ def render_command_center_index_html(payload: dict[str, Any]) -> str:
     }}
     button {{
       border: 1px solid var(--line);
-      background: rgba(118, 215, 223, 0.12);
+      background: linear-gradient(135deg, rgba(114, 217, 222, 0.15), rgba(140, 184, 255, 0.12));
       color: var(--text);
       border-radius: 999px;
-      padding: 9px 12px;
+      padding: 10px 13px;
       font: inherit;
       cursor: pointer;
     }}
-    button:hover {{ background: rgba(118, 215, 223, 0.2); }}
+    button:hover {{ background: linear-gradient(135deg, rgba(114, 217, 222, 0.24), rgba(140, 184, 255, 0.18)); }}
     .status-note {{
       margin-top: 12px;
       color: var(--muted);
@@ -4606,45 +4768,144 @@ def render_command_center_index_html(payload: dict[str, Any]) -> str:
     }}
     pre {{ margin: 0; }}
     .empty {{ color: var(--muted); }}
-    @media (max-width: 960px) {{
-      .layout {{ grid-template-columns: 1fr; }}
+    @media (max-width: 1100px) {{
+      .hero,
+      .glance-grid,
+      .layout {{
+        grid-template-columns: 1fr;
+      }}
+    }}
+    @media (max-width: 760px) {{
+      .shell {{ width: min(100% - 20px, 100%); }}
+      .topbar {{
+        align-items: flex-start;
+        flex-direction: column;
+      }}
+      .topbar-links {{
+        justify-content: flex-start;
+      }}
+      .hero {{
+        padding: 22px;
+      }}
+      .hero-copy h1 {{
+        font-size: clamp(2rem, 10vw, 3rem);
+      }}
     }}
   </style>
 </head>
 <body>
   <main class="shell">
-    <section class="hero">
-      <div class="eyebrow">Level 9 Operating Surface</div>
-      <h1>JARVIS Command Center Index</h1>
-      <p>This is a live entry point for the current Level 9 app-facing surfaces. It links the real approval, supervision, health, and observability routes already running in this checkout.</p>
-      <div class="stats">
-        <div class="stat"><span>Branch</span><strong>{esc(payload['branch'])}</strong></div>
-        <div class="stat"><span>Head</span><strong>{esc(payload['head'])}</strong></div>
-        <div class="stat"><span>Served surfaces</span><strong>{esc(payload['surface_count'])}</strong></div>
-        <div class="stat"><span>Needs me</span><strong>{esc(payload['needs_cockpit']['total'])}</strong></div>
+    <header class="topbar">
+      <div class="topbar-brand">
+        <strong>JARVIS Command Chamber</strong>
+        <span>Live operating shell for approvals, agents, health, activity continuity, and Level 3 proof surfaces.</span>
       </div>
+      <div class="topbar-links">
+        <a href="{esc(payload['proof_paths']['command_center_json'])}">Index JSON <span>{esc(payload['proof_paths']['command_center_json'])}</span></a>
+        <a href="{esc(payload['proof_paths']['supervision_snapshot'])}">Supervision <span>{esc(payload['proof_paths']['supervision_snapshot'])}</span></a>
+        <a href="{esc(payload['proof_paths']['approval_queue'])}">Approvals <span>{esc(payload['proof_paths']['approval_queue'])}</span></a>
+      </div>
+    </header>
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow">Level 3 Operating Surface</div>
+        <h1>JARVIS Command Center Index</h1>
+        <p>This is the live front door for the current app-facing product. It keeps the real approval queue, supervision state, health agents, continuity feeds, and proof routes visible in one chamber instead of flattening them into static mockups.</p>
+        <div class="stats">
+          <div class="stat">
+            <span>Branch</span>
+            <strong>{esc(payload['branch'])}</strong>
+            <small>Canonical GitHub push source</small>
+          </div>
+          <div class="stat">
+            <span>Head</span>
+            <strong>{esc(payload['head'])}</strong>
+            <small>Current local truth</small>
+          </div>
+          <div class="stat">
+            <span>Served surfaces</span>
+            <strong>{esc(payload['surface_count'])}</strong>
+            <small>Live routes with payloads</small>
+          </div>
+          <div class="stat">
+            <span>Needs me</span>
+            <strong>{esc(payload['needs_cockpit']['total'])}</strong>
+            <small>Immediate operator pull</small>
+          </div>
+        </div>
+      </div>
+      <aside class="hero-side">
+        <div class="hero-note">
+          <strong>Continuity is live</strong>
+          <p>Approvals, recovery motion, open loops, health, and agent operations all stay linked to the same product state instead of living as isolated screens.</p>
+          <ul>
+            <li><strong>Activity continuity</strong><span>Real mutations flow back into the shared activity stream.</span></li>
+            <li><strong>Health + agents</strong><span>Helen Cho, health agents, and roster surfaces remain directly reachable.</span></li>
+          </ul>
+        </div>
+        <div class="hero-note">
+          <div class="section-label">Command Dock</div>
+          <div class="command-dock">
+            <a href="{esc(payload['proof_paths']['briefing_json'])}"><strong>Daily Brief JSON</strong><span>{esc(payload['proof_paths']['briefing_json'])}</span></a>
+            <a href="{esc(payload['proof_paths']['missions_json'])}"><strong>Mission Board JSON</strong><span>{esc(payload['proof_paths']['missions_json'])}</span></a>
+            <a href="{esc(payload['proof_paths']['assistant_notifications_json'])}"><strong>Notification Feed JSON</strong><span>{esc(payload['proof_paths']['assistant_notifications_json'])}</span></a>
+          </div>
+        </div>
+      </aside>
     </section>
-    <section class="panel" style="margin-top: 18px;">
-      <h2>Today at a Glance</h2>
-      <ul id="home-overview">{home_overview_rows(payload['home_overview'], payload.get('level3_checklist', {}))}</ul>
-      <h2 style="margin-top: 18px;">Last Home Action</h2>
-      <ul id="home-action-result">{home_action_result_rows(payload['home_overview'].get('action_result', {}))}</ul>
-    </section>
-    <section class="panel" style="margin-top: 18px;">
-      <h2>Open Now</h2>
-      <div class="surface-grid">{surface_cards(payload['surfaces'])}</div>
+    <section class="glance-grid">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Today at a Glance</h2>
+            <p>Real home overview state, current checklist continuity, and the last action that changed the day plan.</p>
+          </div>
+        </div>
+        <ul id="home-overview">{home_overview_rows(payload['home_overview'], payload.get('level3_checklist', {}))}</ul>
+        <div class="panel-head" style="margin-top: 18px;">
+          <div>
+            <h2>Last Home Action</h2>
+            <p>Most recent stateful home mutation rendered straight from the current payload.</p>
+          </div>
+        </div>
+        <ul id="home-action-result">{home_action_result_rows(payload['home_overview'].get('action_result', {}))}</ul>
+      </section>
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Open Now</h2>
+            <p>Jump into the live routes that already carry real payloads, agents, and interaction surfaces.</p>
+          </div>
+        </div>
+        <div class="surface-grid">{surface_cards(payload['surfaces'])}</div>
+      </section>
     </section>
     <div class="layout">
       <section class="panel">
-        <h2>Needs Me Now</h2>
+        <div class="panel-head">
+          <div>
+            <h2>Needs Me Now</h2>
+            <p>Seeded and live operator demand, preserved as a real cockpit instead of a cosmetic queue.</p>
+          </div>
+        </div>
         <ul id="needs-list">{needs_rows(payload['needs_cockpit'])}</ul>
       </section>
       <section class="panel">
-        <h2>Recent Need Motion</h2>
+        <div class="panel-head">
+          <div>
+            <h2>Recent Need Motion</h2>
+            <p>Transitions, reassignment, and changes in urgency reflected back into shared continuity.</p>
+          </div>
+        </div>
         <ul id="needs-motion">{needs_motion_rows(payload['needs_motion'])}</ul>
       </section>
       <section class="panel">
-        <h2>Command Center Actions</h2>
+        <div class="panel-head">
+          <div>
+            <h2>Command Center Actions</h2>
+            <p>Live supervision and approval actions stay executable from the shell.</p>
+          </div>
+        </div>
         <ul id="approval-actions">{approval_rows(payload['pending_approvals'])}</ul>
         <p class="status-note" id="status-note">This panel hydrates from the live supervision and approval endpoints when opened through the app.</p>
       </section>
