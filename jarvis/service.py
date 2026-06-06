@@ -2517,7 +2517,13 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "source_kind": "operator-action",
             },
         )
-        return _json({"status": "recorded", "case": case, "action": action_entry})
+        focus_entry = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module="Recovery",
+            reason=note or "Recovery execution loop became the highest-priority shared Level 3 focus.",
+            route="/recovery-center",
+            actor=actor,
+        )
+        return _json({"status": "recorded", "case": case, "action": action_entry, "focus": focus_entry})
 
     async def _build_mission_board_module_payload() -> dict[str, Any]:
         command_center = build_command_center_index()
@@ -9019,6 +9025,22 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         if not isinstance(objectives, list):
             return JSONResponse({"error": "objectives must be a list"}, status_code=400)
         result = await set_objectives(objectives)
+        if result.get("ok"):
+            actor = str(body.get("actor") or "Chris").strip() or "Chris"
+            latest_objective = ""
+            if objectives and isinstance(objectives[-1], dict):
+                latest_objective = str(objectives[-1].get("objective") or "").strip()
+            focus_entry = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+                module="Health",
+                reason=(
+                    f"Health objective saved: {latest_objective}."
+                    if latest_objective
+                    else "Health objective save became the highest-priority shared Level 3 focus."
+                ),
+                route="/health-center",
+                actor=actor,
+            )
+            result["focus"] = focus_entry
         status_code = 201 if result.get("ok") else 400
         return JSONResponse(result, status_code=status_code)
 

@@ -822,13 +822,17 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertEqual(execute_payload["case"]["execution_count"], 1)
         self.assertEqual(execute_payload["action"]["target_kind"], "recovery-case")
         self.assertEqual(execute_payload["action"]["status"], "executed")
+        self.assertEqual(execute_payload["focus"]["module"], "Recovery")
 
         refreshed_recovery = self._json_body(asyncio.run(self._route("/api/recovery/module", "GET")()))
         activity_payload = self._json_body(asyncio.run(self._route("/api/activity", "GET")()))
+        progress_snapshot = self._json_body(asyncio.run(self._route("/api/progress/module", "GET")()))
 
         self.assertTrue(any(item.get("case_id") == case_id and int(item.get("execution_count", 0) or 0) >= 1 for item in refreshed_recovery["recovery_cases"]))
         self.assertTrue(any(item.get("target_id") == case_id for item in refreshed_recovery["recovery_actions"]["recent"]))
         self.assertTrue(any(item.get("related_kind") == "recovery-case" for item in activity_payload))
+        self.assertEqual(progress_snapshot["progress_next_focus"], "Recovery")
+        self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Recovery")
 
     def test_module_activity_continuity_populates_publish_huddle_and_navigation_payloads(self) -> None:
         asyncio.run(
@@ -1048,10 +1052,14 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
 
         self.assertTrue(result["ok"])
         self.assertEqual(result["count"], 1)
+        self.assertEqual(result["focus"]["module"], "Health")
         self.assertEqual(activity_result["status"], "recorded")
         self.assertTrue(any(item.get("objective") == "Lower A1c by improving post-meal glucose control" for item in health_snapshot["objectives"]))
         self.assertTrue(any(item.get("title") == "Save Health Objective" for item in health_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("related_label") == "Lower A1c by improving post-meal glucose control" for item in health_snapshot["recent_activity"]))
+        progress_snapshot = self._json_body(asyncio.run(self._route("/api/progress/module", "GET")()))
+        self.assertEqual(progress_snapshot["progress_next_focus"], "Health")
+        self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Health")
 
     def test_chronicle_activity_populates_chronicle_continuity(self) -> None:
         asyncio.run(
