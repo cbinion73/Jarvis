@@ -191,10 +191,4 @@ extension WatchViewModel: @preconcurrency WCSessionDelegate {
         }
     }
 
-    nonisolated func sessionDidBecomeInactive(_ session: WCSession) {}
-
-    nonisolated func sessionDidDeactivate(_ session: WCSession) {
-        WCSession.default.activate()
-    }
-
 }
