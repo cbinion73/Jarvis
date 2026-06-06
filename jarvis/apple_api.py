@@ -11169,6 +11169,13 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             related_kind="publishing-review",
             related_label=str(result.get("review", {}).get("title") or review_id),
         )
+        focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+            module="Publish",
+            reason=f"Apple publish surface approved {str(result.get('review', {}).get('title') or review_id).strip() or review_id}.",
+            route="/publish",
+            actor="Chris",
+        )
+        result["focus"] = focus
         return _ok(result)
 
     @app.post("/api/apple/publishing/reviews/{review_id}/revise")
@@ -11197,6 +11204,13 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             related_kind="publishing-review",
             related_label=str(result.get("review", {}).get("title") or review_id),
         )
+        focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+            module="Publish",
+            reason=f"Apple publish surface requested revision for {str(result.get('review', {}).get('title') or review_id).strip() or review_id}.",
+            route="/publish",
+            actor="Chris",
+        )
+        result["focus"] = focus
         return _ok(result)
 
     # ── Huddle ────────────────────────────────────────────────────────────────

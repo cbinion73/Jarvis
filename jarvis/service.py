@@ -5527,43 +5527,84 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/publishing/reviews/pending")
     async def api_publishing_reviews_pending() -> JSONResponse:
         """All draft submissions currently pending review."""
-        bridge = _get_ghostwritr_bridge()
-        if bridge is None:
-            raise HTTPException(status_code=503, detail="Ghostwritr bridge not initialised")
-        pending = bridge.get_pending_reviews()
-        return _json({"reviews": [r.to_dict() for r in pending], "count": len(pending)})
+        pending = _pending_publishing_reviews(limit=12)
+        return _json({"reviews": pending, "count": len(pending)})
 
     @app.post("/api/publishing/draft/approve")
     async def api_publishing_draft_approve(payload: dict[str, Any]) -> JSONResponse:
         """Approve a stage review. Body: {review_id, feedback?}"""
-        bridge = _get_ghostwritr_bridge()
-        if bridge is None:
-            raise HTTPException(status_code=503, detail="Ghostwritr bridge not initialised")
         review_id = str(payload.get("review_id", "")).strip()
         if not review_id:
             raise HTTPException(status_code=400, detail="review_id is required")
-        feedback = str(payload.get("feedback", ""))
-        result = bridge.mark_approved(review_id, feedback=feedback)
+        feedback = str(payload.get("feedback", "")).strip()
+        result = _mutate_publishing_review(review_id, target_status="approved", feedback=feedback)
         if result is None:
             raise HTTPException(status_code=404, detail=f"Review {review_id} not found")
-        return _json({"status": "approved", "review": result.to_dict()})
+        actor = str(payload.get("actor") or "Chris").strip() or "Chris"
+        focus_entry = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module="Publish",
+            reason=f"Publish approved review {str(result.get('title') or review_id).strip() or review_id}.",
+            route="/publish",
+            actor=actor,
+        )
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": "publish",
+                "action": "Approve Publish Review",
+                "title": str(result.get("title") or review_id).strip() or review_id,
+                "detail": f"Approved publishing review {str(result.get('title') or review_id).strip() or review_id}.",
+                "why_now": "Publish route cleared an editorial review directly from the live module.",
+                "result_summary": "Publishing review status: approved",
+                "related_route": "/publish",
+                "route_label": "Open Publish",
+                "related_kind": "publishing-review",
+                "related_label": str(result.get("title") or review_id).strip() or review_id,
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        return _json({"status": "approved", "review": result, "focus": focus_entry})
 
     @app.post("/api/publishing/draft/revise")
     async def api_publishing_draft_revise(payload: dict[str, Any]) -> JSONResponse:
         """Mark a stage review as needs_revision. Body: {review_id, feedback}"""
-        bridge = _get_ghostwritr_bridge()
-        if bridge is None:
-            raise HTTPException(status_code=503, detail="Ghostwritr bridge not initialised")
         review_id = str(payload.get("review_id", "")).strip()
         feedback = str(payload.get("feedback", "")).strip()
         if not review_id:
             raise HTTPException(status_code=400, detail="review_id is required")
         if not feedback:
             raise HTTPException(status_code=400, detail="feedback is required")
-        result = bridge.mark_needs_revision(review_id, feedback=feedback)
+        result = _mutate_publishing_review(review_id, target_status="needs_revision", feedback=feedback)
         if result is None:
             raise HTTPException(status_code=404, detail=f"Review {review_id} not found")
-        return _json({"status": "needs_revision", "review": result.to_dict()})
+        actor = str(payload.get("actor") or "Chris").strip() or "Chris"
+        focus_entry = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module="Publish",
+            reason=f"Publish requested revision for {str(result.get('title') or review_id).strip() or review_id}.",
+            route="/publish",
+            actor=actor,
+        )
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": "publish",
+                "action": "Request Publish Revision",
+                "title": str(result.get("title") or review_id).strip() or review_id,
+                "detail": f"Requested revision for publishing review {str(result.get('title') or review_id).strip() or review_id}.",
+                "why_now": "Publish route sent editorial feedback back into the live module.",
+                "result_summary": "Publishing review status: needs_revision",
+                "related_route": "/publish",
+                "route_label": "Open Publish",
+                "related_kind": "publishing-review",
+                "related_label": str(result.get("title") or review_id).strip() or review_id,
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        return _json({"status": "needs_revision", "review": result, "focus": focus_entry})
 
     @app.get("/api/publishing/track/{slug}")
     async def api_publishing_track_status(slug: str) -> JSONResponse:
@@ -7245,6 +7286,98 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             raise HTTPException(status_code=503, detail="PublishingSuite not initialised")
         return pub
 
+    def _publishing_reviews_path() -> Path:
+        return Path.home() / ".jarvis" / "publishing" / "ghostwritr_reviews.jsonl"
+
+    def _read_publishing_review_rows() -> list[dict[str, Any]]:
+        path = _publishing_reviews_path()
+        if not path.exists():
+            return []
+        rows: list[dict[str, Any]] = []
+        for raw_line in path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(record, dict):
+                rows.append(record)
+        return rows
+
+    def _write_publishing_review_rows(rows: list[dict[str, Any]]) -> None:
+        path = _publishing_reviews_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + ("\n" if rows else ""),
+            encoding="utf-8",
+        )
+
+    def _pending_publishing_reviews(limit: int = 6) -> list[dict[str, Any]]:
+        bridge = _get_ghostwritr_bridge()
+        records: list[dict[str, Any]] = []
+        if bridge is not None:
+            try:
+                records = [
+                    dict(item.to_dict())
+                    for item in list(bridge.get_pending_reviews() or [])
+                    if hasattr(item, "to_dict")
+                ]
+            except Exception:
+                records = []
+        if not records:
+            review_rows = [
+                row for row in _read_publishing_review_rows()
+                if str(row.get("jarvis_status") or "pending").strip().lower() == "pending"
+            ]
+            review_rows.sort(key=lambda row: str(row.get("ready_since") or ""))
+            records = review_rows
+        return [
+            {
+                "review_id": str(item.get("review_id") or "").strip(),
+                "title": str(item.get("title") or "").strip(),
+                "slug": str(item.get("slug") or "").strip(),
+                "track_type": str(item.get("track_type") or "").strip(),
+                "chapter_number": item.get("chapter_number"),
+                "stage_key": str(item.get("stage_key") or "").strip(),
+                "stage_display": str(item.get("stage_display") or "").strip(),
+                "content_preview": str(item.get("content_preview") or "").strip(),
+                "word_count": int(item.get("word_count", 0) or 0),
+                "ready_since": str(item.get("ready_since") or "").strip(),
+                "approval_id": str(item.get("approval_id") or "").strip(),
+                "feedback": str(item.get("feedback") or "").strip(),
+            }
+            for item in records[:limit]
+            if str(item.get("review_id") or "").strip()
+        ]
+
+    def _mutate_publishing_review(review_id: str, *, target_status: str, feedback: str = "") -> dict[str, Any] | None:
+        from datetime import datetime, timezone
+
+        bridge = _get_ghostwritr_bridge()
+        if bridge is not None:
+            if target_status == "approved":
+                result = bridge.mark_approved(review_id, feedback=feedback)
+            else:
+                result = bridge.mark_needs_revision(review_id, feedback=feedback)
+            return dict(result.to_dict()) if result is not None and hasattr(result, "to_dict") else None
+
+        rows = _read_publishing_review_rows()
+        updated: dict[str, Any] | None = None
+        for row in rows:
+            if str(row.get("review_id") or "").strip() != review_id:
+                continue
+            row["jarvis_status"] = target_status
+            row["feedback"] = feedback if target_status == "needs_revision" else str(row.get("feedback") or "")
+            row["reviewed_at"] = datetime.now(timezone.utc).isoformat()
+            updated = dict(row)
+            break
+        if updated is None:
+            return None
+        _write_publishing_review_rows(rows)
+        return updated
+
     def _build_publish_module_payload() -> dict[str, Any]:
         from datetime import datetime, timezone
 
@@ -7261,9 +7394,11 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "project_count": 0,
             "active_project_count": 0,
             "review_count": 0,
+            "pending_reviews_count": 0,
             "scheduled_post_count": 0,
             "overdue_calendar_count": 0,
             "projects": [],
+            "pending_reviews": [],
             "calendar": {"upcoming": [], "overdue": []},
             "social": {"posts": []},
             "revenue": {
@@ -7278,20 +7413,29 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "module_api": "/api/publish/module",
                 "status_api": "/api/publishing/status",
                 "projects_api": "/api/publishing/projects",
+                "review_pending_api": "/api/publishing/reviews/pending",
+                "review_approve_api": "/api/publishing/draft/approve",
+                "review_revise_api": "/api/publishing/draft/revise",
                 "calendar_api": "/api/publishing/calendar",
                 "social_api": "/api/publishing/social/posts",
             },
             "errors": [],
         }
 
-        if bridge is not None:
-            try:
-                pending_reviews = bridge.get_pending_reviews()
-                payload["review_count"] = len(pending_reviews)
-            except Exception as exc:
-                payload["errors"].append(f"ghostwritr_bridge: {exc}")
+        try:
+            pending_reviews = _pending_publishing_reviews()
+            payload["pending_reviews"] = pending_reviews
+            payload["review_count"] = len(pending_reviews)
+            payload["pending_reviews_count"] = len(pending_reviews)
+            if pending_reviews:
+                payload["available"] = True
+        except Exception as exc:
+            payload["errors"].append(f"publishing_reviews: {exc}")
 
         if pub is None:
+            if payload["pending_reviews_count"]:
+                payload["status"] = "Useful"
+                payload["summary"] = "Publish route is live with pending editorial reviews, even though broader publishing sources are not fully initialised in this runtime."
             payload["recent_activity"] = _module_recent_activity(route="/publish", domain="publish")
             return payload
 

@@ -283,6 +283,9 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.original_cwd = os.getcwd()
         os.chdir(self.tempdir.name)
         self.addCleanup(os.chdir, self.original_cwd)
+        self.original_home = os.environ.get("HOME")
+        os.environ["HOME"] = self.tempdir.name
+        self.addCleanup(self._restore_home)
 
         self.original_root = ApprovalQueue.ROOT
         ApprovalQueue.ROOT = Path(self.tempdir.name) / "approvals"
@@ -314,6 +317,12 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
 
     def _restore_root(self) -> None:
         ApprovalQueue.ROOT = self.original_root
+
+    def _restore_home(self) -> None:
+        if self.original_home is None:
+            os.environ.pop("HOME", None)
+        else:
+            os.environ["HOME"] = self.original_home
 
     def _restore_singletons(self) -> None:
         approvals_module._guard_singleton = self.original_guard
@@ -677,12 +686,13 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertEqual(navigation_snapshot["proof_paths"]["module_api"], "/api/navigation/module")
         self.assertIn("JARVIS Publish", publish_html)
         self.assertIn("Quick Draft Project", publish_html)
+        self.assertIn("Editorial Review Lane", publish_html)
         self.assertIn("Refresh Publish State", publish_html)
         self.assertIn("Launch Ops Hub", publish_html)
         self.assertIn("Recent Publish Continuity", publish_html)
-        self.assertIn("/api/activity/operator-action", publish_html)
         self.assertIn("status", publish_snapshot)
         self.assertIn("projects", publish_snapshot)
+        self.assertIn("pending_reviews", publish_snapshot)
         self.assertIn("recent_activity", publish_snapshot)
         self.assertIn("proof_paths", publish_snapshot)
         self.assertEqual(publish_snapshot["proof_paths"]["module_route"], "/publish")
@@ -956,6 +966,53 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertTrue(any(item.get("title") == "Create Draft Project" for item in publish_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("title") == "Start Overnight Research" for item in huddle_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("title") == "Preview Route Intelligence" for item in navigation_snapshot["recent_activity"]))
+
+    def test_publish_review_action_updates_publish_continuity_and_progress_focus(self) -> None:
+        publishing_root = Path.home() / ".jarvis" / "publishing"
+        publishing_root.mkdir(parents=True, exist_ok=True)
+        reviews_path = publishing_root / "ghostwritr_reviews.jsonl"
+        reviews_path.write_text(
+            json.dumps(
+                {
+                    "review_id": "rev-1",
+                    "title": "Approve launch chapter",
+                    "slug": "launch-chapter",
+                    "track_type": "book",
+                    "chapter_number": 12,
+                    "stage_key": "editorial_review",
+                    "stage_display": "Editorial Review",
+                    "content_preview": "Final launch chapter copy is ready for sign-off.",
+                    "word_count": 1840,
+                    "ready_since": "2026-06-06T06:00:00Z",
+                    "jarvis_status": "pending",
+                    "approval_id": "",
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        result = self._json_body(
+            asyncio.run(
+                self._route("/api/publishing/draft/approve", "POST")(
+                    {
+                        "review_id": "rev-1",
+                        "actor": "Chris",
+                    }
+                )
+            )
+        )
+
+        publish_snapshot = self._json_body(asyncio.run(self._route("/api/publish/module", "GET")()))
+        progress_snapshot = self._json_body(asyncio.run(self._route("/api/progress/module", "GET")()))
+
+        self.assertEqual(result["status"], "approved")
+        self.assertEqual(result["focus"]["module"], "Publish")
+        self.assertEqual(publish_snapshot["pending_reviews_count"], 0)
+        self.assertTrue(any(item.get("title") == "Approve Publish Review" for item in publish_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("related_label") == "Approve launch chapter" for item in publish_snapshot["recent_activity"]))
+        self.assertEqual(progress_snapshot["progress_next_focus"], "Publish")
+        self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Publish")
 
     def test_agent_ops_activity_populates_agent_ops_continuity(self) -> None:
         asyncio.run(

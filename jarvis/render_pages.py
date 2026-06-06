@@ -1566,19 +1566,23 @@ def render_publish_module_page(payload: dict) -> str:
         <ul id="project-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>4. Final Delivery Checklist</h2>
+        <h2>4. Editorial Review Lane</h2>
+        <ul id="review-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>5. Final Delivery Checklist</h2>
         <ul id="calendar-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>5. Format Profiles</h2>
+        <h2>6. Format Profiles</h2>
         <ul id="social-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>6. Connected Launch Ops</h2>
+        <h2>7. Connected Launch Ops</h2>
         <ul id="revenue-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>Draft New Handoff Asset · Quick Draft Project</h2>
+        <h2>8. Draft New Handoff Asset · Quick Draft Project</h2>
         <form id="create-project-form">
           <div class="form-grid">
             <label>Title<input id="project-title" placeholder="Launch-ready book or campaign"></label>
@@ -1596,7 +1600,7 @@ def render_publish_module_page(payload: dict) -> str:
         <p class="status-note" id="create-project-note">Create a small draft to verify the module can write real publishing state.</p>
       </section>
       <section class="panel span-6">
-        <h2>7. JARVIS Supervisory Strip &amp; Recent Publish Continuity</h2>
+        <h2>9. JARVIS Supervisory Strip &amp; Recent Publish Continuity</h2>
         <ul id="recent-activity-list"></ul>
       </section>
       <section class="panel span-12">
@@ -1625,6 +1629,7 @@ def render_publish_module_page(payload: dict) -> str:
     const launchControlList = document.getElementById("launch-control-list");
     const moduleStatusList = document.getElementById("module-status-list");
     const projectList = document.getElementById("project-list");
+    const reviewList = document.getElementById("review-list");
     const calendarList = document.getElementById("calendar-list");
     const socialList = document.getElementById("social-list");
     const revenueList = document.getElementById("revenue-list");
@@ -1660,6 +1665,7 @@ def render_publish_module_page(payload: dict) -> str:
       const social = payload.social || {{}};
       const revenue = payload.revenue || {{}};
       const projects = Array.isArray(payload.projects) ? payload.projects : [];
+      const pendingReviews = Array.isArray(payload.pending_reviews) ? payload.pending_reviews : [];
       const upcoming = Array.isArray(calendar.upcoming) ? calendar.upcoming : [];
       const overdue = Array.isArray(calendar.overdue) ? calendar.overdue : [];
       const posts = Array.isArray(social.posts) ? social.posts : [];
@@ -1690,6 +1696,20 @@ def render_publish_module_page(payload: dict) -> str:
         ? projects.slice(0, 6).map((item) => li(item.title || "Untitled project", `${{item.project_type || "project"}} · ${{item.status || "draft"}}`, item.platform || "No platform")).join("")
         : '<li><strong>No projects yet.</strong><span>Create a draft project below to seed the publish workspace.</span></li>';
 
+      reviewList.innerHTML = pendingReviews.length
+        ? pendingReviews.map((item) => `
+            <li>
+              <strong>${{esc(item.title || "Pending review")}}</strong>
+              <span>${{esc(item.stage_display || item.stage_key || item.track_type || "Editorial review")}}</span>
+              <span>${{esc(item.content_preview || "No preview captured yet.")}}</span>
+              <span>
+                <button type="button" data-publish-review-action="approve" data-review-id="${{esc(item.review_id || "")}}">Approve Review</button>
+                <button type="button" data-publish-review-action="revise" data-review-id="${{esc(item.review_id || "")}}" data-review-title="${{esc(item.title || "review")}}">Request Revision</button>
+              </span>
+            </li>
+          `).join("")
+        : '<li><strong>No editorial reviews waiting.</strong><span>The pending review lane is clear right now.</span></li>';
+
       calendarList.innerHTML = [
         ...upcoming.slice(0, 4).map((item) => li(item.title || "Calendar item", `${{item.content_type || "content"}} · ${{item.status || "planned"}}`, item.planned_date || "")),
         ...overdue.slice(0, 2).map((item) => li(item.title || "Overdue item", `Overdue · ${{item.status || "planned"}}`, item.planned_date || "")),
@@ -1706,9 +1726,53 @@ def render_publish_module_page(payload: dict) -> str:
       ].join("");
       recentActivityList.innerHTML = (Array.isArray(payload.recent_activity) ? payload.recent_activity : []).length
         ? payload.recent_activity.map((item) => li(item.title || "Publish action", item.subtitle || item.actor || "Operator continuity", item.detail || item.route_label || "")).join("")
-        : '<li><strong>No publish continuity recorded yet.</strong><span>Create a draft project and publish-side activity will appear here.</span></li>';
+        : '<li><strong>No publish continuity recorded yet.</strong><span>Create a draft project or clear a review and publish-side activity will appear here.</span></li>';
 
       payloadPreview.textContent = JSON.stringify(payload, null, 2);
+
+      document.querySelectorAll("[data-publish-review-action]").forEach((button) => {{
+        button.addEventListener("click", async () => {{
+          const reviewId = button.getAttribute("data-review-id") || "";
+          const action = button.getAttribute("data-publish-review-action") || "approve";
+          const title = button.getAttribute("data-review-title") || "review";
+          if (!reviewId) {{
+            return;
+          }}
+          let feedback = "";
+          if (action === "revise") {{
+            feedback = window.prompt(`Revision feedback for ${{title}}`, "Needs revision from the Publish route.") || "";
+            if (!feedback.trim()) {{
+              statusNote.textContent = "Revision request cancelled.";
+              return;
+            }}
+          }}
+          statusNote.textContent = action === "approve" ? "Approving publish review…" : "Requesting publish revision…";
+          try {{
+            const response = await fetch(
+              action === "approve" ? "/api/publishing/draft/approve" : "/api/publishing/draft/revise",
+              {{
+                method: "POST",
+                headers: {{ "Content-Type": "application/json" }},
+                body: JSON.stringify({{
+                  review_id: reviewId,
+                  feedback,
+                  actor: "Chris",
+                }}),
+              }}
+            );
+            const result = await response.json();
+            if (!response.ok) {{
+              throw new Error(result.detail || result.error || `HTTP ${{response.status}}`);
+            }}
+            statusNote.textContent = action === "approve"
+              ? `Approved publish review: ${{result.review?.title || reviewId}}.`
+              : `Requested revision for: ${{result.review?.title || reviewId}}.`;
+            await refreshPublishState();
+          }} catch (error) {{
+            statusNote.textContent = `Publish review action failed: ${{String(error)}}`;
+          }}
+        }});
+      }});
     }}
 
     async function recordOperatorAction(payload) {{
