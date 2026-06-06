@@ -40,7 +40,7 @@ except Exception:  # pragma: no cover
     def _render_glass_shell(runtime, initial_packet=""):  # type: ignore[misc]
         return render_voice_shell(runtime, initial_packet=initial_packet)
 from .apple_api import _register_apple_api
-from .audit import AuditLog, ProgressFocusStore, ProgressSnapshotStore, RecoveryActionStore, SeamTrackerStore
+from .audit import ActivityReviewStore, AuditLog, ProgressFocusStore, ProgressSnapshotStore, RecoveryActionStore, SeamTrackerStore
 from .health_checkins import HealthCheckInStore
 from . import layout_engine as _layout_engine
 from .recovery_cases import RecoveryCaseStore
@@ -2992,6 +2992,22 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         home_overview = dict(command_center.get("home_overview") or {})
         home_action_result = dict(home_overview.get("action_result") or {})
         focus_summary = ProgressFocusStore(DEFAULT_AUDIT_ROOT).summary()
+        review_summary = ActivityReviewStore(DEFAULT_AUDIT_ROOT).summary()
+
+        def event_id_for(entry: dict[str, Any]) -> str:
+            import hashlib
+
+            raw = "|".join(
+                [
+                    str(entry.get("timestamp", "")).strip(),
+                    str(entry.get("title", "")).strip(),
+                    str(entry.get("detail", "")).strip(),
+                    str(entry.get("related_route", "")).strip(),
+                    str(entry.get("related_kind", "")).strip(),
+                    str(entry.get("entry_type", "")).strip(),
+                ]
+            )
+            return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
 
         def related_route_for(entry: dict[str, Any]) -> str:
             haystack = " ".join(
@@ -3052,6 +3068,11 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             return "Command Center"
 
         enriched_activity = []
+        review_lookup = {
+            str(item.get("event_id", "")).strip(): dict(item)
+            for item in list(review_summary.get("records") or [])
+            if str(item.get("event_id", "")).strip()
+        }
         bridge = dict(home_action_result.get("activity_bridge") or {})
         has_durable_home_action = any(str(item.get("entry_type", "")).strip() == "home-action" for item in activity_feed)
         if bridge and not has_durable_home_action:
@@ -3062,6 +3083,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             bridge_entry["related_route"] = str(home_action_result.get("route", "")).strip() or "/command-center"
             bridge_entry["route_label"] = str(home_action_result.get("route_label", "")).strip() or "Open Related Surface"
             bridge_entry["timestamp"] = str(command_center.get("generated_at", "")).strip()
+            bridge_entry["event_id"] = event_id_for(bridge_entry)
+            bridge_review = review_lookup.get(str(bridge_entry["event_id"]))
+            bridge_entry["review_status"] = str((bridge_review or {}).get("status") or "unreviewed").strip() or "unreviewed"
+            bridge_entry["review_status_label"] = str((bridge_review or {}).get("status_label") or "Unreviewed").strip() or "Unreviewed"
             enriched_activity.append(bridge_entry)
         for item in activity_feed:
             enriched = dict(item)
@@ -3069,6 +3094,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             enriched["detail"] = str(item.get("result", "")).strip() or str(item.get("subtitle", "")).strip()
             enriched["related_route"] = str(item.get("related_route", "")).strip() or related_route_for(enriched)
             enriched["route_label"] = str(item.get("route_label", "")).strip() or "Open Related Surface"
+            enriched["event_id"] = event_id_for(enriched)
+            review = review_lookup.get(str(enriched["event_id"]))
+            enriched["review_status"] = str((review or {}).get("status") or "unreviewed").strip() or "unreviewed"
+            enriched["review_status_label"] = str((review or {}).get("status_label") or "Unreviewed").strip() or "Unreviewed"
             enriched_activity.append(enriched)
 
         enriched_journal = []
@@ -3084,15 +3113,17 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "status": "Useful" if enriched_activity else "Wired",
             "summary": f"Activity feed loaded {len(enriched_activity)} recent event(s) and {len(enriched_journal)} journal item(s) into a dedicated module route inside JARVIS.",
             "what_became_real": "Activity Feed is now a standalone app module instead of only a command-center panel.",
-            "remains_partial": "Richer event mutation, deeper audit filtering, and broader cross-module resume continuity still need follow-on slices.",
+            "remains_partial": "Deeper audit filtering and broader cross-module resume continuity still need follow-on slices, but durable activity review state now lets operators mark live events for review, resume later, or resolution from the standalone feed.",
             "home_action_result": home_action_result,
             "activity_feed": enriched_activity,
             "action_journal": action_journal,
+            "review_lane": list(review_summary.get("records") or [])[:8],
             "counts": {
                 "activity_count": len(enriched_activity),
                 "journal_count": len(enriched_journal),
                 "home_bridge_count": 1 if bridge else 0,
                 "focus_history_count": int(focus_summary.get("history_count", 0) or 0),
+                "review_count": len(list(review_summary.get("records") or [])),
             },
             "focus_control": focus_summary,
             "progress_next_focus": str((focus_summary.get("latest") or {}).get("module") or "").strip() or "No next progress focus recorded yet.",
@@ -3101,6 +3132,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "module_api": "/api/activity/module",
                 "activity_api": "/api/activity",
                 "activity_focus_api": "/api/activity/module/focus",
+                "activity_review_api": "/api/activity/module/review",
                 "command_center_route": "/command-center",
                 "approval_queue_route": "/approval-queue",
                 "recovery_route": "/recovery-center",
@@ -3180,6 +3212,98 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             },
         )
         return _json({"status": "recorded", "focus": focus_entry})
+
+    @app.post("/api/activity/module/review")
+    async def api_activity_module_review(payload: dict[str, Any]) -> JSONResponse:
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail="payload must be an object")
+
+        def module_name_for_route(route: str, related_kind: str = "") -> str:
+            route_value = str(route or "").strip().lower()
+            kind_value = str(related_kind or "").strip().lower()
+            if route_value == "/approval-queue" or "approval" in kind_value:
+                return "Approval Queue"
+            if route_value == "/recovery-center" or any(token in kind_value for token in ("recovery", "failure")):
+                return "Recovery"
+            if route_value == "/mission-board" or "mission" in kind_value:
+                return "Mission Board"
+            if route_value == "/agent-ops-center" or "agent" in kind_value:
+                return "Agent Ops"
+            if route_value == "/briefing-center" or any(token in kind_value for token in ("brief", "open-loop")):
+                return "Daily Brief"
+            if route_value == "/chronicle-center" or "chronicle" in kind_value:
+                return "Chronicle"
+            if route_value == "/health-center" or "health" in kind_value:
+                return "Health"
+            if route_value == "/navigation-center" or any(token in kind_value for token in ("route", "navigation")):
+                return "Navigation"
+            if route_value == "/publish" or any(token in kind_value for token in ("publish", "publishing")):
+                return "Publish"
+            if route_value == "/settings-center" or "settings" in kind_value:
+                return "Settings"
+            if route_value == "/huddle-center" or "huddle" in kind_value:
+                return "Huddle"
+            if route_value == "/supervision-snapshot" or "supervision" in kind_value:
+                return "Supervision"
+            if route_value == "/progress-center" or "progress" in kind_value:
+                return "Progress"
+            if route_value == "/activity-center" or "activity" in kind_value:
+                return "Activity Feed"
+            return "Command Center"
+
+        actor = str(payload.get("actor") or "Chris").strip() or "Chris"
+        event_id = str(payload.get("event_id") or "").strip()
+        title = str(payload.get("title") or "Activity event").strip() or "Activity event"
+        status = str(payload.get("status") or "reviewing").strip().lower() or "reviewing"
+        detail = str(payload.get("detail") or "").strip() or "Activity event reviewed from the standalone feed."
+        related_route = str(payload.get("related_route") or "/command-center").strip() or "/command-center"
+        related_kind = str(payload.get("related_kind") or "").strip()
+        route_label = str(payload.get("route_label") or "Open Related Surface").strip() or "Open Related Surface"
+        if not event_id:
+            raise HTTPException(status_code=400, detail="event_id is required")
+        target_module = str(payload.get("target_module") or "").strip() or module_name_for_route(related_route, related_kind)
+        review_entry = ActivityReviewStore(DEFAULT_AUDIT_ROOT).save_review(
+            review_id=event_id,
+            event_id=event_id,
+            title=title,
+            status=status,
+            actor=actor,
+            detail=detail,
+            related_route=related_route,
+            related_kind=related_kind,
+            route_label=route_label,
+            target_module=target_module,
+        )
+        action_label = {
+            "reviewing": "Review Activity Event",
+            "resume-later": "Queue Activity Resume",
+            "resolved": "Resolve Activity Event",
+        }.get(status, "Review Activity Event")
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": "activity",
+                "action": action_label,
+                "title": title,
+                "detail": detail,
+                "why_now": "Activity Feed advanced a live event into a durable review lane with linked-module continuity.",
+                "result_summary": f"Activity review is now {review_entry['status_label']}.",
+                "related_route": related_route,
+                "route_label": route_label,
+                "related_kind": "activity-review",
+                "related_label": title,
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        focus_entry = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module=target_module,
+            reason=detail,
+            route="/activity-center",
+            actor=actor,
+        )
+        return _json({"status": "recorded", "review": review_entry, "focus": focus_entry})
 
     async def _build_agent_ops_module_payload() -> dict[str, Any]:
         command_center = build_command_center_index()

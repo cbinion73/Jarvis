@@ -641,3 +641,131 @@ class ApprovalStore:
 
     def list_all(self) -> list[dict]:
         return self._load()
+
+
+class ActivityReviewStore:
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self.root.mkdir(parents=True, exist_ok=True)
+        self.current_path = self.root / "activity_reviews.json"
+        self.history_path = self.root / "activity_reviews_log.jsonl"
+        self.history_state_log_path = self.root / "activity_reviews_state_log.jsonl"
+
+    def _load_history(self) -> list[dict]:
+        if not self.history_path.exists():
+            return self._load_history_from_state_log()
+        try:
+            lines = self.history_path.read_text(encoding="utf-8").splitlines()
+            records = [json.loads(line) for line in lines if line.strip()]
+        except (OSError, json.JSONDecodeError):
+            return self._load_history_from_state_log()
+        return [dict(item) for item in records if isinstance(item, dict)] or self._load_history_from_state_log()
+
+    def _load_history_from_state_log(self) -> list[dict]:
+        if not self.history_state_log_path.exists():
+            return []
+        latest: list[dict] = []
+        try:
+            for line in self.history_state_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return []
+        return latest
+
+    def _load_current_records(self) -> list[dict]:
+        if self.current_path.exists():
+            try:
+                payload = json.loads(self.current_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                payload = {}
+            records = payload.get("records") if isinstance(payload, dict) else None
+            if isinstance(records, list):
+                return [dict(item) for item in records if isinstance(item, dict)]
+        latest_by_id: dict[str, dict] = {}
+        for item in self._load_history():
+            review_id = str(item.get("review_id", "")).strip()
+            if review_id:
+                latest_by_id[review_id] = dict(item)
+        return list(latest_by_id.values())
+
+    def save_review(
+        self,
+        *,
+        review_id: str,
+        event_id: str,
+        title: str,
+        status: str,
+        actor: str,
+        detail: str,
+        related_route: str,
+        related_kind: str = "",
+        route_label: str = "",
+        target_module: str = "",
+    ) -> dict:
+        normalized_status = str(status).strip().lower() or "reviewing"
+        if normalized_status not in {"reviewing", "resume-later", "resolved"}:
+            raise ValueError("Unsupported activity review status.")
+        now = datetime.now(timezone.utc).isoformat()
+        entry = {
+            "entry_type": "activity-review",
+            "saved_at": now,
+            "review_id": str(review_id).strip() or str(event_id).strip(),
+            "event_id": str(event_id).strip(),
+            "title": str(title).strip() or "Activity event",
+            "status": normalized_status,
+            "status_label": normalized_status.replace("-", " ").title(),
+            "actor": str(actor).strip() or "Chris",
+            "detail": str(detail).strip() or "No activity review detail recorded.",
+            "related_route": str(related_route).strip() or "/activity-center",
+            "related_kind": str(related_kind).strip(),
+            "route_label": str(route_label).strip() or "Open Related Surface",
+            "target_module": str(target_module).strip() or "",
+        }
+
+        records = [dict(item) for item in self._load_current_records() if str(item.get("review_id", "")).strip() != entry["review_id"]]
+        records.append(entry)
+        records.sort(key=lambda item: str(item.get("saved_at", "")), reverse=True)
+        atomic_write_json(
+            self.current_path,
+            {
+                "saved_at": now,
+                "records": records,
+            },
+        )
+
+        history = self._load_history()
+        history.append(entry)
+        history = history[-120:]
+        atomic_write_jsonl(self.history_path, history)
+        append_jsonl(
+            self.history_state_log_path,
+            {
+                "saved_at": now,
+                "records": history,
+            },
+        )
+        return entry
+
+    def summary(self, limit: int = 8) -> dict:
+        history = self._load_history()
+        records = self._load_current_records()
+        current_saved_at = str(records[0].get("saved_at", "")) if records else ""
+        recent = list(reversed(history[-max(1, limit):]))
+        return {
+            "latest": {
+                "saved_at": current_saved_at,
+                "records": records,
+            },
+            "records": records,
+            "history_count": len(history),
+            "recent": recent,
+            "proof_paths": {
+                "current": str(self.current_path),
+                "history": str(self.history_path),
+            },
+        }

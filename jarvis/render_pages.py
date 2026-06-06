@@ -4981,6 +4981,10 @@ def render_activity_module_page(payload: dict) -> str:
         <div id="journal-list" class="entry-list"></div>
       </section>
       <section class="panel span-5">
+        <h2>Review Lane</h2>
+        <div id="review-lane-list" class="entry-list"></div>
+      </section>
+      <section class="panel span-5">
         <h2>Activity Evidence</h2>
         <ul id="activity-evidence-list"></ul>
       </section>
@@ -5012,6 +5016,7 @@ def render_activity_module_page(payload: dict) -> str:
     const heroHomeBridges = document.getElementById("hero-home-bridges");
     const activityList = document.getElementById("activity-list");
     const journalList = document.getElementById("journal-list");
+    const reviewLaneList = document.getElementById("review-lane-list");
     const detailEl = document.getElementById("activity-detail");
     const evidenceEl = document.getElementById("activity-evidence-list");
     const focusEl = document.getElementById("focus-list");
@@ -5086,6 +5091,9 @@ def render_activity_module_page(payload: dict) -> str:
           <div class="action-row">
             <button type="button" data-related-route="${{esc(relatedRoute)}}">Jump to Related</button>
             <button type="button" data-promote-focus="true">Promote to Progress Focus</button>
+            <button type="button" data-review-status="reviewing">Mark Reviewing</button>
+            <button type="button" data-review-status="resume-later">Resume Later</button>
+            <button type="button" data-review-status="resolved">Resolve Event</button>
             <a href="/api/activity">Open Activity JSON</a>
           </div>
         </div>
@@ -5100,6 +5108,13 @@ def render_activity_module_page(payload: dict) -> str:
         button.addEventListener("click", () => {{
           promoteSelectedActivityFocus().catch((error) => {{
             actionNote.textContent = `Progress focus update failed: ${{String(error)}}`;
+          }});
+        }});
+      }});
+      document.querySelectorAll("[data-review-status]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          reviewSelectedActivity(button.getAttribute("data-review-status") || "reviewing").catch((error) => {{
+            actionNote.textContent = `Activity review update failed: ${{String(error)}}`;
           }});
         }});
       }});
@@ -5164,6 +5179,23 @@ def render_activity_module_page(payload: dict) -> str:
           `).join("")
         : `<div class="entry-card"><strong>No journal entries yet.</strong><span>The action journal will appear here once recent activity is available.</span></div>`;
 
+      const reviewLane = Array.isArray(payload.review_lane) ? payload.review_lane : [];
+      reviewLaneList.innerHTML = reviewLane.length
+        ? reviewLane.map((item) => `
+            <div class="entry-card">
+              <strong>${{esc(item.title || "Reviewed event")}}</strong>
+              <span>${{esc(item.detail || "No review detail captured.")}}</span>
+              <div class="chips">
+                ${{chip(item.status_label || item.status || "Review")}}
+                ${{item.target_module ? chip(item.target_module) : ""}}
+              </div>
+              <div class="action-row">
+                ${{item.related_route ? `<button type="button" data-jump-route="${{esc(item.related_route)}}">Jump to Related</button>` : ""}}
+              </div>
+            </div>
+          `).join("")
+        : `<div class="entry-card"><strong>No reviewed events yet.</strong><span>Mark events for review, resume-later, or resolution and they will stay visible here.</span></div>`;
+
       document.querySelectorAll("[data-select-kind]").forEach((button) => {{
         button.addEventListener("click", () => {{
           currentSelection = {{
@@ -5214,6 +5246,35 @@ def render_activity_module_page(payload: dict) -> str:
         throw new Error(payload.detail || payload.error || "Progress focus update failed");
       }}
       actionNote.textContent = `Shared progress focus moved to ${{payload.focus?.module || "the selected module"}}.`;
+      await refreshActivityFeed();
+    }}
+
+    async function reviewSelectedActivity(status) {{
+      const item = selectedItem(currentPayload);
+      if (!item) {{
+        actionNote.textContent = "Select an activity item before saving review state.";
+        return;
+      }}
+      actionNote.textContent = `Saving activity review as ${{status}}…`;
+      const response = await fetch("/api/activity/module/review", {{
+        method: "POST",
+        headers: {{ "Content-Type": "application/json" }},
+        body: JSON.stringify({{
+          actor: "Chris",
+          event_id: item.event_id || "",
+          title: item.title || "Activity event",
+          detail: item.detail || item.result || item.subtitle || "",
+          status,
+          related_route: item.related_route || "/command-center",
+          related_kind: item.related_kind || item.entry_type || "activity",
+          route_label: item.route_label || "Open Related Surface",
+        }}),
+      }});
+      const payload = await response.json();
+      if (!response.ok) {{
+        throw new Error(payload.detail || payload.error || "Activity review update failed");
+      }}
+      actionNote.textContent = `Activity review is now ${{payload.review?.status_label || status}}.`;
       await refreshActivityFeed();
     }}
 

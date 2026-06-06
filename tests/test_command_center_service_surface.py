@@ -709,22 +709,27 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Home Bridges", activity_html)
         self.assertIn("Progress Snapshot Persisted", activity_html)
         self.assertIn("Promote to Progress Focus", activity_html)
+        self.assertIn("Mark Reviewing", activity_html)
+        self.assertIn("Review Lane", activity_html)
         self.assertIn("Shared Progress Focus", activity_html)
         self.assertIn("/progress-center", activity_html)
         self.assertIn("Home Continuity", activity_html)
         self.assertIn("status", activity_snapshot)
         self.assertIn("activity_feed", activity_snapshot)
         self.assertIn("action_journal", activity_snapshot)
+        self.assertIn("review_lane", activity_snapshot)
         self.assertIn("home_action_result", activity_snapshot)
         self.assertIn("focus_control", activity_snapshot)
         self.assertIn("progress_next_focus", activity_snapshot)
         self.assertIn("home_bridge_count", activity_snapshot["counts"])
         self.assertIn("focus_history_count", activity_snapshot["counts"])
+        self.assertIn("review_count", activity_snapshot["counts"])
         self.assertTrue(any(item.get("entry_type") == "progress-snapshot" for item in activity_snapshot["activity_feed"]))
         self.assertIn("proof_paths", activity_snapshot)
         self.assertEqual(activity_snapshot["proof_paths"]["module_route"], "/activity-center")
         self.assertEqual(activity_snapshot["proof_paths"]["module_api"], "/api/activity/module")
         self.assertEqual(activity_snapshot["proof_paths"]["activity_focus_api"], "/api/activity/module/focus")
+        self.assertEqual(activity_snapshot["proof_paths"]["activity_review_api"], "/api/activity/module/review")
         self.assertIn("JARVIS Agent Operations", agent_ops_html)
         self.assertIn("Refresh Agent Ops State", agent_ops_html)
         self.assertIn("Queue Agent Run", agent_ops_html)
@@ -959,6 +964,56 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertTrue(any(item.get("title") == "Promote Activity Focus" for item in activity_module_payload["activity_feed"]))
         self.assertEqual(progress_snapshot["progress_next_focus"], "Recovery")
         self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Recovery")
+
+    def test_activity_review_mutation_persists_review_lane_and_linked_module_continuity(self) -> None:
+        asyncio.run(
+            self._route("/api/activity/operator-action", "POST")(
+                {
+                    "actor": "Chris",
+                    "domain": "recovery",
+                    "action": "Investigate Relay Failure",
+                    "title": "Dropbox sync failure",
+                    "detail": "Activity review should create durable review state and linked recovery continuity.",
+                    "why_now": "Activity Feed review lane should bridge into the related recovery surface.",
+                    "result_summary": "Recovery review staged",
+                    "route": "/recovery-center",
+                    "route_label": "Open Recovery Center",
+                    "related_kind": "recovery-case",
+                    "related_label": "Dropbox sync failure",
+                    "succeeded": True,
+                }
+            )
+        )
+
+        activity_module_before = self._json_body(asyncio.run(self._route("/api/activity/module", "GET")()))
+        selected = next(
+            item for item in activity_module_before["activity_feed"]
+            if item.get("title") == "Investigate Relay Failure"
+        )
+
+        review_response = asyncio.run(
+            self._route("/api/activity/module/review", "POST")(
+                {
+                    "actor": "Chris",
+                    "event_id": selected["event_id"],
+                    "title": selected["title"],
+                    "detail": "Keep this recovery case hot until the bridge is stable.",
+                    "status": "reviewing",
+                    "related_route": selected["related_route"],
+                    "related_kind": selected["related_kind"],
+                    "route_label": selected["route_label"],
+                }
+            )
+        )
+
+        review_payload = self._json_body(review_response)
+        activity_module_after = self._json_body(asyncio.run(self._route("/api/activity/module", "GET")()))
+        self.assertEqual(review_payload["status"], "recorded")
+        self.assertEqual(review_payload["review"]["status"], "reviewing")
+        self.assertEqual(review_payload["focus"]["module"], "Recovery")
+        self.assertTrue(any(item.get("event_id") == selected["event_id"] for item in activity_module_after["review_lane"]))
+        refreshed = next(item for item in activity_module_after["activity_feed"] if item.get("event_id") == selected["event_id"])
+        self.assertEqual(refreshed["review_status"], "reviewing")
 
     def test_recovery_case_mutations_persist_into_shared_activity(self) -> None:
         recovery_module_response = asyncio.run(self._route("/api/recovery/module", "GET")())
