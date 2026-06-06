@@ -3295,6 +3295,77 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_location_settings() -> JSONResponse:
         return _json(location_settings.describe())
 
+    def _save_settings_profile_preferences(
+        payload: dict[str, Any],
+        *,
+        actor_name: str = "Chris",
+    ) -> dict[str, Any]:
+        from .user_profile import load_profile, save_profile
+
+        actor_name = str(actor_name or "Chris").strip() or "Chris"
+        actor = runtime.get_actor(actor_name)
+        subject_user_id = str(payload.get("subject_user_id") or actor.user_id or "chris").strip() or "chris"
+        updates: dict[str, Any] = {}
+        for key in ("notifications", "privacy", "dashboard"):
+            value = payload.get(key)
+            if isinstance(value, dict):
+                updates[key] = value
+        if not updates:
+            raise ValueError("No settings profile updates were provided.")
+
+        saved = save_profile(subject_user_id, updates)
+        latest = load_profile(subject_user_id)
+        detail_parts: list[str] = []
+        notifications = latest.get("notifications") if isinstance(latest.get("notifications"), dict) else {}
+        privacy = latest.get("privacy") if isinstance(latest.get("privacy"), dict) else {}
+        dashboard = latest.get("dashboard") if isinstance(latest.get("dashboard"), dict) else {}
+        detail_parts.append("approval alerts on" if bool(notifications.get("approvals")) else "approval alerts off")
+        detail_parts.append("health alerts on" if bool(notifications.get("health_alerts")) else "health alerts off")
+        detail_parts.append("chronicle private" if bool(privacy.get("private_chronicle")) else "chronicle shareable")
+        detail_parts.append("health sharing on" if bool(privacy.get("share_health_with_family")) else "health sharing off")
+        if hasattr(runtime, "_invalidate_snapshot_cache"):
+            with suppress(Exception):
+                runtime._invalidate_snapshot_cache(
+                    actor_name,
+                    surfaces=("dashboard", "today_board", "cognitive", "shell_state", "proactive_state"),
+                )
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor_name,
+                "domain": "settings",
+                "action": "Save Profile Defaults",
+                "title": subject_user_id,
+                "detail": f"Settings updated profile defaults for {subject_user_id}: {', '.join(detail_parts)}.",
+                "why_now": "Settings updated the live profile posture used by JARVIS routes and Apple clients.",
+                "result_summary": "Profile defaults saved.",
+                "related_route": "/settings-center",
+                "route_label": "Open Settings",
+                "related_kind": "profile-settings",
+                "related_label": subject_user_id,
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        focus = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module="Settings",
+            reason=f"Settings profile defaults were updated for {subject_user_id}.",
+            route="/settings-center",
+            actor=actor_name.lower(),
+        )
+        return {
+            "ok": True,
+            "message": "Profile defaults updated.",
+            "settings": {
+                "subject_user_id": subject_user_id,
+                "notifications": dict(latest.get("notifications") or {}),
+                "privacy": dict(latest.get("privacy") or {}),
+                "dashboard": dict(latest.get("dashboard") or {}),
+                "updated_at": str(saved.get("updated_at") or latest.get("updated_at") or ""),
+            },
+            "focus": focus,
+        }
+
     async def _build_settings_module_payload() -> dict[str, Any]:
         try:
             from datetime import datetime, timezone
@@ -3309,7 +3380,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "status": "Useful",
             "summary": "Settings now has a dedicated module route with live voice, location, account, and permissions posture inside JARVIS.",
             "what_became_real": "Settings & Permissions is now a standalone app module instead of only a shell packet with scattered APIs behind it.",
-            "remains_partial": "Broader permissions drill-ins, richer save flows, and deeper connector continuity still need follow-on slices.",
+            "remains_partial": "Broader connector actions, richer identity/account edits, and deeper cross-surface continuity still need follow-on slices.",
             "voice": {},
             "voice_options": {},
             "location": {},
@@ -3345,6 +3416,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "google_client_api": "/api/google/client-secret",
                 "google_disconnect_api": "/api/google/disconnect",
                 "personalization_api": "/api/personalization/settings",
+                "profile_settings_api": "/api/settings/profile",
             },
             "errors": [],
         }
@@ -3421,6 +3493,15 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/settings/module")
     async def api_settings_module() -> JSONResponse:
         return _json(await _build_settings_module_payload())
+
+    @app.post("/api/settings/profile")
+    async def api_save_settings_profile(payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = _save_settings_profile_preferences(payload, actor_name=str(payload.get("actor") or "Chris"))
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        await _broadcast_dashboard("settings-profile.updated")
+        return _json(result)
 
     @app.get("/api/design-review-state")
     async def api_design_review_state() -> JSONResponse:

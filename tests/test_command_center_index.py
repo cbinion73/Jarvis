@@ -687,7 +687,7 @@ class CommandCenterIndexTests(unittest.TestCase):
                             "api_path": "/api/settings/module",
                             "summary": "Settings now has a dedicated app module route with live voice, location, account, and permissions posture.",
                             "what_became_real": "Settings & Permissions is now a standalone app module.",
-                            "remains_partial": "Broader permissions drill-ins and richer save flows still need follow-on slices.",
+                            "remains_partial": "Broader connector actions and richer identity/account workflows still need follow-on slices.",
                             "evidence": "Dedicated /settings-center route now sits on top of live settings and permissions APIs.",
                         },
                     ],

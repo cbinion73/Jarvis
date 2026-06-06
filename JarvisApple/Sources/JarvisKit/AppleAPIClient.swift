@@ -193,6 +193,36 @@ public final class AppleAPIClient: Sendable {
         }
     }
 
+    public func fetchSystemsProfileSettings() async throws -> SystemsProfileSettings {
+        try await get("/api/apple/systems/profile-settings")
+    }
+
+    public func saveSystemsProfileSettings(
+        subjectUserId: String = "chris",
+        notifications: SystemsProfileNotificationSettings,
+        privacy: SystemsProfilePrivacySettings,
+        dashboard: SystemsProfileDashboardSettings,
+        actor: String = "chris"
+    ) async throws -> SystemsProfileSettingsActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let subject_user_id: String
+            let notifications: SystemsProfileNotificationSettings
+            let privacy: SystemsProfilePrivacySettings
+            let dashboard: SystemsProfileDashboardSettings
+        }
+        return try await post(
+            "/api/apple/systems/profile-settings",
+            body: Body(
+                actor: actor,
+                subject_user_id: subjectUserId,
+                notifications: notifications,
+                privacy: privacy,
+                dashboard: dashboard
+            )
+        )
+    }
+
     public func promoteTrustZone(_ zoneId: String, actor: String = "chris", basis: String = "manual promotion from phone") async throws -> SystemsTrustZoneActionResult {
         struct Body: Encodable {
             let actor: String

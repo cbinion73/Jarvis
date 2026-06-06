@@ -26,6 +26,7 @@ struct SettingsView: View {
     @State private var nowPlayingState: NowPlayingStateOverview?
     @State private var controlPlane: ControlPlaneOverview?
     @State private var adminSummary: SystemsAdminSummary?
+    @State private var profileSettings: SystemsProfileSettings?
     @State private var notificationAuthorizationStatus: UNAuthorizationStatus = .notDetermined
     @State private var remoteNotificationsRegistered = false
     @State private var pingError: String?
@@ -44,6 +45,15 @@ struct SettingsView: View {
     @State private var governanceWorkflowMessage = ""
     @State private var governanceWorkflowError = ""
     @State private var governanceActionInFlight: String?
+    @State private var profileSettingsMessage = ""
+    @State private var profileSettingsError = ""
+    @State private var profileSettingsSaveInFlight = false
+    @State private var approvalsAlertsEnabled = true
+    @State private var healthAlertsEnabled = true
+    @State private var privateChronicleEnabled = true
+    @State private var shareHealthWithFamilyEnabled = false
+    @State private var showHealthDashboardEnabled = true
+    @State private var showPublishingDashboardEnabled = false
     @State private var adminSummaryDiagnostics = "Idle"
 
     private let steel = Color(red: 0.55, green: 0.65, blue: 0.78)
@@ -1119,6 +1129,49 @@ struct SettingsView: View {
                                         .font(.caption2.monospaced())
                                         .foregroundStyle(.secondary)
                                         .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                        }
+
+                        SystemsSection(title: "Profile Defaults", icon: "person.crop.circle.badge.checkmark", accent: .mint) {
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack(spacing: 10) {
+                                    systemsMetric("Approvals", approvalsAlertsEnabled ? "Alerts On" : "Alerts Off")
+                                    systemsMetric("Health", healthAlertsEnabled ? "Alerts On" : "Alerts Off")
+                                    systemsMetric("Chronicle", privateChronicleEnabled ? "Private" : "Shareable")
+                                }
+                                if let profileSettings {
+                                    SysRow(label: "Updated") {
+                                        Text(nonEmpty(profileSettings.updatedAt, fallback: "No saved timestamp"))
+                                            .foregroundStyle(.white)
+                                            .multilineTextAlignment(.trailing)
+                                    }
+                                }
+                                settingsToggleRow("Approval alerts", isOn: $approvalsAlertsEnabled)
+                                settingsToggleRow("Health alerts", isOn: $healthAlertsEnabled)
+                                settingsToggleRow("Private Chronicle", isOn: $privateChronicleEnabled)
+                                settingsToggleRow("Share health with family", isOn: $shareHealthWithFamilyEnabled)
+                                settingsToggleRow("Show health dashboard", isOn: $showHealthDashboardEnabled)
+                                settingsToggleRow("Show publishing dashboard", isOn: $showPublishingDashboardEnabled)
+                                Button {
+                                    Task { await saveProfileSettings() }
+                                } label: {
+                                    Text(profileSettingsSaveInFlight ? "Saving…" : "Save Profile Defaults")
+                                        .font(.caption.weight(.semibold))
+                                        .frame(maxWidth: .infinity)
+                                }
+                                .disabled(profileSettingsSaveInFlight)
+                                .buttonStyle(.borderedProminent)
+                                .tint(.mint)
+                                if !profileSettingsMessage.isEmpty {
+                                    Text(profileSettingsMessage)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                if !profileSettingsError.isEmpty {
+                                    Text(profileSettingsError)
+                                        .font(.caption)
+                                        .foregroundStyle(.red)
                                 }
                             }
                         }
@@ -2310,6 +2363,15 @@ struct SettingsView: View {
         .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
     }
 
+    private func settingsToggleRow(_ label: String, isOn: Binding<Bool>) -> some View {
+        Toggle(isOn: isOn) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white)
+        }
+        .tint(.mint)
+    }
+
     private func syncStatusChip(label: String) -> some View {
         Text(label)
             .font(.system(size: 10, weight: .semibold))
@@ -2354,6 +2416,9 @@ struct SettingsView: View {
         let controlPlaneTask = Task {
             try await AppleAPIClient.shared.fetchControlPlaneState()
         }
+        let profileSettingsTask = Task {
+            try await AppleAPIClient.shared.fetchSystemsProfileSettings()
+        }
         adminSummaryDiagnostics = "Request queued at \(Date().formatted(date: .omitted, time: .standard))"
         let adminSummaryTask = Task {
             try await AppleAPIClient.shared.fetchSystemsAdminSummary()
@@ -2386,6 +2451,16 @@ struct SettingsView: View {
             }
         }
 
+        Task {
+            let result = try? await profileSettingsTask.value
+            await MainActor.run {
+                guard generation == refreshGeneration else { return }
+                if let result {
+                    applyProfileSettings(result)
+                }
+            }
+        }
+
         var essentialIssues: [String] = []
 
         do {
@@ -2415,6 +2490,7 @@ struct SettingsView: View {
         // instead of withholding Admin and control-plane data behind slower history loads.
         _ = try? await adminSummaryTask.value
         _ = try? await controlPlaneTask.value
+        _ = try? await profileSettingsTask.value
 
         Task {
             async let calendarStateRequest = AppleAPIClient.shared.fetchCalendarState()
@@ -2471,6 +2547,52 @@ struct SettingsView: View {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         notificationAuthorizationStatus = settings.authorizationStatus
         remoteNotificationsRegistered = UIApplication.shared.isRegisteredForRemoteNotifications
+    }
+
+    @MainActor
+    private func applyProfileSettings(_ settings: SystemsProfileSettings) {
+        profileSettings = settings
+        approvalsAlertsEnabled = settings.notifications.approvals
+        healthAlertsEnabled = settings.notifications.healthAlerts
+        privateChronicleEnabled = settings.privacy.privateChronicle
+        shareHealthWithFamilyEnabled = settings.privacy.shareHealthWithFamily
+        showHealthDashboardEnabled = settings.dashboard.showHealth
+        showPublishingDashboardEnabled = settings.dashboard.showPublishing
+    }
+
+    private func saveProfileSettings() async {
+        profileSettingsSaveInFlight = true
+        profileSettingsMessage = ""
+        profileSettingsError = ""
+        do {
+            let result = try await AppleAPIClient.shared.saveSystemsProfileSettings(
+                subjectUserId: profileSettings?.subjectUserId ?? "chris",
+                notifications: SystemsProfileNotificationSettings(
+                    approvals: approvalsAlertsEnabled,
+                    healthAlerts: healthAlertsEnabled,
+                    calendarReminders: profileSettings?.notifications.calendarReminders ?? true,
+                    agentUpdates: profileSettings?.notifications.agentUpdates ?? false
+                ),
+                privacy: SystemsProfilePrivacySettings(
+                    shareHealthWithFamily: shareHealthWithFamilyEnabled,
+                    shareCalendarWithFamily: profileSettings?.privacy.shareCalendarWithFamily ?? true,
+                    privateChronicle: privateChronicleEnabled
+                ),
+                dashboard: SystemsProfileDashboardSettings(
+                    showHealth: showHealthDashboardEnabled,
+                    showFinance: profileSettings?.dashboard.showFinance ?? false,
+                    showDining: profileSettings?.dashboard.showDining ?? true,
+                    showChronicle: profileSettings?.dashboard.showChronicle ?? true,
+                    showPublishing: showPublishingDashboardEnabled
+                )
+            )
+            applyProfileSettings(result.settings)
+            profileSettingsMessage = result.message
+            await refreshSystems()
+        } catch {
+            profileSettingsError = error.localizedDescription
+        }
+        profileSettingsSaveInFlight = false
     }
 
     private func applyFocusPreset(_ preset: FocusPreset) async {

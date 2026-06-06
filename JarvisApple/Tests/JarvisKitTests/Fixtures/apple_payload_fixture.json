@@ -1410,6 +1410,31 @@
   }
 }
   },
+  "/api/apple/systems/profile-settings": {
+    "ok": true,
+    "data": {
+      "subject_user_id": "chris",
+      "notifications": {
+        "approvals": true,
+        "health_alerts": false,
+        "calendar_reminders": true,
+        "agent_updates": false
+      },
+      "privacy": {
+        "share_health_with_family": true,
+        "share_calendar_with_family": true,
+        "private_chronicle": false
+      },
+      "dashboard": {
+        "show_health": true,
+        "show_finance": true,
+        "show_dining": true,
+        "show_chronicle": true,
+        "show_publishing": true
+      },
+      "updated_at": "2026-06-06T07:58:00Z"
+    }
+  },
   "/api/apple/notifications": {
     "ok": true,
     "data": {

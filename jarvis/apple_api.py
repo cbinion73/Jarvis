@@ -120,6 +120,80 @@ def _ok(data: Any) -> dict:
     return {"ok": True, "data": data, "error": None, "ts": _ts()}
 
 
+def _save_apple_settings_profile(
+    runtime,
+    payload: dict[str, Any],
+    *,
+    actor_name: str = "chris",
+) -> dict[str, Any]:
+    from .user_profile import load_profile, save_profile
+
+    actor_name = str(actor_name or "chris").strip() or "chris"
+    actor_display = actor_name.capitalize() if actor_name.islower() else actor_name
+    actor = runtime.get_actor(actor_display)
+    subject_user_id = str(payload.get("subject_user_id") or actor.user_id or "chris").strip() or "chris"
+    updates: dict[str, Any] = {}
+    for key in ("notifications", "privacy", "dashboard"):
+        value = payload.get(key)
+        if isinstance(value, dict):
+            updates[key] = value
+    if not updates:
+        raise ValueError("No settings profile updates were provided.")
+
+    saved = save_profile(subject_user_id, updates)
+    latest = load_profile(subject_user_id)
+    notifications = latest.get("notifications") if isinstance(latest.get("notifications"), dict) else {}
+    privacy = latest.get("privacy") if isinstance(latest.get("privacy"), dict) else {}
+    detail = (
+        f"Notifications: approvals {'on' if bool(notifications.get('approvals')) else 'off'}, "
+        f"health {'on' if bool(notifications.get('health_alerts')) else 'off'}; "
+        f"privacy: chronicle {'private' if bool(privacy.get('private_chronicle')) else 'shareable'}."
+    )
+    if hasattr(runtime, "_invalidate_snapshot_cache"):
+        try:
+            runtime._invalidate_snapshot_cache(
+                actor_display,
+                surfaces=("dashboard", "today_board", "cognitive", "shell_state", "proactive_state"),
+            )
+        except Exception:
+            pass
+    AuditLog(_ACTIVITY_AUDIT_ROOT).log_event(
+        "operator-action",
+        {
+            "actor": actor_display,
+            "domain": "settings",
+            "action": "Save Apple Profile Defaults",
+            "title": subject_user_id,
+            "detail": f"Apple Systems updated profile defaults for {subject_user_id}. {detail}",
+            "why_now": "The iPhone Systems surface updated real Settings defaults and fed that posture back into shared continuity.",
+            "result_summary": "Apple settings profile defaults saved.",
+            "related_route": "/settings-center",
+            "route_label": "Open Settings",
+            "related_kind": "profile-settings",
+            "related_label": subject_user_id,
+            "succeeded": True,
+            "source_kind": "operator-action",
+        },
+    )
+    focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module="Settings",
+        reason=f"Apple Systems updated profile defaults for {subject_user_id}.",
+        route="/settings-center",
+        actor=actor_name,
+    )
+    return {
+        "message": "Profile defaults updated.",
+        "settings": {
+            "subject_user_id": subject_user_id,
+            "notifications": dict(latest.get("notifications") or {}),
+            "privacy": dict(latest.get("privacy") or {}),
+            "dashboard": dict(latest.get("dashboard") or {}),
+            "updated_at": str(saved.get("updated_at") or latest.get("updated_at") or ""),
+        },
+        "focus": focus,
+    }
+
+
 def _record_operator_action(
     *,
     actor: str,
@@ -9073,6 +9147,31 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 },
             }
         )
+
+    @app.get("/api/apple/systems/profile-settings")
+    async def apple_systems_profile_settings():
+        from .user_profile import load_profile
+
+        actor = runtime.get_actor("Chris")
+        profile = load_profile(actor.user_id)
+        return _ok(
+            {
+                "subject_user_id": actor.user_id,
+                "notifications": dict(profile.get("notifications") or {}),
+                "privacy": dict(profile.get("privacy") or {}),
+                "dashboard": dict(profile.get("dashboard") or {}),
+                "updated_at": str(profile.get("updated_at") or ""),
+            }
+        )
+
+    @app.post("/api/apple/systems/profile-settings")
+    async def apple_save_systems_profile_settings(payload: dict[str, Any]):
+        actor_name = str(payload.get("actor") or payload.get("actor_id") or "chris").strip() or "chris"
+        try:
+            result = _save_apple_settings_profile(runtime, payload, actor_name=actor_name)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _ok(result)
 
     @app.post("/api/apple/systems/self-improvement/jobs/{job_id}/sandbox-execute")
     async def apple_execute_sandbox_job(job_id: str, payload: dict = {}):

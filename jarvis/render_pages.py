@@ -8898,10 +8898,23 @@ def render_settings_module_page(payload: dict) -> str:
         <p class="status-note" id="location-note">Persist the preferred location through the live location store used by the shell.</p>
       </section>
       <section class="panel span-6">
+        <h2>Profile Defaults</h2>
+        <form id="profile-settings-form">
+          <label><input type="checkbox" id="profile-approvals"> Approval alerts enabled</label>
+          <label><input type="checkbox" id="profile-health-alerts"> Health alerts enabled</label>
+          <label><input type="checkbox" id="profile-private-chronicle"> Chronicle private by default</label>
+          <label><input type="checkbox" id="profile-share-health"> Share health with family</label>
+          <label><input type="checkbox" id="profile-show-health"> Show health dashboard</label>
+          <label><input type="checkbox" id="profile-show-publishing"> Show publishing dashboard</label>
+          <button type="submit">Save Profile Defaults</button>
+        </form>
+        <p class="status-note" id="profile-note">Persist notification, privacy, and dashboard defaults through the live profile store used by JARVIS.</p>
+      </section>
+      <section class="panel span-6">
         <h2>Permissions & Governance</h2>
         <ul id="permissions-list"></ul>
       </section>
-      <section class="panel span-6">
+      <section class="panel span-12">
         <h2>Identity & Devices</h2>
         <ul id="identity-list"></ul>
       </section>
@@ -8933,6 +8946,7 @@ def render_settings_module_page(payload: dict) -> str:
     const locationsList = document.getElementById("locations-list");
     const recentActivityList = document.getElementById("recent-activity-list");
     const payloadPreview = document.getElementById("payload-preview");
+    const profileNote = document.getElementById("profile-note");
 
     function esc(value) {{
       return String(value ?? "")
@@ -8997,12 +9011,18 @@ def render_settings_module_page(payload: dict) -> str:
         const selected = item.id === location.preferred_location_id ? " selected" : "";
         return `<option value="${{esc(item.id)}}"${{selected}}>${{esc(item.label || item.id)}}</option>`;
       }}).join("");
+      document.getElementById("profile-approvals").checked = Boolean(notifications.approvals);
+      document.getElementById("profile-health-alerts").checked = Boolean(notifications.health_alerts);
+      document.getElementById("profile-private-chronicle").checked = Boolean(privacy.private_chronicle);
+      document.getElementById("profile-share-health").checked = Boolean(privacy.share_health_with_family);
+      document.getElementById("profile-show-health").checked = Boolean((permissions.dashboard || {{}}).show_health);
+      document.getElementById("profile-show-publishing").checked = Boolean((permissions.dashboard || {{}}).show_publishing);
       const stackStatus = voice.stack_status || voiceOptions.stack_status || {{}};
       const clientSecret = (((payload.google || {{}}).client_secret) || {{}});
       moduleStatusList.innerHTML = [
         li("What Became Real", payload.what_became_real || "No settings seam note recorded yet."),
         li("What Remains Partial", payload.remains_partial || "No partial work recorded."),
-        li("Proof API", "/api/settings/module", "/api/voice-settings and /api/location-settings"),
+        li("Proof API", "/api/settings/module", "/api/voice-settings, /api/location-settings, and /api/settings/profile"),
         li("Voice Stack", stackStatus.summary || voice.selected_provider_label || "No voice stack summary available."),
         li("Google Client Secret", clientSecret.configured ? "Configured" : "Missing", clientSecret.detail || ""),
       ].join("");
@@ -9098,6 +9118,36 @@ def render_settings_module_page(payload: dict) -> str:
       }}
     }}
 
+    async function saveProfileSettings(event) {{
+      event.preventDefault();
+      profileNote.textContent = "Saving profile defaults…";
+      try {{
+        const response = await fetch("/api/settings/profile", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            notifications: {{
+              approvals: document.getElementById("profile-approvals").checked,
+              health_alerts: document.getElementById("profile-health-alerts").checked,
+            }},
+            privacy: {{
+              private_chronicle: document.getElementById("profile-private-chronicle").checked,
+              share_health_with_family: document.getElementById("profile-share-health").checked,
+            }},
+            dashboard: {{
+              show_health: document.getElementById("profile-show-health").checked,
+              show_publishing: document.getElementById("profile-show-publishing").checked,
+            }},
+          }}),
+        }});
+        const payload = await response.json();
+        profileNote.textContent = payload.message || "Profile defaults updated.";
+        await refreshSettingsState();
+      }} catch (error) {{
+        profileNote.textContent = `Profile save failed: ${{String(error)}}`;
+      }}
+    }}
+
     document.getElementById("refresh-settings").addEventListener("click", () => {{
       refreshSettingsState().catch((error) => {{
         statusNote.textContent = `Refresh failed: ${{String(error)}}`;
@@ -9105,6 +9155,7 @@ def render_settings_module_page(payload: dict) -> str:
     }});
     document.getElementById("voice-settings-form").addEventListener("submit", saveVoiceSettings);
     document.getElementById("location-settings-form").addEventListener("submit", saveLocationSettings);
+    document.getElementById("profile-settings-form").addEventListener("submit", saveProfileSettings);
     render(initialPayload);
   </script>
 </body>

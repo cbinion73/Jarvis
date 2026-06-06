@@ -1808,7 +1808,7 @@ def _core_modules(
             "roadmap_level": "Level 3",
             "summary": "Settings now has a dedicated app module route with live voice, location, account, and permissions posture.",
             "what_became_real": "Settings & Permissions is now a standalone app module instead of only a shell packet with scattered APIs behind it.",
-            "remains_partial": "Broader permissions drill-ins, richer save flows, and deeper connector continuity still need follow-on slices.",
+            "remains_partial": "Broader connector actions, richer identity/account edits, and deeper connector continuity still need follow-on slices.",
             "evidence": "Dedicated /settings-center route now sits on top of live voice, location, account, identity, and personalization APIs.",
         },
         {
@@ -2327,7 +2327,7 @@ def _seam_tracker(
             "worktree": "primary worktree",
             "surface_path": "/settings-center",
             "what_became_real": "Settings & Permissions now has its own dedicated route and module payload, instead of relying only on the shell packet and scattered APIs.",
-            "remains_partial": "The settings module still needs broader permissions drill-ins, richer update workflows, and deeper connector continuity.",
+            "remains_partial": "The settings module still needs broader connector actions, richer identity/account workflows, and deeper connector continuity.",
             "tests": [
                 "tests/test_command_center_service_surface.py",
             ],
