@@ -3036,6 +3036,55 @@ def render_recovery_module_page(payload: dict) -> str:
       }}
     }}
 
+    async function planRecoveryCase(caseId, detail, fallbackLabel = "Recovery case") {{
+      if (!caseId) return;
+      actionNote.textContent = `Preparing healing plan for ${{fallbackLabel}}…`;
+      try {{
+        const response = await fetch(`/api/recovery/cases/${{encodeURIComponent(caseId)}}/plan`, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            actor: "Chris",
+            note: detail,
+          }}),
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Recovery plan creation failed");
+        }}
+        const updatedCase = payload.case || {{}};
+        actionNote.textContent = `Healing plan prepared for ${{updatedCase.title || fallbackLabel}}.`;
+        await refreshRecoveryState();
+      }} catch (error) {{
+        actionNote.textContent = `Recovery plan failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function executeNextRecoveryPlanStep(caseId, detail, fallbackLabel = "Recovery case") {{
+      if (!caseId) return;
+      actionNote.textContent = `Executing next healing step for ${{fallbackLabel}}…`;
+      try {{
+        const response = await fetch(`/api/recovery/cases/${{encodeURIComponent(caseId)}}/plan/execute-next`, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            actor: "Chris",
+            note: detail,
+          }}),
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Recovery plan step failed");
+        }}
+        const updatedCase = payload.case || {{}};
+        const step = payload.step || {{}};
+        actionNote.textContent = `Completed healing step "${{step.label || "Recovery step"}}" for ${{updatedCase.title || fallbackLabel}}.`;
+        await refreshRecoveryState();
+      }} catch (error) {{
+        actionNote.textContent = `Recovery plan step failed: ${{String(error)}}`;
+      }}
+    }}
+
     function selectedItem(payload) {{
       const failure = payload.failure_recovery || {{}};
       const pending = Array.isArray(payload.pending_approvals) ? payload.pending_approvals : [];
@@ -3069,6 +3118,7 @@ def render_recovery_module_page(payload: dict) -> str:
             ${{item.request_id ? chip("approval gate", "steady") : ""}}
             ${{item.case_id ? chip(item.status_label || item.status || "case", item.status === "resolved" ? "accepted" : item.status === "watch" ? "steady" : "regressed") : ""}}
             ${{item.case_id ? chip(item.remediation_status_label || item.remediation_status || "Available", item.remediation_status === "executed" ? "accepted" : item.remediation_status === "staged" ? "steady" : "") : ""}}
+            ${{item.case_id ? chip(item.remediation_plan_status_label || item.remediation_plan_status || "Unplanned", item.remediation_plan_status === "completed" ? "accepted" : item.remediation_plan_status === "in_progress" ? "steady" : "") : ""}}
             ${{item.name ? chip("integration", "regressed") : ""}}
             ${{item.timestamp ? chip(item.timestamp, "steady") : ""}}
             ${{item.risk_tier ? chip(item.risk_tier, "steady") : ""}}
@@ -3078,7 +3128,10 @@ def render_recovery_module_page(payload: dict) -> str:
             <div><label>Integration Issues</label><strong>${{esc(String(failure.integration_issue_count || 0))}}</strong></div>
             <div><label>Recent Failures</label><strong>${{esc(String(failure.recent_failure_count || 0))}}</strong></div>
             <div><label>Dirty Lane</label><strong>${{esc(String(failure.dirty_count || 0))}}</strong></div>
+            ${{item.case_id ? `<div><label>Healing Plan</label><strong>${{esc(String(item.remediation_plan_completed_count || 0))}} / ${{esc(String(item.remediation_plan_count || 0))}} complete</strong></div>` : ""}}
+            ${{item.case_id ? `<div><label>Next Healing Step</label><strong>${{esc(item.next_plan_step_label || "Plan not prepared")}}</strong></div>` : ""}}
           </div>
+          ${{item.case_id && Array.isArray(item.remediation_plan) && item.remediation_plan.length ? `<ul>${{item.remediation_plan.map((step) => `<li><strong>${{esc(step.label || "Recovery step")}}</strong><span>${{esc(step.detail || step.status || "No detail recorded.")}}</span><span>${{esc((step.status || "pending").replaceAll("_", " "))}}</span></li>`).join("")}}</ul>` : ""}}
           <div class="action-row">
             <a href="${{esc(route)}}">Open Recovery View</a>
             ${{routeLinks(relatedRoutes)}}
@@ -3092,6 +3145,8 @@ def render_recovery_module_page(payload: dict) -> str:
             ${{item.case_id ? `<button type="button" class="alt" data-case-execute="stabilize" data-case-id="${{esc(item.case_id)}}" data-case-label="${{esc(title)}}" data-case-detail="${{esc(summary)}}">Stabilize Recovery Loop</button>` : ""}}
             ${{item.case_id ? `<button type="button" data-case-remediation="stage" data-case-id="${{esc(item.case_id)}}" data-case-label="${{esc(title)}}" data-case-detail="${{esc(summary)}}">Stage Auto-Remediation</button>` : ""}}
             ${{item.case_id ? `<button type="button" class="alt" data-case-remediation="execute" data-case-id="${{esc(item.case_id)}}" data-case-label="${{esc(title)}}" data-case-detail="${{esc(summary)}}">Execute Auto-Remediation</button>` : ""}}
+            ${{item.case_id ? `<button type="button" data-case-plan="prepare" data-case-id="${{esc(item.case_id)}}" data-case-label="${{esc(title)}}" data-case-detail="${{esc(summary)}}">Prepare Healing Plan</button>` : ""}}
+            ${{item.case_id ? `<button type="button" class="alt" data-case-plan="execute-next" data-case-id="${{esc(item.case_id)}}" data-case-label="${{esc(title)}}" data-case-detail="${{esc(summary)}}">Execute Next Healing Step</button>` : ""}}
             <button type="button" data-recovery-action="retry" data-recovery-kind="${{esc(item.request_id ? "approval" : item.name ? "integration" : "failure")}}" data-recovery-label="${{esc(title)}}" data-recovery-detail="${{esc(summary)}}" data-recovery-target-id="${{esc(item.request_id || "")}}">Stage Retry</button>
             <button type="button" class="alt" data-recovery-action="stabilize" data-recovery-kind="${{esc(item.request_id ? "approval" : item.name ? "integration" : "failure")}}" data-recovery-label="${{esc(title)}}" data-recovery-detail="${{esc(summary)}}">Mark Stabilized</button>
           </div>
@@ -3167,6 +3222,19 @@ def render_recovery_module_page(payload: dict) -> str:
             button.getAttribute("data-case-label") || "Recovery case",
           ).catch((error) => {{
             actionNote.textContent = `Recovery remediation failed: ${{String(error)}}`;
+          }});
+        }});
+      }});
+      document.querySelectorAll("[data-case-plan]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          const action = button.getAttribute("data-case-plan") || "prepare";
+          const runner = action === "execute-next" ? executeNextRecoveryPlanStep : planRecoveryCase;
+          runner(
+            button.getAttribute("data-case-id") || "",
+            button.getAttribute("data-case-detail") || "Recovery healing step requested.",
+            button.getAttribute("data-case-label") || "Recovery case",
+          ).catch((error) => {{
+            actionNote.textContent = `Recovery plan action failed: ${{String(error)}}`;
           }});
         }});
       }});
@@ -3271,11 +3339,14 @@ def render_recovery_module_page(payload: dict) -> str:
             <div class="chips">
               ${{chip(item.status_label || item.status || "Open", item.status === "resolved" ? "accepted" : item.status === "watch" ? "steady" : "regressed")}}
               ${{chip(item.remediation_status_label || item.remediation_status || "Available", item.remediation_status === "executed" ? "accepted" : item.remediation_status === "staged" ? "steady" : "")}}
+              ${{chip(item.remediation_plan_status_label || item.remediation_plan_status || "Unplanned", item.remediation_plan_status === "completed" ? "accepted" : item.remediation_plan_status === "in_progress" ? "steady" : "")}}
               ${{item.source_kind ? chip(item.source_kind.replaceAll("-", " ")) : ""}}
               ${{item.last_action_at ? chip(item.last_action_at, "steady") : ""}}
               ${{Number(item.execution_count || 0) > 0 ? chip(`executions ${{String(item.execution_count)}}`, "steady") : ""}}
               ${{Number(item.remediation_count || 0) > 0 ? chip(`remediations ${{String(item.remediation_count)}}`, "steady") : ""}}
+              ${{Number(item.remediation_plan_count || 0) > 0 ? chip(`plan ${{String(item.remediation_plan_completed_count || 0)}}/${{String(item.remediation_plan_count || 0)}}`, "steady") : ""}}
             </div>
+            ${{Number(item.remediation_plan_count || 0) > 0 ? `<span>${{esc(item.next_plan_step_label || "Healing plan is complete.")}}</span>` : ""}}
             <div class="action-row">
               <button type="button" data-select-kind="case" data-select-index="${{esc(String(index))}}">Inspect Case</button>
               <button type="button" data-case-status="investigating" data-case-id="${{esc(item.case_id || "")}}">Mark Investigating</button>
@@ -3285,6 +3356,8 @@ def render_recovery_module_page(payload: dict) -> str:
               <button type="button" class="alt" data-case-execute="stabilize" data-case-id="${{esc(item.case_id || "")}}" data-case-label="${{esc(item.title || "Recovery case")}}" data-case-detail="${{esc(item.detail || "Recovery stabilization requested.")}}">Stabilize Recovery Loop</button>
               <button type="button" data-case-remediation="stage" data-case-id="${{esc(item.case_id || "")}}" data-case-label="${{esc(item.title || "Recovery case")}}" data-case-detail="${{esc(item.detail || "Recovery remediation staging requested.")}}">Stage Auto-Remediation</button>
               <button type="button" class="alt" data-case-remediation="execute" data-case-id="${{esc(item.case_id || "")}}" data-case-label="${{esc(item.title || "Recovery case")}}" data-case-detail="${{esc(item.detail || "Recovery remediation execution requested.")}}">Execute Auto-Remediation</button>
+              <button type="button" data-case-plan="prepare" data-case-id="${{esc(item.case_id || "")}}" data-case-label="${{esc(item.title || "Recovery case")}}" data-case-detail="${{esc(item.detail || "Recovery healing plan requested.")}}">Prepare Healing Plan</button>
+              <button type="button" class="alt" data-case-plan="execute-next" data-case-id="${{esc(item.case_id || "")}}" data-case-label="${{esc(item.title || "Recovery case")}}" data-case-detail="${{esc(item.detail || "Execute the next healing step.")}}">Execute Next Healing Step</button>
               <a href="${{esc(item.related_route || "/recovery-center")}}">Open Related Surface</a>
             </div>
           </div>
@@ -3420,6 +3493,19 @@ def render_recovery_module_page(payload: dict) -> str:
             button.getAttribute("data-case-label") || "Recovery case",
           ).catch((error) => {{
             actionNote.textContent = `Recovery remediation failed: ${{String(error)}}`;
+          }});
+        }});
+      }});
+      document.querySelectorAll("[data-case-plan]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          const action = button.getAttribute("data-case-plan") || "prepare";
+          const runner = action === "execute-next" ? executeNextRecoveryPlanStep : planRecoveryCase;
+          runner(
+            button.getAttribute("data-case-id") || "",
+            button.getAttribute("data-case-detail") || "Recovery healing step requested.",
+            button.getAttribute("data-case-label") || "Recovery case",
+          ).catch((error) => {{
+            actionNote.textContent = `Recovery plan action failed: ${{String(error)}}`;
           }});
         }});
       }});

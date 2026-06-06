@@ -123,6 +123,47 @@ class RecoveryCaseStoreTests(unittest.TestCase):
             self.assertEqual(snapshot[0]["remediation_count"], 2)
             self.assertEqual(snapshot[0]["last_remediation_action"], "execute")
 
+    def test_remediation_plan_persists_and_executes_stepwise(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            store = RecoveryCaseStore(root)
+            created = store.upsert_case(
+                source_kind="integration-failure",
+                title="Repair route hydrator",
+                detail="Hydration is failing across recovery and navigation surfaces.",
+                related_route="/recovery-center",
+                related_key="integration:route-hydrator",
+            )
+
+            planned = store.save_remediation_plan(
+                created["case_id"],
+                actor="Chris",
+                steps=[
+                    {"label": "Confirm current symptom", "detail": "Reproduce the hydration failure."},
+                    {"label": "Retry dependency bridge", "detail": "Restart the bridge before the next route refresh."},
+                ],
+                note="Prepared a two-step healing plan.",
+            )
+            progressed, step = store.execute_next_plan_step(
+                created["case_id"],
+                actor="Chris",
+                note="Executed the first healing step.",
+            )
+
+            self.assertEqual(planned["remediation_plan_status"], "planned")
+            self.assertEqual(planned["remediation_plan_count"], 2)
+            self.assertEqual(planned["next_plan_step_label"], "Confirm current symptom")
+            self.assertEqual(progressed["remediation_plan_status"], "in_progress")
+            self.assertEqual(progressed["remediation_plan_completed_count"], 1)
+            self.assertEqual(step["label"], "Confirm current symptom")
+            self.assertEqual(step["status"], "completed")
+            self.assertEqual(progressed["next_plan_step_label"], "Retry dependency bridge")
+            self.assertEqual(progressed["history"][-1]["action"], "remediation-plan-step")
+
+            snapshot = json.loads(store.path.read_text(encoding="utf-8"))
+            self.assertEqual(snapshot[0]["remediation_plan_count"], 2)
+            self.assertEqual(snapshot[0]["remediation_plan_completed_count"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

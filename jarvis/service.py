@@ -2444,7 +2444,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 else summary
             ),
             "what_became_real": "Failure & Recovery is now a standalone app module with durable retry, approval execution, stabilization, and auto-remediation actions plus visible continuity into the linked approval, supervision, activity, progress, and command-center routes.",
-            "remains_partial": "Broader self-healing depth, richer remediation planning, and wider cross-module continuity still need follow-on slices, but retry, approval execution, stabilization, and durable non-approval remediation loops are now represented across the recovery stack.",
+            "remains_partial": "Broader self-healing depth and wider cross-module continuity still need follow-on slices, but retry, approval execution, stabilization, durable remediation planning, and non-approval healing loops are now represented across the recovery stack.",
             "failure_recovery": failure_recovery,
             "recovery_cases": recovery_cases,
             "pending_approvals": pending_approvals,
@@ -2465,11 +2465,16 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "recovery_case_resolved_count": sum(1 for item in recovery_cases if str(item.get("status", "")).strip().lower() == "resolved"),
                 "recovery_case_execution_count": sum(int(item.get("execution_count", 0) or 0) for item in recovery_cases),
                 "recovery_case_remediation_count": sum(int(item.get("remediation_count", 0) or 0) for item in recovery_cases),
+                "recovery_case_plan_count": sum(int(item.get("remediation_plan_count", 0) or 0) for item in recovery_cases),
+                "recovery_case_plan_completed_count": sum(int(item.get("remediation_plan_completed_count", 0) or 0) for item in recovery_cases),
                 "recovery_case_remediation_staged_count": sum(
                     1 for item in recovery_cases if str(item.get("remediation_status", "")).strip().lower() == "staged"
                 ),
                 "recovery_case_remediation_executed_count": sum(
                     1 for item in recovery_cases if str(item.get("remediation_status", "")).strip().lower() == "executed"
+                ),
+                "recovery_case_plan_ready_count": sum(
+                    1 for item in recovery_cases if int(item.get("remediation_plan_count", 0) or 0) > 0
                 ),
             },
             "proof_paths": {
@@ -2479,6 +2484,8 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "recovery_case_api_prefix": "/api/recovery/cases/",
                 "recovery_case_execute_suffix": "/execute",
                 "recovery_case_remediation_suffix": "/remediation",
+                "recovery_case_plan_suffix": "/plan",
+                "recovery_case_plan_execute_suffix": "/plan/execute-next",
                 "supervision_route": "/supervision-snapshot",
                 "supervision_api": "/api/supervision-snapshot",
                 "approval_queue_route": "/approval-queue",
@@ -2662,6 +2669,123 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             actor=actor,
         )
         return _json({"status": "recorded", "case": case, "action": action_entry, "focus": focus_entry})
+
+    @app.post("/api/recovery/cases/{case_id}/plan")
+    async def api_recovery_case_plan(case_id: str, payload: dict[str, Any]) -> JSONResponse:
+        actor = str(payload.get("actor") or "Chris").strip() or "Chris"
+        steps_payload = payload.get("steps")
+        steps = steps_payload if isinstance(steps_payload, list) and steps_payload else [
+            {"label": "Confirm live failure signal", "detail": "Reproduce the current symptom and confirm the affected surface."},
+            {"label": "Stabilize the fragile dependency", "detail": "Reduce blast radius before the next retry or hydration attempt."},
+            {"label": "Resume module continuity", "detail": "Verify that shared activity and progress reflect the healed state."},
+        ]
+        note = str(payload.get("note") or "").strip()
+        store = RecoveryCaseStore()
+        try:
+            case = store.save_remediation_plan(
+                case_id,
+                actor=actor,
+                steps=steps,
+                note=note,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        detail = note or (
+            f"Prepared a {int(case.get('remediation_plan_count', 0) or 0)}-step healing plan for "
+            f"{str(case.get('title') or case_id).strip()}."
+        )
+        action_entry = RecoveryActionStore(DEFAULT_AUDIT_ROOT).record_action(
+            action_type="remediation-plan",
+            target_kind="recovery-case",
+            target_label=str(case.get("title") or "Recovery case").strip() or "Recovery case",
+            target_id=str(case.get("case_id") or case_id).strip(),
+            detail=detail,
+            route="/recovery-center",
+            status="planned",
+        )
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": "recovery",
+                "action": "Prepare Recovery Healing Plan",
+                "title": str(case.get("title") or "Recovery case").strip() or "Recovery case",
+                "detail": detail,
+                "why_now": f"Recovery center prepared a durable healing plan for {str(case.get('related_key') or case_id).strip()}.",
+                "result_summary": f"Recovery plan prepared with {int(case.get('remediation_plan_count', 0) or 0)} step(s).",
+                "related_route": str(case.get("related_route") or "/recovery-center").strip() or "/recovery-center",
+                "route_label": "Open Related Surface",
+                "related_kind": "recovery-case",
+                "related_label": str(case.get("case_id") or case_id).strip(),
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        focus_entry = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module="Recovery",
+            reason=detail,
+            route="/recovery-center",
+            actor=actor,
+        )
+        return _json({"status": "recorded", "case": case, "action": action_entry, "focus": focus_entry})
+
+    @app.post("/api/recovery/cases/{case_id}/plan/execute-next")
+    async def api_recovery_case_execute_next_plan_step(case_id: str, payload: dict[str, Any] | None = None) -> JSONResponse:
+        payload = payload or {}
+        actor = str(payload.get("actor") or "Chris").strip() or "Chris"
+        note = str(payload.get("note") or "").strip()
+        store = RecoveryCaseStore()
+        try:
+            case, step = store.execute_next_plan_step(
+                case_id,
+                actor=actor,
+                note=note,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        detail = note or f"Executed healing step '{str(step.get('label') or '').strip() or 'Recovery step'}'."
+        action_entry = RecoveryActionStore(DEFAULT_AUDIT_ROOT).record_action(
+            action_type="remediation-plan-step",
+            target_kind="recovery-case",
+            target_label=str(case.get("title") or "Recovery case").strip() or "Recovery case",
+            target_id=str(case.get("case_id") or case_id).strip(),
+            detail=detail,
+            route="/recovery-center",
+            status=str(case.get("remediation_plan_status") or "in_progress").strip() or "in_progress",
+        )
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": "recovery",
+                "action": "Execute Recovery Healing Step",
+                "title": str(case.get("title") or "Recovery case").strip() or "Recovery case",
+                "detail": detail,
+                "why_now": f"Recovery center advanced the next durable healing step for {str(case.get('related_key') or case_id).strip()}.",
+                "result_summary": (
+                    f"Recovery plan is now {str(case.get('remediation_plan_status_label') or case.get('remediation_plan_status') or 'In Progress').strip()}."
+                ),
+                "related_route": str(case.get("related_route") or "/recovery-center").strip() or "/recovery-center",
+                "route_label": "Open Related Surface",
+                "related_kind": "recovery-case",
+                "related_label": str(case.get("case_id") or case_id).strip(),
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        focus_entry = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module="Recovery",
+            reason=detail,
+            route="/recovery-center",
+            actor=actor,
+        )
+        return _json({"status": "recorded", "case": case, "step": step, "action": action_entry, "focus": focus_entry})
 
     async def _build_mission_board_module_payload() -> dict[str, Any]:
         command_center = build_command_center_index()

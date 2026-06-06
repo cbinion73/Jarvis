@@ -639,6 +639,8 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Stabilize Recovery Loop", recovery_html)
         self.assertIn("Stage Auto-Remediation", recovery_html)
         self.assertIn("Execute Auto-Remediation", recovery_html)
+        self.assertIn("Prepare Healing Plan", recovery_html)
+        self.assertIn("Execute Next Healing Step", recovery_html)
         self.assertIn("/api/recovery/action", recovery_html)
         self.assertIn("status", recovery_snapshot)
         self.assertIn("failure_recovery", recovery_snapshot)
@@ -649,12 +651,15 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("recovery_case_count", recovery_snapshot["counts"])
         self.assertIn("recovery_case_execution_count", recovery_snapshot["counts"])
         self.assertIn("recovery_case_remediation_count", recovery_snapshot["counts"])
+        self.assertIn("recovery_case_plan_count", recovery_snapshot["counts"])
         self.assertIn("proof_paths", recovery_snapshot)
         self.assertEqual(recovery_snapshot["proof_paths"]["module_route"], "/recovery-center")
         self.assertEqual(recovery_snapshot["proof_paths"]["module_api"], "/api/recovery/module")
         self.assertEqual(recovery_snapshot["proof_paths"]["recovery_action_api"], "/api/recovery/action")
         self.assertEqual(recovery_snapshot["proof_paths"]["recovery_case_execute_suffix"], "/execute")
         self.assertEqual(recovery_snapshot["proof_paths"]["recovery_case_remediation_suffix"], "/remediation")
+        self.assertEqual(recovery_snapshot["proof_paths"]["recovery_case_plan_suffix"], "/plan")
+        self.assertEqual(recovery_snapshot["proof_paths"]["recovery_case_plan_execute_suffix"], "/plan/execute-next")
         self.assertIn("JARVIS Mission &amp; Task Board", mission_board_html)
         self.assertIn("Refresh Mission Board", mission_board_html)
         self.assertIn("Mission Authoring", mission_board_html)
@@ -1068,6 +1073,57 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
                 for item in activity_payload
             )
         )
+        self.assertEqual(progress_snapshot["progress_next_focus"], "Recovery")
+        self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Recovery")
+
+    def test_recovery_case_plan_persists_into_recovery_activity_and_progress(self) -> None:
+        recovery_module_response = asyncio.run(self._route("/api/recovery/module", "GET")())
+        recovery_payload = self._json_body(recovery_module_response)
+        self.assertGreaterEqual(len(recovery_payload["recovery_cases"]), 1)
+        case_id = recovery_payload["recovery_cases"][0]["case_id"]
+
+        plan_response = asyncio.run(
+            self._route("/api/recovery/cases/{case_id}/plan", "POST")(
+                case_id,
+                {
+                    "actor": "Chris",
+                    "steps": [
+                        {"label": "Confirm signal", "detail": "Reproduce the failure in the live route."},
+                        {"label": "Heal dependency", "detail": "Repair the connector before the next refresh."},
+                    ],
+                    "note": "Prepared a route-healing plan from Recovery Center.",
+                },
+            )
+        )
+        step_response = asyncio.run(
+            self._route("/api/recovery/cases/{case_id}/plan/execute-next", "POST")(
+                case_id,
+                {
+                    "actor": "Chris",
+                    "note": "Executed the next healing step from Recovery Center.",
+                },
+            )
+        )
+
+        plan_payload = self._json_body(plan_response)
+        step_payload = self._json_body(step_response)
+        self.assertEqual(plan_payload["status"], "recorded")
+        self.assertEqual(plan_payload["case"]["remediation_plan_count"], 2)
+        self.assertEqual(plan_payload["action"]["action_type"], "remediation-plan")
+        self.assertEqual(step_payload["status"], "recorded")
+        self.assertEqual(step_payload["step"]["status"], "completed")
+        self.assertEqual(step_payload["action"]["action_type"], "remediation-plan-step")
+
+        refreshed_recovery = self._json_body(asyncio.run(self._route("/api/recovery/module", "GET")()))
+        activity_payload = self._json_body(asyncio.run(self._route("/api/activity", "GET")()))
+        progress_snapshot = self._json_body(asyncio.run(self._route("/api/progress/module", "GET")()))
+
+        target_case = next(item for item in refreshed_recovery["recovery_cases"] if item.get("case_id") == case_id)
+        self.assertEqual(target_case["remediation_plan_count"], 2)
+        self.assertEqual(target_case["remediation_plan_completed_count"], 1)
+        self.assertEqual(target_case["remediation_plan_status"], "in_progress")
+        self.assertTrue(any(item.get("target_id") == case_id and str(item.get("action_type")) == "remediation-plan-step" for item in refreshed_recovery["recovery_actions"]["recent"]))
+        self.assertTrue(any(item.get("related_kind") == "recovery-case" and "healing step" in str(item.get("detail") or "").lower() for item in activity_payload))
         self.assertEqual(progress_snapshot["progress_next_focus"], "Recovery")
         self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Recovery")
 

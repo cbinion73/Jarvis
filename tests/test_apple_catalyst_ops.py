@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from jarvis.apple_api import (
+    _advance_catalyst_recovery_plan,
     _approve_catalyst_approval,
     _build_catalyst_ops_overview,
     _execute_catalyst_recovery_case,
@@ -93,6 +94,15 @@ class CatalystOpsAppleAPITests(unittest.TestCase):
             action_type="retry",
             note="Retry the weather relay before commute mode.",
         )
+        RecoveryCaseStore(root).save_remediation_plan(
+            case["case_id"],
+            actor="chris",
+            steps=[
+                "Confirm current symptom",
+                "Restart the route bridge",
+            ],
+            note="Catalyst prepared a healing plan for the route relay.",
+        )
         AuditLog(root).log_event(
             "operator-action",
             {
@@ -110,6 +120,10 @@ class CatalystOpsAppleAPITests(unittest.TestCase):
         self.assertEqual(overview["counts"]["mission_count"], 0)
         self.assertEqual(overview["recovery_cases"][0]["next_action_type"], "retry")
         self.assertEqual(overview["recovery_cases"][0]["remediation_action_type"], "execute")
+        self.assertEqual(overview["recovery_cases"][0]["remediation_plan_status"], "planned")
+        self.assertEqual(overview["recovery_cases"][0]["remediation_plan_completed_count"], 0)
+        self.assertEqual(overview["recovery_cases"][0]["next_plan_step_label"], "Confirm current symptom")
+        self.assertEqual(overview["recovery_cases"][0]["plan_action_label"], "Execute Next Healing Step")
         self.assertEqual(overview["approvals"][0]["title"], "Approve storm comms handoff")
         self.assertEqual(overview["recent_activity"][0]["related_route"], "/command-center")
         self.assertIn("agent_ops", overview)
@@ -153,6 +167,22 @@ class CatalystOpsAppleAPITests(unittest.TestCase):
         self.assertEqual(remediation["status"], "recorded")
         self.assertEqual(remediation["case"]["remediation_status"], "executed")
 
+        RecoveryCaseStore(Path("data/logs")).save_remediation_plan(
+            case["case_id"],
+            actor="chris",
+            steps=["Confirm current symptom", "Restart the route bridge"],
+            note="Catalyst prepared the healing plan before advancing it.",
+        )
+        plan_step = _advance_catalyst_recovery_plan(
+            case_id=case["case_id"],
+            actor="chris",
+            note="Catalyst advanced the next healing step from the native ops studio.",
+        )
+        self.assertEqual(plan_step["status"], "recorded")
+        self.assertEqual(plan_step["step"]["status"], "completed")
+        self.assertEqual(plan_step["case"]["remediation_plan_status"], "in_progress")
+        self.assertEqual(plan_step["focus"]["module"], "Recovery")
+
         focus_summary = ProgressFocusStore(Path("data/logs")).summary(limit=8)
         self.assertEqual(focus_summary["latest"]["module"], "Recovery")
 
@@ -162,6 +192,7 @@ class CatalystOpsAppleAPITests(unittest.TestCase):
         self.assertIn("Approve Catalyst Approval", titles)
         self.assertIn("Execute Catalyst Recovery Loop", titles)
         self.assertIn("Execute Catalyst Recovery Auto-Remediation", titles)
+        self.assertIn("Execute Catalyst Recovery Healing Step", titles)
 
     def test_update_catalyst_mission_status_records_shared_focus(self) -> None:
         class _MissionRuntime(_StubRuntime):

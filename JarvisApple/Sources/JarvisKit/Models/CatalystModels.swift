@@ -228,11 +228,17 @@ public struct CatalystRecoveryCaseEntry: Codable, Equatable, Identifiable, Senda
     public let remediationStatus: String
     public let remediationStatusLabel: String
     public let remediationCount: Int
+    public let remediationPlanStatus: String
+    public let remediationPlanStatusLabel: String
+    public let remediationPlanCount: Int
+    public let remediationPlanCompletedCount: Int
+    public let nextPlanStepLabel: String
     public let relatedRoute: String
     public let nextActionType: String
     public let nextActionLabel: String
     public let remediationActionType: String
     public let remediationActionLabel: String
+    public let planActionLabel: String
 
     public var id: String { caseId }
 
@@ -246,11 +252,17 @@ public struct CatalystRecoveryCaseEntry: Codable, Equatable, Identifiable, Senda
         case remediationStatus = "remediation_status"
         case remediationStatusLabel = "remediation_status_label"
         case remediationCount = "remediation_count"
+        case remediationPlanStatus = "remediation_plan_status"
+        case remediationPlanStatusLabel = "remediation_plan_status_label"
+        case remediationPlanCount = "remediation_plan_count"
+        case remediationPlanCompletedCount = "remediation_plan_completed_count"
+        case nextPlanStepLabel = "next_plan_step_label"
         case relatedRoute = "related_route"
         case nextActionType = "next_action_type"
         case nextActionLabel = "next_action_label"
         case remediationActionType = "remediation_action_type"
         case remediationActionLabel = "remediation_action_label"
+        case planActionLabel = "plan_action_label"
     }
 }
 

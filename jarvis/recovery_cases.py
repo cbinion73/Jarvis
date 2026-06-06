@@ -63,8 +63,68 @@ class RecoveryCaseStore:
         append_jsonl(self.log_path, payload)
         append_jsonl(self.state_log_path, payload)
 
+    def _normalize_plan_step(self, raw_step: Any, index: int) -> dict[str, Any] | None:
+        if isinstance(raw_step, str):
+            label = raw_step.strip()
+            detail = ""
+            status = "pending"
+            step_id = ""
+        elif isinstance(raw_step, dict):
+            label = str(raw_step.get("label") or raw_step.get("title") or raw_step.get("step") or "").strip()
+            detail = str(raw_step.get("detail") or raw_step.get("summary") or "").strip()
+            status = str(raw_step.get("status") or "pending").strip().lower() or "pending"
+            step_id = str(raw_step.get("step_id") or raw_step.get("id") or "").strip()
+        else:
+            return None
+        if not label:
+            return None
+        if status not in {"pending", "completed"}:
+            status = "pending"
+        return {
+            "step_id": step_id or f"recovery-step-{index + 1}",
+            "label": label,
+            "detail": detail,
+            "status": status,
+            "completed_at": str(raw_step.get("completed_at") or "").strip() if isinstance(raw_step, dict) else "",
+        }
+
+    def _refresh_plan_state(self, record: dict[str, Any]) -> None:
+        raw_steps = record.get("remediation_plan")
+        normalized_steps: list[dict[str, Any]] = []
+        if isinstance(raw_steps, list):
+            for index, item in enumerate(raw_steps):
+                step = self._normalize_plan_step(item, index)
+                if step is not None:
+                    normalized_steps.append(step)
+        record["remediation_plan"] = normalized_steps
+        total = len(normalized_steps)
+        completed = sum(1 for item in normalized_steps if str(item.get("status") or "").strip().lower() == "completed")
+        pending_steps = [item for item in normalized_steps if str(item.get("status") or "").strip().lower() != "completed"]
+        next_step = pending_steps[0] if pending_steps else None
+        if total == 0:
+            plan_status = "unplanned"
+            plan_label = "Unplanned"
+        elif completed >= total:
+            plan_status = "completed"
+            plan_label = "Completed"
+        elif completed == 0:
+            plan_status = "planned"
+            plan_label = "Planned"
+        else:
+            plan_status = "in_progress"
+            plan_label = "In Progress"
+        record["remediation_plan_count"] = total
+        record["remediation_plan_completed_count"] = completed
+        record["remediation_plan_status"] = plan_status
+        record["remediation_plan_status_label"] = plan_label
+        record["next_plan_step_id"] = str((next_step or {}).get("step_id") or "").strip()
+        record["next_plan_step_label"] = str((next_step or {}).get("label") or "").strip()
+
     def list_cases(self) -> list[dict[str, Any]]:
-        return deepcopy(self._load_json())
+        records = self._load_json()
+        for item in records:
+            self._refresh_plan_state(item)
+        return deepcopy(records)
 
     def upsert_case(
         self,
@@ -116,7 +176,15 @@ class RecoveryCaseStore:
                 "last_remediation_at": "",
                 "last_remediation_action": "",
                 "last_remediation_status": "",
+                "remediation_plan": [],
+                "remediation_plan_count": 0,
+                "remediation_plan_completed_count": 0,
+                "remediation_plan_status": "unplanned",
+                "remediation_plan_status_label": "Unplanned",
+                "next_plan_step_id": "",
+                "next_plan_step_label": "",
             }
+            self._refresh_plan_state(record)
             records.append(record)
             self._save(records)
             return deepcopy(record)
@@ -131,6 +199,14 @@ class RecoveryCaseStore:
         existing.setdefault("last_remediation_at", "")
         existing.setdefault("last_remediation_action", "")
         existing.setdefault("last_remediation_status", "")
+        existing.setdefault("remediation_plan", [])
+        existing.setdefault("remediation_plan_count", 0)
+        existing.setdefault("remediation_plan_completed_count", 0)
+        existing.setdefault("remediation_plan_status", "unplanned")
+        existing.setdefault("remediation_plan_status_label", "Unplanned")
+        existing.setdefault("next_plan_step_id", "")
+        existing.setdefault("next_plan_step_label", "")
+        self._refresh_plan_state(existing)
         existing["updated_at"] = now
         self._save(records)
         return deepcopy(existing)
@@ -168,6 +244,7 @@ class RecoveryCaseStore:
             }
         )
         target["history"] = history[-12:]
+        self._refresh_plan_state(target)
         self._save(records)
         return deepcopy(target)
 
@@ -225,6 +302,7 @@ class RecoveryCaseStore:
             }
         )
         target["history"] = history[-16:]
+        self._refresh_plan_state(target)
         self._save(records)
         return deepcopy(target)
 
@@ -282,5 +360,104 @@ class RecoveryCaseStore:
             }
         )
         target["history"] = history[-20:]
+        self._refresh_plan_state(target)
         self._save(records)
         return deepcopy(target)
+
+    def save_remediation_plan(
+        self,
+        case_id: str,
+        *,
+        actor: str,
+        steps: list[Any],
+        note: str = "",
+    ) -> dict[str, Any]:
+        records = self._load_json()
+        target = None
+        for item in records:
+            if str(item.get("case_id", "")).strip() == case_id.strip():
+                target = item
+                break
+        if target is None:
+            raise KeyError("Recovery case not found.")
+        normalized_steps = [
+            step
+            for index, raw_step in enumerate(steps)
+            for step in [self._normalize_plan_step(raw_step, index)]
+            if step is not None
+        ]
+        if not normalized_steps:
+            raise ValueError("At least one remediation step is required.")
+
+        now = _now_iso()
+        target["remediation_plan"] = normalized_steps
+        target["updated_at"] = now
+        target["last_action_at"] = now
+        target["last_action"] = "remediation-plan"
+        self._refresh_plan_state(target)
+
+        history = list(target.get("history") or [])
+        history.append(
+            {
+                "timestamp": now,
+                "action": "remediation-plan",
+                "status": str(target.get("status") or "open"),
+                "actor": actor.strip() or "Chris",
+                "detail": note.strip() or f"Recovery plan prepared with {len(normalized_steps)} step(s).",
+            }
+        )
+        target["history"] = history[-24:]
+        self._save(records)
+        return deepcopy(target)
+
+    def execute_next_plan_step(
+        self,
+        case_id: str,
+        *,
+        actor: str,
+        note: str = "",
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        records = self._load_json()
+        target = None
+        for item in records:
+            if str(item.get("case_id", "")).strip() == case_id.strip():
+                target = item
+                break
+        if target is None:
+            raise KeyError("Recovery case not found.")
+        self._refresh_plan_state(target)
+        steps = list(target.get("remediation_plan") or [])
+        next_index = next(
+            (index for index, step in enumerate(steps) if str(step.get("status") or "").strip().lower() != "completed"),
+            -1,
+        )
+        if next_index < 0:
+            raise ValueError("Recovery plan has no pending steps.")
+
+        now = _now_iso()
+        step = dict(steps[next_index])
+        step["status"] = "completed"
+        step["completed_at"] = now
+        steps[next_index] = step
+        target["remediation_plan"] = steps
+        target["updated_at"] = now
+        target["last_action_at"] = now
+        target["last_action"] = "remediation-plan-step"
+        target["last_remediation_at"] = now
+        target["last_remediation_action"] = "plan-step"
+        target["last_remediation_status"] = "in_progress"
+        self._refresh_plan_state(target)
+
+        history = list(target.get("history") or [])
+        history.append(
+            {
+                "timestamp": now,
+                "action": "remediation-plan-step",
+                "status": str(target.get("status") or "open"),
+                "actor": actor.strip() or "Chris",
+                "detail": note.strip() or f"Executed remediation step: {step.get('label')}.",
+            }
+        )
+        target["history"] = history[-26:]
+        self._save(records)
+        return deepcopy(target), deepcopy(step)

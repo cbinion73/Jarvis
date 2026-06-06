@@ -726,6 +726,24 @@ public final class AppleAPIClient: Sendable {
     }
 
     @discardableResult
+    public func executeNextCatalystRecoveryPlanStep(
+        _ caseId: String,
+        note: String = "",
+        actor: String = "chris"
+    ) async throws -> Bool {
+        struct Body: Encodable {
+            let note: String
+            let actor: String
+        }
+        struct Response: Decodable { let status: String }
+        let response: Response = try await post(
+            "/api/apple/catalyst/recovery-cases/\(caseId)/plan/execute-next",
+            body: Body(note: note, actor: actor)
+        )
+        return response.status == "recorded"
+    }
+
+    @discardableResult
     public func queueCatalystAgentRun(
         _ agentId: String,
         actor: String = "chris"

@@ -762,6 +762,22 @@ struct CatalystView: View {
         }
     }
 
+    private func advanceCatalystRecoveryPlan(_ entry: CatalystRecoveryCaseEntry) async {
+        actionInFlight = "recovery-plan:\(entry.id)"
+        opsMessage = "\(entry.planActionLabel) for \(entry.title)…"
+        defer { actionInFlight = nil }
+        do {
+            _ = try await AppleAPIClient.shared.executeNextCatalystRecoveryPlanStep(
+                entry.caseId,
+                note: "Catalyst advanced the next healing step from the native ops studio."
+            )
+            await loadOpsStudio()
+            opsMessage = "\(entry.planActionLabel) finished for \(entry.title)."
+        } catch {
+            opsMessage = "Unable to advance recovery plan: \(error.localizedDescription)"
+        }
+    }
+
     private func queueCatalystAgentRun(_ agent: CatalystAgentOpsEntry) async {
         actionInFlight = "agent:\(agent.id)"
         opsMessage = "Queueing \(agent.name)…"
@@ -938,6 +954,14 @@ struct CatalystView: View {
                 Text("\(entry.statusLabel) · \(entry.executionCount)x loop · \(entry.remediationStatusLabel) · \(entry.remediationCount)x remediation")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+                Text("\(entry.remediationPlanStatusLabel) healing plan · \(entry.remediationPlanCompletedCount)/\(entry.remediationPlanCount) step(s)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                if !entry.nextPlanStepLabel.isEmpty {
+                    Text("Next: \(entry.nextPlanStepLabel)")
+                        .font(.caption2)
+                        .foregroundStyle(.cyan.opacity(0.82))
+                }
                 Text(entry.detail)
                     .font(.caption2)
                     .foregroundStyle(.secondary.opacity(0.9))
@@ -971,6 +995,20 @@ struct CatalystView: View {
                 .buttonStyle(.plain)
                 .disabled(actionInFlight != nil)
                 .opacity(actionInFlight != nil ? 0.7 : 1.0)
+
+                Button {
+                    Task { await advanceCatalystRecoveryPlan(entry) }
+                } label: {
+                    Text(entry.planActionLabel)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(Color(red: 0.36, green: 0.65, blue: 0.97).opacity(0.78), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(actionInFlight != nil || entry.remediationPlanCount <= 0 || entry.remediationPlanStatus == "completed")
+                .opacity(actionInFlight != nil || entry.remediationPlanCount <= 0 || entry.remediationPlanStatus == "completed" ? 0.7 : 1.0)
             }
         }
         .padding(10)
