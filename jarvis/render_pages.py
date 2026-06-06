@@ -1355,6 +1355,21 @@ def render_agent_ops_module_page(payload: dict) -> str:
       return Array.isArray((payload.agent_ops_roster || {{}}).items) ? payload.agent_ops_roster.items : [];
     }}
 
+    async function recordAgentOpsActivity(payload) {{
+      try {{
+        const response = await fetch("/api/activity/operator-action", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify(payload || {{}}),
+        }});
+        if (!response.ok) return false;
+        await response.json().catch(() => ({{}}));
+        return true;
+      }} catch (_error) {{
+        return false;
+      }}
+    }}
+
     function setSelectedAgent(agentId) {{
       selectedAgentId = agentId || "";
       render(latestPayload);
@@ -1377,12 +1392,155 @@ def render_agent_ops_module_page(payload: dict) -> str:
       }}
     }}
 
+    async function promoteTaskAgent(agent) {{
+      if (!agent || !agent.is_task_agent || !agent.agent_id) return;
+      const roleInput = document.getElementById("task-agent-role-name");
+      const policyInput = document.getElementById("task-agent-policy-assignment");
+      const memoryInput = document.getElementById("task-agent-memory-boundary");
+      const draft = {{
+        role_name: String(roleInput?.value || agent.name || "").trim(),
+        policy_assignment: String(policyInput?.value || agent.assignment || "").trim(),
+        memory_boundary: String(memoryInput?.value || agent.memory_boundary || "").trim(),
+        force: true,
+      }};
+      actionNote.textContent = `Promoting task agent ${{agent.agent_id}}…`;
+      try {{
+        const response = await fetch(`/api/agents/${{encodeURIComponent(agent.agent_id)}}/promote`, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify(draft),
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Task agent promotion failed");
+        }}
+        const recorded = await recordAgentOpsActivity({{
+          actor: "Chris",
+          domain: "agent-ops",
+          action: "Promote Task Agent",
+          title: agent.name || agent.agent_id,
+          status: String(payload.promotion_status || payload.status || "promoted"),
+          detail: `Action succeeded: /api/agents/${{agent.agent_id}}/promote`,
+          why_now: draft.policy_assignment || agent.assignment || `Task agent ${{agent.agent_id}} needed a durable role assignment.`,
+          result_summary: `Task agent promotion status: ${{String(payload.promotion_status || payload.status || "promoted")}}`,
+          route: "/agent-ops-center",
+          route_label: "Open Agent Ops",
+          related_kind: "agent",
+          related_label: agent.name || agent.agent_id,
+          succeeded: true,
+        }});
+        actionNote.textContent = recorded
+          ? `Promoted ${{agent.agent_id}} and recorded the result in shared activity.`
+          : `Promoted ${{agent.agent_id}}.`;
+        await refreshAgentOpsState();
+        selectedAgentId = agent.agent_id;
+      }} catch (error) {{
+        const errorText = String(error);
+        await recordAgentOpsActivity({{
+          actor: "Chris",
+          domain: "agent-ops",
+          action: "Promote Task Agent",
+          title: agent.name || agent.agent_id,
+          status: "failed",
+          detail: `Action failed: /api/agents/${{agent.agent_id}}/promote`,
+          why_now: errorText,
+          result_summary: `Task agent promotion failed: ${{errorText}}`,
+          route: "/agent-ops-center",
+          route_label: "Open Agent Ops",
+          related_kind: "agent",
+          related_label: agent.name || agent.agent_id,
+          succeeded: false,
+        }});
+        actionNote.textContent = `Promote Task Agent failed: ${{errorText}}`;
+      }}
+    }}
+
+    async function retireTaskAgent(agent) {{
+      if (!agent || !agent.is_task_agent || !agent.agent_id) return;
+      actionNote.textContent = `Retiring task agent ${{agent.agent_id}}…`;
+      try {{
+        const response = await fetch(`/api/agents/${{encodeURIComponent(agent.agent_id)}}/retire`, {{
+          method: "POST",
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Task agent retirement failed");
+        }}
+        const recorded = await recordAgentOpsActivity({{
+          actor: "Chris",
+          domain: "agent-ops",
+          action: "Retire Task Agent",
+          title: agent.name || agent.agent_id,
+          status: String(payload.status || "retired"),
+          detail: `Action succeeded: /api/agents/${{agent.agent_id}}/retire`,
+          why_now: agent.assignment || agent.mission_id || `Task agent ${{agent.agent_id}} is being retired from active duty.`,
+          result_summary: `Task agent retirement status: ${{String(payload.status || "retired")}}`,
+          route: "/agent-ops-center",
+          route_label: "Open Agent Ops",
+          related_kind: "agent",
+          related_label: agent.name || agent.agent_id,
+          succeeded: true,
+        }});
+        actionNote.textContent = recorded
+          ? `Retired ${{agent.agent_id}} and recorded the result in shared activity.`
+          : `Retired ${{agent.agent_id}}.`;
+        await refreshAgentOpsState();
+        selectedAgentId = agent.agent_id;
+      }} catch (error) {{
+        const errorText = String(error);
+        await recordAgentOpsActivity({{
+          actor: "Chris",
+          domain: "agent-ops",
+          action: "Retire Task Agent",
+          title: agent.name || agent.agent_id,
+          status: "failed",
+          detail: `Action failed: /api/agents/${{agent.agent_id}}/retire`,
+          why_now: errorText,
+          result_summary: `Task agent retirement failed: ${{errorText}}`,
+          route: "/agent-ops-center",
+          route_label: "Open Agent Ops",
+          related_kind: "agent",
+          related_label: agent.name || agent.agent_id,
+          succeeded: false,
+        }});
+        actionNote.textContent = `Retire Task Agent failed: ${{errorText}}`;
+      }}
+    }}
+
     function renderDetail(agent) {{
       if (!agent) {{
         detailEl.innerHTML = "<p class=\\"detail-copy\\">No visible agent selected yet.</p>";
         return;
       }}
       const roles = Array.isArray(agent.mission_roles) ? agent.mission_roles : [];
+      const taskAgentControls = agent.is_task_agent ? `
+        <div class="meta">
+          <div><label>Source</label><strong>${{esc(agent.source_label || "Task Agent")}}</strong></div>
+          <div><label>Mission</label><strong>${{esc(agent.mission_id || "not linked")}}</strong></div>
+          <div><label>Template</label><strong>${{esc(agent.template_id || "not recorded")}}</strong></div>
+          <div><label>Policy Assignment</label><strong>${{esc(agent.policy_assignment || "not assigned")}}</strong></div>
+          <div><label>Memory Boundary</label><strong>${{esc(agent.memory_boundary || "not recorded")}}</strong></div>
+          <div><label>Promotion Candidate</label><strong>${{esc(agent.promotion_candidate ? "eligible" : "not yet")}}</strong></div>
+        </div>
+        <div class="meta">
+          <div>
+            <label for="task-agent-role-name">Role Name</label>
+            <input id="task-agent-role-name" value="${{esc(agent.name || "")}}" />
+          </div>
+          <div>
+            <label for="task-agent-policy-assignment">Policy Assignment</label>
+            <input id="task-agent-policy-assignment" value="${{esc(agent.policy_assignment || agent.assignment || "")}}" />
+          </div>
+          <div>
+            <label for="task-agent-memory-boundary">Memory Boundary</label>
+            <input id="task-agent-memory-boundary" value="${{esc(agent.memory_boundary || (agent.mission_id ? `mission:${{agent.mission_id}}` : ""))}}" />
+          </div>
+        </div>
+      ` : "";
+      const missionLinks = agent.mission_id ? `
+        <a href="/mission-board">Open Mission Board</a>
+        <a href="/api/missions/${{encodeURIComponent(agent.mission_id)}}">Open Mission API</a>
+      ` : '<a href="/command-center">Open Command Center</a>';
       detailEl.innerHTML = `
         <div class="agent-card">
           <div class="agent-head">
@@ -1403,12 +1561,17 @@ def render_agent_ops_module_page(payload: dict) -> str:
             <div><label>Last Activity</label><strong>${{esc(agent.last_activity || "not recorded")}}</strong></div>
             <div><label>Attention</label><strong>${{esc(agent.attention_reason || "No active attention reason recorded.")}}</strong></div>
           </div>
+          ${{taskAgentControls}}
           <div class="chips">
+            ${{chip(agent.source_label || "Agent", agent.is_task_agent ? "artifact" : "")}}
             ${{roles.length ? roles.map((role) => chip(role)).join("") : chip("No mission roles")}}
           </div>
           <div class="actions">
             <button type="button" data-queue-run="${{esc(agent.agent_id || "")}}">Queue Agent Run</button>
             <a href="/agents/workspace/${{encodeURIComponent(agent.agent_id || "")}}">Open Agent Workspace</a>
+            ${{missionLinks}}
+            ${{agent.is_task_agent && agent.status !== "retired" ? '<button type="button" data-promote-selected-task-agent="1">Promote Task Agent</button>' : ""}}
+            ${{agent.is_task_agent && agent.status !== "retired" ? '<button type="button" class="alt" data-retire-selected-task-agent="1">Retire Task Agent</button>' : ""}}
           </div>
         </div>
       `;
@@ -1444,6 +1607,7 @@ def render_agent_ops_module_page(payload: dict) -> str:
                   <span>${{esc(agent.domain || "general")}} · ${{esc(agent.assignment || "unassigned")}}</span>
                 </div>
                 <div class="chips">
+                  ${{chip(agent.source_label || "Agent", agent.is_task_agent ? "artifact" : "")}}
                   ${{chip(agent.status || "unknown", agent.status_class || "")}}
                   ${{chip(agent.maturity || "Useful", agent.maturity_class || "")}}
                 </div>
@@ -1471,6 +1635,8 @@ def render_agent_ops_module_page(payload: dict) -> str:
         item("Registry Count", String(runtimeCounts.registry_count ?? 0)),
         item("Runtime Count", String(runtimeCounts.runtime_count ?? 0)),
         item("Background Agents", String(runtimeCounts.background_count ?? 0)),
+        item("Task Agents", String(counts.task_agents ?? 0)),
+        item("Promoted Agents", String(counts.promoted ?? 0)),
         item("What Became Real", payload.what_became_real || "No module note recorded yet."),
         item("What Remains Partial", payload.remains_partial || "No partial work recorded."),
       ].join("");
@@ -1491,6 +1657,23 @@ def render_agent_ops_module_page(payload: dict) -> str:
           }}
         }});
       }});
+      const selectedAgent = currentSelection;
+      const promoteButton = document.querySelector("[data-promote-selected-task-agent]");
+      if (promoteButton && selectedAgent) {{
+        promoteButton.addEventListener("click", () => {{
+          promoteTaskAgent(selectedAgent).catch((error) => {{
+            actionNote.textContent = `Promote Task Agent failed: ${{String(error)}}`;
+          }});
+        }});
+      }}
+      const retireButton = document.querySelector("[data-retire-selected-task-agent]");
+      if (retireButton && selectedAgent) {{
+        retireButton.addEventListener("click", () => {{
+          retireTaskAgent(selectedAgent).catch((error) => {{
+            actionNote.textContent = `Retire Task Agent failed: ${{String(error)}}`;
+          }});
+        }});
+      }}
     }}
 
     async function refreshAgentOpsState() {{

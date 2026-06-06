@@ -2228,9 +2228,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "generated_at": command_center.get("generated_at", ""),
             "available": True,
             "status": "Useful" if int(roster.get("item_count", 0) or 0) else "Wired",
-            "summary": "Agent Operations now has a dedicated module route with live roster posture, runtime summary, and queue-run controls inside JARVIS.",
-            "what_became_real": "Agent Operations is now a standalone app module instead of being split across command-center summaries and hierarchy/workspace routes.",
-            "remains_partial": "Richer assignment mutation, deeper per-agent review workflows, and broader ops continuity still need follow-on slices.",
+            "summary": "Agent Operations now has a dedicated module route with live roster posture, task-agent visibility, and route-level mutation controls inside JARVIS.",
+            "what_became_real": "Agent Operations is now a standalone app module with visible core and task agents instead of being split across command-center summaries and hierarchy/workspace routes.",
+            "remains_partial": "Broader cross-route continuity, deeper assignment editing, and richer per-agent outcome review still need follow-on slices.",
             "agent_ops_roster": roster,
             "registry": {},
             "background_agents": {},
@@ -2242,6 +2242,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "running": int(counts.get("running", 0) or 0),
                 "blocked": int(counts.get("blocked", 0) or 0),
                 "attention": int(counts.get("attention", 0) or 0),
+                "task_agents": int(counts.get("task_agents", 0) or 0),
+                "core_agents": int(counts.get("core_agents", 0) or 0),
+                "promoted": int(counts.get("promoted", 0) or 0),
             },
             "proof_paths": {
                 "module_route": "/agent-ops-center",
@@ -2250,8 +2253,12 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "registry_api": "/api/agent-registry",
                 "background_agents_api": "/api/agents",
                 "agent_runtime_api": "/api/agent-runtime",
+                "task_agent_profile_api_prefix": "/api/agents/",
+                "promote_agent_api_prefix": "/api/agents/",
+                "retire_agent_api_prefix": "/api/agents/",
                 "scheduler_status_api": "/api/scheduler/status",
                 "queue_run_api_prefix": "/api/scheduler/run/",
+                "activity_api": "/api/activity/operator-action",
             },
             "errors": [],
         }
@@ -2302,7 +2309,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["summary"] = (
                 f"Agent operations loaded {payload['counts']['visible_agents']} visible agent(s), "
                 f"{payload['counts']['running']} running, {payload['counts']['blocked']} blocked, "
-                f"and {payload['counts']['attention']} needing attention."
+                f"{payload['counts']['attention']} needing attention, and {payload['counts']['task_agents']} task agent(s)."
             )
 
         if payload["errors"] and not payload["counts"]["visible_agents"]:

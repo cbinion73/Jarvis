@@ -82,6 +82,7 @@ class CommandCenterIndexTests(unittest.TestCase):
         self.assertGreaterEqual(payload["seam_tracker"]["item_count"], 3)
         self.assertGreaterEqual(payload["mission_task_board"]["item_count"], 1)
         self.assertGreaterEqual(payload["agent_ops_roster"]["item_count"], 1)
+        self.assertTrue(any(item.get("source_kind") == "task-agent" for item in payload["agent_ops_roster"]["items"]))
         self.assertGreaterEqual(payload["core_modules"]["item_count"], 10)
         self.assertGreaterEqual(payload["progress_dashboard"]["item_count"], 5)
         self.assertGreaterEqual(payload["level3_checklist"]["item_count"], 5)

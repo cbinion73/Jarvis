@@ -1043,8 +1043,14 @@ def _agent_ops_roster() -> dict[str, Any]:
         runtime_payload = json.loads(runtime_path.read_text())
     except FileNotFoundError:
         runtime_payload = {"agents": {}}
+    task_agents_path = REPO_ROOT / "data" / "missions" / "task_agents.json"
+    try:
+        task_agents_payload = json.loads(task_agents_path.read_text()) if task_agents_path.exists() else []
+    except (OSError, json.JSONDecodeError):
+        task_agents_payload = []
     registry_agents = list(registry_payload.get("agents") or [])
     runtime_agents = dict(runtime_payload.get("agents") or {})
+    task_agents = [dict(item) for item in list(task_agents_payload or []) if isinstance(item, dict)]
 
     def maturity_label(promotion_status: str) -> tuple[str, str]:
         normalized = str(promotion_status or "").strip().lower()
@@ -1073,7 +1079,7 @@ def _agent_ops_roster() -> dict[str, Any]:
         return (status or "unknown"), ("steady" if status else "artifact")
 
     items = []
-    counts = {"running": 0, "blocked": 0, "attention": 0}
+    counts = {"running": 0, "blocked": 0, "attention": 0, "core_agents": 0, "task_agents": 0, "promoted": 0}
     for registry_entry in registry_agents[:12]:
         agent_id = str(registry_entry.get("agent_id", "")).strip()
         runtime_entry = dict(runtime_agents.get(agent_id) or {})
@@ -1084,12 +1090,15 @@ def _agent_ops_roster() -> dict[str, Any]:
         supervision = dict(runtime_entry.get("supervision") or {})
         status_label, status_class = status_badge(runtime_entry, registry_entry)
         maturity, maturity_class = maturity_label(str(registry_entry.get("promotion_status", "")).strip())
+        counts["core_agents"] += 1
         if status_label == "blocked":
             counts["blocked"] += 1
         elif supervision.get("requires_attention"):
             counts["attention"] += 1
         else:
             counts["running"] += 1
+        if maturity == "Compounding":
+            counts["promoted"] += 1
         items.append(
             {
                 "agent_id": agent_id,
@@ -1107,11 +1116,76 @@ def _agent_ops_roster() -> dict[str, Any]:
                 "mission_roles": [str(item).strip() for item in list(registry_entry.get("mission_roles") or contract.get("mission_roles") or []) if str(item).strip()],
                 "attention_reason": str(supervision.get("attention_reason", "")).strip() or str(health.get("reason", "")).strip(),
                 "heartbeat_status": str(heartbeat.get("status", "")).strip() or "unknown",
+                "source_kind": "core-agent",
+                "source_label": "Core Agent",
+                "is_task_agent": False,
+                "mission_id": "",
+                "template_id": "",
+                "promotion_candidate": False,
+                "policy_assignment": "",
+                "memory_boundary": "",
+            }
+        )
+
+    for task_entry in task_agents[:12]:
+        agent_id = str(task_entry.get("agent_id", "")).strip()
+        if not agent_id:
+            continue
+        status_value = str(task_entry.get("status", "")).strip().lower() or "active"
+        promotion_status = str(task_entry.get("promotion_status", "")).strip()
+        maturity, maturity_class = maturity_label(promotion_status)
+        attention_reason = ""
+        if bool(task_entry.get("promotion_candidate")):
+            attention_reason = "Eligible for promotion based on recent task-agent outcomes."
+        if status_value in {"blocked", "failed"}:
+            status_label, status_class = "blocked", "regressed"
+            counts["blocked"] += 1
+        elif status_value in {"retired", "paused"}:
+            status_label, status_class = status_value, "steady"
+            counts["attention"] += 1
+        elif attention_reason:
+            status_label, status_class = "attention", "artifact"
+            counts["attention"] += 1
+        else:
+            status_label, status_class = status_value or "active", "accepted"
+            counts["running"] += 1
+        counts["task_agents"] += 1
+        if str(promotion_status).strip().lower() in {"promoted", "compounding"}:
+            counts["promoted"] += 1
+        mission_id = str(task_entry.get("mission_id", "")).strip()
+        items.append(
+            {
+                "agent_id": agent_id,
+                "name": str(task_entry.get("label", "")).strip() or agent_id,
+                "purpose": str(task_entry.get("purpose", "")).strip() or "No purpose recorded.",
+                "domain": str(task_entry.get("domain", "")).strip() or "general",
+                "status": status_label,
+                "status_class": status_class,
+                "assignment": mission_id or str(task_entry.get("trust_zone", "")).strip() or "unassigned",
+                "last_activity": str(task_entry.get("last_used_at", "")).strip() or str(task_entry.get("updated_at", "")).strip() or str(task_entry.get("created_at", "")).strip() or "not recorded",
+                "module": str(task_entry.get("domain", "")).strip() or str(task_entry.get("template_id", "")).strip() or "mission-control",
+                "maturity": maturity,
+                "maturity_class": maturity_class,
+                "authority_stage": "task-agent",
+                "mission_roles": [str(item).strip() for item in list(task_entry.get("mission_roles") or []) if str(item).strip()],
+                "attention_reason": attention_reason,
+                "heartbeat_status": status_value or "unknown",
+                "source_kind": "task-agent",
+                "source_label": "Task Agent",
+                "is_task_agent": True,
+                "mission_id": mission_id,
+                "template_id": str(task_entry.get("template_id", "")).strip(),
+                "promotion_candidate": bool(task_entry.get("promotion_candidate")),
+                "policy_assignment": str(task_entry.get("policy_assignment", "")).strip(),
+                "memory_boundary": str(task_entry.get("memory_boundary", "")).strip(),
             }
         )
 
     return {
-        "summary": f"{counts['running']} running, {counts['blocked']} blocked, {counts['attention']} needing attention across {len(items)} visible agent(s).",
+        "summary": (
+            f"{counts['running']} running, {counts['blocked']} blocked, {counts['attention']} needing attention "
+            f"across {len(items)} visible agent(s), including {counts['task_agents']} task agent(s) and {counts['promoted']} promoted agent(s)."
+        ),
         "item_count": len(items),
         "counts": counts,
         "items": items,
@@ -1298,7 +1372,7 @@ def _level3_checklist(
                 "tests/test_command_center_index.py",
             ],
             "proof_routes": ["/agent-ops-center", "/api/agent-ops/module"],
-            "next_slice": "Add safe assignment mutation controls and stronger last-activity drill-ins that round-trip cleanly between agent detail, missions, and command center.",
+            "next_slice": "Deepen mission-linked assignment editing and per-agent outcome review now that task-agent promotion and retirement controls are live on the standalone route.",
         },
         {
             "title": "Durable Seam and Progress Persistence",
@@ -1805,8 +1879,8 @@ def _seam_tracker(
             "branch": branch,
             "worktree": "primary worktree",
             "surface_path": "/command-center",
-            "what_became_real": f"The command center now surfaces {agent_count} registered agent contracts across {domain_count} domain lane(s) with live maturity and authority metadata.",
-            "remains_partial": "Per-agent assignments, last activity drill-ins, and direct ops controls still need their own route-level detail views.",
+            "what_became_real": f"The command center now surfaces {agent_count} registered agent contracts across {domain_count} domain lane(s) with live maturity, authority, and seeded task-agent metadata.",
+            "remains_partial": "Command-center roster continuity still needs deeper last-activity drill-ins and stronger mission-linked assignment context.",
             "tests": [
                 "tests/test_command_center_index.py",
             ],
@@ -1828,8 +1902,8 @@ def _seam_tracker(
             "branch": branch,
             "worktree": "primary worktree",
             "surface_path": "/agent-ops-center",
-            "what_became_real": "Agent operations now has a dedicated route with live roster posture, selected-agent detail, and queue-run controls inside the app shell.",
-            "remains_partial": "Deeper agent assignment edits, richer last-activity review, and broader route-to-route ops continuity still need follow-on slices.",
+            "what_became_real": "Agent operations now has a dedicated route with live core and task-agent roster posture, selected-agent detail, queue-run controls, and task-agent promotion or retirement controls inside the app shell.",
+            "remains_partial": "Broader route-to-route ops continuity, richer assignment editing, and deeper per-agent outcome review still need follow-on slices.",
             "tests": [
                 "tests/test_command_center_index.py",
                 "tests/test_command_center_service_surface.py",
