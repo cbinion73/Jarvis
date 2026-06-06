@@ -67,6 +67,50 @@ public struct CarPlayRecoveryCaseEntry: Codable, Equatable, Identifiable, Sendab
     }
 }
 
+public struct CarPlayAgentOpsEntry: Codable, Equatable, Identifiable, Sendable {
+    public let agentId: String
+    public let name: String
+    public let status: String
+    public let assignment: String
+    public let purpose: String
+    public let attentionReason: String
+    public let queueActionLabel: String
+
+    public var id: String { agentId }
+
+    enum CodingKeys: String, CodingKey {
+        case agentId = "agent_id"
+        case name
+        case status
+        case assignment
+        case purpose
+        case attentionReason = "attention_reason"
+        case queueActionLabel = "queue_action_label"
+    }
+}
+
+public struct CarPlaySupervisionEntry: Codable, Equatable, Identifiable, Sendable {
+    public let requestId: String
+    public let title: String
+    public let agent: String
+    public let risk: String
+    public let detail: String
+    public let approveLabel: String
+    public let rejectLabel: String
+
+    public var id: String { requestId }
+
+    enum CodingKeys: String, CodingKey {
+        case requestId = "request_id"
+        case title
+        case agent
+        case risk
+        case detail
+        case approveLabel = "approve_label"
+        case rejectLabel = "reject_label"
+    }
+}
+
 public struct CarPlayActivityEntry: Codable, Equatable, Identifiable, Sendable {
     public let title: String
     public let detail: String
@@ -112,12 +156,16 @@ public struct CarPlayOpsCounts: Codable, Equatable, Sendable {
     public let recoveryCaseCount: Int
     public let recentActivityCount: Int
     public let recoveryActionCount: Int
+    public let agentOpsCount: Int
+    public let supervisionCount: Int
 
     enum CodingKeys: String, CodingKey {
         case approvalCount = "approval_count"
         case recoveryCaseCount = "recovery_case_count"
         case recentActivityCount = "recent_activity_count"
         case recoveryActionCount = "recovery_action_count"
+        case agentOpsCount = "agent_ops_count"
+        case supervisionCount = "supervision_count"
     }
 }
 
@@ -127,6 +175,8 @@ public struct CarPlayOpsOverview: Codable, Equatable, Sendable {
     public let focusCandidates: [CarPlayOpsFocusCandidate]
     public let approvals: [CarPlayApprovalEntry]
     public let recoveryCases: [CarPlayRecoveryCaseEntry]
+    public let agentOps: [CarPlayAgentOpsEntry]
+    public let supervisionItems: [CarPlaySupervisionEntry]
     public let recentActivity: [CarPlayActivityEntry]
     public let missionSummary: CarPlayMissionSummary
     public let agentSummary: CarPlayAgentSummary
@@ -138,6 +188,8 @@ public struct CarPlayOpsOverview: Codable, Equatable, Sendable {
         case focusCandidates = "focus_candidates"
         case approvals
         case recoveryCases = "recovery_cases"
+        case agentOps = "agent_ops"
+        case supervisionItems = "supervision_items"
         case recentActivity = "recent_activity"
         case missionSummary = "mission_summary"
         case agentSummary = "agent_summary"

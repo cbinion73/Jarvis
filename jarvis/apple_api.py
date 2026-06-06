@@ -157,6 +157,9 @@ def _record_operator_action(
 
 
 def _build_carplay_ops_overview(runtime: Any) -> dict[str, Any]:
+    from .command_center_index import _agent_ops_roster
+    from .supervision_snapshot import build_supervision_snapshot
+
     focus_summary = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).summary(limit=5)
     recovery_cases = RecoveryCaseStore(_ACTIVITY_AUDIT_ROOT).list_cases()
     recovery_actions = RecoveryActionStore(_ACTIVITY_AUDIT_ROOT).summary(limit=4)
@@ -164,10 +167,18 @@ def _build_carplay_ops_overview(runtime: Any) -> dict[str, Any]:
     activity = AuditLog(_ACTIVITY_AUDIT_ROOT).list_recent(limit=6)
     mission_snapshot = runtime.mission_control_snapshot("Chris")
     agent_snapshot = runtime.background_agent_status(recent_activity=activity)
+    agent_roster = _agent_ops_roster()
+    supervision_snapshot = build_supervision_snapshot()
 
     latest_focus = dict(focus_summary.get("latest") or {})
     active_missions = list(mission_snapshot.get("active_missions") or [])
     agent_statuses = list(agent_snapshot.get("statuses") or [])
+    agent_items = [dict(item) for item in list(agent_roster.get("items") or []) if isinstance(item, dict)]
+    supervision_items = [
+        dict(item)
+        for item in list(supervision_snapshot.get("attention_queue") or [])
+        if isinstance(item, dict)
+    ]
 
     return {
         "generated_at": _ts(),
@@ -201,6 +212,32 @@ def _build_carplay_ops_overview(runtime: Any) -> dict[str, Any]:
             for item in recovery_cases[:5]
             if isinstance(item, dict)
         ],
+        "agent_ops": [
+            {
+                "agent_id": str(item.get("agent_id") or "").strip(),
+                "name": str(item.get("name") or item.get("agent_id") or "Agent").strip() or "Agent",
+                "status": str(item.get("status") or "unknown").strip() or "unknown",
+                "assignment": str(item.get("assignment") or "unassigned").strip() or "unassigned",
+                "purpose": str(item.get("purpose") or "No purpose recorded.").strip() or "No purpose recorded.",
+                "attention_reason": str(item.get("attention_reason") or "").strip(),
+                "queue_action_label": "Queue Run",
+            }
+            for item in agent_items[:4]
+            if str(item.get("agent_id") or "").strip()
+        ],
+        "supervision_items": [
+            {
+                "request_id": str(item.get("request_id") or "").strip(),
+                "title": str(item.get("title") or "Supervision review").strip() or "Supervision review",
+                "agent": str(item.get("agent_label") or item.get("actor_id") or "Unknown agent").strip() or "Unknown agent",
+                "risk": str(item.get("risk_tier") or "medium").strip() or "medium",
+                "detail": str(item.get("why_now") or "Needs supervision review.").strip() or "Needs supervision review.",
+                "approve_label": "Approve",
+                "reject_label": "Reject",
+            }
+            for item in supervision_items[:4]
+            if str(item.get("request_id") or "").strip()
+        ],
         "recent_activity": [
             {
                 "title": str(item.get("action") or item.get("entry_type") or "Activity").strip() or "Activity",
@@ -226,6 +263,8 @@ def _build_carplay_ops_overview(runtime: Any) -> dict[str, Any]:
             "recovery_case_count": len(recovery_cases),
             "recent_activity_count": len(activity),
             "recovery_action_count": int(recovery_actions.get("count", 0) or 0),
+            "agent_ops_count": len(agent_items),
+            "supervision_count": len(supervision_items),
         },
     }
 
@@ -251,6 +290,104 @@ def _save_carplay_ops_focus(*, module: str, route: str, actor: str, reason: str)
         succeeded=True,
     )
     return entry
+
+
+def _queue_carplay_agent_run(*, agent_id: str, actor: str) -> dict[str, Any]:
+    from .scheduler import get_scheduler
+
+    scheduler = get_scheduler()
+    if scheduler is None:
+        raise RuntimeError("Scheduler not initialised")
+    item = scheduler.force_run(agent_id)
+    if item is None:
+        raise KeyError("Unknown agent")
+
+    detail = f"CarPlay queued agent {agent_id} from the ops lane."
+    _record_operator_action(
+        actor=actor,
+        domain="carplay",
+        action="Queue CarPlay Agent Run",
+        detail=detail,
+        why_now="A CarPlay operational selection elevated an agent run without leaving the in-car surface.",
+        result_summary=f"{agent_id} is queued for execution.",
+        route="/agent-ops-center",
+        route_label="Open Agent Ops",
+        related_kind="agent-run",
+        related_label=agent_id,
+        succeeded=True,
+    )
+    focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module="Agent Ops",
+        reason=detail,
+        route="/agent-ops-center",
+        actor=actor,
+    )
+    return {
+        "status": "queued",
+        "agent_id": agent_id,
+        "item_id": str(getattr(item, "item_id", "") or ""),
+        "focus": focus,
+    }
+
+
+def _resolve_carplay_supervision_item(
+    runtime: Any,
+    *,
+    request_id: str,
+    action: str,
+    actor: str,
+    reason: str = "",
+) -> dict[str, Any]:
+    action_key = str(action or "").strip().lower()
+    if action_key not in {"approve", "reject"}:
+        raise ValueError("Unsupported supervision action.")
+
+    from .supervision_snapshot import build_supervision_snapshot
+
+    supervision_snapshot = build_supervision_snapshot()
+    attention_items = [
+        dict(item)
+        for item in list(supervision_snapshot.get("attention_queue") or [])
+        if isinstance(item, dict)
+    ]
+    target = next((item for item in attention_items if str(item.get("request_id") or "").strip() == request_id.strip()), None)
+    status = "approved" if action_key == "approve" else "rejected"
+    updated = runtime.approval_store.update_status(request_id, status)
+    if updated is None:
+        raise KeyError("Supervision request not found.")
+
+    title = str((target or {}).get("title") or updated.get("request") or updated.get("title") or request_id).strip() or request_id
+    detail = reason or (
+        f"CarPlay approved {title} from the supervision lane."
+        if action_key == "approve"
+        else f"CarPlay rejected {title} from the supervision lane."
+    )
+    _record_operator_action(
+        actor=actor,
+        domain="carplay",
+        action="Approve CarPlay Supervision Review" if action_key == "approve" else "Reject CarPlay Supervision Review",
+        detail=detail,
+        why_now="The CarPlay supervision lane resolved a bounded-autonomy review item in the vehicle surface.",
+        result_summary=f"Supervision review moved to {status}.",
+        route="/supervision-snapshot",
+        route_label="Open Supervision",
+        related_kind="supervision-review",
+        related_label=title,
+        succeeded=True,
+    )
+    focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module="Supervision",
+        reason=detail,
+        route="/supervision-snapshot",
+        actor=actor,
+    )
+    return {
+        "status": status,
+        "request_id": request_id,
+        "title": title,
+        "focus": focus,
+        "request": updated,
+    }
 
 
 def _build_catalyst_ops_overview(runtime: Any) -> dict[str, Any]:
@@ -6055,6 +6192,42 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             reason=reason,
         )
         return _ok(entry)
+
+    @app.post("/api/apple/carplay/agents/{agent_id}/queue-run")
+    async def apple_carplay_agent_queue(agent_id: str, payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        try:
+            result = await asyncio.to_thread(
+                _queue_carplay_agent_run,
+                agent_id=agent_id,
+                actor=actor,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except RuntimeError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        return _ok(result)
+
+    @app.post("/api/apple/carplay/supervision/{request_id}/{action}")
+    async def apple_carplay_supervision_action(request_id: str, action: str, payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        reason = str(payload.get("reason") or "").strip()
+        try:
+            result = await asyncio.to_thread(
+                _resolve_carplay_supervision_item,
+                runtime,
+                request_id=request_id,
+                action=action,
+                actor=actor,
+                reason=reason,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _ok(result)
 
     @app.get("/api/apple/while-you-were-away")
     async def apple_while_you_were_away(actor: str = "chris"):

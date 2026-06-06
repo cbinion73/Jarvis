@@ -334,7 +334,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
             let currentFocus = overview.currentFocus
             let commandItem = CPListItem(
                 text: "Catalyst Command Deck",
-                detailText: "\(overview.counts.approvalCount) approvals · \(overview.counts.recoveryCaseCount) recovery cases · \(overview.agentSummary.awakeCount) agents awake"
+                detailText: "\(overview.counts.approvalCount) approvals · \(overview.counts.recoveryCaseCount) recovery cases · \(overview.counts.agentOpsCount) agent ops · \(overview.counts.supervisionCount) supervision review(s)"
             )
             commandItem.setImage(
                 UIImage(systemName: "gauge.with.dots.needle.67percent")?
@@ -379,8 +379,6 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                     return item
                 }
             }
-            sections.append(CPListSection(items: recoveryItems, header: "3. Recovery", sectionIndexTitle: nil))
-
             let approvalItems: [CPListItem]
             if overview.approvals.isEmpty {
                 let item = CPListItem(text: "Approval lane is clear", detailText: "Nothing is waiting for a review tap.")
@@ -396,7 +394,49 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                     return item
                 }
             }
-            sections.append(CPListSection(items: approvalItems, header: "4. Approvals", sectionIndexTitle: nil))
+            sections.append(CPListSection(items: approvalItems, header: "3. Approvals", sectionIndexTitle: nil))
+
+            sections.append(CPListSection(items: recoveryItems, header: "4. Recovery", sectionIndexTitle: nil))
+
+            let agentOpsItems: [CPListItem]
+            if overview.agentOps.isEmpty {
+                let item = CPListItem(text: "No agent push needed", detailText: "Agent runs are steady from the in-car lane.")
+                item.setImage(
+                    UIImage(systemName: "person.crop.circle.badge.checkmark")?
+                        .withTintColor(.systemGreen, renderingMode: .alwaysOriginal)
+                )
+                agentOpsItems = [item]
+            } else {
+                agentOpsItems = overview.agentOps.prefix(4).map { agent in
+                    let detail = [agent.assignment, agent.attentionReason.isEmpty ? agent.purpose : agent.attentionReason]
+                        .filter { !$0.isEmpty }
+                        .joined(separator: " · ")
+                    let item = CPListItem(text: "\(agent.name) · \(agent.status.capitalized)", detailText: detail)
+                    item.setImage(
+                        UIImage(systemName: "person.2.badge.gearshape.fill")?
+                            .withTintColor(.systemTeal, renderingMode: .alwaysOriginal)
+                    )
+                    return item
+                }
+            }
+            sections.append(CPListSection(items: agentOpsItems, header: "5. Agent Ops", sectionIndexTitle: nil))
+
+            let supervisionItems: [CPListItem]
+            if overview.supervisionItems.isEmpty {
+                let item = CPListItem(text: "No supervision review waiting", detailText: "Bounded-autonomy reviews are clear right now.")
+                item.setImage(
+                    UIImage(systemName: "eye.circle.fill")?
+                        .withTintColor(.systemGreen, renderingMode: .alwaysOriginal)
+                )
+                supervisionItems = [item]
+            } else {
+                supervisionItems = overview.supervisionItems.prefix(4).map { review in
+                    let item = CPListItem(text: review.title, detailText: "\(review.agent) · \(review.risk.capitalized) risk")
+                    item.setImage(riskImage(for: review.risk))
+                    return item
+                }
+            }
+            sections.append(CPListSection(items: supervisionItems, header: "6. Supervision", sectionIndexTitle: nil))
 
             let missionHeadline = overview.missionSummary.headline.isEmpty
                 ? "\(overview.missionSummary.activeCount) active mission(s) are flowing through JARVIS."
@@ -417,8 +457,6 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                 UIImage(systemName: "person.3.fill")?
                     .withTintColor(.systemTeal, renderingMode: .alwaysOriginal)
             )
-            sections.append(CPListSection(items: [missionItem, agentItem], header: "5. Mission & Agents", sectionIndexTitle: nil))
-
             let activityItems: [CPListItem]
             if overview.recentActivity.isEmpty {
                 activityItems = [CPListItem(text: "No recent continuity yet", detailText: "Ops actions will echo back here when they happen.")]
@@ -432,7 +470,8 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                     return item
                 }
             }
-            sections.append(CPListSection(items: activityItems, header: "6. Recent Continuity", sectionIndexTitle: nil))
+            sections.append(CPListSection(items: [missionItem, agentItem], header: "7. Mission Pressure", sectionIndexTitle: nil))
+            sections.append(CPListSection(items: activityItems, header: "8. Recent Continuity", sectionIndexTitle: nil))
 
             opsTemplate.updateSections(sections)
         } catch {
@@ -588,11 +627,25 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
     private func handleOpsSelection(indexPath: (section: Int, item: Int)) async {
         guard let overview = opsOverview else { return }
         let focusSectionIndex = opsTemplate.sections.firstIndex { $0.header == "2. Focus Lanes" }
-        guard let focusSectionIndex, indexPath.section == focusSectionIndex, indexPath.item < overview.focusCandidates.count else {
+        if let focusSectionIndex, indexPath.section == focusSectionIndex, indexPath.item < overview.focusCandidates.count {
+            let candidate = overview.focusCandidates[indexPath.item]
+            presentOpsFocusAlert(for: candidate)
             return
         }
-        let candidate = overview.focusCandidates[indexPath.item]
-        presentOpsFocusAlert(for: candidate)
+        let approvalSectionIndex = opsTemplate.sections.firstIndex { $0.header == "3. Approvals" }
+        if let approvalSectionIndex, indexPath.section == approvalSectionIndex, indexPath.item < overview.approvals.count {
+            presentOpsApprovalAlert(for: overview.approvals[indexPath.item])
+            return
+        }
+        let agentSectionIndex = opsTemplate.sections.firstIndex { $0.header == "5. Agent Ops" }
+        if let agentSectionIndex, indexPath.section == agentSectionIndex, indexPath.item < overview.agentOps.count {
+            presentCarPlayAgentAlert(for: overview.agentOps[indexPath.item])
+            return
+        }
+        let supervisionSectionIndex = opsTemplate.sections.firstIndex { $0.header == "6. Supervision" }
+        if let supervisionSectionIndex, indexPath.section == supervisionSectionIndex, indexPath.item < overview.supervisionItems.count {
+            presentCarPlaySupervisionAlert(for: overview.supervisionItems[indexPath.item])
+        }
     }
 
     private func mergeRecentDestinations(_ destination: String, into existing: [String]) -> [String] {
@@ -705,7 +758,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
         let approveAction = CPAlertAction(title: "Approve", style: .default) { [weak self] _ in
             guard let self else { return }
             Task {
-                try? await self.client.approve(requestId: need.id)
+                _ = try? await self.client.approve(requestId: need.id)
                 await self.loadNeeds()
             }
         }
@@ -721,14 +774,14 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
         let approveAction = CPAlertAction(title: "Approve", style: .default) { [weak self] _ in
             guard let self else { return }
             Task {
-                try? await self.client.approvePublishingReview(review.id)
+                _ = try? await self.client.approvePublishingReview(review.id)
                 await self.loadPublishing()
             }
         }
         let reviseAction = CPAlertAction(title: "Revise", style: .destructive) { [weak self] _ in
             guard let self else { return }
             Task {
-                try? await self.client.requestPublishingRevision(review.id)
+                _ = try? await self.client.requestPublishingRevision(review.id)
                 await self.loadPublishing()
             }
         }
@@ -745,7 +798,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
             guard let self else { return }
             Task {
                 let reason = "CarPlay elevated \(candidate.module) as the next live operating focus."
-                try? await self.client.saveCarPlayOpsFocus(
+                _ = try? await self.client.saveCarPlayOpsFocus(
                     module: candidate.module,
                     route: candidate.route,
                     reason: reason
@@ -757,6 +810,69 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
         let alert = CPAlertTemplate(
             titleVariants: [candidate.label, "Promote \(candidate.module) into shared progress focus?"],
             actions: [applyAction, cancelAction]
+        )
+        interfaceController.presentTemplate(alert, animated: true, completion: nil)
+    }
+
+    private func presentOpsApprovalAlert(for approval: CarPlayApprovalEntry) {
+        let approveAction = CPAlertAction(title: "Approve", style: .default) { [weak self] _ in
+            guard let self else { return }
+            Task {
+                _ = try? await self.client.approve(requestId: approval.requestId)
+                await self.refreshAll()
+            }
+        }
+        let cancelAction = CPAlertAction(title: "Close", style: .cancel) { _ in }
+        let alert = CPAlertTemplate(
+            titleVariants: [approval.title, "\(approval.agent) · \(approval.risk.capitalized) risk"],
+            actions: [approveAction, cancelAction]
+        )
+        interfaceController.presentTemplate(alert, animated: true, completion: nil)
+    }
+
+    private func presentCarPlayAgentAlert(for agent: CarPlayAgentOpsEntry) {
+        let queueAction = CPAlertAction(title: agent.queueActionLabel, style: .default) { [weak self] _ in
+            guard let self else { return }
+            Task {
+                _ = try? await self.client.queueCarPlayAgentRun(agent.agentId)
+                await self.loadOps()
+            }
+        }
+        let cancelAction = CPAlertAction(title: "Close", style: .cancel) { _ in }
+        let alert = CPAlertTemplate(
+            titleVariants: [agent.name, agent.attentionReason.isEmpty ? agent.purpose : agent.attentionReason],
+            actions: [queueAction, cancelAction]
+        )
+        interfaceController.presentTemplate(alert, animated: true, completion: nil)
+    }
+
+    private func presentCarPlaySupervisionAlert(for item: CarPlaySupervisionEntry) {
+        let approveAction = CPAlertAction(title: item.approveLabel, style: .default) { [weak self] _ in
+            guard let self else { return }
+            Task {
+                _ = try? await self.client.resolveCarPlaySupervision(
+                    item.requestId,
+                    action: "approve",
+                    reason: "CarPlay approved \(item.title) from the supervision lane."
+                )
+                await self.refreshAll()
+            }
+        }
+        let rejectAction = CPAlertAction(title: item.rejectLabel, style: .destructive) { [weak self] _ in
+            guard let self else { return }
+            Task {
+                _ = try? await self.client.resolveCarPlaySupervision(
+                    item.requestId,
+                    action: "reject",
+                    reason: "CarPlay rejected \(item.title) from the supervision lane to request a safer path."
+                )
+                await self.refreshAll()
+            }
+        }
+        let cancelAction = CPAlertAction(title: "Close", style: .cancel) { _ in }
+        let alert = CPAlertTemplate(
+            titleVariants: [item.title, item.detail],
+            actions: [approveAction, rejectAction, cancelAction]
         )
         interfaceController.presentTemplate(alert, animated: true, completion: nil)
     }

@@ -308,6 +308,39 @@ public final class AppleAPIClient: Sendable {
         )
     }
 
+    @discardableResult
+    public func queueCarPlayAgentRun(
+        _ agentId: String,
+        actor: String = "chris"
+    ) async throws -> Bool {
+        struct Body: Encodable { let actor: String }
+        struct Response: Decodable { let status: String }
+        let response: Response = try await post(
+            "/api/apple/carplay/agents/\(agentId)/queue-run",
+            body: Body(actor: actor)
+        )
+        return response.status == "queued"
+    }
+
+    @discardableResult
+    public func resolveCarPlaySupervision(
+        _ requestId: String,
+        action: String,
+        reason: String = "",
+        actor: String = "chris"
+    ) async throws -> Bool {
+        struct Body: Encodable {
+            let reason: String
+            let actor: String
+        }
+        struct Response: Decodable { let status: String }
+        let response: Response = try await post(
+            "/api/apple/carplay/supervision/\(requestId)/\(action)",
+            body: Body(reason: reason, actor: actor)
+        )
+        return response.status == "approved" || response.status == "rejected"
+    }
+
     // MARK: - Voice
 
     /// Send a text command and receive an agent response.
