@@ -65,6 +65,7 @@ struct PublishView: View {
     private func contentView(_ ov: PublishOverview) -> some View {
         ScrollView {
             VStack(spacing: 14) {
+                publishStoryboardHeader(ov)
 
                 if !ov.actionItems.isEmpty {
                     PressSection(title: "Command Queue", icon: "sparkles.rectangle.stack.fill", accent: green) {
@@ -140,9 +141,71 @@ struct PublishView: View {
                         }
                     }
                 }
+
+                supervisoryStrip(ov)
             }
             .padding(.horizontal, 16).padding(.vertical, 12)
         }
+    }
+
+    @ViewBuilder
+    private func publishStoryboardHeader(_ ov: PublishOverview) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 14) {
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(
+                        LinearGradient(
+                            colors: [green.opacity(0.28), Color(red: 0.34, green: 0.24, blue: 0.08), Color.black.opacity(0.92)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 88, height: 118)
+                    .overlay(
+                        VStack(spacing: 8) {
+                            Image(systemName: "book.closed.fill")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundStyle(green)
+                            Text(activeProjectTitle(in: ov))
+                                .font(.system(size: 10, weight: .bold))
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(.white.opacity(0.92))
+                                .lineLimit(3)
+                                .padding(.horizontal, 6)
+                        }
+                    )
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("GHOSTWRITR PUBLISH HANDOFF")
+                        .font(.system(size: 10, weight: .bold))
+                        .tracking(1.4)
+                        .foregroundStyle(green.opacity(0.82))
+                    Text(activeProjectTitle(in: ov))
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(.white)
+                    Text(activeProjectSubtitle(in: ov))
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.72))
+                    HStack(spacing: 8) {
+                        publishChip(launchStatusText(in: ov), tint: .orange)
+                        publishChip("\(ov.pendingReviewsCount) review\(ov.pendingReviewsCount == 1 ? "" : "s")", tint: green)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+
+            HStack(spacing: 10) {
+                storyboardMetric(title: "Package", value: packageStatusText(in: ov), tint: .orange)
+                storyboardMetric(title: "Projects", value: "\(ov.projects.count)", tint: green)
+                storyboardMetric(title: "Streams", value: "\(ov.revenueSummary.streamCount)", tint: .cyan)
+            }
+        }
+        .padding(18)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 22))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(green.opacity(0.14), lineWidth: 1)
+        )
     }
 
     // MARK: - Revenue banner
@@ -402,6 +465,17 @@ struct PublishView: View {
         }
     }
 
+    @ViewBuilder
+    private func supervisoryStrip(_ ov: PublishOverview) -> some View {
+        PressSection(title: "Supervisory Strip", icon: "person.2.wave.2.fill", accent: green) {
+            HStack(alignment: .top, spacing: 12) {
+                supervisorPill(name: "JARVIS", detail: "Launch posture", tint: .cyan)
+                supervisorPill(name: "Ghostwritr", detail: "Source authority", tint: green)
+                supervisorPill(name: "Herald", detail: ov.pendingReviewsCount > 0 ? "Review pressure" : "Queue clear", tint: .orange)
+            }
+        }
+    }
+
     // MARK: - Error
 
     private func errorView(_ msg: String) -> some View {
@@ -468,6 +542,34 @@ struct PublishView: View {
         return "\(days)d"
     }
 
+    private func activeProjectTitle(in ov: PublishOverview) -> String {
+        if let title = ov.launchControl?.title, !title.isEmpty {
+            return title
+        }
+        return ov.projects.first?.title ?? "Launch Ops"
+    }
+
+    private func activeProjectSubtitle(in ov: PublishOverview) -> String {
+        if let nextAction = ov.launchControl?.nextAction, !nextAction.isEmpty {
+            return nextAction
+        }
+        return "Editorial readiness, assembly, and launch continuity remain wired to live publish state."
+    }
+
+    private func launchStatusText(in ov: PublishOverview) -> String {
+        if let status = ov.launchControl?.status, !status.isEmpty {
+            return status.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+        return "Ready"
+    }
+
+    private func packageStatusText(in ov: PublishOverview) -> String {
+        if let phase = ov.launchControl?.phase, !phase.isEmpty {
+            return phase.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+        return "Live"
+    }
+
     @ViewBuilder
     private func metricPill(_ value: String, _ label: String, tint: Color) -> some View {
         VStack(spacing: 2) {
@@ -492,6 +594,45 @@ struct PublishView: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(color.opacity(0.14), in: Capsule())
+    }
+
+    private func publishChip(_ title: String, tint: Color) -> some View {
+        Text(title)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(tint.opacity(0.12), in: Capsule())
+    }
+
+    private func storyboardMetric(title: String, value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased())
+                .font(.system(size: 9, weight: .bold))
+                .tracking(1.2)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(tint)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func supervisorPill(name: String, detail: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(name)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(tint)
+            Text(detail)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.72))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 16))
     }
 }
 

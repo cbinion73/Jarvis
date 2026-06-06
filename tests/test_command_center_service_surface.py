@@ -198,11 +198,19 @@ class _StubRuntime:
     def __init__(self) -> None:
         self.config = SimpleNamespace(
             tts_provider="auto",
+            tts_fallbacks=[],
+            stt_provider="auto",
+            stt_fallbacks=[],
             elevenlabs_voice="",
+            elevenlabs_api_key="",
+            openai_api_key="",
+            localai_base_url="",
+            piper_binary="piper",
             piper_model_path=None,
             piper_speaker="0",
             second_brain_enabled=False,
         )
+        self.config.load_household = lambda: SimpleNamespace(location_label="Home")
         self.supervision_support = _StubSupervisionSupport()
 
     def execute_sandbox_job(self, *, actor_name: str, job_id: str, triggered_by: str) -> dict:
@@ -676,9 +684,12 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("JARVIS Settings", settings_html)
         self.assertIn("Save Voice Settings", settings_html)
         self.assertIn("Save Location Settings", settings_html)
+        self.assertIn("Recent Settings Continuity", settings_html)
         self.assertIn("status", settings_snapshot)
         self.assertIn("voice", settings_snapshot)
         self.assertIn("location", settings_snapshot)
+        self.assertIn("recent_activity", settings_snapshot)
+        self.assertIn("recent_activity_count", settings_snapshot["counts"])
         self.assertIn("proof_paths", settings_snapshot)
         self.assertEqual(settings_snapshot["proof_paths"]["module_route"], "/settings-center")
         self.assertEqual(settings_snapshot["proof_paths"]["module_api"], "/api/settings/module")
@@ -1060,6 +1071,41 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         progress_snapshot = self._json_body(asyncio.run(self._route("/api/progress/module", "GET")()))
         self.assertEqual(progress_snapshot["progress_next_focus"], "Health")
         self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Health")
+
+    def test_settings_mutations_persist_into_settings_and_activity(self) -> None:
+        voice_response = asyncio.run(
+            self._route("/api/voice-settings", "POST")(
+                {
+                    "actor": "Chris",
+                    "tts_provider": "elevenlabs",
+                    "elevenlabs_voice": "alloy",
+                    "piper_model_path": "",
+                    "piper_speaker": "2",
+                }
+            )
+        )
+        location_response = asyncio.run(
+            self._route("/api/location-settings", "POST")(
+                {
+                    "actor": "Chris",
+                    "preferred_location_id": "household-home",
+                }
+            )
+        )
+
+        voice_payload = self._json_body(voice_response)
+        location_payload = self._json_body(location_response)
+        settings_snapshot = self._json_body(asyncio.run(self._route("/api/settings/module", "GET")()))
+        activity_payload = self._json_body(asyncio.run(self._route("/api/activity", "GET")()))
+
+        self.assertEqual(voice_payload["message"], "Voice settings updated.")
+        self.assertTrue(location_payload["ok"])
+        self.assertEqual(settings_snapshot["voice"]["tts_provider"], "elevenlabs")
+        self.assertEqual(settings_snapshot["location"]["preferred_location_id"], "household-home")
+        self.assertTrue(any(item.get("title") == "Save Voice Settings" for item in settings_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("title") == "Save Location Settings" for item in settings_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("related_kind") == "voice-settings" for item in activity_payload))
+        self.assertTrue(any(item.get("related_kind") == "location-settings" for item in activity_payload))
 
     def test_chronicle_activity_populates_chronicle_continuity(self) -> None:
         asyncio.run(

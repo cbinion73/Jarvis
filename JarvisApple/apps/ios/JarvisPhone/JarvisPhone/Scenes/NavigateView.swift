@@ -478,6 +478,8 @@ struct NavigateView: View {
                     .buttonStyle(.plain)
                 }
 
+                phoneStoryboardStrip
+
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Where to?")
                         .font(.title3.weight(.semibold))
@@ -516,6 +518,8 @@ struct NavigateView: View {
                 phoneRecentPlaces
 
                 routeRecommendationCard
+
+                phoneCapabilityFooter
             }
         }
     }
@@ -523,6 +527,8 @@ struct NavigateView: View {
     private var phoneActiveRoute: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 14) {
+                phoneStoryboardStrip
+
                 ZStack(alignment: .topLeading) {
                     mapStage
                         .frame(height: 395)
@@ -560,7 +566,25 @@ struct NavigateView: View {
                         panelMode = .stops
                     }
                 }
+
+                phoneCapabilityFooter
             }
+        }
+    }
+
+    private var phoneStoryboardStrip: some View {
+        HStack(spacing: 10) {
+            storyboardStep(number: "1", title: route == nil ? "Planner" : "Route", accent: slate)
+            storyboardStep(number: "2", title: "Stops", accent: stopGreen)
+            storyboardStep(number: "3", title: "Voice", accent: Color.white.opacity(0.82))
+        }
+    }
+
+    private var phoneCapabilityFooter: some View {
+        HStack(spacing: 10) {
+            capabilityPill(title: "Route Aware", detail: trafficHeadline, tint: slate)
+            capabilityPill(title: "Weather Aware", detail: weatherHeadline, tint: .cyan)
+            capabilityPill(title: "Family First", detail: familyTravelHeadline, tint: .green)
         }
     }
 
@@ -1373,6 +1397,46 @@ struct NavigateView: View {
         .background(cardFill, in: RoundedRectangle(cornerRadius: 18))
         .overlay(
             RoundedRectangle(cornerRadius: 18)
+                .stroke(.white.opacity(0.05), lineWidth: 1)
+        )
+    }
+
+    private func storyboardStep(number: String, title: String, accent: Color) -> some View {
+        HStack(spacing: 8) {
+            Text(number)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white)
+                .frame(width: 24, height: 24)
+                .background(accent.opacity(0.22), in: Circle())
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.84))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(cardFill, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(.white.opacity(0.05), lineWidth: 1)
+        )
+    }
+
+    private func capabilityPill(title: String, detail: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(tint)
+            Text(detail)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.72))
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(cardFill, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
                 .stroke(.white.opacity(0.05), lineWidth: 1)
         )
     }

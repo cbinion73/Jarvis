@@ -173,6 +173,18 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
             }
 
             var sections: [CPListSection] = []
+            let overviewItem = CPListItem(
+                text: "Route Intelligence",
+                detailText: routeHeadline?.detail.isEmpty == false
+                    ? routeHeadline?.detail
+                    : "Live route timing, hazard posture, and smart stop continuity."
+            )
+            overviewItem.setImage(
+                UIImage(systemName: "point.bottomleft.forward.to.point.topright.scurvepath")?
+                    .withTintColor(.systemBlue, renderingMode: .alwaysOriginal)
+            )
+            sections.append(CPListSection(items: [overviewItem], header: "Command Center", sectionIndexTitle: nil))
+
             routeCurrentItemSelectable = routeHeadline != nil
             if let routeHeadline {
                 let currentItem = CPListItem(text: routeHeadline.title, detailText: routeHeadline.detail)
@@ -229,6 +241,18 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                 )
                 sections.append(CPListSection(items: [item], header: "Launch Control", sectionIndexTitle: nil))
             }
+
+            let handoffItem = CPListItem(
+                text: "Ghostwritr Publish Handoff",
+                detailText: overview.pendingReviewsCount > 0
+                    ? "\(overview.pendingReviewsCount) review item(s) waiting with live launch continuity."
+                    : "Queue is clear and launch posture is stable."
+            )
+            handoffItem.setImage(
+                UIImage(systemName: "shippingbox.fill")?
+                    .withTintColor(.systemOrange, renderingMode: .alwaysOriginal)
+            )
+            sections.insert(CPListSection(items: [handoffItem], header: "Handoff State", sectionIndexTitle: nil), at: 0)
 
             if publishQueue.isEmpty {
                 let item = CPListItem(text: "No reviews waiting", detailText: "Publishing queue is clear right now.")

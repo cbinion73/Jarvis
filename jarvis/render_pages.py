@@ -1005,8 +1005,8 @@ def render_publish_module_page(payload: dict) -> str:
   <main class="shell">
     <section class="topbar">
       <div>
-        <strong>JARVIS Publish</strong>
-        <span>Ghostwritr Publish Handoff with live launch posture, editorial readiness, and downstream supervision continuity.</span>
+        <strong>JARVIS PUBLISH · Ghostwritr Publish Handoff</strong>
+        <span>Meaningful data concept with live launch posture, editorial readiness, and downstream supervision continuity.</span>
       </div>
       <div class="actions">
         <a href="/command-center">Back to Command Center</a>
@@ -1041,32 +1041,32 @@ def render_publish_module_page(payload: dict) -> str:
       <section class="panel rail span-4">
         <div class="rail-header">
           <div class="rail-label">Ghostwritr Workspace</div>
-          <h2>Publish handoff rail</h2>
+          <h2>1. Handoff Overview</h2>
         </div>
         <ul id="module-status-list"></ul>
       </section>
       <section class="panel span-8">
-        <h2>Launch Ops Lane</h2>
+        <h2>2. Validation Report</h2>
         <ul id="launch-control-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>Validation &amp; Readiness</h2>
+        <h2>3. Chapter Readiness</h2>
         <ul id="project-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>Chapter &amp; Calendar Readiness</h2>
+        <h2>4. Final Delivery Checklist</h2>
         <ul id="calendar-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>Connected Launch Ops</h2>
+        <h2>5. Format Profiles</h2>
         <ul id="social-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>Supervisor Strip</h2>
+        <h2>6. Connected Launch Ops</h2>
         <ul id="revenue-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>Quick Draft Project</h2>
+        <h2>Draft New Handoff Asset · Quick Draft Project</h2>
         <form id="create-project-form">
           <div class="form-grid">
             <label>Title<input id="project-title" placeholder="Launch-ready book or campaign"></label>
@@ -1084,8 +1084,16 @@ def render_publish_module_page(payload: dict) -> str:
         <p class="status-note" id="create-project-note">Create a small draft to verify the module can write real publishing state.</p>
       </section>
       <section class="panel span-6">
-        <h2>Recent Publish Continuity</h2>
+        <h2>7. JARVIS Supervisory Strip &amp; Recent Publish Continuity</h2>
         <ul id="recent-activity-list"></ul>
+      </section>
+      <section class="panel span-12">
+        <h2>Source Provenance &amp; Audit Posture</h2>
+        <ul>
+          <li><strong>Live module route</strong><span>`/publish` remains backed by the real publish payload and draft mutation flow.</span></li>
+          <li><strong>Launch continuity</strong><span>Quick draft creation still feeds shared operator activity so the storyboard shell stays tied to real supervision seams.</span></li>
+          <li><strong>Meaningful data concept</strong><span>The visual language now mirrors the publish JPG while preserving Ghostwritr, launch ops, revenue, and review continuity.</span></li>
+        </ul>
       </section>
       <section class="panel span-12">
         <h2>Payload Preview</h2>
@@ -8187,6 +8195,10 @@ def render_settings_module_page(payload: dict) -> str:
         <ul id="locations-list"></ul>
       </section>
       <section class="panel span-6">
+        <h2>Recent Settings Continuity</h2>
+        <ul id="recent-activity-list"></ul>
+      </section>
+      <section class="panel span-6">
         <h2>Payload Preview</h2>
         <pre id="payload-preview"></pre>
       </section>
@@ -8204,6 +8216,7 @@ def render_settings_module_page(payload: dict) -> str:
     const permissionsList = document.getElementById("permissions-list");
     const identityList = document.getElementById("identity-list");
     const locationsList = document.getElementById("locations-list");
+    const recentActivityList = document.getElementById("recent-activity-list");
     const payloadPreview = document.getElementById("payload-preview");
 
     function esc(value) {{
@@ -8308,6 +8321,9 @@ def render_settings_module_page(payload: dict) -> str:
         item.geography || "No geography recorded.",
         item.source || item.notes || ""
       )).join("") || '<li><strong>No saved locations.</strong><span>Saved locations will appear here when available.</span></li>';
+      recentActivityList.innerHTML = (Array.isArray(payload.recent_activity) ? payload.recent_activity : []).length
+        ? payload.recent_activity.map((item) => li(item.title || "Settings action", item.subtitle || item.actor || "Operator continuity", item.detail || item.route_label || "")).join("")
+        : '<li><strong>No settings continuity recorded yet.</strong><span>Save voice or location settings to begin the route-level continuity trail.</span></li>';
 
       payloadPreview.textContent = JSON.stringify(payload, null, 2);
     }}
@@ -8567,8 +8583,8 @@ def render_navigation_module_page(payload: dict) -> str:
   <main class="shell">
     <section class="topbar">
       <div>
-        <strong>Navigation Desktop Experience</strong>
-        <span>Command-center routing, smart stops, and voice consultation inspired by the desktop and phone JPG storyboards.</span>
+        <strong>JARVIS Navigation Desktop Experience</strong>
+        <span>Concept storyboard with live route intelligence, smart stops, and voice consultation backed by the real navigation payload.</span>
       </div>
       <div class="actions">
         <a href="/command-center">Back to Command Center</a>
@@ -8601,15 +8617,15 @@ def render_navigation_module_page(payload: dict) -> str:
     </section>
     <div class="layout">
       <section class="panel span-4">
-        <h2>Navigation Command Rail</h2>
+        <h2>1. Navigation Command Center</h2>
         <ul id="module-status-list"></ul>
       </section>
       <section class="panel span-8">
-        <h2>Saved Places &amp; Route Context</h2>
+        <h2>2. Route Context &amp; Command Search</h2>
         <ul id="locations-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>Live Route Intelligence Workspace</h2>
+        <h2>3. Live Route Intelligence Workspace</h2>
         <form id="navigation-route-form">
           <label>Origin
             <input id="navigation-origin" placeholder="Home">
@@ -8626,16 +8642,24 @@ def render_navigation_module_page(payload: dict) -> str:
         <pre id="navigation-route-output">Awaiting route preview.</pre>
       </section>
       <section class="panel span-6">
-        <h2>Travel Orchestration &amp; Planning</h2>
+        <h2>4. Travel Orchestration &amp; Planning</h2>
         <ul id="state-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>Smart Stops Along Route Studio</h2>
+        <h2>5. Smart Stops Along Route Studio</h2>
         <ul id="stops-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>Recent Route Continuity</h2>
+        <h2>6. Voice Navigation Consultation &amp; Recent Route Continuity</h2>
         <ul id="recent-activity-list"></ul>
+      </section>
+      <section class="panel span-12">
+        <h2>Route Intelligence Capabilities</h2>
+        <ul>
+          <li><strong>Route aware</strong><span>Live route previews persist origin, destination, and travel posture into the module state.</span></li>
+          <li><strong>Smart stops</strong><span>Along-route stop suggestions stay connected to the actual navigation route preview and activity continuity.</span></li>
+          <li><strong>Voice driven</strong><span>The consultation copy still reflects route hazard and timing state instead of static mockup text.</span></li>
+        </ul>
       </section>
       <section class="panel span-12">
         <h2>Payload Preview</h2>

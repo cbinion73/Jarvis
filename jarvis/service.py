@@ -3218,17 +3218,20 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "insights": [],
                 "rhythms": [],
             },
+            "recent_activity": [],
             "counts": {
                 "account_count": 0,
                 "connected_account_count": 0,
                 "saved_location_count": 0,
                 "insight_count": 0,
+                "recent_activity_count": 0,
             },
             "proof_paths": {
                 "module_route": "/settings-center",
                 "module_api": "/api/settings/module",
                 "voice_api": "/api/voice-settings",
                 "location_api": "/api/location-settings",
+                "activity_api": "/api/activity/operator-action",
                 "voice_options_api": "/api/voice-options",
                 "accounts_api": "/api/accounts",
                 "identity_api": "/api/identity",
@@ -3277,6 +3280,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["identity"] = runtime.identity_overview()
         except Exception as exc:
             payload["errors"].append(f"identity: {exc}")
+
+        payload["recent_activity"] = _module_recent_activity(route="/settings-center", domain="settings")
+        payload["counts"]["recent_activity_count"] = len(payload["recent_activity"])
 
         try:
             from .user_profile import load_profile
@@ -4624,6 +4630,26 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.post("/api/voice-settings")
     async def api_save_voice_settings(payload: dict[str, Any]) -> JSONResponse:
         settings = voice_settings.save(payload)
+        actor = str(payload.get("actor") or "Chris").strip() or "Chris"
+        provider = str(payload.get("tts_provider") or settings.tts_provider or "").strip() or "voice provider"
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": "settings",
+                "action": "Save Voice Settings",
+                "title": provider,
+                "detail": f"Voice settings saved with provider {provider}.",
+                "why_now": "Settings updated the live voice runtime configuration.",
+                "result_summary": f"Voice provider set to {provider}.",
+                "related_route": "/settings-center",
+                "route_label": "Open Settings",
+                "related_kind": "voice-settings",
+                "related_label": provider,
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
         return _json(
             {
                 "message": "Voice settings updated.",
@@ -4636,17 +4662,53 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.post("/api/location-settings")
     async def api_save_location_settings(payload: dict[str, Any]) -> JSONResponse:
         action = str(payload.get("action", "")).strip()
+        preferred_location_id = str(payload.get("preferred_location_id", "")).strip()
         try:
             if action == "add_location":
                 state = location_settings.add_location(payload)
-            elif action == "set_preferred":
-                state = location_settings.set_preferred_location(str(payload.get("location_id", "")).strip())
+            elif action == "set_preferred" or (not action and preferred_location_id):
+                state = location_settings.set_preferred_location(
+                    preferred_location_id or str(payload.get("location_id", "")).strip()
+                )
             elif action == "save_device_location":
                 state = location_settings.save_device_location(payload)
             else:
                 state = location_settings.save(payload)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        actor = str(payload.get("actor") or "Chris").strip() or "Chris"
+        preferred_id = str(
+            payload.get("preferred_location_id")
+            or payload.get("location_id")
+            or (state.get("preferred_location_id") if isinstance(state, dict) else "")
+            or ""
+        ).strip()
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": "settings",
+                "action": "Save Location Settings",
+                "title": preferred_id or "Preferred location",
+                "detail": (
+                    f"Location settings saved with preferred location {preferred_id}."
+                    if preferred_id
+                    else "Location settings saved."
+                ),
+                "why_now": "Settings updated the live location posture used by the shell.",
+                "result_summary": (
+                    f"Preferred location set to {preferred_id}."
+                    if preferred_id
+                    else "Location settings updated."
+                ),
+                "related_route": "/settings-center",
+                "route_label": "Open Settings",
+                "related_kind": "location-settings",
+                "related_label": preferred_id or "Preferred location",
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
         return _json({"ok": True, "state": location_settings.describe(), "saved": state})
 
     @app.post("/api/accounts")

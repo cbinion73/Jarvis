@@ -32,9 +32,9 @@ class VoiceSettings:
 
 
 class VoiceSettingsStore:
-    def __init__(self, config: AppConfig, path: Path = VOICE_SETTINGS_PATH) -> None:
+    def __init__(self, config: AppConfig, path: Path | None = None) -> None:
         self.config = config
-        self.path = path
+        self.path = path or (Path.cwd() / "data" / "settings" / "voice.json")
         self.log_path = self.path.with_name(f"{self.path.stem}_log.jsonl")
         self.state_log_path = self.path.with_name(f"{self.path.stem}_state_log.jsonl")
 
@@ -183,7 +183,7 @@ class VoiceSettingsStore:
         return voices
 
     def list_elevenlabs_voices(self) -> list[dict]:
-        api_key = self.config.elevenlabs_api_key.strip()
+        api_key = str(getattr(self.config, "elevenlabs_api_key", "") or "").strip()
         if not api_key:
             return []
         try:
@@ -263,9 +263,9 @@ class VoiceSettingsStore:
 
 
 class LocationSettingsStore:
-    def __init__(self, config: AppConfig, path: Path = LOCATION_SETTINGS_PATH) -> None:
+    def __init__(self, config: AppConfig, path: Path | None = None) -> None:
         self.config = config
-        self.path = path
+        self.path = path or (Path.cwd() / "data" / "settings" / "locations.json")
         self.log_path = self.path.with_name(f"{self.path.stem}_log.jsonl")
         self.state_log_path = self.path.with_name(f"{self.path.stem}_state_log.jsonl")
 
