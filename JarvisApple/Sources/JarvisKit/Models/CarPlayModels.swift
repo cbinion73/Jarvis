@@ -241,6 +241,7 @@ public struct CarPlayNavigationChoice: Equatable, Identifiable, Sendable {
         case saved
         case favorite
         case recent
+        case routeHistory = "route_history"
     }
 
     public let id: String
@@ -358,6 +359,16 @@ public enum JarvisCarPlayPresentation {
                 detail: "Recent destination",
                 destination: recent,
                 source: .recent
+            )
+        }
+
+        for route in overview.navigationState?.routeHistory ?? [] {
+            appendChoice(
+                id: "route-history:\(route.routeID)",
+                title: route.destination,
+                detail: "\(route.origin) -> \(route.destination)",
+                destination: route.destination,
+                source: .routeHistory
             )
         }
 

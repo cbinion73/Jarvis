@@ -31,6 +31,7 @@ struct CarPlayPresentationTests {
             navigationState: NavigationState(
                 favoriteDestinations: ["Work", "Grandma's House"],
                 recentDestinations: ["Cincinnati, OH", "Grandma's House"],
+                routeHistory: [],
                 activeStopCategoryIDs: ["food", "parks"],
                 parksHistoricRadiusMiles: 25,
                 selectedOriginMode: "home",
@@ -40,10 +41,12 @@ struct CarPlayPresentationTests {
         )
 
         let choices = JarvisCarPlayPresentation.navigationChoices(from: overview)
+        let titles = choices.map { $0.title }
+        let sources = choices.map { $0.source }
 
         #expect(choices.count == 4)
-        #expect(choices.map(\.title) == ["Home", "Work", "Grandma's House", "Cincinnati, OH"])
-        #expect(choices.map(\.source) == [.saved, .saved, .favorite, .recent])
+        #expect(titles == ["Home", "Work", "Grandma's House", "Cincinnati, OH"])
+        #expect(sources == [.saved, .saved, .favorite, .recent])
         #expect(JarvisCarPlayPresentation.preferredOriginLabel(from: overview) == "8384 Riley Rd, Alexandria, KY 41001")
     }
 
@@ -66,6 +69,7 @@ struct CarPlayPresentationTests {
             state: NavigationState(
                 favoriteDestinations: [],
                 recentDestinations: [],
+                routeHistory: [],
                 activeStopCategoryIDs: [],
                 parksHistoricRadiusMiles: 25,
                 selectedOriginMode: "home",

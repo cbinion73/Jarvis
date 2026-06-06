@@ -1140,16 +1140,18 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "status": "Useful",
             "summary": "Navigation now has a dedicated module route with persisted route state and live route-preview intelligence.",
             "what_became_real": "Navigation is now represented as a dedicated app module instead of only the shared shell surface.",
-            "remains_partial": "Cross-surface navigation continuity and stronger auditability still need follow-on slices.",
+            "remains_partial": "Broader travel orchestration and deeper voice-linked guidance still need follow-on slices, but durable route history and route resume continuity are now represented across the app layer.",
             "navigation_state": {},
             "saved_locations": [],
             "route_preview": {"summary": "", "hazard_active": False, "sections": []},
+            "route_history": [],
             "recent_activity": [],
             "proof_paths": {
                 "module_route": "/navigation-center",
                 "module_api": "/api/navigation/module",
                 "route_api": "/api/navigation/module/route",
                 "state_api": "/api/navigation/module/state",
+                "resume_api": "/api/navigation/module/resume",
                 "storm_route_api": "/api/storm-route-weather",
             },
             "errors": [],
@@ -1185,6 +1187,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["errors"].append(f"navigation_state: {exc}")
 
         state = payload["navigation_state"] if isinstance(payload.get("navigation_state"), dict) else {}
+        payload["route_history"] = list(state.get("route_history") or []) if isinstance(state, dict) else []
         origin = str(((state.get("last_route") or {}).get("origin") if isinstance(state.get("last_route"), dict) else "") or "").strip()
         destination = str(((state.get("last_route") or {}).get("destination") if isinstance(state.get("last_route"), dict) else "") or "").strip()
         if origin and destination:
@@ -1203,6 +1206,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["summary"] = (
                 f"Navigation center loaded {len(payload['saved_locations'])} saved location(s), "
                 f"{len((state.get('favorite_destinations') or [])) if isinstance(state, dict) else 0} favorite destination(s), "
+                f"{len(payload['route_history'])} durable route entr{'y' if len(payload['route_history']) == 1 else 'ies'}, "
                 f"and a persisted route preview surface."
             )
         payload["recent_activity"] = _module_recent_activity(route="/navigation-center", domain="navigation")
@@ -1217,10 +1221,26 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         parks_historic_radius_miles: float,
         persist: bool,
     ) -> dict[str, Any]:
-        from .apple_api import _save_navigation_state, _NAV_STOP_LABELS, _nav_bridge, _nav_nps_along_route, _nav_route_points, _nav_state_codes
+        from .apple_api import _record_navigation_route_history, _NAV_STOP_LABELS, _nav_bridge, _nav_nps_along_route, _nav_route_points, _nav_state_codes
         from .nav_bridge import haversine, sample_route_points
 
-        route_packet = runtime.storm_route_weather(origin, destination)
+        route_warning = ""
+        try:
+            route_packet = runtime.storm_route_weather(origin, destination)
+        except Exception as exc:
+            route_warning = str(exc).strip()
+            route_packet = {
+                "origin": {"label": origin},
+                "destination": {"label": destination},
+                "summary": "Route saved, but live route intelligence is temporarily unavailable in this runtime.",
+                "hazard_active": False,
+                "route": {
+                    "distance_miles": None,
+                    "duration_minutes": None,
+                    "coordinates": [],
+                    "steps": [],
+                },
+            }
         route_info = route_packet.get("route") if isinstance(route_packet, dict) else {}
         route_points = _nav_route_points(route_info if isinstance(route_info, dict) else {})
         total_miles = float(route_info.get("distance_miles") or 0) if isinstance(route_info, dict) else 0.0
@@ -1294,12 +1314,13 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                     }
                 )
         if persist:
-            _save_navigation_state(
-                {
-                    "parks_historic_radius_miles": parks_historic_radius_miles,
-                    "last_route": {"origin": origin, "destination": destination},
-                    "recent_destinations": [destination],
-                }
+            _record_navigation_route_history(
+                origin=origin,
+                destination=destination,
+                origin_mode="home",
+                saved_location_id="",
+                parks_historic_radius_miles=int(parks_historic_radius_miles),
+                source_label="Navigation module route preview",
             )
         return {
             "origin": origin,
@@ -1308,6 +1329,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "hazard_active": bool(route_packet.get("hazard_active")),
             "route": route_packet.get("route") if isinstance(route_packet, dict) else {},
             "sections": sections,
+            "warning": route_warning,
         }
 
     @app.get("/api/navigation/module")
@@ -1337,6 +1359,42 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         if not isinstance(payload, dict):
             raise HTTPException(status_code=400, detail="payload must be an object")
         return _json(_save_navigation_state(payload))
+
+    @app.post("/api/navigation/module/resume")
+    async def api_navigation_module_resume(payload: dict[str, Any]) -> JSONResponse:
+        from .apple_api import _resume_navigation_route_history
+
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail="payload must be an object")
+        route_id = str(payload.get("route_id") or "").strip()
+        actor = str(payload.get("actor") or "Chris").strip() or "Chris"
+        if not route_id:
+            raise HTTPException(status_code=400, detail="route_id is required")
+        try:
+            resumed = _resume_navigation_route_history(
+                route_id=route_id,
+                actor=actor,
+                source_label="Navigation module resume",
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+        route_entry = dict(resumed.get("route") or {})
+        preview = await _build_navigation_route_preview(
+            origin=str(route_entry.get("origin") or "").strip(),
+            destination=str(route_entry.get("destination") or "").strip(),
+            parks_historic_radius_miles=float((resumed.get("state") or {}).get("parks_historic_radius_miles") or 25),
+            persist=False,
+        )
+        return _json(
+            {
+                "status": "resumed",
+                "route": route_entry,
+                "focus": resumed.get("focus") or {},
+                "navigation_state": resumed.get("state") or {},
+                "route_preview": preview,
+            }
+        )
 
     @app.get("/agents/hierarchy", response_class=HTMLResponse)
     async def agent_hierarchy() -> str:

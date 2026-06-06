@@ -249,7 +249,9 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
             )
             let orchestrationItem = CPListItem(
                 text: "Travel Orchestration",
-                detailText: overview.navigationState?.recentDestinations.isEmpty == false
+                detailText: overview.navigationState?.routeHistory.isEmpty == false
+                    ? "\(overview.navigationState?.routeHistory.count ?? 0) stored route(s) are ready to resume across surfaces."
+                    : overview.navigationState?.recentDestinations.isEmpty == false
                     ? "Recent routes and preferred origin are ready for the next drive."
                     : "Planner continuity will grow as routes are previewed."
             )
@@ -564,6 +566,9 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
         case .recent:
             name = "clock.fill"
             tint = .systemTeal
+        case .routeHistory:
+            name = "arrow.triangle.swap"
+            tint = .systemPurple
         }
         return UIImage(systemName: name)?.withTintColor(tint, renderingMode: .alwaysOriginal)
     }
@@ -671,18 +676,24 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
         let origin = JarvisCarPlayPresentation.preferredOriginLabel(from: overview)
 
         do {
-            let currentState = try await client.fetchNavigationState()
-            let updatedRecent = mergeRecentDestinations(
-                choice.destination,
-                into: currentState.recentDestinations
-            )
-            let patch = NavigationStatePatch(
-                recentDestinations: updatedRecent,
-                selectedOriginMode: currentState.selectedOriginMode,
-                selectedSavedLocationID: currentState.selectedSavedLocationID,
-                lastRoute: NavigationLastRoute(origin: origin, destination: choice.destination)
-            )
-            _ = try await client.updateNavigationState(patch)
+            if choice.source == .routeHistory,
+               let routeID = choice.id.split(separator: ":").dropFirst().first.map(String.init),
+               !routeID.isEmpty {
+                _ = try await client.resumeNavigationHistoryRoute(routeID)
+            } else {
+                let currentState = try await client.fetchNavigationState()
+                let updatedRecent = mergeRecentDestinations(
+                    choice.destination,
+                    into: currentState.recentDestinations
+                )
+                let patch = NavigationStatePatch(
+                    recentDestinations: updatedRecent,
+                    selectedOriginMode: currentState.selectedOriginMode,
+                    selectedSavedLocationID: currentState.selectedSavedLocationID,
+                    lastRoute: NavigationLastRoute(origin: origin, destination: choice.destination)
+                )
+                _ = try await client.updateNavigationState(patch)
+            }
         } catch {
             // Continue into route presentation even if persistence fails.
         }

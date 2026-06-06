@@ -15,6 +15,7 @@ public struct NavigationLocationsOverview: Codable, Sendable {
 public struct NavigationState: Codable, Sendable {
     public let favoriteDestinations: [String]
     public let recentDestinations: [String]
+    public let routeHistory: [NavigationRouteHistoryEntry]
     public let activeStopCategoryIDs: [String]
     public let parksHistoricRadiusMiles: Int
     public let selectedOriginMode: String
@@ -24,6 +25,7 @@ public struct NavigationState: Codable, Sendable {
     enum CodingKeys: String, CodingKey {
         case favoriteDestinations = "favorite_destinations"
         case recentDestinations = "recent_destinations"
+        case routeHistory = "route_history"
         case activeStopCategoryIDs = "active_stop_category_ids"
         case parksHistoricRadiusMiles = "parks_historic_radius_miles"
         case selectedOriginMode = "selected_origin_mode"
@@ -39,6 +41,36 @@ public struct NavigationLastRoute: Codable, Sendable {
     public init(origin: String, destination: String) {
         self.origin = origin
         self.destination = destination
+    }
+}
+
+public struct NavigationRouteHistoryEntry: Codable, Identifiable, Sendable {
+    public let routeID: String
+    public let origin: String
+    public let destination: String
+    public let originMode: String
+    public let savedLocationID: String
+    public let sourceLabel: String
+    public let savedAt: String
+    public let lastPreviewedAt: String
+    public let lastResumedAt: String
+    public let previewCount: Int
+    public let resumeCount: Int
+
+    public var id: String { routeID }
+
+    enum CodingKeys: String, CodingKey {
+        case routeID = "route_id"
+        case origin
+        case destination
+        case originMode = "origin_mode"
+        case savedLocationID = "saved_location_id"
+        case sourceLabel = "source_label"
+        case savedAt = "saved_at"
+        case lastPreviewedAt = "last_previewed_at"
+        case lastResumedAt = "last_resumed_at"
+        case previewCount = "preview_count"
+        case resumeCount = "resume_count"
     }
 }
 

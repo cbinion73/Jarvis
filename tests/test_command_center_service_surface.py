@@ -772,14 +772,17 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Navigation Command Center", navigation_html)
         self.assertIn("Concept Storyboard", navigation_html)
         self.assertIn("Stop Detail &amp; Route Modification", navigation_html)
+        self.assertIn("Resume Route History", navigation_html)
         self.assertIn("Recent Route Continuity", navigation_html)
         self.assertIn("/api/activity/operator-action", navigation_html)
         self.assertIn("status", navigation_snapshot)
         self.assertIn("navigation_state", navigation_snapshot)
+        self.assertIn("route_history", navigation_snapshot)
         self.assertIn("recent_activity", navigation_snapshot)
         self.assertIn("proof_paths", navigation_snapshot)
         self.assertEqual(navigation_snapshot["proof_paths"]["module_route"], "/navigation-center")
         self.assertEqual(navigation_snapshot["proof_paths"]["module_api"], "/api/navigation/module")
+        self.assertEqual(navigation_snapshot["proof_paths"]["resume_api"], "/api/navigation/module/resume")
         self.assertIn("JARVIS Publish", publish_html)
         self.assertIn("Quick Draft Project", publish_html)
         self.assertIn("Editorial Review Lane", publish_html)
@@ -1187,6 +1190,53 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertTrue(any(item.get("title") == "Create Draft Project" for item in publish_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("title") == "Start Overnight Research" for item in huddle_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("title") == "Preview Route Intelligence" for item in navigation_snapshot["recent_activity"]))
+
+    def test_navigation_route_history_resume_updates_module_state_activity_and_progress(self) -> None:
+        from jarvis.apple_api import _record_navigation_route_history
+
+        _, seeded_route = _record_navigation_route_history(
+            origin="Home Base",
+            destination="Office",
+            origin_mode="home",
+            parks_historic_radius_miles=25,
+            source_label="Navigation test seed",
+        )
+        self.assertEqual(seeded_route["destination"], "Office")
+        self.runtime.storm_route_weather = lambda origin, destination: {
+            "origin": {"label": origin},
+            "destination": {"label": destination},
+            "summary": f"Preview ready for {origin} -> {destination}.",
+            "hazard_active": False,
+            "route": {
+                "distance_miles": 12,
+                "duration_minutes": 18,
+                "coordinates": [[38.95, -84.47], [39.10, -84.51]],
+                "steps": [],
+            },
+        }
+
+        module_before = self._json_body(asyncio.run(self._route("/api/navigation/module", "GET")()))
+        self.assertEqual(len(module_before["route_history"]), 1)
+        route_id = module_before["route_history"][0]["route_id"]
+
+        resume_response = self._json_body(
+            asyncio.run(
+                self._route("/api/navigation/module/resume", "POST")(
+                    {"route_id": route_id, "actor": "Chris"}
+                )
+            )
+        )
+        self.assertEqual(resume_response["status"], "resumed")
+        self.assertEqual(resume_response["route"]["destination"], "Office")
+        self.assertEqual(resume_response["focus"]["module"], "Navigation")
+
+        module_after = self._json_body(asyncio.run(self._route("/api/navigation/module", "GET")()))
+        history_entry = next(item for item in module_after["route_history"] if item.get("route_id") == route_id)
+        from jarvis.audit import AuditLog
+
+        self.assertEqual(history_entry["resume_count"], 1)
+        recent_activity = AuditLog(Path("data/logs")).list_recent(limit=8, entry_type="operator-action")
+        self.assertTrue(any(item.get("action") == "Resume Navigation Route" for item in recent_activity))
 
     def test_huddle_idea_actions_update_huddle_continuity_and_progress_focus(self) -> None:
         async def _capture_payload() -> dict[str, str]:

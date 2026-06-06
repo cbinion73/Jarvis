@@ -60,6 +60,21 @@ public final class AppleAPIClient: Sendable {
         try await post("/api/apple/navigation/state", body: state)
     }
 
+    public func resumeNavigationHistoryRoute(_ routeID: String) async throws -> NavigationState {
+        struct Response: Decodable {
+            let state: NavigationState
+
+            enum CodingKeys: String, CodingKey {
+                case state = "navigation_state"
+            }
+        }
+        let response: Response = try await post(
+            "/api/apple/navigation/history/\(routeID)/resume",
+            body: EmptyBody()
+        )
+        return response.state
+    }
+
     public func fetchNavigationRoute(origin: String, destination: String) async throws -> NavigationRouteOverview {
         let allowed = CharacterSet.urlQueryAllowed
         guard

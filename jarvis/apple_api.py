@@ -5168,6 +5168,7 @@ def _default_navigation_state() -> dict[str, Any]:
     return {
         "favorite_destinations": [],
         "recent_destinations": [],
+        "route_history": [],
         "active_stop_category_ids": ["food", "starbucks", "parks", "historic", "family"],
         "parks_historic_radius_miles": 25,
         "selected_origin_mode": "home",
@@ -5176,6 +5177,43 @@ def _default_navigation_state() -> dict[str, Any]:
             "origin": "",
             "destination": "",
         },
+    }
+
+
+def _normalize_navigation_route_history_entry(item: Any) -> dict[str, Any] | None:
+    if not isinstance(item, dict):
+        return None
+    origin = str(item.get("origin") or "").strip()
+    destination = str(item.get("destination") or "").strip()
+    if not origin or not destination:
+        return None
+    route_id = str(item.get("route_id") or uuid.uuid5(uuid.NAMESPACE_URL, f"jarvis-route:{origin.lower()}::{destination.lower()}")).strip()
+    saved_at = str(item.get("saved_at") or item.get("last_previewed_at") or _ts()).strip() or _ts()
+    last_previewed_at = str(item.get("last_previewed_at") or saved_at).strip() or saved_at
+    last_resumed_at = str(item.get("last_resumed_at") or "").strip()
+    source_label = str(item.get("source_label") or "Navigation route preview").strip() or "Navigation route preview"
+    origin_mode = str(item.get("origin_mode") or "home").strip() or "home"
+    saved_location_id = str(item.get("saved_location_id") or "").strip()
+    try:
+        preview_count = max(1, int(item.get("preview_count", 1) or 1))
+    except Exception:
+        preview_count = 1
+    try:
+        resume_count = max(0, int(item.get("resume_count", 0) or 0))
+    except Exception:
+        resume_count = 0
+    return {
+        "route_id": route_id,
+        "origin": origin,
+        "destination": destination,
+        "origin_mode": origin_mode,
+        "saved_location_id": saved_location_id,
+        "source_label": source_label,
+        "saved_at": saved_at,
+        "last_previewed_at": last_previewed_at,
+        "last_resumed_at": last_resumed_at,
+        "preview_count": preview_count,
+        "resume_count": resume_count,
     }
 
 
@@ -5195,6 +5233,16 @@ def _load_navigation_state() -> dict[str, Any]:
         for item in (merged.get("recent_destinations") or [])
         if str(item).strip()
     ][:8]
+    route_history: list[dict[str, Any]] = []
+    for item in (merged.get("route_history") or []):
+        normalized = _normalize_navigation_route_history_entry(item)
+        if normalized:
+            route_history.append(normalized)
+    route_history.sort(
+        key=lambda item: str(item.get("last_previewed_at") or item.get("saved_at") or ""),
+        reverse=True,
+    )
+    merged["route_history"] = route_history[:8]
     merged["active_stop_category_ids"] = [
         str(item).strip()
         for item in (merged.get("active_stop_category_ids") or [])
@@ -5239,6 +5287,16 @@ def _save_navigation_state(patch: dict[str, Any]) -> dict[str, Any]:
         for item in (cleaned.get("recent_destinations") or [])
         if str(item).strip()
     ][:8]
+    route_history: list[dict[str, Any]] = []
+    for item in (cleaned.get("route_history") or []):
+        normalized = _normalize_navigation_route_history_entry(item)
+        if normalized:
+            route_history.append(normalized)
+    route_history.sort(
+        key=lambda item: str(item.get("last_previewed_at") or item.get("saved_at") or ""),
+        reverse=True,
+    )
+    cleaned["route_history"] = route_history[:8]
     cleaned["active_stop_category_ids"] = [
         str(item).strip()
         for item in (cleaned.get("active_stop_category_ids") or [])
@@ -5260,6 +5318,143 @@ def _save_navigation_state(patch: dict[str, Any]) -> dict[str, Any]:
     }
     _safe_write_json(_NAVIGATION_STATE_PATH, cleaned)
     return cleaned
+
+
+def _record_navigation_route_history(
+    *,
+    origin: str,
+    destination: str,
+    origin_mode: str,
+    saved_location_id: str = "",
+    parks_historic_radius_miles: int | None = None,
+    source_label: str = "Navigation route preview",
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    current = _load_navigation_state()
+    route_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"jarvis-route:{origin.lower()}::{destination.lower()}"))
+    now = _ts()
+    existing_history = list(current.get("route_history") or [])
+    next_history: list[dict[str, Any]] = []
+    matched_entry: dict[str, Any] | None = None
+    for item in existing_history:
+        normalized = _normalize_navigation_route_history_entry(item)
+        if not normalized:
+            continue
+        if normalized["route_id"] == route_id:
+            normalized["origin_mode"] = origin_mode
+            normalized["saved_location_id"] = saved_location_id
+            normalized["source_label"] = source_label
+            normalized["last_previewed_at"] = now
+            normalized["preview_count"] = int(normalized.get("preview_count", 1) or 1) + 1
+            matched_entry = normalized
+        next_history.append(normalized)
+    if matched_entry is None:
+        matched_entry = {
+            "route_id": route_id,
+            "origin": origin,
+            "destination": destination,
+            "origin_mode": origin_mode,
+            "saved_location_id": saved_location_id,
+            "source_label": source_label,
+            "saved_at": now,
+            "last_previewed_at": now,
+            "last_resumed_at": "",
+            "preview_count": 1,
+            "resume_count": 0,
+        }
+        next_history.append(matched_entry)
+    next_recent = [destination] + [
+        str(item).strip()
+        for item in (current.get("recent_destinations") or [])
+        if str(item).strip() and str(item).strip().lower() != destination.lower()
+    ]
+    saved = _save_navigation_state(
+        {
+            "selected_origin_mode": origin_mode,
+            "selected_saved_location_id": saved_location_id,
+            "parks_historic_radius_miles": parks_historic_radius_miles if parks_historic_radius_miles is not None else current.get("parks_historic_radius_miles"),
+            "last_route": {"origin": origin, "destination": destination},
+            "recent_destinations": next_recent[:8],
+            "route_history": next_history,
+        }
+    )
+    normalized_saved = next(
+        (
+            item for item in (saved.get("route_history") or [])
+            if str(item.get("route_id") or "").strip() == route_id
+        ),
+        matched_entry,
+    )
+    return saved, normalized_saved
+
+
+def _resume_navigation_route_history(
+    *,
+    route_id: str,
+    actor: str = "chris",
+    source_label: str = "Navigation route history",
+) -> dict[str, Any]:
+    current = _load_navigation_state()
+    history = list(current.get("route_history") or [])
+    target: dict[str, Any] | None = None
+    next_history: list[dict[str, Any]] = []
+    now = _ts()
+    for item in history:
+        normalized = _normalize_navigation_route_history_entry(item)
+        if not normalized:
+            continue
+        if normalized["route_id"] == route_id:
+            normalized["last_resumed_at"] = now
+            normalized["resume_count"] = int(normalized.get("resume_count", 0) or 0) + 1
+            target = normalized
+        next_history.append(normalized)
+    if target is None:
+        raise KeyError("Navigation route history entry not found.")
+    destination = str(target.get("destination") or "").strip()
+    saved = _save_navigation_state(
+        {
+            "selected_origin_mode": str(target.get("origin_mode") or current.get("selected_origin_mode") or "home").strip() or "home",
+            "selected_saved_location_id": str(target.get("saved_location_id") or current.get("selected_saved_location_id") or "").strip(),
+            "last_route": {
+                "origin": str(target.get("origin") or "").strip(),
+                "destination": destination,
+            },
+            "recent_destinations": [destination]
+            + [
+                str(item).strip()
+                for item in (current.get("recent_destinations") or [])
+                if str(item).strip() and str(item).strip().lower() != destination.lower()
+            ][:7],
+            "route_history": next_history,
+        }
+    )
+    restored = next(
+        (
+            item for item in (saved.get("route_history") or [])
+            if str(item.get("route_id") or "").strip() == route_id
+        ),
+        target,
+    )
+    title = f"{str(restored.get('origin') or '').strip()} -> {destination}"
+    _record_operator_action(
+        actor=actor,
+        domain="navigation",
+        action="Resume Navigation Route",
+        detail=f"{source_label} resumed {title}.",
+        why_now="A stored route was restored so travel continuity can move cleanly across desktop, iPhone, and CarPlay.",
+        result_summary=f"Navigation focus restored for {title}.",
+        route="/navigation-center",
+        route_label="Open Navigation",
+        related_kind="route-history",
+        related_label=title,
+        succeeded=True,
+    )
+    focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module="Navigation",
+        reason=f"Resumed stored route {title}.",
+        route="/navigation-center",
+        actor=actor,
+    )
+    return {"state": saved, "route": restored, "focus": focus}
 
 
 def _nav_route_points(route_info: dict[str, Any]) -> list[tuple[float, float]]:
@@ -8043,6 +8238,14 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         origin = str((last_route or {}).get("origin") or "").strip()
         destination = str((last_route or {}).get("destination") or "").strip()
         if origin and destination:
+            saved, _ = _record_navigation_route_history(
+                origin=origin,
+                destination=destination,
+                origin_mode=str(saved.get("selected_origin_mode") or "home").strip() or "home",
+                saved_location_id=str(saved.get("selected_saved_location_id") or "").strip(),
+                parks_historic_radius_miles=int(saved.get("parks_historic_radius_miles") or 25),
+                source_label="Apple navigation state update",
+            )
             _record_operator_action(
                 actor="Chris",
                 domain="navigation",
@@ -8056,6 +8259,28 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 related_label=destination,
             )
         return _ok(saved)
+
+    @app.post("/api/apple/navigation/history/{route_id}/resume")
+    async def apple_navigation_resume_history(route_id: str):
+        route_id = str(route_id or "").strip()
+        if not route_id:
+            raise HTTPException(status_code=400, detail="route_id is required")
+        try:
+            resumed = _resume_navigation_route_history(
+                route_id=route_id,
+                actor="Chris",
+                source_label="Apple navigation route history",
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _ok(
+            {
+                "status": "resumed",
+                "navigation_state": resumed.get("state") or {},
+                "route": resumed.get("route") or {},
+                "focus": resumed.get("focus") or {},
+            }
+        )
 
     # ------------------------------------------------------------------
     # GET /api/apple/navigation/route

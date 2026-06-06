@@ -10021,7 +10021,12 @@ def render_navigation_module_page(payload: dict) -> str:
         <ul id="stops-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>7. Voice Navigation Consultation &amp; Recent Route Continuity</h2>
+        <h2>7. Resume Route History</h2>
+        <ul id="route-history-list"></ul>
+        <p class="status-note" id="route-history-note">Stored routes can be resumed across desktop, iPhone, and CarPlay.</p>
+      </section>
+      <section class="panel span-6">
+        <h2>8. Voice Navigation Consultation &amp; Recent Route Continuity</h2>
         <ul id="recent-activity-list"></ul>
       </section>
       <section class="panel span-12">
@@ -10050,6 +10055,7 @@ def render_navigation_module_page(payload: dict) -> str:
     const stateList = document.getElementById("state-list");
     const stopsList = document.getElementById("stops-list");
     const routeDetailList = document.getElementById("route-detail-list");
+    const routeHistoryList = document.getElementById("route-history-list");
     const recentActivityList = document.getElementById("recent-activity-list");
     const payloadPreview = document.getElementById("payload-preview");
 
@@ -10102,6 +10108,7 @@ def render_navigation_module_page(payload: dict) -> str:
         li("Origin Mode", state.selected_origin_mode || "home"),
         li("Favorite Destinations", (state.favorite_destinations || []).join(" | ") || "No favorites saved."),
         li("Recent Destinations", (state.recent_destinations || []).join(" | ") || "No recent destinations saved."),
+        li("Route History", `${{(payload.route_history || []).length}} stored route entr${{(payload.route_history || []).length === 1 ? "y" : "ies"}}`),
       ].join("");
 
       const leadStop = (preview.sections || []).flatMap((section) => section.items || [])[0];
@@ -10117,6 +10124,18 @@ def render_navigation_module_page(payload: dict) -> str:
         `${{(section.items || []).length}} stop suggestion(s)`,
         (section.items || []).slice(0, 2).map((item) => item.name).join(" | ")
       )).join("") || '<li><strong>No stop suggestions yet.</strong><span>Run a route preview to load along-route stops.</span></li>';
+      routeHistoryList.innerHTML = (Array.isArray(payload.route_history) ? payload.route_history : []).length
+        ? payload.route_history.map((item) => `
+          <li>
+            <strong>${{esc((item.origin || "Origin") + " -> " + (item.destination || "Destination"))}}</strong>
+            <span>${{esc((item.source_label || "Stored route") + " · previewed " + String(item.preview_count || 0) + "x · resumed " + String(item.resume_count || 0) + "x")}}</span>
+            <span>${{esc(item.last_resumed_at || item.last_previewed_at || item.saved_at || "")}}</span>
+            <div class="actions">
+              <button type="button" data-route-history-id="${{esc(item.route_id || "")}}" data-route-history-label="${{esc((item.origin || "Origin") + " -> " + (item.destination || "Destination"))}}">Resume Route</button>
+            </div>
+          </li>
+        `).join("")
+        : '<li><strong>No stored routes yet.</strong><span>Preview a route and JARVIS will keep a durable resume-ready route history here.</span></li>';
       recentActivityList.innerHTML = (Array.isArray(payload.recent_activity) ? payload.recent_activity : []).length
         ? payload.recent_activity.map((item) => li(item.title || "Navigation action", item.subtitle || item.actor || "Operator continuity", item.detail || item.route_label || "")).join("")
         : '<li><strong>No route continuity recorded yet.</strong><span>Preview a route and the live travel history will appear here.</span></li>';
@@ -10182,12 +10201,37 @@ def render_navigation_module_page(payload: dict) -> str:
       }}
     }}
 
+    async function resumeStoredRoute(routeId, label) {{
+      const note = document.getElementById("route-history-note");
+      note.textContent = `Resuming ${{label}}…`;
+      try {{
+        const response = await fetch("/api/navigation/module/resume", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{ route_id: routeId, actor: "Chris" }}),
+        }});
+        const payload = await response.json();
+        document.getElementById("navigation-route-output").textContent = JSON.stringify(payload.route_preview || payload, null, 2);
+        note.textContent = `Resumed ${{label}}.`;
+        await refreshNavigationState();
+      }} catch (error) {{
+        note.textContent = `Resume failed: ${{String(error)}}`;
+      }}
+    }}
+
     document.getElementById("refresh-navigation").addEventListener("click", () => {{
       refreshNavigationState().catch((error) => {{
         statusNote.textContent = `Refresh failed: ${{String(error)}}`;
       }});
     }});
     document.getElementById("navigation-route-form").addEventListener("submit", previewRoute);
+    document.addEventListener("click", (event) => {{
+      const button = event.target.closest("[data-route-history-id]");
+      if (!button) return;
+      resumeStoredRoute(button.getAttribute("data-route-history-id") || "", button.getAttribute("data-route-history-label") || "stored route").catch((error) => {{
+        document.getElementById("route-history-note").textContent = `Resume failed: ${{String(error)}}`;
+      }});
+    }});
     render(initialPayload);
   </script>
 </body>

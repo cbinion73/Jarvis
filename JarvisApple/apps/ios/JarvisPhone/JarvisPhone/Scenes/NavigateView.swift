@@ -85,6 +85,7 @@ struct NavigateView: View {
     @State private var preferredLocationId: String?
     @State private var favoriteDestinations: [String] = []
     @State private var recentDestinations: [String] = []
+    @State private var routeHistory: [NavigationRouteHistoryEntry] = []
     @State private var activeStopCategoryIDs: Set<String> = ["food", "starbucks", "parks", "historic", "family"]
     @State private var parksHistoricRadiusMiles = 25.0
     @State private var selectedOriginMode: OriginMode = .home
@@ -2060,6 +2061,10 @@ struct NavigateView: View {
             if !recentDestinations.isEmpty {
                 quickDestinationSection(title: "Recent", systemImage: "clock.arrow.circlepath", items: recentDestinations, tint: slate)
             }
+
+            if !routeHistory.isEmpty {
+                routeHistorySection
+            }
         }
     }
 
@@ -2081,6 +2086,35 @@ struct NavigateView: View {
                             .lineLimit(1)
                         Spacer()
                     }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var routeHistorySection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Route History", systemImage: "arrow.triangle.swap")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.teal)
+            ForEach(Array(routeHistory.prefix(4))) { entry in
+                Button {
+                    Task { await resumeStoredRoute(entry) }
+                } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(entry.destination)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                        Text("\(entry.origin) -> \(entry.destination)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        Text("Previewed \(entry.previewCount)x · Resumed \(entry.resumeCount)x")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary.opacity(0.85))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .buttonStyle(.plain)
             }
@@ -3431,6 +3465,7 @@ struct NavigateView: View {
     private func hydrateNavigationState(_ state: NavigationState) {
         favoriteDestinations = state.favoriteDestinations
         recentDestinations = state.recentDestinations
+        routeHistory = state.routeHistory
         activeStopCategoryIDs = Set(state.activeStopCategoryIDs.isEmpty ? ["food", "starbucks", "parks", "historic", "family"] : state.activeStopCategoryIDs)
         parksHistoricRadiusMiles = Double(state.parksHistoricRadiusMiles)
         selectedStopCategoryID = state.activeStopCategoryIDs.first ?? selectedStopCategoryID
@@ -3519,6 +3554,29 @@ struct NavigateView: View {
             focusMap(on: overview)
             await loadStops(origin: origin, destination: destination)
             self.pendingRouteRestore = nil
+        } catch {
+            routeError = error.localizedDescription
+        }
+    }
+
+    private func resumeStoredRoute(_ entry: NavigationRouteHistoryEntry) async {
+        loadingRoute = true
+        routeError = nil
+        defer { loadingRoute = false }
+
+        do {
+            let state = try await AppleAPIClient.shared.resumeNavigationHistoryRoute(entry.routeID)
+            routeHistory = state.routeHistory
+            recentDestinations = state.recentDestinations
+            favoriteDestinations = state.favoriteDestinations
+            if let restoredOriginMode = OriginMode(rawValue: state.selectedOriginMode),
+               availableOriginModes.contains(restoredOriginMode) {
+                selectedOriginMode = restoredOriginMode
+            }
+            selectedSavedLocationID = state.selectedSavedLocationID.isEmpty ? selectedSavedLocationID : state.selectedSavedLocationID
+            pendingRouteRestore = state.lastRoute
+            destinationText = state.lastRoute.destination
+            await restorePendingRouteIfPossible()
         } catch {
             routeError = error.localizedDescription
         }
