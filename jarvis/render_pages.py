@@ -2033,6 +2033,10 @@ def render_recovery_module_page(payload: dict) -> str:
         <div id="failure-list"></div>
       </section>
       <section class="panel span-12">
+        <h2>Recovery Cases</h2>
+        <div id="recovery-case-list"></div>
+      </section>
+      <section class="panel span-12">
         <h2>Recovery Continuity</h2>
         <div id="recovery-bridge-list"></div>
       </section>
@@ -2064,6 +2068,7 @@ def render_recovery_module_page(payload: dict) -> str:
     const approvalList = document.getElementById("approval-list");
     const integrationList = document.getElementById("integration-list");
     const failureList = document.getElementById("failure-list");
+    const recoveryCaseList = document.getElementById("recovery-case-list");
     const recoveryBridgeList = document.getElementById("recovery-bridge-list");
     const recoveryJournalList = document.getElementById("recovery-journal-list");
     const proofList = document.getElementById("proof-list");
@@ -2163,7 +2168,9 @@ def render_recovery_module_page(payload: dict) -> str:
       const actions = Array.isArray(failure.action_items) ? failure.action_items : [];
       const integrations = Array.isArray(failure.failing_integrations) ? failure.failing_integrations : [];
       const recent = Array.isArray(failure.recent_failures) ? failure.recent_failures : [];
+      const cases = Array.isArray(payload.recovery_cases) ? payload.recovery_cases : [];
       if (currentSelection.kind === "approval") return pending[currentSelection.index] || pending[0] || null;
+      if (currentSelection.kind === "case") return cases[currentSelection.index] || cases[0] || null;
       if (currentSelection.kind === "integration") return integrations[currentSelection.index] || integrations[0] || null;
       if (currentSelection.kind === "failure") return recent[currentSelection.index] || recent[0] || null;
       return actions[currentSelection.index] || actions[0] || null;
@@ -2186,6 +2193,7 @@ def render_recovery_module_page(payload: dict) -> str:
           <span>${{esc(summary)}}</span>
           <div class="chips">
             ${{item.request_id ? chip("approval gate", "steady") : ""}}
+            ${{item.case_id ? chip(item.status_label || item.status || "case", item.status === "resolved" ? "accepted" : item.status === "watch" ? "steady" : "regressed") : ""}}
             ${{item.name ? chip("integration", "regressed") : ""}}
             ${{item.timestamp ? chip(item.timestamp, "steady") : ""}}
             ${{item.risk_tier ? chip(item.risk_tier, "steady") : ""}}
@@ -2202,6 +2210,9 @@ def render_recovery_module_page(payload: dict) -> str:
             ${{item.request_id ? `<button type="button" data-approve-id="${{esc(item.request_id)}}">Approve Recovery Gate</button>` : ""}}
             ${{item.request_id ? `<button type="button" data-execute-id="${{esc(item.request_id)}}" data-execute-label="${{esc(title)}}" data-execute-detail="${{esc(summary)}}">Execute Recovery Gate</button>` : ""}}
             ${{item.request_id ? `<button type="button" class="alt" data-reject-id="${{esc(item.request_id)}}">Reject Recovery Gate</button>` : ""}}
+            ${{item.case_id ? `<button type="button" data-case-status="investigating" data-case-id="${{esc(item.case_id)}}">Mark Investigating</button>` : ""}}
+            ${{item.case_id ? `<button type="button" class="alt" data-case-status="watch" data-case-id="${{esc(item.case_id)}}">Mark Watch</button>` : ""}}
+            ${{item.case_id ? `<button type="button" class="alt" data-case-status="resolved" data-case-id="${{esc(item.case_id)}}">Mark Resolved</button>` : ""}}
             <button type="button" data-recovery-action="retry" data-recovery-kind="${{esc(item.request_id ? "approval" : item.name ? "integration" : "failure")}}" data-recovery-label="${{esc(title)}}" data-recovery-detail="${{esc(summary)}}" data-recovery-target-id="${{esc(item.request_id || "")}}">Stage Retry</button>
             <button type="button" class="alt" data-recovery-action="stabilize" data-recovery-kind="${{esc(item.request_id ? "approval" : item.name ? "integration" : "failure")}}" data-recovery-label="${{esc(title)}}" data-recovery-detail="${{esc(summary)}}">Mark Stabilized</button>
           </div>
@@ -2246,6 +2257,16 @@ def render_recovery_module_page(payload: dict) -> str:
           }});
         }});
       }});
+      document.querySelectorAll("[data-case-status]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          updateRecoveryCase(
+            button.getAttribute("data-case-id") || "",
+            button.getAttribute("data-case-status") || "investigating",
+          ).catch((error) => {{
+            actionNote.textContent = `Recovery case update failed: ${{String(error)}}`;
+          }});
+        }});
+      }});
     }}
 
     function render(payload) {{
@@ -2255,6 +2276,7 @@ def render_recovery_module_page(payload: dict) -> str:
       const pending = Array.isArray(payload.pending_approvals) ? payload.pending_approvals : [];
       const integrations = Array.isArray(failure.failing_integrations) ? failure.failing_integrations : [];
       const recent = Array.isArray(failure.recent_failures) ? failure.recent_failures : [];
+      const cases = Array.isArray(payload.recovery_cases) ? payload.recovery_cases : [];
       const proofs = payload.proof_paths || {{}};
 
       heroStatus.textContent = payload.status || "Wired";
@@ -2335,6 +2357,30 @@ def render_recovery_module_page(payload: dict) -> str:
         `,
         "No recent failure signals.",
         "Recent runtime failures and rollback signals will appear here."
+      );
+
+      recoveryCaseList.innerHTML = listOrEmpty(
+        cases,
+        (item, index) => `
+          <div class="entry-card">
+            <strong>${{esc(item.title || "Recovery case")}}</strong>
+            <span>${{esc(item.detail || "Durable recovery case is ready for review.")}}</span>
+            <div class="chips">
+              ${{chip(item.status_label || item.status || "Open", item.status === "resolved" ? "accepted" : item.status === "watch" ? "steady" : "regressed")}}
+              ${{item.source_kind ? chip(item.source_kind.replaceAll("-", " ")) : ""}}
+              ${{item.last_action_at ? chip(item.last_action_at, "steady") : ""}}
+            </div>
+            <div class="action-row">
+              <button type="button" data-select-kind="case" data-select-index="${{esc(String(index))}}">Inspect Case</button>
+              <button type="button" data-case-status="investigating" data-case-id="${{esc(item.case_id || "")}}">Mark Investigating</button>
+              <button type="button" class="alt" data-case-status="watch" data-case-id="${{esc(item.case_id || "")}}">Mark Watch</button>
+              <button type="button" class="alt" data-case-status="resolved" data-case-id="${{esc(item.case_id || "")}}">Mark Resolved</button>
+              <a href="${{esc(item.related_route || "/recovery-center")}}">Open Related Surface</a>
+            </div>
+          </div>
+        `,
+        "No durable recovery cases yet.",
+        "Integration and failure signals will open durable recovery cases here."
       );
 
       const recoveryBridge = ((payload.recovery_actions || {{}}).recent) || [];
@@ -2433,6 +2479,16 @@ def render_recovery_module_page(payload: dict) -> str:
           }});
         }});
       }});
+      document.querySelectorAll("[data-case-status]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          updateRecoveryCase(
+            button.getAttribute("data-case-id") || "",
+            button.getAttribute("data-case-status") || "investigating",
+          ).catch((error) => {{
+            actionNote.textContent = `Recovery case update failed: ${{String(error)}}`;
+          }});
+        }});
+      }});
 
       renderDetail(payload);
     }}
@@ -2522,6 +2578,31 @@ def render_recovery_module_page(payload: dict) -> str:
         await refreshRecoveryState();
       }} catch (error) {{
         actionNote.textContent = `${{action === "approve" ? "Approve" : action === "execute" ? "Execute" : "Reject"}} failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function updateRecoveryCase(caseId, status) {{
+      if (!caseId) return;
+      actionNote.textContent = `Updating recovery case ${{caseId}} to ${{status}}…`;
+      try {{
+        const response = await fetch(`/api/recovery/cases/${{encodeURIComponent(caseId)}}`, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            actor: "Chris",
+            status,
+            note: `Recovery case moved to ${{status}} from the Recovery Center.`,
+          }}),
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Recovery case update failed");
+        }}
+        const updatedCase = payload.case || {{}};
+        actionNote.textContent = `Recovery case ${{updatedCase.title || caseId}} is now ${{updatedCase.status_label || status}}.`;
+        await refreshRecoveryState();
+      }} catch (error) {{
+        actionNote.textContent = `Recovery case update failed: ${{String(error)}}`;
       }}
     }}
 

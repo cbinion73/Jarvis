@@ -510,12 +510,17 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Execute Recovery Gate", recovery_html)
         self.assertIn("Stage Retry", recovery_html)
         self.assertIn("Mark Stabilized", recovery_html)
+        self.assertIn("Mark Investigating", recovery_html)
+        self.assertIn("Mark Watch", recovery_html)
+        self.assertIn("Mark Resolved", recovery_html)
         self.assertIn("/api/recovery/action", recovery_html)
         self.assertIn("status", recovery_snapshot)
         self.assertIn("failure_recovery", recovery_snapshot)
         self.assertIn("pending_approvals", recovery_snapshot)
         self.assertIn("recovery_actions", recovery_snapshot)
+        self.assertIn("recovery_cases", recovery_snapshot)
         self.assertIn("recorded_recovery_actions", recovery_snapshot["counts"])
+        self.assertIn("recovery_case_count", recovery_snapshot["counts"])
         self.assertIn("proof_paths", recovery_snapshot)
         self.assertEqual(recovery_snapshot["proof_paths"]["module_route"], "/recovery-center")
         self.assertEqual(recovery_snapshot["proof_paths"]["module_api"], "/api/recovery/module")
@@ -716,6 +721,31 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertTrue(any(item.get("entry_type") == "operator-action" for item in activity_module_payload["activity_feed"]))
         self.assertGreaterEqual(int(action_journal.get("operator_count", 0) or 0), 1)
         self.assertTrue(any(item.get("kind") == "operator-action" for item in action_journal.get("entries", [])))
+
+    def test_recovery_case_mutations_persist_into_shared_activity(self) -> None:
+        recovery_module_response = asyncio.run(self._route("/api/recovery/module", "GET")())
+        recovery_payload = self._json_body(recovery_module_response)
+        self.assertGreaterEqual(len(recovery_payload["recovery_cases"]), 1)
+        case_id = recovery_payload["recovery_cases"][0]["case_id"]
+
+        update_response = asyncio.run(
+            self._route("/api/recovery/cases/{case_id}", "POST")(
+                case_id,
+                {
+                    "actor": "Chris",
+                    "status": "investigating",
+                    "note": "Working the integration failure from Recovery Center.",
+                },
+            )
+        )
+        updated_payload = self._json_body(update_response)
+        self.assertEqual(updated_payload["status"], "recorded")
+        self.assertEqual(updated_payload["case"]["status"], "investigating")
+
+        activity_response = asyncio.run(self._route("/api/activity", "GET")())
+        activity_payload = self._json_body(activity_response)
+        self.assertTrue(any(item.get("entry_type") == "operator-action" for item in activity_payload))
+        self.assertTrue(any(item.get("related_kind") == "recovery-case" for item in activity_payload))
 
 
 if __name__ == "__main__":

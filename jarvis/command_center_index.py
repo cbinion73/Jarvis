@@ -9,6 +9,7 @@ from typing import Any
 from .audit import AuditLog, ProgressSnapshotStore
 from .agent_registry_contract import load_contract_bundle
 from .approval_queue_surface import build_approval_queue_snapshot
+from .recovery_cases import RecoveryCaseStore
 from .supervision_snapshot import build_supervision_snapshot
 
 
@@ -163,6 +164,7 @@ def _failure_recovery(
     approval_snapshot: dict[str, Any],
     activity_feed: list[dict[str, Any]],
 ) -> dict[str, Any]:
+    recovery_case_store = RecoveryCaseStore()
     integrations = list(supervision_snapshot.get("integrations") or [])
     failing_integrations = []
     for item in integrations:
@@ -232,11 +234,39 @@ def _failure_recovery(
             }
         )
 
+    recovery_cases = []
+    try:
+        recovery_cases = recovery_case_store.list_cases()
+    except Exception:
+        recovery_cases = []
+    unresolved_cases = [
+        item for item in recovery_cases
+        if str(item.get("status", "")).strip().lower() in {"open", "investigating", "watch"}
+    ]
+    if unresolved_cases:
+        investigating_count = sum(
+            1 for item in unresolved_cases
+            if str(item.get("status", "")).strip().lower() == "investigating"
+        )
+        watch_count = sum(
+            1 for item in unresolved_cases
+            if str(item.get("status", "")).strip().lower() == "watch"
+        )
+        action_items.insert(
+            0,
+            {
+                "title": "Durable recovery cases need review",
+                "detail": f"{len(unresolved_cases)} case(s) are open, including {investigating_count} investigating and {watch_count} watch item(s).",
+            },
+        )
+
     return {
         "integration_issue_count": len(failing_integrations),
         "recent_failure_count": len(recent_failures),
         "pending_approval_count": pending_count,
         "dirty_count": dirty_count,
+        "recovery_case_count": len(recovery_cases),
+        "unresolved_recovery_case_count": len(unresolved_cases),
         "failing_integrations": failing_integrations,
         "recent_failures": recent_failures,
         "action_items": action_items[:5],

@@ -42,6 +42,7 @@ except Exception:  # pragma: no cover
 from .apple_api import _register_apple_api
 from .audit import AuditLog, ProgressSnapshotStore, RecoveryActionStore
 from . import layout_engine as _layout_engine
+from .recovery_cases import RecoveryCaseStore
 
 try:
     from .voice_pipeline import get_friday, get_pipeline, get_time_aware_greeting, init_voice as _init_voice_pipeline, VOICE_TOOL_ALLOWLIST
@@ -2147,6 +2148,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         recovery_actions = _recovery_bridge_summary(limit=8)
         supervision_snapshot = build_supervision_snapshot()
         approval_snapshot = build_approval_queue_snapshot()
+        recovery_case_store = RecoveryCaseStore()
         action_items = [
             _decorate_recovery_surface_item(item, "recovery")
             for item in list(failure_recovery.get("action_items") or [])
@@ -2162,6 +2164,36 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             for item in list(failure_recovery.get("recent_failures") or [])
             if isinstance(item, dict)
         ]
+        recovery_cases = []
+        recovery_case_error = ""
+        try:
+            for item in failing_integrations:
+                name = str(item.get("name", "")).strip() or "integration"
+                detail = str(item.get("detail", "")).strip() or "Integration needs review."
+                recovery_case_store.upsert_case(
+                    source_kind="integration-failure",
+                    title=f"Repair {name}",
+                    detail=detail,
+                    related_route="/supervision-snapshot",
+                    related_key=f"integration:{name.lower()}",
+                    metadata={"integration_name": name},
+                )
+            for index, item in enumerate(recent_failures):
+                title = str(item.get("title", "")).strip() or "Recent failure surfaced"
+                detail = str(item.get("detail", "")).strip() or "Runtime failure needs review."
+                timestamp = str(item.get("timestamp", "")).strip()
+                recovery_case_store.upsert_case(
+                    source_kind="recent-failure",
+                    title=title,
+                    detail=detail,
+                    related_route="/command-center",
+                    related_key=f"failure:{timestamp or index}:{title.lower()}",
+                    metadata={"timestamp": timestamp},
+                )
+            recovery_cases = recovery_case_store.list_cases()
+        except Exception as exc:
+            recovery_case_error = str(exc).strip()
+            recovery_cases = []
         summary = "Failure & Recovery now has a dedicated module route with live recovery posture, pending approval gates, and recent failure signals inside JARVIS."
 
         if action_items:
@@ -2170,6 +2202,12 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 f"{int(failure_recovery.get('pending_approval_count', 0) or 0)} pending approval gate(s), "
                 f"and {int(failure_recovery.get('integration_issue_count', 0) or 0)} integration issue(s)."
             )
+        if recovery_cases:
+            unresolved_case_count = sum(
+                1 for item in recovery_cases
+                if str(item.get("status", "")).strip().lower() in {"open", "investigating", "watch"}
+            )
+            summary += f" {unresolved_case_count} durable recovery case(s) remain open inside the app state model."
 
         failure_recovery["action_items"] = action_items
         failure_recovery["failing_integrations"] = failing_integrations
@@ -2178,11 +2216,12 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         payload: dict[str, Any] = {
             "generated_at": command_center.get("generated_at", ""),
             "available": True,
-            "status": "Useful" if (action_items or pending_approvals or failing_integrations or recent_failures) else "Wired",
+            "status": "Useful" if (action_items or pending_approvals or failing_integrations or recent_failures or recovery_cases) else "Wired",
             "summary": summary,
             "what_became_real": "Failure & Recovery is now a standalone app module with durable retry, approval execution, and stabilization actions plus visible continuity into the linked approval, supervision, activity, and command-center routes.",
-            "remains_partial": "Automated remediation still needs follow-on slices, but retry, approval execution, and stabilization actions are now durably represented across the recovery stack.",
+            "remains_partial": "Automated remediation still needs follow-on slices, but retry, approval execution, stabilization actions, and durable non-approval recovery cases are now represented across the recovery stack.",
             "failure_recovery": failure_recovery,
+            "recovery_cases": recovery_cases,
             "pending_approvals": pending_approvals,
             "activity_feed": activity_feed,
             "recovery_actions": recovery_actions,
@@ -2195,11 +2234,16 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "dirty_count": int(failure_recovery.get("dirty_count", 0) or 0),
                 "action_count": len(action_items),
                 "recorded_recovery_actions": int(recovery_actions.get("count", 0) or 0),
+                "recovery_case_count": len(recovery_cases),
+                "recovery_case_investigating_count": sum(1 for item in recovery_cases if str(item.get("status", "")).strip().lower() == "investigating"),
+                "recovery_case_watch_count": sum(1 for item in recovery_cases if str(item.get("status", "")).strip().lower() == "watch"),
+                "recovery_case_resolved_count": sum(1 for item in recovery_cases if str(item.get("status", "")).strip().lower() == "resolved"),
             },
             "proof_paths": {
                 "module_route": "/recovery-center",
                 "module_api": "/api/recovery/module",
                 "recovery_action_api": "/api/recovery/action",
+                "recovery_case_api_prefix": "/api/recovery/cases/",
                 "supervision_route": "/supervision-snapshot",
                 "supervision_api": "/api/supervision-snapshot",
                 "approval_queue_route": "/approval-queue",
@@ -2208,6 +2252,8 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "approve_api_prefix": "/api/approvals/",
             },
         }
+        if recovery_case_error:
+            payload["recovery_case_error"] = recovery_case_error
         return payload
 
     @app.get("/api/recovery/module")
@@ -2227,6 +2273,39 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             status=str(payload.get("status", "")).strip() or "queued",
         )
         return _json(entry, status_code=201)
+
+    @app.post("/api/recovery/cases/{case_id}")
+    async def api_recovery_case_update(case_id: str, payload: dict[str, Any]) -> JSONResponse:
+        actor = str(payload.get("actor") or "Chris").strip() or "Chris"
+        status = str(payload.get("status") or "investigating").strip().lower() or "investigating"
+        note = str(payload.get("note") or "").strip()
+        store = RecoveryCaseStore()
+        try:
+            case = store.update_status(case_id, status=status, actor=actor, note=note)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": "recovery-center",
+                "action": f"Mark Recovery Case {case.get('status_label', status.title())}",
+                "title": str(case.get("title") or "Recovery case").strip() or "Recovery case",
+                "detail": note or str(case.get("detail") or "").strip() or f"Recovery case moved to {status}.",
+                "why_now": f"Failure and recovery updated durable case state for {str(case.get('related_key') or case_id).strip()}.",
+                "result_summary": f"Recovery case status: {status}",
+                "related_route": str(case.get("related_route") or "/recovery-center").strip() or "/recovery-center",
+                "route_label": "Open Related Surface",
+                "related_kind": "recovery-case",
+                "related_label": str(case.get("case_id") or case_id).strip(),
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        return _json({"status": "recorded", "case": case})
 
     async def _build_mission_board_module_payload() -> dict[str, Any]:
         command_center = build_command_center_index()
