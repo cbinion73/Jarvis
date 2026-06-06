@@ -1407,6 +1407,22 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         return _json(updated)
 
+    @app.post("/api/missions/{mission_id}/edit")
+    async def api_update_mission_details(mission_id: str, payload: dict[str, Any]) -> JSONResponse:
+        try:
+            updated = await asyncio.to_thread(
+                runtime.update_mission_details,
+                mission_id,
+                title=str(payload.get("title", "")).strip(),
+                brief=str(payload.get("brief", "")).strip(),
+                request=str(payload.get("request", "")).strip(),
+                next_step=str(payload.get("next_step", "")).strip(),
+                note=str(payload.get("note", "")).strip(),
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(updated)
+
     @app.get("/api/missions/{mission_id}/approvals")
     async def api_mission_approvals(mission_id: str) -> JSONResponse:
         return _json(await asyncio.to_thread(runtime.mission_approvals, mission_id))
@@ -2080,15 +2096,16 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def _build_mission_board_module_payload() -> dict[str, Any]:
         command_center = build_command_center_index()
         mission_task_board = dict(command_center.get("mission_task_board") or {})
+        seam_tracker = dict(command_center.get("seam_tracker") or {})
         items = list(mission_task_board.get("items") or [])
         counts = dict(mission_task_board.get("counts") or {})
         payload: dict[str, Any] = {
             "generated_at": command_center.get("generated_at", ""),
             "available": True,
             "status": "Useful" if int(mission_task_board.get("item_count", 0) or 0) else "Wired",
-            "summary": "Mission & Task Board now has a dedicated module route with live lane posture, mission detail, mission authoring, mission workspaces, handoff authoring, and mission status mutation inside JARVIS.",
-            "what_became_real": "Mission & Task Board is now a standalone app module with mission authoring, workspace review, handoff flows, and per-agent work-state controls instead of only a command-center panel and mission API proof path.",
-            "remains_partial": "Broader mission edit flows and deeper seam linkage still need follow-on slices.",
+            "summary": "Mission & Task Board now has a dedicated module route with live lane posture, mission detail, mission authoring, mission workspaces, handoff authoring, seam linkage, and mission status mutation inside JARVIS.",
+            "what_became_real": "Mission & Task Board is now a standalone app module with mission authoring, seam linkage, workspace review, handoff flows, and per-agent work-state controls instead of only a command-center panel and mission API proof path.",
+            "remains_partial": "Broader mission edit flows still need follow-on slices, and seam linkage can still deepen beyond this first mission-detail pass.",
             "mission_task_board": mission_task_board,
             "mission_details": {},
             "counts": {
@@ -2102,6 +2119,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "module_api": "/api/mission-board/module",
                 "missions_api": "/api/missions",
                 "mission_create_api": "/api/missions",
+                "mission_edit_api_suffix": "/edit",
                 "mission_status_api_prefix": "/api/missions/",
                 "mission_handoff_api_suffix": "/handoffs",
                 "mission_handoff_ack_suffix": "/handoffs/{handoff_id}/acknowledge",
@@ -2112,6 +2130,52 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
         mission_snapshot = getattr(runtime, "mission_snapshot", None)
         mission_work_state_snapshot = getattr(runtime, "mission_work_state_snapshot", None)
+        seam_items = [item for item in list(seam_tracker.get("items") or []) if isinstance(item, dict)]
+
+        def related_seams_for(detail: dict[str, Any], board_item: dict[str, Any]) -> list[dict[str, Any]]:
+            mission_text = " ".join(
+                [
+                    str(detail.get("title", "")).strip().lower(),
+                    str(detail.get("brief", "")).strip().lower(),
+                    str(detail.get("request", "")).strip().lower(),
+                    str(detail.get("primary_domain", "")).strip().lower(),
+                    " ".join(str(item).strip().lower() for item in list(detail.get("selected_agents") or [])),
+                ]
+            )
+            domain = str(board_item.get("primary_domain", "")).strip().lower()
+            module_hints = {"Mission Board", "Activity Feed", "Agent Operations", "Progress"}
+            if domain == "communications":
+                module_hints.add("Publish")
+            elif domain == "formation":
+                module_hints.add("Chronicle")
+            elif domain == "weather":
+                module_hints.add("Navigation")
+            matches: list[dict[str, Any]] = []
+            for seam in seam_items:
+                module_name = str(seam.get("module", "")).strip()
+                haystack = " ".join(
+                    [
+                        str(seam.get("name", "")).strip().lower(),
+                        str(seam.get("module", "")).strip().lower(),
+                        str(seam.get("what_became_real", "")).strip().lower(),
+                        str(seam.get("remains_partial", "")).strip().lower(),
+                    ]
+                )
+                if module_name in module_hints or any(token and token in haystack for token in mission_text.split()):
+                    matches.append(
+                        {
+                            "name": str(seam.get("name", "")).strip() or "Seam",
+                            "module": module_name or "Progress",
+                            "status": str(seam.get("status", "")).strip() or "Wired",
+                            "surface_path": str(seam.get("surface_path", "")).strip() or "/command-center",
+                            "what_became_real": str(seam.get("what_became_real", "")).strip() or "No seam outcome captured yet.",
+                            "remains_partial": str(seam.get("remains_partial", "")).strip() or "No remaining seam detail recorded.",
+                        }
+                    )
+                if len(matches) >= 4:
+                    break
+            return matches
+
         if callable(mission_snapshot):
             details: dict[str, Any] = {}
             for item in items[:4]:
@@ -2126,10 +2190,12 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                                 detail["work_state"] = await asyncio.to_thread(mission_work_state_snapshot, mission_id)
                             except Exception as exc:
                                 payload["errors"].append(f"mission_work_state[{mission_id}]: {exc}")
+                        detail["related_seams"] = related_seams_for(detail, item)
                         detail["related_routes"] = [
                             {"label": "Open Agent Ops", "href": "/agent-ops-center"},
                             {"label": "Open Activity Feed", "href": "/activity-center"},
                             {"label": "Open Command Center", "href": "/command-center"},
+                            {"label": "Mission Edit API", "href": f"/api/missions/{mission_id}/edit"},
                             {"label": "Mission Work-State API", "href": f"/api/missions/{mission_id}/work-state"},
                             {"label": "Mission Handoffs API", "href": f"/api/missions/{mission_id}/handoffs"},
                         ]
@@ -2143,7 +2209,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 f"Mission board loaded {len(items)} mission(s): "
                 f"{payload['counts']['now']} now, {payload['counts']['next']} next, "
                 f"{payload['counts']['blocked']} blocked, and {payload['counts']['completed']} completed, "
-                f"with mission detail, mission authoring, work-state review, and handoff flows available for the leading board items."
+                f"with mission detail, mission authoring, mission editing, seam linkage, work-state review, and handoff flows available for the leading board items."
             )
 
         if payload["errors"] and not items:

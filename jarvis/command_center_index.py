@@ -1370,7 +1370,7 @@ def _level3_checklist(
             "status_class": "steady",
             "area": "Mission and Task Board",
             "why_open": str(mission_seam.get("remains_partial", "")).strip()
-            or "Mission flows still need richer mission editing and better seam linkage.",
+            or "Mission flows still need richer mission editing and deeper seam linkage.",
             "live_signal": str(mission_seam.get("what_became_real", "")).strip()
             or "Mission posture is still strongest at the lane-summary level.",
             "exact_files": [
@@ -1380,7 +1380,7 @@ def _level3_checklist(
                 "tests/test_command_center_service_surface.py",
             ],
             "proof_routes": ["/mission-board", "/api/mission-board/module", "/api/missions"],
-            "next_slice": "Deepen mission edit flows and seam linkage now that mission authoring, mission workspaces, handoff authoring, and per-agent work-state controls are live on the standalone route.",
+            "next_slice": "Deepen mission edit flows further and expand seam linkage beyond the first mission-detail pass now that mission authoring, mission workspaces, handoff authoring, and per-agent work-state controls are live on the standalone route.",
         },
         {
             "title": "Agent Operations Assignment and Continuity Controls",
@@ -2024,8 +2024,8 @@ def _seam_tracker(
             "branch": branch,
             "worktree": "primary worktree",
             "surface_path": "/mission-board",
-            "what_became_real": "The mission board now has a dedicated route with lane-based mission visibility, selected mission detail, mission authoring, mission workspace review, handoff authoring, and per-agent work-state controls inside the app shell.",
-            "remains_partial": "Broader mission edit flows and deeper seam linkage still need follow-on slices.",
+            "what_became_real": "The mission board now has a dedicated route with lane-based mission visibility, selected mission detail, mission authoring, mission editing, mission workspace review, handoff authoring, seam linkage, and per-agent work-state controls inside the app shell.",
+            "remains_partial": "Mission edit flows and seam linkage are now real at the first pass, but they still need deeper breadth and richer linkage coverage in later slices.",
             "tests": [
                 "tests/test_command_center_index.py",
                 "tests/test_command_center_service_surface.py",

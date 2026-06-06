@@ -16698,6 +16698,28 @@ class JarvisRuntime:
         self._invalidate_snapshot_cache(actor_name, surfaces=("dashboard", "shell_state", "today_board", "proactive_state", "cognitive"))
         return self._enriched_mission(updated)
 
+    def update_mission_details(
+        self,
+        mission_id: str,
+        *,
+        title: str = "",
+        brief: str = "",
+        request: str = "",
+        next_step: str = "",
+        note: str = "",
+    ) -> dict[str, Any]:
+        updated = self.mission_support.update_mission_details(
+            mission_id,
+            title=title,
+            brief=brief,
+            request=request,
+            next_step=next_step,
+            note=note,
+        )
+        actor_name = str(updated.get("actor", "Chris")).strip() or "Chris"
+        self._invalidate_snapshot_cache(actor_name, surfaces=("dashboard", "shell_state", "today_board", "proactive_state", "cognitive"))
+        return self._enriched_mission(updated)
+
     def spawn_task_agent(
         self,
         mission_id: str,

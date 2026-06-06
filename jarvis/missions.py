@@ -564,6 +564,71 @@ class MissionSupport:
                     self.record_task_agent_outcome(agent_id, succeeded=False)
         return self.save_mission(dossier)
 
+    def update_mission_details(
+        self,
+        mission_id: str,
+        *,
+        title: str = "",
+        brief: str = "",
+        request: str = "",
+        next_step: str = "",
+        note: str = "",
+    ) -> dict[str, Any]:
+        dossier = self.get_mission(mission_id)
+        if dossier is None:
+            raise KeyError(f"Unknown mission: {mission_id}")
+        now = _now_iso()
+        updated_fields: list[str] = []
+        clean_title = title.strip()
+        clean_brief = brief.strip()
+        clean_request = request.strip()
+        clean_next_step = next_step.strip()
+        if clean_title and clean_title != str(dossier.get("title", "")).strip():
+            dossier["title"] = clean_title
+            updated_fields.append("title")
+        if clean_brief and clean_brief != str(dossier.get("brief", "")).strip():
+            dossier["brief"] = clean_brief
+            updated_fields.append("brief")
+        if clean_request and clean_request != str(dossier.get("request", "")).strip():
+            dossier["request"] = clean_request
+            updated_fields.append("request")
+        if clean_next_step:
+            subtasks = [dict(item or {}) for item in list(dossier.get("subtasks") or []) if isinstance(item, dict)]
+            target_index = -1
+            for index, item in enumerate(subtasks):
+                if str(item.get("status", "")).strip().lower() == "active":
+                    target_index = index
+                    break
+            if target_index < 0 and subtasks:
+                target_index = 0
+            if target_index >= 0:
+                current_title = str(subtasks[target_index].get("title", "")).strip()
+                if clean_next_step != current_title:
+                    subtasks[target_index]["title"] = clean_next_step
+                    subtasks[target_index]["updated_at"] = now
+                    dossier["subtasks"] = subtasks
+                    updated_fields.append("next_step")
+        if note.strip() or updated_fields:
+            evidence = list(dossier.get("evidence", []))
+            summary_bits = updated_fields[:] or ["mission detail"]
+            evidence.append(
+                asdict(
+                    MissionEvidence(
+                        evidence_id=str(uuid.uuid4()),
+                        source_agent="jarvis-orchestrator",
+                        source_system="mission-control",
+                        kind="detail-update",
+                        title="Mission detail updated",
+                        summary=f"Updated {', '.join(summary_bits)}.",
+                        detail=note.strip() or f"Updated {', '.join(summary_bits)} from the mission board.",
+                        timestamp=now,
+                    )
+                )
+            )
+            dossier["evidence"] = evidence
+        dossier["updated_at"] = now
+        return self.save_mission(dossier)
+
     def mission_work_state(self, mission_id: str) -> dict[str, Any]:
         dossier = self.get_mission(mission_id)
         if dossier is None:

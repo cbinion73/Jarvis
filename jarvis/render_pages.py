@@ -2661,6 +2661,74 @@ def render_mission_board_module_page(payload: dict) -> str:
       }}
     }}
 
+    async function updateMissionDetails(missionId) {{
+      if (!missionId) return;
+      const title = String(document.getElementById("mission-edit-title")?.value || "").trim();
+      const brief = String(document.getElementById("mission-edit-brief")?.value || "").trim();
+      const request = String(document.getElementById("mission-edit-request")?.value || "").trim();
+      const nextStep = String(document.getElementById("mission-edit-next-step")?.value || "").trim();
+      const note = String(document.getElementById("mission-edit-note")?.value || "").trim();
+      if (!title && !brief && !request && !nextStep) {{
+        actionNote.textContent = "Change at least one mission detail before saving edits.";
+        return;
+      }}
+      actionNote.textContent = `Saving mission detail changes for ${{missionId}}…`;
+      try {{
+        const response = await fetch(`/api/missions/${{encodeURIComponent(missionId)}}/edit`, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            title,
+            brief,
+            request,
+            next_step: nextStep,
+            note,
+          }}),
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Mission detail update failed");
+        }}
+        const recorded = await recordMissionActivity({{
+          actor: "Chris",
+          domain: "mission-board",
+          action: "Edit Mission Details",
+          title: title || String(payload.title || missionId).trim() || missionId,
+          status: String(payload.status || "updated").trim() || "updated",
+          detail: `Action succeeded: /api/missions/${{missionId}}/edit`,
+          why_now: note || brief || request || nextStep || "Mission detail changed from the Mission Board.",
+          result_summary: `Mission ${{missionId}} detail is now updated in the shared mission substrate.`,
+          route: "/mission-board",
+          route_label: "Open Mission Board",
+          related_kind: "mission",
+          related_label: missionId,
+          succeeded: true,
+        }});
+        actionNote.textContent = recorded
+          ? `Saved mission detail changes for ${{missionId}} and recorded them in shared activity.`
+          : `Saved mission detail changes for ${{missionId}}.`;
+        await refreshMissionBoard();
+      }} catch (error) {{
+        const errorText = String(error);
+        await recordMissionActivity({{
+          actor: "Chris",
+          domain: "mission-board",
+          action: "Edit Mission Details",
+          title: missionId,
+          status: "failed",
+          detail: `Action failed: /api/missions/${{missionId}}/edit`,
+          why_now: errorText,
+          result_summary: `Mission detail update failed: ${{errorText}}`,
+          route: "/mission-board",
+          route_label: "Open Mission Board",
+          related_kind: "mission",
+          related_label: missionId,
+          succeeded: false,
+        }});
+        actionNote.textContent = `Mission detail update failed: ${{errorText}}`;
+      }}
+    }}
+
     async function createMissionHandoff(missionId) {{
       if (!missionId) return;
       const detail = currentMissionDetail(currentPayload) || {{}};
@@ -2881,6 +2949,7 @@ def render_mission_board_module_page(payload: dict) -> str:
       const taskAgents = Array.isArray(mission.task_agent_labels) ? mission.task_agent_labels : [];
       const summary = workState.summary || {{}};
       const relatedRoutes = Array.isArray(detail.related_routes) ? detail.related_routes : [];
+      const relatedSeams = Array.isArray(detail.related_seams) ? detail.related_seams : [];
       const handoffs = Array.isArray(detail.handoffs) ? detail.handoffs : [];
       const pendingHandoffs = handoffs.filter((item) => {{
         const status = String(item?.status || "").trim().toLowerCase();
@@ -2918,6 +2987,31 @@ def render_mission_board_module_page(payload: dict) -> str:
             <a href="/agent-ops-center">Open Agent Ops</a>
             <a href="/activity-center">Open Activity Feed</a>
           </div>
+          <div class="meta">
+            <div>
+              <label>Edit Title</label>
+              <input id="mission-edit-title" value="${{esc(detail.title || mission.title || "")}}" />
+            </div>
+            <div>
+              <label>Edit Brief</label>
+              <input id="mission-edit-brief" value="${{esc(detail.brief || mission.brief || "")}}" />
+            </div>
+            <div>
+              <label>Edit Request</label>
+              <input id="mission-edit-request" value="${{esc(detail.request || "")}}" />
+            </div>
+            <div>
+              <label>Edit Next Step</label>
+              <input id="mission-edit-next-step" value="${{esc(mission.next_step || "")}}" />
+            </div>
+            <div>
+              <label>Edit Note</label>
+              <input id="mission-edit-note" value="" placeholder="Why is this mission changing?" />
+            </div>
+          </div>
+          <div class="action-row">
+            <button type="button" id="save-mission-detail-button">Save Mission Detail</button>
+          </div>
         </div>
       `;
       document.querySelectorAll("[data-mission-status]").forEach((button) => {{
@@ -2925,6 +3019,11 @@ def render_mission_board_module_page(payload: dict) -> str:
           updateMissionStatus(selectedMissionId, button.getAttribute("data-mission-status") || "").catch((error) => {{
             actionNote.textContent = `Mission status update failed: ${{String(error)}}`;
           }});
+        }});
+      }});
+      document.getElementById("save-mission-detail-button")?.addEventListener("click", () => {{
+        updateMissionDetails(selectedMissionId).catch((error) => {{
+          actionNote.textContent = `Mission detail update failed: ${{String(error)}}`;
         }});
       }});
 
@@ -2936,6 +3035,7 @@ def render_mission_board_module_page(payload: dict) -> str:
         li("Task Agents", taskAgents.join(", ") || "none recorded"),
         li("Pending Handoffs", String(summary.pending_handoffs || 0), String(summary.pending_transfers || 0) + " transfer(s) waiting"),
         li("Escalations", String(summary.escalations || 0), String(summary.duplicate_suppressions || 0) + " duplicate suppression record(s)"),
+        ...relatedSeams.map((item) => li(`Related Seam: ${{item.name || "Seam"}}`, item.what_became_real || "No seam outcome captured yet.", `${{item.module || "Progress"}} · ${{item.status || "Wired"}} · ${{item.surface_path || "/command-center"}}`)),
         ...relatedRoutes.map((item) => li(item.label || "Related Route", item.href || "")),
       ].join("");
 
