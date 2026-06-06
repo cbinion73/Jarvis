@@ -13,6 +13,7 @@ final class BriefingViewModel: ObservableObject {
     @Published var publishingOverview: PublishOverview?
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var latestOpenLoopAction: BriefingOpenLoopActionResult?
 
     private let client = AppleAPIClient.shared
     private let speechManager = SpeechManager.shared
@@ -100,6 +101,26 @@ final class BriefingViewModel: ObservableObject {
             await load()
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    @discardableResult
+    func applyOpenLoopAction(_ item: BriefingOpenLoopItem, action: String, note: String = "") async -> BriefingOpenLoopActionResult? {
+        do {
+            let result = try await client.applyBriefingOpenLoopAction(
+                itemId: item.itemId,
+                domain: item.domain,
+                action: action,
+                title: item.title,
+                summary: item.summary,
+                note: note
+            )
+            await load()
+            latestOpenLoopAction = result
+            return result
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
         }
     }
 }

@@ -1703,7 +1703,7 @@ def _core_modules(
             "roadmap_level": "Level 3",
             "summary": "Daily Brief now has a dedicated app module route with live briefing text, today-board posture, and open-loop follow-through actions.",
             "what_became_real": "Daily Brief is now a standalone app module instead of only a shell packet and preview panel.",
-            "remains_partial": "Deeper briefing-specific action loops, richer continuity capture, and broader module drill-ins still need follow-on slices.",
+            "remains_partial": "Broader module drill-ins and richer phone-native brief drill-downs still need follow-on slices, but Daily Brief now has real open-loop follow-through across web and Apple surfaces.",
             "evidence": "Dedicated /briefing-center route now sits on top of live briefing, today-board, and open-loop APIs.",
         },
         {

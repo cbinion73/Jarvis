@@ -9,6 +9,7 @@ public struct BriefingPacket: Codable, Sendable {
     public let workingItems: [WorkingItem]
     public let needsItems: [NeedsItem]
     public let driftItems: [DriftItem]
+    public let openLoopItems: [BriefingOpenLoopItem]
     public let continuity: BriefingContinuity?
     public let whileYouWereAway: WhileYouWereAwayReport?
     public let greeting: String
@@ -21,6 +22,7 @@ public struct BriefingPacket: Codable, Sendable {
         workingItems: [WorkingItem],
         needsItems: [NeedsItem],
         driftItems: [DriftItem],
+        openLoopItems: [BriefingOpenLoopItem] = [],
         continuity: BriefingContinuity? = nil,
         whileYouWereAway: WhileYouWereAwayReport? = nil,
         greeting: String,
@@ -32,6 +34,7 @@ public struct BriefingPacket: Codable, Sendable {
         self.workingItems = workingItems
         self.needsItems = needsItems
         self.driftItems = driftItems
+        self.openLoopItems = openLoopItems
         self.continuity = continuity
         self.whileYouWereAway = whileYouWereAway
         self.greeting = greeting
@@ -45,6 +48,7 @@ public struct BriefingPacket: Codable, Sendable {
         case workingItems = "working_items"
         case needsItems = "needs_items"
         case driftItems = "drift_items"
+        case openLoopItems = "open_loop_items"
         case continuity
         case whileYouWereAway = "while_you_were_away"
         case greeting
@@ -59,11 +63,57 @@ public struct BriefingPacket: Codable, Sendable {
         workingItems = try container.decode([WorkingItem].self, forKey: .workingItems)
         needsItems = try container.decode([NeedsItem].self, forKey: .needsItems)
         driftItems = try container.decode([DriftItem].self, forKey: .driftItems)
+        openLoopItems = try container.decodeIfPresent([BriefingOpenLoopItem].self, forKey: .openLoopItems) ?? []
         continuity = try container.decodeIfPresent(BriefingContinuity.self, forKey: .continuity)
         whileYouWereAway = try container.decodeIfPresent(WhileYouWereAwayReport.self, forKey: .whileYouWereAway)
         greeting = try container.decode(String.self, forKey: .greeting)
         mode = try container.decode(String.self, forKey: .mode)
         generatedAt = try container.decode(String.self, forKey: .generatedAt)
+    }
+}
+
+public struct BriefingOpenLoopItem: Codable, Identifiable, Sendable {
+    public var id: String { itemId }
+    public let itemId: String
+    public let domain: String
+    public let kind: String
+    public let title: String
+    public let summary: String
+    public let status: String
+    public let statusLabel: String
+    public let actor: String
+    public let timestamp: String
+    public let taskLane: String
+    public let ownerAgent: String
+    public let availableActions: [String]
+    public let proactiveReason: String
+    public let nextAction: String
+
+    enum CodingKeys: String, CodingKey {
+        case itemId = "item_id"
+        case domain, kind, title, summary, status, actor, timestamp
+        case statusLabel = "status_label"
+        case taskLane = "task_lane"
+        case ownerAgent = "owner_agent"
+        case availableActions = "available_actions"
+        case proactiveReason = "proactive_reason"
+        case nextAction = "next_action"
+    }
+}
+
+public struct BriefingOpenLoopActionResult: Codable, Sendable {
+    public let status: String
+    public let performedAction: String
+    public let itemId: String
+    public let openLoop: BriefingOpenLoopItem?
+    public let openLoopCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case status
+        case performedAction = "performed_action"
+        case itemId = "item_id"
+        case openLoop = "open_loop"
+        case openLoopCount = "open_loop_count"
     }
 }
 

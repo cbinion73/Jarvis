@@ -17,6 +17,9 @@ struct BriefingView: View {
     @State private var laneActionMessage = ""
     @State private var laneActionError = ""
     @State private var laneActionID: String?
+    @State private var openLoopActionMessage = ""
+    @State private var openLoopActionError = ""
+    @State private var openLoopActionID: String?
 
     private let gold = Color(red: 1.0, green: 0.82, blue: 0.28)
 
@@ -169,6 +172,10 @@ struct BriefingView: View {
 
                 if let continuity = packet.continuity {
                     briefingContinuityCard(continuity)
+                }
+
+                if !packet.openLoopItems.isEmpty {
+                    followThroughLane(packet.openLoopItems)
                 }
 
                 // ── Greeting + mode chip ─────────────────────────
@@ -688,6 +695,33 @@ struct BriefingView: View {
         }
     }
 
+    private func followThroughLane(_ items: [BriefingOpenLoopItem]) -> some View {
+        OracleSection(title: "Follow-Through Lane", icon: "arrow.triangle.branch", accent: .mint) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Live Daily Brief open loops you can move forward without leaving the native chamber.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if !openLoopActionError.isEmpty {
+                    Text(openLoopActionError)
+                        .font(.caption2)
+                        .foregroundStyle(.red.opacity(0.9))
+                } else if !openLoopActionMessage.isEmpty {
+                    Text(openLoopActionMessage)
+                        .font(.caption2)
+                        .foregroundStyle(gold.opacity(0.82))
+                }
+
+                ForEach(Array(items.prefix(3))) { item in
+                    briefingOpenLoopCard(item)
+                    if item.id != items.prefix(3).last?.id {
+                        Divider().opacity(0.2)
+                    }
+                }
+            }
+        }
+    }
+
     @ViewBuilder
     private func appStateCards(_ appState: AppStateOverview) -> some View {
         if appState.notifications.pendingCount > 0 || appState.calendar.count > 0 || appState.reminders.count > 0 {
@@ -1200,6 +1234,82 @@ struct BriefingView: View {
         return parts.joined(separator: " · ")
     }
 
+    private func briefingOpenLoopCard(_ item: BriefingOpenLoopItem) -> some View {
+        let visibleActions = Array(item.availableActions.filter { !$0.isEmpty }.prefix(3))
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.title)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                    if !item.summary.isEmpty {
+                        Text(item.summary)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(3)
+                    }
+                }
+                Spacer(minLength: 8)
+                VStack(alignment: .trailing, spacing: 6) {
+                    pill(item.statusLabel, color: .mint.opacity(0.9))
+                    if !item.domain.isEmpty {
+                        pill(item.domain.capitalized, color: gold.opacity(0.92))
+                    }
+                }
+            }
+
+            if !item.proactiveReason.isEmpty {
+                Text(item.proactiveReason)
+                    .font(.caption2)
+                    .foregroundStyle(gold.opacity(0.78))
+                    .lineLimit(2)
+            } else if !item.nextAction.isEmpty {
+                Text(item.nextAction)
+                    .font(.caption2)
+                    .foregroundStyle(gold.opacity(0.78))
+                    .lineLimit(2)
+            }
+
+            let metadata = [item.ownerAgent, item.taskLane, formatTimestamp(item.timestamp)]
+                .filter { !$0.isEmpty }
+                .joined(separator: " · ")
+            if !metadata.isEmpty {
+                Text(metadata)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+
+            if !visibleActions.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(visibleActions, id: \.self) { action in
+                            Button {
+                                Task { await applyOpenLoopAction(item, action: action) }
+                            } label: {
+                                if openLoopActionID == "\(item.id)|\(action)" {
+                                    ProgressView()
+                                        .tint(.black)
+                                        .frame(minWidth: 80)
+                                } else {
+                                    Text(actionLabel(action))
+                                        .font(.caption.weight(.semibold))
+                                        .lineLimit(1)
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(buttonTint(for: action))
+                            .disabled(openLoopActionID != nil)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14))
+    }
+
     private func completeReminder(_ reminder: AppStateReminderItem) async {
         reminderActionError = ""
         do {
@@ -1304,6 +1414,44 @@ struct BriefingView: View {
     private func refreshAll() async {
         await viewModel.refresh()
         await loadStatus()
+    }
+
+    private func applyOpenLoopAction(_ item: BriefingOpenLoopItem, action: String) async {
+        openLoopActionID = "\(item.id)|\(action)"
+        openLoopActionError = ""
+        openLoopActionMessage = ""
+        defer { openLoopActionID = nil }
+        let note = "Native Daily Brief follow-through moved \(item.title)."
+        guard let result = await viewModel.applyOpenLoopAction(item, action: action, note: note) else {
+            openLoopActionError = viewModel.errorMessage ?? "Daily Brief action did not complete cleanly."
+            return
+        }
+        let targetTitle = result.openLoop?.title.isEmpty == false ? result.openLoop?.title : item.title
+        openLoopActionMessage = "\(actionLabel(action)) moved \(targetTitle ?? item.title)."
+    }
+
+    private func actionLabel(_ action: String) -> String {
+        action
+            .split(separator: "-")
+            .map { fragment in
+                let value = String(fragment)
+                guard let first = value.first else { return value }
+                return String(first).uppercased() + value.dropFirst()
+            }
+            .joined(separator: " ")
+    }
+
+    private func buttonTint(for action: String) -> Color {
+        switch action {
+        case "approve", "done", "publish":
+            return .mint
+        case "reject", "archive":
+            return .red
+        case "defer", "defer-1d", "defer-4h", "defer-tomorrow-am":
+            return .orange
+        default:
+            return gold
+        }
     }
 
     private func formatTimestamp(_ raw: String) -> String {

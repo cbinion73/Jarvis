@@ -2059,7 +2059,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "summary": "Daily Brief now has a dedicated module route with live briefing text, today-board posture, and open-loop follow-through actions inside JARVIS.",
             "headline": "",
             "what_became_real": "Daily Brief is now a standalone app module instead of only a shell packet and preview panel, with durable follow-through continuity visible inside the route.",
-            "remains_partial": "Deeper briefing-specific action loops and broader module drill-ins still need follow-on slices, but open-loop actions now feed shared continuity back into Daily Brief.",
+            "remains_partial": "Broader module drill-ins and richer phone-native brief drill-downs still need follow-on slices, but Daily Brief now has real open-loop follow-through across web and Apple surfaces.",
             "briefing_text": "",
             "live_briefing": {},
             "today_board": {},

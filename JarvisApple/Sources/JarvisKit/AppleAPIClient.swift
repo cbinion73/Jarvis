@@ -33,6 +33,29 @@ public final class AppleAPIClient: Sendable {
         try await get("/api/apple/briefing?actor=\(actor)")
     }
 
+    public func applyBriefingOpenLoopAction(
+        itemId: String,
+        domain: String,
+        action: String,
+        title: String,
+        summary: String,
+        note: String = "",
+        actor: String = "chris"
+    ) async throws -> BriefingOpenLoopActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let domain: String
+            let action: String
+            let title: String
+            let summary: String
+            let note: String
+        }
+        return try await post(
+            "/api/apple/briefing/open-loops/\(itemId)/action",
+            body: Body(actor: actor, domain: domain, action: action, title: title, summary: summary, note: note)
+        )
+    }
+
     /// Fetch the compact Watch complication status payload.
     public func fetchStatus() async throws -> WatchStatus {
         try await get("/api/apple/status")

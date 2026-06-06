@@ -7469,6 +7469,15 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             watch_status=watch_status if isinstance(watch_status, dict) else {},
             while_you_were_away=while_you_were_away,
         )
+        open_loop_items = []
+        try:
+            open_loop_items = [
+                _normalise_open_loop_item(item)
+                for item in list((runtime.unified_open_loops(actor, limit=6) or {}).get("items") or [])
+                if isinstance(item, dict)
+            ]
+        except Exception as exc:
+            logger.warning("apple_briefing: open loop hydrate failed: %s", exc)
 
         data = {
             "briefing_items": [
@@ -7496,6 +7505,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             "generated_at":   packet.get("generated_at") or _ts(),
             "continuity":     _build_briefing_continuity(actor),
             "while_you_were_away": while_you_were_away,
+            "open_loop_items": open_loop_items,
             "command_items":  list(home_aggregate.get("command_items") or []) or _build_briefing_command_items(
                 home_context=home_context,
                 home_state=home_state,
@@ -7504,6 +7514,70 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             "home_aggregate": home_aggregate,
         }
         return _ok(data)
+
+    @app.post("/api/apple/briefing/open-loops/{item_id}/action")
+    async def apple_briefing_open_loop_action(item_id: str, payload: dict):
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        domain = str(payload.get("domain") or "").strip().lower()
+        action = str(payload.get("action") or "").strip().lower()
+        note = str(payload.get("note") or "").strip()
+        item_title = str(payload.get("title") or payload.get("item_title") or item_id).strip() or item_id
+        item_summary = str(payload.get("summary") or payload.get("item_summary") or "").strip()
+
+        try:
+            result = runtime.apply_open_loop_action(
+                actor,
+                domain=domain,
+                item_id=item_id,
+                action=action,
+                note=note or "apple-briefing",
+            )
+        except KeyError:
+            raise HTTPException(status_code=404, detail="Open-loop item not found.")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+        open_loop_payload = runtime.unified_open_loops(actor, limit=12)
+        current_item = next(
+            (
+                _normalise_open_loop_item(item)
+                for item in list(open_loop_payload.get("items") or [])
+                if isinstance(item, dict) and str(item.get("item_id") or "").strip() == item_id
+            ),
+            None,
+        )
+
+        action_label = action.replace("-", " ").title() or "Apply Open-Loop Action"
+        status_line = str(((result.get("record") or {}) if isinstance(result.get("record"), dict) else {}).get("status") or action).strip()
+        _record_operator_action(
+            actor=actor,
+            domain="briefing",
+            action=f"Apple Daily Brief {action_label}",
+            detail=item_summary or f"Daily Brief moved {item_title} with {action_label.lower()}.",
+            why_now=note or "The native Daily Brief follow-through lane moved a live open loop forward.",
+            result_summary=f"Daily Brief action result: {status_line or action}.",
+            route="/briefing-center",
+            route_label="Open Daily Brief",
+            related_kind="daily-brief-open-loop",
+            related_label=item_title,
+            succeeded=bool(result.get("ok", True)),
+        )
+        focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+            module="Daily Brief",
+            reason=note or f"Daily Brief advanced {item_title} with {action_label.lower()}.",
+            route="/briefing-center",
+            actor=actor,
+        )
+        return _ok(
+            {
+                "status": "recorded",
+                "performed_action": action,
+                "item_id": item_id,
+                "open_loop": current_item,
+                "focus": focus,
+                "open_loop_count": int((open_loop_payload.get("summary") or {}).get("total") or len(list(open_loop_payload.get("items") or []))),
+            }
+        )
 
     @app.get("/api/apple/carplay/ops")
     async def apple_carplay_ops():
@@ -13576,6 +13650,26 @@ def _normalise_drift_item(raw: dict) -> dict:
         "text":     str(raw.get("text") or raw.get("title") or ""),
         "severity": severity,
         "agent":    str(raw.get("agent") or raw.get("source") or "JARVIS"),
+    }
+
+
+def _normalise_open_loop_item(raw: dict) -> dict:
+    status = str(raw.get("status") or "pending").strip() or "pending"
+    return {
+        "item_id": str(raw.get("item_id") or uuid.uuid4()),
+        "domain": str(raw.get("domain") or "general").strip() or "general",
+        "kind": str(raw.get("kind") or "open-loop").strip() or "open-loop",
+        "title": str(raw.get("title") or "Open loop").strip() or "Open loop",
+        "summary": str(raw.get("summary") or "").strip(),
+        "status": status,
+        "status_label": status.replace("-", " ").title(),
+        "actor": str(raw.get("actor") or "").strip(),
+        "timestamp": str(raw.get("timestamp") or _ts()).strip() or _ts(),
+        "task_lane": str(raw.get("task_lane") or "").strip(),
+        "owner_agent": str(raw.get("owner_agent") or "").strip(),
+        "available_actions": [str(action).strip() for action in list(raw.get("available_actions") or []) if str(action).strip()],
+        "proactive_reason": str(raw.get("proactive_reason") or "").strip(),
+        "next_action": str(raw.get("next_action") or "").strip(),
     }
 
 

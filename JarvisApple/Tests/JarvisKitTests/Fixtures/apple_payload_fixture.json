@@ -2245,9 +2245,52 @@
           "agent": "Watcher"
         }
       ],
+      "open_loop_items": [
+        {
+          "item_id": "loop-1",
+          "domain": "family",
+          "kind": "message-draft",
+          "title": "Review family follow-up draft",
+          "summary": "Pepper staged a note that still needs your decision.",
+          "status": "pending",
+          "status_label": "Pending",
+          "actor": "Chris",
+          "timestamp": "2026-06-01T08:00:00Z",
+          "task_lane": "household-home",
+          "owner_agent": "Pepper",
+          "available_actions": ["approve", "defer-1d", "surface-now"],
+          "proactive_reason": "This is still blocking the family lane.",
+          "next_action": "Approve or defer the note before the first handoff block."
+        }
+      ],
       "greeting": "Good morning, Chris.",
       "mode": "morning",
       "generated_at": "2026-06-01T08:00:00Z"
+    }
+  },
+  "/api/apple/briefing/open-loops/loop-1/action": {
+    "ok": true,
+    "data": {
+      "status": "recorded",
+      "performed_action": "defer-1d",
+      "item_id": "loop-1",
+      "open_loop_count": 1,
+      "open_loop": {
+        "item_id": "loop-1",
+        "domain": "family",
+        "kind": "message-draft",
+        "title": "Review family follow-up draft",
+        "summary": "Pepper staged a note that still needs your decision.",
+        "status": "deferred",
+        "status_label": "Deferred",
+        "actor": "Chris",
+        "timestamp": "2026-06-01T08:00:00Z",
+        "task_lane": "household-home",
+        "owner_agent": "Pepper",
+        "available_actions": ["surface-now"],
+        "proactive_reason": "This is still blocking the family lane.",
+        "next_action": "Surface the note again in the next Daily Brief pass."
+      }
     }
   },
   "/api/apple/while-you-were-away?actor=chris": {

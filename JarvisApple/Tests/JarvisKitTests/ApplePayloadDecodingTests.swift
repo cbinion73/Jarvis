@@ -75,6 +75,7 @@ struct ApplePayloadDecodingTests {
             decoder: decoder
         )
         try decode(BriefingPacket.self, from: payloads, key: "/api/apple/briefing?actor=chris", decoder: decoder)
+        try decode(BriefingOpenLoopActionResult.self, from: payloads, key: "/api/apple/briefing/open-loops/loop-1/action", decoder: decoder)
         try decode([NeedsItem].self, from: payloads, key: "/api/apple/needs", decoder: decoder)
         try decode(HealthSummary.self, from: payloads, key: "/api/apple/health/summary?actor=chris", decoder: decoder)
         try decode(HomeState.self, from: payloads, key: "/api/apple/home/state", decoder: decoder)
