@@ -417,6 +417,7 @@ public struct HuddleOverview: Codable, Sendable {
     public let runtime: HuddleRuntimeSummary?
     public let partyMode: HuddlePartyStatus?
     public let dossiers: [HuddleDossierSummary]
+    public let ideaInbox: HuddleIdeaInbox
     public let continuity: HuddleContinuity?
     public let updatedAt:  String
 
@@ -427,6 +428,7 @@ public struct HuddleOverview: Codable, Sendable {
         case runtime
         case partyMode = "party_mode"
         case dossiers
+        case ideaInbox = "idea_inbox"
         case continuity
         case updatedAt = "updated_at"
     }
@@ -441,6 +443,7 @@ public struct HuddleOverview: Codable, Sendable {
         runtime: HuddleRuntimeSummary? = nil,
         partyMode: HuddlePartyStatus? = nil,
         dossiers: [HuddleDossierSummary] = [],
+        ideaInbox: HuddleIdeaInbox = HuddleIdeaInbox(),
         continuity: HuddleContinuity? = nil,
         updatedAt: String = ""
     ) {
@@ -453,6 +456,7 @@ public struct HuddleOverview: Codable, Sendable {
         self.runtime = runtime
         self.partyMode = partyMode
         self.dossiers = dossiers
+        self.ideaInbox = ideaInbox
         self.continuity = continuity
         self.updatedAt = updatedAt
     }
@@ -468,8 +472,48 @@ public struct HuddleOverview: Codable, Sendable {
         runtime = try container.decodeIfPresent(HuddleRuntimeSummary.self, forKey: .runtime)
         partyMode = try container.decodeIfPresent(HuddlePartyStatus.self, forKey: .partyMode)
         dossiers = try container.decodeIfPresent([HuddleDossierSummary].self, forKey: .dossiers) ?? []
+        ideaInbox = try container.decodeIfPresent(HuddleIdeaInbox.self, forKey: .ideaInbox) ?? HuddleIdeaInbox()
         continuity = try container.decodeIfPresent(HuddleContinuity.self, forKey: .continuity)
         updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt) ?? ""
+    }
+}
+
+public struct HuddleIdeaInbox: Codable, Sendable {
+    public let total: Int
+    public let capturedCount: Int
+    public let queuedCount: Int
+    public let recent: [HuddleIdeaSummary]
+
+    enum CodingKeys: String, CodingKey {
+        case total
+        case capturedCount = "captured_count"
+        case queuedCount = "queued_count"
+        case recent
+    }
+
+    public init(
+        total: Int = 0,
+        capturedCount: Int = 0,
+        queuedCount: Int = 0,
+        recent: [HuddleIdeaSummary] = []
+    ) {
+        self.total = total
+        self.capturedCount = capturedCount
+        self.queuedCount = queuedCount
+        self.recent = recent
+    }
+}
+
+public struct HuddleIdeaSummary: Codable, Identifiable, Sendable {
+    public let id: String
+    public let text: String
+    public let status: String
+    public let domain: String
+    public let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, text, status, domain
+        case createdAt = "created_at"
     }
 }
 
@@ -694,6 +738,26 @@ public struct HuddleApprovalActionResult: Codable, Sendable {
         case workId = "work_id"
         case title
         case focus
+    }
+}
+
+public struct HuddleIdeaActionResult: Codable, Sendable {
+    public let status: String
+    public let idea: HuddleIdeaSummary?
+    public let focus: HuddleProgressFocus?
+}
+
+public struct HuddleIdeaResearchActionResult: Codable, Sendable {
+    public let status: String?
+    public let queued: Bool?
+    public let workId: String?
+    public let message: String?
+    public let idea: HuddleIdeaSummary?
+    public let focus: HuddleProgressFocus?
+
+    enum CodingKeys: String, CodingKey {
+        case status, queued, message, idea, focus
+        case workId = "work_id"
     }
 }
 

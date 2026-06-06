@@ -7884,6 +7884,7 @@ def render_huddle_module_page(payload: dict) -> str:
           <button type="submit">Capture Huddle Idea</button>
         </form>
         <p class="status-note" id="idea-note">Use this to push a real idea into the live inbox.</p>
+        <ul id="idea-inbox-list"></ul>
         <pre id="idea-output">Awaiting idea capture.</pre>
       </section>
       <section class="panel span-12">
@@ -7912,6 +7913,7 @@ def render_huddle_module_page(payload: dict) -> str:
     const runtimeList = document.getElementById("runtime-list");
     const dossiersList = document.getElementById("dossiers-list");
     const recentActivityList = document.getElementById("recent-activity-list");
+    const ideaInboxList = document.getElementById("idea-inbox-list");
     const ideaOutput = document.getElementById("idea-output");
     const payloadPreview = document.getElementById("payload-preview");
 
@@ -7926,6 +7928,20 @@ def render_huddle_module_page(payload: dict) -> str:
 
     function li(title, summary, detail = "") {{
       return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
+    }}
+
+    function ideaActionButtons(idea) {{
+      const status = String(idea.status || "").toLowerCase();
+      const disableQueue = !idea.id || ["queued", "researching", "done", "passed"].includes(status) ? "disabled" : "";
+      const disableResearch = !idea.id || ["researching", "done", "passed"].includes(status) ? "disabled" : "";
+      const disablePass = !idea.id || ["passed", "done"].includes(status) ? "disabled" : "";
+      return `
+        <span class="inline-actions">
+          <button type="button" data-idea-action="queue" data-idea-id="${{esc(idea.id || "")}}" ${{disableQueue}}>Queue</button>
+          <button type="button" data-idea-action="research" data-idea-id="${{esc(idea.id || "")}}" ${{disableResearch}}>Research Now</button>
+          <button type="button" data-idea-action="pass" data-idea-id="${{esc(idea.id || "")}}" ${{disablePass}}>Pass</button>
+        </span>
+      `;
     }}
 
     function render(payload) {{
@@ -7982,19 +7998,21 @@ def render_huddle_module_page(payload: dict) -> str:
         item.executive_summary || item.first_action || "No summary available.",
         `confidence ${{item.confidence_score || 0}} · updated ${{item.updated_at || "unknown"}}`
       )).join("") || '<li><strong>No ready dossiers.</strong><span>Start overnight research or research an idea to generate dossier output.</span></li>';
+      ideaInboxList.innerHTML = (Array.isArray(inbox.recent) ? inbox.recent : []).length
+        ? inbox.recent.map((item) => `
+          <li>
+            <strong>${{esc(item.text || "Idea")}}</strong>
+            <span>${{esc((item.domain || "general") + " · " + (item.status || "captured"))}}</span>
+            <span>${{esc(item.created_at || "")}}</span>
+            ${{ideaActionButtons(item)}}
+          </li>
+        `).join("")
+        : '<li><strong>No idea candidates yet.</strong><span>Capture a Huddle idea to start the shared research lane.</span></li>';
       recentActivityList.innerHTML = (Array.isArray(payload.recent_activity) ? payload.recent_activity : []).length
         ? payload.recent_activity.map((item) => li(item.title || "Huddle action", item.subtitle || item.actor || "Operator continuity", item.detail || item.route_label || "")).join("")
         : '<li><strong>No huddle continuity recorded yet.</strong><span>Start overnight research or capture an idea to begin the continuity trail.</span></li>';
 
       payloadPreview.textContent = JSON.stringify(payload, null, 2);
-    }}
-
-    async function recordOperatorAction(payload) {{
-      await fetch("/api/activity/operator-action", {{
-        method: "POST",
-        headers: {{ "Content-Type": "application/json" }},
-        body: JSON.stringify(payload),
-      }});
     }}
 
     async function refreshHuddleState() {{
@@ -8014,20 +8032,6 @@ def render_huddle_module_page(payload: dict) -> str:
       try {{
         const response = await fetch("/api/party-mode/start", {{ method: "POST" }});
         const payload = await response.json();
-        await recordOperatorAction({{
-          actor: "Chris",
-          domain: "huddle",
-          action: "Start Overnight Research",
-          title: "Party Mode",
-          detail: payload.status === "started" ? "Party mode started from Huddle." : "Party mode already running during Huddle action.",
-          why_now: "Huddle module launched a real overnight research cycle.",
-          result_summary: `Party mode status: ${{payload.status || "unknown"}}`,
-          route: "/huddle-center",
-          route_label: "Open Huddle",
-          related_kind: "party-mode",
-          related_label: "Overnight research",
-          succeeded: true,
-        }});
         statusNote.textContent = payload.status === "started"
           ? "Party mode started."
           : payload.status === "already_running"
@@ -8043,7 +8047,7 @@ def render_huddle_module_page(payload: dict) -> str:
       event.preventDefault();
       ideaNote.textContent = "Capturing idea…";
       try {{
-        const response = await fetch("/api/ideas", {{
+        const response = await fetch("/api/huddle/ideas", {{
           method: "POST",
           headers: {{ "Content-Type": "application/json" }},
           body: JSON.stringify({{
@@ -8052,26 +8056,43 @@ def render_huddle_module_page(payload: dict) -> str:
           }}),
         }});
         const payload = await response.json();
-        await recordOperatorAction({{
-          actor: "Chris",
-          domain: "huddle",
-          action: "Capture Huddle Idea",
-          title: payload.idea ? payload.idea.text || "Idea captured" : "Idea capture",
-          detail: payload.idea ? `Captured idea in ${{payload.idea.domain || "general"}} domain.` : "Idea capture returned without a full idea payload.",
-          why_now: "Huddle module pushed a new idea into the live research inbox.",
-          result_summary: "Huddle continuity updated with a captured idea.",
-          route: "/huddle-center",
-          route_label: "Open Huddle",
-          related_kind: "idea",
-          related_label: payload.idea ? payload.idea.text || payload.idea.id || "Idea" : "Idea",
-          succeeded: true,
-        }});
         ideaOutput.textContent = JSON.stringify(payload, null, 2);
         ideaNote.textContent = payload.idea ? "Idea captured in the live inbox." : "Idea capture returned without an idea payload.";
         document.getElementById("idea-text").value = "";
         await refreshHuddleState();
       }} catch (error) {{
         ideaNote.textContent = `Idea capture failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function runIdeaAction(action, ideaId) {{
+      const endpoints = {{
+        queue: `/api/huddle/ideas/${{encodeURIComponent(ideaId)}}/queue`,
+        research: `/api/huddle/ideas/${{encodeURIComponent(ideaId)}}/research-now`,
+        pass: `/api/huddle/ideas/${{encodeURIComponent(ideaId)}}/pass`,
+      }};
+      const labels = {{
+        queue: "Queueing idea…",
+        research: "Starting live research…",
+        pass: "Passing idea…",
+      }};
+      ideaNote.textContent = labels[action] || "Updating idea…";
+      try {{
+        const response = await fetch(endpoints[action], {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{ actor: "Chris" }}),
+        }});
+        const payload = await response.json();
+        ideaOutput.textContent = JSON.stringify(payload, null, 2);
+        ideaNote.textContent = action === "research"
+          ? (payload.message || "Live research started.")
+          : `Idea ${{
+              action === "queue" ? "queued" : "passed"
+            }} from the Huddle inbox.`;
+        await refreshHuddleState();
+      }} catch (error) {{
+        ideaNote.textContent = `Idea action failed: ${{String(error)}}`;
       }}
     }}
 
@@ -8086,6 +8107,13 @@ def render_huddle_module_page(payload: dict) -> str:
       }});
     }});
     document.getElementById("idea-form").addEventListener("submit", captureIdea);
+    ideaInboxList.addEventListener("click", (event) => {{
+      const button = event.target.closest("button[data-idea-action]");
+      if (!button) return;
+      runIdeaAction(button.dataset.ideaAction, button.dataset.ideaId).catch((error) => {{
+        ideaNote.textContent = `Idea action failed: ${{String(error)}}`;
+      }});
+    }});
     render(initialPayload);
   </script>
 </body>

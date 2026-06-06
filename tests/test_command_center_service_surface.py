@@ -737,9 +737,11 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Capture Huddle Idea", huddle_html)
         self.assertIn("Agent Council Chamber", huddle_html)
         self.assertIn("Recent Huddle Continuity", huddle_html)
-        self.assertIn("/api/activity/operator-action", huddle_html)
+        self.assertIn("Research Now", huddle_html)
+        self.assertIn("/api/huddle/ideas", huddle_html)
         self.assertIn("status", huddle_snapshot)
         self.assertIn("reports", huddle_snapshot)
+        self.assertIn("idea_inbox", huddle_snapshot)
         self.assertIn("recent_activity", huddle_snapshot)
         self.assertIn("proof_paths", huddle_snapshot)
         self.assertEqual(huddle_snapshot["proof_paths"]["module_route"], "/huddle-center")
@@ -989,6 +991,40 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertTrue(any(item.get("title") == "Create Draft Project" for item in publish_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("title") == "Start Overnight Research" for item in huddle_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("title") == "Preview Route Intelligence" for item in navigation_snapshot["recent_activity"]))
+
+    def test_huddle_idea_actions_update_huddle_continuity_and_progress_focus(self) -> None:
+        async def _capture_payload() -> dict[str, str]:
+            return {
+                "actor": "Chris",
+                "text": "Research a tighter morning family launch cadence",
+                "domain": "family",
+            }
+
+        capture_response = asyncio.run(
+            self._route("/api/huddle/ideas", "POST")(SimpleNamespace(json=_capture_payload))
+        )
+        capture_payload = self._json_body(capture_response)
+        idea_id = capture_payload["idea"]["id"]
+
+        queue_response = asyncio.run(
+            self._route("/api/huddle/ideas/{idea_id}/queue", "POST")(idea_id=idea_id, payload={"actor": "Chris"})
+        )
+        queue_payload = self._json_body(queue_response)
+
+        huddle_snapshot = self._json_body(asyncio.run(self._route("/api/huddle/module", "GET")()))
+        progress_snapshot = self._json_body(asyncio.run(self._route("/api/progress/module", "GET")()))
+
+        self.assertEqual(queue_payload["idea"]["status"], "queued")
+        self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Huddle")
+        self.assertTrue(
+            any(item.get("title") == "Capture Huddle Idea" for item in huddle_snapshot["recent_activity"])
+        )
+        self.assertTrue(
+            any(item.get("title") == "Queue Huddle Idea" for item in huddle_snapshot["recent_activity"])
+        )
+        self.assertTrue(
+            any(item.get("id") == idea_id and item.get("status") == "queued" for item in huddle_snapshot["idea_inbox"]["recent"])
+        )
 
     def test_publish_review_action_updates_publish_continuity_and_progress_focus(self) -> None:
         publishing_root = Path.home() / ".jarvis" / "publishing"

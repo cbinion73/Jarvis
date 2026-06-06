@@ -1733,7 +1733,7 @@ def _core_modules(
             "roadmap_level": "Level 3",
             "summary": "Huddle now has a dedicated app module route with live standups, runtime posture, dossiers, and idea capture.",
             "what_became_real": "Huddle is now a standalone app module instead of a shell-only mission-control path.",
-            "remains_partial": "Deeper huddle workflows, richer approvals handling, and broader continuity review still need follow-on slices.",
+            "remains_partial": "CarPlay parity, broader decision workflows, and richer cross-route continuity review still need follow-on slices.",
             "evidence": "Dedicated /huddle-center route now sits on top of live huddle, party-mode, dossiers, and idea APIs.",
         },
         {

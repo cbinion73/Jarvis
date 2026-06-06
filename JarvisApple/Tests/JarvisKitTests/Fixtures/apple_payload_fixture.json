@@ -3496,6 +3496,27 @@
           "updated_at": "2026-06-01T04:39:00Z"
         }
       ],
+      "idea_inbox": {
+        "total": 2,
+        "captured_count": 1,
+        "queued_count": 1,
+        "recent": [
+          {
+            "id": "idea-1",
+            "text": "Research a tighter family launch cadence",
+            "status": "captured",
+            "domain": "family",
+            "created_at": "2026-06-01T07:45:00Z"
+          },
+          {
+            "id": "idea-2",
+            "text": "Queue a morning route buffer experiment",
+            "status": "queued",
+            "domain": "operations",
+            "created_at": "2026-06-01T07:40:00Z"
+          }
+        ]
+      },
       "continuity": {
         "subject_display_name": "Chris",
         "council_focus": "Two ready dossiers and one approval request need a clear decision lane before the next overnight cycle.",
@@ -4315,6 +4336,84 @@
       "authority_stage": "stage_alert",
       "arena_status": "active",
       "approval_mode": "stage_and_alert"
+    }
+  },
+  "/api/apple/huddle/ideas": {
+    "ok": true,
+    "data": {
+      "status": "captured",
+      "idea": {
+        "id": "idea-1",
+        "text": "Research a tighter family launch cadence",
+        "status": "captured",
+        "domain": "family",
+        "created_at": "2026-06-01T07:45:00Z"
+      },
+      "focus": {
+        "module": "Huddle",
+        "reason": "Huddle captured a live idea in the family lane.",
+        "route": "/huddle-center",
+        "saved_at": "2026-06-01T07:45:00Z"
+      }
+    }
+  },
+  "/api/apple/huddle/ideas/idea-1/queue": {
+    "ok": true,
+    "data": {
+      "status": "queued",
+      "idea": {
+        "id": "idea-1",
+        "text": "Research a tighter family launch cadence",
+        "status": "queued",
+        "domain": "family",
+        "created_at": "2026-06-01T07:45:00Z"
+      },
+      "focus": {
+        "module": "Huddle",
+        "reason": "Huddle queued Research a tighter family launch cadence for background research.",
+        "route": "/huddle-center",
+        "saved_at": "2026-06-01T07:46:00Z"
+      }
+    }
+  },
+  "/api/apple/huddle/ideas/idea-1/pass": {
+    "ok": true,
+    "data": {
+      "status": "passed",
+      "idea": {
+        "id": "idea-1",
+        "text": "Research a tighter family launch cadence",
+        "status": "passed",
+        "domain": "family",
+        "created_at": "2026-06-01T07:45:00Z"
+      },
+      "focus": {
+        "module": "Huddle",
+        "reason": "Huddle passed on Research a tighter family launch cadence after review.",
+        "route": "/huddle-center",
+        "saved_at": "2026-06-01T07:47:00Z"
+      }
+    }
+  },
+  "/api/apple/huddle/ideas/idea-1/research-now": {
+    "ok": true,
+    "data": {
+      "queued": true,
+      "work_id": "huddle-work-1",
+      "message": "Research started - check /api/dossiers for results.",
+      "idea": {
+        "id": "idea-1",
+        "text": "Research a tighter family launch cadence",
+        "status": "researching",
+        "domain": "family",
+        "created_at": "2026-06-01T07:45:00Z"
+      },
+      "focus": {
+        "module": "Huddle",
+        "reason": "Huddle launched live dossier research for Research a tighter family launch cadence.",
+        "route": "/huddle-center",
+        "saved_at": "2026-06-01T07:48:00Z"
+      }
     }
   },
   "/api/apple/forge/save": {

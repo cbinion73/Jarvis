@@ -6231,6 +6231,41 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         signals = await asyncio.to_thread(db.list_unclassified_signals, 50)
         return _json({"signals": signals, "total": len(signals)})
 
+    def _record_huddle_idea_focus(
+        *,
+        actor: str,
+        action: str,
+        detail: str,
+        why_now: str,
+        result_summary: str,
+        related_label: str,
+    ) -> dict[str, Any]:
+        actor = str(actor or "Chris").strip() or "Chris"
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": "huddle",
+                "action": action,
+                "title": related_label,
+                "detail": detail,
+                "why_now": why_now,
+                "result_summary": result_summary,
+                "related_route": "/huddle-center",
+                "route_label": "Open Huddle",
+                "related_kind": "idea",
+                "related_label": related_label,
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        return ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module="Huddle",
+            reason=f"Huddle idea workflow advanced: {related_label}.",
+            route="/huddle-center",
+            actor=actor.lower(),
+        )
+
     # ── Value Log ─────────────────────────────────────────────────────────────
 
     @app.post("/api/home/projects/{project_id}/value")
@@ -6276,7 +6311,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "status": "Useful",
             "summary": "Huddle now has a dedicated module route with live standups, runtime posture, dossiers, and idea capture.",
             "what_became_real": "Huddle is now represented as a dedicated app module instead of a shell-only packet path.",
-            "remains_partial": "Deeper huddle workflows, richer approvals handling, and broader continuity review still need follow-on slices.",
+            "remains_partial": "CarPlay parity, broader decision workflows, and richer cross-route continuity review still need follow-on slices.",
             "total_active_work": 0,
             "approvals_count": 0,
             "blocker_count": 0,
@@ -6300,7 +6335,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "module_api": "/api/huddle/module",
                 "huddle_api": "/api/huddle",
                 "party_start_api": "/api/party-mode/start",
-                "ideas_api": "/api/ideas",
+                "ideas_api": "/api/huddle/ideas",
+                "idea_queue_api": "/api/huddle/ideas/{idea_id}/queue",
+                "idea_pass_api": "/api/huddle/ideas/{idea_id}/pass",
+                "idea_research_api": "/api/huddle/ideas/{idea_id}/research-now",
                 "dossiers_api": "/api/dossiers",
             },
             "errors": [],
@@ -6735,6 +6773,35 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         )
         return _json({"idea": idea}, status_code=201)
 
+    @app.post("/api/huddle/ideas")
+    async def api_huddle_ideas_add(request: Request) -> JSONResponse:
+        from .ideas import add_idea
+
+        body = await request.json()
+        text = str(body.get("text", "")).strip()
+        if not text:
+            raise HTTPException(status_code=400, detail="text is required")
+        actor = str(body.get("actor") or "Chris").strip() or "Chris"
+        domain = str(body.get("domain", "passive-income")).strip() or "passive-income"
+        idea = await asyncio.to_thread(
+            add_idea,
+            text,
+            "user",
+            str(body.get("notes", "")),
+            domain,
+            list(body.get("tags", [])),
+        )
+        focus = _record_huddle_idea_focus(
+            actor=actor,
+            action="Capture Huddle Idea",
+            detail=f"Huddle captured a live idea in the {domain} lane.",
+            why_now="The Huddle module pushed a real idea into the live research inbox.",
+            result_summary="Huddle idea captured.",
+            related_label=str(idea.get("text") or idea.get("id") or "Idea"),
+        )
+        await _broadcast_dashboard("huddle-ideas.updated")
+        return _json({"idea": idea, "focus": focus}, status_code=201)
+
     @app.post("/api/ideas/{idea_id}/queue")
     async def api_ideas_queue(idea_id: str) -> JSONResponse:
         """Mark an idea as queued for background research."""
@@ -6743,6 +6810,24 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         if updated is None:
             raise HTTPException(status_code=404, detail="Idea not found")
         return _json({"idea": updated})
+
+    @app.post("/api/huddle/ideas/{idea_id}/queue")
+    async def api_huddle_ideas_queue(idea_id: str, payload: dict[str, Any] | None = None) -> JSONResponse:
+        from .ideas import queue_idea
+
+        updated = await asyncio.to_thread(queue_idea, idea_id)
+        if updated is None:
+            raise HTTPException(status_code=404, detail="Idea not found")
+        focus = _record_huddle_idea_focus(
+            actor=str((payload or {}).get("actor") or "Chris"),
+            action="Queue Huddle Idea",
+            detail=f"Huddle queued {str(updated.get('text') or idea_id).strip() or idea_id} for background research.",
+            why_now="The Huddle module promoted a captured idea into the queued research lane.",
+            result_summary="Huddle idea queued.",
+            related_label=str(updated.get("text") or updated.get("id") or idea_id),
+        )
+        await _broadcast_dashboard("huddle-ideas.updated")
+        return _json({"idea": updated, "focus": focus})
 
     @app.post("/api/ideas/{idea_id}/pass")
     async def api_ideas_pass(idea_id: str) -> JSONResponse:
@@ -6753,6 +6838,24 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             raise HTTPException(status_code=404, detail="Idea not found")
         return _json({"idea": updated})
 
+    @app.post("/api/huddle/ideas/{idea_id}/pass")
+    async def api_huddle_ideas_pass(idea_id: str, payload: dict[str, Any] | None = None) -> JSONResponse:
+        from .ideas import pass_idea
+
+        updated = await asyncio.to_thread(pass_idea, idea_id)
+        if updated is None:
+            raise HTTPException(status_code=404, detail="Idea not found")
+        focus = _record_huddle_idea_focus(
+            actor=str((payload or {}).get("actor") or "Chris"),
+            action="Pass Huddle Idea",
+            detail=f"Huddle passed on {str(updated.get('text') or idea_id).strip() or idea_id} after review.",
+            why_now="The Huddle module intentionally dismissed a live idea instead of leaving it stalled in the inbox.",
+            result_summary="Huddle idea passed.",
+            related_label=str(updated.get("text") or updated.get("id") or idea_id),
+        )
+        await _broadcast_dashboard("huddle-ideas.updated")
+        return _json({"idea": updated, "focus": focus})
+
     @app.delete("/api/ideas/{idea_id}")
     async def api_ideas_delete(idea_id: str) -> JSONResponse:
         """Hard-delete an idea."""
@@ -6762,23 +6865,17 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             raise HTTPException(status_code=404, detail="Idea not found")
         return _json({"deleted": True})
 
-    @app.post("/api/ideas/{idea_id}/research-now")
-    async def api_ideas_research_now(
+    async def _research_idea_now_impl(
         idea_id: str,
         background_tasks: BackgroundTasks,
-    ) -> JSONResponse:
-        """
-        Immediately trigger dossier research for an idea (don't wait for party mode).
-        Creates a WorkItem under catalyst-personal, fires DossierBuilder in the background.
-        Returns immediately with the work_id — poll /api/dossiers for the result.
-        """
+    ) -> dict[str, Any]:
         from .ideas import get_idea, mark_researching, mark_done, queue_idea
         idea = await asyncio.to_thread(get_idea, idea_id)
         if idea is None:
             raise HTTPException(status_code=404, detail="Idea not found")
 
         if idea.get("status") == "researching":
-            return _json({"queued": False, "message": "Already researching", "idea": idea})
+            return {"queued": False, "message": "Already researching", "idea": idea}
 
         # Ensure it's at least queued
         if idea.get("status") == "captured":
@@ -6828,11 +6925,42 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
         background_tasks.add_task(_build_dossier)
 
-        return _json({
+        return {
             "queued": True,
             "work_id": work_id,
+            "idea": await asyncio.to_thread(get_idea, idea_id),
             "message": "Research started — check /api/dossiers for results.",
-        })
+        }
+
+    @app.post("/api/ideas/{idea_id}/research-now")
+    async def api_ideas_research_now(
+        idea_id: str,
+        background_tasks: BackgroundTasks,
+    ) -> JSONResponse:
+        """
+        Immediately trigger dossier research for an idea (don't wait for party mode).
+        Creates a WorkItem under catalyst-personal, fires DossierBuilder in the background.
+        Returns immediately with the work_id — poll /api/dossiers for the result.
+        """
+        return _json(await _research_idea_now_impl(idea_id, background_tasks))
+
+    @app.post("/api/huddle/ideas/{idea_id}/research-now")
+    async def api_huddle_ideas_research_now(
+        idea_id: str,
+        background_tasks: BackgroundTasks,
+        payload: dict[str, Any] | None = None,
+    ) -> JSONResponse:
+        result = await _research_idea_now_impl(idea_id, background_tasks)
+        focus = _record_huddle_idea_focus(
+            actor=str((payload or {}).get("actor") or "Chris"),
+            action="Research Huddle Idea Now",
+            detail=f"Huddle launched live dossier research for {str((result.get('idea') or {}).get('text') or idea_id).strip() or idea_id}.",
+            why_now="The Huddle module escalated an idea directly into live research instead of waiting for a later queue sweep.",
+            result_summary="Huddle idea research started.",
+            related_label=str((result.get("idea") or {}).get("text") or (result.get("idea") or {}).get("id") or idea_id),
+        )
+        await _broadcast_dashboard("huddle-ideas.updated")
+        return _json({**result, "focus": focus})
 
     # ------------------------------------------------------------------
     # Scheduler POST routes — must be BEFORE the catch-all

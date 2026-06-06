@@ -757,6 +757,54 @@ public final class AppleAPIClient: Sendable {
         )
     }
 
+    public func captureHuddleIdea(
+        text: String,
+        domain: String = "passive-income",
+        notes: String = "",
+        actor: String = "chris"
+    ) async throws -> HuddleIdeaActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let text: String
+            let domain: String
+            let notes: String
+        }
+        return try await post(
+            "/api/apple/huddle/ideas",
+            body: Body(actor: actor, text: text, domain: domain, notes: notes)
+        )
+    }
+
+    public func queueHuddleIdea(_ ideaId: String, actor: String = "chris") async throws -> HuddleIdeaActionResult {
+        struct Body: Encodable {
+            let actor: String
+        }
+        return try await post(
+            "/api/apple/huddle/ideas/\(ideaId)/queue",
+            body: Body(actor: actor)
+        )
+    }
+
+    public func passHuddleIdea(_ ideaId: String, actor: String = "chris") async throws -> HuddleIdeaActionResult {
+        struct Body: Encodable {
+            let actor: String
+        }
+        return try await post(
+            "/api/apple/huddle/ideas/\(ideaId)/pass",
+            body: Body(actor: actor)
+        )
+    }
+
+    public func researchHuddleIdeaNow(_ ideaId: String, actor: String = "chris") async throws -> HuddleIdeaResearchActionResult {
+        struct Body: Encodable {
+            let actor: String
+        }
+        return try await post(
+            "/api/apple/huddle/ideas/\(ideaId)/research-now",
+            body: Body(actor: actor)
+        )
+    }
+
     public func stageStewardshipLaneReview(_ laneId: String, actor: String = "chris", note: String = "") async throws -> StewardshipLaneActionResult {
         struct Body: Encodable {
             let actor: String

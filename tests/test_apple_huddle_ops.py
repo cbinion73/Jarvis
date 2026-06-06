@@ -5,7 +5,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from jarvis.apple_api import _record_huddle_progress_focus, _resolve_huddle_approval
+from jarvis.apple_api import (
+    _capture_huddle_idea,
+    _pass_huddle_idea,
+    _queue_huddle_idea,
+    _record_huddle_progress_focus,
+    _resolve_huddle_approval,
+)
 from jarvis.audit import AuditLog, ProgressFocusStore
 
 
@@ -87,6 +93,30 @@ class AppleHuddleOpsTests(unittest.TestCase):
         titles = [item.get("action") for item in recent]
         self.assertIn("Approve Huddle Decision", titles)
         self.assertIn("Reject Huddle Decision", titles)
+
+    def test_huddle_idea_helpers_update_focus_and_activity(self) -> None:
+        captured = _capture_huddle_idea(
+            text="Research a stronger family launch cadence",
+            actor="chris",
+            domain="family",
+            notes="Captured from native Huddle.",
+        )
+        idea_id = captured["idea"]["id"]
+        queued = _queue_huddle_idea(idea_id=idea_id, actor="chris")
+        passed = _pass_huddle_idea(idea_id=idea_id, actor="chris")
+
+        self.assertEqual(captured["status"], "captured")
+        self.assertEqual(queued["status"], "queued")
+        self.assertEqual(passed["status"], "passed")
+
+        summary = ProgressFocusStore(Path("data/logs")).summary(limit=5)
+        self.assertEqual(summary["latest"]["module"], "Huddle")
+
+        recent = AuditLog(Path("data/logs")).list_recent(limit=6, entry_type="operator-action")
+        titles = [item.get("action") for item in recent]
+        self.assertIn("Capture Huddle Idea", titles)
+        self.assertIn("Queue Huddle Idea", titles)
+        self.assertIn("Pass Huddle Idea", titles)
 
 
 if __name__ == "__main__":

@@ -20,8 +20,14 @@ struct HuddleView: View {
     @State private var partyModeMessage = ""
     @State private var approvalActionMessage = ""
     @State private var approvalActionInFlightID: String?
+    @State private var ideaText = ""
+    @State private var ideaDomain = "passive-income"
+    @State private var ideaActionMessage = ""
+    @State private var ideaActionInFlightID: String?
+    @State private var isCapturingIdea = false
 
     private let teal = Color(red: 0.15, green: 0.75, blue: 0.75)
+    private let ideaDomains = ["passive-income", "general", "operations", "family"]
 
     private var storyboardStages: [HuddleStoryboardStage] {
         [
@@ -111,6 +117,8 @@ struct HuddleView: View {
                 if let partyMode = ov.partyMode {
                     partyModeSection(partyMode, dossiers: ov.dossiers)
                 }
+
+                ideaInboxSection(ov.ideaInbox)
 
                 if !ov.approvals.isEmpty {
                     HuddleSection(title: "Awaiting Approval", icon: "checklist.checked", accent: .orange) {
@@ -301,6 +309,76 @@ struct HuddleView: View {
         isStartingPartyMode = false
     }
 
+    @ViewBuilder
+    private func ideaInboxSection(_ inbox: HuddleIdeaInbox) -> some View {
+        HuddleSection(title: "Idea Inbox", icon: "lightbulb.max.fill", accent: .yellow) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 10) {
+                    runtimePill("\(inbox.total)", "Tracked", tint: .yellow)
+                    runtimePill("\(inbox.capturedCount)", "Captured", tint: .orange)
+                    runtimePill("\(inbox.queuedCount)", "Queued", tint: .green)
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Capture a live idea")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.88))
+
+                    TextField("What should Huddle research next?", text: $ideaText, axis: .vertical)
+                        .textFieldStyle(.plain)
+                        .padding(12)
+                        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(.white.opacity(0.06), lineWidth: 1)
+                        )
+                        .foregroundStyle(.white)
+
+                    Picker("Domain", selection: $ideaDomain) {
+                        ForEach(ideaDomains, id: \.self) { domain in
+                            Text(domain.replacingOccurrences(of: "-", with: " ").capitalized).tag(domain)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    Button {
+                        Task { await captureIdea() }
+                    } label: {
+                        Label(isCapturingIdea ? "Capturing…" : "Capture Huddle Idea", systemImage: "plus.circle.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.yellow)
+                    .disabled(isCapturingIdea || ideaText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                    if !ideaActionMessage.isEmpty {
+                        Text(ideaActionMessage)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if inbox.recent.isEmpty {
+                    Text("No live Huddle ideas yet. Capture one here to start the shared research lane.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(inbox.recent) { idea in
+                        HuddleIdeaRow(
+                            idea: idea,
+                            isWorking: ideaActionInFlightID == idea.id,
+                            actionMessage: ideaActionInFlightID == idea.id ? "" : ideaActionMessage,
+                            onQueue: { Task { await queueIdea(idea) } },
+                            onResearch: { Task { await researchIdea(idea) } },
+                            onPass: { Task { await passIdea(idea) } }
+                        )
+                        if idea.id != inbox.recent.last?.id { Divider().opacity(0.2) }
+                    }
+                }
+            }
+        }
+    }
+
     private func approveDecision(_ approval: HuddleApproval) async {
         approvalActionInFlightID = approval.id
         approvalActionMessage = ""
@@ -314,6 +392,66 @@ struct HuddleView: View {
             self.error = error.localizedDescription
         }
         approvalActionInFlightID = nil
+    }
+
+    private func captureIdea() async {
+        let trimmed = ideaText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        isCapturingIdea = true
+        ideaActionMessage = ""
+        do {
+            let result = try await AppleAPIClient.shared.captureHuddleIdea(text: trimmed, domain: ideaDomain)
+            ideaActionMessage = result.status.replacingOccurrences(of: "_", with: " ").capitalized
+            ideaText = ""
+            await load()
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isCapturingIdea = false
+    }
+
+    private func queueIdea(_ idea: HuddleIdeaSummary) async {
+        guard !idea.id.isEmpty else { return }
+        ideaActionInFlightID = idea.id
+        ideaActionMessage = ""
+        do {
+            let result = try await AppleAPIClient.shared.queueHuddleIdea(idea.id)
+            ideaActionMessage = result.status.replacingOccurrences(of: "_", with: " ").capitalized
+            await load()
+        } catch {
+            self.error = error.localizedDescription
+        }
+        ideaActionInFlightID = nil
+    }
+
+    private func passIdea(_ idea: HuddleIdeaSummary) async {
+        guard !idea.id.isEmpty else { return }
+        ideaActionInFlightID = idea.id
+        ideaActionMessage = ""
+        do {
+            let result = try await AppleAPIClient.shared.passHuddleIdea(idea.id)
+            ideaActionMessage = result.status.replacingOccurrences(of: "_", with: " ").capitalized
+            await load()
+        } catch {
+            self.error = error.localizedDescription
+        }
+        ideaActionInFlightID = nil
+    }
+
+    private func researchIdea(_ idea: HuddleIdeaSummary) async {
+        guard !idea.id.isEmpty else { return }
+        ideaActionInFlightID = idea.id
+        ideaActionMessage = ""
+        do {
+            let result = try await AppleAPIClient.shared.researchHuddleIdeaNow(idea.id)
+            ideaActionMessage = result.message
+                ?? result.status?.replacingOccurrences(of: "_", with: " ").capitalized
+                ?? (result.queued == true ? "Research started." : "Research checked.")
+            await load()
+        } catch {
+            self.error = error.localizedDescription
+        }
+        ideaActionInFlightID = nil
     }
 
     private func rejectDecision(_ approval: HuddleApproval) async {
@@ -884,6 +1022,96 @@ private struct ApprovalRow: View {
                 .buttonStyle(.bordered)
                 .tint(.orange)
                 .disabled(isWorking || approval.workId.isEmpty)
+            }
+
+            if !actionMessage.isEmpty && !isWorking {
+                Text(actionMessage)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+private struct HuddleIdeaRow: View {
+    let idea: HuddleIdeaSummary
+    let isWorking: Bool
+    let actionMessage: String
+    let onQueue: () -> Void
+    let onResearch: () -> Void
+    let onPass: () -> Void
+
+    private var statusColor: Color {
+        switch idea.status.lowercased() {
+        case "queued": return .green
+        case "researching": return .purple
+        case "done": return .teal
+        case "passed": return .secondary
+        default: return .orange
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(idea.text.isEmpty ? "Untitled idea" : idea.text)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                    HStack(spacing: 6) {
+                        if !idea.domain.isEmpty {
+                            Text(idea.domain.replacingOccurrences(of: "-", with: " ").capitalized)
+                        }
+                        Text(idea.status.replacingOccurrences(of: "_", with: " ").capitalized)
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Text(idea.status.replacingOccurrences(of: "_", with: " ").uppercased())
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(statusColor)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(statusColor.opacity(0.12), in: Capsule())
+            }
+
+            if !idea.createdAt.isEmpty {
+                Text(idea.createdAt.prefix(16).replacingOccurrences(of: "T", with: " "))
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 8) {
+                Button {
+                    onQueue()
+                } label: {
+                    Label(isWorking ? "Working…" : "Queue", systemImage: "arrowshape.turn.up.right.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+                .disabled(isWorking || idea.id.isEmpty || idea.status.lowercased() == "queued" || idea.status.lowercased() == "researching" || idea.status.lowercased() == "done" || idea.status.lowercased() == "passed")
+
+                Button {
+                    onResearch()
+                } label: {
+                    Label("Research", systemImage: "sparkles")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(.purple)
+                .disabled(isWorking || idea.id.isEmpty || idea.status.lowercased() == "researching" || idea.status.lowercased() == "done" || idea.status.lowercased() == "passed")
+
+                Button {
+                    onPass()
+                } label: {
+                    Label("Pass", systemImage: "forward.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(.orange)
+                .disabled(isWorking || idea.id.isEmpty || idea.status.lowercased() == "passed" || idea.status.lowercased() == "done")
             }
 
             if !actionMessage.isEmpty && !isWorking {

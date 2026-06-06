@@ -1112,6 +1112,112 @@ def _resolve_huddle_approval(*, work_id: str, action: str, actor: str, note: str
     }
 
 
+def _capture_huddle_idea(*, text: str, actor: str, domain: str = "passive-income", notes: str = "") -> dict[str, Any]:
+    from .ideas import add_idea
+
+    cleaned = str(text or "").strip()
+    if not cleaned:
+        raise ValueError("text is required")
+    domain = str(domain or "passive-income").strip() or "passive-income"
+    idea = add_idea(cleaned, "user", str(notes or ""), domain, [])
+    focus = _record_huddle_progress_focus(
+        actor=actor,
+        action="Capture Huddle Idea",
+        detail=f"Huddle captured a live idea in the {domain} lane.",
+        why_now="The iPhone Huddle screen pushed a live idea into the shared research inbox.",
+        result_summary="Huddle idea captured.",
+        related_kind="idea",
+        related_label=str(idea.get("text") or idea.get("id") or "Idea"),
+    )
+    return {"status": "captured", "idea": idea, "focus": focus}
+
+
+def _queue_huddle_idea(*, idea_id: str, actor: str) -> dict[str, Any]:
+    from .ideas import queue_idea
+
+    idea = queue_idea(idea_id)
+    if idea is None:
+        raise KeyError("Idea not found.")
+    focus = _record_huddle_progress_focus(
+        actor=actor,
+        action="Queue Huddle Idea",
+        detail=f"Huddle queued {str(idea.get('text') or idea_id).strip() or idea_id} for background research.",
+        why_now="The iPhone Huddle screen promoted a captured idea into the queued research lane.",
+        result_summary="Huddle idea queued.",
+        related_kind="idea",
+        related_label=str(idea.get("text") or idea.get("id") or idea_id),
+    )
+    return {"status": "queued", "idea": idea, "focus": focus}
+
+
+def _pass_huddle_idea(*, idea_id: str, actor: str) -> dict[str, Any]:
+    from .ideas import pass_idea
+
+    idea = pass_idea(idea_id)
+    if idea is None:
+        raise KeyError("Idea not found.")
+    focus = _record_huddle_progress_focus(
+        actor=actor,
+        action="Pass Huddle Idea",
+        detail=f"Huddle passed on {str(idea.get('text') or idea_id).strip() or idea_id} after review.",
+        why_now="The iPhone Huddle screen intentionally dismissed a live idea instead of leaving it stalled in the inbox.",
+        result_summary="Huddle idea passed.",
+        related_kind="idea",
+        related_label=str(idea.get("text") or idea.get("id") or idea_id),
+    )
+    return {"status": "passed", "idea": idea, "focus": focus}
+
+
+def _research_huddle_idea_now(*, idea_id: str, actor: str) -> dict[str, Any]:
+    from .agent_work import get_work_store
+    from .ideas import get_idea, mark_researching, queue_idea
+    from .llm_gateway import get_gateway
+
+    idea = get_idea(idea_id)
+    if idea is None:
+        raise KeyError("Idea not found.")
+    if idea.get("status") == "researching":
+        focus = _record_huddle_progress_focus(
+            actor=actor,
+            action="Research Huddle Idea Now",
+            detail=f"Huddle confirmed {str(idea.get('text') or idea_id).strip() or idea_id} is already researching.",
+            why_now="The iPhone Huddle screen checked a live idea that was already in research.",
+            result_summary="Huddle idea was already researching.",
+            related_kind="idea",
+            related_label=str(idea.get("text") or idea.get("id") or idea_id),
+        )
+        return {"status": "already_researching", "idea": idea, "work_id": str(idea.get("work_id") or ""), "focus": focus}
+
+    if idea.get("status") == "captured":
+        queue_idea(idea_id)
+        idea = get_idea(idea_id) or idea
+
+    gw = get_gateway()
+    if gw is None:
+        raise ValueError("LLM gateway not available")
+
+    pi_store = get_work_store("catalyst-personal")
+    work_item = pi_store.dream_idea(
+        str(idea.get("text") or "")[:80],
+        str(idea.get("text") or ""),
+        str(idea.get("domain") or "passive-income"),
+        list(idea.get("tags") or []),
+    )
+    work_id = work_item.work_id
+    mark_researching(idea_id, work_id)
+    refreshed = get_idea(idea_id) or idea
+    focus = _record_huddle_progress_focus(
+        actor=actor,
+        action="Research Huddle Idea Now",
+        detail=f"Huddle launched live dossier research for {str(refreshed.get('text') or idea_id).strip() or idea_id}.",
+        why_now="The iPhone Huddle screen escalated an idea directly into live research instead of waiting for a later queue sweep.",
+        result_summary="Huddle idea research started.",
+        related_kind="idea",
+        related_label=str(refreshed.get("text") or refreshed.get("id") or idea_id),
+    )
+    return {"status": "researching", "idea": refreshed, "work_id": work_id, "focus": focus}
+
+
 async def _timeboxed_to_thread(
     func: Any,
     *args: Any,
@@ -11667,6 +11773,30 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                     "effort_hours": int(getattr(dossier, "effort_hours", 0) or 0),
                     "updated_at": str(getattr(dossier, "updated_at", "") or getattr(dossier, "created_at", "") or ""),
                 })
+            try:
+                from .ideas import list_ideas, stats as idea_stats
+
+                summary = idea_stats()
+                ideas = list_ideas()
+                by_status = dict(summary.get("by_status") or {})
+                idea_inbox = {
+                    "total": int(summary.get("total") or 0),
+                    "captured_count": int(by_status.get("captured") or 0),
+                    "queued_count": int(by_status.get("queued") or 0),
+                    "recent": [
+                        {
+                            "id": str(item.get("id") or ""),
+                            "text": _truncate(str(item.get("text") or ""), 100),
+                            "status": str(item.get("status") or ""),
+                            "domain": str(item.get("domain") or ""),
+                            "created_at": str(item.get("created_at") or ""),
+                        }
+                        for item in ideas[:6]
+                        if isinstance(item, dict)
+                    ],
+                }
+            except Exception:
+                idea_inbox = {"total": 0, "captured_count": 0, "queued_count": 0, "recent": []}
             return _ok({
                 "reports": reports[:15],
                 "blockers": [str(b)[:80] for b in (h.get("blockers") or [])[:5]],
@@ -11695,6 +11825,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                     "ended_at": str(party_status.get("ended_at") or ""),
                 },
                 "dossiers": dossiers,
+                "idea_inbox": idea_inbox,
                 "continuity": _build_huddle_continuity(
                     "chris",
                     reports=reports[:15],
@@ -11716,6 +11847,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 "runtime": None,
                 "party_mode": None,
                 "dossiers": [],
+                "idea_inbox": {"total": 0, "captured_count": 0, "queued_count": 0, "recent": []},
                 "continuity": {
                     "subject_display_name": "Chris",
                     "council_focus": "",
@@ -11851,6 +11983,43 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         actor = str(payload.get("actor") or payload.get("actor_id") or "chris").strip() or "chris"
         note = str(payload.get("note") or "").strip()
         return _ok(_resolve_huddle_approval(work_id=work_id, action="reject", actor=actor, note=note))
+
+    @app.post("/api/apple/huddle/ideas")
+    async def apple_huddle_capture_idea(payload: dict[str, Any]):
+        actor = str(payload.get("actor") or payload.get("actor_id") or "chris").strip() or "chris"
+        text = str(payload.get("text") or "").strip()
+        domain = str(payload.get("domain") or "passive-income").strip() or "passive-income"
+        notes = str(payload.get("notes") or "").strip()
+        try:
+            return _ok(_capture_huddle_idea(text=text, actor=actor, domain=domain, notes=notes))
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/api/apple/huddle/ideas/{idea_id}/queue")
+    async def apple_huddle_queue_idea(idea_id: str, payload: dict[str, Any]):
+        actor = str(payload.get("actor") or payload.get("actor_id") or "chris").strip() or "chris"
+        try:
+            return _ok(_queue_huddle_idea(idea_id=idea_id, actor=actor))
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.post("/api/apple/huddle/ideas/{idea_id}/pass")
+    async def apple_huddle_pass_idea(idea_id: str, payload: dict[str, Any]):
+        actor = str(payload.get("actor") or payload.get("actor_id") or "chris").strip() or "chris"
+        try:
+            return _ok(_pass_huddle_idea(idea_id=idea_id, actor=actor))
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.post("/api/apple/huddle/ideas/{idea_id}/research-now")
+    async def apple_huddle_research_idea_now(idea_id: str, payload: dict[str, Any]):
+        actor = str(payload.get("actor") or payload.get("actor_id") or "chris").strip() or "chris"
+        try:
+            return _ok(_research_huddle_idea_now(idea_id=idea_id, actor=actor))
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     # ── Forge 3-D models ──────────────────────────────────────────────────────
 
