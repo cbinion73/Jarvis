@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import types
@@ -502,6 +503,18 @@ class MainApprovalInitializationTests(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertEqual(calls, [("supervision-support", "sandbox-router")])
         self.assertEqual(served, [(runtime, "127.0.0.1", 8787)])
+
+    def test_python_module_help_invokes_cli_entrypoint(self) -> None:
+        result = subprocess.run(
+            [sys.executable, "-m", "jarvis.main", "--help"],
+            cwd="/Users/chris/Desktop/JARVIS",
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("serve", result.stdout)
+        self.assertIn("JARVIS household runtime scaffold", result.stdout)
 
 
 if __name__ == "__main__":

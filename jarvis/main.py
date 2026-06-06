@@ -2620,3 +2620,7 @@ def main() -> int:
         return command_voice(runtime, args)
     parser.error(f"Unknown command: {args.command}")
     return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

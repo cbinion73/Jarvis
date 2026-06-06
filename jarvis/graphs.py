@@ -3,7 +3,50 @@ from __future__ import annotations
 import json
 from typing import Any, TypedDict
 
-from langgraph.graph import END, START, StateGraph
+try:
+    from langgraph.graph import END, START, StateGraph
+except ModuleNotFoundError:  # pragma: no cover - local fallback for cold runtimes
+    START = "__start__"
+    END = "__end__"
+
+    class StateGraph:  # type: ignore[override]
+        def __init__(self, *_args, **_kwargs) -> None:
+            self._nodes: dict[str, Any] = {}
+            self._edges: dict[str, list[str]] = {}
+
+        def add_node(self, name: str, fn: Any) -> None:
+            self._nodes[name] = fn
+
+        def add_edge(self, source: str, target: str) -> None:
+            self._edges.setdefault(source, []).append(target)
+
+        def compile(self):
+            nodes = dict(self._nodes)
+            edges = {key: list(value) for key, value in self._edges.items()}
+
+            class _CompiledGraph:
+                def invoke(self, state: dict[str, Any]) -> dict[str, Any]:
+                    current = dict(state)
+                    cursor = START
+                    visited: set[tuple[str, str]] = set()
+
+                    while True:
+                        next_nodes = edges.get(cursor, [])
+                        if not next_nodes:
+                            return current
+                        next_node = next_nodes[0]
+                        if next_node == END:
+                            return current
+                        edge_key = (cursor, next_node)
+                        if edge_key in visited:
+                            return current
+                        visited.add(edge_key)
+                        update = nodes[next_node](current) or {}
+                        if isinstance(update, dict):
+                            current.update(update)
+                        cursor = next_node
+
+            return _CompiledGraph()
 
 from .models import RequestPlan
 from .openai_tasks import OpenAIResult
