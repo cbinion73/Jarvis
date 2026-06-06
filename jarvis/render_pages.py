@@ -235,6 +235,15 @@ def _render_catalyst_workspace_chrome(title: str, subtitle: str, body_html: str,
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 14px;
     }}
+    .grid-3 {{
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }}
+    .span-2 {{
+      grid-column: span 2;
+    }}
+    .span-3 {{
+      grid-column: 1 / -1;
+    }}
     .card {{
       border: 1px solid var(--jarvis-line);
       background: var(--jarvis-panel-strong);
@@ -258,6 +267,105 @@ def _render_catalyst_workspace_chrome(title: str, subtitle: str, body_html: str,
       padding-left: 18px;
       display: grid;
       gap: 8px;
+    }}
+    .storyboard-strip {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }}
+    .story-step {{
+      border: 1px solid var(--jarvis-line);
+      background: linear-gradient(180deg, rgba(9, 19, 31, 0.96), rgba(7, 16, 27, 0.88));
+      border-radius: 10px;
+      padding: 14px;
+      display: grid;
+      gap: 6px;
+      min-height: 110px;
+    }}
+    .story-step strong {{
+      color: var(--jarvis-accent-strong);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }}
+    .story-step span {{
+      color: var(--jarvis-ink);
+      font-size: 14px;
+      line-height: 1.55;
+    }}
+    .metric-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }}
+    .metric-card {{
+      border: 1px solid var(--jarvis-line);
+      background: linear-gradient(180deg, rgba(14, 27, 43, 0.92), rgba(8, 18, 31, 0.96));
+      border-radius: 10px;
+      padding: 14px;
+      display: grid;
+      gap: 6px;
+    }}
+    .metric-card .label {{
+      color: var(--jarvis-muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }}
+    .metric-card strong {{
+      font-size: 28px;
+      line-height: 1;
+      color: var(--jarvis-ink);
+    }}
+    .metric-card span {{
+      color: var(--jarvis-muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }}
+    .card-hero {{
+      background:
+        radial-gradient(circle at top right, rgba(116, 216, 255, 0.16), transparent 34%),
+        linear-gradient(180deg, rgba(12, 24, 38, 0.98), rgba(8, 16, 27, 0.96));
+    }}
+    .card-hero h2 {{
+      margin: 8px 0 8px;
+      font-size: 24px;
+      color: var(--jarvis-ink);
+      letter-spacing: 0;
+      text-transform: none;
+    }}
+    .rail-card {{
+      background:
+        radial-gradient(circle at top, rgba(255, 212, 138, 0.09), transparent 28%),
+        linear-gradient(180deg, rgba(12, 23, 35, 0.98), rgba(8, 16, 27, 0.96));
+    }}
+    .callout {{
+      border: 1px solid var(--jarvis-line);
+      background: rgba(7, 16, 27, 0.8);
+      border-radius: 10px;
+      padding: 12px;
+      display: grid;
+      gap: 6px;
+    }}
+    .callout strong {{
+      color: var(--jarvis-accent-strong);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }}
+    .callout p {{
+      margin: 0;
+      color: var(--jarvis-ink);
+      font-size: 14px;
+      line-height: 1.55;
+    }}
+    .muted-kicker {{
+      color: var(--jarvis-muted);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }}
     .muted {{ color: var(--jarvis-muted); }}
     .table {{
@@ -483,6 +591,13 @@ def _render_catalyst_workspace_chrome(title: str, subtitle: str, body_html: str,
       .grid {{
         grid-template-columns: 1fr;
       }}
+      .grid-3 {{
+        grid-template-columns: 1fr;
+      }}
+      .span-2,
+      .span-3 {{
+        grid-column: auto;
+      }}
     }}
   </style>
 </head>
@@ -584,10 +699,6 @@ def _render_catalyst_workspace_chrome(title: str, subtitle: str, body_html: str,
 
 def render_catalyst_workspace_page(runtime: JarvisRuntime, page: str) -> str:
     page = (page or "home").strip().lower()
-    mockup = CATALYST_MOCKUP_PAGES.get(page)
-    if mockup and mockup.exists() and page not in {"home", "calendar"}:
-        return _inject_catalyst_theme(mockup.read_text(encoding="utf-8"))
-
     overview = runtime.catalyst_overview()
     google = runtime.google_workspace_summary()
     family_calendar = runtime.family_calendar_summary()
@@ -618,6 +729,16 @@ def render_catalyst_workspace_page(runtime: JarvisRuntime, page: str) -> str:
         for entry in google_accounts
         if str(entry.get("calendar_error", "")).strip()
     ]
+    live_workspace = overview.get("live_workspace") if isinstance(overview.get("live_workspace"), dict) else {}
+    counts = overview.get("counts") if isinstance(overview.get("counts"), dict) else {}
+    portfolio = overview.get("portfolio") if isinstance(overview.get("portfolio"), dict) else {}
+    portfolio_lanes = overview.get("portfolio_lanes") if isinstance(overview.get("portfolio_lanes"), list) else []
+    active_work = overview.get("active_work") if isinstance(overview.get("active_work"), list) else []
+    latest_runs = overview.get("latest_runs") if isinstance(overview.get("latest_runs"), dict) else {}
+    live_projects = ((live_workspace.get("projects") or {}).get("items") or []) if isinstance(live_workspace.get("projects"), dict) else []
+    live_tasks = ((live_workspace.get("tasks") or {}).get("items") or []) if isinstance(live_workspace.get("tasks"), dict) else []
+    live_calendar_items = ((live_workspace.get("calendar") or {}).get("items") or []) if isinstance(live_workspace.get("calendar"), dict) else []
+    live_email_items = ((live_workspace.get("email") or {}).get("items") or []) if isinstance(live_workspace.get("email"), dict) else []
 
     def _short_google_error(detail: str) -> str:
         lowered = detail.lower()
@@ -631,6 +752,84 @@ def render_catalyst_workspace_page(runtime: JarvisRuntime, page: str) -> str:
         merged = list(upcoming_events) + list(family_upcoming_events)
         merged.sort(key=lambda entry: str(entry[1].get("start", "")))
         return merged[:limit]
+
+    def _storyboard(steps: list[tuple[str, str]]) -> str:
+        return '<section class="storyboard-strip">' + "".join(
+            f'<div class="story-step"><strong>{escape(title)}</strong><span>{escape(detail)}</span></div>'
+            for title, detail in steps
+        ) + "</section>"
+
+    def _metric_grid(metrics: list[tuple[str, str, str]]) -> str:
+        return '<section class="metric-grid">' + "".join(
+            f'<div class="metric-card"><div class="label">{escape(label)}</div><strong>{escape(value)}</strong><span>{escape(detail)}</span></div>'
+            for label, value, detail in metrics
+        ) + "</section>"
+
+    def _row(title: str, detail: str, meta: str = "") -> str:
+        meta_html = f'<div class="muted">{escape(meta)}</div>' if meta else ""
+        return f'<div class="row"><strong>{escape(title)}</strong><div>{escape(detail)}</div>{meta_html}</div>'
+
+    def _table(rows: list[str], empty_copy: str) -> str:
+        inner = "".join(rows) if rows else f'<div class="muted">{escape(empty_copy)}</div>'
+        return f'<div class="table">{inner}</div>'
+
+    def _format_stamp(value: str) -> str:
+        cleaned = str(value or "").strip()
+        if not cleaned:
+            return "No timestamp"
+        return cleaned.replace("T", " ").replace("Z", " UTC")
+
+    connected_connectors = [
+        item for item in overview.get("connectors", [])
+        if str(item.get("status", "")).strip().lower() in {"connected", "local", "live"}
+    ]
+    disconnected_connectors = [
+        item for item in overview.get("connectors", [])
+        if str(item.get("status", "")).strip().lower() not in {"connected", "local", "live"}
+    ]
+    signal_titles = [str(item.get("title") or "").strip() for item in (overview.get("top_signals") or []) if str(item.get("title") or "").strip()]
+    workflow_rows = [
+        _row(
+            key.replace("_", " ").title(),
+            f"{int(value or 0)} tracked",
+            "Live workflow telemetry" if int(value or 0) else "Awaiting more live workflow data",
+        )
+        for key, value in counts.items()
+        if key in {"signals", "email_triage", "meeting_extractions", "briefings", "drafts", "project_briefs", "implementation_plans", "hypotheses"}
+    ]
+    latest_run_rows = [
+        _row(
+            key.replace("_", " ").title(),
+            str(item.get("title") or item.get("meeting_title") or item.get("subject") or item.get("summary") or "Recent run captured."),
+            _format_stamp(str(item.get("timestamp") or item.get("created_at") or item.get("updated_at") or "")),
+        )
+        for key, item in latest_runs.items()
+        if isinstance(item, dict)
+    ]
+    active_work_rows = [
+        _row(
+            str(item.get("title") or "Active work"),
+            str(item.get("summary") or item.get("problem") or item.get("lane") or "Catalyst work is in motion."),
+            " · ".join(
+                bit for bit in [
+                    str(item.get("domain") or "").strip(),
+                    str(item.get("status") or item.get("stage") or "").strip(),
+                    _format_stamp(str(item.get("updated_at") or item.get("updated") or item.get("timestamp") or "")),
+                ] if bit and bit != "No timestamp"
+            ),
+        )
+        for item in active_work[:6]
+        if isinstance(item, dict)
+    ]
+    signal_rows = [
+        _row(
+            str(item.get("title") or "Signal"),
+            str(item.get("source") or "Catalyst"),
+            ", ".join(item.get("tags") or []) or _format_stamp(str(item.get("timestamp") or "")),
+        )
+        for item in (overview.get("top_signals") or [])[:6]
+        if isinstance(item, dict)
+    ]
 
     if page == "email":
         body = f"""
@@ -659,31 +858,119 @@ def render_catalyst_workspace_page(runtime: JarvisRuntime, page: str) -> str:
         total_events = sum(int(entry.get("counts", {}).get("upcoming_events", 0)) for entry in google_accounts)
         family_event_count = int(family_calendar.get("counts", {}).get("upcoming_events", 0))
         merged_events = _merged_upcoming(limit=6)
+        storyboard = _storyboard([
+            ("1. Catalyst Operations", "Live counts, latest runs, and portfolio pressure stay visible at the top of the desktop experience."),
+            ("2. Workflow Builder", "Projects, plans, and implementation lanes are real workspace data instead of static mockup panels."),
+            ("3. Agent Execution", "Current work and recent runs expose what JARVIS already moved this morning."),
+            ("4. Intervention Queue", "Disconnected connectors, API drift, and inbox blockers surface as a real attention rail."),
+            ("5. Voice Orchestration", "The same mail, meeting, project, and task lanes can be opened from voice or the Catalyst workspace."),
+            ("6. Continuity Strip", "Signals, family schedule context, and operator history keep the deck grounded in live state."),
+        ])
+        metrics = _metric_grid([
+            ("Active Windows", str(len(active_work)), "Projects, tasks, and lanes currently in motion"),
+            ("Staged Actions", str(len(latest_runs)), "Recent Catalyst runs ready for review or follow-through"),
+            ("Queued Automations", str(sum(int(counts.get(key) or 0) for key in ("email_triage", "meeting_extractions", "briefings"))), "Captured workflow automations across mail, meetings, and briefings"),
+            ("Approvals Needed", str(len(disconnected_connectors) + len(gmail_diagnostics) + len(calendar_diagnostics)), "Connectivity gaps and execution blockers asking for intervention"),
+        ])
+        live_summary = [
+            _row("Projects", str(len(live_projects)), "Live workspace project records"),
+            _row("Tasks", str(len(live_tasks)), "Task queue items available right now"),
+            _row("Calendar", str(len(live_calendar_items) or total_events + family_event_count), "Upcoming calendar items across personal and family lanes"),
+            _row("Email", str(len(live_email_items) or total_unread), "Unread or recent inbox records"),
+        ]
+        intervention_rows = [
+            *[
+                _row(
+                    str(item.get("label") or "Connector"),
+                    str(item.get("notes") or "Needs attention."),
+                    str(item.get("status") or "disconnected").title(),
+                )
+                for item in disconnected_connectors[:4]
+            ],
+            *[
+                _row(
+                    str(account.get("owner_display_name") or account.get("label") or "Google"),
+                    _short_google_error(detail),
+                    "Mail integration alert",
+                )
+                for account, detail in gmail_diagnostics[:2]
+            ],
+            *[
+                _row(
+                    str(account.get("owner_display_name") or account.get("label") or "Calendar"),
+                    _short_google_error(detail),
+                    "Calendar integration alert",
+                )
+                for account, detail in calendar_diagnostics[:2]
+            ],
+        ]
+        event_rows = [
+            _row(
+                str(event.get("summary") or "(Untitled event)"),
+                str(account.get("owner_display_name") or account.get("label") or account.get("source") or "Calendar"),
+                str(event.get("start") or "No start time"),
+            )
+            for account, event in merged_events
+        ]
         body = f"""
-        <div class="grid">
+        {storyboard}
+        {metrics}
+        <div class="grid grid-3">
+          <div class="card card-hero span-2">
+            <div class="muted-kicker">Catalyst Operations Command Center</div>
+            <h2>Good morning, Chris.</h2>
+            <p>The desktop Catalyst deck now uses the mockup language without dropping back to static HTML. Mail, meetings, projects, tasks, signals, and launch posture all render from the current runtime.</p>
+            <div class="inline-actions">
+              <a class="btn btn-primary" href="/catalyst/view/projects">Open Workflow Builder</a>
+              <a class="btn btn-secondary" href="/catalyst/view/tasks">Review Execution Queue</a>
+              <a class="btn btn-secondary" href="/catalyst/view/reports">Inspect Reports</a>
+            </div>
+          </div>
+          <div class="card rail-card">
+            <h2>Intervention Required</h2>
+            {_table(intervention_rows, "No intervention rail items are open right now.")}
+          </div>
+          <div class="card">
+            <h2>Live Operations</h2>
+            {_table(live_summary, "No live workspace state was returned yet.")}
+          </div>
+          <div class="card">
+            <h2>Workflow Builder Studio</h2>
+            {_table(workflow_rows, "Workflow counters will appear here as Catalyst captures runs.")}
+          </div>
+          <div class="card">
+            <h2>Recent Runs</h2>
+            {_table(latest_run_rows, "No recent workflow runs have been recorded yet.")}
+          </div>
+          <div class="card span-2">
+            <h2>Agent Execution Board</h2>
+            {_table(active_work_rows, "No active Catalyst work is staged right now.")}
+          </div>
+          <div class="card">
+            <h2>Voice Orchestration</h2>
+            <div class="callout">
+              <strong>Open From Voice</strong>
+              <p>Ask JARVIS to open calendar, email, meetings, projects, or reports and the same workspace lanes light up here.</p>
+            </div>
+            <div class="callout" style="margin-top: 12px;">
+              <strong>Continuity Thread</strong>
+              <p>{escape(signal_titles[0] if signal_titles else "No dominant Catalyst continuity thread is recorded yet.")}</p>
+            </div>
+          </div>
           <div class="card">
             <h2>Connected Accounts</h2>
             <div class="table">{''.join(f'<div class="row"><strong>{escape(account.get("label") or account.get("owner_display_name") or "Account")}</strong><div class="muted">{escape(account.get("provider", "unknown"))} · {escape(account.get("status", "planned"))}</div></div>' for account in accounts) or '<div class="muted">No personal accounts have been saved yet.</div>'}</div>
           </div>
           <div class="card">
-            <h2>Live Summary</h2>
-            <ul>
-              <li><strong>{escape(str(total_unread))}</strong> unread emails across connected accounts</li>
-              <li><strong>{escape(str(total_events))}</strong> Google calendar events in the next 30 days</li>
-              <li><strong>{escape(str(family_event_count))}</strong> family shared calendar events in the next 30 days</li>
-              <li><strong>{escape(str(overview.get("counts", {}).get("signals", 0)))}</strong> captured Catalyst signals</li>
-            </ul>
+            <h2>Signal Intelligence</h2>
+            {_table(signal_rows, "No Catalyst signals have been captured yet.")}
           </div>
           <div class="card">
             <h2>Next Events</h2>
-            <div class="table">{''.join(f'<div class="row"><strong>{escape(event.get("summary") or "(Untitled event)")}</strong><div class="muted">{escape(account.get("owner_display_name") or account.get("label") or account.get("source") or "Calendar")} · {escape(event.get("start") or "No start time")}</div></div>' for account, event in merged_events) or '<div class="muted">No upcoming events are loaded yet.</div>'}</div>
-          </div>
-          <div class="card">
-            <h2>Unread Mail Snapshot</h2>
-            <div class="table">{''.join(f'<div class="row"><strong>{escape(email.get("subject") or "(No subject)")}</strong><div class="muted">{escape(account.get("owner_display_name") or account.get("label") or "Account")} · {escape(email.get("from") or "Unknown sender")}</div></div>' for account, email in unread_emails[:6]) or '<div class="muted">No unread mail is loaded yet.</div>'}</div>
+            {_table(event_rows, "No upcoming events are loaded yet.")}
           </div>
         </div>"""
-        return _render_catalyst_workspace_chrome("Catalyst Workspace", "Live personal workflow state inside JARVIS, with current mail and calendar context instead of mockup data.", body, page)
+        return _render_catalyst_workspace_chrome("Catalyst Desktop Experience", "A live JARVIS operations deck that now follows the desktop mockup language without losing real data or route continuity.", body, page)
 
     if page == "calendar":
         merged_events = _merged_upcoming(limit=20)
@@ -726,6 +1013,206 @@ def render_catalyst_workspace_page(runtime: JarvisRuntime, page: str) -> str:
           </div>
         </div>"""
         return _render_catalyst_workspace_chrome("Meetings Workspace", "Pre-meeting preparation, transcript extraction, and next-action capture.", body, page)
+
+    if page == "projects":
+        storyboard = _storyboard([
+            ("1. Workflow Builder Studio", "Live project records now replace the static concept page and stay connected to Catalyst portfolio state."),
+            ("2. Lane Strategy", "Portfolio lanes and active work show where JARVIS is concentrating energy right now."),
+            ("3. Build To Review", "Recent briefs, hypotheses, and implementation runs frame what is ready for the next move."),
+        ])
+        metrics = _metric_grid([
+            ("Projects", str(len(live_projects) or int(counts.get("project_briefs", 0) or 0)), "Project records in the live workspace"),
+            ("Plans", str(int(counts.get("implementation_plans", 0) or 0)), "Implementation-plan runs captured"),
+            ("Hypotheses", str(int(counts.get("hypotheses", 0) or 0)), "Opportunity and experiment frames ready to test"),
+            ("Active Lanes", str(len(portfolio_lanes) or len(portfolio.get("lanes", []) or [])), "Portfolio lanes carrying current pressure"),
+        ])
+        project_rows = [
+            _row(
+                str(item.get("title") or item.get("name") or "Project"),
+                str(item.get("summary") or item.get("description") or item.get("status") or "Live workspace project"),
+                " · ".join(
+                    bit for bit in [
+                        str(item.get("status") or "").strip(),
+                        str(item.get("owner") or "").strip(),
+                        _format_stamp(str(item.get("updatedAt") or item.get("updated_at") or item.get("updated") or "")),
+                    ] if bit and bit != "No timestamp"
+                ),
+            )
+            for item in live_projects[:8]
+            if isinstance(item, dict)
+        ]
+        lane_rows = [
+            _row(
+                str(item.get("label") or item.get("title") or "Lane"),
+                str(item.get("description") or item.get("summary") or "Catalyst portfolio lane"),
+                str(item.get("status") or "planned").title(),
+            )
+            for item in (portfolio_lanes or portfolio.get("lanes") or [])[:6]
+            if isinstance(item, dict)
+        ]
+        body = f"""
+        {storyboard}
+        {metrics}
+        <div class="grid grid-3">
+          <div class="card card-hero span-2">
+            <div class="muted-kicker">Workflow Builder</div>
+            <h2>{escape(str(portfolio.get("mission") or "Build the next operational workflow with real Catalyst context."))}</h2>
+            <p>Projects now open as live route-backed workspace cards instead of a frozen mockup export. This lane pulls from the current Catalyst workspace, portfolio lanes, and active build pressure.</p>
+            <div class="inline-actions">
+              <a class="btn btn-primary" href="/catalyst/view/tasks">Open Execution Queue</a>
+              <a class="btn btn-secondary" href="/catalyst/view/reports">Review Output</a>
+            </div>
+          </div>
+          <div class="card rail-card">
+            <h2>Portfolio Lanes</h2>
+            {_table(lane_rows, "No portfolio lanes are populated yet.")}
+          </div>
+          <div class="card span-2">
+            <h2>Project Records</h2>
+            {_table(project_rows, "No live projects are loaded from the workspace yet.")}
+          </div>
+          <div class="card">
+            <h2>Recent Build Runs</h2>
+            {_table(latest_run_rows, "No recent workflow runs have been captured yet.")}
+          </div>
+          <div class="card span-3">
+            <h2>Active Work Across Lanes</h2>
+            {_table(active_work_rows, "No active Catalyst work is staged right now.")}
+          </div>
+        </div>"""
+        return _render_catalyst_workspace_chrome("Workflow Builder Studio", "Live project, lane, and implementation posture inside the JARVIS Catalyst workspace.", body, page)
+
+    if page == "tasks":
+        storyboard = _storyboard([
+            ("1. Live Agent Execution", "Task queue items, active work, and due pressure stay visible in one desktop command surface."),
+            ("2. Staged Actions", "Recent runs and upcoming meetings help decide what should move now versus wait."),
+            ("3. Review And Hand Off", "Execution stays connected to the broader Catalyst continuity and reporting lanes."),
+        ])
+        metrics = _metric_grid([
+            ("Task Queue", str(len(live_tasks)), "Live workspace tasks available"),
+            ("Active Work", str(len(active_work)), "Execution items already in motion"),
+            ("Upcoming Events", str(len(_merged_upcoming(limit=8))), "Calendar commitments that may constrain the queue"),
+            ("Signals", str(int(counts.get("signals", 0) or 0)), "Catalyst signals shaping task priority"),
+        ])
+        task_rows = [
+            _row(
+                str(item.get("title") or item.get("name") or "Task"),
+                str(item.get("summary") or item.get("description") or item.get("status") or "Live workspace task"),
+                " · ".join(
+                    bit for bit in [
+                        str(item.get("status") or "").strip(),
+                        str(item.get("assignee") or item.get("owner") or "").strip(),
+                        str(item.get("due") or item.get("dueDate") or "").strip(),
+                    ] if bit
+                ),
+            )
+            for item in live_tasks[:10]
+            if isinstance(item, dict)
+        ]
+        calendar_rows = [
+            _row(
+                str(event.get("summary") or "(Untitled event)"),
+                str(account.get("owner_display_name") or account.get("label") or account.get("source") or "Calendar"),
+                str(event.get("start") or "No start time"),
+            )
+            for account, event in _merged_upcoming(limit=8)
+        ]
+        body = f"""
+        {storyboard}
+        {metrics}
+        <div class="grid grid-3">
+          <div class="card card-hero span-2">
+            <div class="muted-kicker">Execution Board</div>
+            <h2>Queue what matters, then keep continuity intact.</h2>
+            <p>The task lane now renders real workspace tasks and current execution pressure instead of a static mockup board. It stays tied to meetings, signals, and the broader Catalyst reporting trail.</p>
+            <div class="inline-actions">
+              <a class="btn btn-primary" href="/catalyst/view/meetings">Meeting Prep</a>
+              <a class="btn btn-secondary" href="/catalyst/view/email">Inbox Triage</a>
+            </div>
+          </div>
+          <div class="card rail-card">
+            <h2>Upcoming Constraints</h2>
+            {_table(calendar_rows, "No time constraints are loaded yet.")}
+          </div>
+          <div class="card span-2">
+            <h2>Execution Queue</h2>
+            {_table(task_rows, "No live tasks are loaded from the workspace yet.")}
+          </div>
+          <div class="card">
+            <h2>Latest Workflow Runs</h2>
+            {_table(latest_run_rows, "No recent runs have been stored yet.")}
+          </div>
+          <div class="card span-3">
+            <h2>Active Work Continuity</h2>
+            {_table(active_work_rows, "No active Catalyst work is staged right now.")}
+          </div>
+        </div>"""
+        return _render_catalyst_workspace_chrome("Live Agent Execution Board", "Real task execution, timing pressure, and workflow continuity inside Catalyst.", body, page)
+
+    if page == "reports":
+        storyboard = _storyboard([
+            ("1. Live Intelligence", "Recent Catalyst runs, signal pressure, and connector health surface in one reporting lane."),
+            ("2. Governance Posture", "Connected versus blocked systems are visible so reports stay honest about runtime truth."),
+            ("3. Plan To Impact", "Signals, family timing, and latest runs make this feel like the mockup while staying fully functional."),
+        ])
+        metrics = _metric_grid([
+            ("Recent Runs", str(len(latest_runs)), "Captured workflow outputs"),
+            ("Connected", str(len(connected_connectors)), "Connectors currently live or locally backed"),
+            ("Attention", str(len(disconnected_connectors) + len(gmail_diagnostics) + len(calendar_diagnostics)), "Reporting-side blockers still asking for intervention"),
+            ("Signals", str(len(signal_titles) or int(counts.get("signals", 0) or 0)), "Signals contributing to the current reporting posture"),
+        ])
+        connector_rows = [
+            _row(
+                str(item.get("label") or "Connector"),
+                str(item.get("notes") or "No connector note recorded."),
+                str(item.get("status") or "planned").title(),
+            )
+            for item in overview.get("connectors", [])[:8]
+            if isinstance(item, dict)
+        ]
+        email_rows = [
+            _row(
+                str(email.get("subject") or "(No subject)"),
+                str(email.get("from") or "Unknown sender"),
+                str(account.get("owner_display_name") or account.get("label") or "Account"),
+            )
+            for account, email in unread_emails[:8]
+        ]
+        body = f"""
+        {storyboard}
+        {metrics}
+        <div class="grid grid-3">
+          <div class="card card-hero span-2">
+            <div class="muted-kicker">Reporting And Review</div>
+            <h2>Live reports, real posture, no mockup-only fallback.</h2>
+            <p>This reporting lane now pulls its content from recent Catalyst runs, connector health, unread mail context, and surfaced signals instead of serving a static design export.</p>
+            <div class="inline-actions">
+              <a class="btn btn-primary" href="/catalyst/view/home">Return To Command Center</a>
+              <a class="btn btn-secondary" href="/catalyst/view/calendar">Check Schedule</a>
+            </div>
+          </div>
+          <div class="card rail-card">
+            <h2>Connector Governance</h2>
+            {_table(connector_rows, "No connector posture is recorded yet.")}
+          </div>
+          <div class="card">
+            <h2>Recent Runs</h2>
+            {_table(latest_run_rows, "No recent workflow runs have been recorded yet.")}
+          </div>
+          <div class="card">
+            <h2>Signal Pressure</h2>
+            {_table(signal_rows, "No Catalyst signals have been captured yet.")}
+          </div>
+          <div class="card">
+            <h2>Unread Mail Snapshot</h2>
+            {_table(email_rows, "No unread mail is loaded yet.")}
+          </div>
+          <div class="card span-3">
+            <h2>Live Workflow Telemetry</h2>
+            {_table(workflow_rows, "Workflow telemetry will appear here as runs are captured.")}
+          </div>
+        </div>"""
+        return _render_catalyst_workspace_chrome("Catalyst Reporting Deck", "A live reporting lane shaped by the mockups but grounded in current workflow, connector, and signal truth.", body, page)
 
     if page == "contacts":
         body = f"""

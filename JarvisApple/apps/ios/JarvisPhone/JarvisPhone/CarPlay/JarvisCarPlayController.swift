@@ -14,7 +14,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
     private let needsTemplate = CPListTemplate(title: "Needs You", sections: [])
     private let routeTemplate = CPListTemplate(title: "Route", sections: [])
     private let publishTemplate = CPListTemplate(title: "Publish", sections: [])
-    private let opsTemplate = CPListTemplate(title: "Ops", sections: [])
+    private let opsTemplate = CPListTemplate(title: "Catalyst", sections: [])
 
     private var pendingNeeds: [NeedsItem] = []
     private var navigationChoices: [CarPlayNavigationChoice] = []
@@ -333,7 +333,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
 
             let currentFocus = overview.currentFocus
             let commandItem = CPListItem(
-                text: "Operational Command Deck",
+                text: "Catalyst Command Deck",
                 detailText: "\(overview.counts.approvalCount) approvals · \(overview.counts.recoveryCaseCount) recovery cases · \(overview.agentSummary.awakeCount) agents awake"
             )
             commandItem.setImage(
@@ -348,7 +348,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                 UIImage(systemName: "scope")?
                     .withTintColor(.systemOrange, renderingMode: .alwaysOriginal)
             )
-            sections.append(CPListSection(items: [commandItem, focusItem], header: "Command Chamber", sectionIndexTitle: nil))
+            sections.append(CPListSection(items: [commandItem, focusItem], header: "1. Command Chamber", sectionIndexTitle: nil))
 
             let focusItems = overview.focusCandidates.map { candidate in
                 let item = CPListItem(text: candidate.label, detailText: candidate.module)
@@ -358,7 +358,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                 )
                 return item
             }
-            sections.append(CPListSection(items: focusItems, header: "Focus Lanes", sectionIndexTitle: nil))
+            sections.append(CPListSection(items: focusItems, header: "2. Focus Lanes", sectionIndexTitle: nil))
 
             let recoveryItems: [CPListItem]
             if overview.recoveryCases.isEmpty {
@@ -379,7 +379,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                     return item
                 }
             }
-            sections.append(CPListSection(items: recoveryItems, header: "Recovery", sectionIndexTitle: nil))
+            sections.append(CPListSection(items: recoveryItems, header: "3. Recovery", sectionIndexTitle: nil))
 
             let approvalItems: [CPListItem]
             if overview.approvals.isEmpty {
@@ -396,7 +396,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                     return item
                 }
             }
-            sections.append(CPListSection(items: approvalItems, header: "Approvals", sectionIndexTitle: nil))
+            sections.append(CPListSection(items: approvalItems, header: "4. Approvals", sectionIndexTitle: nil))
 
             let missionHeadline = overview.missionSummary.headline.isEmpty
                 ? "\(overview.missionSummary.activeCount) active mission(s) are flowing through JARVIS."
@@ -417,7 +417,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                 UIImage(systemName: "person.3.fill")?
                     .withTintColor(.systemTeal, renderingMode: .alwaysOriginal)
             )
-            sections.append(CPListSection(items: [missionItem, agentItem], header: "Mission & Agents", sectionIndexTitle: nil))
+            sections.append(CPListSection(items: [missionItem, agentItem], header: "5. Mission & Agents", sectionIndexTitle: nil))
 
             let activityItems: [CPListItem]
             if overview.recentActivity.isEmpty {
@@ -432,7 +432,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                     return item
                 }
             }
-            sections.append(CPListSection(items: activityItems, header: "Recent Continuity", sectionIndexTitle: nil))
+            sections.append(CPListSection(items: activityItems, header: "6. Recent Continuity", sectionIndexTitle: nil))
 
             opsTemplate.updateSections(sections)
         } catch {
@@ -587,7 +587,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
 
     private func handleOpsSelection(indexPath: (section: Int, item: Int)) async {
         guard let overview = opsOverview else { return }
-        let focusSectionIndex = opsTemplate.sections.firstIndex { $0.header == "Focus Lanes" }
+        let focusSectionIndex = opsTemplate.sections.firstIndex { $0.header == "2. Focus Lanes" }
         guard let focusSectionIndex, indexPath.section == focusSectionIndex, indexPath.item < overview.focusCandidates.count else {
             return
         }

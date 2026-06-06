@@ -302,10 +302,10 @@ struct CatalystView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("JARVIS Ops Deck")
+                    Text("JARVIS Catalyst Experience")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
-                    Text("Mission pressure, approvals, recovery, continuity, and supervision are now reachable on iPhone through the real hosted product.")
+                    Text("Plans become action here. Mission pressure, approvals, recovery, continuity, and supervision are all reachable through the real product, while the native ops studio handles the fastest loops on-device.")
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.72))
                         .fixedSize(horizontal: false, vertical: true)
@@ -318,7 +318,7 @@ struct CatalystView: View {
                         tint: overview.liveWorkspace.live ? .green : .orange
                     )
                     opsBadge(
-                        title: "\(opsModules.count) Modules",
+                        title: "\(opsModules.count) Lanes",
                         detail: "Operational routes ready",
                         tint: blue
                     )
@@ -328,6 +328,9 @@ struct CatalystView: View {
             HStack(spacing: 10) {
                 actionCapsule(title: "Command Center", icon: "square.grid.2x2.fill") {
                     selectedModule = .commandCenter
+                }
+                actionCapsule(title: "Approvals", icon: "checklist.checked") {
+                    selectedModule = .approvalQueue
                 }
                 actionCapsule(title: "Reload", icon: "arrow.clockwise") {
                     Task { await load() }
@@ -354,26 +357,34 @@ struct CatalystView: View {
     }
 
     private var opsStoryboardStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        let frames: [(String, String, String, Color)] = [
+            ("1", "Operations", "See what is running, staged, and asking for intervention.", .cyan),
+            ("2", "Workflow", "Open the live route-backed modules that still run best in the hosted product.", blue),
+            ("3", "Agent Execution", "Track active missions and recent continuity without losing the native shell.", .orange),
+            ("4", "Draft To Live", "Move the right lane forward with shared focus and mission actions.", .green),
+            ("5", "Intervention", "Handle approvals and recovery loops from the phone before drift grows.", .pink),
+            ("6", "Voice", "Use JARVIS as the command layer while the same operational routes stay one tap away.", Color.white.opacity(0.82)),
+        ]
+        return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                ForEach(opsModules.prefix(8)) { module in
+                ForEach(Array(frames.enumerated()), id: \.offset) { _, frame in
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 8) {
-                            Text(module.storyNumber)
+                            Text(frame.0)
                                 .font(.caption2.weight(.bold))
-                                .foregroundStyle(module.tint)
+                                .foregroundStyle(frame.3)
                                 .frame(width: 24, height: 24)
-                                .background(module.tint.opacity(0.14), in: Circle())
-                            Text(module.title)
+                                .background(frame.3.opacity(0.14), in: Circle())
+                            Text(frame.1)
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.white)
                         }
-                        Text(module.phoneSummary)
+                        Text(frame.2)
                             .font(.caption2)
                             .foregroundStyle(.white.opacity(0.62))
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    .frame(width: 172, alignment: .leading)
+                    .frame(width: 186, alignment: .leading)
                     .padding(12)
                     .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .overlay(
