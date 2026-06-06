@@ -64,6 +64,14 @@ struct NavigateView: View {
         let text: String
     }
 
+    private struct StoryboardStage: Identifiable {
+        let id: String
+        let number: String
+        let title: String
+        let detail: String
+        let accent: Color
+    }
+
     @ObservedObject private var loc = WeatherLocationProvider.shared
     @ObservedObject private var geo = GeofenceManager.shared
     @ObservedObject private var speech = SpeechRecognitionManager.shared
@@ -328,6 +336,53 @@ struct NavigateView: View {
         return "Gas, stops, and route timing look normal"
     }
 
+    private var phoneStoryboardStages: [StoryboardStage] {
+        [
+            StoryboardStage(
+                id: "planner",
+                number: "1",
+                title: "Planner",
+                detail: route == nil ? "Search and launch a route." : "Saved places and recents stay live.",
+                accent: slate
+            ),
+            StoryboardStage(
+                id: "route",
+                number: "2",
+                title: route == nil ? "Active Route" : "On Route",
+                detail: "ETA, traffic, and current travel posture.",
+                accent: .white.opacity(0.82)
+            ),
+            StoryboardStage(
+                id: "stops",
+                number: "3",
+                title: "Smart Stops",
+                detail: "Coffee, food, parks, and family-fit options.",
+                accent: stopGreen
+            ),
+            StoryboardStage(
+                id: "detail",
+                number: "4",
+                title: "Stop Detail",
+                detail: "Detour cost and route-fit before you commit.",
+                accent: .orange
+            ),
+            StoryboardStage(
+                id: "intel",
+                number: "5",
+                title: "Route Intel",
+                detail: "Weather, timing risk, and traffic outlook.",
+                accent: .cyan
+            ),
+            StoryboardStage(
+                id: "voice",
+                number: "6",
+                title: "Voice",
+                detail: "Hands-free route questions and guidance.",
+                accent: .pink
+            ),
+        ]
+    }
+
     @ViewBuilder
     private var routeRecommendationCard: some View {
         if let route, let stop = allVisibleSections.first?.items.first {
@@ -457,6 +512,7 @@ struct NavigateView: View {
                 HStack(alignment: .top) {
                     phoneNavTitle(title: "JARVIS", subtitle: "Navigation")
                     Spacer()
+                    phoneConceptBadge
                     Button {
                         refreshPlannerHome()
                     } label: {
@@ -573,10 +629,17 @@ struct NavigateView: View {
     }
 
     private var phoneStoryboardStrip: some View {
-        HStack(spacing: 10) {
-            storyboardStep(number: "1", title: route == nil ? "Planner" : "Route", accent: slate)
-            storyboardStep(number: "2", title: "Stops", accent: stopGreen)
-            storyboardStep(number: "3", title: "Voice", accent: Color.white.opacity(0.82))
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(phoneStoryboardStages) { stage in
+                    storyboardStep(
+                        number: stage.number,
+                        title: stage.title,
+                        detail: stage.detail,
+                        accent: stage.accent
+                    )
+                }
+            }
         }
     }
 
@@ -1187,6 +1250,34 @@ struct NavigateView: View {
             Text(subtitle)
                 .font(.headline)
                 .foregroundStyle(slate)
+            Text("Concept storyboard with live route continuity.")
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.62))
+        }
+    }
+
+    private var phoneConceptBadge: some View {
+        VStack(alignment: .trailing, spacing: 6) {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [slate.opacity(0.9), slate.opacity(0.2), .clear],
+                            center: .center,
+                            startRadius: 1,
+                            endRadius: 18
+                        )
+                    )
+                    .frame(width: 24, height: 24)
+                    .overlay(Image(systemName: "location.north.fill").font(.caption2.bold()).foregroundStyle(.white))
+                Text("CONCEPT STORYBOARD")
+                    .font(.caption2.weight(.semibold))
+                    .tracking(1.2)
+                    .foregroundStyle(.white.opacity(0.72))
+            }
+            Text("Route aware. Weather aware.")
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.5))
         }
     }
 
@@ -1401,18 +1492,24 @@ struct NavigateView: View {
         )
     }
 
-    private func storyboardStep(number: String, title: String, accent: Color) -> some View {
-        HStack(spacing: 8) {
-            Text(number)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.white)
-                .frame(width: 24, height: 24)
-                .background(accent.opacity(0.22), in: Circle())
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.84))
+    private func storyboardStep(number: String, title: String, detail: String, accent: Color) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(number)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 24, height: 24)
+                    .background(accent.opacity(0.22), in: Circle())
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.9))
+            }
+            Text(detail)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.6))
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(width: 156, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(cardFill, in: RoundedRectangle(cornerRadius: 16))
@@ -1465,6 +1562,10 @@ struct NavigateView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(cardFill, in: RoundedRectangle(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(.white.opacity(0.05), lineWidth: 1)
+        )
     }
 
     private func phoneBottomItem(title: String, icon: String, active: Bool = false, action: @escaping () -> Void) -> some View {

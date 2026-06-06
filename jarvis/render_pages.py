@@ -9114,6 +9114,40 @@ def render_navigation_module_page(payload: dict) -> str:
       color: var(--muted);
       margin-top: 4px;
     }}
+    .storyboard-strip {{
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 12px;
+      margin: 0 0 18px;
+    }}
+    .story-card {{
+      padding: 14px 16px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: rgba(7, 14, 23, 0.82);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+    }}
+    .story-card strong {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: 1px solid rgba(121, 216, 255, 0.18);
+      color: var(--accent);
+      font-size: 13px;
+      margin-bottom: 10px;
+    }}
+    .story-card h3 {{
+      margin: 0 0 6px;
+      font-size: 15px;
+    }}
+    .story-card p {{
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.45;
+    }}
     .hero {{
       display: grid;
       grid-template-columns: minmax(0, 1.18fr) minmax(300px, 0.82fr);
@@ -9237,7 +9271,38 @@ def render_navigation_module_page(payload: dict) -> str:
       overflow-x: auto;
     }}
     .status-note {{ min-height: 1.3em; color: var(--muted); margin-top: 10px; }}
+    .footer-capabilities {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: rgba(6, 12, 19, 0.82);
+    }}
+    .capability {{
+      padding: 12px 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(121, 216, 255, 0.08);
+      background: rgba(255, 255, 255, 0.02);
+    }}
+    .capability strong {{
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: #dff4ff;
+    }}
+    .capability span {{
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }}
     @media (max-width: 980px) {{
+      .storyboard-strip,
+      .footer-capabilities {{
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }}
       .hero {{ grid-template-columns: 1fr; }}
       .span-4, .span-6, .span-8, .span-12 {{ grid-column: span 12; }}
     }}
@@ -9254,6 +9319,14 @@ def render_navigation_module_page(payload: dict) -> str:
         <a href="/command-center">Back to Command Center</a>
         <button type="button" id="refresh-navigation">Refresh Navigation State</button>
       </div>
+    </section>
+    <section class="storyboard-strip" aria-label="Navigation storyboard">
+      <article class="story-card"><strong>1</strong><h3>Navigation Home / Planner</h3><p>Plan smarter with live saved places, family-aware origin posture, and recent destination continuity.</p></article>
+      <article class="story-card"><strong>2</strong><h3>Live Route Intelligence</h3><p>Persisted route timing, hazard posture, and weather-aware guidance stay attached to the active route.</p></article>
+      <article class="story-card"><strong>3</strong><h3>Smart Stops Along Route</h3><p>JARVIS keeps coffee, food, parks, and family-fit places aligned to the actual route preview.</p></article>
+      <article class="story-card"><strong>4</strong><h3>Stop Detail &amp; Modification</h3><p>Detour impact, route fit, and next actions stay visible before you commit a stop to the trip.</p></article>
+      <article class="story-card"><strong>5</strong><h3>Travel Orchestration</h3><p>Origin mode, favorites, and recent routes help JARVIS coordinate the full travel plan instead of a one-off search.</p></article>
+      <article class="story-card"><strong>6</strong><h3>Voice Navigation</h3><p>Recent route continuity feeds voice-ready guidance so the consultation stays grounded in live travel context.</p></article>
     </section>
     <section class="hero">
       <div>
@@ -9285,7 +9358,7 @@ def render_navigation_module_page(payload: dict) -> str:
         <ul id="module-status-list"></ul>
       </section>
       <section class="panel span-8">
-        <h2>2. Route Context &amp; Command Search</h2>
+        <h2>2. Route Context &amp; Planner Search</h2>
         <ul id="locations-list"></ul>
       </section>
       <section class="panel span-6">
@@ -9306,30 +9379,34 @@ def render_navigation_module_page(payload: dict) -> str:
         <pre id="navigation-route-output">Awaiting route preview.</pre>
       </section>
       <section class="panel span-6">
-        <h2>4. Travel Orchestration &amp; Planning</h2>
+        <h2>4. Stop Detail &amp; Route Modification</h2>
+        <ul id="route-detail-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>5. Travel Orchestration &amp; Planning</h2>
         <ul id="state-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>5. Smart Stops Along Route Studio</h2>
+        <h2>6. Smart Stops Along Route Studio</h2>
         <ul id="stops-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>6. Voice Navigation Consultation &amp; Recent Route Continuity</h2>
+        <h2>7. Voice Navigation Consultation &amp; Recent Route Continuity</h2>
         <ul id="recent-activity-list"></ul>
-      </section>
-      <section class="panel span-12">
-        <h2>Route Intelligence Capabilities</h2>
-        <ul>
-          <li><strong>Route aware</strong><span>Live route previews persist origin, destination, and travel posture into the module state.</span></li>
-          <li><strong>Smart stops</strong><span>Along-route stop suggestions stay connected to the actual navigation route preview and activity continuity.</span></li>
-          <li><strong>Voice driven</strong><span>The consultation copy still reflects route hazard and timing state instead of static mockup text.</span></li>
-        </ul>
       </section>
       <section class="panel span-12">
         <h2>Payload Preview</h2>
         <pre id="payload-preview"></pre>
       </section>
     </div>
+    <section class="footer-capabilities" aria-label="Navigation capability footer">
+      <article class="capability"><strong>Route Intelligence</strong><span>Real-time traffic, incidents, and predictive route insight from the live module payload.</span></article>
+      <article class="capability"><strong>Weather Aware</strong><span>Route-specific weather and timing guidance reflect the latest preview rather than static concept copy.</span></article>
+      <article class="capability"><strong>Smart Stops</strong><span>Suggested places remain tied to the chosen route, detour cost, and category selection.</span></article>
+      <article class="capability"><strong>Time Optimized</strong><span>Leave-by posture, recent trips, and current origin mode all stay visible in one travel workflow.</span></article>
+      <article class="capability"><strong>Family &amp; Travel</strong><span>Saved family places and favorite destinations remain first-class inside the actual planner.</span></article>
+      <article class="capability"><strong>Voice First</strong><span>Recent route continuity and hazard posture feed the voice consultation lane for hands-free travel.</span></article>
+    </section>
   </main>
   <script>
     const initialPayload = {raw_json};
@@ -9342,6 +9419,7 @@ def render_navigation_module_page(payload: dict) -> str:
     const locationsList = document.getElementById("locations-list");
     const stateList = document.getElementById("state-list");
     const stopsList = document.getElementById("stops-list");
+    const routeDetailList = document.getElementById("route-detail-list");
     const recentActivityList = document.getElementById("recent-activity-list");
     const payloadPreview = document.getElementById("payload-preview");
 
@@ -9395,6 +9473,14 @@ def render_navigation_module_page(payload: dict) -> str:
         li("Favorite Destinations", (state.favorite_destinations || []).join(" | ") || "No favorites saved."),
         li("Recent Destinations", (state.recent_destinations || []).join(" | ") || "No recent destinations saved."),
       ].join("");
+
+      const leadStop = (preview.sections || []).flatMap((section) => section.items || [])[0];
+      routeDetailList.innerHTML = leadStop ? [
+        li("Recommended Stop", leadStop.name || "Smart stop", leadStop.address || "No address available."),
+        li("Detour Impact", leadStop.distance_from_route_miles != null ? `${{Number(leadStop.distance_from_route_miles).toFixed(1)}} mi off route` : "Minimal detour expected."),
+        li("Route Fit", leadStop.route_mile_marker != null ? `Around mile ${{Math.round(Number(leadStop.route_mile_marker))}} on the active route.` : "Route mile marker will appear after a full preview."),
+        li("Next Move", "Use Preview Route Intelligence again to refresh stop rankings and route timing before leaving."),
+      ].join("") : '<li><strong>No stop detail yet.</strong><span>Run a route preview and JARVIS will surface a lead stop with detour and route-fit detail here.</span></li>';
 
       stopsList.innerHTML = (preview.sections || []).slice(0, 6).map((section) => li(
         section.label || section.id || "Category",

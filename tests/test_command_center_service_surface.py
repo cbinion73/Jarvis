@@ -676,6 +676,8 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("JARVIS Navigation", navigation_html)
         self.assertIn("Preview Route Intelligence", navigation_html)
         self.assertIn("Navigation Command Center", navigation_html)
+        self.assertIn("Concept Storyboard", navigation_html)
+        self.assertIn("Stop Detail &amp; Route Modification", navigation_html)
         self.assertIn("Recent Route Continuity", navigation_html)
         self.assertIn("/api/activity/operator-action", navigation_html)
         self.assertIn("status", navigation_snapshot)
