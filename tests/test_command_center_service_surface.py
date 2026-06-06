@@ -462,13 +462,17 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("JARVIS Daily Brief", briefing_html)
         self.assertIn("Refresh Daily Brief", briefing_html)
         self.assertIn("Generate Live Brief", briefing_html)
+        self.assertIn("Recent Brief Continuity", briefing_html)
         self.assertIn("status", briefing_snapshot)
         self.assertIn("briefing_text", briefing_snapshot)
         self.assertIn("today_board", briefing_snapshot)
         self.assertIn("open_loops", briefing_snapshot)
+        self.assertIn("recent_activity", briefing_snapshot)
+        self.assertIn("recent_activity_count", briefing_snapshot["counts"])
         self.assertIn("proof_paths", briefing_snapshot)
         self.assertEqual(briefing_snapshot["proof_paths"]["module_route"], "/briefing-center")
         self.assertEqual(briefing_snapshot["proof_paths"]["module_api"], "/api/briefing/module")
+        self.assertEqual(briefing_snapshot["proof_paths"]["activity_api"], "/api/activity/operator-action")
         self.assertIn("JARVIS Progress", progress_html)
         self.assertIn("Refresh Progress State", progress_html)
         self.assertIn('id="level3-checklist"', progress_html)
@@ -823,6 +827,49 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertTrue(any(item.get("title") == "Create Draft Project" for item in publish_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("title") == "Start Overnight Research" for item in huddle_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("title") == "Preview Route Intelligence" for item in navigation_snapshot["recent_activity"]))
+
+    def test_open_loop_action_populates_daily_brief_continuity(self) -> None:
+        self.runtime.apply_open_loop_action = lambda actor_name, **kwargs: {
+            "ok": True,
+            "actor": actor_name,
+            "domain": kwargs.get("domain", ""),
+            "item_id": kwargs.get("item_id", ""),
+            "action": kwargs.get("action", ""),
+            "record": {"status": "deferred"},
+            "open_loops": {"items": []},
+        }
+        self.runtime.shell_state_snapshot = lambda: {}
+        self.runtime.dashboard_snapshot = lambda: {}
+
+        response = asyncio.run(
+            self._route("/api/open-loops/action", "POST")(
+                {
+                    "actor": "Chris",
+                    "domain": "family",
+                    "item_id": "draft-1",
+                    "action": "defer-1d",
+                    "item_title": "Confirm family note",
+                    "item_summary": "Need to defer this until tomorrow.",
+                    "route": "/briefing-center",
+                    "route_label": "Open Daily Brief",
+                    "activity_domain": "briefing",
+                    "why_now": "Daily Brief follow-through moved a live open-loop item forward.",
+                    "result_summary": "Daily Brief continuity updated from an open-loop action.",
+                    "related_kind": "open-loop",
+                    "related_label": "Confirm family note",
+                }
+            )
+        )
+        result_payload = self._json_body(response)
+        self.assertTrue(result_payload["ok"])
+
+        activity_payload = self._json_body(asyncio.run(self._route("/api/activity", "GET")()))
+        briefing_snapshot = self._json_body(asyncio.run(self._route("/api/briefing/module", "GET")()))
+
+        self.assertTrue(any(item.get("related_route") == "/briefing-center" for item in activity_payload))
+        self.assertTrue(any(item.get("related_kind") == "open-loop" for item in activity_payload))
+        self.assertTrue(any(item.get("title") == "Defer 1D" for item in briefing_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("related_label") == "Confirm family note" for item in briefing_snapshot["recent_activity"]))
 
 
 if __name__ == "__main__":

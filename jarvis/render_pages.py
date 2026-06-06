@@ -5799,6 +5799,10 @@ def render_daily_brief_module_page(payload: dict) -> str:
         <p class="status-note" id="open-loop-note">Apply an open-loop action here to turn the daily brief into a real follow-through surface.</p>
       </section>
       <section class="panel span-6">
+        <h2>Recent Brief Continuity</h2>
+        <ul id="brief-activity-list"></ul>
+      </section>
+      <section class="panel span-6">
         <h2>Assistant Notifications</h2>
         <ul id="notifications-list"></ul>
       </section>
@@ -5823,6 +5827,7 @@ def render_daily_brief_module_page(payload: dict) -> str:
     const calendarList = document.getElementById("calendar-list");
     const notificationsList = document.getElementById("notifications-list");
     const openLoopsList = document.getElementById("open-loops-list");
+    const briefActivityList = document.getElementById("brief-activity-list");
     const payloadPreview = document.getElementById("payload-preview");
     const liveBriefOutput = document.getElementById("live-brief-output");
     let currentPayload = initialPayload;
@@ -5896,7 +5901,7 @@ def render_daily_brief_module_page(payload: dict) -> str:
         item.channel || item.urgency || ""
       )).join("") || '<li><strong>No unread assistant notifications.</strong><span>Fresh assistant notices will appear here.</span></li>';
       openLoopsList.innerHTML = openLoops.map((item) => `
-        <li data-domain="${{esc(item.domain || "")}}" data-item-id="${{esc(item.item_id || "")}}">
+        <li data-domain="${{esc(item.domain || "")}}" data-item-id="${{esc(item.item_id || "")}}" data-item-title="${{esc(item.title || "Open loop")}}" data-item-summary="${{esc(item.summary || item.next_action || "No summary recorded.")}}">
           <strong>${{esc(item.title || "Open loop")}}</strong>
           <span>${{esc(item.summary || item.next_action || "No summary recorded.")}}</span>
           <span>${{esc(`${{item.domain || "general"}} · ${{item.status || "open"}} · ${{item.owner_agent || "JARVIS"}}`)}}</span>
@@ -5906,6 +5911,9 @@ def render_daily_brief_module_page(payload: dict) -> str:
           </div>
         </li>
       `).join("") || '<li><strong>No open loops surfaced.</strong><span>The day currently has no visible follow-through pressure.</span></li>';
+      briefActivityList.innerHTML = (Array.isArray(payload.recent_activity) ? payload.recent_activity : []).length
+        ? payload.recent_activity.map((item) => li(item.title || "Brief action", item.subtitle || item.actor || "Operator continuity", item.detail || item.route_label || "")).join("")
+        : '<li><strong>No brief continuity yet.</strong><span>Daily Brief actions will show up here once you move live open-loop work forward.</span></li>';
       payloadPreview.textContent = JSON.stringify(payload, null, 2);
     }}
 
@@ -5950,6 +5958,15 @@ def render_daily_brief_module_page(payload: dict) -> str:
             domain: host.getAttribute("data-domain") || "",
             item_id: host.getAttribute("data-item-id") || "",
             action: actionSelect ? actionSelect.value : "",
+            item_title: host.getAttribute("data-item-title") || "Open loop",
+            item_summary: host.getAttribute("data-item-summary") || "",
+            route: "/briefing-center",
+            route_label: "Open Daily Brief",
+            activity_domain: "briefing",
+            why_now: "Daily Brief follow-through moved a live open-loop item forward.",
+            result_summary: "Daily Brief continuity updated from an open-loop action.",
+            related_kind: "open-loop",
+            related_label: host.getAttribute("data-item-title") || "Open loop",
           }}),
         }});
         const payload = await response.json();

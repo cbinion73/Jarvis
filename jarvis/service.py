@@ -1841,18 +1841,20 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "status": "Useful",
             "summary": "Daily Brief now has a dedicated module route with live briefing text, today-board posture, and open-loop follow-through actions inside JARVIS.",
             "headline": "",
-            "what_became_real": "Daily Brief is now a standalone app module instead of only a shell packet and preview panel.",
-            "remains_partial": "Deeper briefing-specific action loops, richer continuity capture, and broader module drill-ins still need follow-on slices.",
+            "what_became_real": "Daily Brief is now a standalone app module instead of only a shell packet and preview panel, with durable follow-through continuity visible inside the route.",
+            "remains_partial": "Deeper briefing-specific action loops and broader module drill-ins still need follow-on slices, but open-loop actions now feed shared continuity back into Daily Brief.",
             "briefing_text": "",
             "live_briefing": {},
             "today_board": {},
             "open_loops": {"items": [], "summary": {}},
+            "recent_activity": [],
             "counts": {
                 "priority_count": 0,
                 "waiting_on_you": 0,
                 "needs_revisit": 0,
                 "notification_count": 0,
                 "calendar_count": 0,
+                "recent_activity_count": 0,
             },
             "proof_paths": {
                 "module_route": "/briefing-center",
@@ -1862,6 +1864,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "today_board_api": f"/api/today-board?actor={actor_display}",
                 "open_loops_api": f"/api/open-loops?actor={actor_display}",
                 "open_loop_action_api": "/api/open-loops/action",
+                "activity_api": "/api/activity/operator-action",
             },
             "errors": [],
         }
@@ -1900,6 +1903,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 payload["live_briefing"] = await asyncio.to_thread(builder.build, actor_user_id)
         except Exception as exc:
             payload["errors"].append(f"live_briefing: {exc}")
+
+        payload["recent_activity"] = _module_recent_activity(route="/briefing-center", domain="briefing")
+        payload["counts"]["recent_activity_count"] = len(payload["recent_activity"])
 
         if payload["counts"]["priority_count"] or payload["counts"]["waiting_on_you"]:
             payload["summary"] = (
@@ -2923,6 +2929,32 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        action_label = str(payload.get("action", "")).strip().replace("-", " ").title() or "Apply Open-Loop Action"
+        title = str(payload.get("item_title") or payload.get("title") or payload.get("item_id") or "Open loop").strip() or "Open loop"
+        status = "ok" if bool(result.get("ok", True)) else "error"
+        route = str(payload.get("route") or "/command-center").strip() or "/command-center"
+        route_label = str(payload.get("route_label") or "Open Related Surface").strip() or "Open Related Surface"
+        domain = str(payload.get("activity_domain") or payload.get("source_module") or "command-center").strip() or "command-center"
+        summary = str(result.get("record", {}).get("status") or result.get("action") or status).strip() if isinstance(result.get("record"), dict) else str(result.get("action") or status).strip()
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": str(payload.get("actor") or result.get("actor") or "Chris").strip() or "Chris",
+                "domain": domain,
+                "action": action_label,
+                "title": title,
+                "detail": str(payload.get("item_summary") or payload.get("note") or f"Applied {action_label.lower()} to {title}.").strip(),
+                "why_now": str(payload.get("why_now") or "Daily Brief follow-through moved a live open-loop item forward.").strip(),
+                "result_summary": str(payload.get("result_summary") or f"Open-loop result: {summary}").strip() or f"Open-loop result: {summary}",
+                "related_route": route,
+                "route_label": route_label,
+                "related_kind": str(payload.get("related_kind") or "open-loop").strip() or "open-loop",
+                "related_label": str(payload.get("related_label") or title).strip() or title,
+                "succeeded": bool(result.get("ok", True)),
+                "source_kind": "operator-action",
+            },
+        )
         await _broadcast_dashboard("open-loops-updated")
         return _json(result)
 
