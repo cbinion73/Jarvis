@@ -1064,6 +1064,162 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_supervision_module() -> JSONResponse:
         return _json(await _build_supervision_module_payload())
 
+    @app.post("/api/supervision/reviews/{request_id}/{action}")
+    async def api_supervision_review_action(
+        request_id: str,
+        action: str,
+        payload: dict[str, Any] | None = None,
+    ) -> JSONResponse:
+        payload = payload or {}
+        action_key = str(action or "").strip().lower()
+        if action_key not in {"approve", "reject", "cancel", "execute"}:
+            raise HTTPException(status_code=400, detail="Unsupported supervision review action.")
+
+        actor = str(payload.get("actor") or "Chris").strip() or "Chris"
+        title = str(payload.get("title") or request_id).strip() or request_id
+        reason = str(payload.get("reason") or payload.get("detail") or "").strip()
+        result: dict[str, Any] | None = None
+
+        if action_key == "approve":
+            queue = get_approval_queue()
+            if queue is not None:
+                from dataclasses import asdict as _asdict
+
+                item = queue.approve(request_id, approved_by=actor.lower())
+                if item is not None:
+                    result = {"status": "approved", "request": _asdict(item)}
+            if result is None:
+                updated = runtime.approval_store.update_status(request_id, "approved")
+                if updated is not None:
+                    result = {"status": "approved", "request": updated}
+        elif action_key == "reject":
+            queue = get_approval_queue()
+            if queue is not None and queue.reject(request_id, reason=reason, rejected_by=actor.lower()):
+                result = {"status": "rejected", "request_id": request_id, "reason": reason}
+            if result is None:
+                updated = runtime.approval_store.update_status(request_id, "rejected")
+                if updated is not None:
+                    result = {"status": "rejected", "request": updated, "reason": reason}
+        elif action_key == "cancel":
+            queue = get_approval_queue()
+            if queue is not None and queue.cancel(request_id):
+                result = {"status": "cancelled", "request_id": request_id}
+            if result is None:
+                updated = runtime.approval_store.update_status(request_id, "cancelled")
+                if updated is not None:
+                    result = {"status": "cancelled", "request": updated}
+        else:
+            guard = get_approval_guard()
+            if guard is None:
+                raise HTTPException(status_code=503, detail="Approval system not initialised")
+            execution = guard.execute_approved(request_id)
+            if execution.get("status") == "error":
+                raise HTTPException(status_code=400, detail=str(execution.get("detail") or "Execution failed"))
+            result = {
+                "status": "executed",
+                "request_id": request_id,
+                "result": execution,
+                "supervision_decision": dict(execution.get("supervision_decision", {}) or {}),
+            }
+
+        if result is None:
+            raise HTTPException(status_code=404, detail="Supervision review item not found.")
+
+        status = str(result.get("status") or action_key).strip() or action_key
+        detail = (
+            f"Supervision {action_key} moved {title} to {status}."
+            if action_key != "execute"
+            else f"Supervision executed {title} from the dedicated review lane."
+        )
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": "supervision",
+                "action": f"{action_key.capitalize()} Supervision Item",
+                "title": title,
+                "detail": detail,
+                "why_now": reason or "Supervision route resolved a bounded-autonomy review item from the dedicated module surface.",
+                "result_summary": f"Supervision action status: {status}",
+                "related_route": "/supervision-snapshot",
+                "route_label": "Open Supervision Snapshot",
+                "related_kind": "supervision-item",
+                "related_label": title,
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        focus_entry = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module="Supervision",
+            reason=detail,
+            route="/supervision-snapshot",
+            actor=actor,
+        )
+        return _json({"status": status, "request_id": request_id, "focus": focus_entry, "result": result})
+
+    @app.post("/api/supervision/integrations/{integration_name}/recovery")
+    async def api_supervision_integration_recovery(
+        integration_name: str,
+        payload: dict[str, Any] | None = None,
+    ) -> JSONResponse:
+        payload = payload or {}
+        actor = str(payload.get("actor") or "Chris").strip() or "Chris"
+        integration_key = str(integration_name or "").strip()
+        if not integration_key:
+            raise HTTPException(status_code=400, detail="Integration name is required.")
+
+        snapshot = build_supervision_snapshot()
+        target = next(
+            (
+                dict(item)
+                for item in list(snapshot.get("integrations") or [])
+                if isinstance(item, dict) and str(item.get("name") or "").strip().lower() == integration_key.lower()
+            ),
+            None,
+        )
+        if target is None:
+            raise HTTPException(status_code=404, detail="Integration status not found.")
+
+        integration_detail = str(target.get("detail") or "").strip() or "Integration needs supervision recovery."
+        case = RecoveryCaseStore().upsert_case(
+            source_kind="integration",
+            title=f"{integration_key} supervision recovery",
+            detail=f"{integration_key} surfaced a failing integration inside Supervision. {integration_detail}",
+            related_route="/recovery-center",
+            related_key=integration_key,
+            metadata={
+                "origin_module": "supervision",
+                "integration_name": integration_key,
+                "integration_ok": bool(target.get("ok")),
+                "integration_detail": integration_detail,
+            },
+        )
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": "supervision",
+                "action": "Stage Supervision Recovery Case",
+                "title": integration_key,
+                "detail": f"Supervision promoted {integration_key} into the recovery lane.",
+                "why_now": "The Supervision module turned a failing integration into a durable recovery case instead of leaving it as a passive warning.",
+                "result_summary": f"Recovery case {str(case.get('status_label') or 'Open')} for {integration_key}.",
+                "related_route": "/recovery-center",
+                "route_label": "Open Recovery",
+                "related_kind": "recovery-case",
+                "related_label": str(case.get("case_id") or integration_key).strip(),
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        focus_entry = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module="Recovery",
+            reason=f"Supervision staged a recovery case for {integration_key}.",
+            route="/recovery-center",
+            actor=actor,
+        )
+        return _json({"status": "staged", "integration": target, "case": case, "focus": focus_entry})
+
     @app.get("/command-center", response_class=HTMLResponse)
     async def command_center_index() -> HTMLResponse:
         return HTMLResponse(render_command_center_index_html(build_command_center_index()))
@@ -2297,6 +2453,39 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         registry = dict(snapshot.get("registry") or {})
         recovery_bridge = _recovery_bridge_summary(limit=5, target_kinds=("approval", "integration", "failure", "recovery"))
         recent_activity = _module_recent_activity(route="/supervision-snapshot", domain="supervision")
+        recovery_cases = [
+            dict(item)
+            for item in RecoveryCaseStore().list_cases()
+            if str(item.get("source_kind") or "").strip().lower() == "integration"
+            and str(item.get("metadata", {}).get("origin_module") or "").strip().lower() == "supervision"
+        ][:6]
+        integration_recovery_lane: list[dict[str, Any]] = []
+        for item in integrations:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("name") or "").strip()
+            if not name:
+                continue
+            matching_case = next(
+                (
+                    case
+                    for case in recovery_cases
+                    if str(case.get("related_key") or "").strip().lower() == name.lower()
+                ),
+                None,
+            )
+            integration_recovery_lane.append(
+                {
+                    "name": name,
+                    "ok": bool(item.get("ok")),
+                    "detail": str(item.get("detail") or "").strip(),
+                    "case_id": str((matching_case or {}).get("case_id") or "").strip(),
+                    "case_status": str((matching_case or {}).get("status") or "").strip(),
+                    "case_status_label": str((matching_case or {}).get("status_label") or "").strip(),
+                    "case_route": str((matching_case or {}).get("related_route") or "/recovery-center").strip() or "/recovery-center",
+                    "recovery_action_label": "Stage Recovery Case" if matching_case is None else "Refresh Recovery Case",
+                }
+            )
         issue_count = sum(1 for item in integrations if not bool(item.get("ok")))
         summary = str((snapshot.get("return_brief") or {}).get("summary", "")).strip() or (
             "Supervision Snapshot now has a dedicated module route with live lane posture, approval attention, integration issues, and memory cues inside JARVIS."
@@ -2316,7 +2505,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "registry": registry,
             "integrations": integrations,
             "what_needs_me": what_needs_me,
+            "integration_recovery_lane": integration_recovery_lane,
             "recovery_bridge": recovery_bridge,
+            "recovery_cases": recovery_cases,
             "recent_activity": recent_activity,
             "counts": {
                 "needs_review_count": len(what_needs_me),
@@ -2325,12 +2516,15 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "memory_proposal_count": int(memory.get("proposal_count", 0) or 0),
                 "registered_agent_count": int(registry.get("agent_count", 0) or 0),
                 "recovery_bridge_count": int(recovery_bridge.get("count", 0) or 0),
+                "integration_recovery_count": len([item for item in integration_recovery_lane if str(item.get("case_id") or "").strip()]),
                 "recent_activity_count": len(recent_activity),
             },
             "proof_paths": {
                 "module_route": "/supervision-snapshot",
                 "module_api": "/api/supervision/module",
                 "legacy_snapshot_api": "/api/supervision-snapshot",
+                "supervision_review_action_suffix": "/api/supervision/reviews/{request_id}/{action}",
+                "supervision_integration_recovery_suffix": "/api/supervision/integrations/{integration_name}/recovery",
                 "approval_queue_route": "/approval-queue",
                 "approval_queue_api": "/api/approval/module",
                 "command_center_route": "/command-center",
@@ -5996,13 +6190,6 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         ok = delete_task(task_id)
         return _json({"ok": ok})
 
-    @app.post("/api/approvals/{request_id}")
-    async def api_update_approval(request_id: str, payload: dict[str, Any]) -> JSONResponse:
-        updated = runtime.update_approval(request_id, str(payload.get("status", "pending")))
-        if updated is None:
-            raise HTTPException(status_code=404, detail="Approval request not found")
-        return _json(updated)
-
     # ------------------------------------------------------------------
     # Epic 6: Approval & Permission Layer endpoints
     # ------------------------------------------------------------------
@@ -6134,6 +6321,13 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "supervision_decision": dict(result.get("supervision_decision", {}) or {}),
             }
         )
+
+    @app.post("/api/approvals/{request_id}")
+    async def api_update_approval(request_id: str, payload: dict[str, Any]) -> JSONResponse:
+        updated = runtime.update_approval(request_id, str(payload.get("status", "pending")))
+        if updated is None:
+            raise HTTPException(status_code=404, detail="Approval request not found")
+        return _json(updated)
 
     @app.post("/api/message-drafts/{draft_id}")
     async def api_update_message_draft(draft_id: str, payload: dict[str, Any]) -> JSONResponse:

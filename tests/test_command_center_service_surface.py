@@ -552,19 +552,27 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("JARVIS Supervision Snapshot", supervision_html)
         self.assertIn("Refresh Supervision State", supervision_html)
         self.assertIn("Inspect Supervision Item", supervision_html)
+        self.assertIn("Integration Recovery Lane", supervision_html)
+        self.assertIn("Supervision Recovery Cases", supervision_html)
+        self.assertIn("Stage Recovery Case", supervision_html)
         self.assertIn("Recovery Continuity", supervision_html)
         self.assertIn("Recent Supervision Continuity", supervision_html)
         self.assertIn("/api/activity/operator-action", supervision_html)
         self.assertIn("status", supervision_snapshot)
         self.assertIn("attention_queue", supervision_snapshot)
         self.assertIn("integrations", supervision_snapshot)
+        self.assertIn("integration_recovery_lane", supervision_snapshot)
+        self.assertIn("recovery_cases", supervision_snapshot)
         self.assertIn("recovery_bridge", supervision_snapshot)
         self.assertIn("recent_activity", supervision_snapshot)
+        self.assertIn("integration_recovery_count", supervision_snapshot["counts"])
         self.assertIn("recent_activity_count", supervision_snapshot["counts"])
         self.assertIn("proof_paths", supervision_snapshot)
         self.assertEqual(supervision_snapshot["proof_paths"]["module_route"], "/supervision-snapshot")
         self.assertEqual(supervision_snapshot["proof_paths"]["module_api"], "/api/supervision/module")
         self.assertEqual(supervision_snapshot["proof_paths"]["recovery_action_api"], "/api/recovery/action")
+        self.assertEqual(supervision_snapshot["proof_paths"]["supervision_review_action_suffix"], "/api/supervision/reviews/{request_id}/{action}")
+        self.assertEqual(supervision_snapshot["proof_paths"]["supervision_integration_recovery_suffix"], "/api/supervision/integrations/{integration_name}/recovery")
         self.assertIn("JARVIS Daily Brief", briefing_html)
         self.assertIn("Refresh Daily Brief", briefing_html)
         self.assertIn("Generate Live Brief", briefing_html)
@@ -1529,6 +1537,82 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
 
         self.assertTrue(any(item.get("title") == "Reject Supervision Item" for item in supervision_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("related_label") == "Watchtower deployment proposal" for item in supervision_snapshot["recent_activity"]))
+
+    def test_supervision_review_action_persists_into_supervision_and_progress(self) -> None:
+        submit_response = asyncio.run(
+            self._route("/api/approvals/submit", "POST")(
+                {
+                    "agent_id": "watchtower",
+                    "agent_label": "Watchtower",
+                    "action_type": "deployment_review",
+                    "title": "Watchtower deployment proposal",
+                    "description": "Need bounded review before proceeding.",
+                    "payload_data": {"environment": "production"},
+                    "actor_id": "chris",
+                    "priority": 4,
+                    "tags": ["supervision", "deployment"],
+                    "context": {"route": "/supervision-snapshot"},
+                }
+            )
+        )
+        self.assertEqual(self._json_body(submit_response)["status"], "submitted")
+
+        supervision_snapshot = self._json_body(asyncio.run(self._route("/api/supervision/module", "GET")()))
+        self.assertGreaterEqual(len(supervision_snapshot["attention_queue"]), 1)
+        item = supervision_snapshot["attention_queue"][0]
+
+        response = asyncio.run(
+            self._route("/api/supervision/reviews/{request_id}/{action}", "POST")(
+                item["request_id"],
+                "reject",
+                {
+                    "actor": "Chris",
+                    "title": item["title"],
+                    "reason": "Need a safer plan first.",
+                },
+            )
+        )
+        refreshed_supervision = self._json_body(asyncio.run(self._route("/api/supervision/module", "GET")()))
+        activity_snapshot = self._json_body(asyncio.run(self._route("/api/activity", "GET")()))
+        progress_snapshot = self._json_body(asyncio.run(self._route("/api/progress/module", "GET")()))
+
+        result = self._json_body(response)
+
+        self.assertEqual(result["status"], "rejected")
+        self.assertEqual(result["focus"]["module"], "Supervision")
+        self.assertTrue(any(entry.get("title") == "Reject Supervision Item" for entry in refreshed_supervision["recent_activity"]))
+        self.assertTrue(any(entry.get("related_label") == item["title"] for entry in refreshed_supervision["recent_activity"]))
+        self.assertTrue(any(entry.get("related_kind") == "supervision-item" for entry in activity_snapshot))
+        self.assertEqual(progress_snapshot["progress_next_focus"], "Supervision")
+        self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Supervision")
+
+    def test_supervision_integration_recovery_creates_durable_case_and_recovery_focus(self) -> None:
+        supervision_snapshot = self._json_body(asyncio.run(self._route("/api/supervision/module", "GET")()))
+        self.assertGreaterEqual(len(supervision_snapshot["integration_recovery_lane"]), 1)
+        target = next(item for item in supervision_snapshot["integration_recovery_lane"] if not item.get("ok"))
+
+        response = asyncio.run(
+            self._route("/api/supervision/integrations/{integration_name}/recovery", "POST")(
+                target["name"],
+                {"actor": "Chris"},
+            )
+        )
+        refreshed_supervision = self._json_body(asyncio.run(self._route("/api/supervision/module", "GET")()))
+        recovery_snapshot = self._json_body(asyncio.run(self._route("/api/recovery/module", "GET")()))
+        activity_snapshot = self._json_body(asyncio.run(self._route("/api/activity", "GET")()))
+        progress_snapshot = self._json_body(asyncio.run(self._route("/api/progress/module", "GET")()))
+
+        result = self._json_body(response)
+
+        self.assertEqual(result["status"], "staged")
+        self.assertEqual(result["focus"]["module"], "Recovery")
+        self.assertEqual(result["integration"]["name"], target["name"])
+        self.assertTrue(any(entry.get("name") == target["name"] and entry.get("case_id") for entry in refreshed_supervision["integration_recovery_lane"]))
+        self.assertTrue(any(case.get("related_key") == target["name"] for case in refreshed_supervision["recovery_cases"]))
+        self.assertTrue(any(case.get("related_key") == target["name"] for case in recovery_snapshot["recovery_cases"]))
+        self.assertTrue(any(entry.get("title") == "Stage Supervision Recovery Case" for entry in activity_snapshot))
+        self.assertEqual(progress_snapshot["progress_next_focus"], "Recovery")
+        self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Recovery")
 
     def test_health_objective_mutation_persists_into_health_and_activity(self) -> None:
         objectives_path = Path(self.tempdir.name) / "health" / "quarterly_objectives.json"

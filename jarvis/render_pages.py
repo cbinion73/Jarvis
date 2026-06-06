@@ -6032,12 +6032,20 @@ def render_supervision_module_page(payload: dict) -> str:
         <div id="integration-list" class="entry-list"></div>
       </section>
       <section class="panel span-4">
+        <h2>Integration Recovery Lane</h2>
+        <div id="integration-recovery-list" class="entry-list"></div>
+      </section>
+      <section class="panel span-4">
         <h2>Lane Residue</h2>
         <ul id="lane-residue-list"></ul>
       </section>
-      <section class="panel span-8">
+      <section class="panel span-4">
         <h2>Registry and Memory</h2>
         <ul id="registry-memory-list"></ul>
+      </section>
+      <section class="panel span-4">
+        <h2>Supervision Recovery Cases</h2>
+        <ul id="supervision-recovery-cases"></ul>
       </section>
       <section class="panel span-4">
         <h2>Proof Paths</h2>
@@ -6071,8 +6079,10 @@ def render_supervision_module_page(payload: dict) -> str:
     const detailEl = document.getElementById("supervision-detail");
     const needsMeEl = document.getElementById("needs-me-list");
     const integrationList = document.getElementById("integration-list");
+    const integrationRecoveryList = document.getElementById("integration-recovery-list");
     const laneResidueEl = document.getElementById("lane-residue-list");
     const registryMemoryEl = document.getElementById("registry-memory-list");
+    const supervisionRecoveryCasesEl = document.getElementById("supervision-recovery-cases");
     const recoveryBridgeEl = document.getElementById("recovery-bridge-list");
     const recentActivityEl = document.getElementById("recent-activity-list");
     const proofEl = document.getElementById("proof-list");
@@ -6138,10 +6148,10 @@ def render_supervision_module_page(payload: dict) -> str:
             <div><label>Request ID</label><strong>${{esc(item.request_id || "n/a")}}</strong></div>
           </div>
           <div class="action-row">
-            ${{actions.approve ? `<button type="button" data-request-action="approve" data-endpoint="${{esc(actions.approve)}}">Approve</button>` : ""}}
-            ${{actions.reject ? `<button type="button" class="alt" data-request-action="reject" data-endpoint="${{esc(actions.reject)}}" data-body='{{"reason":"Need a safer plan first"}}'>Reject</button>` : ""}}
-            ${{actions.cancel ? `<button type="button" class="alt" data-request-action="cancel" data-endpoint="${{esc(actions.cancel)}}">Cancel</button>` : ""}}
-            ${{actions.execute ? `<button type="button" class="alt" data-request-action="execute" data-endpoint="${{esc(actions.execute)}}">Execute</button>` : ""}}
+            ${{actions.approve ? `<button type="button" data-request-action="approve" data-endpoint="/api/supervision/reviews/${{esc(item.request_id || "")}}/approve">Approve</button>` : ""}}
+            ${{actions.reject ? `<button type="button" class="alt" data-request-action="reject" data-endpoint="/api/supervision/reviews/${{esc(item.request_id || "")}}/reject">Reject</button>` : ""}}
+            ${{actions.cancel ? `<button type="button" class="alt" data-request-action="cancel" data-endpoint="/api/supervision/reviews/${{esc(item.request_id || "")}}/cancel">Cancel</button>` : ""}}
+            ${{actions.execute ? `<button type="button" class="alt" data-request-action="execute" data-endpoint="/api/supervision/reviews/${{esc(item.request_id || "")}}/execute">Execute</button>` : ""}}
             <button type="button" data-route-jump="/approval-queue">Open Approval Queue</button>
           </div>
         </div>
@@ -6154,41 +6164,26 @@ def render_supervision_module_page(payload: dict) -> str:
       document.querySelectorAll("[data-request-action]").forEach((button) => {{
         button.addEventListener("click", async () => {{
           const endpoint = button.getAttribute("data-endpoint") || "";
-          const rawBody = button.getAttribute("data-body");
           const action = button.getAttribute("data-request-action") || "action";
+          const bodyPayload = {{
+            actor: "Chris",
+            title: item.title || "Supervision Item",
+            detail: item.why_now || "",
+          }};
+          if (action === "reject") {{
+            bodyPayload.reason = "Need a safer plan first";
+          }}
           actionNote.textContent = `Running supervision action: ${{action}}…`;
           try {{
             const response = await fetch(endpoint, {{
               method: "POST",
-              headers: rawBody ? {{ "Content-Type": "application/json" }} : {{}},
-              body: rawBody || undefined,
+              headers: {{ "Content-Type": "application/json" }},
+              body: JSON.stringify(bodyPayload),
             }});
             const result = await response.json().catch(() => ({{}}));
             if (!response.ok) {{
               throw new Error(result.detail || `HTTP ${{response.status}}`);
             }}
-            await recordOperatorAction({{
-              actor: "Chris",
-              domain: "supervision",
-              action: `${{action.charAt(0).toUpperCase() + action.slice(1)}} Supervision Item`,
-              title: item.title || "Supervision Item",
-              detail: result.status
-                ? `Supervision action ${{
-                    action
-                  }} recorded from the Supervision Snapshot.`
-                : `Supervision action ${{
-                    action
-                  }} completed from the Supervision Snapshot.`,
-              why_now: "Supervision changed a live review item from the route-level operator flow.",
-              result_summary: result.status
-                ? `Supervision action status: ${{result.status}}`
-                : `Supervision action completed: ${{action}}`,
-              route: "/supervision-snapshot",
-              route_label: "Open Supervision Snapshot",
-              related_kind: "supervision-item",
-              related_label: item.title || item.request_id || "Supervision Item",
-              succeeded: true,
-            }});
             await refreshSupervisionState();
             actionNote.textContent = result.status
               ? `Supervision action recorded: ${{result.status}}.`
@@ -6249,6 +6244,24 @@ def render_supervision_module_page(payload: dict) -> str:
           `).join("")
         : `<div class="entry-card"><strong>No integration posture available.</strong><span>Integration state did not hydrate.</span></div>`;
 
+      const integrationRecoveryLane = Array.isArray(payload.integration_recovery_lane) ? payload.integration_recovery_lane : [];
+      integrationRecoveryList.innerHTML = integrationRecoveryLane.length
+        ? integrationRecoveryLane.map((item) => `
+            <div class="entry-card">
+              <strong>${{esc(item.name || "Integration")}}</strong>
+              <span>${{esc(item.detail || "No recovery detail captured.")}}</span>
+              <div class="chips">
+                ${{chip(item.ok ? "stable" : "issue")}}
+                ${{item.case_status_label ? chip(item.case_status_label) : ""}}
+              </div>
+              <div class="action-row">
+                <button type="button" data-integration-recovery="${{esc(item.name || "")}}">${{esc(item.recovery_action_label || "Stage Recovery Case")}}</button>
+                ${{item.case_route ? `<a href="${{esc(item.case_route)}}">Open Recovery</a>` : ""}}
+              </div>
+            </div>
+          `).join("")
+        : `<div class="entry-card"><strong>No integration recovery items.</strong><span>Failing integrations staged from Supervision will appear here.</span></div>`;
+
       laneResidueEl.innerHTML = Array.isArray(lane.dirty_sample) && lane.dirty_sample.length
         ? lane.dirty_sample.map((line) => li("Dirty File", line)).join("")
         : `<li><strong>Clean sample unavailable.</strong><span>No dirty sample was captured.</span></li>`;
@@ -6259,6 +6272,15 @@ def render_supervision_module_page(payload: dict) -> str:
         li("Registered Agents", String(registry.agent_count || 0), Array.isArray(registry.domains) ? registry.domains.join(", ") : ""),
         li("Memory Entries", String(memory.entry_count || 0), Array.isArray(memory.latest_entry_titles) ? memory.latest_entry_titles.join(", ") : ""),
       ].join("");
+
+      const supervisionRecoveryCases = Array.isArray(payload.recovery_cases) ? payload.recovery_cases : [];
+      supervisionRecoveryCasesEl.innerHTML = supervisionRecoveryCases.length
+        ? supervisionRecoveryCases.map((item) => li(
+            item.title || "Supervision recovery case",
+            item.status_label || item.status || "Open",
+            item.detail || item.related_route || ""
+          )).join("")
+        : `<li><strong>No supervision-created recovery cases yet.</strong><span>Stage a failing integration into Recovery to create a durable linked case.</span></li>`;
 
       const recoveryBridge = ((payload.recovery_bridge || {{}}).recent) || [];
       recoveryBridgeEl.innerHTML = recoveryBridge.length
@@ -6286,6 +6308,27 @@ def render_supervision_module_page(payload: dict) -> str:
           currentSelection = {{ kind: "attention", index: Number(button.getAttribute("data-select-index") || "0") }};
           renderDetail(payload);
           actionNote.textContent = "Focused supervision detail for review.";
+        }});
+      }});
+      document.querySelectorAll("[data-integration-recovery]").forEach((button) => {{
+        button.addEventListener("click", async () => {{
+          const integrationName = button.getAttribute("data-integration-recovery") || "";
+          actionNote.textContent = `Staging recovery for ${{integrationName}}…`;
+          try {{
+            const response = await fetch(`/api/supervision/integrations/${{encodeURIComponent(integrationName)}}/recovery`, {{
+              method: "POST",
+              headers: {{ "Content-Type": "application/json" }},
+              body: JSON.stringify({{ actor: "Chris" }}),
+            }});
+            const result = await response.json();
+            if (!response.ok) {{
+              throw new Error(result.detail || `HTTP ${{response.status}}`);
+            }}
+            await refreshSupervisionState();
+            actionNote.textContent = `Recovery case staged for ${{integrationName}}.`;
+          }} catch (error) {{
+            actionNote.textContent = `Recovery staging failed: ${{String(error)}}`;
+          }}
         }});
       }});
 
