@@ -17297,7 +17297,7 @@ class JarvisRuntime:
         if not current:
             raise KeyError(account_id)
         merged = current.to_dict()
-        for field in ("label", "login_hint", "status", "notes"):
+        for field in ("label", "login_hint", "status", "notes", "service_scope"):
             if field in payload:
                 merged[field] = payload.get(field)
         account = self.account_registry.save_account(merged)

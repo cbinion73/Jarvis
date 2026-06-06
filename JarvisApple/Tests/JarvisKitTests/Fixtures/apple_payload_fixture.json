@@ -699,6 +699,9 @@
             "provider": "google",
             "status": "connected",
             "login_hint": "chris@example.com",
+            "service_scope": "mail_calendar",
+            "notes": "Family inbox and calendar.",
+            "connection_status": "connected",
             "detail": "mail_calendar"
           },
           {
@@ -707,6 +710,9 @@
             "provider": "outlook",
             "status": "planned",
             "login_hint": "chris@outlook.com",
+            "service_scope": "mail",
+            "notes": "Calendar bridge not yet wired.",
+            "connection_status": "planned",
             "detail": "mail"
           },
           {
@@ -715,6 +721,9 @@
             "provider": "amazon",
             "status": "connected",
             "login_hint": "",
+            "service_scope": "mail",
+            "notes": "Publishing alerts only.",
+            "connection_status": "connected",
             "detail": "publishing"
           }
         ]

@@ -822,16 +822,21 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Save Location Settings", settings_html)
         self.assertIn("Save Profile Defaults", settings_html)
         self.assertIn("Account Command Deck", settings_html)
+        self.assertIn("Connector Provisioning Lane", settings_html)
+        self.assertIn("Save Connector Controls", settings_html)
         self.assertIn("Recent Settings Continuity", settings_html)
         self.assertIn("status", settings_snapshot)
         self.assertIn("voice", settings_snapshot)
         self.assertIn("location", settings_snapshot)
+        self.assertIn("connector_lane", settings_snapshot)
         self.assertIn("recent_activity", settings_snapshot)
         self.assertIn("recent_activity_count", settings_snapshot["counts"])
+        self.assertIn("connector_attention_count", settings_snapshot["counts"])
         self.assertIn("proof_paths", settings_snapshot)
         self.assertEqual(settings_snapshot["proof_paths"]["module_route"], "/settings-center")
         self.assertEqual(settings_snapshot["proof_paths"]["module_api"], "/api/settings/module")
         self.assertEqual(settings_snapshot["proof_paths"]["account_settings_api"], "/api/settings/account")
+        self.assertEqual(settings_snapshot["proof_paths"]["connector_settings_api"], "/api/settings/connector")
         self.assertEqual(settings_snapshot["proof_paths"]["profile_settings_api"], "/api/settings/profile")
         self.assertIn("JARVIS Huddle", huddle_html)
         self.assertIn("Start Overnight Research", huddle_html)
@@ -1885,6 +1890,35 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertTrue(any(item.get("title") == "Save Account Controls" for item in settings_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("title") == "Disconnect Account" for item in settings_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("related_kind") == "settings-account" for item in activity_payload))
+        self.assertEqual(progress_snapshot["progress_next_focus"], "Settings")
+        self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Settings")
+
+    def test_settings_connector_mutations_persist_into_settings_and_activity(self) -> None:
+        connector_response = asyncio.run(
+            self._route("/api/settings/connector", "POST")(
+                {
+                    "actor": "Chris",
+                    "account_id": "acct-google-1",
+                    "service_scope": "calendar",
+                    "status": "watch",
+                    "notes": "Calendar still needs OAuth repair before mail is re-enabled.",
+                }
+            )
+        )
+
+        connector_payload = self._json_body(connector_response)
+        settings_snapshot = self._json_body(asyncio.run(self._route("/api/settings/module", "GET")()))
+        activity_payload = self._json_body(asyncio.run(self._route("/api/activity", "GET")()))
+        progress_snapshot = self._json_body(asyncio.run(self._route("/api/progress/module", "GET")()))
+
+        self.assertTrue(connector_payload["ok"])
+        connector = settings_snapshot["connector_lane"][0]
+        self.assertEqual(connector["service_scope"], "calendar")
+        self.assertEqual(connector["status"], "watch")
+        self.assertEqual(connector["notes"], "Calendar still needs OAuth repair before mail is re-enabled.")
+        self.assertTrue(connector["needs_attention"])
+        self.assertTrue(any(item.get("title") == "Save Connector Controls" for item in settings_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("related_kind") == "settings-connector" for item in activity_payload))
         self.assertEqual(progress_snapshot["progress_next_focus"], "Settings")
         self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Settings")
 

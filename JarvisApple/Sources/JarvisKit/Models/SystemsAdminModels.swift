@@ -35,11 +35,29 @@ public struct SystemsAdminAccountItem: Codable, Sendable, Identifiable {
     public let provider: String
     public let status: String
     public let loginHint: String
+    public let serviceScope: String
+    public let notes: String
+    public let connectionStatus: String
     public let detail: String
 
     enum CodingKeys: String, CodingKey {
-        case id, label, provider, status, detail
+        case id, label, provider, status, detail, notes
         case loginHint = "login_hint"
+        case serviceScope = "service_scope"
+        case connectionStatus = "connection_status"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        label = try container.decode(String.self, forKey: .label)
+        provider = try container.decode(String.self, forKey: .provider)
+        status = try container.decode(String.self, forKey: .status)
+        loginHint = try container.decodeIfPresent(String.self, forKey: .loginHint) ?? ""
+        serviceScope = try container.decodeIfPresent(String.self, forKey: .serviceScope) ?? "mail_calendar"
+        notes = try container.decodeIfPresent(String.self, forKey: .notes) ?? ""
+        connectionStatus = try container.decodeIfPresent(String.self, forKey: .connectionStatus) ?? status
+        detail = try container.decodeIfPresent(String.self, forKey: .detail) ?? notes
     }
 }
 

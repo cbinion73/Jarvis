@@ -242,18 +242,35 @@ public final class AppleAPIClient: Sendable {
         accountId: String,
         label: String,
         loginHint: String,
-        status: String,
         actor: String = "chris"
     ) async throws -> SystemsAccountActionResult {
         struct Body: Encodable {
             let actor: String
             let label: String
             let login_hint: String
-            let status: String
         }
         return try await post(
             "/api/apple/systems/accounts/\(accountId)",
-            body: Body(actor: actor, label: label, login_hint: loginHint, status: status)
+            body: Body(actor: actor, label: label, login_hint: loginHint)
+        )
+    }
+
+    public func saveSystemsConnector(
+        accountId: String,
+        serviceScope: String,
+        status: String,
+        notes: String,
+        actor: String = "chris"
+    ) async throws -> SystemsAccountActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let service_scope: String
+            let status: String
+            let notes: String
+        }
+        return try await post(
+            "/api/apple/systems/accounts/\(accountId)/connector",
+            body: Body(actor: actor, service_scope: serviceScope, status: status, notes: notes)
         )
     }
 

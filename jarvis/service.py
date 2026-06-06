@@ -4111,6 +4111,69 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "registry": runtime.account_registry_snapshot(),
         }
 
+    def _save_settings_connector_preferences(
+        account_id: str,
+        payload: dict[str, Any],
+        *,
+        actor_name: str = "Chris",
+    ) -> dict[str, Any]:
+        actor_name = str(actor_name or "Chris").strip() or "Chris"
+        updates = {
+            key: payload.get(key)
+            for key in ("service_scope", "status", "notes")
+            if key in payload
+        }
+        if not updates:
+            raise ValueError("No connector updates were provided.")
+        try:
+            result = runtime.update_personal_account(account_id, updates)
+        except KeyError as exc:
+            raise ValueError("Account not found.") from exc
+
+        account = dict(result.get("account") or {})
+        label = str(account.get("label") or account_id).strip() or account_id
+        provider = str(account.get("provider") or "account").strip() or "account"
+        service_scope = str(account.get("service_scope") or "mail_calendar").strip() or "mail_calendar"
+        status = str(account.get("status") or "planned").strip() or "planned"
+        notes = str(account.get("notes") or "").strip()
+        detail_parts = [
+            f"{provider.title()} connector scope saved as {service_scope.replace('_', ' / ')}.",
+            f"Connector posture is now {status.replace('_', ' ')}.",
+        ]
+        if notes:
+            detail_parts.append(notes)
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor_name,
+                "domain": "settings",
+                "action": "Save Connector Controls",
+                "title": label,
+                "detail": " ".join(detail_parts),
+                "why_now": "Settings refined a live connector scope and stabilization plan without leaving the module route.",
+                "result_summary": f"Connector controls saved for {label}.",
+                "related_route": "/settings-center",
+                "route_label": "Open Settings",
+                "related_kind": "settings-connector",
+                "related_label": label,
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        focus = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module="Settings",
+            reason=f"Settings connector controls were updated for {label}.",
+            route="/settings-center",
+            actor=actor_name.lower(),
+        )
+        return {
+            "ok": True,
+            "message": result.get("message") or f"Updated connector controls for '{label}'.",
+            "account": account,
+            "registry": result.get("registry") or runtime.account_registry_snapshot(),
+            "focus": focus,
+        }
+
     async def _build_settings_module_payload() -> dict[str, Any]:
         try:
             from datetime import datetime, timezone
@@ -4130,6 +4193,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "voice_options": {},
             "location": {},
             "accounts": {"accounts": []},
+            "connector_lane": [],
             "google": {},
             "identity": {"members": [], "devices": []},
             "permissions": {
@@ -4144,6 +4208,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "counts": {
                 "account_count": 0,
                 "connected_account_count": 0,
+                "connector_attention_count": 0,
                 "saved_location_count": 0,
                 "insight_count": 0,
                 "recent_activity_count": 0,
@@ -4163,6 +4228,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "personalization_api": "/api/personalization/settings",
                 "profile_settings_api": "/api/settings/profile",
                 "account_settings_api": "/api/settings/account",
+                "connector_settings_api": "/api/settings/connector",
                 "account_disconnect_api": "/api/settings/accounts/{account_id}/disconnect",
             },
             "errors": [],
@@ -4193,6 +4259,34 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 or str((item.get("connection") or {}).get("status", "")).strip().lower() == "connected"
                 or str(item.get("connection", "")).strip().lower() == "connected"
             )
+            connector_lane = []
+            connector_attention_count = 0
+            for item in account_items:
+                status = str(item.get("status") or "planned").strip().lower() or "planned"
+                connection = item.get("connection")
+                if isinstance(connection, dict):
+                    connection_status = str(connection.get("status") or connection.get("state") or "").strip().lower()
+                else:
+                    connection_status = str(connection or "").strip().lower()
+                needs_attention = status not in {"connected", "active"} or connection_status not in {"", "connected", "active", "ready"}
+                if needs_attention:
+                    connector_attention_count += 1
+                connector_lane.append(
+                    {
+                        "account_id": str(item.get("account_id") or item.get("id") or ""),
+                        "label": str(item.get("label") or item.get("owner_display_name") or item.get("account_id") or "Account"),
+                        "provider": str(item.get("provider") or "unknown"),
+                        "status": status,
+                        "status_label": status.replace("_", " ").title(),
+                        "service_scope": str(item.get("service_scope") or "mail_calendar"),
+                        "service_scope_label": str(item.get("service_scope") or "mail_calendar").replace("_", " / ").replace("mail", "Mail").replace("calendar", "Calendar"),
+                        "notes": str(item.get("notes") or ""),
+                        "connection_status": connection_status or status,
+                        "needs_attention": needs_attention,
+                    }
+                )
+            payload["connector_lane"] = connector_lane
+            payload["counts"]["connector_attention_count"] = connector_attention_count
         except Exception as exc:
             payload["errors"].append(f"accounts: {exc}")
 
@@ -4264,6 +4358,22 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         await _broadcast_dashboard("settings-account.updated")
+        return _json(result)
+
+    @app.post("/api/settings/connector")
+    async def api_save_settings_connector(payload: dict[str, Any]) -> JSONResponse:
+        account_id = str(payload.get("account_id") or "").strip()
+        if not account_id:
+            raise HTTPException(status_code=400, detail="Account id is required.")
+        try:
+            result = _save_settings_connector_preferences(
+                account_id,
+                payload,
+                actor_name=str(payload.get("actor") or "Chris"),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        await _broadcast_dashboard("settings-connector.updated")
         return _json(result)
 
     @app.post("/api/settings/accounts/{account_id}/disconnect")

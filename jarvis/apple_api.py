@@ -250,7 +250,74 @@ def _save_apple_settings_account(
             "provider": provider,
             "status": status,
             "login_hint": login_hint,
+            "service_scope": str(account.get("service_scope") or "mail_calendar"),
+            "notes": str(account.get("notes") or ""),
+            "connection_status": str(account.get("connection") or status),
             "detail": str(account.get("notes") or account.get("service_scope") or login_hint or "Awaiting configuration"),
+        },
+        "focus": focus,
+    }
+
+
+def _save_apple_settings_connector(
+    runtime,
+    account_id: str,
+    payload: dict[str, Any],
+    *,
+    actor_name: str = "chris",
+) -> dict[str, Any]:
+    actor_name = str(actor_name or "chris").strip() or "chris"
+    updates = {
+        key: payload.get(key)
+        for key in ("service_scope", "status", "notes")
+        if key in payload
+    }
+    if not updates:
+        raise ValueError("No connector updates were provided.")
+    try:
+        result = runtime.update_personal_account(account_id, updates)
+    except KeyError as exc:
+        raise ValueError("Account not found.") from exc
+    account = dict(result.get("account") or {})
+    label = str(account.get("label") or account_id).strip() or account_id
+    provider = str(account.get("provider") or "account").strip() or "account"
+    service_scope = str(account.get("service_scope") or "mail_calendar").strip() or "mail_calendar"
+    status = str(account.get("status") or "planned").strip() or "planned"
+    notes = str(account.get("notes") or "").strip()
+    detail = f"{provider.title()} connector saved as {service_scope.replace('_', ' / ')} with {status.replace('_', ' ')} posture."
+    if notes:
+        detail += f" {notes}"
+    _record_operator_action(
+        actor=actor_name,
+        domain="settings",
+        action="Save Apple Connector Controls",
+        detail=f"Apple Systems updated {label}. {detail}",
+        why_now="The iPhone Systems surface refined live connector scope and stabilization posture from native controls.",
+        result_summary=f"Apple connector controls saved for {label}.",
+        route="/settings-center",
+        route_label="Open Settings",
+        related_kind="settings-connector",
+        related_label=label,
+        succeeded=True,
+    )
+    focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module="Settings",
+        reason=f"Apple Systems updated connector controls for {label}.",
+        route="/settings-center",
+        actor=actor_name,
+    )
+    return {
+        "message": result.get("message") or f"Updated connector controls for '{label}'.",
+        "account": {
+            "id": str(account.get("account_id") or account_id),
+            "label": label,
+            "provider": provider,
+            "status": status,
+            "login_hint": str(account.get("login_hint") or ""),
+            "service_scope": service_scope,
+            "notes": notes,
+            "connection_status": str(account.get("connection") or status),
+            "detail": notes or service_scope or "Awaiting configuration",
         },
         "focus": focus,
     }
@@ -296,6 +363,9 @@ def _disconnect_apple_settings_account(
             "provider": provider,
             "status": str(account.get("status") or "planned"),
             "login_hint": str(account.get("login_hint") or ""),
+            "service_scope": str(account.get("service_scope") or "mail_calendar"),
+            "notes": str(account.get("notes") or ""),
+            "connection_status": str(account.get("connection") or "planned"),
             "detail": str(account.get("notes") or account.get("service_scope") or "Disconnected"),
         },
         "focus": focus,
@@ -9312,6 +9382,9 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                     "provider": str(item.get("provider") or "unknown"),
                     "status": status or "planned",
                     "login_hint": str(item.get("login_hint") or ""),
+                    "service_scope": str(item.get("service_scope") or "mail_calendar"),
+                    "notes": str(item.get("notes") or ""),
+                    "connection_status": str(item.get("connection") or status or "planned"),
                     "detail": str(item.get("notes") or item.get("service_scope") or item.get("login_hint") or "Awaiting configuration"),
                 }
             )
@@ -10107,6 +10180,15 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         actor_name = str(payload.get("actor") or payload.get("actor_id") or "chris").strip() or "chris"
         try:
             result = _save_apple_settings_account(runtime, account_id, payload, actor_name=actor_name)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _ok(result)
+
+    @app.post("/api/apple/systems/accounts/{account_id}/connector")
+    async def apple_save_systems_connector(account_id: str, payload: dict[str, Any]):
+        actor_name = str(payload.get("actor") or payload.get("actor_id") or "chris").strip() or "chris"
+        try:
+            result = _save_apple_settings_connector(runtime, account_id, payload, actor_name=actor_name)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return _ok(result)

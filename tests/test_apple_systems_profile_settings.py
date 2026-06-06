@@ -10,6 +10,7 @@ import jarvis.user_profile as user_profile_module
 from jarvis.apple_api import (
     _disconnect_apple_settings_account,
     _save_apple_settings_account,
+    _save_apple_settings_connector,
     _save_apple_settings_profile,
 )
 from jarvis.audit import AuditLog, ProgressFocusStore
@@ -131,3 +132,27 @@ class AppleSystemsProfileSettingsTests(unittest.TestCase):
         recent = AuditLog(Path("data/logs")).list_recent(limit=4, entry_type="operator-action")
         self.assertEqual(recent[0]["action"], "Disconnect Apple Account")
         self.assertEqual(recent[0]["related_kind"], "settings-account")
+
+    def test_save_apple_connector_controls_records_activity_and_focus(self) -> None:
+        runtime = _StubRuntime()
+        result = _save_apple_settings_connector(
+            runtime,
+            "acct-google-1",
+            {
+                "service_scope": "calendar",
+                "status": "watch",
+                "notes": "Calendar still needs OAuth repair before mail is re-enabled.",
+            },
+            actor_name="chris",
+        )
+
+        self.assertEqual(result["account"]["service_scope"], "calendar")
+        self.assertEqual(result["account"]["status"], "watch")
+        self.assertEqual(result["account"]["notes"], "Calendar still needs OAuth repair before mail is re-enabled.")
+
+        focus_summary = ProgressFocusStore(Path("data/logs")).summary(limit=4)
+        self.assertEqual(focus_summary["latest"]["module"], "Settings")
+
+        recent = AuditLog(Path("data/logs")).list_recent(limit=4, entry_type="operator-action")
+        self.assertEqual(recent[0]["action"], "Save Apple Connector Controls")
+        self.assertEqual(recent[0]["related_kind"], "settings-connector")

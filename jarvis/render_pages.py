@@ -9486,7 +9486,7 @@ def render_settings_module_page(payload: dict) -> str:
     </section>
     <section class="storyboard-strip">
       <div class="storyboard-step"><strong>1. Systems Chamber</strong><span>Voice, location, accounts, and governance stay in the same operational deck instead of scattered modal settings.</span></div>
-      <div class="storyboard-step"><strong>2. Account Command</strong><span>Connector posture can be edited, stabilized, or disconnected from the route itself.</span></div>
+      <div class="storyboard-step"><strong>2. Account Command</strong><span>Account identity and connector posture can be edited, stabilized, or disconnected from the route itself.</span></div>
       <div class="storyboard-step"><strong>3. Voice Stack</strong><span>Live provider and fallback posture stays editable inside the same chamber language.</span></div>
       <div class="storyboard-step"><strong>4. Place Memory</strong><span>Preferred location and saved places stay tied to the same continuity surface.</span></div>
       <div class="storyboard-step"><strong>5. Profile Defaults</strong><span>Notification, privacy, and dashboard posture keep shaping the live product from one route.</span></div>
@@ -9513,7 +9513,24 @@ def render_settings_module_page(payload: dict) -> str:
           <label>Login Hint
             <input id="account-login-hint" placeholder="chris@example.com">
           </label>
-          <label>Status
+          <div class="account-actions">
+            <button type="submit">Save Account Controls</button>
+            <button type="button" id="disconnect-account">Disconnect Account</button>
+          </div>
+        </form>
+        <p class="status-note" id="account-note">Select a live account to edit its label or login hint from Settings.</p>
+      </section>
+      <section class="panel span-6">
+        <h2>Connector Provisioning Lane</h2>
+        <form id="connector-settings-form">
+          <label>Connector Scope
+            <select id="connector-service-scope">
+              <option value="mail">Mail</option>
+              <option value="calendar">Calendar</option>
+              <option value="mail_calendar">Mail / Calendar</option>
+            </select>
+          </label>
+          <label>Connector Status
             <select id="account-status">
               <option value="planned">Planned</option>
               <option value="connected">Connected</option>
@@ -9522,12 +9539,14 @@ def render_settings_module_page(payload: dict) -> str:
               <option value="active">Active</option>
             </select>
           </label>
+          <label>Connector Notes
+            <textarea id="connector-notes" class="compact-textarea" placeholder="Capture stabilization guidance, credential posture, or the next connector repair step."></textarea>
+          </label>
           <div class="account-actions">
-            <button type="submit">Save Account Controls</button>
-            <button type="button" id="disconnect-account">Disconnect Account</button>
+            <button type="submit">Save Connector Controls</button>
           </div>
         </form>
-        <p class="status-note" id="account-note">Select a live account to edit its posture, login hint, or connector state from Settings.</p>
+        <p class="status-note" id="connector-note">Adjust service scope, live connector posture, and stabilization notes from the same Settings chamber.</p>
       </section>
       <section class="panel span-6">
         <h2>Voice Controls</h2>
@@ -9611,6 +9630,7 @@ def render_settings_module_page(payload: dict) -> str:
     const payloadPreview = document.getElementById("payload-preview");
     const profileNote = document.getElementById("profile-note");
     const accountNote = document.getElementById("account-note");
+    const connectorNote = document.getElementById("connector-note");
 
     function esc(value) {{
       return String(value ?? "")
@@ -9680,10 +9700,15 @@ def render_settings_module_page(payload: dict) -> str:
       }}
       document.getElementById("account-label").value = active.label || "";
       document.getElementById("account-login-hint").value = active.login_hint || "";
+      document.getElementById("connector-service-scope").value = active.service_scope || "mail_calendar";
       document.getElementById("account-status").value = active.status || "planned";
-      accountNote.textContent = active.detail
-        ? `Editing ${{active.label || active.account_id || "account"}} · ${{active.detail}}`
-        : "Adjust the live account posture from the same Settings chamber.";
+      document.getElementById("connector-notes").value = active.notes || "";
+      accountNote.textContent = active.login_hint
+        ? `Editing ${{active.label || active.account_id || "account"}} · login hint ${{active.login_hint}}`
+        : "Adjust the account identity fields from the same Settings chamber.";
+      connectorNote.textContent = active.detail
+        ? `Connector lane · ${{active.detail}}`
+        : "Adjust service scope, posture, and stabilization notes from the same Settings chamber.";
     }}
 
     function render(payload) {{
@@ -9729,9 +9754,10 @@ def render_settings_module_page(payload: dict) -> str:
       moduleStatusList.innerHTML = [
         li("What Became Real", payload.what_became_real || "No settings seam note recorded yet."),
         li("What Remains Partial", payload.remains_partial || "No partial work recorded."),
-        li("Proof API", "/api/settings/module", "/api/voice-settings, /api/location-settings, and /api/settings/profile"),
+        li("Proof API", "/api/settings/module", "/api/voice-settings, /api/location-settings, /api/settings/profile, and /api/settings/connector"),
         li("Voice Stack", stackStatus.summary || voice.selected_provider_label || "No voice stack summary available."),
         li("Google Client Secret", clientSecret.configured ? "Configured" : "Missing", clientSecret.detail || ""),
+        li("Connector Attention", String((payload.counts || {{}}).connector_attention_count || 0), "Connectors still asking for stabilization or expanded scope"),
       ].join("");
 
       accountsList.innerHTML = accounts.slice(0, 8).map((account) => li(
@@ -9837,7 +9863,6 @@ def render_settings_module_page(payload: dict) -> str:
             account_id: selectedAccountId,
             label: document.getElementById("account-label").value,
             login_hint: document.getElementById("account-login-hint").value,
-            status: document.getElementById("account-status").value,
           }}),
         }});
         const payload = await response.json();
@@ -9845,6 +9870,32 @@ def render_settings_module_page(payload: dict) -> str:
         await refreshSettingsState();
       }} catch (error) {{
         accountNote.textContent = `Account save failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function saveConnectorSettings(event) {{
+      event.preventDefault();
+      if (!selectedAccountId) {{
+        connectorNote.textContent = "No account is selected.";
+        return;
+      }}
+      connectorNote.textContent = "Saving connector controls…";
+      try {{
+        const response = await fetch("/api/settings/connector", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            account_id: selectedAccountId,
+            service_scope: document.getElementById("connector-service-scope").value,
+            status: document.getElementById("account-status").value,
+            notes: document.getElementById("connector-notes").value,
+          }}),
+        }});
+        const payload = await response.json();
+        connectorNote.textContent = payload.message || "Connector controls updated.";
+        await refreshSettingsState();
+      }} catch (error) {{
+        connectorNote.textContent = `Connector save failed: ${{String(error)}}`;
       }}
     }}
 
@@ -9914,6 +9965,7 @@ def render_settings_module_page(payload: dict) -> str:
         accountNote.textContent = `Disconnect failed: ${{String(error)}}`;
       }});
     }});
+    document.getElementById("connector-settings-form").addEventListener("submit", saveConnectorSettings);
     document.getElementById("voice-settings-form").addEventListener("submit", saveVoiceSettings);
     document.getElementById("location-settings-form").addEventListener("submit", saveLocationSettings);
     document.getElementById("profile-settings-form").addEventListener("submit", saveProfileSettings);

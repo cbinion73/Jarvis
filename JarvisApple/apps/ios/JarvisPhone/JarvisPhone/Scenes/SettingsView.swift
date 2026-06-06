@@ -59,9 +59,12 @@ struct SettingsView: View {
     @State private var accountLabelDraft = ""
     @State private var accountLoginHintDraft = ""
     @State private var accountStatusDraft = "planned"
+    @State private var connectorServiceScopeDraft = "mail_calendar"
+    @State private var connectorNotesDraft = ""
     @State private var accountWorkflowMessage = ""
     @State private var accountWorkflowError = ""
     @State private var accountSaveInFlight = false
+    @State private var connectorSaveInFlight = false
     @State private var accountDisconnectInFlight = false
 
     private let steel = Color(red: 0.55, green: 0.65, blue: 0.78)
@@ -357,11 +360,39 @@ struct SettingsView: View {
                                                 .autocorrectionDisabled()
                                                 .keyboardType(.emailAddress)
                                         }
+                                        HStack(spacing: 10) {
+                                            Button(accountSaveInFlight ? "Saving…" : "Save Account") {
+                                                Task { await saveSelectedAccount() }
+                                            }
+                                            .buttonStyle(.borderedProminent)
+                                            .tint(.teal)
+                                            .disabled(accountSaveInFlight || connectorSaveInFlight || accountDisconnectInFlight || selectedAccountId.isEmpty)
+
+                                            Button(accountDisconnectInFlight ? "Disconnecting…" : "Disconnect") {
+                                                Task { await disconnectSelectedAccount() }
+                                            }
+                                            .buttonStyle(.bordered)
+                                            .tint(.orange)
+                                            .disabled(accountSaveInFlight || connectorSaveInFlight || accountDisconnectInFlight || selectedAccountId.isEmpty)
+                                        }
+                                        .font(.caption.weight(.semibold))
+                                        Divider().opacity(0.3)
                                         VStack(alignment: .leading, spacing: 6) {
-                                            Text("Status")
+                                            Text("Connector Scope")
                                                 .font(.caption2)
                                                 .foregroundStyle(.secondary)
-                                            Picker("Status", selection: $accountStatusDraft) {
+                                            Picker("Connector Scope", selection: $connectorServiceScopeDraft) {
+                                                Text("Mail").tag("mail")
+                                                Text("Calendar").tag("calendar")
+                                                Text("Mail / Calendar").tag("mail_calendar")
+                                            }
+                                            .pickerStyle(.segmented)
+                                        }
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            Text("Connector Status")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                            Picker("Connector Status", selection: $accountStatusDraft) {
                                                 Text("Planned").tag("planned")
                                                 Text("Connected").tag("connected")
                                                 Text("Paused").tag("paused")
@@ -370,25 +401,25 @@ struct SettingsView: View {
                                             }
                                             .pickerStyle(.segmented)
                                         }
-                                        HStack(spacing: 10) {
-                                            Button(accountSaveInFlight ? "Saving…" : "Save Account") {
-                                                Task { await saveSelectedAccount() }
-                                            }
-                                            .buttonStyle(.borderedProminent)
-                                            .tint(.teal)
-                                            .disabled(accountSaveInFlight || accountDisconnectInFlight || selectedAccountId.isEmpty)
-
-                                            Button(accountDisconnectInFlight ? "Disconnecting…" : "Disconnect") {
-                                                Task { await disconnectSelectedAccount() }
-                                            }
-                                            .buttonStyle(.bordered)
-                                            .tint(.orange)
-                                            .disabled(accountSaveInFlight || accountDisconnectInFlight || selectedAccountId.isEmpty)
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            Text("Connector Notes")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                            TextEditor(text: $connectorNotesDraft)
+                                                .frame(minHeight: 88)
+                                                .scrollContentBackground(.hidden)
+                                                .padding(10)
+                                                .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
                                         }
-                                        .font(.caption.weight(.semibold))
+                                        Button(connectorSaveInFlight ? "Saving Connector…" : "Save Connector Controls") {
+                                            Task { await saveSelectedConnector() }
+                                        }
+                                        .buttonStyle(.borderedProminent)
+                                        .tint(steel)
+                                        .disabled(accountSaveInFlight || connectorSaveInFlight || accountDisconnectInFlight || selectedAccountId.isEmpty)
                                     }
                                     if let selectedAccount = selectedAccount(in: adminSummary.accounts.items) {
-                                        Text("\(selectedAccount.provider.capitalized) · \(selectedAccount.detail)")
+                                        Text("\(selectedAccount.provider.capitalized) · \(selectedAccount.serviceScope.replacingOccurrences(of: "_", with: " / ")) · \(selectedAccount.detail)")
                                             .font(.caption2)
                                             .foregroundStyle(.secondary)
                                             .lineLimit(2)
@@ -2678,6 +2709,8 @@ struct SettingsView: View {
         accountLabelDraft = selected.label
         accountLoginHintDraft = selected.loginHint
         accountStatusDraft = selected.status.isEmpty ? "planned" : selected.status
+        connectorServiceScopeDraft = selected.serviceScope.isEmpty ? "mail_calendar" : selected.serviceScope
+        connectorNotesDraft = selected.notes
     }
 
     private func selectedAccount(in accounts: [SystemsAdminAccountItem]) -> SystemsAdminAccountItem? {
@@ -2698,8 +2731,31 @@ struct SettingsView: View {
             let result = try await AppleAPIClient.shared.saveSystemsAccount(
                 accountId: selectedAccountId,
                 label: accountLabelDraft,
-                loginHint: accountLoginHintDraft,
-                status: accountStatusDraft
+                loginHint: accountLoginHintDraft
+            )
+            accountWorkflowMessage = result.message
+            await refreshSystems()
+        } catch {
+            accountWorkflowError = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func saveSelectedConnector() async {
+        guard !selectedAccountId.isEmpty else {
+            accountWorkflowError = "Select an account first."
+            return
+        }
+        connectorSaveInFlight = true
+        accountWorkflowMessage = ""
+        accountWorkflowError = ""
+        defer { connectorSaveInFlight = false }
+        do {
+            let result = try await AppleAPIClient.shared.saveSystemsConnector(
+                accountId: selectedAccountId,
+                serviceScope: connectorServiceScopeDraft,
+                status: accountStatusDraft,
+                notes: connectorNotesDraft
             )
             accountWorkflowMessage = result.message
             await refreshSystems()
