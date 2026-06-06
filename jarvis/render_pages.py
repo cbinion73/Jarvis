@@ -1598,7 +1598,9 @@ def render_agent_ops_module_page(payload: dict) -> str:
         return;
       }}
       const missionOptions = Array.isArray((latestPayload || {{}}).mission_options) ? latestPayload.mission_options : [];
+      const review = ((latestPayload || {{}}).agent_reviews || {{}})[agent.agent_id || ""] || {{}};
       const roles = Array.isArray(agent.mission_roles) ? agent.mission_roles : [];
+      const reviewDecisions = Array.isArray(review.recent_decisions) ? review.recent_decisions : [];
       const taskAgentControls = agent.is_task_agent ? `
         <div class="meta">
           <div><label>Source</label><strong>${{esc(agent.source_label || "Task Agent")}}</strong></div>
@@ -1666,6 +1668,25 @@ def render_agent_ops_module_page(payload: dict) -> str:
             ${{chip(agent.source_label || "Agent", agent.is_task_agent ? "artifact" : "")}}
             ${{roles.length ? roles.map((role) => chip(role)).join("") : chip("No mission roles")}}
           </div>
+          <div class="meta">
+            <div><label>Outcome Review</label><strong>${{esc(review.success_rate || "No success rate yet")}}</strong></div>
+            <div><label>Usage Count</label><strong>${{esc(review.usage_count ?? 0)}}</strong></div>
+            <div><label>Success Count</label><strong>${{esc(review.success_count ?? 0)}}</strong></div>
+            <div><label>Workspace Status</label><strong>${{esc(review.status || "not recorded")}}</strong></div>
+            <div><label>Review Mission</label><strong>${{esc(review.mission_title || review.mission_id || "not linked")}}</strong></div>
+            <div><label>Last Used</label><strong>${{esc(review.last_used_at || review.updated_at || "not recorded")}}</strong></div>
+          </div>
+          <div class="meta">
+            <div><label>Current Focus</label><strong>${{esc(review.current_focus || "No current focus recorded.")}}</strong></div>
+            <div><label>Pending Reviews</label><strong>${{esc(review.pending_reviews ?? 0)}}</strong></div>
+            <div><label>Active Tasks</label><strong>${{esc(review.active_tasks ?? 0)}}</strong></div>
+            <div><label>Blocked Tasks</label><strong>${{esc(review.blocked_tasks ?? 0)}}</strong></div>
+            <div><label>Ownership Mode</label><strong>${{esc(review.ownership_mode || "supporting")}}</strong></div>
+            <div><label>Last Handoff</label><strong>${{esc(review.last_handoff_at || "not recorded")}}</strong></div>
+          </div>
+          <ul>
+            ${{reviewDecisions.length ? reviewDecisions.map((decision) => `<li><strong>${{esc(decision.summary || "Decision")}}</strong><span>${{esc(decision.rationale || "No rationale recorded.")}}</span><span>${{esc(decision.created_at || "")}}</span></li>`).join("") : '<li><strong>No recent decisions.</strong><span>This agent has not recorded recent outcome decisions yet.</span></li>'}}
+          </ul>
           <div class="actions">
             <button type="button" data-queue-run="${{esc(agent.agent_id || "")}}">Queue Agent Run</button>
             <a href="/agents/workspace/${{encodeURIComponent(agent.agent_id || "")}}">Open Agent Workspace</a>

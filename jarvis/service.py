@@ -2339,6 +2339,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         mission_task_board = dict(command_center.get("mission_task_board") or {})
         counts = dict(roster.get("counts") or {})
         runtime_counts = {"registry_count": 0, "runtime_count": 0, "background_count": 0}
+        agent_reviews: dict[str, Any] = {}
         mission_options = []
         for item in list(mission_task_board.get("items") or []):
             if not isinstance(item, dict):
@@ -2361,9 +2362,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "status": "Useful" if int(roster.get("item_count", 0) or 0) else "Wired",
             "summary": "Agent Operations now has a dedicated module route with live roster posture, task-agent visibility, mission-linked assignment editing, and route-level mutation controls inside JARVIS.",
             "what_became_real": "Agent Operations is now a standalone app module with visible core and task agents, mission-linked assignment edits, and route-level mutation controls instead of being split across command-center summaries and hierarchy/workspace routes.",
-            "remains_partial": "Broader cross-route continuity and richer per-agent outcome review still need follow-on slices.",
+            "remains_partial": "Broader cross-route continuity still needs follow-on slices, but per-agent outcome review is now visible inside the standalone route.",
             "agent_ops_roster": roster,
             "mission_options": mission_options,
+            "agent_reviews": agent_reviews,
             "registry": {},
             "background_agents": {},
             "agent_runtime": {},
@@ -2390,6 +2392,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "retire_agent_api_prefix": "/api/agents/",
                 "assignment_api_prefix": "/api/agents/",
                 "missions_api": "/api/missions",
+                "mission_work_state_api_prefix": "/api/missions/",
                 "scheduler_status_api": "/api/scheduler/status",
                 "queue_run_api_prefix": "/api/scheduler/run/",
                 "activity_api": "/api/activity/operator-action",
@@ -2428,6 +2431,101 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                     payload["runtime_counts"]["runtime_count"] = int(len(runtime_agents))
             except Exception as exc:
                 payload["errors"].append(f"agent_runtime: {exc}")
+
+        mission_work_state_snapshot = getattr(runtime, "mission_work_state_snapshot", None)
+        mission_title_map = {str(item.get("mission_id", "")).strip(): str(item.get("title", "")).strip() for item in mission_options}
+        if callable(mission_work_state_snapshot):
+            for item in mission_options[:8]:
+                mission_id = str(item.get("mission_id", "")).strip()
+                if not mission_id:
+                    continue
+                try:
+                    work_state = await asyncio.to_thread(mission_work_state_snapshot, mission_id)
+                except Exception as exc:
+                    payload["errors"].append(f"mission_work_state[{mission_id}]: {exc}")
+                    continue
+                workspace_map = dict((work_state or {}).get("agent_work_states") or {})
+                for agent_id, workspace in workspace_map.items():
+                    clean_agent_id = str(agent_id).strip()
+                    if not clean_agent_id:
+                        continue
+                    state = dict(workspace or {})
+                    review = agent_reviews.setdefault(
+                        clean_agent_id,
+                        {
+                            "mission_id": mission_id,
+                            "mission_title": mission_title_map.get(mission_id, mission_id),
+                            "status": str(state.get("status", "")).strip() or "unknown",
+                            "ownership_mode": str(state.get("ownership_mode", "")).strip() or "supporting",
+                            "current_focus": str(state.get("current_focus", "")).strip(),
+                            "active_tasks": len(list(state.get("active_tasks") or [])),
+                            "blocked_tasks": len(list(state.get("blocked_tasks") or [])),
+                            "pending_reviews": len(list(state.get("pending_reviews") or [])),
+                            "recent_decisions": [dict(decision or {}) for decision in list(state.get("recent_decisions") or [])[:4]],
+                            "last_handoff_at": str(state.get("last_handoff_at", "")).strip(),
+                            "updated_at": str(state.get("updated_at", "")).strip(),
+                            "usage_count": 0,
+                            "success_count": 0,
+                            "success_rate": "",
+                            "last_used_at": "",
+                        },
+                    )
+                    review["mission_id"] = mission_id
+                    review["mission_title"] = mission_title_map.get(mission_id, mission_id)
+                    review["status"] = str(state.get("status", "")).strip() or review["status"]
+                    review["ownership_mode"] = str(state.get("ownership_mode", "")).strip() or review["ownership_mode"]
+                    review["current_focus"] = str(state.get("current_focus", "")).strip() or review["current_focus"]
+                    review["active_tasks"] = len(list(state.get("active_tasks") or []))
+                    review["blocked_tasks"] = len(list(state.get("blocked_tasks") or []))
+                    review["pending_reviews"] = len(list(state.get("pending_reviews") or []))
+                    review["recent_decisions"] = [dict(decision or {}) for decision in list(state.get("recent_decisions") or [])[:4]]
+                    review["last_handoff_at"] = str(state.get("last_handoff_at", "")).strip() or review["last_handoff_at"]
+                    review["updated_at"] = str(state.get("updated_at", "")).strip() or review["updated_at"]
+
+        task_agent_profile = getattr(runtime, "task_agent_profile", None)
+        if callable(task_agent_profile):
+            for item in roster.get("items") or []:
+                if not isinstance(item, dict) or not bool(item.get("is_task_agent")):
+                    continue
+                agent_id = str(item.get("agent_id", "")).strip()
+                if not agent_id:
+                    continue
+                try:
+                    profile = await asyncio.to_thread(task_agent_profile, agent_id)
+                except Exception as exc:
+                    payload["errors"].append(f"task_agent_profile[{agent_id}]: {exc}")
+                    continue
+                if not isinstance(profile, dict):
+                    continue
+                usage_count = int(profile.get("usage_count", 0) or 0)
+                success_count = int(profile.get("success_count", 0) or 0)
+                review = agent_reviews.setdefault(
+                    agent_id,
+                    {
+                        "mission_id": str(profile.get("mission_id", "")).strip(),
+                        "mission_title": mission_title_map.get(str(profile.get("mission_id", "")).strip(), str(profile.get("mission_id", "")).strip()),
+                        "status": str(item.get("status", "")).strip() or "unknown",
+                        "ownership_mode": "supporting",
+                        "current_focus": "",
+                        "active_tasks": 0,
+                        "blocked_tasks": 0,
+                        "pending_reviews": 0,
+                        "recent_decisions": [],
+                        "last_handoff_at": "",
+                        "updated_at": str(profile.get("updated_at", "")).strip(),
+                        "usage_count": usage_count,
+                        "success_count": success_count,
+                        "success_rate": "",
+                        "last_used_at": str(profile.get("last_used_at", "")).strip(),
+                    },
+                )
+                review["usage_count"] = usage_count
+                review["success_count"] = success_count
+                review["last_used_at"] = str(profile.get("last_used_at", "")).strip() or review.get("last_used_at", "")
+                review["updated_at"] = str(profile.get("updated_at", "")).strip() or review.get("updated_at", "")
+                review["mission_id"] = str(profile.get("mission_id", "")).strip() or review.get("mission_id", "")
+                review["mission_title"] = mission_title_map.get(review["mission_id"], review["mission_id"])
+                review["success_rate"] = f"{round((success_count / usage_count) * 100)}%" if usage_count > 0 else ""
 
         try:
             scheduler = get_scheduler()
