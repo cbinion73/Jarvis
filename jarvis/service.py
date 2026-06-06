@@ -949,15 +949,19 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         packet: str = Query(default=""),
         theme: str = Query(default=""),
     ) -> str:
-        # Daily Briefing is the default web landing surface. Theme shells remain
-        # available explicitly, and the command center stays on its own route.
+        # The main web app should keep the full shell chrome. Default the shell
+        # to the Daily Briefing packet instead of sending root traffic to a
+        # standalone module page.
         if theme == "nexus" and _NEXUS_THEME_AVAILABLE:
             return _render_nexus_shell(runtime, initial_packet=packet)
         if theme == "glass" and _GLASS_THEME_AVAILABLE:
             return _render_glass_shell(runtime, initial_packet=packet)
         if theme == "voice":
             return render_voice_shell(runtime, initial_packet=packet)
-        return HTMLResponse(render_daily_brief_module_page(await _build_daily_brief_module_payload("Chris")))
+        default_packet = packet or "briefing"
+        if _GLASS_THEME_AVAILABLE:
+            return _render_glass_shell(runtime, initial_packet=default_packet)
+        return render_voice_shell(runtime, initial_packet=default_packet)
 
     @app.get("/nexus", response_class=HTMLResponse)
     async def nexus_shortcut(packet: str = Query(default="")) -> str:
