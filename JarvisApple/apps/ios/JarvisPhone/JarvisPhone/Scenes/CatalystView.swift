@@ -14,6 +14,8 @@ struct CatalystView: View {
     @State private var opsMessage: String?
     @State private var actionInFlight: String?
     @State private var selectedModule: CatalystOpsModule?
+    @State private var agentMissionDrafts: [String: String] = [:]
+    @State private var agentPolicyDrafts: [String: String] = [:]
 
     private let blue = Color(red: 0.25, green: 0.55, blue: 1.0)
     private let opsModules = CatalystOpsModule.allCases
@@ -689,6 +691,7 @@ struct CatalystView: View {
     private func loadOpsStudio() async {
         do {
             opsOverview = try await AppleAPIClient.shared.fetchCatalystOps()
+            syncAgentDrafts()
             if actionInFlight == nil, opsMessage?.hasPrefix("Native ops studio is unavailable") == true {
                 opsMessage = nil
             }
@@ -788,6 +791,27 @@ struct CatalystView: View {
             opsMessage = "\(agent.name) is queued for execution."
         } catch {
             opsMessage = "Unable to queue \(agent.name): \(error.localizedDescription)"
+        }
+    }
+
+    private func saveCatalystAgentAssignment(_ agent: CatalystAgentOpsEntry) async {
+        actionInFlight = "assignment:\(agent.id)"
+        opsMessage = "Saving assignment for \(agent.name)…"
+        defer { actionInFlight = nil }
+        do {
+            let missionId = agentMissionDrafts[agent.id] ?? agent.missionId
+            let policy = agentPolicyDrafts[agent.id] ?? agent.policyAssignment
+            let result = try await AppleAPIClient.shared.saveCatalystAgentAssignment(
+                agent.agentId,
+                missionId: missionId,
+                policyAssignment: policy,
+                purpose: agent.purpose
+            )
+            await loadOpsStudio()
+            let target = result.agent.missionId.isEmpty ? "the unassigned lane" : result.agent.missionId
+            opsMessage = "\(agent.name) now points at \(target)."
+        } catch {
+            opsMessage = "Unable to save assignment for \(agent.name): \(error.localizedDescription)"
         }
     }
 
@@ -934,6 +958,25 @@ struct CatalystView: View {
         .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
+    private func syncAgentDrafts() {
+        guard let opsOverview else { return }
+        for agent in opsOverview.agentOps {
+            if agentMissionDrafts[agent.id] == nil {
+                agentMissionDrafts[agent.id] = agent.missionId
+            }
+            if agentPolicyDrafts[agent.id] == nil {
+                agentPolicyDrafts[agent.id] = agent.policyAssignment
+            }
+        }
+    }
+
+    private func missionTitle(for missionId: String) -> String {
+        guard let mission = opsOverview?.missions.first(where: { $0.missionId == missionId }) else {
+            return missionId.isEmpty ? "Unassigned" : missionId
+        }
+        return mission.title
+    }
+
     private func approvalTint(for risk: String) -> Color {
         switch risk.lowercased() {
         case "high", "critical":
@@ -1030,21 +1073,73 @@ struct CatalystView: View {
                 Text(agent.attentionReason.isEmpty ? "Last activity: \(agent.lastActivity)" : agent.attentionReason)
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.7))
+
+                if agent.isTaskAgent {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Picker("Mission", selection: Binding(
+                            get: { agentMissionDrafts[agent.id] ?? agent.missionId },
+                            set: { agentMissionDrafts[agent.id] = $0 }
+                        )) {
+                            Text("Unassigned").tag("")
+                            ForEach(opsOverview?.missions ?? []) { mission in
+                                Text(mission.title).tag(mission.missionId)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .tint(.white)
+
+                        TextField(
+                            "Policy Assignment",
+                            text: Binding(
+                                get: { agentPolicyDrafts[agent.id] ?? agent.policyAssignment },
+                                set: { agentPolicyDrafts[agent.id] = $0 }
+                            )
+                        )
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .font(.caption2)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                        Text("Current mission: \(missionTitle(for: agentMissionDrafts[agent.id] ?? agent.missionId))")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
             Spacer()
-            Button {
-                Task { await queueCatalystAgentRun(agent) }
-            } label: {
-                Text(agent.queueActionLabel)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .background(Color(red: 0.44, green: 0.72, blue: 1.0).opacity(0.8), in: Capsule())
+            VStack(alignment: .trailing, spacing: 8) {
+                Button {
+                    Task { await queueCatalystAgentRun(agent) }
+                } label: {
+                    Text(agent.queueActionLabel)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(Color(red: 0.44, green: 0.72, blue: 1.0).opacity(0.8), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(actionInFlight != nil)
+                .opacity(actionInFlight != nil ? 0.7 : 1.0)
+
+                if agent.isTaskAgent {
+                    Button {
+                        Task { await saveCatalystAgentAssignment(agent) }
+                    } label: {
+                        Text(agent.assignmentActionLabel)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background(.mint.opacity(0.78), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(actionInFlight != nil)
+                    .opacity(actionInFlight != nil ? 0.7 : 1.0)
+                }
             }
-            .buttonStyle(.plain)
-            .disabled(actionInFlight != nil)
-            .opacity(actionInFlight != nil ? 0.7 : 1.0)
         }
         .padding(10)
         .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12, style: .continuous))

@@ -1044,10 +1044,15 @@ def _build_catalyst_ops_overview(runtime: Any) -> dict[str, Any]:
                 "assignment": str(item.get("assignment") or "unassigned").strip() or "unassigned",
                 "purpose": str(item.get("purpose") or "No purpose recorded.").strip() or "No purpose recorded.",
                 "module": str(item.get("module") or item.get("domain") or "general").strip() or "general",
+                "is_task_agent": bool(item.get("is_task_agent")),
+                "mission_id": str(item.get("mission_id") or "").strip(),
+                "mission_roles": [str(role).strip() for role in list(item.get("mission_roles") or []) if str(role).strip()],
+                "policy_assignment": str(item.get("policy_assignment") or "").strip(),
                 "attention_reason": str(item.get("attention_reason") or "").strip(),
                 "last_activity": str(item.get("last_activity") or "not recorded").strip() or "not recorded",
                 "related_route": "/agent-ops-center",
                 "queue_action_label": "Queue Run",
+                "assignment_action_label": "Save Assignment",
             }
             for item in agent_items[:4]
             if str(item.get("agent_id") or "").strip()
@@ -1343,6 +1348,55 @@ def _queue_catalyst_agent_run(*, agent_id: str, actor: str) -> dict[str, Any]:
         "status": "queued",
         "agent_id": agent_id,
         "item_id": str(getattr(item, "item_id", "") or ""),
+        "focus": focus,
+    }
+
+
+def _save_catalyst_agent_assignment(
+    runtime: Any,
+    *,
+    agent_id: str,
+    mission_id: str,
+    actor: str,
+    policy_assignment: str = "",
+    purpose: str = "",
+) -> dict[str, Any]:
+    updated = runtime.update_task_agent_assignment(
+        agent_id,
+        mission_id=mission_id,
+        mission_roles=[],
+        policy_assignment=policy_assignment,
+        purpose=purpose,
+    )
+    title = str(updated.get("name") or updated.get("agent_id") or agent_id).strip() or agent_id
+    target = str(updated.get("mission_id") or mission_id).strip()
+    detail = (
+        f"Catalyst updated {title} to mission {target} from the native ops studio."
+        if target
+        else f"Catalyst cleared the mission assignment for {title} from the native ops studio."
+    )
+    _record_operator_action(
+        actor=actor,
+        domain="catalyst",
+        action="Save Catalyst Agent Assignment",
+        detail=detail,
+        why_now="The native iPhone ops studio updated a task-agent assignment without falling back to the hosted route.",
+        result_summary=f"{title} now points at {target or 'an unassigned lane'}.",
+        route="/agent-ops-center",
+        route_label="Open Agent Ops",
+        related_kind="agent-assignment",
+        related_label=title,
+        succeeded=True,
+    )
+    focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module="Agent Ops",
+        reason=detail,
+        route="/agent-ops-center",
+        actor=actor,
+    )
+    return {
+        "status": "recorded",
+        "agent": updated,
         "focus": focus,
     }
 
@@ -11944,6 +11998,29 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         except RuntimeError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
+        return _ok(result)
+
+    @app.post("/api/apple/catalyst/agents/{agent_id}/assignment")
+    async def apple_catalyst_agent_assignment(agent_id: str, payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        mission_id = str(payload.get("mission_id") or "").strip()
+        policy_assignment = str(payload.get("policy_assignment") or "").strip()
+        purpose = str(payload.get("purpose") or "").strip()
+        try:
+            result = await asyncio.to_thread(
+                _save_catalyst_agent_assignment,
+                runtime,
+                agent_id=agent_id,
+                mission_id=mission_id,
+                actor=actor,
+                policy_assignment=policy_assignment,
+                purpose=purpose,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         return _ok(result)
 
     @app.post("/api/apple/catalyst/supervision/{request_id}/{action}")

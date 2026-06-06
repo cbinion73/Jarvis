@@ -836,6 +836,30 @@ public final class AppleAPIClient: Sendable {
         return response.status == "queued"
     }
 
+    public func saveCatalystAgentAssignment(
+        _ agentId: String,
+        missionId: String,
+        policyAssignment: String = "",
+        purpose: String = "",
+        actor: String = "chris"
+    ) async throws -> CatalystAgentAssignmentResult {
+        struct Body: Encodable {
+            let mission_id: String
+            let policy_assignment: String
+            let purpose: String
+            let actor: String
+        }
+        return try await post(
+            "/api/apple/catalyst/agents/\(agentId)/assignment",
+            body: Body(
+                mission_id: missionId,
+                policy_assignment: policyAssignment,
+                purpose: purpose,
+                actor: actor
+            )
+        )
+    }
+
     @discardableResult
     public func resolveCatalystSupervision(
         _ requestId: String,

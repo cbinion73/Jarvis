@@ -316,10 +316,15 @@ public struct CatalystAgentOpsEntry: Codable, Equatable, Identifiable, Sendable 
     public let assignment: String
     public let purpose: String
     public let module: String
+    public let isTaskAgent: Bool
+    public let missionId: String
+    public let missionRoles: [String]
+    public let policyAssignment: String
     public let attentionReason: String
     public let lastActivity: String
     public let relatedRoute: String
     public let queueActionLabel: String
+    public let assignmentActionLabel: String
 
     public var id: String { agentId }
 
@@ -331,10 +336,37 @@ public struct CatalystAgentOpsEntry: Codable, Equatable, Identifiable, Sendable 
         case assignment
         case purpose
         case module
+        case isTaskAgent = "is_task_agent"
+        case missionId = "mission_id"
+        case missionRoles = "mission_roles"
+        case policyAssignment = "policy_assignment"
         case attentionReason = "attention_reason"
         case lastActivity = "last_activity"
         case relatedRoute = "related_route"
         case queueActionLabel = "queue_action_label"
+        case assignmentActionLabel = "assignment_action_label"
+    }
+}
+
+public struct CatalystAgentAssignmentResult: Codable, Equatable, Sendable {
+    public let status: String
+    public let agent: CatalystAgentAssignmentAgent
+    public let focus: CatalystProgressFocus?
+}
+
+public struct CatalystAgentAssignmentAgent: Codable, Equatable, Sendable {
+    public let agentId: String
+    public let missionId: String
+    public let policyAssignment: String
+    public let purpose: String
+    public let updatedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case agentId = "agent_id"
+        case missionId = "mission_id"
+        case policyAssignment = "policy_assignment"
+        case purpose
+        case updatedAt = "updated_at"
     }
 }
 

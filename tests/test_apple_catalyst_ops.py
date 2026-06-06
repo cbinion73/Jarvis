@@ -14,6 +14,7 @@ from jarvis.apple_api import (
     _queue_catalyst_agent_run,
     _remediate_catalyst_recovery_case,
     _resolve_catalyst_supervision_item,
+    _save_catalyst_agent_assignment,
     _save_catalyst_progress_focus,
 )
 from jarvis.audit import AuditLog, ProgressFocusStore
@@ -60,6 +61,27 @@ class _StubRuntime:
             "summary": {},
             "active_missions": [],
             "pending_approvals": [],
+        }
+
+    def update_task_agent_assignment(
+        self,
+        agent_id: str,
+        *,
+        mission_id: str,
+        mission_roles: list[str] | None = None,
+        policy_assignment: str = "",
+        purpose: str = "",
+    ) -> dict:
+        if agent_id != "sam-wilson":
+            raise KeyError("Unknown agent")
+        return {
+            "agent_id": agent_id,
+            "mission_id": mission_id,
+            "mission_roles": mission_roles or [],
+            "policy_assignment": policy_assignment,
+            "purpose": purpose or "Keep route pressure clear.",
+            "updated_at": "2026-06-06T11:30:00Z",
+            "name": "Sam Wilson",
         }
 
 
@@ -282,6 +304,25 @@ class CatalystOpsAppleAPITests(unittest.TestCase):
         titles = [item.get("action") for item in recent]
         self.assertIn("Queue Catalyst Agent Run", titles)
         self.assertIn("Reject Catalyst Supervision Review", titles)
+
+    def test_save_agent_assignment_records_shared_focus(self) -> None:
+        runtime = _StubRuntime(Path("data"))
+
+        result = _save_catalyst_agent_assignment(
+            runtime,
+            agent_id="sam-wilson",
+            mission_id="mission-ops",
+            actor="chris",
+            policy_assignment="route-ops",
+            purpose="Keep route pressure clear.",
+        )
+
+        self.assertEqual(result["status"], "recorded")
+        self.assertEqual(result["agent"]["mission_id"], "mission-ops")
+        self.assertEqual(result["agent"]["policy_assignment"], "route-ops")
+        self.assertEqual(result["focus"]["module"], "Agent Ops")
+        recent = AuditLog(Path("data/logs")).list_recent(limit=4, entry_type="operator-action")
+        self.assertEqual(recent[0]["action"], "Save Catalyst Agent Assignment")
 
 
 if __name__ == "__main__":

@@ -3109,10 +3109,18 @@
         "assignment": "Morning mobility",
         "purpose": "Keep route, briefing, and family departure surfaces aligned.",
         "module": "navigation",
+        "is_task_agent": true,
+        "mission_id": "mission-1",
+        "mission_roles": [
+          "routing",
+          "departure"
+        ],
+        "policy_assignment": "route-ops",
         "attention_reason": "Mission pressure is elevated ahead of departure.",
         "last_activity": "2026-06-01T07:58:00Z",
         "related_route": "/agent-ops-center",
-        "queue_action_label": "Queue Run"
+        "queue_action_label": "Queue Run",
+        "assignment_action_label": "Save Assignment"
       }
     ],
     "supervision_items": [
