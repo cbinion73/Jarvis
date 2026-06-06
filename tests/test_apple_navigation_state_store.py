@@ -50,6 +50,36 @@ class AppleNavigationStateStoreTests(unittest.TestCase):
                 self.assertEqual(loaded["favorite_destinations"], ["Office"])
                 self.assertEqual(loaded["selected_saved_location_id"], "hq")
 
+    def test_records_operator_action_into_activity_audit_log(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            audit_root = Path(tmp) / "logs"
+
+            with patch.object(apple_api, "_ACTIVITY_AUDIT_ROOT", audit_root):
+                apple_api._record_operator_action(
+                    actor="Chris",
+                    domain="navigation",
+                    action="Update Apple Navigation State",
+                    detail="Persisted route from Home to Office.",
+                    why_now="Apple surface selected or refreshed a route destination.",
+                    result_summary="Navigation continuity updated from Apple route state.",
+                    route="/navigation-center",
+                    route_label="Open Navigation",
+                    related_kind="route-preview",
+                    related_label="Office",
+                )
+
+            records = apple_api.AuditLog(audit_root).list_recent()
+
+            self.assertEqual(len(records), 1)
+            self.assertEqual(records[0]["entry_type"], "operator-action")
+            self.assertEqual(records[0]["actor"], "Chris")
+            self.assertEqual(records[0]["domain"], "navigation")
+            self.assertEqual(records[0]["related_route"], "/navigation-center")
+            self.assertEqual(records[0]["route_label"], "Open Navigation")
+            self.assertEqual(records[0]["related_kind"], "route-preview")
+            self.assertEqual(records[0]["related_label"], "Office")
+            self.assertEqual(records[0]["result_summary"], "Navigation continuity updated from Apple route state.")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -42,6 +42,7 @@ from urllib.parse import quote
 
 from fastapi import FastAPI, HTTPException
 
+from .audit import AuditLog
 from .nav_bridge import NavBridge, haversine, min_distance_to_route, sample_route_points
 from .persistence import append_jsonl as persistence_append_jsonl, atomic_write_json
 from .settings import LOCATION_SETTINGS_PATH, VoiceSettingsStore
@@ -67,6 +68,7 @@ _APPLE_NOW_PLAYING_LOG_PATH = _APPLE_NOW_PLAYING_PATH.with_name("now_playing_log
 _CHRONICLE_PRAYER_ACTIVITY_PATH = Path.home() / ".jarvis" / "chronicle" / "prayer_activity.json"
 _CHRONICLE_PRAYER_ACTIVITY_LOG_PATH = _CHRONICLE_PRAYER_ACTIVITY_PATH.with_name("prayer_activity_log.jsonl")
 _CHRONICLE_ANSWERED_PRAYERS_PATH = Path.home() / ".jarvis" / "chronicle" / "answered_prayers.jsonl"
+_ACTIVITY_AUDIT_ROOT = Path("data/logs")
 
 _NAV_STOP_LABELS = {
     "food": "Food",
@@ -100,6 +102,42 @@ def _ts() -> str:
 
 def _ok(data: Any) -> dict:
     return {"ok": True, "data": data, "error": None, "ts": _ts()}
+
+
+def _record_operator_action(
+    *,
+    actor: str,
+    domain: str,
+    action: str,
+    detail: str,
+    why_now: str,
+    result_summary: str,
+    route: str,
+    route_label: str,
+    related_kind: str = "",
+    related_label: str = "",
+    succeeded: bool = True,
+) -> None:
+    try:
+        AuditLog(_ACTIVITY_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": domain,
+                "action": action,
+                "detail": detail,
+                "why_now": why_now,
+                "result_summary": result_summary,
+                "related_route": route,
+                "route_label": route_label,
+                "related_kind": related_kind,
+                "related_label": related_label,
+                "source_kind": "operator-action",
+                "succeeded": bool(succeeded),
+            },
+        )
+    except Exception as exc:
+        logger.warning("apple_api operator action log failed: %s", exc)
 
 
 async def _timeboxed_to_thread(
@@ -6405,7 +6443,24 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
     async def apple_navigation_state_update(payload: dict):
         if not isinstance(payload, dict):
             raise HTTPException(status_code=400, detail="payload must be an object")
-        return _ok(_save_navigation_state(payload))
+        saved = _save_navigation_state(payload)
+        last_route = saved.get("last_route") if isinstance(saved.get("last_route"), dict) else {}
+        origin = str((last_route or {}).get("origin") or "").strip()
+        destination = str((last_route or {}).get("destination") or "").strip()
+        if origin and destination:
+            _record_operator_action(
+                actor="Chris",
+                domain="navigation",
+                action="Update Apple Navigation State",
+                detail=f"Persisted route from {origin} to {destination}.",
+                why_now="Apple surface selected or refreshed a route destination.",
+                result_summary="Navigation continuity updated from Apple route state.",
+                route="/navigation-center",
+                route_label="Open Navigation",
+                related_kind="route-preview",
+                related_label=destination,
+            )
+        return _ok(saved)
 
     # ------------------------------------------------------------------
     # GET /api/apple/navigation/route
@@ -10320,13 +10375,24 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         rows = _safe_read_jsonl(reviews_path)
         if not any(str(row.get("review_id") or "") == review_id for row in rows):
             raise HTTPException(status_code=404, detail=f"Review {review_id} not found")
-        return _ok(
-            _governed_publication_review_mutation(
+        result = _governed_publication_review_mutation(
                 review_id,
                 target_status="approved",
                 action_label="approve",
             )
+        _record_operator_action(
+            actor="Chris",
+            domain="publish",
+            action="Approve Publishing Review",
+            detail=f"Approved publishing review {result.get('review', {}).get('title') or review_id}.",
+            why_now="Apple publish surface cleared a pending editorial review.",
+            result_summary=f"Publishing review status: {result.get('status') or 'approved'}",
+            route="/publish",
+            route_label="Open Publish",
+            related_kind="publishing-review",
+            related_label=str(result.get("review", {}).get("title") or review_id),
         )
+        return _ok(result)
 
     @app.post("/api/apple/publishing/reviews/{review_id}/revise")
     async def apple_publishing_revise_review(review_id: str, payload: dict[str, Any]):
@@ -10336,14 +10402,25 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         feedback = str(payload.get("feedback") or "").strip() or "Needs revision from JarvisPhone."
         if not any(str(row.get("review_id") or "") == review_id for row in rows):
             raise HTTPException(status_code=404, detail=f"Review {review_id} not found")
-        return _ok(
-            _governed_publication_review_mutation(
+        result = _governed_publication_review_mutation(
                 review_id,
                 target_status="needs_revision",
                 action_label="revise",
                 feedback=feedback,
             )
+        _record_operator_action(
+            actor="Chris",
+            domain="publish",
+            action="Request Publishing Revision",
+            detail=f"Requested revision for publishing review {result.get('review', {}).get('title') or review_id}.",
+            why_now="Apple publish surface sent editorial feedback back into the launch pipeline.",
+            result_summary=f"Publishing review status: {result.get('status') or 'needs_revision'}",
+            route="/publish",
+            route_label="Open Publish",
+            related_kind="publishing-review",
+            related_label=str(result.get("review", {}).get("title") or review_id),
         )
+        return _ok(result)
 
     # ── Huddle ────────────────────────────────────────────────────────────────
 
