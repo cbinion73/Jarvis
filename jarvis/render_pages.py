@@ -2422,6 +2422,10 @@ def render_mission_board_module_page(payload: dict) -> str:
         <h2>Mission Workspaces</h2>
         <div id="mission-workspaces" class="board-grid"></div>
       </section>
+      <section class="panel span-12">
+        <h2>Handoff Console</h2>
+        <div id="mission-handoffs" class="board-grid"></div>
+      </section>
       <section class="panel span-8">
         <h2>Mission API Proof</h2>
         <ul id="proof-list"></ul>
@@ -2446,6 +2450,7 @@ def render_mission_board_module_page(payload: dict) -> str:
     const detailEl = document.getElementById("mission-detail");
     const evidenceEl = document.getElementById("mission-evidence-list");
     const workspacesEl = document.getElementById("mission-workspaces");
+    const handoffsEl = document.getElementById("mission-handoffs");
     const proofEl = document.getElementById("proof-list");
     const payloadPreview = document.getElementById("payload-preview");
     const statusNote = document.getElementById("mission-status-note");
@@ -2482,6 +2487,35 @@ def render_mission_board_module_page(payload: dict) -> str:
       if (!mission || !mission.mission_id) return null;
       const details = payload.mission_details || {{}};
       return details[mission.mission_id] || null;
+    }}
+
+    function missionAgentProfiles(detail) {{
+      return Array.isArray(detail?.agent_profiles) ? detail.agent_profiles : [];
+    }}
+
+    function missionAgentOptions(detail, workState) {{
+      const options = new Map();
+      missionAgentProfiles(detail).forEach((profile) => {{
+        const agentId = String(profile?.agent_id || profile?.id || "").trim();
+        if (!agentId) return;
+        const label = String(profile?.display_name || profile?.name || profile?.role || agentId).trim() || agentId;
+        options.set(agentId, label);
+      }});
+      Object.entries((workState || {{}}).agent_work_states || {{}}).forEach(([agentId, workspace]) => {{
+        const cleanId = String(agentId || "").trim();
+        if (!cleanId || options.has(cleanId)) return;
+        options.set(cleanId, String(workspace?.role || cleanId).trim() || cleanId);
+      }});
+      return Array.from(options.entries()).map(([value, label]) => ({{ value, label }}));
+    }}
+
+    function selectOptions(options, selected = "") {{
+      return options.map((item) => {{
+        const value = String(item?.value || "").trim();
+        const label = String(item?.label || value).trim() || value;
+        const isSelected = value && value === String(selected || "").trim() ? " selected" : "";
+        return `<option value="${{esc(value)}}"${{isSelected}}>${{esc(label)}}</option>`;
+      }}).join("");
     }}
 
     async function recordMissionActivity(payload) {{
@@ -2622,6 +2656,146 @@ def render_mission_board_module_page(payload: dict) -> str:
       }}
     }}
 
+    async function createMissionHandoff(missionId) {{
+      if (!missionId) return;
+      const detail = currentMissionDetail(currentPayload) || {{}};
+      const fromAgent = String(document.getElementById("handoff-from-agent")?.value || "").trim();
+      const toAgent = String(document.getElementById("handoff-to-agent")?.value || "").trim();
+      const taskTitle = String(document.getElementById("handoff-task-title")?.value || "").trim();
+      const summary = String(document.getElementById("handoff-summary")?.value || "").trim();
+      const partialWork = String(document.getElementById("handoff-partial-work")?.value || "").trim();
+      const transferOwnership = Boolean(document.getElementById("handoff-transfer-ownership")?.checked);
+      if (!fromAgent || !toAgent || !taskTitle || !summary) {{
+        actionNote.textContent = "Choose from/to agents and provide both a task title and summary before creating a handoff.";
+        return;
+      }}
+      if (fromAgent === toAgent) {{
+        actionNote.textContent = "Handoffs need different source and receiving agents.";
+        return;
+      }}
+      actionNote.textContent = `Creating handoff from ${{fromAgent}} to ${{toAgent}}…`;
+      try {{
+        const response = await fetch(`/api/missions/${{encodeURIComponent(missionId)}}/handoffs`, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            from_agent: fromAgent,
+            to_agent: toAgent,
+            task_title: taskTitle,
+            summary,
+            partial_work: partialWork,
+            context: String(document.getElementById("handoff-context")?.value || "").trim(),
+            delegation_reason: String(document.getElementById("handoff-reason")?.value || "").trim(),
+            expected_result: String(document.getElementById("handoff-expected-result")?.value || "").trim(),
+            duplicate_key: String(document.getElementById("handoff-duplicate-key")?.value || "").trim(),
+            transfer_ownership: transferOwnership,
+          }}),
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Mission handoff creation failed");
+        }}
+        const recorded = await recordMissionActivity({{
+          actor: "Chris",
+          domain: "mission-board",
+          action: transferOwnership ? "Transfer Mission Ownership" : "Create Mission Handoff",
+          title: taskTitle,
+          status: transferOwnership ? "pending-acceptance" : "pending",
+          detail: `Action succeeded: /api/missions/${{missionId}}/handoffs`,
+          why_now: summary,
+          result_summary: `Handoff from ${{fromAgent}} to ${{toAgent}} is now live in the mission substrate.`,
+          route: "/mission-board",
+          route_label: "Open Mission Board",
+          related_kind: "mission",
+          related_label: missionId,
+          succeeded: true,
+        }});
+        actionNote.textContent = recorded
+          ? `Created the handoff from ${{fromAgent}} to ${{toAgent}} and recorded it in shared activity.`
+          : `Created the handoff from ${{fromAgent}} to ${{toAgent}}.`;
+        await refreshMissionBoard();
+      }} catch (error) {{
+        const errorText = String(error);
+        await recordMissionActivity({{
+          actor: "Chris",
+          domain: "mission-board",
+          action: "Create Mission Handoff",
+          title: taskTitle || detail?.title || missionId,
+          status: "failed",
+          detail: `Action failed: /api/missions/${{missionId}}/handoffs`,
+          why_now: errorText,
+          result_summary: `Mission handoff creation failed: ${{errorText}}`,
+          route: "/mission-board",
+          route_label: "Open Mission Board",
+          related_kind: "mission",
+          related_label: missionId,
+          succeeded: false,
+        }});
+        actionNote.textContent = `Mission handoff creation failed: ${{errorText}}`;
+      }}
+    }}
+
+    async function acknowledgeMissionHandoff(missionId, handoffId, receivingAgent, accepted) {{
+      if (!missionId || !handoffId || !receivingAgent) return;
+      const noteInput = document.querySelector(`[data-handoff-note="${{handoffId}}"]`);
+      const note = String(noteInput?.value || "").trim();
+      actionNote.textContent = `${{accepted ? "Accepting" : "Rejecting"}} handoff ${{handoffId}}…`;
+      try {{
+        const response = await fetch(`/api/missions/${{encodeURIComponent(missionId)}}/handoffs/${{encodeURIComponent(handoffId)}}/acknowledge`, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            receiving_agent: receivingAgent,
+            accepted,
+            note,
+          }}),
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Mission handoff acknowledgement failed");
+        }}
+        const recorded = await recordMissionActivity({{
+          actor: "Chris",
+          domain: "mission-board",
+          action: accepted ? "Accept Mission Handoff" : "Reject Mission Handoff",
+          title: handoffId,
+          status: accepted ? "accepted" : "rejected",
+          detail: `Action succeeded: /api/missions/${{missionId}}/handoffs/${{handoffId}}/acknowledge`,
+          why_now: note || `Receiving agent ${{receivingAgent}} reviewed the mission handoff.`,
+          result_summary: accepted
+            ? `Handoff ${{handoffId}} was accepted by ${{receivingAgent}}.`
+            : `Handoff ${{handoffId}} was rejected by ${{receivingAgent}}.`,
+          route: "/mission-board",
+          route_label: "Open Mission Board",
+          related_kind: "mission",
+          related_label: missionId,
+          succeeded: true,
+        }});
+        actionNote.textContent = recorded
+          ? `Handoff ${{handoffId}} ${{accepted ? "accepted" : "rejected"}} and recorded in shared activity.`
+          : `Handoff ${{handoffId}} ${{accepted ? "accepted" : "rejected"}}.`;
+        await refreshMissionBoard();
+      }} catch (error) {{
+        const errorText = String(error);
+        await recordMissionActivity({{
+          actor: "Chris",
+          domain: "mission-board",
+          action: accepted ? "Accept Mission Handoff" : "Reject Mission Handoff",
+          title: handoffId,
+          status: "failed",
+          detail: `Action failed: /api/missions/${{missionId}}/handoffs/${{handoffId}}/acknowledge`,
+          why_now: errorText,
+          result_summary: `Mission handoff acknowledgement failed: ${{errorText}}`,
+          route: "/mission-board",
+          route_label: "Open Mission Board",
+          related_kind: "mission",
+          related_label: missionId,
+          succeeded: false,
+        }});
+        actionNote.textContent = `Mission handoff acknowledgement failed: ${{errorText}}`;
+      }}
+    }}
+
     function renderDetail(payload) {{
       const mission = currentMission(payload);
       const detail = currentMissionDetail(payload) || {{}};
@@ -2630,6 +2804,7 @@ def render_mission_board_module_page(payload: dict) -> str:
         detailEl.innerHTML = "<p class=\\"status-note\\">No mission detail available right now.</p>";
         evidenceEl.innerHTML = "<li><strong>No mission evidence.</strong><span>Mission records will appear once the board is hydrated.</span></li>";
         workspacesEl.innerHTML = '<div class="mission-card"><strong>No mission workspaces.</strong><span>Mission work-state will appear once a selected mission is hydrated.</span></div>';
+        handoffsEl.innerHTML = '<div class="mission-card"><strong>No mission handoffs.</strong><span>Choose a mission to author or acknowledge a handoff.</span></div>';
         return;
       }}
       selectedMissionId = mission.mission_id || "";
@@ -2637,6 +2812,13 @@ def render_mission_board_module_page(payload: dict) -> str:
       const taskAgents = Array.isArray(mission.task_agent_labels) ? mission.task_agent_labels : [];
       const summary = workState.summary || {{}};
       const relatedRoutes = Array.isArray(detail.related_routes) ? detail.related_routes : [];
+      const handoffs = Array.isArray(detail.handoffs) ? detail.handoffs : [];
+      const pendingHandoffs = handoffs.filter((item) => {{
+        const status = String(item?.status || "").trim().toLowerCase();
+        return status === "pending" || status === "pending-acceptance";
+      }});
+      const ownershipTransfers = Array.isArray(detail.ownership_transfers) ? detail.ownership_transfers : [];
+      const handoffOptions = missionAgentOptions(detail, workState);
       detailEl.innerHTML = `
         <div class="mission-card">
           <strong>${{esc(mission.title || mission.mission_id || "Mission")}}</strong>
@@ -2743,6 +2925,115 @@ def render_mission_board_module_page(payload: dict) -> str:
               actionNote.textContent = `Mission workspace update failed: ${{String(error)}}`;
             }});
           }}
+        }});
+      }});
+
+      const pendingCards = pendingHandoffs.length
+        ? pendingHandoffs.map((item) => {{
+            const handoffId = String(item?.handoff_id || "").trim();
+            const transfer = ownershipTransfers.find((transferItem) => String(transferItem?.task_id || "").trim() === String(item?.task_id || "").trim());
+            return `
+              <div class="mission-card">
+                <strong>${{esc(item.summary || item.task_id || "Mission handoff")}}</strong>
+                <span>${{esc(item.from_agent || "unknown source")}} → ${{esc(item.to_agent || "unknown receiving agent")}}</span>
+                <div class="chips">
+                  ${{chip(item.handoff_kind || "delegation", item.requires_acceptance ? "steady" : "")}}
+                  ${{chip(item.status || "pending", item.status === "pending-acceptance" ? "steady" : "accepted")}}
+                  ${{transfer ? chip("ownership-transfer", "steady") : ""}}
+                </div>
+                <span>${{esc(item.partial_work || item.context || "No partial work or continuity notes recorded yet.")}}</span>
+                <div class="meta">
+                  <div><label>Created</label><strong>${{esc(item.created_at || "not recorded")}}</strong></div>
+                  <div><label>Task ID</label><strong>${{esc(item.task_id || "not recorded")}}</strong></div>
+                  <div><label>Duplicate Key</label><strong>${{esc(item.duplicate_key || "not recorded")}}</strong></div>
+                </div>
+                <div class="meta">
+                  <div>
+                    <label>Acknowledge Note</label>
+                    <input data-handoff-note="${{esc(handoffId)}}" value="" placeholder="Add a quick acceptance or rejection note" />
+                  </div>
+                </div>
+                <div class="action-row">
+                  <button type="button" data-handoff-ack="${{esc(handoffId)}}" data-handoff-agent="${{esc(item.to_agent || "")}}" data-handoff-accepted="true">Accept Handoff</button>
+                  <button type="button" data-handoff-ack="${{esc(handoffId)}}" data-handoff-agent="${{esc(item.to_agent || "")}}" data-handoff-accepted="false">Reject Handoff</button>
+                </div>
+              </div>
+            `;
+          }}).join("")
+        : '<div class="mission-card"><strong>No pending handoffs.</strong><span>This mission does not currently need a receiving-agent acknowledgement.</span></div>';
+
+      handoffsEl.innerHTML = `
+        <div class="mission-card">
+          <strong>Author New Handoff</strong>
+          <span>Delegate work or transfer ownership between mission agents without leaving the mission board.</span>
+          <div class="meta">
+            <div>
+              <label>From Agent</label>
+              <select id="handoff-from-agent">
+                <option value="">Choose source agent</option>
+                ${{selectOptions(handoffOptions)}}
+              </select>
+            </div>
+            <div>
+              <label>To Agent</label>
+              <select id="handoff-to-agent">
+                <option value="">Choose receiving agent</option>
+                ${{selectOptions(handoffOptions)}}
+              </select>
+            </div>
+            <div>
+              <label>Task Title</label>
+              <input id="handoff-task-title" value="" placeholder="What is being handed off?" />
+            </div>
+            <div>
+              <label>Summary</label>
+              <input id="handoff-summary" value="" placeholder="Short handoff summary" />
+            </div>
+            <div>
+              <label>Delegation Reason</label>
+              <input id="handoff-reason" value="" placeholder="Why should this move?" />
+            </div>
+            <div>
+              <label>Expected Result</label>
+              <input id="handoff-expected-result" value="" placeholder="What should come back?" />
+            </div>
+            <div>
+              <label>Partial Work</label>
+              <input id="handoff-partial-work" value="" placeholder="Continuity notes or partial work" />
+            </div>
+            <div>
+              <label>Context</label>
+              <input id="handoff-context" value="" placeholder="Important context for the receiving agent" />
+            </div>
+            <div>
+              <label>Duplicate Key</label>
+              <input id="handoff-duplicate-key" value="" placeholder="Optional duplicate suppression key" />
+            </div>
+            <div>
+              <label>Ownership Transfer</label>
+              <input id="handoff-transfer-ownership" type="checkbox" />
+            </div>
+          </div>
+          <div class="action-row">
+            <button type="button" id="create-handoff-button">Create Handoff</button>
+          </div>
+        </div>
+        ${{pendingCards}}
+      `;
+
+      document.getElementById("create-handoff-button")?.addEventListener("click", () => {{
+        createMissionHandoff(selectedMissionId).catch((error) => {{
+          actionNote.textContent = `Mission handoff creation failed: ${{String(error)}}`;
+        }});
+      }});
+      document.querySelectorAll("[data-handoff-ack]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          const handoffId = button.getAttribute("data-handoff-ack") || "";
+          const receivingAgent = button.getAttribute("data-handoff-agent") || "";
+          const accepted = String(button.getAttribute("data-handoff-accepted") || "").trim() === "true";
+          acknowledgeMissionHandoff(selectedMissionId, handoffId, receivingAgent, accepted).catch((error) => {{
+            actionNote.textContent = `Mission handoff acknowledgement failed: ${{String(error)}}`;
+          }});
         }});
       }});
     }}

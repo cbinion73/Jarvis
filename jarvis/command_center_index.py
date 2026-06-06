@@ -1380,7 +1380,7 @@ def _level3_checklist(
                 "tests/test_command_center_service_surface.py",
             ],
             "proof_routes": ["/mission-board", "/api/mission-board/module", "/api/missions"],
-            "next_slice": "Deepen handoff authoring, mission create-edit flows, and seam linkage now that mission workspaces and per-agent work-state controls are live on the standalone route.",
+            "next_slice": "Deepen mission create-edit flows and seam linkage now that mission workspaces, handoff authoring, and per-agent work-state controls are live on the standalone route.",
         },
         {
             "title": "Agent Operations Assignment and Continuity Controls",
@@ -2024,8 +2024,8 @@ def _seam_tracker(
             "branch": branch,
             "worktree": "primary worktree",
             "surface_path": "/mission-board",
-            "what_became_real": "The mission board now has a dedicated route with lane-based mission visibility, selected mission detail, mission workspace review, and per-agent work-state controls inside the app shell.",
-            "remains_partial": "Broader mission creation/edit flows, richer handoff authoring, and deeper seam linkage still need follow-on slices.",
+            "what_became_real": "The mission board now has a dedicated route with lane-based mission visibility, selected mission detail, mission workspace review, handoff authoring, and per-agent work-state controls inside the app shell.",
+            "remains_partial": "Broader mission creation/edit flows and deeper seam linkage still need follow-on slices.",
             "tests": [
                 "tests/test_command_center_index.py",
                 "tests/test_command_center_service_surface.py",
