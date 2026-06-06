@@ -11,6 +11,7 @@ from jarvis.apple_api import (
     _build_catalyst_ops_overview,
     _execute_catalyst_recovery_case,
     _queue_catalyst_agent_run,
+    _remediate_catalyst_recovery_case,
     _resolve_catalyst_supervision_item,
     _save_catalyst_progress_focus,
 )
@@ -108,6 +109,7 @@ class CatalystOpsAppleAPITests(unittest.TestCase):
         self.assertEqual(overview["counts"]["approval_count"], 1)
         self.assertEqual(overview["counts"]["mission_count"], 0)
         self.assertEqual(overview["recovery_cases"][0]["next_action_type"], "retry")
+        self.assertEqual(overview["recovery_cases"][0]["remediation_action_type"], "execute")
         self.assertEqual(overview["approvals"][0]["title"], "Approve storm comms handoff")
         self.assertEqual(overview["recent_activity"][0]["related_route"], "/command-center")
         self.assertIn("agent_ops", overview)
@@ -142,14 +144,24 @@ class CatalystOpsAppleAPITests(unittest.TestCase):
         )
         self.assertEqual(recovery["status"], "recorded")
 
+        remediation = _remediate_catalyst_recovery_case(
+            case_id=case["case_id"],
+            actor="chris",
+            action_type="execute",
+            note="Catalyst executed auto-remediation from the native ops studio.",
+        )
+        self.assertEqual(remediation["status"], "recorded")
+        self.assertEqual(remediation["case"]["remediation_status"], "executed")
+
         focus_summary = ProgressFocusStore(Path("data/logs")).summary(limit=8)
         self.assertEqual(focus_summary["latest"]["module"], "Recovery")
 
-        recent = AuditLog(Path("data/logs")).list_recent(limit=6, entry_type="operator-action")
+        recent = AuditLog(Path("data/logs")).list_recent(limit=8, entry_type="operator-action")
         titles = [item.get("action") for item in recent]
         self.assertIn("Set Catalyst Focus", titles)
         self.assertIn("Approve Catalyst Approval", titles)
         self.assertIn("Execute Catalyst Recovery Loop", titles)
+        self.assertIn("Execute Catalyst Recovery Auto-Remediation", titles)
 
     def test_update_catalyst_mission_status_records_shared_focus(self) -> None:
         class _MissionRuntime(_StubRuntime):

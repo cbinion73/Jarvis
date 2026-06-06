@@ -225,9 +225,14 @@ public struct CatalystRecoveryCaseEntry: Codable, Equatable, Identifiable, Senda
     public let statusLabel: String
     public let detail: String
     public let executionCount: Int
+    public let remediationStatus: String
+    public let remediationStatusLabel: String
+    public let remediationCount: Int
     public let relatedRoute: String
     public let nextActionType: String
     public let nextActionLabel: String
+    public let remediationActionType: String
+    public let remediationActionLabel: String
 
     public var id: String { caseId }
 
@@ -238,9 +243,14 @@ public struct CatalystRecoveryCaseEntry: Codable, Equatable, Identifiable, Senda
         case statusLabel = "status_label"
         case detail
         case executionCount = "execution_count"
+        case remediationStatus = "remediation_status"
+        case remediationStatusLabel = "remediation_status_label"
+        case remediationCount = "remediation_count"
         case relatedRoute = "related_route"
         case nextActionType = "next_action_type"
         case nextActionLabel = "next_action_label"
+        case remediationActionType = "remediation_action_type"
+        case remediationActionLabel = "remediation_action_label"
     }
 }
 

@@ -3069,9 +3069,14 @@
           "status_label": "Investigating",
           "detail": "Apple weather relay needs a retry before the commute surface opens.",
           "execution_count": 2,
+          "remediation_status": "staged",
+          "remediation_status_label": "Staged",
+          "remediation_count": 1,
           "related_route": "/recovery-center",
         "next_action_type": "retry",
-        "next_action_label": "Execute Retry Loop"
+        "next_action_label": "Execute Retry Loop",
+        "remediation_action_type": "execute",
+        "remediation_action_label": "Execute Auto-Remediation"
       }
     ],
     "agent_ops": [

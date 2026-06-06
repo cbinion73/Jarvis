@@ -3009,6 +3009,33 @@ def render_recovery_module_page(payload: dict) -> str:
       }}
     }}
 
+    async function remediateRecoveryCase(caseId, actionType, detail, fallbackLabel = "Recovery case") {{
+      if (!caseId) return;
+      actionNote.textContent = `${{actionType === "stage" ? "Staging auto-remediation" : "Executing auto-remediation"}} for ${{fallbackLabel}}…`;
+      try {{
+        const response = await fetch(`/api/recovery/cases/${{encodeURIComponent(caseId)}}/remediation`, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            actor: "Chris",
+            action_type: actionType,
+            note: detail,
+          }}),
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Recovery remediation failed");
+        }}
+        const updatedCase = payload.case || {{}};
+        actionNote.textContent = actionType === "stage"
+          ? `Auto-remediation staged for ${{updatedCase.title || fallbackLabel}}.`
+          : `Auto-remediation executed for ${{updatedCase.title || fallbackLabel}}.`;
+        await refreshRecoveryState();
+      }} catch (error) {{
+        actionNote.textContent = `Recovery remediation failed: ${{String(error)}}`;
+      }}
+    }}
+
     function selectedItem(payload) {{
       const failure = payload.failure_recovery || {{}};
       const pending = Array.isArray(payload.pending_approvals) ? payload.pending_approvals : [];
@@ -3041,6 +3068,7 @@ def render_recovery_module_page(payload: dict) -> str:
           <div class="chips">
             ${{item.request_id ? chip("approval gate", "steady") : ""}}
             ${{item.case_id ? chip(item.status_label || item.status || "case", item.status === "resolved" ? "accepted" : item.status === "watch" ? "steady" : "regressed") : ""}}
+            ${{item.case_id ? chip(item.remediation_status_label || item.remediation_status || "Available", item.remediation_status === "executed" ? "accepted" : item.remediation_status === "staged" ? "steady" : "") : ""}}
             ${{item.name ? chip("integration", "regressed") : ""}}
             ${{item.timestamp ? chip(item.timestamp, "steady") : ""}}
             ${{item.risk_tier ? chip(item.risk_tier, "steady") : ""}}
@@ -3062,6 +3090,8 @@ def render_recovery_module_page(payload: dict) -> str:
             ${{item.case_id ? `<button type="button" class="alt" data-case-status="resolved" data-case-id="${{esc(item.case_id)}}">Mark Resolved</button>` : ""}}
             ${{item.case_id ? `<button type="button" data-case-execute="retry" data-case-id="${{esc(item.case_id)}}" data-case-label="${{esc(title)}}" data-case-detail="${{esc(summary)}}">Execute Retry Loop</button>` : ""}}
             ${{item.case_id ? `<button type="button" class="alt" data-case-execute="stabilize" data-case-id="${{esc(item.case_id)}}" data-case-label="${{esc(title)}}" data-case-detail="${{esc(summary)}}">Stabilize Recovery Loop</button>` : ""}}
+            ${{item.case_id ? `<button type="button" data-case-remediation="stage" data-case-id="${{esc(item.case_id)}}" data-case-label="${{esc(title)}}" data-case-detail="${{esc(summary)}}">Stage Auto-Remediation</button>` : ""}}
+            ${{item.case_id ? `<button type="button" class="alt" data-case-remediation="execute" data-case-id="${{esc(item.case_id)}}" data-case-label="${{esc(title)}}" data-case-detail="${{esc(summary)}}">Execute Auto-Remediation</button>` : ""}}
             <button type="button" data-recovery-action="retry" data-recovery-kind="${{esc(item.request_id ? "approval" : item.name ? "integration" : "failure")}}" data-recovery-label="${{esc(title)}}" data-recovery-detail="${{esc(summary)}}" data-recovery-target-id="${{esc(item.request_id || "")}}">Stage Retry</button>
             <button type="button" class="alt" data-recovery-action="stabilize" data-recovery-kind="${{esc(item.request_id ? "approval" : item.name ? "integration" : "failure")}}" data-recovery-label="${{esc(title)}}" data-recovery-detail="${{esc(summary)}}">Mark Stabilized</button>
           </div>
@@ -3125,6 +3155,18 @@ def render_recovery_module_page(payload: dict) -> str:
             button.getAttribute("data-case-label") || "Recovery case",
           ).catch((error) => {{
             actionNote.textContent = `Recovery execution failed: ${{String(error)}}`;
+          }});
+        }});
+      }});
+      document.querySelectorAll("[data-case-remediation]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          remediateRecoveryCase(
+            button.getAttribute("data-case-id") || "",
+            button.getAttribute("data-case-remediation") || "stage",
+            button.getAttribute("data-case-detail") || "Recovery remediation requested.",
+            button.getAttribute("data-case-label") || "Recovery case",
+          ).catch((error) => {{
+            actionNote.textContent = `Recovery remediation failed: ${{String(error)}}`;
           }});
         }});
       }});
@@ -3228,9 +3270,11 @@ def render_recovery_module_page(payload: dict) -> str:
             <span>${{esc(item.detail || "Durable recovery case is ready for review.")}}</span>
             <div class="chips">
               ${{chip(item.status_label || item.status || "Open", item.status === "resolved" ? "accepted" : item.status === "watch" ? "steady" : "regressed")}}
+              ${{chip(item.remediation_status_label || item.remediation_status || "Available", item.remediation_status === "executed" ? "accepted" : item.remediation_status === "staged" ? "steady" : "")}}
               ${{item.source_kind ? chip(item.source_kind.replaceAll("-", " ")) : ""}}
               ${{item.last_action_at ? chip(item.last_action_at, "steady") : ""}}
               ${{Number(item.execution_count || 0) > 0 ? chip(`executions ${{String(item.execution_count)}}`, "steady") : ""}}
+              ${{Number(item.remediation_count || 0) > 0 ? chip(`remediations ${{String(item.remediation_count)}}`, "steady") : ""}}
             </div>
             <div class="action-row">
               <button type="button" data-select-kind="case" data-select-index="${{esc(String(index))}}">Inspect Case</button>
@@ -3239,6 +3283,8 @@ def render_recovery_module_page(payload: dict) -> str:
               <button type="button" class="alt" data-case-status="resolved" data-case-id="${{esc(item.case_id || "")}}">Mark Resolved</button>
               <button type="button" data-case-execute="retry" data-case-id="${{esc(item.case_id || "")}}" data-case-label="${{esc(item.title || "Recovery case")}}" data-case-detail="${{esc(item.detail || "Recovery retry requested.")}}">Execute Retry Loop</button>
               <button type="button" class="alt" data-case-execute="stabilize" data-case-id="${{esc(item.case_id || "")}}" data-case-label="${{esc(item.title || "Recovery case")}}" data-case-detail="${{esc(item.detail || "Recovery stabilization requested.")}}">Stabilize Recovery Loop</button>
+              <button type="button" data-case-remediation="stage" data-case-id="${{esc(item.case_id || "")}}" data-case-label="${{esc(item.title || "Recovery case")}}" data-case-detail="${{esc(item.detail || "Recovery remediation staging requested.")}}">Stage Auto-Remediation</button>
+              <button type="button" class="alt" data-case-remediation="execute" data-case-id="${{esc(item.case_id || "")}}" data-case-label="${{esc(item.title || "Recovery case")}}" data-case-detail="${{esc(item.detail || "Recovery remediation execution requested.")}}">Execute Auto-Remediation</button>
               <a href="${{esc(item.related_route || "/recovery-center")}}">Open Related Surface</a>
             </div>
           </div>
@@ -3362,6 +3408,18 @@ def render_recovery_module_page(payload: dict) -> str:
             button.getAttribute("data-case-label") || "Recovery case",
           ).catch((error) => {{
             actionNote.textContent = `Recovery execution failed: ${{String(error)}}`;
+          }});
+        }});
+      }});
+      document.querySelectorAll("[data-case-remediation]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          remediateRecoveryCase(
+            button.getAttribute("data-case-id") || "",
+            button.getAttribute("data-case-remediation") || "stage",
+            button.getAttribute("data-case-detail") || "Recovery remediation requested.",
+            button.getAttribute("data-case-label") || "Recovery case",
+          ).catch((error) => {{
+            actionNote.textContent = `Recovery remediation failed: ${{String(error)}}`;
           }});
         }});
       }});

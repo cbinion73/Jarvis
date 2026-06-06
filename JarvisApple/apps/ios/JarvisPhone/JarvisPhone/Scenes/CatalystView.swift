@@ -745,6 +745,23 @@ struct CatalystView: View {
         }
     }
 
+    private func remediateCatalystRecovery(_ entry: CatalystRecoveryCaseEntry) async {
+        actionInFlight = "recovery-remediation:\(entry.id)"
+        opsMessage = "\(entry.remediationActionLabel) for \(entry.title)…"
+        defer { actionInFlight = nil }
+        do {
+            _ = try await AppleAPIClient.shared.remediateCatalystRecoveryCase(
+                entry.caseId,
+                actionType: entry.remediationActionType,
+                note: "Catalyst ran \(entry.remediationActionLabel.lowercased()) from the native ops studio."
+            )
+            await loadOpsStudio()
+            opsMessage = "\(entry.remediationActionLabel) finished for \(entry.title)."
+        } catch {
+            opsMessage = "Unable to run recovery remediation: \(error.localizedDescription)"
+        }
+    }
+
     private func queueCatalystAgentRun(_ agent: CatalystAgentOpsEntry) async {
         actionInFlight = "agent:\(agent.id)"
         opsMessage = "Queueing \(agent.name)…"
@@ -918,7 +935,7 @@ struct CatalystView: View {
                 Text(entry.title)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.white)
-                Text("\(entry.statusLabel) · \(entry.executionCount)x loop")
+                Text("\(entry.statusLabel) · \(entry.executionCount)x loop · \(entry.remediationStatusLabel) · \(entry.remediationCount)x remediation")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 Text(entry.detail)
@@ -926,19 +943,35 @@ struct CatalystView: View {
                     .foregroundStyle(.secondary.opacity(0.9))
             }
             Spacer()
-            Button {
-                Task { await executeCatalystRecovery(entry) }
-            } label: {
-                Text(entry.nextActionLabel)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .background(.pink.opacity(0.75), in: Capsule())
+            VStack(alignment: .trailing, spacing: 8) {
+                Button {
+                    Task { await executeCatalystRecovery(entry) }
+                } label: {
+                    Text(entry.nextActionLabel)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(.pink.opacity(0.75), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(actionInFlight != nil)
+                .opacity(actionInFlight != nil ? 0.7 : 1.0)
+
+                Button {
+                    Task { await remediateCatalystRecovery(entry) }
+                } label: {
+                    Text(entry.remediationActionLabel)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(Color(red: 0.45, green: 0.83, blue: 0.75).opacity(0.78), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(actionInFlight != nil)
+                .opacity(actionInFlight != nil ? 0.7 : 1.0)
             }
-            .buttonStyle(.plain)
-            .disabled(actionInFlight != nil)
-            .opacity(actionInFlight != nil ? 0.7 : 1.0)
         }
         .padding(10)
         .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12, style: .continuous))

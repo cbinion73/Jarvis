@@ -723,12 +723,25 @@ def _build_catalyst_ops_overview(runtime: Any) -> dict[str, Any]:
                 "status_label": str(item.get("status_label") or item.get("status") or "Open").strip() or "Open",
                 "detail": str(item.get("detail") or "").strip() or "Recovery case needs review.",
                 "execution_count": int(item.get("execution_count", 0) or 0),
+                "remediation_status": str(item.get("remediation_status") or "available").strip() or "available",
+                "remediation_status_label": str(item.get("remediation_status_label") or "Available").strip() or "Available",
+                "remediation_count": int(item.get("remediation_count", 0) or 0),
                 "related_route": str(item.get("related_route") or "/recovery-center").strip() or "/recovery-center",
                 "next_action_type": "retry" if str(item.get("status") or "").strip().lower() not in {"watch", "resolved"} else "stabilize",
                 "next_action_label": (
                     "Execute Retry Loop"
                     if str(item.get("status") or "").strip().lower() not in {"watch", "resolved"}
                     else "Stabilize Watch"
+                ),
+                "remediation_action_type": (
+                    "execute"
+                    if str(item.get("remediation_status") or "").strip().lower() in {"staged", "available"}
+                    else "stage"
+                ),
+                "remediation_action_label": (
+                    "Execute Auto-Remediation"
+                    if str(item.get("remediation_status") or "").strip().lower() in {"staged", "available"}
+                    else "Restage Auto-Remediation"
                 ),
             }
             for item in recovery_cases[:4]
@@ -890,6 +903,47 @@ def _execute_catalyst_recovery_case(*, case_id: str, actor: str, action_type: st
         detail=detail,
         why_now="The native iPhone ops studio advanced a durable recovery case directly from the phone surface.",
         result_summary=f"Recovery case moved to {str(case.get('status_label') or case.get('status') or 'Investigating').strip()}",
+        route=str(case.get("related_route") or "/recovery-center").strip() or "/recovery-center",
+        route_label="Open Recovery Center",
+        related_kind="recovery-case",
+        related_label=str(case.get("case_id") or case_id).strip(),
+        succeeded=True,
+    )
+    focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module="Recovery",
+        reason=detail,
+        route="/recovery-center",
+        actor=actor,
+    )
+    return {"status": "recorded", "case": case, "action": action_entry, "focus": focus}
+
+
+def _remediate_catalyst_recovery_case(*, case_id: str, actor: str, action_type: str, note: str = "") -> dict[str, Any]:
+    store = RecoveryCaseStore(_ACTIVITY_AUDIT_ROOT)
+    case = store.record_remediation(case_id, actor=actor, action_type=action_type, note=note)
+    detail = note or (
+        f"Auto-remediation staged for {str(case.get('title') or case_id).strip()}."
+        if action_type == "stage"
+        else f"Auto-remediation executed for {str(case.get('title') or case_id).strip()}."
+    )
+    action_entry = RecoveryActionStore(_ACTIVITY_AUDIT_ROOT).record_action(
+        action_type=f"remediation-{action_type}",
+        target_kind="recovery-case",
+        target_label=str(case.get("title") or "Recovery case").strip() or "Recovery case",
+        target_id=str(case.get("case_id") or case_id).strip(),
+        detail=detail,
+        route="/recovery-center",
+        status="staged" if action_type == "stage" else "executed",
+    )
+    _record_operator_action(
+        actor=actor,
+        domain="catalyst",
+        action="Stage Catalyst Recovery Auto-Remediation" if action_type == "stage" else "Execute Catalyst Recovery Auto-Remediation",
+        detail=detail,
+        why_now="The native iPhone ops studio advanced a durable auto-remediation plan directly from the phone surface.",
+        result_summary=(
+            f"Recovery remediation now {str(case.get('remediation_status_label') or case.get('remediation_status') or 'Staged').strip()}"
+        ),
         route=str(case.get("related_route") or "/recovery-center").strip() or "/recovery-center",
         route_label="Open Recovery Center",
         related_kind="recovery-case",
@@ -11118,6 +11172,26 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         try:
             result = await asyncio.to_thread(
                 _execute_catalyst_recovery_case,
+                case_id=case_id,
+                actor=actor,
+                action_type=action_type,
+                note=note,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _ok(result)
+
+    @app.post("/api/apple/catalyst/recovery-cases/{case_id}/remediation")
+    async def apple_catalyst_recovery_remediation(case_id: str, payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        action_type = str(payload.get("action_type") or "stage").strip().lower() or "stage"
+        note = str(payload.get("note") or "").strip()
+        try:
+            result = await asyncio.to_thread(
+                _remediate_catalyst_recovery_case,
                 case_id=case_id,
                 actor=actor,
                 action_type=action_type,

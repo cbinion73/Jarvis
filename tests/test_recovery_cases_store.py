@@ -83,6 +83,46 @@ class RecoveryCaseStoreTests(unittest.TestCase):
             snapshot = json.loads(store.path.read_text(encoding="utf-8"))
             self.assertEqual(snapshot[0]["execution_count"], 1)
 
+    def test_record_remediation_persists_remediation_state_and_watch_transition(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            store = RecoveryCaseStore(root)
+            created = store.upsert_case(
+                source_kind="integration-failure",
+                title="Repair Maps bridge",
+                detail="Route relay needs a safe remediation plan.",
+                related_route="/recovery-center",
+                related_key="integration:maps-bridge",
+            )
+
+            staged = store.record_remediation(
+                created["case_id"],
+                actor="Chris",
+                action_type="stage",
+                note="Stage auto-remediation before the next route hydration window.",
+            )
+            executed = store.record_remediation(
+                created["case_id"],
+                actor="Chris",
+                action_type="execute",
+                note="Execute auto-remediation after the route hydration window opens.",
+            )
+
+            self.assertEqual(staged["remediation_status"], "staged")
+            self.assertEqual(staged["remediation_status_label"], "Staged")
+            self.assertEqual(staged["remediation_count"], 1)
+            self.assertEqual(executed["remediation_status"], "executed")
+            self.assertEqual(executed["remediation_status_label"], "Executed")
+            self.assertEqual(executed["remediation_count"], 2)
+            self.assertEqual(executed["status"], "watch")
+            self.assertEqual(executed["status_label"], "Watch")
+            self.assertEqual(executed["history"][-1]["action"], "remediation-execute")
+            self.assertEqual(executed["history"][-1]["detail"], "Execute auto-remediation after the route hydration window opens.")
+
+            snapshot = json.loads(store.path.read_text(encoding="utf-8"))
+            self.assertEqual(snapshot[0]["remediation_count"], 2)
+            self.assertEqual(snapshot[0]["last_remediation_action"], "execute")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -110,6 +110,12 @@ class RecoveryCaseStore:
                         "detail": detail.strip() or "Recovery case opened.",
                     }
                 ],
+                "remediation_status": "available",
+                "remediation_status_label": "Available",
+                "remediation_count": 0,
+                "last_remediation_at": "",
+                "last_remediation_action": "",
+                "last_remediation_status": "",
             }
             records.append(record)
             self._save(records)
@@ -119,6 +125,12 @@ class RecoveryCaseStore:
         existing["detail"] = detail.strip() or str(existing.get("detail", "")).strip() or "Recovery case needs review."
         existing["related_route"] = related_route.strip() or str(existing.get("related_route", "")).strip() or "/recovery-center"
         existing["metadata"] = {**dict(existing.get("metadata") or {}), **dict(metadata or {})}
+        existing.setdefault("remediation_status", "available")
+        existing.setdefault("remediation_status_label", "Available")
+        existing.setdefault("remediation_count", 0)
+        existing.setdefault("last_remediation_at", "")
+        existing.setdefault("last_remediation_action", "")
+        existing.setdefault("last_remediation_status", "")
         existing["updated_at"] = now
         self._save(records)
         return deepcopy(existing)
@@ -213,5 +225,62 @@ class RecoveryCaseStore:
             }
         )
         target["history"] = history[-16:]
+        self._save(records)
+        return deepcopy(target)
+
+    def record_remediation(
+        self,
+        case_id: str,
+        *,
+        actor: str,
+        action_type: str,
+        note: str = "",
+    ) -> dict[str, Any]:
+        normalized_action = action_type.strip().lower()
+        if normalized_action not in {"stage", "execute"}:
+            raise ValueError("Unsupported recovery remediation action.")
+        records = self._load_json()
+        target = None
+        for item in records:
+            if str(item.get("case_id", "")).strip() == case_id.strip():
+                target = item
+                break
+        if target is None:
+            raise KeyError("Recovery case not found.")
+
+        now = _now_iso()
+        remediation_count = int(target.get("remediation_count", 0) or 0) + 1
+        remediation_status = "staged" if normalized_action == "stage" else "executed"
+        remediation_label = "Staged" if normalized_action == "stage" else "Executed"
+
+        target["remediation_status"] = remediation_status
+        target["remediation_status_label"] = remediation_label
+        target["remediation_count"] = remediation_count
+        target["last_remediation_at"] = now
+        target["last_remediation_action"] = normalized_action
+        target["last_remediation_status"] = remediation_status
+        target["updated_at"] = now
+        target["last_action_at"] = now
+        target["last_action"] = f"remediation-{normalized_action}"
+        if normalized_action == "execute":
+            target["status"] = "watch"
+            target["status_label"] = "Watch"
+
+        history = list(target.get("history") or [])
+        history.append(
+            {
+                "timestamp": now,
+                "action": f"remediation-{normalized_action}",
+                "status": str(target.get("status") or "open"),
+                "actor": actor.strip() or "Chris",
+                "detail": note.strip()
+                or (
+                    "Recovery auto-remediation staged for the next safe execution window."
+                    if normalized_action == "stage"
+                    else "Recovery auto-remediation executed and moved the case into watch."
+                ),
+            }
+        )
+        target["history"] = history[-20:]
         self._save(records)
         return deepcopy(target)
