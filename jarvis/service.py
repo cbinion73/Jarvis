@@ -949,12 +949,15 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         packet: str = Query(default=""),
         theme: str = Query(default=""),
     ) -> str:
-        # Glass is the default. Only an explicit ?theme=nexus query param overrides it.
+        # The command center is the default web landing surface. Theme shells remain
+        # available explicitly so the richer module work is visible at the main host.
         if theme == "nexus" and _NEXUS_THEME_AVAILABLE:
             return _render_nexus_shell(runtime, initial_packet=packet)
-        if _GLASS_THEME_AVAILABLE:
+        if theme == "glass" and _GLASS_THEME_AVAILABLE:
             return _render_glass_shell(runtime, initial_packet=packet)
-        return render_voice_shell(runtime, initial_packet=packet)
+        if theme == "voice":
+            return render_voice_shell(runtime, initial_packet=packet)
+        return render_command_center_index_html(build_command_center_index())
 
     @app.get("/nexus", response_class=HTMLResponse)
     async def nexus_shortcut(packet: str = Query(default="")) -> str:
