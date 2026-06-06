@@ -1,0 +1,195 @@
+[
+  {
+    "case_id": "bf98bcbe-40dd-4bba-990b-511e2672b1cb",
+    "source_kind": "integration",
+    "title": "openai-api supervision recovery",
+    "detail": "openai-api surfaced a failing integration inside Supervision. OPENAI_API_KEY is missing",
+    "status": "open",
+    "status_label": "Open",
+    "related_route": "/recovery-center",
+    "related_key": "openai-api",
+    "metadata": {
+      "origin_module": "supervision",
+      "integration_name": "openai-api",
+      "integration_ok": false,
+      "integration_detail": "OPENAI_API_KEY is missing"
+    },
+    "created_at": "2026-06-06T10:19:17.309180+00:00",
+    "updated_at": "2026-06-06T10:20:00.263217+00:00",
+    "last_action_at": "2026-06-06T10:19:17.309180+00:00",
+    "last_action": "opened",
+    "history": [
+      {
+        "timestamp": "2026-06-06T10:19:17.309180+00:00",
+        "action": "opened",
+        "status": "open",
+        "detail": "openai-api surfaced a failing integration inside Supervision. OPENAI_API_KEY is missing"
+      }
+    ],
+    "remediation_status": "available",
+    "remediation_status_label": "Available",
+    "remediation_count": 0,
+    "last_remediation_at": "",
+    "last_remediation_action": "",
+    "last_remediation_status": "",
+    "remediation_plan": [],
+    "remediation_plan_count": 0,
+    "remediation_plan_completed_count": 0,
+    "remediation_plan_status": "unplanned",
+    "remediation_plan_status_label": "Unplanned",
+    "next_plan_step_id": "",
+    "next_plan_step_label": ""
+  },
+  {
+    "case_id": "7c2c4163-55d1-406a-8b3a-f21946549c0c",
+    "source_kind": "integration-failure",
+    "title": "Repair openviking",
+    "detail": "JARVIS_OPENVIKING_ENABLED is false",
+    "status": "open",
+    "status_label": "Open",
+    "related_route": "/supervision-snapshot",
+    "related_key": "integration:openviking",
+    "metadata": {
+      "integration_name": "openviking"
+    },
+    "created_at": "2026-06-06T08:45:03.740913+00:00",
+    "updated_at": "2026-06-06T09:37:57.193624+00:00",
+    "last_action_at": "2026-06-06T08:45:03.740913+00:00",
+    "last_action": "opened",
+    "history": [
+      {
+        "timestamp": "2026-06-06T08:45:03.740913+00:00",
+        "action": "opened",
+        "status": "open",
+        "detail": "JARVIS_OPENVIKING_ENABLED is false"
+      }
+    ],
+    "remediation_status": "available",
+    "remediation_status_label": "Available",
+    "remediation_count": 0,
+    "last_remediation_at": "",
+    "last_remediation_action": "",
+    "last_remediation_status": "",
+    "remediation_plan": [],
+    "remediation_plan_count": 0,
+    "remediation_plan_completed_count": 0,
+    "remediation_plan_status": "unplanned",
+    "remediation_plan_status_label": "Unplanned",
+    "next_plan_step_id": "",
+    "next_plan_step_label": ""
+  },
+  {
+    "case_id": "08b40115-0ed7-4aaa-8d49-87de704a90b8",
+    "source_kind": "integration-failure",
+    "title": "Repair home-assistant",
+    "detail": "HOME_ASSISTANT_URL or HOME_ASSISTANT_TOKEN is missing",
+    "status": "open",
+    "status_label": "Open",
+    "related_route": "/supervision-snapshot",
+    "related_key": "integration:home-assistant",
+    "metadata": {
+      "integration_name": "home-assistant"
+    },
+    "created_at": "2026-06-06T08:45:03.740336+00:00",
+    "updated_at": "2026-06-06T09:37:57.193176+00:00",
+    "last_action_at": "2026-06-06T08:45:03.740336+00:00",
+    "last_action": "opened",
+    "history": [
+      {
+        "timestamp": "2026-06-06T08:45:03.740336+00:00",
+        "action": "opened",
+        "status": "open",
+        "detail": "HOME_ASSISTANT_URL or HOME_ASSISTANT_TOKEN is missing"
+      }
+    ],
+    "remediation_status": "available",
+    "remediation_status_label": "Available",
+    "remediation_count": 0,
+    "last_remediation_at": "",
+    "last_remediation_action": "",
+    "last_remediation_status": "",
+    "remediation_plan": [],
+    "remediation_plan_count": 0,
+    "remediation_plan_completed_count": 0,
+    "remediation_plan_status": "unplanned",
+    "remediation_plan_status_label": "Unplanned",
+    "next_plan_step_id": "",
+    "next_plan_step_label": ""
+  },
+  {
+    "case_id": "bf87290f-dff1-40a8-9e40-c6c8878111bf",
+    "source_kind": "integration-failure",
+    "title": "Repair google-workspace",
+    "detail": "Google client secret is missing",
+    "status": "open",
+    "status_label": "Open",
+    "related_route": "/supervision-snapshot",
+    "related_key": "integration:google-workspace",
+    "metadata": {
+      "integration_name": "google-workspace"
+    },
+    "created_at": "2026-06-06T08:45:03.739628+00:00",
+    "updated_at": "2026-06-06T09:37:57.192698+00:00",
+    "last_action_at": "2026-06-06T08:45:03.739628+00:00",
+    "last_action": "opened",
+    "history": [
+      {
+        "timestamp": "2026-06-06T08:45:03.739628+00:00",
+        "action": "opened",
+        "status": "open",
+        "detail": "Google client secret is missing"
+      }
+    ],
+    "remediation_status": "available",
+    "remediation_status_label": "Available",
+    "remediation_count": 0,
+    "last_remediation_at": "",
+    "last_remediation_action": "",
+    "last_remediation_status": "",
+    "remediation_plan": [],
+    "remediation_plan_count": 0,
+    "remediation_plan_completed_count": 0,
+    "remediation_plan_status": "unplanned",
+    "remediation_plan_status_label": "Unplanned",
+    "next_plan_step_id": "",
+    "next_plan_step_label": ""
+  },
+  {
+    "case_id": "bc549d7f-cc5b-49a6-af25-a5f4d93afc6c",
+    "source_kind": "integration-failure",
+    "title": "Repair openai-api",
+    "detail": "OPENAI_API_KEY is missing",
+    "status": "open",
+    "status_label": "Open",
+    "related_route": "/supervision-snapshot",
+    "related_key": "integration:openai-api",
+    "metadata": {
+      "integration_name": "openai-api"
+    },
+    "created_at": "2026-06-06T08:45:03.738491+00:00",
+    "updated_at": "2026-06-06T09:37:57.191996+00:00",
+    "last_action_at": "2026-06-06T08:45:03.738491+00:00",
+    "last_action": "opened",
+    "history": [
+      {
+        "timestamp": "2026-06-06T08:45:03.738491+00:00",
+        "action": "opened",
+        "status": "open",
+        "detail": "OPENAI_API_KEY is missing"
+      }
+    ],
+    "remediation_status": "available",
+    "remediation_status_label": "Available",
+    "remediation_count": 0,
+    "last_remediation_at": "",
+    "last_remediation_action": "",
+    "last_remediation_status": "",
+    "remediation_plan": [],
+    "remediation_plan_count": 0,
+    "remediation_plan_completed_count": 0,
+    "remediation_plan_status": "unplanned",
+    "remediation_plan_status_label": "Unplanned",
+    "next_plan_step_id": "",
+    "next_plan_step_label": ""
+  }
+]

@@ -125,22 +125,22 @@
     "source": "repo-health",
     "evidence": {
       "git_status_excerpt": [
-        "M .agents/skills/bmad-advanced-elicitation/methods.csv",
-        " M .agents/skills/bmad-agent-analyst/SKILL.md",
-        " M .agents/skills/bmad-agent-architect/SKILL.md",
-        " M .agents/skills/bmad-agent-dev/SKILL.md",
-        " M .agents/skills/bmad-agent-dev/customize.toml",
-        " M .agents/skills/bmad-agent-pm/SKILL.md",
-        " M .agents/skills/bmad-agent-pm/customize.toml",
-        " M .agents/skills/bmad-agent-tech-writer/SKILL.md",
-        " M .agents/skills/bmad-agent-ux-designer/SKILL.md",
-        " M .agents/skills/bmad-agent-ux-designer/customize.toml",
-        " M .agents/skills/bmad-brainstorming/steps/step-03-technique-execution.md",
-        " M .agents/skills/bmad-brainstorming/workflow.md"
+        "M JarvisApple/Sources/JarvisKit/AppleAPIClient.swift",
+        " M JarvisApple/Sources/JarvisKit/Models/SystemsAdminModels.swift",
+        " M JarvisApple/Tests/JarvisKitTests/Fixtures/apple_payload_fixture.json",
+        " M JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Scenes/SettingsView.swift",
+        " M data/chronicle/entries.jsonl",
+        " M data/logs/actions.jsonl",
+        " M data/memory/entries_log.jsonl",
+        " M data/memory/entries_state_log.jsonl",
+        " M data/memory/profile_facts_log.jsonl",
+        " M data/memory/profile_facts_state_log.jsonl",
+        " M data/memory/proposals_log.jsonl",
+        " M data/memory/proposals_state_log.jsonl"
       ]
     },
     "created_at": "2026-06-02T11:21:09.443642+00:00",
-    "updated_at": "2026-06-02T11:57:41.654720+00:00",
+    "updated_at": "2026-06-06T10:57:27.643187+00:00",
     "last_result": {},
     "last_run_at": ""
   },
@@ -178,7 +178,7 @@
       "heavy": true
     },
     "created_at": "2026-06-02T11:21:13.272891+00:00",
-    "updated_at": "2026-06-02T11:57:41.654720+00:00",
+    "updated_at": "2026-06-06T10:57:27.643187+00:00",
     "last_result": {},
     "last_run_at": ""
   }

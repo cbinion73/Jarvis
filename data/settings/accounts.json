@@ -4,11 +4,11 @@
     "owner_user_id": "chris",
     "owner_display_name": "Chris",
     "provider": "google",
-    "service_scope": "mail_calendar",
+    "service_scope": "calendar",
     "label": "Chris Gmail",
     "login_hint": "cbinion73@gmail.com",
-    "status": "connected",
-    "notes": "Google login complete."
+    "status": "watch",
+    "notes": "Calendar connector is waiting on credential repair."
   },
   {
     "account_id": "fde50967-da96-4d50-a313-66d93ff323e3",

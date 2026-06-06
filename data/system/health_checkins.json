@@ -1,0 +1,32 @@
+[
+  {
+    "checkin_id": "2182bae2-cf9f-4916-a80e-c808ac3d941e",
+    "actor_id": "chris",
+    "symptoms": "Morning recovery dip",
+    "note": "Smoke path for the new review lane.",
+    "energy_level": 4,
+    "sleep_hours": 5.5,
+    "stress_level": 6,
+    "source": "smoke-health",
+    "saved_at": "2026-06-06T10:11:37.231829+00:00",
+    "review_status": "watch",
+    "review_status_label": "Watch",
+    "review_note": "Smoke review marked this for watch.",
+    "reviewed_at": "2026-06-06T10:11:43.304504+00:00"
+  },
+  {
+    "checkin_id": "6a2c6af3-dec3-46b4-92f1-ad3994d53f05",
+    "actor_id": "chris",
+    "symptoms": "Morning fatigue",
+    "note": "Live smoke from localhost health center.",
+    "energy_level": 4,
+    "sleep_hours": 5.5,
+    "stress_level": 6,
+    "source": "local-smoke",
+    "saved_at": "2026-06-06T09:10:23.104966+00:00",
+    "review_status": "",
+    "review_status_label": "",
+    "review_note": "",
+    "reviewed_at": ""
+  }
+]
