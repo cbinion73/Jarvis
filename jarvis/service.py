@@ -2765,10 +2765,11 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "status": "Useful" if int(roster.get("item_count", 0) or 0) else "Wired",
             "summary": "Agent Operations now has a dedicated module route with live roster posture, task-agent visibility, mission-linked assignment editing, and route-level mutation controls inside JARVIS.",
             "what_became_real": "Agent Operations is now a standalone app module with visible core and task agents, mission-linked assignment edits, and route-level mutation controls instead of being split across command-center summaries and hierarchy/workspace routes.",
-            "remains_partial": "Broader cross-route continuity still needs follow-on slices, but per-agent outcome review is now visible inside the standalone route.",
+            "remains_partial": "Broader per-agent workflow depth still needs follow-on slices, but Agent Ops actions now feed visible route-level continuity back into the standalone screen.",
             "agent_ops_roster": roster,
             "mission_options": mission_options,
             "agent_reviews": agent_reviews,
+            "recent_activity": [],
             "registry": {},
             "background_agents": {},
             "agent_runtime": {},
@@ -2782,6 +2783,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "task_agents": int(counts.get("task_agents", 0) or 0),
                 "core_agents": int(counts.get("core_agents", 0) or 0),
                 "promoted": int(counts.get("promoted", 0) or 0),
+                "recent_activity_count": 0,
             },
             "proof_paths": {
                 "module_route": "/agent-ops-center",
@@ -2956,6 +2958,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["status"] = "Useful"
             payload["summary"] = "Agent operations route is live with partial runtime or scheduler hydration."
             payload["remains_partial"] = "Some ops sources still failed to hydrate; inspect the payload preview for details."
+
+        payload["recent_activity"] = _module_recent_activity(route="/agent-ops-center", domain="agent-ops")
+        payload["counts"]["recent_activity_count"] = len(payload["recent_activity"])
 
         return payload
 

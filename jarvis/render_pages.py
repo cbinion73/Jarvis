@@ -1470,6 +1470,10 @@ def render_agent_ops_module_page(payload: dict) -> str:
         <h2>Proof Paths</h2>
         <ul id="proof-list"></ul>
       </section>
+      <section class="panel span-4">
+        <h2>Recent Agent Ops Continuity</h2>
+        <ul id="agent-ops-activity-list"></ul>
+      </section>
       <section class="panel span-8">
         <h2>Payload Preview</h2>
         <pre id="payload-preview"></pre>
@@ -1491,6 +1495,7 @@ def render_agent_ops_module_page(payload: dict) -> str:
     const schedulerEl = document.getElementById("scheduler-list");
     const runtimeEl = document.getElementById("runtime-list");
     const proofEl = document.getElementById("proof-list");
+    const recentActivityEl = document.getElementById("agent-ops-activity-list");
     const payloadPreview = document.getElementById("payload-preview");
     const statusNote = document.getElementById("agent-ops-status-note");
     const actionNote = document.getElementById("agent-action-note");
@@ -1546,10 +1551,43 @@ def render_agent_ops_module_page(payload: dict) -> str:
         if (!response.ok) {{
           throw new Error(payload.detail || payload.error || "Queue request failed");
         }}
-        actionNote.textContent = `Queued ${{agentId}} with item ${{payload.item_id || "unknown"}}.`;
+        const recorded = await recordAgentOpsActivity({{
+          actor: "Chris",
+          domain: "agent-ops",
+          action: "Queue Agent Run",
+          title: agentId,
+          status: String(payload.status || "queued"),
+          detail: `Action succeeded: /api/scheduler/run/${{agentId}}`,
+          why_now: `Agent Operations queued a live runtime cycle for ${{agentId}}.`,
+          result_summary: `Agent run queued with item ${{String(payload.item_id || "unknown")}}.`,
+          route: "/agent-ops-center",
+          route_label: "Open Agent Ops",
+          related_kind: "agent",
+          related_label: agentId,
+          succeeded: true,
+        }});
+        actionNote.textContent = recorded
+          ? `Queued ${{agentId}} with item ${{payload.item_id || "unknown"}} and recorded it in shared activity.`
+          : `Queued ${{agentId}} with item ${{payload.item_id || "unknown"}}.`;
         await refreshAgentOpsState();
       }} catch (error) {{
-        actionNote.textContent = `Queue Agent Run failed: ${{String(error)}}`;
+        const errorText = String(error);
+        await recordAgentOpsActivity({{
+          actor: "Chris",
+          domain: "agent-ops",
+          action: "Queue Agent Run",
+          title: agentId,
+          status: "failed",
+          detail: `Action failed: /api/scheduler/run/${{agentId}}`,
+          why_now: errorText,
+          result_summary: `Queue Agent Run failed: ${{errorText}}`,
+          route: "/agent-ops-center",
+          route_label: "Open Agent Ops",
+          related_kind: "agent",
+          related_label: agentId,
+          succeeded: false,
+        }});
+        actionNote.textContent = `Queue Agent Run failed: ${{errorText}}`;
       }}
     }}
 
@@ -1912,6 +1950,9 @@ def render_agent_ops_module_page(payload: dict) -> str:
       ].join("");
 
       proofEl.innerHTML = Object.entries(proofs).map(([key, value]) => item(key, value)).join("");
+      recentActivityEl.innerHTML = (Array.isArray(payload.recent_activity) ? payload.recent_activity : []).length
+        ? payload.recent_activity.map((item) => `<li><strong>${{esc(item.title || "Agent Ops action")}}</strong><span>${{esc(item.subtitle || item.actor || "Operator continuity")}}</span><span>${{esc(item.detail || item.route_label || "")}}</span></li>`).join("")
+        : '<li><strong>No agent ops continuity recorded yet.</strong><span>Queue a run or update an assignment to start the route-level continuity trail.</span></li>';
       payloadPreview.textContent = JSON.stringify(payload, null, 2);
 
       document.querySelectorAll("[data-select-agent]").forEach((button) => {{

@@ -600,6 +600,7 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Queue Agent Run", agent_ops_html)
         self.assertIn("Save Assignment", agent_ops_html)
         self.assertIn("Outcome Review", agent_ops_html)
+        self.assertIn("Recent Agent Ops Continuity", agent_ops_html)
         self.assertIn("Promote Task Agent", agent_ops_html)
         self.assertIn("Retire Task Agent", agent_ops_html)
         self.assertIn("/assignment", agent_ops_html)
@@ -610,7 +611,9 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("mission_options", agent_ops_snapshot)
         self.assertIn("agent_reviews", agent_ops_snapshot)
         self.assertIn("scheduler_status", agent_ops_snapshot)
+        self.assertIn("recent_activity", agent_ops_snapshot)
         self.assertIn("task_agents", agent_ops_snapshot["counts"])
+        self.assertIn("recent_activity_count", agent_ops_snapshot["counts"])
         self.assertTrue(any(item.get("source_kind") == "task-agent" for item in agent_ops_snapshot["agent_ops_roster"]["items"]))
         self.assertGreaterEqual(len(agent_ops_snapshot["mission_options"]), 1)
         self.assertTrue(any(review.get("recent_decisions") is not None for review in agent_ops_snapshot["agent_reviews"].values()))
@@ -867,6 +870,30 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertTrue(any(item.get("title") == "Create Draft Project" for item in publish_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("title") == "Start Overnight Research" for item in huddle_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("title") == "Preview Route Intelligence" for item in navigation_snapshot["recent_activity"]))
+
+    def test_agent_ops_activity_populates_agent_ops_continuity(self) -> None:
+        asyncio.run(
+            self._route("/api/activity/operator-action", "POST")(
+                {
+                    "actor": "Chris",
+                    "domain": "agent-ops",
+                    "action": "Queue Agent Run",
+                    "detail": "Queued agent run from the Agent Ops route.",
+                    "why_now": "Agent Ops continuity smoke test.",
+                    "result_summary": "Agent run queued with item wi-123.",
+                    "route": "/agent-ops-center",
+                    "route_label": "Open Agent Ops",
+                    "related_kind": "agent",
+                    "related_label": "storm",
+                    "succeeded": True,
+                }
+            )
+        )
+
+        agent_ops_snapshot = self._json_body(asyncio.run(self._route("/api/agent-ops/module", "GET")()))
+
+        self.assertTrue(any(item.get("title") == "Queue Agent Run" for item in agent_ops_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("related_label") == "storm" for item in agent_ops_snapshot["recent_activity"]))
 
     def test_open_loop_action_populates_daily_brief_continuity(self) -> None:
         self.runtime.apply_open_loop_action = lambda actor_name, **kwargs: {
