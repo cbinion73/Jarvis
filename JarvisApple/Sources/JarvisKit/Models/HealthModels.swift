@@ -123,6 +123,10 @@ public struct HealthCheckInEntry: Codable, Sendable, Identifiable {
     public let stressLevel: Int?
     public let source: String
     public let savedAt: String
+    public let reviewStatus: String
+    public let reviewStatusLabel: String
+    public let reviewNote: String
+    public let reviewedAt: String
 
     public var id: String { checkinId }
 
@@ -136,12 +140,53 @@ public struct HealthCheckInEntry: Codable, Sendable, Identifiable {
         case stressLevel = "stress_level"
         case source
         case savedAt = "saved_at"
+        case reviewStatus = "review_status"
+        case reviewStatusLabel = "review_status_label"
+        case reviewNote = "review_note"
+        case reviewedAt = "reviewed_at"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        checkinId = try container.decode(String.self, forKey: .checkinId)
+        actorId = try container.decodeIfPresent(String.self, forKey: .actorId) ?? "chris"
+        symptoms = try container.decodeIfPresent(String.self, forKey: .symptoms) ?? ""
+        note = try container.decodeIfPresent(String.self, forKey: .note) ?? ""
+        energyLevel = try container.decodeIfPresent(Int.self, forKey: .energyLevel)
+        sleepHours = try container.decodeIfPresent(Double.self, forKey: .sleepHours)
+        stressLevel = try container.decodeIfPresent(Int.self, forKey: .stressLevel)
+        source = try container.decodeIfPresent(String.self, forKey: .source) ?? "manual"
+        savedAt = try container.decodeIfPresent(String.self, forKey: .savedAt) ?? ""
+        reviewStatus = try container.decodeIfPresent(String.self, forKey: .reviewStatus) ?? ""
+        reviewStatusLabel = try container.decodeIfPresent(String.self, forKey: .reviewStatusLabel) ?? ""
+        reviewNote = try container.decodeIfPresent(String.self, forKey: .reviewNote) ?? ""
+        reviewedAt = try container.decodeIfPresent(String.self, forKey: .reviewedAt) ?? ""
     }
 }
 
 public struct HealthCheckInOverview: Codable, Sendable {
     public let entries: [HealthCheckInEntry]
     public let count: Int
+    public let reviewLane: [HealthCheckInEntry]
+    public let reviewCount: Int
+    public let reviewStatusCounts: [String: Int]
+
+    enum CodingKeys: String, CodingKey {
+        case entries
+        case count
+        case reviewLane = "review_lane"
+        case reviewCount = "review_count"
+        case reviewStatusCounts = "review_status_counts"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        entries = try container.decodeIfPresent([HealthCheckInEntry].self, forKey: .entries) ?? []
+        count = try container.decodeIfPresent(Int.self, forKey: .count) ?? entries.count
+        reviewLane = try container.decodeIfPresent([HealthCheckInEntry].self, forKey: .reviewLane) ?? []
+        reviewCount = try container.decodeIfPresent(Int.self, forKey: .reviewCount) ?? reviewLane.count
+        reviewStatusCounts = try container.decodeIfPresent([String: Int].self, forKey: .reviewStatusCounts) ?? [:]
+    }
 }
 
 public struct HealthCheckInActionResult: Codable, Sendable {

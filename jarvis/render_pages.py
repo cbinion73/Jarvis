@@ -7737,6 +7737,12 @@ def render_health_module_page(payload: dict) -> str:
         <ul id="recent-checkins-list"></ul>
       </section>
       <section class="panel span-6">
+        <h2>Historical Review Lane</h2>
+        <p class="status-note" id="review-note-status">Use this to turn manual check-ins into a real coaching history instead of a passive log.</p>
+        <ul id="review-lane-list"></ul>
+        <pre id="review-output">Awaiting review action.</pre>
+      </section>
+      <section class="panel span-6">
         <h2>Payload Preview</h2>
         <pre id="payload-preview"></pre>
       </section>
@@ -7763,6 +7769,9 @@ def render_health_module_page(payload: dict) -> str:
     const checkinOutput = document.getElementById("checkin-output");
     const recentActivityList = document.getElementById("recent-activity-list");
     const recentCheckinsList = document.getElementById("recent-checkins-list");
+    const reviewNoteStatus = document.getElementById("review-note-status");
+    const reviewLaneList = document.getElementById("review-lane-list");
+    const reviewOutput = document.getElementById("review-output");
     const payloadPreview = document.getElementById("payload-preview");
 
     function esc(value) {{
@@ -7843,12 +7852,27 @@ def render_health_module_page(payload: dict) -> str:
         ? payload.recent_activity.map((item) => li(item.title || "Health action", item.subtitle || item.actor || "Operator continuity", item.detail || item.route_label || "")).join("")
         : '<li><strong>No health continuity recorded yet.</strong><span>Run triage or save a health objective to begin the route-level continuity trail.</span></li>';
       recentCheckinsList.innerHTML = (Array.isArray(payload.recent_checkins) ? payload.recent_checkins : []).length
-        ? payload.recent_checkins.map((item) => li(
-            item.symptoms || "Health check-in",
-            `Energy ${{item.energy_level ?? "n/a"}} · Sleep ${{item.sleep_hours ?? "n/a"}}h · Stress ${{item.stress_level ?? "n/a"}}`,
-            item.note || item.saved_at || ""
-          )).join("")
+        ? payload.recent_checkins.map((item) => `
+            <li>
+              <strong>${{esc(item.symptoms || "Health check-in")}}</strong>
+              <span>${{esc(`Energy ${{item.energy_level ?? "n/a"}} · Sleep ${{item.sleep_hours ?? "n/a"}}h · Stress ${{item.stress_level ?? "n/a"}}`)}}</span>
+              <span>${{esc(item.note || item.saved_at || "")}}</span>
+              <span>${{esc(item.review_status_label || "Awaiting review")}}</span>
+              <div class="button-row">
+                <button type="button" onclick="reviewHealthCheckin('${{esc(item.checkin_id || "")}}', 'watch')">Mark Watch</button>
+                <button type="button" onclick="reviewHealthCheckin('${{esc(item.checkin_id || "")}}', 'adjust')">Adjust Protocol</button>
+                <button type="button" onclick="reviewHealthCheckin('${{esc(item.checkin_id || "")}}', 'resolved')">Mark Resolved</button>
+              </div>
+            </li>
+          `).join("")
         : '<li><strong>No manual check-ins recorded yet.</strong><span>Save a health check-in to create durable longitudinal review data.</span></li>';
+      reviewLaneList.innerHTML = (Array.isArray(payload.review_lane) ? payload.review_lane : []).length
+        ? payload.review_lane.map((item) => li(
+            item.symptoms || "Health review",
+            item.review_status_label || "Reviewed",
+            item.review_note || item.note || item.reviewed_at || item.saved_at || ""
+          )).join("")
+        : '<li><strong>No reviewed check-ins yet.</strong><span>Mark a manual check-in as watch, adjust protocol, or resolved to build a true history lane.</span></li>';
 
       payloadPreview.textContent = JSON.stringify(payload, null, 2);
     }}
@@ -7982,6 +8006,37 @@ def render_health_module_page(payload: dict) -> str:
         await refreshHealthState();
       }} catch (error) {{
         checkinNoteStatus.textContent = `Health check-in save failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function reviewHealthCheckin(checkinId, status) {{
+      if (!checkinId) {{
+        return;
+      }}
+      reviewNoteStatus.textContent = "Updating health review…";
+      try {{
+        const response = await fetch(`/api/health/checkins/${{encodeURIComponent(checkinId)}}/review`, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            actor: "Chris",
+            status,
+            note: status === "adjust"
+              ? "Manual review flagged this check-in for a protocol adjustment."
+              : status === "watch"
+                ? "Manual review flagged this check-in for continued watch."
+                : "Manual review closed the check-in loop as resolved.",
+          }}),
+        }});
+        const payload = await response.json();
+        reviewOutput.textContent = JSON.stringify(payload, null, 2);
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Health review update failed");
+        }}
+        reviewNoteStatus.textContent = `Health history updated: ${{payload.checkin?.review_status_label || status}}.`;
+        await refreshHealthState();
+      }} catch (error) {{
+        reviewNoteStatus.textContent = `Health review update failed: ${{String(error)}}`;
       }}
     }}
 

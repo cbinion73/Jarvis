@@ -9941,7 +9941,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "status": "Useful",
             "summary": "Health now has a dedicated module route with live drift, objective, and triage posture inside JARVIS.",
             "what_became_real": "Health is now represented as a dedicated app module with visible route-owned continuity instead of a storyboard-only route.",
-            "remains_partial": "Deeper health workflows, historical review, and broader manual data entry still need follow-on slices.",
+            "remains_partial": "Deeper health workflows and broader manual data entry still need follow-on slices.",
             "signal_count": 0,
             "active_cluster_count": 0,
             "objective_count": 0,
@@ -10008,9 +10008,14 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         payload["recent_activity"] = _module_recent_activity(route="/health-center", domain="health")
         checkin_store = HealthCheckInStore()
         recent_checkins = checkin_store.list_checkins("chris", limit=6)
+        review_summary = checkin_store.review_summary("chris", limit=6)
         payload["recent_checkins"] = recent_checkins
         payload["checkin_count"] = len(recent_checkins)
+        payload["review_lane"] = list(review_summary.get("items") or [])
+        payload["review_count"] = int(review_summary.get("count") or 0)
+        payload["review_status_counts"] = dict(review_summary.get("counts") or {})
         payload["proof_paths"]["checkins_api"] = "/api/health/checkins"
+        payload["proof_paths"]["checkin_review_api"] = "/api/health/checkins/{checkin_id}/review"
         if recent_checkins:
             latest_checkin = recent_checkins[0]
             payload["summary"] = (
@@ -10034,7 +10039,16 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_health_checkins_get(actor: str = "chris") -> JSONResponse:
         store = HealthCheckInStore()
         entries = store.list_checkins(actor, limit=12)
-        return _json({"entries": entries, "count": len(entries)})
+        review_summary = store.review_summary(actor, limit=12)
+        return _json(
+            {
+                "entries": entries,
+                "count": len(entries),
+                "review_lane": list(review_summary.get("items") or []),
+                "review_count": int(review_summary.get("count") or 0),
+                "review_status_counts": dict(review_summary.get("counts") or {}),
+            }
+        )
 
     @app.post("/api/health/checkins")
     async def api_health_checkins_post(request: Request) -> JSONResponse:
@@ -10079,6 +10093,52 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         focus_entry = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
             module="Health",
             reason=str(entry.get("note") or "Health check-in updated the shared health continuity lane.").strip(),
+            route="/health-center",
+            actor=actor,
+        )
+        return _json({"status": "recorded", "checkin": entry, "focus": focus_entry})
+
+    @app.post("/api/health/checkins/{checkin_id}/review")
+    async def api_health_checkins_review(checkin_id: str, request: Request) -> JSONResponse:
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        actor = str(body.get("actor") or "Chris").strip() or "Chris"
+        review_note = str(body.get("note") or "").strip()
+        try:
+            entry = HealthCheckInStore().review_checkin(
+                checkin_id=checkin_id,
+                status=str(body.get("status") or "").strip(),
+                note=review_note,
+            )
+        except KeyError:
+            raise HTTPException(status_code=404, detail="Health check-in not found.")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        detail = str(entry.get("symptoms") or "Health check-in").strip() or "Health check-in"
+        label = str(entry.get("review_status_label") or entry.get("review_status") or "reviewed").strip() or "reviewed"
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": "health",
+                "action": "Review Health Check-In",
+                "title": detail,
+                "detail": f"Health check-in marked {label.lower()}.",
+                "why_now": review_note or "Health history review updated the longitudinal coaching lane.",
+                "result_summary": f"Health check-in is now {label.lower()}.",
+                "related_route": "/health-center",
+                "route_label": "Open Health",
+                "related_kind": "health-checkin-review",
+                "related_label": str(entry.get("checkin_id") or "").strip(),
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        focus_entry = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module="Health",
+            reason=review_note or f"Health check-in moved into {label.lower()} review posture.",
             route="/health-center",
             actor=actor,
         )

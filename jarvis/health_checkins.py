@@ -14,6 +14,15 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _normalize_checkin(item: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(item)
+    normalized.setdefault("review_status", "")
+    normalized.setdefault("review_status_label", "")
+    normalized.setdefault("review_note", "")
+    normalized.setdefault("reviewed_at", "")
+    return normalized
+
+
 class HealthCheckInStore:
     def __init__(self, root: Path | None = None) -> None:
         base = root or (Path.cwd() / "data" / "system")
@@ -33,7 +42,7 @@ class HealthCheckInStore:
             return self._load_from_state_log(default)
         if not isinstance(payload, list):
             return self._load_from_state_log(default)
-        rows = [dict(item) for item in payload if isinstance(item, dict)]
+        rows = [_normalize_checkin(dict(item)) for item in payload if isinstance(item, dict)]
         return rows or self._load_from_state_log(default)
 
     def _load_from_state_log(self, default: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -47,14 +56,14 @@ class HealthCheckInStore:
                 payload = json.loads(line)
                 records = payload.get("records")
                 if isinstance(records, list):
-                    latest = [dict(item) for item in records if isinstance(item, dict)]
+                    latest = [_normalize_checkin(dict(item)) for item in records if isinstance(item, dict)]
         except (OSError, json.JSONDecodeError):
             return deepcopy(default)
         return latest or deepcopy(default)
 
     def _save(self, records: list[dict[str, Any]]) -> None:
         ordered = sorted(
-            [dict(item) for item in records if isinstance(item, dict)],
+            [_normalize_checkin(dict(item)) for item in records if isinstance(item, dict)],
             key=lambda item: str(item.get("saved_at", "")),
             reverse=True,
         )
@@ -71,6 +80,20 @@ class HealthCheckInStore:
             if str(item.get("actor_id", "")).strip().lower() == normalized_actor
         ]
         return deepcopy(rows[: max(1, limit)])
+
+    def review_summary(self, actor_id: str = "chris", limit: int = 6) -> dict[str, Any]:
+        rows = self.list_checkins(actor_id, limit=100)
+        reviewed = [dict(item) for item in rows if str(item.get("review_status") or "").strip()]
+        counts = {
+            "watch": len([item for item in reviewed if str(item.get("review_status") or "") == "watch"]),
+            "adjust": len([item for item in reviewed if str(item.get("review_status") or "") == "adjust"]),
+            "resolved": len([item for item in reviewed if str(item.get("review_status") or "") == "resolved"]),
+        }
+        return {
+            "count": len(reviewed),
+            "counts": counts,
+            "items": deepcopy(reviewed[: max(1, limit)]),
+        }
 
     def save_checkin(
         self,
@@ -94,7 +117,38 @@ class HealthCheckInStore:
             "stress_level": int(stress_level) if isinstance(stress_level, (int, float)) else None,
             "source": str(source).strip() or "manual",
             "saved_at": _now_iso(),
+            "review_status": "",
+            "review_status_label": "",
+            "review_note": "",
+            "reviewed_at": "",
         }
         records.append(entry)
         self._save(records)
         return deepcopy(entry)
+
+    def review_checkin(
+        self,
+        *,
+        checkin_id: str,
+        status: str,
+        note: str = "",
+    ) -> dict[str, Any]:
+        normalized_status = str(status).strip().lower()
+        labels = {
+            "watch": "Watch",
+            "adjust": "Adjust Protocol",
+            "resolved": "Resolved",
+        }
+        if normalized_status not in labels:
+            raise ValueError("Invalid health review status.")
+        records = self._load_json()
+        for item in records:
+            if str(item.get("checkin_id") or "").strip() != str(checkin_id).strip():
+                continue
+            item["review_status"] = normalized_status
+            item["review_status_label"] = labels[normalized_status]
+            item["review_note"] = str(note).strip()
+            item["reviewed_at"] = _now_iso()
+            self._save(records)
+            return deepcopy(item)
+        raise KeyError(f"Unknown check-in '{checkin_id}'.")

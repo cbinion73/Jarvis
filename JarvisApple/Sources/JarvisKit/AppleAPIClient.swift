@@ -529,6 +529,23 @@ public final class AppleAPIClient: Sendable {
         )
     }
 
+    public func reviewHealthCheckin(
+        checkinId: String,
+        status: String,
+        note: String,
+        actor: String = "chris"
+    ) async throws -> HealthCheckInActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let status: String
+            let note: String
+        }
+        return try await post(
+            "/api/apple/health/checkins/\(checkinId)/review",
+            body: Body(actor: actor, status: status, note: note)
+        )
+    }
+
     /// Push HealthKit samples from the iPhone to JARVIS for storage and analysis.
     ///
     /// - Returns: The number of samples successfully logged on the server.

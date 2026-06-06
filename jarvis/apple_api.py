@@ -8806,8 +8806,18 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
 
     @app.get("/api/apple/health/checkins")
     async def apple_health_checkins(actor: str = "chris"):
-        entries = HealthCheckInStore().list_checkins(actor, limit=8)
-        return _ok({"entries": entries, "count": len(entries)})
+        store = HealthCheckInStore()
+        entries = store.list_checkins(actor, limit=8)
+        review_summary = store.review_summary(actor, limit=8)
+        return _ok(
+            {
+                "entries": entries,
+                "count": len(entries),
+                "review_lane": list(review_summary.get("items") or []),
+                "review_count": int(review_summary.get("count") or 0),
+                "review_status_counts": dict(review_summary.get("counts") or {}),
+            }
+        )
 
     @app.post("/api/apple/health/checkins")
     async def apple_health_checkins_post(payload: dict):
@@ -8838,6 +8848,41 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
             module="Health",
             reason=str(entry.get("note") or "Manual health check-in updated the shared health lane.").strip(),
+            route="/health-center",
+            actor=actor,
+        )
+        return _ok({"status": "recorded", "checkin": entry, "focus": focus})
+
+    @app.post("/api/apple/health/checkins/{checkin_id}/review")
+    async def apple_health_checkins_review(checkin_id: str, payload: dict):
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        review_note = str(payload.get("note") or "").strip()
+        try:
+            entry = HealthCheckInStore().review_checkin(
+                checkin_id=checkin_id,
+                status=str(payload.get("status") or "").strip(),
+                note=review_note,
+            )
+        except KeyError:
+            raise HTTPException(status_code=404, detail="Health check-in not found.")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        _record_operator_action(
+            actor=actor,
+            domain="health",
+            action="Review Apple Health Check-In",
+            detail=f"Apple Health marked {str(entry.get('symptoms') or 'health check-in').strip() or 'health check-in'} as {str(entry.get('review_status_label') or 'reviewed').lower()}.",
+            why_now=review_note or "The iPhone health surface reviewed a manual check-in and promoted it into longitudinal continuity.",
+            result_summary=f"Apple health review set {str(entry.get('review_status_label') or 'reviewed').lower()}.",
+            route="/health-center",
+            route_label="Open Health",
+            related_kind="health-checkin-review",
+            related_label=str(entry.get("checkin_id") or "").strip(),
+            succeeded=True,
+        )
+        focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+            module="Health",
+            reason=review_note or f"Apple health review moved a check-in to {str(entry.get('review_status_label') or 'reviewed').lower()}.",
             route="/health-center",
             actor=actor,
         )

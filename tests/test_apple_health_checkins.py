@@ -74,6 +74,52 @@ class AppleHealthCheckInTests(unittest.TestCase):
         focus = ProgressFocusStore(Path("data/logs")).summary(limit=4)
         self.assertEqual(focus["latest"]["module"], "Health")
 
+    def test_apple_health_checkin_review_persists_review_lane_activity_and_progress(self) -> None:
+        post = self._route("/api/apple/health/checkins", "POST")
+        review = self._route("/api/apple/health/checkins/{checkin_id}/review", "POST")
+        get = self._route("/api/apple/health/checkins", "GET")
+
+        created = asyncio.run(
+            post(
+                {
+                    "actor": "chris",
+                    "actor_id": "chris",
+                    "symptoms": "Low energy after travel day",
+                    "note": "Captured in the native Health lane.",
+                    "energy_level": 4,
+                    "sleep_hours": 5.5,
+                    "stress_level": 6,
+                    "source": "test-apple-health",
+                }
+            )
+        )["data"]["checkin"]
+
+        response = asyncio.run(
+            review(
+                created["checkin_id"],
+                {
+                    "actor": "chris",
+                    "status": "watch",
+                    "note": "Monitor this for another day before escalating.",
+                },
+            )
+        )
+        listing = asyncio.run(get(actor="chris"))
+
+        self.assertTrue(response["ok"])
+        self.assertEqual(response["data"]["status"], "recorded")
+        self.assertEqual(response["data"]["checkin"]["review_status"], "watch")
+        self.assertEqual(response["data"]["focus"]["module"], "Health")
+        self.assertEqual(listing["data"]["review_count"], 1)
+        self.assertEqual(listing["data"]["review_lane"][0]["review_status_label"], "Watch")
+
+        recent = AuditLog(Path("data/logs")).list_recent(limit=4, entry_type="operator-action")
+        self.assertEqual(recent[0]["action"], "Review Apple Health Check-In")
+        self.assertEqual(recent[0]["related_kind"], "health-checkin-review")
+
+        focus = ProgressFocusStore(Path("data/logs")).summary(limit=4)
+        self.assertEqual(focus["latest"]["module"], "Health")
+
 
 if __name__ == "__main__":
     unittest.main()

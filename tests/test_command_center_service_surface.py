@@ -842,6 +842,9 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Manual Health Check-In", health_html)
         self.assertIn("Save Health Check-In", health_html)
         self.assertIn("Recent Manual Check-Ins", health_html)
+        self.assertIn("Historical Review Lane", health_html)
+        self.assertIn("Mark Watch", health_html)
+        self.assertIn("Adjust Protocol", health_html)
         self.assertIn("Recent Health Continuity", health_html)
         self.assertIn("/api/activity/operator-action", health_html)
         self.assertIn("status", health_snapshot)
@@ -849,10 +852,14 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("recent_activity", health_snapshot)
         self.assertIn("recent_checkins", health_snapshot)
         self.assertIn("checkin_count", health_snapshot)
+        self.assertIn("review_lane", health_snapshot)
+        self.assertIn("review_count", health_snapshot)
+        self.assertIn("review_status_counts", health_snapshot)
         self.assertIn("proof_paths", health_snapshot)
         self.assertEqual(health_snapshot["proof_paths"]["module_route"], "/health-center")
         self.assertEqual(health_snapshot["proof_paths"]["module_api"], "/api/health/module")
         self.assertEqual(health_snapshot["proof_paths"]["checkins_api"], "/api/health/checkins")
+        self.assertEqual(health_snapshot["proof_paths"]["checkin_review_api"], "/api/health/checkins/{checkin_id}/review")
 
     def test_home_action_events_persist_into_shared_activity_surfaces(self) -> None:
         record_response = asyncio.run(
@@ -1628,6 +1635,59 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertTrue(any(item.get("title") == "Save Health Check-In" for item in health_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("subtitle") == "Late night, no walk, and heavier dinner than normal." for item in health_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("related_kind") == "health-checkin" for item in activity_snapshot))
+        self.assertEqual(progress_snapshot["progress_next_focus"], "Health")
+        self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Health")
+
+    def test_health_checkin_review_persists_review_lane_and_shared_continuity(self) -> None:
+        async def _create_payload() -> dict[str, object]:
+            return {
+                "actor": "Chris",
+                "actor_id": "chris",
+                "symptoms": "Lingering fatigue after poor sleep",
+                "note": "Manual entry from the Health command center.",
+                "energy_level": 4,
+                "sleep_hours": 5.0,
+                "stress_level": 6,
+                "source": "test-health-route",
+            }
+
+        create_response = asyncio.run(
+            self._route("/api/health/checkins", "POST")(
+                SimpleNamespace(json=_create_payload)
+            )
+        )
+        created = self._json_body(create_response)["checkin"]
+
+        async def _review_payload() -> dict[str, object]:
+            return {
+                "actor": "Chris",
+                "status": "adjust",
+                "note": "Reduce training load and prioritize recovery protocol tomorrow.",
+            }
+
+        review_response = asyncio.run(
+            self._route("/api/health/checkins/{checkin_id}/review", "POST")(
+                created["checkin_id"],
+                SimpleNamespace(json=_review_payload),
+            )
+        )
+        listing = self._json_body(asyncio.run(self._route("/api/health/checkins", "GET")(actor="chris")))
+        health_snapshot = self._json_body(asyncio.run(self._route("/api/health/module", "GET")()))
+        activity_snapshot = self._json_body(asyncio.run(self._route("/api/activity", "GET")()))
+        progress_snapshot = self._json_body(asyncio.run(self._route("/api/progress/module", "GET")()))
+
+        result = self._json_body(review_response)
+
+        self.assertEqual(result["status"], "recorded")
+        self.assertEqual(result["checkin"]["review_status"], "adjust")
+        self.assertEqual(result["checkin"]["review_status_label"], "Adjust Protocol")
+        self.assertEqual(result["focus"]["module"], "Health")
+        self.assertEqual(listing["review_count"], 1)
+        self.assertEqual(listing["review_status_counts"]["adjust"], 1)
+        self.assertTrue(any(item.get("review_status") == "adjust" for item in health_snapshot["recent_checkins"]))
+        self.assertTrue(any(item.get("review_status") == "adjust" for item in health_snapshot["review_lane"]))
+        self.assertTrue(any(item.get("title") == "Review Health Check-In" for item in health_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("related_kind") == "health-checkin-review" for item in activity_snapshot))
         self.assertEqual(progress_snapshot["progress_next_focus"], "Health")
         self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Health")
 

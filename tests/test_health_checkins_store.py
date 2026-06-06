@@ -68,6 +68,32 @@ class HealthCheckInStoreTests(unittest.TestCase):
         self.assertEqual(replayed[0]["checkin_id"], saved["checkin_id"])
         self.assertEqual(replayed[0]["note"], "Using the replay path.")
 
+    def test_review_checkin_persists_review_state_and_summary(self) -> None:
+        store = HealthCheckInStore(Path("data/system"))
+        saved = store.save_checkin(
+            actor_id="chris",
+            symptoms="Delayed recovery after workout",
+            note="Energy stayed low through the afternoon.",
+            energy_level=4,
+            sleep_hours=6.0,
+            stress_level=5,
+            source="unit-test",
+        )
+
+        reviewed = store.review_checkin(
+            checkin_id=saved["checkin_id"],
+            status="adjust",
+            note="Shift tomorrow into a lighter recovery protocol.",
+        )
+        summary = store.review_summary("chris", limit=4)
+
+        self.assertEqual(reviewed["review_status"], "adjust")
+        self.assertEqual(reviewed["review_status_label"], "Adjust Protocol")
+        self.assertEqual(reviewed["review_note"], "Shift tomorrow into a lighter recovery protocol.")
+        self.assertEqual(summary["count"], 1)
+        self.assertEqual(summary["counts"]["adjust"], 1)
+        self.assertEqual(summary["items"][0]["checkin_id"], saved["checkin_id"])
+
 
 if __name__ == "__main__":
     unittest.main()

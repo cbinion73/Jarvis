@@ -14,6 +14,8 @@ struct HealthView: View {
     @State private var checkinStress = 4.0
     @State private var isSavingCheckin = false
     @State private var checkinStatusMessage = "Capture a manual health check-in when live signals are sparse or you want extra context."
+    @State private var isReviewingCheckin = false
+    @State private var reviewStatusMessage = "Review recent check-ins to turn them into a real coaching history lane."
 
     var body: some View {
         NavigationStack {
@@ -148,6 +150,8 @@ struct HealthView: View {
                 manualCheckInCard
 
                 recentCheckinsCard
+
+                reviewLaneCard
 
                 HStack(spacing: 8) {
                     if syncManager.isSyncing {
@@ -482,13 +486,134 @@ struct HealthView: View {
             } else {
                 ForEach(viewModel.checkins.prefix(4)) { checkin in
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(checkin.symptoms.isEmpty ? "Health check-in" : checkin.symptoms)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
+                        HStack(alignment: .top, spacing: 8) {
+                            Text(checkin.symptoms.isEmpty ? "Health check-in" : checkin.symptoms)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                            Spacer()
+                            if !checkin.reviewStatusLabel.isEmpty {
+                                Text(checkin.reviewStatusLabel)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.cyan)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 5)
+                                    .background(.cyan.opacity(0.12), in: Capsule())
+                            }
+                        }
                         Text("Energy \(checkin.energyLevel ?? 0) · Sleep \(checkin.sleepHours ?? 0, specifier: "%.1f")h · Stress \(checkin.stressLevel ?? 0)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         if !checkin.note.isEmpty {
+                            Text(checkin.note)
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.72))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        HStack(spacing: 8) {
+                            reviewActionButton(
+                                title: "Watch",
+                                tint: .yellow,
+                                disabled: isReviewingCheckin,
+                                action: {
+                                    Task {
+                                        await reviewCheckin(
+                                            checkin,
+                                            status: "watch",
+                                            note: "The iPhone health lane flagged this manual check-in for continued watch."
+                                        )
+                                    }
+                                }
+                            )
+                            reviewActionButton(
+                                title: "Adjust",
+                                tint: .orange,
+                                disabled: isReviewingCheckin,
+                                action: {
+                                    Task {
+                                        await reviewCheckin(
+                                            checkin,
+                                            status: "adjust",
+                                            note: "The iPhone health lane requested a protocol adjustment from this check-in."
+                                        )
+                                    }
+                                }
+                            )
+                            reviewActionButton(
+                                title: "Resolved",
+                                tint: .green,
+                                disabled: isReviewingCheckin,
+                                action: {
+                                    Task {
+                                        await reviewCheckin(
+                                            checkin,
+                                            status: "resolved",
+                                            note: "The iPhone health lane closed this check-in as resolved."
+                                        )
+                                    }
+                                }
+                            )
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(10)
+                    .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var reviewLaneCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Health Review Lane", systemImage: "cross.case.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .tracking(1.0)
+                    .foregroundStyle(.green.opacity(0.95))
+                Spacer()
+                if !viewModel.reviewLane.isEmpty {
+                    Text("\(viewModel.reviewLane.count)")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.green)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(.green.opacity(0.12), in: Capsule())
+                }
+            }
+
+            Text(reviewStatusMessage)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.68))
+                .fixedSize(horizontal: false, vertical: true)
+
+            if viewModel.reviewLane.isEmpty {
+                Text("No reviewed check-ins yet. Mark a recent entry as watch, adjust, or resolved to build a real longitudinal review trail.")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.68))
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                ForEach(viewModel.reviewLane.prefix(4)) { checkin in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(checkin.symptoms.isEmpty ? "Health review" : checkin.symptoms)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                            Spacer()
+                            Text(checkin.reviewStatusLabel.isEmpty ? "Reviewed" : checkin.reviewStatusLabel)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.green)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 5)
+                                .background(.green.opacity(0.12), in: Capsule())
+                        }
+                        if !checkin.reviewNote.isEmpty {
+                            Text(checkin.reviewNote)
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.72))
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else if !checkin.note.isEmpty {
                             Text(checkin.note)
                                 .font(.caption)
                                 .foregroundStyle(.white.opacity(0.72))
@@ -504,6 +629,25 @@ struct HealthView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func reviewActionButton(
+        title: String,
+        tint: Color,
+        disabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(tint)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 7)
+                .background(tint.opacity(0.12), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+        .opacity(disabled ? 0.6 : 1.0)
     }
 
     private func continuityCard(_ continuity: HealthContinuity) -> some View {
@@ -958,6 +1102,22 @@ struct HealthView: View {
             checkinStatusMessage = "Health check-in saved to JARVIS."
         } catch {
             checkinStatusMessage = "Unable to save check-in: \(error.localizedDescription)"
+        }
+    }
+
+    private func reviewCheckin(_ checkin: HealthCheckInEntry, status: String, note: String) async {
+        isReviewingCheckin = true
+        reviewStatusMessage = "Updating health review…"
+        defer { isReviewingCheckin = false }
+        do {
+            let result = try await viewModel.reviewCheckin(
+                checkinId: checkin.checkinId,
+                status: status,
+                note: note
+            )
+            reviewStatusMessage = "\(result.checkin.reviewStatusLabel.isEmpty ? "Health review updated" : result.checkin.reviewStatusLabel) saved to JARVIS."
+        } catch {
+            reviewStatusMessage = "Unable to update health review: \(error.localizedDescription)"
         }
     }
 

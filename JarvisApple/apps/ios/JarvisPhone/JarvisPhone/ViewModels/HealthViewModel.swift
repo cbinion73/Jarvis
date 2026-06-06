@@ -6,6 +6,7 @@ final class HealthViewModel: ObservableObject {
 
     @Published var summary: HealthSummary?
     @Published var checkins: [HealthCheckInEntry] = []
+    @Published var reviewLane: [HealthCheckInEntry] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
 
@@ -18,7 +19,9 @@ final class HealthViewModel: ObservableObject {
             async let summaryTask = client.fetchHealthSummary()
             async let checkinsTask = client.fetchHealthCheckins()
             summary = try await summaryTask
-            checkins = try await checkinsTask.entries
+            let checkinOverview = try await checkinsTask
+            checkins = checkinOverview.entries
+            reviewLane = checkinOverview.reviewLane
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -55,5 +58,20 @@ final class HealthViewModel: ObservableObject {
         )
         try? await Task.sleep(nanoseconds: 150_000_000)
         await load()
+    }
+
+    func reviewCheckin(
+        checkinId: String,
+        status: String,
+        note: String
+    ) async throws -> HealthCheckInActionResult {
+        let result = try await client.reviewHealthCheckin(
+            checkinId: checkinId,
+            status: status,
+            note: note
+        )
+        try? await Task.sleep(nanoseconds: 150_000_000)
+        await load()
+        return result
     }
 }
