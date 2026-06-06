@@ -11,6 +11,7 @@ from jarvis.apple_api import (
     _disconnect_apple_settings_account,
     _save_apple_settings_account,
     _save_apple_settings_connector,
+    _save_apple_settings_family_member,
     _save_apple_settings_profile,
 )
 from jarvis.audit import AuditLog, ProgressFocusStore
@@ -32,6 +33,20 @@ class _StubRuntime:
                 "status": "connected",
                 "service_scope": "mail_calendar",
                 "notes": "Family inbox and calendar.",
+            }
+        ]
+        self._members = [
+            {
+                "user_id": "chris",
+                "display_name": "Chris",
+                "role": "parent",
+                "permissions": "admin",
+                "trust_level": "trusted",
+                "preferred_tone": "calm and direct",
+                "privacy_boundary": "personal",
+                "notes": "Primary operator.",
+                "device_ids": ["device-1"],
+                "active": True,
             }
         ]
 
@@ -58,6 +73,16 @@ class _StubRuntime:
             self._accounts[index] = updated
             return {"ok": True, "message": "Account disconnected.", "account": updated}
         return {"ok": False, "message": "Account not found."}
+
+    def save_identity_member(self, payload: dict) -> dict:
+        user_id = payload["user_id"]
+        for index, member in enumerate(self._members):
+            if member["user_id"] != user_id:
+                continue
+            updated = {**member, **payload}
+            self._members[index] = updated
+            return {"ok": True, "member": updated, "identity": {"members": list(self._members), "devices": []}}
+        raise ValueError("Unknown household user")
 
 
 class AppleSystemsProfileSettingsTests(unittest.TestCase):
@@ -156,3 +181,29 @@ class AppleSystemsProfileSettingsTests(unittest.TestCase):
         recent = AuditLog(Path("data/logs")).list_recent(limit=4, entry_type="operator-action")
         self.assertEqual(recent[0]["action"], "Save Apple Connector Controls")
         self.assertEqual(recent[0]["related_kind"], "settings-connector")
+
+    def test_save_apple_family_identity_records_activity_and_focus(self) -> None:
+        runtime = _StubRuntime()
+        result = _save_apple_settings_family_member(
+            runtime,
+            "chris",
+            {
+                "role": "operator",
+                "permissions": "household-admin",
+                "trust_level": "trusted",
+                "preferred_tone": "warm and direct",
+                "notes": "Primary morning and launch owner.",
+            },
+            actor_name="chris",
+        )
+
+        self.assertEqual(result["member"]["role"], "operator")
+        self.assertEqual(result["member"]["permissions"], "household-admin")
+        self.assertEqual(result["member"]["preferred_tone"], "warm and direct")
+
+        focus_summary = ProgressFocusStore(Path("data/logs")).summary(limit=4)
+        self.assertEqual(focus_summary["latest"]["module"], "Settings")
+
+        recent = AuditLog(Path("data/logs")).list_recent(limit=4, entry_type="operator-action")
+        self.assertEqual(recent[0]["action"], "Save Apple Family Identity")
+        self.assertEqual(recent[0]["related_kind"], "settings-family-identity")

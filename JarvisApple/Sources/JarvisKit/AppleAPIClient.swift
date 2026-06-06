@@ -287,6 +287,36 @@ public final class AppleAPIClient: Sendable {
         )
     }
 
+    public func saveSystemsFamilyMember(
+        userId: String,
+        role: String,
+        permissions: String,
+        trustLevel: String,
+        preferredTone: String,
+        notes: String,
+        actor: String = "chris"
+    ) async throws -> SystemsFamilyMemberActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let role: String
+            let permissions: String
+            let trust_level: String
+            let preferred_tone: String
+            let notes: String
+        }
+        return try await post(
+            "/api/apple/systems/family/\(userId)",
+            body: Body(
+                actor: actor,
+                role: role,
+                permissions: permissions,
+                trust_level: trustLevel,
+                preferred_tone: preferredTone,
+                notes: notes
+            )
+        )
+    }
+
     public func promoteTrustZone(_ zoneId: String, actor: String = "chris", basis: String = "manual promotion from phone") async throws -> SystemsTrustZoneActionResult {
         struct Body: Encodable {
             let actor: String

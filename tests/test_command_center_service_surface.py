@@ -227,6 +227,21 @@ class _StubRuntime:
                 "connection": {"status": "connected"},
             }
         ]
+        self._identity_members = [
+            {
+                "display_name": "Chris",
+                "user_id": "chris",
+                "role": "parent",
+                "permissions": "admin",
+                "trust_level": "trusted",
+                "preferred_tone": "calm and direct",
+                "privacy_boundary": "personal",
+                "notes": "Primary operator.",
+                "device_ids": ["device-1"],
+                "active": True,
+            }
+        ]
+        self._identity_devices = [{"label": "JarvisPhone", "device_id": "device-1"}]
 
     def execute_sandbox_job(self, *, actor_name: str, job_id: str, triggered_by: str) -> dict:
         return {"ok": True, "accepted": True, "job": {"job_id": job_id, "status": "sandbox-queued"}}
@@ -350,9 +365,19 @@ class _StubRuntime:
 
     def identity_overview(self) -> dict:
         return {
-            "members": [{"display_name": "Chris", "user_id": "chris"}],
-            "devices": [{"label": "JarvisPhone", "device_id": "device-1"}],
+            "members": [dict(item) for item in self._identity_members],
+            "devices": [dict(item) for item in self._identity_devices],
         }
+
+    def save_identity_member(self, payload: dict) -> dict:
+        user_id = str(payload.get("user_id") or "").strip().lower()
+        for index, member in enumerate(self._identity_members):
+            if member["user_id"] != user_id:
+                continue
+            updated = {**member, **payload}
+            self._identity_members[index] = updated
+            return {"ok": True, "member": dict(updated), "identity": self.identity_overview()}
+        raise ValueError("Unknown household user")
 
 
 class CommandCenterServiceSurfaceTests(unittest.TestCase):
@@ -824,6 +849,8 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Account Command Deck", settings_html)
         self.assertIn("Connector Provisioning Lane", settings_html)
         self.assertIn("Save Connector Controls", settings_html)
+        self.assertIn("Family Identity Command Deck", settings_html)
+        self.assertIn("Save Family Identity", settings_html)
         self.assertIn("Recent Settings Continuity", settings_html)
         self.assertIn("status", settings_snapshot)
         self.assertIn("voice", settings_snapshot)
@@ -837,6 +864,7 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertEqual(settings_snapshot["proof_paths"]["module_api"], "/api/settings/module")
         self.assertEqual(settings_snapshot["proof_paths"]["account_settings_api"], "/api/settings/account")
         self.assertEqual(settings_snapshot["proof_paths"]["connector_settings_api"], "/api/settings/connector")
+        self.assertEqual(settings_snapshot["proof_paths"]["family_identity_api"], "/api/settings/family-member")
         self.assertEqual(settings_snapshot["proof_paths"]["profile_settings_api"], "/api/settings/profile")
         self.assertIn("JARVIS Huddle", huddle_html)
         self.assertIn("Start Overnight Research", huddle_html)
@@ -1919,6 +1947,37 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertTrue(connector["needs_attention"])
         self.assertTrue(any(item.get("title") == "Save Connector Controls" for item in settings_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("related_kind") == "settings-connector" for item in activity_payload))
+        self.assertEqual(progress_snapshot["progress_next_focus"], "Settings")
+        self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Settings")
+
+    def test_settings_family_identity_mutations_persist_into_settings_and_activity(self) -> None:
+        identity_response = asyncio.run(
+            self._route("/api/settings/family-member", "POST")(
+                {
+                    "actor": "Chris",
+                    "user_id": "chris",
+                    "role": "operator",
+                    "permissions": "household-admin",
+                    "trust_level": "trusted",
+                    "preferred_tone": "warm and direct",
+                    "notes": "Primary morning and launch owner.",
+                }
+            )
+        )
+
+        identity_payload = self._json_body(identity_response)
+        settings_snapshot = self._json_body(asyncio.run(self._route("/api/settings/module", "GET")()))
+        activity_payload = self._json_body(asyncio.run(self._route("/api/activity", "GET")()))
+        progress_snapshot = self._json_body(asyncio.run(self._route("/api/progress/module", "GET")()))
+
+        self.assertTrue(identity_payload["ok"])
+        member = settings_snapshot["identity"]["members"][0]
+        self.assertEqual(member["role"], "operator")
+        self.assertEqual(member["permissions"], "household-admin")
+        self.assertEqual(member["preferred_tone"], "warm and direct")
+        self.assertEqual(member["notes"], "Primary morning and launch owner.")
+        self.assertTrue(any(item.get("title") == "Save Family Identity" for item in settings_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("related_kind") == "settings-family-identity" for item in activity_payload))
         self.assertEqual(progress_snapshot["progress_next_focus"], "Settings")
         self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Settings")
 

@@ -737,6 +737,10 @@
             "display_name": "Chris",
             "role": "parent",
             "permissions": "admin",
+            "trust_level": "trusted",
+            "preferred_tone": "calm and direct",
+            "privacy_boundary": "personal",
+            "notes": "Primary household operator.",
             "device_count": 2,
             "online_device_count": 1,
             "status": "Online"
@@ -746,6 +750,10 @@
             "display_name": "Rebekah",
             "role": "parent",
             "permissions": "adult",
+            "trust_level": "trusted",
+            "preferred_tone": "gentle and clear",
+            "privacy_boundary": "household",
+            "notes": "Shared home and family lane owner.",
             "device_count": 1,
             "online_device_count": 1,
             "status": "Online"
@@ -755,6 +763,10 @@
             "display_name": "Caleb",
             "role": "child",
             "permissions": "child",
+            "trust_level": "child-safe",
+            "preferred_tone": "encouraging and simple",
+            "privacy_boundary": "child-safe",
+            "notes": "Child-safe family posture.",
             "device_count": 0,
             "online_device_count": 0,
             "status": "No Device"

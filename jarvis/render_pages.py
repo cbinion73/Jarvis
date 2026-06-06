@@ -9599,6 +9599,38 @@ def render_settings_module_page(payload: dict) -> str:
         <ul id="identity-list"></ul>
       </section>
       <section class="panel span-6">
+        <h2>Family Identity Command Deck</h2>
+        <form id="family-identity-form">
+          <label>Family Member
+            <select id="family-member-selected"></select>
+          </label>
+          <label>Role
+            <input id="family-member-role" placeholder="parent">
+          </label>
+          <label>Permissions
+            <input id="family-member-permissions" placeholder="admin">
+          </label>
+          <label>Trust Level
+            <select id="family-member-trust-level">
+              <option value="trusted">Trusted</option>
+              <option value="standard">Standard</option>
+              <option value="child-safe">Child Safe</option>
+              <option value="restricted">Restricted</option>
+            </select>
+          </label>
+          <label>Preferred Tone
+            <input id="family-member-tone" placeholder="calm and direct">
+          </label>
+          <label>Identity Notes
+            <textarea id="family-member-notes" class="compact-textarea" placeholder="Capture household context, briefing posture, or family-specific guidance."></textarea>
+          </label>
+          <div class="account-actions">
+            <button type="submit">Save Family Identity</button>
+          </div>
+        </form>
+        <p class="status-note" id="family-identity-note">Adjust family role, permissions, and tone from the same Settings chamber that governs the rest of JARVIS.</p>
+      </section>
+      <section class="panel span-6">
         <h2>Saved Locations</h2>
         <ul id="locations-list"></ul>
       </section>
@@ -9631,6 +9663,8 @@ def render_settings_module_page(payload: dict) -> str:
     const profileNote = document.getElementById("profile-note");
     const accountNote = document.getElementById("account-note");
     const connectorNote = document.getElementById("connector-note");
+    const familyIdentityNote = document.getElementById("family-identity-note");
+    let selectedFamilyMemberId = "";
 
     function esc(value) {{
       return String(value ?? "")
@@ -9678,6 +9712,16 @@ def render_settings_module_page(payload: dict) -> str:
       }}).join("");
     }}
 
+    function familyMemberOptionMarkup(members, selectedId) {{
+      return members.map((member) => {{
+        const id = member.user_id || member.id || "";
+        const selected = id === selectedId ? " selected" : "";
+        const label = member.display_name || member.label || id || "Member";
+        const role = member.role || "member";
+        return `<option value="${{esc(id)}}"${{selected}}>${{esc(label)}} · ${{esc(role)}}</option>`;
+      }}).join("");
+    }}
+
     function syncAccountForm(accounts) {{
       const select = document.getElementById("account-selected");
       const list = Array.isArray(accounts) ? accounts : [];
@@ -9711,6 +9755,38 @@ def render_settings_module_page(payload: dict) -> str:
         : "Adjust service scope, posture, and stabilization notes from the same Settings chamber.";
     }}
 
+    function syncFamilyIdentityForm(members) {{
+      const select = document.getElementById("family-member-selected");
+      const list = Array.isArray(members) ? members : [];
+      if (!list.length) {{
+        selectedFamilyMemberId = "";
+        select.innerHTML = "";
+        document.getElementById("family-member-role").value = "";
+        document.getElementById("family-member-permissions").value = "";
+        document.getElementById("family-member-trust-level").value = "standard";
+        document.getElementById("family-member-tone").value = "";
+        document.getElementById("family-member-notes").value = "";
+        familyIdentityNote.textContent = "No family members were loaded in this runtime.";
+        return;
+      }}
+      if (!selectedFamilyMemberId || !list.some((item) => (item.user_id || item.id || "") === selectedFamilyMemberId)) {{
+        selectedFamilyMemberId = list[0].user_id || list[0].id || "";
+      }}
+      select.innerHTML = familyMemberOptionMarkup(list, selectedFamilyMemberId);
+      const active = list.find((item) => (item.user_id || item.id || "") === selectedFamilyMemberId) || list[0];
+      if (!active) {{
+        return;
+      }}
+      document.getElementById("family-member-role").value = active.role || "";
+      document.getElementById("family-member-permissions").value = active.permissions || "";
+      document.getElementById("family-member-trust-level").value = active.trust_level || "standard";
+      document.getElementById("family-member-tone").value = active.preferred_tone || "";
+      document.getElementById("family-member-notes").value = active.notes || "";
+      familyIdentityNote.textContent = active.display_name
+        ? `Editing ${{active.display_name}} · ${{active.role || "member"}} · ${{active.permissions || "member"}}`
+        : "Adjust family identity posture from the same Settings chamber.";
+    }}
+
     function render(payload) {{
       currentPayload = payload || {{}};
       const voice = payload.voice || {{}};
@@ -9726,6 +9802,7 @@ def render_settings_module_page(payload: dict) -> str:
       const insights = Array.isArray(permissions.insights) ? permissions.insights : [];
       const activeLocation = location.active_location || {{}};
       const deviceLocation = location.device_location || {{}};
+      const members = Array.isArray(identity.members) ? identity.members : [];
 
       heroStatus.textContent = payload.status || "Stubbed";
       heroAccounts.textContent = String(accounts.length);
@@ -9738,6 +9815,7 @@ def render_settings_module_page(payload: dict) -> str:
       document.getElementById("voice-piper").innerHTML = `<option value="">No Piper model selected</option>${{optionMarkup(voiceOptions.piper, voice.piper_model_path)}}`;
       document.getElementById("voice-speaker").value = voice.piper_speaker || "";
       syncAccountForm(accounts);
+      syncFamilyIdentityForm(members);
 
       document.getElementById("location-preferred").innerHTML = savedLocations.map((item) => {{
         const selected = item.id === location.preferred_location_id ? " selected" : "";
@@ -9754,7 +9832,7 @@ def render_settings_module_page(payload: dict) -> str:
       moduleStatusList.innerHTML = [
         li("What Became Real", payload.what_became_real || "No settings seam note recorded yet."),
         li("What Remains Partial", payload.remains_partial || "No partial work recorded."),
-        li("Proof API", "/api/settings/module", "/api/voice-settings, /api/location-settings, /api/settings/profile, and /api/settings/connector"),
+        li("Proof API", "/api/settings/module", "/api/voice-settings, /api/location-settings, /api/settings/profile, /api/settings/connector, and /api/settings/family-member"),
         li("Voice Stack", stackStatus.summary || voice.selected_provider_label || "No voice stack summary available."),
         li("Google Client Secret", clientSecret.configured ? "Configured" : "Missing", clientSecret.detail || ""),
         li("Connector Attention", String((payload.counts || {{}}).connector_attention_count || 0), "Connectors still asking for stabilization or expanded scope"),
@@ -9773,7 +9851,6 @@ def render_settings_module_page(payload: dict) -> str:
         ...insights.slice(0, 3).map((item) => li(item.title || item.insight_id || "Insight", item.summary || "No summary.", item.status || "")),
       ].join("");
 
-      const members = Array.isArray(identity.members) ? identity.members : [];
       const devices = Array.isArray(identity.devices) ? identity.devices : [];
       identityList.innerHTML = [
         li("Identity Members", `${{members.length}} member profile(s)`, members.slice(0, 2).map((item) => item.display_name).join(" | ") || "No members loaded."),
@@ -9899,6 +9976,34 @@ def render_settings_module_page(payload: dict) -> str:
       }}
     }}
 
+    async function saveFamilyIdentity(event) {{
+      event.preventDefault();
+      if (!selectedFamilyMemberId) {{
+        familyIdentityNote.textContent = "No family member is selected.";
+        return;
+      }}
+      familyIdentityNote.textContent = "Saving family identity…";
+      try {{
+        const response = await fetch("/api/settings/family-member", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            user_id: selectedFamilyMemberId,
+            role: document.getElementById("family-member-role").value,
+            permissions: document.getElementById("family-member-permissions").value,
+            trust_level: document.getElementById("family-member-trust-level").value,
+            preferred_tone: document.getElementById("family-member-tone").value,
+            notes: document.getElementById("family-member-notes").value,
+          }}),
+        }});
+        const payload = await response.json();
+        familyIdentityNote.textContent = payload.message || "Family identity updated.";
+        await refreshSettingsState();
+      }} catch (error) {{
+        familyIdentityNote.textContent = `Family identity save failed: ${{String(error)}}`;
+      }}
+    }}
+
     async function disconnectAccount() {{
       if (!selectedAccountId) {{
         accountNote.textContent = "No account is selected.";
@@ -9959,6 +10064,11 @@ def render_settings_module_page(payload: dict) -> str:
       const accounts = Array.isArray((currentPayload.accounts || {{}}).accounts) ? currentPayload.accounts.accounts : [];
       syncAccountForm(accounts);
     }});
+    document.getElementById("family-member-selected").addEventListener("change", (event) => {{
+      selectedFamilyMemberId = event.target.value || "";
+      const members = Array.isArray((currentPayload.identity || {{}}).members) ? currentPayload.identity.members : [];
+      syncFamilyIdentityForm(members);
+    }});
     document.getElementById("account-settings-form").addEventListener("submit", saveAccountSettings);
     document.getElementById("disconnect-account").addEventListener("click", () => {{
       disconnectAccount().catch((error) => {{
@@ -9966,6 +10076,7 @@ def render_settings_module_page(payload: dict) -> str:
       }});
     }});
     document.getElementById("connector-settings-form").addEventListener("submit", saveConnectorSettings);
+    document.getElementById("family-identity-form").addEventListener("submit", saveFamilyIdentity);
     document.getElementById("voice-settings-form").addEventListener("submit", saveVoiceSettings);
     document.getElementById("location-settings-form").addEventListener("submit", saveLocationSettings);
     document.getElementById("profile-settings-form").addEventListener("submit", saveProfileSettings);

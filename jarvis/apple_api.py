@@ -323,6 +323,78 @@ def _save_apple_settings_connector(
     }
 
 
+def _save_apple_settings_family_member(
+    runtime,
+    user_id: str,
+    payload: dict[str, Any],
+    *,
+    actor_name: str = "chris",
+) -> dict[str, Any]:
+    actor_name = str(actor_name or "chris").strip() or "chris"
+    updates = {
+        "user_id": user_id,
+        **{
+            key: payload.get(key)
+            for key in ("role", "permissions", "trust_level", "preferred_tone", "privacy_boundary", "notes")
+            if key in payload
+        },
+    }
+    if len(updates) <= 1:
+        raise ValueError("No family identity updates were provided.")
+    try:
+        result = runtime.save_identity_member(updates)
+    except ValueError as exc:
+        raise ValueError(str(exc)) from exc
+    member = dict(result.get("member") or {})
+    label = str(member.get("display_name") or user_id).strip() or user_id
+    role = str(member.get("role") or "member").strip() or "member"
+    permissions = str(member.get("permissions") or "member").strip() or "member"
+    trust_level = str(member.get("trust_level") or "standard").strip() or "standard"
+    preferred_tone = str(member.get("preferred_tone") or "").strip()
+    detail = f"{label} is now staged as {role.replace('_', ' ')} with {permissions.replace('_', ' ')} permissions and {trust_level.replace('_', ' ')} trust."
+    if preferred_tone:
+        detail += f" Tone: {preferred_tone}."
+    notes = str(member.get("notes") or "").strip()
+    if notes:
+        detail += f" {notes}"
+    _record_operator_action(
+        actor=actor_name,
+        domain="settings",
+        action="Save Apple Family Identity",
+        detail=f"Apple Systems updated {label}. {detail}",
+        why_now="The iPhone Systems surface refined live family identity posture so role, tone, and permissions stay aligned across JARVIS.",
+        result_summary=f"Apple family identity saved for {label}.",
+        route="/settings-center",
+        route_label="Open Settings",
+        related_kind="settings-family-identity",
+        related_label=label,
+        succeeded=True,
+    )
+    focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module="Settings",
+        reason=f"Apple Systems updated family identity for {label}.",
+        route="/settings-center",
+        actor=actor_name,
+    )
+    return {
+        "message": f"Saved family identity for {label}.",
+        "member": {
+            "id": str(member.get("user_id") or user_id),
+            "display_name": label,
+            "role": role,
+            "permissions": permissions,
+            "trust_level": trust_level,
+            "preferred_tone": preferred_tone,
+            "privacy_boundary": str(member.get("privacy_boundary") or "personal"),
+            "notes": notes,
+            "device_count": int(len(member.get("device_ids") or [])),
+            "online_device_count": int(member.get("online_device_count") or 0),
+            "status": str(member.get("status") or ("Active" if member.get("active", True) else "Inactive")),
+        },
+        "focus": focus,
+    }
+
+
 def _disconnect_apple_settings_account(
     runtime,
     account_id: str,
@@ -9414,6 +9486,10 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                     "display_name": str(member.get("display_name") or member.get("name") or member_id or "Member"),
                     "role": str(member.get("role") or ""),
                     "permissions": str(member.get("permissions") or ""),
+                    "trust_level": str(member.get("trust_level") or "standard"),
+                    "preferred_tone": str(member.get("preferred_tone") or ""),
+                    "privacy_boundary": str(member.get("privacy_boundary") or "personal"),
+                    "notes": str(member.get("notes") or ""),
                     "device_count": len(member_devices),
                     "online_device_count": online_device_count,
                     "status": "Online" if online_device_count else ("Offline" if member_devices else "No Device"),
@@ -10199,6 +10275,15 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         actor_name = str(payload.get("actor") or payload.get("actor_id") or "chris").strip() or "chris"
         try:
             result = _disconnect_apple_settings_account(runtime, account_id, actor_name=actor_name)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _ok(result)
+
+    @app.post("/api/apple/systems/family/{user_id}")
+    async def apple_save_systems_family_member(user_id: str, payload: dict[str, Any]):
+        actor_name = str(payload.get("actor") or payload.get("actor_id") or "chris").strip() or "chris"
+        try:
+            result = _save_apple_settings_family_member(runtime, user_id, payload, actor_name=actor_name)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return _ok(result)

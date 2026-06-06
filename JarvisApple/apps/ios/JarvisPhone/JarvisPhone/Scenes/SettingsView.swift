@@ -61,11 +61,20 @@ struct SettingsView: View {
     @State private var accountStatusDraft = "planned"
     @State private var connectorServiceScopeDraft = "mail_calendar"
     @State private var connectorNotesDraft = ""
+    @State private var selectedFamilyMemberId = ""
+    @State private var familyMemberRoleDraft = ""
+    @State private var familyMemberPermissionsDraft = ""
+    @State private var familyMemberTrustLevelDraft = "standard"
+    @State private var familyMemberToneDraft = ""
+    @State private var familyMemberNotesDraft = ""
     @State private var accountWorkflowMessage = ""
     @State private var accountWorkflowError = ""
+    @State private var familyIdentityWorkflowMessage = ""
+    @State private var familyIdentityWorkflowError = ""
     @State private var accountSaveInFlight = false
     @State private var connectorSaveInFlight = false
     @State private var accountDisconnectInFlight = false
+    @State private var familyIdentitySaveInFlight = false
 
     private let steel = Color(red: 0.55, green: 0.65, blue: 0.78)
 
@@ -457,7 +466,103 @@ struct SettingsView: View {
                                             Text("\(member.role.isEmpty ? "Member" : member.role.capitalized) · \(member.onlineDeviceCount)/\(member.deviceCount) devices online")
                                                 .font(.caption2)
                                                 .foregroundStyle(.secondary)
+                                            if !member.preferredTone.isEmpty || !member.notes.isEmpty {
+                                                Text("\(member.preferredTone.isEmpty ? "Tone not set" : member.preferredTone) · \(member.notes.isEmpty ? member.privacyBoundary : member.notes)")
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                                    .lineLimit(2)
+                                            }
                                         }
+                                    }
+                                }
+                                if !adminSummary.family.members.isEmpty {
+                                    Divider().opacity(0.3)
+                                    Text("Family Identity Command Deck")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    Picker("Family Member", selection: $selectedFamilyMemberId) {
+                                        ForEach(adminSummary.family.members.prefix(6)) { member in
+                                            Text(member.displayName.isEmpty ? member.id : member.displayName)
+                                                .tag(member.id)
+                                        }
+                                    }
+                                    .pickerStyle(.menu)
+                                    .tint(steel)
+                                    .onChange(of: selectedFamilyMemberId) { _, newValue in
+                                        syncFamilyMemberDrafts(
+                                            members: adminSummary.family.members,
+                                            preferredMemberId: newValue
+                                        )
+                                    }
+                                    VStack(alignment: .leading, spacing: 10) {
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            Text("Role")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                            TextField("parent", text: $familyMemberRoleDraft)
+                                                .textInputAutocapitalization(.never)
+                                                .disableAutocorrection(true)
+                                        }
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            Text("Permissions")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                            TextField("admin", text: $familyMemberPermissionsDraft)
+                                                .textInputAutocapitalization(.never)
+                                                .disableAutocorrection(true)
+                                        }
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            Text("Trust Level")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                            Picker("Trust Level", selection: $familyMemberTrustLevelDraft) {
+                                                Text("Trusted").tag("trusted")
+                                                Text("Standard").tag("standard")
+                                                Text("Child Safe").tag("child-safe")
+                                                Text("Restricted").tag("restricted")
+                                            }
+                                            .pickerStyle(.segmented)
+                                        }
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            Text("Preferred Tone")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                            TextField("calm and direct", text: $familyMemberToneDraft)
+                                                .textInputAutocapitalization(.never)
+                                                .disableAutocorrection(true)
+                                        }
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            Text("Identity Notes")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                            TextEditor(text: $familyMemberNotesDraft)
+                                                .frame(minHeight: 88)
+                                                .scrollContentBackground(.hidden)
+                                                .padding(10)
+                                                .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+                                        }
+                                        Button(familyIdentitySaveInFlight ? "Saving Family Identity…" : "Save Family Identity") {
+                                            Task { await saveSelectedFamilyMember() }
+                                        }
+                                        .buttonStyle(.borderedProminent)
+                                        .tint(.teal)
+                                        .disabled(familyIdentitySaveInFlight || selectedFamilyMemberId.isEmpty)
+                                    }
+                                    if let selectedMember = selectedFamilyMember(in: adminSummary.family.members) {
+                                        Text("\(selectedMember.role.isEmpty ? "member" : selectedMember.role) · \(selectedMember.permissions.isEmpty ? "member" : selectedMember.permissions) · \(selectedMember.trustLevel)")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(2)
+                                    }
+                                    if !familyIdentityWorkflowMessage.isEmpty {
+                                        Text(familyIdentityWorkflowMessage)
+                                            .font(.caption2)
+                                            .foregroundStyle(.green.opacity(0.9))
+                                    }
+                                    if !familyIdentityWorkflowError.isEmpty {
+                                        Text(familyIdentityWorkflowError)
+                                            .font(.caption2)
+                                            .foregroundStyle(.red.opacity(0.9))
                                     }
                                 }
 
@@ -2560,6 +2665,7 @@ struct SettingsView: View {
                     guard generation == refreshGeneration else { return }
                     adminSummary = result
                     syncAccountDrafts(accounts: result.accounts.items)
+                    syncFamilyMemberDrafts(members: result.family.members)
                     adminSummaryDiagnostics = "Loaded in \(String(format: "%.3f", Date().timeIntervalSince(startedAt)))s"
                     print("[JARVIS Systems] refresh \(generation) promoted adminSummary in \(String(format: "%.3f", Date().timeIntervalSince(startedAt)))s")
                 }
@@ -2718,6 +2824,35 @@ struct SettingsView: View {
     }
 
     @MainActor
+    private func syncFamilyMemberDrafts(
+        members: [SystemsAdminFamilyMember],
+        preferredMemberId: String? = nil
+    ) {
+        let availableMembers = members
+        guard !availableMembers.isEmpty else {
+            selectedFamilyMemberId = ""
+            familyMemberRoleDraft = ""
+            familyMemberPermissionsDraft = ""
+            familyMemberTrustLevelDraft = "standard"
+            familyMemberToneDraft = ""
+            familyMemberNotesDraft = ""
+            return
+        }
+        let requestedId = preferredMemberId ?? selectedFamilyMemberId
+        let selected = availableMembers.first(where: { $0.id == requestedId }) ?? availableMembers[0]
+        selectedFamilyMemberId = selected.id
+        familyMemberRoleDraft = selected.role
+        familyMemberPermissionsDraft = selected.permissions
+        familyMemberTrustLevelDraft = selected.trustLevel.isEmpty ? "standard" : selected.trustLevel
+        familyMemberToneDraft = selected.preferredTone
+        familyMemberNotesDraft = selected.notes
+    }
+
+    private func selectedFamilyMember(in members: [SystemsAdminFamilyMember]) -> SystemsAdminFamilyMember? {
+        members.first(where: { $0.id == selectedFamilyMemberId }) ?? members.first
+    }
+
+    @MainActor
     private func saveSelectedAccount() async {
         guard !selectedAccountId.isEmpty else {
             accountWorkflowError = "Select an account first."
@@ -2761,6 +2896,32 @@ struct SettingsView: View {
             await refreshSystems()
         } catch {
             accountWorkflowError = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func saveSelectedFamilyMember() async {
+        guard !selectedFamilyMemberId.isEmpty else {
+            familyIdentityWorkflowError = "Select a family member first."
+            return
+        }
+        familyIdentitySaveInFlight = true
+        familyIdentityWorkflowMessage = ""
+        familyIdentityWorkflowError = ""
+        defer { familyIdentitySaveInFlight = false }
+        do {
+            let result = try await AppleAPIClient.shared.saveSystemsFamilyMember(
+                userId: selectedFamilyMemberId,
+                role: familyMemberRoleDraft,
+                permissions: familyMemberPermissionsDraft,
+                trustLevel: familyMemberTrustLevelDraft,
+                preferredTone: familyMemberToneDraft,
+                notes: familyMemberNotesDraft
+            )
+            familyIdentityWorkflowMessage = result.message
+            await refreshSystems()
+        } catch {
+            familyIdentityWorkflowError = error.localizedDescription
         }
     }
 

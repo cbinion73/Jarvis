@@ -4174,6 +4174,75 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "focus": focus,
         }
 
+    def _save_settings_family_member_preferences(
+        user_id: str,
+        payload: dict[str, Any],
+        *,
+        actor_name: str = "Chris",
+    ) -> dict[str, Any]:
+        actor_name = str(actor_name or "Chris").strip() or "Chris"
+        updates = {
+            "user_id": user_id,
+            **{
+                key: payload.get(key)
+                for key in ("role", "permissions", "trust_level", "preferred_tone", "privacy_boundary", "notes")
+                if key in payload
+            },
+        }
+        if len(updates) <= 1:
+            raise ValueError("No family identity updates were provided.")
+        try:
+            result = runtime.save_identity_member(updates)
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
+
+        member = dict(result.get("member") or {})
+        label = str(member.get("display_name") or user_id).strip() or user_id
+        role = str(member.get("role") or "member").strip() or "member"
+        permissions = str(member.get("permissions") or "member").strip() or "member"
+        trust_level = str(member.get("trust_level") or "standard").strip() or "standard"
+        preferred_tone = str(member.get("preferred_tone") or "").strip()
+        detail_parts = [
+            f"{label} now holds the {role.replace('_', ' ')} role with {permissions.replace('_', ' ')} permissions.",
+            f"Trust posture is {trust_level.replace('_', ' ')}.",
+        ]
+        if preferred_tone:
+            detail_parts.append(f"Tone: {preferred_tone}.")
+        notes = str(member.get("notes") or "").strip()
+        if notes:
+            detail_parts.append(notes)
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor_name,
+                "domain": "settings",
+                "action": "Save Family Identity",
+                "title": label,
+                "detail": " ".join(detail_parts),
+                "why_now": "Settings refined a live family identity profile so role, tone, and permissions stay aligned across JARVIS surfaces.",
+                "result_summary": f"Family identity saved for {label}.",
+                "related_route": "/settings-center",
+                "route_label": "Open Settings",
+                "related_kind": "settings-family-identity",
+                "related_label": label,
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        focus = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module="Settings",
+            reason=f"Settings family identity was updated for {label}.",
+            route="/settings-center",
+            actor=actor_name.lower(),
+        )
+        return {
+            "ok": True,
+            "message": f"Saved family identity for {label}.",
+            "member": member,
+            "identity": result.get("identity") or runtime.identity_overview(),
+            "focus": focus,
+        }
+
     async def _build_settings_module_payload() -> dict[str, Any]:
         try:
             from datetime import datetime, timezone
@@ -4188,7 +4257,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "status": "Useful",
             "summary": "Settings now has a dedicated module route with live voice, location, account controls, and permissions posture inside JARVIS.",
             "what_became_real": "Settings & Permissions is now a standalone app module instead of only a shell packet with scattered APIs behind it.",
-            "remains_partial": "Broader connector provisioning, richer family identity edits, and deeper cross-surface continuity still need follow-on slices.",
+            "remains_partial": "Deeper cross-surface continuity still needs follow-on slices.",
             "voice": {},
             "voice_options": {},
             "location": {},
@@ -4229,6 +4298,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "profile_settings_api": "/api/settings/profile",
                 "account_settings_api": "/api/settings/account",
                 "connector_settings_api": "/api/settings/connector",
+                "family_identity_api": "/api/settings/family-member",
                 "account_disconnect_api": "/api/settings/accounts/{account_id}/disconnect",
             },
             "errors": [],
@@ -4374,6 +4444,22 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         await _broadcast_dashboard("settings-connector.updated")
+        return _json(result)
+
+    @app.post("/api/settings/family-member")
+    async def api_save_settings_family_member(payload: dict[str, Any]) -> JSONResponse:
+        user_id = str(payload.get("user_id") or "").strip().lower()
+        if not user_id:
+            raise HTTPException(status_code=400, detail="User id is required.")
+        try:
+            result = _save_settings_family_member_preferences(
+                user_id,
+                payload,
+                actor_name=str(payload.get("actor") or "Chris"),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        await _broadcast_dashboard("settings-family.updated")
         return _json(result)
 
     @app.post("/api/settings/accounts/{account_id}/disconnect")

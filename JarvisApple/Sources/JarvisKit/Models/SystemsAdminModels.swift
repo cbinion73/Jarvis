@@ -90,15 +90,49 @@ public struct SystemsAdminFamilyMember: Codable, Sendable, Identifiable {
     public let displayName: String
     public let role: String
     public let permissions: String
+    public let trustLevel: String
+    public let preferredTone: String
+    public let privacyBoundary: String
+    public let notes: String
     public let deviceCount: Int
     public let onlineDeviceCount: Int
     public let status: String
 
     enum CodingKeys: String, CodingKey {
-        case id, role, permissions, status
+        case id, role, permissions, status, notes
         case displayName = "display_name"
+        case trustLevel = "trust_level"
+        case preferredTone = "preferred_tone"
+        case privacyBoundary = "privacy_boundary"
         case deviceCount = "device_count"
         case onlineDeviceCount = "online_device_count"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        displayName = try container.decode(String.self, forKey: .displayName)
+        role = try container.decodeIfPresent(String.self, forKey: .role) ?? ""
+        permissions = try container.decodeIfPresent(String.self, forKey: .permissions) ?? ""
+        trustLevel = try container.decodeIfPresent(String.self, forKey: .trustLevel) ?? "standard"
+        preferredTone = try container.decodeIfPresent(String.self, forKey: .preferredTone) ?? ""
+        privacyBoundary = try container.decodeIfPresent(String.self, forKey: .privacyBoundary) ?? "personal"
+        notes = try container.decodeIfPresent(String.self, forKey: .notes) ?? ""
+        deviceCount = try container.decodeIfPresent(Int.self, forKey: .deviceCount) ?? 0
+        onlineDeviceCount = try container.decodeIfPresent(Int.self, forKey: .onlineDeviceCount) ?? 0
+        status = try container.decodeIfPresent(String.self, forKey: .status) ?? "Unknown"
+    }
+}
+
+public struct SystemsFamilyMemberActionResult: Codable, Sendable {
+    public let message: String
+    public let member: SystemsAdminFamilyMember
+    public let focus: SystemsProfileFocus?
+
+    public init(message: String, member: SystemsAdminFamilyMember, focus: SystemsProfileFocus?) {
+        self.message = message
+        self.member = member
+        self.focus = focus
     }
 }
 
