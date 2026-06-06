@@ -82,6 +82,7 @@ struct ApplePayloadDecodingTests {
         try decode(ChronicleOverview.self, from: payloads, key: "/api/apple/chronicle", decoder: decoder)
         try decode(FaithOverview.self, from: payloads, key: "/api/apple/faith?actor=chris", decoder: decoder)
         try decode(PublishOverview.self, from: payloads, key: "/api/apple/publishing", decoder: decoder)
+        try decode(PublishChecklistActionResult.self, from: payloads, key: "/api/apple/publishing/checklist/pub-1/pricing_set", decoder: decoder)
         try decode(HuddleOverview.self, from: payloads, key: "/api/apple/huddle", decoder: decoder)
         try decode(ForgeWrapper.self, from: payloads, key: "/api/apple/forge", decoder: decoder)
     }

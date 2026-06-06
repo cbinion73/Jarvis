@@ -4204,6 +4204,53 @@
       "feedback": ""
     }
   },
+  "/api/apple/publishing/checklist/pub-1/pricing_set": {
+    "ok": true,
+    "data": {
+      "status": "completed",
+      "project_id": "pub-1",
+      "step": "pricing_set",
+      "label": "Pricing set",
+      "completed": true,
+      "progress": "8/11",
+      "percent": 73,
+      "workspace": {
+        "project_id": "pub-1",
+        "title": "Jarvis Civilization",
+        "platform": "KDP",
+        "platform_focus": "KDP metadata, proof review, and marketplace copy readiness.",
+        "checklist_progress": "8/11",
+        "checklist_percent": 73,
+        "next_checklist_step": "Published as draft on KDP",
+        "launch_slug": "jarvis-civilization",
+        "asset_status": "partial",
+        "generated_at": "2026-06-01T06:35:00Z",
+        "checklist": [
+          {
+            "step": "manuscript_final",
+            "label": "Final manuscript complete",
+            "order": 1,
+            "completed": true,
+            "completed_at": "2026-05-20T09:00:00Z"
+          },
+          {
+            "step": "pricing_set",
+            "label": "Pricing set",
+            "order": 8,
+            "completed": true,
+            "completed_at": "2026-06-01T06:35:00Z"
+          }
+        ],
+        "assets": []
+      },
+      "focus": {
+        "module": "Publish",
+        "reason": "Pricing set marked complete for Jarvis Civilization.",
+        "route": "/publish",
+        "saved_at": "2026-06-01T06:35:00Z"
+      }
+    }
+  },
   "/api/apple/publishing/reviews/rev-1/revise": {
     "ok": true,
     "data": {

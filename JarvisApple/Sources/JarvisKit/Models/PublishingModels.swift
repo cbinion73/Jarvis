@@ -336,6 +336,35 @@ public struct PublishReviewActionResult: Codable, Sendable {
     }
 }
 
+public struct PublishChecklistActionResult: Codable, Sendable {
+    public let status: String
+    public let projectId: String
+    public let step: String
+    public let label: String
+    public let completed: Bool
+    public let progress: String
+    public let percent: Int
+    public let workspace: PublishLaunchWorkspace?
+    public let focus: PublishProgressFocus?
+
+    enum CodingKeys: String, CodingKey {
+        case status, step, label, completed, progress, percent, workspace, focus
+        case projectId = "project_id"
+    }
+}
+
+public struct PublishProgressFocus: Codable, Sendable {
+    public let module: String
+    public let reason: String
+    public let route: String
+    public let savedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case module, reason, route
+        case savedAt = "saved_at"
+    }
+}
+
 // MARK: - RevenueStream
 
 public struct RevenueStream: Codable, Identifiable, Sendable {

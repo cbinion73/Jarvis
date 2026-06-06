@@ -1570,7 +1570,7 @@ def render_publish_module_page(payload: dict) -> str:
         <ul id="review-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>5. Final Delivery Checklist</h2>
+        <h2>5. Launch Checklist Lane</h2>
         <ul id="calendar-list"></ul>
       </section>
       <section class="panel span-6">
@@ -1607,7 +1607,7 @@ def render_publish_module_page(payload: dict) -> str:
         <h2>Source Provenance &amp; Audit Posture</h2>
         <ul>
           <li><strong>Live module route</strong><span>`/publish` remains backed by the real publish payload and draft mutation flow.</span></li>
-          <li><strong>Launch continuity</strong><span>Quick draft creation still feeds shared operator activity so the storyboard shell stays tied to real supervision seams.</span></li>
+          <li><strong>Launch continuity</strong><span>Quick draft creation and checklist advancement both feed shared operator activity so the storyboard shell stays tied to real supervision seams.</span></li>
           <li><strong>Meaningful data concept</strong><span>The visual language now mirrors the publish JPG while preserving Ghostwritr, launch ops, revenue, and review continuity.</span></li>
         </ul>
       </section>
@@ -1664,10 +1664,10 @@ def render_publish_module_page(payload: dict) -> str:
       const calendar = payload.calendar || {{}};
       const social = payload.social || {{}};
       const revenue = payload.revenue || {{}};
+      const launchWorkspace = payload.launch_workspace || {{}};
       const projects = Array.isArray(payload.projects) ? payload.projects : [];
       const pendingReviews = Array.isArray(payload.pending_reviews) ? payload.pending_reviews : [];
-      const upcoming = Array.isArray(calendar.upcoming) ? calendar.upcoming : [];
-      const overdue = Array.isArray(calendar.overdue) ? calendar.overdue : [];
+      const checklist = Array.isArray(launchWorkspace.checklist) ? launchWorkspace.checklist : [];
       const posts = Array.isArray(social.posts) ? social.posts : [];
 
       heroStatus.textContent = payload.status || "Stubbed";
@@ -1690,6 +1690,7 @@ def render_publish_module_page(payload: dict) -> str:
         li("Next Action", launch.next_action || "No launch-control action recorded yet."),
         li("Pending Reviews", String(payload.review_count || 0), "Ghostwritr review pressure"),
         li("Scheduled Posts", String(payload.scheduled_post_count || 0), "Publishing queue pressure"),
+        li("Launch Checklist", String(launchWorkspace.checklist_progress || "No checklist"), launchWorkspace.next_checklist_step || "No next checklist step surfaced yet."),
       ].join("");
 
       projectList.innerHTML = projects.length
@@ -1710,10 +1711,24 @@ def render_publish_module_page(payload: dict) -> str:
           `).join("")
         : '<li><strong>No editorial reviews waiting.</strong><span>The pending review lane is clear right now.</span></li>';
 
-      calendarList.innerHTML = [
-        ...upcoming.slice(0, 4).map((item) => li(item.title || "Calendar item", `${{item.content_type || "content"}} · ${{item.status || "planned"}}`, item.planned_date || "")),
-        ...overdue.slice(0, 2).map((item) => li(item.title || "Overdue item", `Overdue · ${{item.status || "planned"}}`, item.planned_date || "")),
-      ].join("") || '<li><strong>No calendar items yet.</strong><span>Publishing calendar is clear right now.</span></li>';
+      calendarList.innerHTML = checklist.length
+        ? checklist.map((item) => `
+            <li>
+              <strong>${{esc(item.label || "Checklist step")}}</strong>
+              <span>Step ${{esc(item.order ?? "")}} · ${{item.completed ? "Complete" : "Waiting"}}</span>
+              <span>${{item.completed && item.completed_at ? esc(String(item.completed_at).slice(0, 10)) : esc(launchWorkspace.next_checklist_step || "Advance this launch step from the live publish route.")}}</span>
+              <span>
+                <button
+                  type="button"
+                  data-publish-checklist-step="${{esc(item.step || "")}}"
+                  data-publish-checklist-project="${{esc(launchWorkspace.project_id || "")}}"
+                  data-publish-checklist-completed="${{item.completed ? "false" : "true"}}"
+                  data-publish-checklist-label="${{esc(item.label || "Checklist step")}}"
+                >${{item.completed ? "Reopen Step" : "Mark Step Complete"}}</button>
+              </span>
+            </li>
+          `).join("")
+        : '<li><strong>No launch checklist yet.</strong><span>Create or activate a publishing project to surface the live launch workspace.</span></li>';
 
       socialList.innerHTML = posts.length
         ? posts.slice(0, 6).map((item) => li(item.platform || "Platform", item.status || "draft", String(item.content || "").slice(0, 120) || "No post content")).join("")
@@ -1770,6 +1785,42 @@ def render_publish_module_page(payload: dict) -> str:
             await refreshPublishState();
           }} catch (error) {{
             statusNote.textContent = `Publish review action failed: ${{String(error)}}`;
+          }}
+        }});
+      }});
+
+      document.querySelectorAll("[data-publish-checklist-step]").forEach((button) => {{
+        button.addEventListener("click", async () => {{
+          const projectId = button.getAttribute("data-publish-checklist-project") || "";
+          const step = button.getAttribute("data-publish-checklist-step") || "";
+          const label = button.getAttribute("data-publish-checklist-label") || "Checklist step";
+          const completed = (button.getAttribute("data-publish-checklist-completed") || "true") === "true";
+          if (!projectId || !step) {{
+            statusNote.textContent = "Checklist action is unavailable for this row.";
+            return;
+          }}
+          statusNote.textContent = completed ? `Completing ${{label}}…` : `Reopening ${{label}}…`;
+          try {{
+            const response = await fetch("/api/publishing/checklist/step", {{
+              method: "POST",
+              headers: {{ "Content-Type": "application/json" }},
+              body: JSON.stringify({{
+                project_id: projectId,
+                step,
+                completed,
+                actor: "Chris",
+              }}),
+            }});
+            const result = await response.json();
+            if (!response.ok) {{
+              throw new Error(result.detail || result.error || `HTTP ${{response.status}}`);
+            }}
+            statusNote.textContent = completed
+              ? `Completed publish checklist step: ${{result.label || label}}.`
+              : `Reopened publish checklist step: ${{result.label || label}}.`;
+            await refreshPublishState();
+          }} catch (error) {{
+            statusNote.textContent = `Publish checklist action failed: ${{String(error)}}`;
           }}
         }});
       }});

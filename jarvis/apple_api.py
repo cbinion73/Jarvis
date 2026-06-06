@@ -11331,6 +11331,59 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             "feedback": feedback,
         }
 
+    def _publishing_checklist_action_result(
+        *,
+        project_dict: dict[str, Any],
+        strategy: dict[str, Any] | None,
+        agent: Any,
+        mutation: dict[str, Any],
+        step_label: str,
+        completed: bool,
+        actor: str,
+    ) -> dict[str, Any]:
+        project_id = str(project_dict.get("project_id") or "")
+        checklist = agent.get_publishing_checklist(agent._store.get_project(project_id)) if project_id else []
+        workspace = _publishing_launch_workspace(
+            project=project_dict,
+            strategy=strategy if isinstance(strategy, dict) else None,
+            checklist=checklist,
+        )
+        action = "Complete Publish Checklist Step" if completed else "Reopen Publish Checklist Step"
+        detail = (
+            f"{step_label} marked complete for {str(project_dict.get('title') or project_id).strip() or project_id}."
+            if completed
+            else f"{step_label} reopened for {str(project_dict.get('title') or project_id).strip() or project_id}."
+        )
+        _record_operator_action(
+            actor=actor,
+            domain="publish",
+            action=action,
+            detail=detail,
+            why_now="Apple publish surfaces advanced a real launch checklist step instead of only observing the queue.",
+            result_summary=f"Publish checklist now at {mutation.get('progress') or 'updated'}.",
+            route="/publish",
+            route_label="Open Publish",
+            related_kind="publishing-checklist",
+            related_label=str(project_dict.get("title") or project_id).strip() or project_id,
+        )
+        focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+            module="Publish",
+            reason=detail,
+            route="/publish",
+            actor=actor,
+        )
+        return {
+            "status": "completed" if completed else "reopened",
+            "project_id": project_id,
+            "step": str(mutation.get("step") or ""),
+            "label": step_label,
+            "completed": completed,
+            "progress": str(mutation.get("progress") or ""),
+            "percent": int(mutation.get("percent") or 0),
+            "workspace": workspace,
+            "focus": focus,
+        }
+
     @app.post("/api/apple/publishing/reviews/{review_id}/approve")
     async def apple_publishing_approve_review(review_id: str):
         pub_root = Path.home() / ".jarvis" / "publishing"
@@ -11398,6 +11451,40 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         )
         result["focus"] = focus
         return _ok(result)
+
+    @app.post("/api/apple/publishing/checklist/{project_id}/{step}")
+    async def apple_publishing_checklist_step(project_id: str, step: str, payload: dict[str, Any] | None = None):
+        from .publishing_suite import PublishingStore, RobbieRobertsonAgent
+
+        body = payload or {}
+        completed = bool(body.get("completed", True))
+        actor = str(body.get("actor") or "Chris").strip() or "Chris"
+
+        pub_root = Path.home() / ".jarvis" / "publishing"
+        store = PublishingStore(root=pub_root)
+        agent = RobbieRobertsonAgent(store)
+        project = store.get_project(project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail=f"Publishing project not found: {project_id}")
+
+        checklist = list(agent.get_publishing_checklist(project))
+        matched = next((item for item in checklist if str(item.get("step") or "").strip() == step), None)
+        if matched is None:
+            raise HTTPException(status_code=404, detail=f"Checklist step not found: {step}")
+
+        strategy = _safe_read_json(pub_root / "launch_strategies.json", {}).get(project_id)
+        mutation = agent.track_kdp_checklist(project_id, step, completed)
+        return _ok(
+            _publishing_checklist_action_result(
+                project_dict=project.to_dict(),
+                strategy=strategy if isinstance(strategy, dict) else None,
+                agent=agent,
+                mutation=mutation,
+                step_label=str(matched.get("label") or step).strip() or step,
+                completed=completed,
+                actor=actor,
+            )
+        )
 
     # ── Huddle ────────────────────────────────────────────────────────────────
 

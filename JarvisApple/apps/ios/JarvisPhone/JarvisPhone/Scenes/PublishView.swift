@@ -10,6 +10,9 @@ struct PublishView: View {
     @State private var isLoading  = false
     @State private var error: String?
     @State private var reviewActionInFlight: String?
+    @State private var checklistActionInFlight: String?
+    @State private var checklistActionMessage = ""
+    @State private var checklistActionError = ""
 
     private let green = Color(red: 0.15, green: 0.85, blue: 0.45)
 
@@ -331,6 +334,16 @@ struct PublishView: View {
                         .foregroundStyle(.white)
                 }
 
+                if !checklistActionError.isEmpty {
+                    Text(checklistActionError)
+                        .font(.caption)
+                        .foregroundStyle(.red.opacity(0.9))
+                } else if !checklistActionMessage.isEmpty {
+                    Text(checklistActionMessage)
+                        .font(.caption)
+                        .foregroundStyle(green.opacity(0.88))
+                }
+
                 if !workspace.assets.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("ASSET COVERAGE")
@@ -351,7 +364,14 @@ struct PublishView: View {
                             .tracking(1.0)
                             .foregroundStyle(.secondary)
                         ForEach(workspace.checklist) { item in
-                            ChecklistRow(item: item, accent: green)
+                            ChecklistRow(
+                                item: item,
+                                accent: green,
+                                isActing: checklistActionInFlight == item.id,
+                                onToggle: {
+                                    Task { await toggleChecklistStep(projectId: workspace.projectId, item: item) }
+                                }
+                            )
                             if item.id != workspace.checklist.last?.id { Divider().opacity(0.2) }
                         }
                     }
@@ -533,6 +553,27 @@ struct PublishView: View {
             self.error = error.localizedDescription
         }
         reviewActionInFlight = nil
+    }
+
+    private func toggleChecklistStep(projectId: String, item: PublishChecklistItem) async {
+        guard !projectId.isEmpty else { return }
+        checklistActionInFlight = item.id
+        checklistActionMessage = ""
+        checklistActionError = ""
+        do {
+            let result = try await AppleAPIClient.shared.updatePublishingChecklistStep(
+                projectId: projectId,
+                step: item.step,
+                completed: !item.completed
+            )
+            checklistActionMessage = result.completed
+                ? "\(result.label) marked complete. Launch checklist is now \(result.progress)."
+                : "\(result.label) reopened. Launch checklist is now \(result.progress)."
+            await load()
+        } catch {
+            checklistActionError = error.localizedDescription
+        }
+        checklistActionInFlight = nil
     }
 
     private func daysLabel(for days: Int?) -> String {
@@ -951,6 +992,8 @@ private struct AssetSummaryRow: View {
 private struct ChecklistRow: View {
     let item: PublishChecklistItem
     let accent: Color
+    let isActing: Bool
+    let onToggle: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -977,6 +1020,12 @@ private struct ChecklistRow: View {
                 }
             }
             Spacer()
+            Button(isActing ? "Working…" : (item.completed ? "Reopen" : "Complete")) {
+                onToggle()
+            }
+            .buttonStyle(.bordered)
+            .tint(item.completed ? .orange : accent)
+            .disabled(isActing)
         }
         .padding(.vertical, 2)
     }

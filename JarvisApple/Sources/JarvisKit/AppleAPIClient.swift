@@ -679,6 +679,22 @@ public final class AppleAPIClient: Sendable {
         )
     }
 
+    public func updatePublishingChecklistStep(
+        projectId: String,
+        step: String,
+        completed: Bool,
+        actor: String = "chris"
+    ) async throws -> PublishChecklistActionResult {
+        struct Body: Encodable {
+            let completed: Bool
+            let actor: String
+        }
+        return try await post(
+            "/api/apple/publishing/checklist/\(projectId)/\(step)",
+            body: Body(completed: completed, actor: actor)
+        )
+    }
+
     // MARK: - Huddle
 
     public func fetchHuddle() async throws -> HuddleOverview {

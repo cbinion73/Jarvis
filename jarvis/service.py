@@ -5606,6 +5606,24 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         )
         return _json({"status": "needs_revision", "review": result, "focus": focus_entry})
 
+    @app.post("/api/publishing/checklist/step")
+    async def api_publishing_checklist_step(payload: dict[str, Any]) -> JSONResponse:
+        """Update a publish launch checklist step. Body: {project_id, step, completed?, actor?}"""
+        project_id = str(payload.get("project_id") or "").strip()
+        step = str(payload.get("step") or "").strip()
+        if not project_id:
+            raise HTTPException(status_code=400, detail="project_id is required")
+        if not step:
+            raise HTTPException(status_code=400, detail="step is required")
+        result = _mutate_publishing_checklist_step(
+            project_id,
+            step=step,
+            completed=bool(payload.get("completed", True)),
+            actor=str(payload.get("actor") or "Chris"),
+        )
+        await _broadcast_dashboard("publishing-checklist-updated")
+        return _json(result)
+
     @app.get("/api/publishing/track/{slug}")
     async def api_publishing_track_status(slug: str) -> JSONResponse:
         """Return book summary and stage progress for a given book slug."""
@@ -7378,6 +7396,92 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         _write_publishing_review_rows(rows)
         return updated
 
+    def _build_publish_launch_workspace(pub: Any, project_id: str, *, generated_at: str = "") -> dict[str, Any] | None:
+        if not project_id:
+            return None
+        project = pub._store.get_project(project_id)
+        if project is None:
+            return None
+        checklist_items = list(pub.robbie.get_publishing_checklist(project))
+        completed_steps = sum(1 for item in checklist_items if bool(item.get("completed")))
+        total_steps = len(checklist_items)
+        next_step = next((str(item.get("label") or "").strip() for item in checklist_items if not bool(item.get("completed"))), "")
+        return {
+            "project_id": project.project_id,
+            "title": project.title,
+            "platform": project.platform,
+            "project_type": project.project_type,
+            "checklist_progress": f"{completed_steps}/{total_steps}" if total_steps else "",
+            "checklist_percent": round((completed_steps / total_steps) * 100) if total_steps else 0,
+            "next_checklist_step": next_step,
+            "generated_at": generated_at,
+            "checklist": checklist_items,
+        }
+
+    def _mutate_publishing_checklist_step(
+        project_id: str,
+        *,
+        step: str,
+        completed: bool,
+        actor: str = "Chris",
+    ) -> dict[str, Any]:
+        pub = _publishing_or_503()
+        project = pub._store.get_project(project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail=f"Publishing project not found: {project_id}")
+
+        checklist = list(pub.robbie.get_publishing_checklist(project))
+        matched = next((item for item in checklist if str(item.get("step") or "").strip() == step), None)
+        if matched is None:
+            raise HTTPException(status_code=404, detail=f"Checklist step not found: {step}")
+
+        result = pub.robbie.track_kdp_checklist(project_id, step, completed)
+        workspace = _build_publish_launch_workspace(pub, project_id)
+        action_title = "Complete Publish Checklist Step" if completed else "Reopen Publish Checklist Step"
+        step_label = str(matched.get("label") or step).strip() or step
+        project_title = project.title.strip() or project_id
+        detail = (
+            f"{step_label} marked complete for {project_title}."
+            if completed
+            else f"{step_label} reopened for {project_title}."
+        )
+        actor_name = str(actor or "Chris").strip() or "Chris"
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor_name,
+                "domain": "publish",
+                "action": action_title,
+                "title": step_label,
+                "detail": detail,
+                "why_now": "Publish launch orchestration advanced a real checklist step from the live module route.",
+                "result_summary": f"Publish checklist now at {result.get('progress') or 'updated'}.",
+                "related_route": "/publish",
+                "route_label": "Open Publish",
+                "related_kind": "publishing-checklist",
+                "related_label": project_title,
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        focus = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module="Publish",
+            reason=detail,
+            route="/publish",
+            actor=actor_name,
+        )
+        return {
+            "status": "completed" if completed else "reopened",
+            "project_id": project_id,
+            "step": step,
+            "label": step_label,
+            "completed": completed,
+            "progress": str(result.get("progress") or ""),
+            "percent": int(result.get("percent") or 0),
+            "workspace": workspace,
+            "focus": focus,
+        }
+
     def _build_publish_module_payload() -> dict[str, Any]:
         from datetime import datetime, timezone
 
@@ -7399,6 +7503,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "overdue_calendar_count": 0,
             "projects": [],
             "pending_reviews": [],
+            "launch_workspace": None,
             "calendar": {"upcoming": [], "overdue": []},
             "social": {"posts": []},
             "revenue": {
@@ -7416,6 +7521,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "review_pending_api": "/api/publishing/reviews/pending",
                 "review_approve_api": "/api/publishing/draft/approve",
                 "review_revise_api": "/api/publishing/draft/revise",
+                "checklist_step_api": "/api/publishing/checklist/step",
                 "calendar_api": "/api/publishing/calendar",
                 "social_api": "/api/publishing/social/posts",
             },
@@ -7483,6 +7589,12 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         try:
             launch_control = _build_launch_control_payload(None)
             payload["launch_control"] = launch_control
+            active_project = dict(launch_control.get("active_project") or {})
+            project_id = str(active_project.get("project_id") or "").strip()
+            if not project_id:
+                project_id = str((payload["projects"][0] or {}).get("project_id") or "").strip() if payload["projects"] else ""
+            if project_id:
+                payload["launch_workspace"] = _build_publish_launch_workspace(pub, project_id, generated_at=generated_at)
             if launch_control.get("active_project"):
                 payload["what_became_real"] = "Publish now has a dedicated app route backed by live launch-control, project, social, and revenue state."
         except Exception as exc:

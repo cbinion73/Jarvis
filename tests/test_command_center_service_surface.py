@@ -275,6 +275,12 @@ class _StubRuntime:
             "duplicate_suppressions": [],
         }
 
+    def shell_state_snapshot(self) -> dict:
+        return {"lane": "test", "dirty": False}
+
+    def dashboard_snapshot(self) -> dict:
+        return {"status": "ok"}
+
 
 class CommandCenterServiceSurfaceTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -689,12 +695,14 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("JARVIS Publish", publish_html)
         self.assertIn("Quick Draft Project", publish_html)
         self.assertIn("Editorial Review Lane", publish_html)
+        self.assertIn("Launch Checklist Lane", publish_html)
         self.assertIn("Refresh Publish State", publish_html)
         self.assertIn("Launch Ops Hub", publish_html)
         self.assertIn("Recent Publish Continuity", publish_html)
         self.assertIn("status", publish_snapshot)
         self.assertIn("projects", publish_snapshot)
         self.assertIn("pending_reviews", publish_snapshot)
+        self.assertIn("launch_workspace", publish_snapshot)
         self.assertIn("recent_activity", publish_snapshot)
         self.assertIn("proof_paths", publish_snapshot)
         self.assertEqual(publish_snapshot["proof_paths"]["module_route"], "/publish")
@@ -1013,6 +1021,59 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertEqual(publish_snapshot["pending_reviews_count"], 0)
         self.assertTrue(any(item.get("title") == "Approve Publish Review" for item in publish_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("related_label") == "Approve launch chapter" for item in publish_snapshot["recent_activity"]))
+        self.assertEqual(progress_snapshot["progress_next_focus"], "Publish")
+        self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Publish")
+
+    def test_publish_checklist_action_updates_workspace_continuity_and_progress_focus(self) -> None:
+        import jarvis.publishing_suite as publishing_suite_module
+
+        publishing_suite_module._publishing_singleton = None
+        publishing_suite_module.init_publishing()
+
+        async def _create_payload() -> dict[str, str]:
+            return {
+                "title": "Launch Checklist Project",
+                "project_type": "book",
+                "platform": "KDP",
+                "status": "editing",
+            }
+
+        create_result = self._json_body(
+            asyncio.run(
+                self._route("/api/publishing/projects", "POST")(
+                    SimpleNamespace(json=_create_payload)
+                )
+            )
+        )
+        project_id = create_result["project_id"]
+
+        result = self._json_body(
+            asyncio.run(
+                self._route("/api/publishing/checklist/step", "POST")(
+                    {
+                        "project_id": project_id,
+                        "step": "manuscript_final",
+                        "completed": True,
+                        "actor": "Chris",
+                    }
+                )
+            )
+        )
+
+        publish_snapshot = self._json_body(asyncio.run(self._route("/api/publish/module", "GET")()))
+        progress_snapshot = self._json_body(asyncio.run(self._route("/api/progress/module", "GET")()))
+        workspace = dict(publish_snapshot.get("launch_workspace") or {})
+        checklist = list(workspace.get("checklist") or [])
+        matched = next((item for item in checklist if item.get("step") == "manuscript_final"), {})
+
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(result["focus"]["module"], "Publish")
+        self.assertEqual(result["workspace"]["project_id"], project_id)
+        self.assertEqual(workspace.get("project_id"), project_id)
+        self.assertTrue(bool(matched.get("completed")))
+        self.assertEqual(workspace.get("checklist_progress"), "1/11")
+        self.assertTrue(any(item.get("title") == "Complete Publish Checklist Step" for item in publish_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("related_label") == "Launch Checklist Project" for item in publish_snapshot["recent_activity"]))
         self.assertEqual(progress_snapshot["progress_next_focus"], "Publish")
         self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Publish")
 

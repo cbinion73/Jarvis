@@ -25,6 +25,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
     private var routeCurrentItemSelectable = false
     private var publishQueue: [CarPlayPublishQueueEntry] = []
     private var publishReviews: [PublishReview] = []
+    private var publishLaunchWorkspace: PublishLaunchWorkspace?
     private var opsOverview: CarPlayOpsOverview?
 
     init(interfaceController: CPInterfaceController) {
@@ -269,6 +270,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
             let overview = try await client.fetchPublishing()
             publishReviews = overview.pendingReviews
             publishQueue = JarvisCarPlayPresentation.publishQueue(from: overview)
+            publishLaunchWorkspace = overview.launchWorkspace
 
             var sections: [CPListSection] = []
             if let launchControl = overview.launchControl {
@@ -285,6 +287,21 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                         .withTintColor(.systemGreen, renderingMode: .alwaysOriginal)
                 )
                 sections.append(CPListSection(items: [item], header: "Launch Control", sectionIndexTitle: nil))
+            }
+
+            if let workspace = overview.launchWorkspace {
+                let nextStep = workspace.checklist.first(where: { !$0.completed })
+                let item = CPListItem(
+                    text: nextStep?.label ?? "Launch checklist complete",
+                    detailText: nextStep != nil
+                        ? "\(workspace.checklistProgress) complete · Tap to mark the next step done."
+                        : "\(workspace.checklistProgress) complete · Nothing is waiting in the launch checklist."
+                )
+                item.setImage(
+                    UIImage(systemName: nextStep == nil ? "checkmark.seal.fill" : "checkmark.circle")?
+                        .withTintColor(nextStep == nil ? .systemGreen : .systemOrange, renderingMode: .alwaysOriginal)
+                )
+                sections.append(CPListSection(items: [item], header: "Launch Checklist", sectionIndexTitle: nil))
             }
 
             let handoffItem = CPListItem(
@@ -557,6 +574,11 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
         }
 
         if listTemplate === publishTemplate {
+            let checklistSectionIndex = publishTemplate.sections.firstIndex { $0.header == "Launch Checklist" }
+            if let checklistSectionIndex, indexPath.section == checklistSectionIndex {
+                presentPublishChecklistAlert(completion: completionHandler)
+                return
+            }
             let queueSectionIndex = publishTemplate.sections.firstIndex { $0.header == "Review Queue" } ?? 0
             guard indexPath.section == queueSectionIndex, indexPath.item < publishReviews.count else {
                 completionHandler()
@@ -819,6 +841,34 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
         let alert = CPAlertTemplate(
             titleVariants: [review.title],
             actions: [approveAction, reviseAction, cancelAction]
+        )
+        interfaceController.presentTemplate(alert, animated: true) { _, _ in completion() }
+    }
+
+    private func presentPublishChecklistAlert(completion: @escaping () -> Void) {
+        guard
+            let workspace = publishLaunchWorkspace,
+            let nextStep = workspace.checklist.first(where: { !$0.completed }),
+            !workspace.projectId.isEmpty
+        else {
+            completion()
+            return
+        }
+        let completeAction = CPAlertAction(title: "Complete", style: .default) { [weak self] _ in
+            guard let self else { return }
+            Task {
+                _ = try? await self.client.updatePublishingChecklistStep(
+                    projectId: workspace.projectId,
+                    step: nextStep.step,
+                    completed: true
+                )
+                await self.loadPublishing()
+            }
+        }
+        let cancelAction = CPAlertAction(title: "Close", style: .cancel) { _ in }
+        let alert = CPAlertTemplate(
+            titleVariants: [nextStep.label, "Mark this launch checklist step complete?"],
+            actions: [completeAction, cancelAction]
         )
         interfaceController.presentTemplate(alert, animated: true) { _, _ in completion() }
     }
