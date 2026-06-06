@@ -4303,6 +4303,10 @@ def render_progress_module_page(payload: dict) -> str:
         <ul id="hosted-readiness-list"></ul>
       </section>
       <section class="panel span-6">
+        <h2>Durable Progress History</h2>
+        <ul id="progress-history-list"></ul>
+      </section>
+      <section class="panel span-6">
         <h2>Core Module Links</h2>
         <ul id="module-links-list"></ul>
       </section>
@@ -4326,6 +4330,7 @@ def render_progress_module_page(payload: dict) -> str:
     const seamHighlightsList = document.getElementById("seam-highlights-list");
     const laneFailureList = document.getElementById("lane-failure-list");
     const hostedReadinessList = document.getElementById("hosted-readiness-list");
+    const progressHistoryList = document.getElementById("progress-history-list");
     const moduleLinksList = document.getElementById("module-links-list");
     const payloadPreview = document.getElementById("payload-preview");
     let currentPayload = initialPayload;
@@ -4400,6 +4405,7 @@ def render_progress_module_page(payload: dict) -> str:
       const laneProgress = payload.lane_progress || {{}};
       const failureRecovery = payload.failure_recovery || {{}};
       const hostedDeployment = payload.hosted_deployment || {{}};
+      const progressPersistence = payload.progress_persistence || {{}};
       const moduleLinks = Array.isArray((payload.core_modules || {{}}).items) ? payload.core_modules.items : [];
 
       heroStatus.textContent = payload.status || "Wired";
@@ -4436,6 +4442,16 @@ def render_progress_module_page(payload: dict) -> str:
         li("Hosted URL", hostedDeployment.hosted_url || "https://jarvis.teambinion.org", hostedDeployment.edge_provider || "Hosted edge provider not captured."),
         li("Deploy Mode", hostedDeployment.deploy_mode || "unknown", hostedDeployment.remote_detail || "No deploy mode detail captured."),
         li("Deploy Proof", Array.isArray(hostedDeployment.proof_files) ? hostedDeployment.proof_files.join(" | ") : "No deploy proof files captured.", hostedDeployment.next_action || "No deploy next action recorded yet."),
+      ].join("");
+
+      progressHistoryList.innerHTML = [
+        li("History Count", String(payload.counts?.history_count ?? progressPersistence.history_count ?? 0), payload.proof_paths?.progress_snapshot_history || "No history proof path recorded."),
+        li("Latest Snapshot", progressPersistence.latest?.saved_at || "No snapshot recorded yet.", progressPersistence.latest?.next_focus || "No next focus recorded yet."),
+        ...(Array.isArray(progressPersistence.recent) ? progressPersistence.recent.slice(0, 4).map((entry) => li(
+          `${{entry.branch || "unknown branch"}} @ ${{entry.head || "unknown head"}}`,
+          `Dirty: ${{entry.dirty_count ?? 0}} · Next Focus: ${{entry.next_focus || "none"}}`,
+          `${{Object.entries(entry.progress_counts || {{}}).map(([key, value]) => `${{key}}=${{value}}`).join(" · ") || "No readiness counts"}}`
+        )) : []),
       ].join("");
 
       moduleLinksList.innerHTML = moduleLinks.slice(0, 6).map((item) => li(

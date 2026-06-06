@@ -40,7 +40,7 @@ except Exception:  # pragma: no cover
     def _render_glass_shell(runtime, initial_packet=""):  # type: ignore[misc]
         return render_voice_shell(runtime, initial_packet=initial_packet)
 from .apple_api import _register_apple_api
-from .audit import AuditLog
+from .audit import AuditLog, ProgressSnapshotStore
 from . import layout_engine as _layout_engine
 
 try:
@@ -1871,13 +1871,21 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 break
         if not next_focus:
             next_focus = str((progress_items[0] if progress_items else {}).get("module", "")).strip()
+        progress_store = ProgressSnapshotStore(DEFAULT_AUDIT_ROOT)
+        persisted_snapshot = progress_store.save_snapshot(
+            progress_dashboard=progress_dashboard,
+            seam_tracker=seam_tracker,
+            lane_progress=lane_progress,
+            next_focus=next_focus,
+        )
+        persistence_summary = progress_store.summary(limit=6)
         return {
             "generated_at": command_center.get("generated_at", ""),
             "available": True,
             "status": "Useful",
             "summary": "Progress now has a dedicated module route with live readiness rows, seam posture, lane state, and failure evidence inside JARVIS.",
             "what_became_real": "Progress is now represented as a standalone app module instead of only a command-center panel.",
-            "remains_partial": "Richer route-to-route progress actions, deeper per-module mutation flows, and broader persistence still need follow-on slices.",
+            "remains_partial": "Richer route-to-route progress actions and deeper per-module mutation flows still need follow-on slices, but progress history now persists durably.",
             "progress_dashboard": progress_dashboard,
             "seam_tracker": seam_tracker,
             "level3_checklist": level3_checklist,
@@ -1885,14 +1893,17 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "failure_recovery": failure_recovery,
             "hosted_deployment": hosted_deployment,
             "core_modules": core_modules,
+            "progress_persistence": persistence_summary,
             "counts": {
                 "useful": int(counts.get("useful", 0) or 0),
                 "wired": int(counts.get("wired", 0) or 0),
                 "durable": int(counts.get("durable", 0) or 0),
                 "compounding": int(counts.get("compounding", 0) or 0),
                 "seam_count": int(seam_tracker.get("item_count", 0) or 0),
+                "history_count": int(persistence_summary.get("history_count", 0) or 0),
             },
             "progress_next_focus": next_focus or "No next progress focus recorded yet.",
+            "latest_progress_snapshot": persisted_snapshot,
             "proof_paths": {
                 "module_route": "/progress-center",
                 "module_api": "/api/progress/module",
@@ -1902,6 +1913,8 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "hosted_url": str(hosted_deployment.get("hosted_url", "")).strip() or "https://jarvis.teambinion.org",
                 "deploy_script": "deploy/deploy.sh",
                 "deploy_workflow": ".github/workflows/deploy.yml",
+                "progress_snapshot_json": str((DEFAULT_AUDIT_ROOT / "progress_snapshot.json")),
+                "progress_snapshot_history": str((DEFAULT_AUDIT_ROOT / "progress_snapshot_log.jsonl")),
             },
         }
 
