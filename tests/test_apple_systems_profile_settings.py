@@ -7,7 +7,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 import jarvis.user_profile as user_profile_module
-from jarvis.apple_api import _save_apple_settings_profile
+from jarvis.apple_api import (
+    _disconnect_apple_settings_account,
+    _save_apple_settings_account,
+    _save_apple_settings_profile,
+)
 from jarvis.audit import AuditLog, ProgressFocusStore
 
 
@@ -17,11 +21,42 @@ class _StubActor:
 
 
 class _StubRuntime:
+    def __init__(self) -> None:
+        self._accounts = [
+            {
+                "account_id": "acct-google-1",
+                "provider": "google",
+                "label": "Chris Google",
+                "login_hint": "chris@example.com",
+                "status": "connected",
+                "service_scope": "mail_calendar",
+                "notes": "Family inbox and calendar.",
+            }
+        ]
+
     def get_actor(self, actor_name: str) -> _StubActor:
         return _StubActor("chris")
 
     def _invalidate_snapshot_cache(self, *args, **kwargs) -> None:
         return None
+
+    def update_personal_account(self, account_id: str, payload: dict) -> dict:
+        for index, account in enumerate(self._accounts):
+            if account["account_id"] != account_id:
+                continue
+            updated = {**account, **{key: value for key, value in payload.items() if value is not None}}
+            self._accounts[index] = updated
+            return {"message": f"Updated account '{updated['label']}'.", "account": updated}
+        raise KeyError(account_id)
+
+    def disconnect_account(self, account_id: str) -> dict:
+        for index, account in enumerate(self._accounts):
+            if account["account_id"] != account_id:
+                continue
+            updated = {**account, "status": "planned", "notes": "Disconnected from Google."}
+            self._accounts[index] = updated
+            return {"ok": True, "message": "Account disconnected.", "account": updated}
+        return {"ok": False, "message": "Account not found."}
 
 
 class AppleSystemsProfileSettingsTests(unittest.TestCase):
@@ -59,3 +94,40 @@ class AppleSystemsProfileSettingsTests(unittest.TestCase):
         self.assertEqual(recent[0]["action"], "Save Apple Profile Defaults")
         self.assertEqual(recent[0]["related_kind"], "profile-settings")
 
+    def test_save_apple_account_controls_records_activity_and_focus(self) -> None:
+        runtime = _StubRuntime()
+        result = _save_apple_settings_account(
+            runtime,
+            "acct-google-1",
+            {
+                "label": "Chris Family Google",
+                "login_hint": "family@example.com",
+                "status": "paused",
+            },
+            actor_name="chris",
+        )
+
+        self.assertEqual(result["message"], "Updated account 'Chris Family Google'.")
+        self.assertEqual(result["account"]["label"], "Chris Family Google")
+        self.assertEqual(result["account"]["status"], "paused")
+
+        focus_summary = ProgressFocusStore(Path("data/logs")).summary(limit=4)
+        self.assertEqual(focus_summary["latest"]["module"], "Settings")
+
+        recent = AuditLog(Path("data/logs")).list_recent(limit=4, entry_type="operator-action")
+        self.assertEqual(recent[0]["action"], "Save Apple Account Controls")
+        self.assertEqual(recent[0]["related_kind"], "settings-account")
+
+    def test_disconnect_apple_account_records_activity_and_focus(self) -> None:
+        runtime = _StubRuntime()
+        result = _disconnect_apple_settings_account(runtime, "acct-google-1", actor_name="chris")
+
+        self.assertEqual(result["message"], "Account disconnected.")
+        self.assertEqual(result["account"]["status"], "planned")
+
+        focus_summary = ProgressFocusStore(Path("data/logs")).summary(limit=4)
+        self.assertEqual(focus_summary["latest"]["module"], "Settings")
+
+        recent = AuditLog(Path("data/logs")).list_recent(limit=4, entry_type="operator-action")
+        self.assertEqual(recent[0]["action"], "Disconnect Apple Account")
+        self.assertEqual(recent[0]["related_kind"], "settings-account")

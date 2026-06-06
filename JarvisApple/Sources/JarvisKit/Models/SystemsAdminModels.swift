@@ -43,6 +43,18 @@ public struct SystemsAdminAccountItem: Codable, Sendable, Identifiable {
     }
 }
 
+public struct SystemsAccountActionResult: Codable, Sendable {
+    public let message: String
+    public let account: SystemsAdminAccountItem
+    public let focus: SystemsProfileFocus?
+
+    public init(message: String, account: SystemsAdminAccountItem, focus: SystemsProfileFocus?) {
+        self.message = message
+        self.account = account
+        self.focus = focus
+    }
+}
+
 public struct SystemsAdminFamily: Codable, Sendable {
     public let memberCount: Int
     public let onlineCount: Int

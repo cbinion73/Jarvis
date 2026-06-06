@@ -55,6 +55,14 @@ struct SettingsView: View {
     @State private var showHealthDashboardEnabled = true
     @State private var showPublishingDashboardEnabled = false
     @State private var adminSummaryDiagnostics = "Idle"
+    @State private var selectedAccountId = ""
+    @State private var accountLabelDraft = ""
+    @State private var accountLoginHintDraft = ""
+    @State private var accountStatusDraft = "planned"
+    @State private var accountWorkflowMessage = ""
+    @State private var accountWorkflowError = ""
+    @State private var accountSaveInFlight = false
+    @State private var accountDisconnectInFlight = false
 
     private let steel = Color(red: 0.55, green: 0.65, blue: 0.78)
 
@@ -309,6 +317,96 @@ struct SettingsView: View {
                                                 .lineLimit(2)
                                         }
                                     }
+                                }
+
+                                Divider().opacity(0.3)
+                                Text("Account Command Deck")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                if !adminSummary.accounts.items.isEmpty {
+                                    Picker("Account", selection: $selectedAccountId) {
+                                        ForEach(adminSummary.accounts.items.prefix(6)) { account in
+                                            Text(account.label.isEmpty ? account.id : account.label)
+                                                .tag(account.id)
+                                        }
+                                    }
+                                    .pickerStyle(.menu)
+                                    .tint(steel)
+                                    .onChange(of: selectedAccountId) { _, newValue in
+                                        syncAccountDrafts(
+                                            accounts: adminSummary.accounts.items,
+                                            preferredAccountId: newValue
+                                        )
+                                    }
+
+                                    VStack(alignment: .leading, spacing: 10) {
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            Text("Label")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                            TextField("Chris Google Workspace", text: $accountLabelDraft)
+                                                .textInputAutocapitalization(.words)
+                                                .disableAutocorrection(true)
+                                        }
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            Text("Login Hint")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                            TextField("chris@example.com", text: $accountLoginHintDraft)
+                                                .textInputAutocapitalization(.never)
+                                                .autocorrectionDisabled()
+                                                .keyboardType(.emailAddress)
+                                        }
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            Text("Status")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                            Picker("Status", selection: $accountStatusDraft) {
+                                                Text("Planned").tag("planned")
+                                                Text("Connected").tag("connected")
+                                                Text("Paused").tag("paused")
+                                                Text("Watch").tag("watch")
+                                                Text("Active").tag("active")
+                                            }
+                                            .pickerStyle(.segmented)
+                                        }
+                                        HStack(spacing: 10) {
+                                            Button(accountSaveInFlight ? "Saving…" : "Save Account") {
+                                                Task { await saveSelectedAccount() }
+                                            }
+                                            .buttonStyle(.borderedProminent)
+                                            .tint(.teal)
+                                            .disabled(accountSaveInFlight || accountDisconnectInFlight || selectedAccountId.isEmpty)
+
+                                            Button(accountDisconnectInFlight ? "Disconnecting…" : "Disconnect") {
+                                                Task { await disconnectSelectedAccount() }
+                                            }
+                                            .buttonStyle(.bordered)
+                                            .tint(.orange)
+                                            .disabled(accountSaveInFlight || accountDisconnectInFlight || selectedAccountId.isEmpty)
+                                        }
+                                        .font(.caption.weight(.semibold))
+                                    }
+                                    if let selectedAccount = selectedAccount(in: adminSummary.accounts.items) {
+                                        Text("\(selectedAccount.provider.capitalized) · \(selectedAccount.detail)")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(2)
+                                    }
+                                    if !accountWorkflowMessage.isEmpty {
+                                        Text(accountWorkflowMessage)
+                                            .font(.caption2)
+                                            .foregroundStyle(.green.opacity(0.9))
+                                    }
+                                    if !accountWorkflowError.isEmpty {
+                                        Text(accountWorkflowError)
+                                            .font(.caption2)
+                                            .foregroundStyle(.red.opacity(0.9))
+                                    }
+                                } else {
+                                    Text("No saved accounts are available yet. Once a personal account is connected, its label, login hint, and live posture can be adjusted here.")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
                                 }
 
                                 Divider().opacity(0.3)
@@ -2430,6 +2528,7 @@ struct SettingsView: View {
                 await MainActor.run {
                     guard generation == refreshGeneration else { return }
                     adminSummary = result
+                    syncAccountDrafts(accounts: result.accounts.items)
                     adminSummaryDiagnostics = "Loaded in \(String(format: "%.3f", Date().timeIntervalSince(startedAt)))s"
                     print("[JARVIS Systems] refresh \(generation) promoted adminSummary in \(String(format: "%.3f", Date().timeIntervalSince(startedAt)))s")
                 }
@@ -2558,6 +2657,74 @@ struct SettingsView: View {
         shareHealthWithFamilyEnabled = settings.privacy.shareHealthWithFamily
         showHealthDashboardEnabled = settings.dashboard.showHealth
         showPublishingDashboardEnabled = settings.dashboard.showPublishing
+    }
+
+    @MainActor
+    private func syncAccountDrafts(
+        accounts: [SystemsAdminAccountItem],
+        preferredAccountId: String? = nil
+    ) {
+        let availableAccounts = accounts
+        guard !availableAccounts.isEmpty else {
+            selectedAccountId = ""
+            accountLabelDraft = ""
+            accountLoginHintDraft = ""
+            accountStatusDraft = "planned"
+            return
+        }
+        let requestedId = preferredAccountId ?? selectedAccountId
+        let selected = availableAccounts.first(where: { $0.id == requestedId }) ?? availableAccounts[0]
+        selectedAccountId = selected.id
+        accountLabelDraft = selected.label
+        accountLoginHintDraft = selected.loginHint
+        accountStatusDraft = selected.status.isEmpty ? "planned" : selected.status
+    }
+
+    private func selectedAccount(in accounts: [SystemsAdminAccountItem]) -> SystemsAdminAccountItem? {
+        accounts.first(where: { $0.id == selectedAccountId }) ?? accounts.first
+    }
+
+    @MainActor
+    private func saveSelectedAccount() async {
+        guard !selectedAccountId.isEmpty else {
+            accountWorkflowError = "Select an account first."
+            return
+        }
+        accountSaveInFlight = true
+        accountWorkflowMessage = ""
+        accountWorkflowError = ""
+        defer { accountSaveInFlight = false }
+        do {
+            let result = try await AppleAPIClient.shared.saveSystemsAccount(
+                accountId: selectedAccountId,
+                label: accountLabelDraft,
+                loginHint: accountLoginHintDraft,
+                status: accountStatusDraft
+            )
+            accountWorkflowMessage = result.message
+            await refreshSystems()
+        } catch {
+            accountWorkflowError = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func disconnectSelectedAccount() async {
+        guard !selectedAccountId.isEmpty else {
+            accountWorkflowError = "Select an account first."
+            return
+        }
+        accountDisconnectInFlight = true
+        accountWorkflowMessage = ""
+        accountWorkflowError = ""
+        defer { accountDisconnectInFlight = false }
+        do {
+            let result = try await AppleAPIClient.shared.disconnectSystemsAccount(accountId: selectedAccountId)
+            accountWorkflowMessage = result.message
+            await refreshSystems()
+        } catch {
+            accountWorkflowError = error.localizedDescription
+        }
     }
 
     private func saveProfileSettings() async {

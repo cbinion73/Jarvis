@@ -213,6 +213,20 @@ class _StubRuntime:
         )
         self.config.load_household = lambda: SimpleNamespace(location_label="Home")
         self.supervision_support = _StubSupervisionSupport()
+        self._accounts = [
+            {
+                "account_id": "acct-google-1",
+                "owner_user_id": "chris",
+                "owner_display_name": "Chris",
+                "provider": "google",
+                "service_scope": "mail_calendar",
+                "label": "Chris Google",
+                "login_hint": "chris@example.com",
+                "status": "connected",
+                "notes": "Family inbox and calendar.",
+                "connection": {"status": "connected"},
+            }
+        ]
 
     def execute_sandbox_job(self, *, actor_name: str, job_id: str, triggered_by: str) -> dict:
         return {"ok": True, "accepted": True, "job": {"job_id": job_id, "status": "sandbox-queued"}}
@@ -290,6 +304,54 @@ class _StubRuntime:
             "governance": {"enabled": True, "review_required": False},
             "insights": [{"title": "Quiet mornings reduce friction", "status": "active"}],
             "rhythms": ["Protect the first hour for briefing and setup."],
+        }
+
+    def account_registry_snapshot(self) -> dict:
+        return {
+            "accounts": [dict(item) for item in self._accounts],
+            "owners": [{"id": "chris", "label": "Chris"}],
+            "providers": [{"id": "google", "label": "Google"}],
+            "services": [{"id": "mail_calendar", "label": "Mail / Calendar"}],
+        }
+
+    def update_personal_account(self, account_id: str, payload: dict) -> dict:
+        for index, account in enumerate(self._accounts):
+            if account["account_id"] != account_id:
+                continue
+            updated = {**account, **{key: value for key, value in payload.items() if value is not None}}
+            self._accounts[index] = updated
+            return {
+                "message": f"Updated account '{updated['label']}'.",
+                "account": dict(updated),
+                "registry": self.account_registry_snapshot(),
+            }
+        raise KeyError(account_id)
+
+    def disconnect_account(self, account_id: str) -> dict:
+        for index, account in enumerate(self._accounts):
+            if account["account_id"] != account_id:
+                continue
+            updated = {
+                **account,
+                "status": "planned",
+                "notes": "Disconnected from Google.",
+                "connection": {"status": "disconnected"},
+            }
+            self._accounts[index] = updated
+            return {
+                "ok": True,
+                "message": "Account disconnected.",
+                "account": dict(updated),
+            }
+        return {"ok": False, "message": "Account not found."}
+
+    def google_workspace_summary(self) -> dict:
+        return {"client_secret": {"configured": True, "present": True, "detail": "Google Workspace linked."}}
+
+    def identity_overview(self) -> dict:
+        return {
+            "members": [{"display_name": "Chris", "user_id": "chris"}],
+            "devices": [{"label": "JarvisPhone", "device_id": "device-1"}],
         }
 
 
@@ -732,6 +794,7 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Save Voice Settings", settings_html)
         self.assertIn("Save Location Settings", settings_html)
         self.assertIn("Save Profile Defaults", settings_html)
+        self.assertIn("Account Command Deck", settings_html)
         self.assertIn("Recent Settings Continuity", settings_html)
         self.assertIn("status", settings_snapshot)
         self.assertIn("voice", settings_snapshot)
@@ -741,6 +804,7 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("proof_paths", settings_snapshot)
         self.assertEqual(settings_snapshot["proof_paths"]["module_route"], "/settings-center")
         self.assertEqual(settings_snapshot["proof_paths"]["module_api"], "/api/settings/module")
+        self.assertEqual(settings_snapshot["proof_paths"]["account_settings_api"], "/api/settings/account")
         self.assertEqual(settings_snapshot["proof_paths"]["profile_settings_api"], "/api/settings/profile")
         self.assertIn("JARVIS Huddle", huddle_html)
         self.assertIn("Start Overnight Research", huddle_html)
@@ -1473,6 +1537,45 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
             self.assertTrue(any(item.get("related_kind") == "profile-settings" for item in activity_payload))
             self.assertEqual(progress_snapshot["progress_next_focus"], "Settings")
             self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Settings")
+
+    def test_settings_account_mutations_persist_into_settings_and_activity(self) -> None:
+        save_response = asyncio.run(
+            self._route("/api/settings/account", "POST")(
+                {
+                    "actor": "Chris",
+                    "account_id": "acct-google-1",
+                    "label": "Chris Family Google",
+                    "login_hint": "family@example.com",
+                    "status": "paused",
+                }
+            )
+        )
+        disconnect_response = asyncio.run(
+            self._route("/api/settings/accounts/{account_id}/disconnect", "POST")(
+                account_id="acct-google-1",
+                payload={"actor": "Chris"},
+            )
+        )
+
+        save_payload = self._json_body(save_response)
+        disconnect_payload = self._json_body(disconnect_response)
+        settings_snapshot = self._json_body(asyncio.run(self._route("/api/settings/module", "GET")()))
+        activity_payload = self._json_body(asyncio.run(self._route("/api/activity", "GET")()))
+        progress_snapshot = self._json_body(asyncio.run(self._route("/api/progress/module", "GET")()))
+
+        self.assertTrue(save_payload["ok"])
+        self.assertTrue(disconnect_payload["ok"])
+        self.assertEqual(settings_snapshot["counts"]["account_count"], 1)
+        self.assertEqual(settings_snapshot["counts"]["connected_account_count"], 0)
+        account = settings_snapshot["accounts"]["accounts"][0]
+        self.assertEqual(account["label"], "Chris Family Google")
+        self.assertEqual(account["login_hint"], "family@example.com")
+        self.assertEqual(account["status"], "planned")
+        self.assertTrue(any(item.get("title") == "Save Account Controls" for item in settings_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("title") == "Disconnect Account" for item in settings_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("related_kind") == "settings-account" for item in activity_payload))
+        self.assertEqual(progress_snapshot["progress_next_focus"], "Settings")
+        self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Settings")
 
     def test_chronicle_activity_populates_chronicle_continuity(self) -> None:
         asyncio.run(

@@ -3504,6 +3504,112 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "focus": focus,
         }
 
+    def _save_settings_account_preferences(
+        account_id: str,
+        payload: dict[str, Any],
+        *,
+        actor_name: str = "Chris",
+    ) -> dict[str, Any]:
+        actor_name = str(actor_name or "Chris").strip() or "Chris"
+        updates = {
+            key: payload.get(key)
+            for key in ("label", "login_hint", "status", "notes")
+            if key in payload
+        }
+        if not updates:
+            raise ValueError("No account updates were provided.")
+        try:
+            result = runtime.update_personal_account(account_id, updates)
+        except KeyError as exc:
+            raise ValueError("Account not found.") from exc
+
+        account = dict(result.get("account") or {})
+        label = str(account.get("label") or account_id).strip() or account_id
+        provider = str(account.get("provider") or "account").strip() or "account"
+        status = str(account.get("status") or "planned").strip() or "planned"
+        login_hint = str(account.get("login_hint") or "").strip()
+        detail_parts = [f"{provider.title()} account posture saved as {status.replace('_', ' ')}."]
+        if login_hint:
+            detail_parts.append(f"Login hint set to {login_hint}.")
+        notes = str(account.get("notes") or "").strip()
+        if notes:
+            detail_parts.append(notes)
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor_name,
+                "domain": "settings",
+                "action": "Save Account Controls",
+                "title": label,
+                "detail": " ".join(detail_parts),
+                "why_now": "Settings updated the live account posture used by JARVIS connectors and Apple clients.",
+                "result_summary": f"Settings account controls saved for {label}.",
+                "related_route": "/settings-center",
+                "route_label": "Open Settings",
+                "related_kind": "settings-account",
+                "related_label": label,
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        focus = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module="Settings",
+            reason=f"Settings account controls were updated for {label}.",
+            route="/settings-center",
+            actor=actor_name.lower(),
+        )
+        return {
+            "ok": True,
+            "message": result.get("message") or f"Updated account '{label}'.",
+            "account": account,
+            "registry": result.get("registry") or runtime.account_registry_snapshot(),
+            "focus": focus,
+        }
+
+    def _disconnect_settings_account(
+        account_id: str,
+        *,
+        actor_name: str = "Chris",
+    ) -> dict[str, Any]:
+        actor_name = str(actor_name or "Chris").strip() or "Chris"
+        result = runtime.disconnect_account(account_id)
+        if not bool(result.get("ok", False)):
+            raise ValueError(str(result.get("message") or "Account disconnect failed."))
+        account = dict(result.get("account") or {})
+        label = str(account.get("label") or account_id).strip() or account_id
+        provider = str(account.get("provider") or "account").strip() or "account"
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor_name,
+                "domain": "settings",
+                "action": "Disconnect Account",
+                "title": label,
+                "detail": f"Settings disconnected the {provider.title()} account and returned it to planned posture.",
+                "why_now": "Settings needed to pause or reset a live account connector without leaving the module route.",
+                "result_summary": f"{label} disconnected from {provider.title()}.",
+                "related_route": "/settings-center",
+                "route_label": "Open Settings",
+                "related_kind": "settings-account",
+                "related_label": label,
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        focus = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module="Settings",
+            reason=f"Settings disconnected the {label} account.",
+            route="/settings-center",
+            actor=actor_name.lower(),
+        )
+        return {
+            "ok": True,
+            "message": result.get("message") or f"Disconnected {label}.",
+            "account": account,
+            "focus": focus,
+            "registry": runtime.account_registry_snapshot(),
+        }
+
     async def _build_settings_module_payload() -> dict[str, Any]:
         try:
             from datetime import datetime, timezone
@@ -3516,9 +3622,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "generated_at": generated_at,
             "available": True,
             "status": "Useful",
-            "summary": "Settings now has a dedicated module route with live voice, location, account, and permissions posture inside JARVIS.",
+            "summary": "Settings now has a dedicated module route with live voice, location, account controls, and permissions posture inside JARVIS.",
             "what_became_real": "Settings & Permissions is now a standalone app module instead of only a shell packet with scattered APIs behind it.",
-            "remains_partial": "Broader connector actions, richer identity/account edits, and deeper cross-surface continuity still need follow-on slices.",
+            "remains_partial": "Broader connector provisioning, richer family identity edits, and deeper cross-surface continuity still need follow-on slices.",
             "voice": {},
             "voice_options": {},
             "location": {},
@@ -3555,6 +3661,8 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "google_disconnect_api": "/api/google/disconnect",
                 "personalization_api": "/api/personalization/settings",
                 "profile_settings_api": "/api/settings/profile",
+                "account_settings_api": "/api/settings/account",
+                "account_disconnect_api": "/api/settings/accounts/{account_id}/disconnect",
             },
             "errors": [],
         }
@@ -3639,6 +3747,35 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         await _broadcast_dashboard("settings-profile.updated")
+        return _json(result)
+
+    @app.post("/api/settings/account")
+    async def api_save_settings_account(payload: dict[str, Any]) -> JSONResponse:
+        account_id = str(payload.get("account_id") or "").strip()
+        if not account_id:
+            raise HTTPException(status_code=400, detail="Account id is required.")
+        try:
+            result = _save_settings_account_preferences(
+                account_id,
+                payload,
+                actor_name=str(payload.get("actor") or "Chris"),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        await _broadcast_dashboard("settings-account.updated")
+        return _json(result)
+
+    @app.post("/api/settings/accounts/{account_id}/disconnect")
+    async def api_disconnect_settings_account(account_id: str, payload: dict[str, Any] | None = None) -> JSONResponse:
+        payload = payload or {}
+        try:
+            result = _disconnect_settings_account(
+                account_id,
+                actor_name=str(payload.get("actor") or "Chris"),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        await _broadcast_dashboard("settings-account.disconnected")
         return _json(result)
 
     @app.get("/api/design-review-state")

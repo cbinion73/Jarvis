@@ -17244,8 +17244,9 @@ class JarvisRuntime:
         if account.provider != "google":
             return {"ok": False, "message": f"{account.provider.title()} disconnect is not wired yet."}
         result = self.google_workspace.disconnect(account)
-        self.account_registry.update_status(account_id, "planned", "Disconnected from Google.")
-        result["account"] = account.to_dict()
+        updated = self.account_registry.update_status(account_id, "planned", "Disconnected from Google.")
+        result["account"] = (updated or account).to_dict()
+        self._invalidate_snapshot_cache()
         return result
 
     def disconnect_account(self, account_id: str) -> dict:
@@ -17254,13 +17255,15 @@ class JarvisRuntime:
             return {"ok": False, "message": "Account not found."}
         if account.provider == "google":
             result = self.google_workspace.disconnect(account)
-            self.account_registry.update_status(account_id, "planned", "Disconnected from Google.")
-            result["account"] = account.to_dict()
+            updated = self.account_registry.update_status(account_id, "planned", "Disconnected from Google.")
+            result["account"] = (updated or account).to_dict()
+            self._invalidate_snapshot_cache()
             return result
         if account.provider == "outlook":
             result = self.microsoft_graph.disconnect(account)
-            self.account_registry.update_status(account_id, "planned", "Disconnected from Microsoft Graph.")
-            result["account"] = account.to_dict()
+            updated = self.account_registry.update_status(account_id, "planned", "Disconnected from Microsoft Graph.")
+            result["account"] = (updated or account).to_dict()
+            self._invalidate_snapshot_cache()
             return result
         return {"ok": False, "message": f"{account.provider.title()} disconnect is not wired yet."}
 
@@ -17285,6 +17288,22 @@ class JarvisRuntime:
         self._invalidate_snapshot_cache()
         return {
             "message": f"Saved account '{account.label}'.",
+            "account": account.to_dict(),
+            "registry": self.account_registry_snapshot(),
+        }
+
+    def update_personal_account(self, account_id: str, payload: dict) -> dict:
+        current = self.account_registry.get(account_id)
+        if not current:
+            raise KeyError(account_id)
+        merged = current.to_dict()
+        for field in ("label", "login_hint", "status", "notes"):
+            if field in payload:
+                merged[field] = payload.get(field)
+        account = self.account_registry.save_account(merged)
+        self._invalidate_snapshot_cache()
+        return {
+            "message": f"Updated account '{account.label}'.",
             "account": account.to_dict(),
             "registry": self.account_registry_snapshot(),
         }

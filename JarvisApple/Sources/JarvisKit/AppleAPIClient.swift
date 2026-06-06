@@ -223,6 +223,38 @@ public final class AppleAPIClient: Sendable {
         )
     }
 
+    public func saveSystemsAccount(
+        accountId: String,
+        label: String,
+        loginHint: String,
+        status: String,
+        actor: String = "chris"
+    ) async throws -> SystemsAccountActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let label: String
+            let login_hint: String
+            let status: String
+        }
+        return try await post(
+            "/api/apple/systems/accounts/\(accountId)",
+            body: Body(actor: actor, label: label, login_hint: loginHint, status: status)
+        )
+    }
+
+    public func disconnectSystemsAccount(
+        accountId: String,
+        actor: String = "chris"
+    ) async throws -> SystemsAccountActionResult {
+        struct Body: Encodable {
+            let actor: String
+        }
+        return try await post(
+            "/api/apple/systems/accounts/\(accountId)/disconnect",
+            body: Body(actor: actor)
+        )
+    }
+
     public func promoteTrustZone(_ zoneId: String, actor: String = "chris", basis: String = "manual promotion from phone") async throws -> SystemsTrustZoneActionResult {
         struct Body: Encodable {
             let actor: String

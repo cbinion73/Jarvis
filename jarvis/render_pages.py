@@ -9110,7 +9110,39 @@ def render_settings_module_page(payload: dict) -> str:
     }}
     .status-note {{ min-height: 1.3em; color: var(--muted); margin-top: 10px; }}
     .ok {{ color: var(--success); }}
+    .storyboard-strip {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 12px;
+    }}
+    .storyboard-step {{
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      min-height: 124px;
+    }}
+    .storyboard-step strong {{
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }}
+    .storyboard-step span {{
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 13px;
+    }}
+    .account-actions {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }}
     @media (max-width: 980px) {{
+      .storyboard-strip {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
       .span-4, .span-6, .span-8, .span-12 {{ grid-column: span 12; }}
     }}
   </style>
@@ -9133,6 +9165,14 @@ def render_settings_module_page(payload: dict) -> str:
       </div>
       <p class="status-note" id="settings-status-note">Loading settings module state…</p>
     </section>
+    <section class="storyboard-strip">
+      <div class="storyboard-step"><strong>1. Systems Chamber</strong><span>Voice, location, accounts, and governance stay in the same operational deck instead of scattered modal settings.</span></div>
+      <div class="storyboard-step"><strong>2. Account Command</strong><span>Connector posture can be edited, stabilized, or disconnected from the route itself.</span></div>
+      <div class="storyboard-step"><strong>3. Voice Stack</strong><span>Live provider and fallback posture stays editable inside the same chamber language.</span></div>
+      <div class="storyboard-step"><strong>4. Place Memory</strong><span>Preferred location and saved places stay tied to the same continuity surface.</span></div>
+      <div class="storyboard-step"><strong>5. Profile Defaults</strong><span>Notification, privacy, and dashboard posture keep shaping the live product from one route.</span></div>
+      <div class="storyboard-step"><strong>6. Continuity Trail</strong><span>Every settings mutation feeds shared activity and progress instead of disappearing after save.</span></div>
+    </section>
     <div class="layout">
       <section class="panel span-4">
         <h2>Module Status</h2>
@@ -9141,6 +9181,34 @@ def render_settings_module_page(payload: dict) -> str:
       <section class="panel span-8">
         <h2>Accounts & Connectors</h2>
         <ul id="accounts-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Account Command Deck</h2>
+        <form id="account-settings-form">
+          <label>Account
+            <select id="account-selected"></select>
+          </label>
+          <label>Account Label
+            <input id="account-label" placeholder="Chris Google Workspace">
+          </label>
+          <label>Login Hint
+            <input id="account-login-hint" placeholder="chris@example.com">
+          </label>
+          <label>Status
+            <select id="account-status">
+              <option value="planned">Planned</option>
+              <option value="connected">Connected</option>
+              <option value="paused">Paused</option>
+              <option value="watch">Watch</option>
+              <option value="active">Active</option>
+            </select>
+          </label>
+          <div class="account-actions">
+            <button type="submit">Save Account Controls</button>
+            <button type="button" id="disconnect-account">Disconnect Account</button>
+          </div>
+        </form>
+        <p class="status-note" id="account-note">Select a live account to edit its posture, login hint, or connector state from Settings.</p>
       </section>
       <section class="panel span-6">
         <h2>Voice Controls</h2>
@@ -9208,6 +9276,8 @@ def render_settings_module_page(payload: dict) -> str:
   </main>
   <script>
     const initialPayload = {raw_json};
+    let currentPayload = initialPayload;
+    let selectedAccountId = "";
     const heroStatus = document.getElementById("hero-status");
     const heroAccounts = document.getElementById("hero-accounts");
     const heroLocations = document.getElementById("hero-locations");
@@ -9221,6 +9291,7 @@ def render_settings_module_page(payload: dict) -> str:
     const recentActivityList = document.getElementById("recent-activity-list");
     const payloadPreview = document.getElementById("payload-preview");
     const profileNote = document.getElementById("profile-note");
+    const accountNote = document.getElementById("account-note");
 
     function esc(value) {{
       return String(value ?? "")
@@ -9258,12 +9329,54 @@ def render_settings_module_page(payload: dict) -> str:
       return account.status || "unknown";
     }}
 
+    function accountOptionMarkup(accounts, selectedId) {{
+      return accounts.map((account) => {{
+        const id = account.account_id || account.id || "";
+        const selected = id === selectedId ? " selected" : "";
+        const label = account.label || id || "Account";
+        const provider = account.provider || "provider";
+        return `<option value="${{esc(id)}}"${{selected}}>${{esc(label)}} · ${{esc(provider)}}</option>`;
+      }}).join("");
+    }}
+
+    function syncAccountForm(accounts) {{
+      const select = document.getElementById("account-selected");
+      const list = Array.isArray(accounts) ? accounts : [];
+      if (!list.length) {{
+        selectedAccountId = "";
+        select.innerHTML = "";
+        document.getElementById("account-label").value = "";
+        document.getElementById("account-login-hint").value = "";
+        document.getElementById("account-status").value = "planned";
+        accountNote.textContent = "No personal accounts are saved yet. Add or connect an account first, then refine it here.";
+        return;
+      }}
+      if (!selectedAccountId || !list.some((item) => (item.account_id || item.id || "") === selectedAccountId)) {{
+        selectedAccountId = list[0].account_id || list[0].id || "";
+      }}
+      select.innerHTML = accountOptionMarkup(list, selectedAccountId);
+      const active = list.find((item) => (item.account_id || item.id || "") === selectedAccountId) || list[0];
+      if (!active) {{
+        return;
+      }}
+      document.getElementById("account-label").value = active.label || "";
+      document.getElementById("account-login-hint").value = active.login_hint || "";
+      document.getElementById("account-status").value = active.status || "planned";
+      accountNote.textContent = active.detail
+        ? `Editing ${{active.label || active.account_id || "account"}} · ${{active.detail}}`
+        : "Adjust the live account posture from the same Settings chamber.";
+    }}
+
     function render(payload) {{
+      currentPayload = payload || {{}};
       const voice = payload.voice || {{}};
       const voiceOptions = payload.voice_options || {{}};
       const location = payload.location || {{}};
       const accounts = Array.isArray((payload.accounts || {{}}).accounts) ? payload.accounts.accounts : [];
       const permissions = payload.permissions || {{}};
+      const governance = permissions.governance || {{}};
+      const privacy = permissions.privacy || {{}};
+      const notifications = permissions.notifications || {{}};
       const identity = payload.identity || {{}};
       const savedLocations = Array.isArray(location.saved_locations) ? location.saved_locations : [];
       const insights = Array.isArray(permissions.insights) ? permissions.insights : [];
@@ -9280,6 +9393,7 @@ def render_settings_module_page(payload: dict) -> str:
       document.getElementById("voice-elevenlabs").innerHTML = `<option value="">No ElevenLabs voice selected</option>${{optionMarkup(voiceOptions.elevenlabs, voice.elevenlabs_voice)}}`;
       document.getElementById("voice-piper").innerHTML = `<option value="">No Piper model selected</option>${{optionMarkup(voiceOptions.piper, voice.piper_model_path)}}`;
       document.getElementById("voice-speaker").value = voice.piper_speaker || "";
+      syncAccountForm(accounts);
 
       document.getElementById("location-preferred").innerHTML = savedLocations.map((item) => {{
         const selected = item.id === location.preferred_location_id ? " selected" : "";
@@ -9304,12 +9418,9 @@ def render_settings_module_page(payload: dict) -> str:
       accountsList.innerHTML = accounts.slice(0, 8).map((account) => li(
         account.label || account.account_id || "Account",
         `${{account.provider || "provider"}} · ${{connectedSummary(account)}}`,
-        account.login_hint || account.service_scope || ""
+        account.notes || account.login_hint || account.service_scope || ""
       )).join("") || '<li><strong>No accounts configured.</strong><span>Saved Google or Outlook accounts will appear here.</span></li>';
 
-      const governance = permissions.governance || {{}};
-      const privacy = permissions.privacy || {{}};
-      const notifications = permissions.notifications || {{}};
       permissionsList.innerHTML = [
         li("Governance", governance.enabled ? "Enabled" : "Paused", governance.review_required ? "Adult review required" : "No extra review flag"),
         li("Privacy", privacy.private_chronicle ? "Chronicle is private by default." : "Chronicle is shareable by default.", privacy.share_health_with_family ? "Health sharing enabled." : "Health sharing disabled."),
@@ -9392,6 +9503,52 @@ def render_settings_module_page(payload: dict) -> str:
       }}
     }}
 
+    async function saveAccountSettings(event) {{
+      event.preventDefault();
+      if (!selectedAccountId) {{
+        accountNote.textContent = "No account is selected.";
+        return;
+      }}
+      accountNote.textContent = "Saving account controls…";
+      try {{
+        const response = await fetch("/api/settings/account", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            account_id: selectedAccountId,
+            label: document.getElementById("account-label").value,
+            login_hint: document.getElementById("account-login-hint").value,
+            status: document.getElementById("account-status").value,
+          }}),
+        }});
+        const payload = await response.json();
+        accountNote.textContent = payload.message || "Account controls updated.";
+        await refreshSettingsState();
+      }} catch (error) {{
+        accountNote.textContent = `Account save failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function disconnectAccount() {{
+      if (!selectedAccountId) {{
+        accountNote.textContent = "No account is selected.";
+        return;
+      }}
+      accountNote.textContent = "Disconnecting account…";
+      try {{
+        const response = await fetch(`/api/settings/accounts/${{encodeURIComponent(selectedAccountId)}}/disconnect`, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{}}),
+        }});
+        const payload = await response.json();
+        accountNote.textContent = payload.message || "Account disconnected.";
+        await refreshSettingsState();
+      }} catch (error) {{
+        accountNote.textContent = `Disconnect failed: ${{String(error)}}`;
+      }}
+    }}
+
     async function saveProfileSettings(event) {{
       event.preventDefault();
       profileNote.textContent = "Saving profile defaults…";
@@ -9425,6 +9582,17 @@ def render_settings_module_page(payload: dict) -> str:
     document.getElementById("refresh-settings").addEventListener("click", () => {{
       refreshSettingsState().catch((error) => {{
         statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }});
+    }});
+    document.getElementById("account-selected").addEventListener("change", (event) => {{
+      selectedAccountId = event.target.value || "";
+      const accounts = Array.isArray((currentPayload.accounts || {{}}).accounts) ? currentPayload.accounts.accounts : [];
+      syncAccountForm(accounts);
+    }});
+    document.getElementById("account-settings-form").addEventListener("submit", saveAccountSettings);
+    document.getElementById("disconnect-account").addEventListener("click", () => {{
+      disconnectAccount().catch((error) => {{
+        accountNote.textContent = `Disconnect failed: ${{String(error)}}`;
       }});
     }});
     document.getElementById("voice-settings-form").addEventListener("submit", saveVoiceSettings);

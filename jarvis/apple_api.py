@@ -195,6 +195,112 @@ def _save_apple_settings_profile(
     }
 
 
+def _save_apple_settings_account(
+    runtime,
+    account_id: str,
+    payload: dict[str, Any],
+    *,
+    actor_name: str = "chris",
+) -> dict[str, Any]:
+    actor_name = str(actor_name or "chris").strip() or "chris"
+    updates = {
+        key: payload.get(key)
+        for key in ("label", "login_hint", "status", "notes")
+        if key in payload
+    }
+    if not updates:
+        raise ValueError("No account updates were provided.")
+    try:
+        result = runtime.update_personal_account(account_id, updates)
+    except KeyError as exc:
+        raise ValueError("Account not found.") from exc
+    account = dict(result.get("account") or {})
+    label = str(account.get("label") or account_id).strip() or account_id
+    provider = str(account.get("provider") or "account").strip() or "account"
+    status = str(account.get("status") or "planned").strip() or "planned"
+    login_hint = str(account.get("login_hint") or "").strip()
+    detail = f"{provider.title()} account saved as {status.replace('_', ' ')}."
+    if login_hint:
+        detail += f" Login hint: {login_hint}."
+    _record_operator_action(
+        actor=actor_name,
+        domain="settings",
+        action="Save Apple Account Controls",
+        detail=f"Apple Systems updated {label}. {detail}",
+        why_now="The iPhone Systems surface updated live account posture and fed that continuity back into Settings.",
+        result_summary=f"Apple account controls saved for {label}.",
+        route="/settings-center",
+        route_label="Open Settings",
+        related_kind="settings-account",
+        related_label=label,
+        succeeded=True,
+    )
+    focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module="Settings",
+        reason=f"Apple Systems updated the {label} account.",
+        route="/settings-center",
+        actor=actor_name,
+    )
+    return {
+        "message": result.get("message") or f"Updated account '{label}'.",
+        "account": {
+            "id": str(account.get("account_id") or account_id),
+            "label": label,
+            "provider": provider,
+            "status": status,
+            "login_hint": login_hint,
+            "detail": str(account.get("notes") or account.get("service_scope") or login_hint or "Awaiting configuration"),
+        },
+        "focus": focus,
+    }
+
+
+def _disconnect_apple_settings_account(
+    runtime,
+    account_id: str,
+    *,
+    actor_name: str = "chris",
+) -> dict[str, Any]:
+    actor_name = str(actor_name or "chris").strip() or "chris"
+    result = runtime.disconnect_account(account_id)
+    if not bool(result.get("ok", False)):
+        raise ValueError(str(result.get("message") or "Account disconnect failed."))
+    account = dict(result.get("account") or {})
+    label = str(account.get("label") or account_id).strip() or account_id
+    provider = str(account.get("provider") or "account").strip() or "account"
+    _record_operator_action(
+        actor=actor_name,
+        domain="settings",
+        action="Disconnect Apple Account",
+        detail=f"Apple Systems disconnected the {provider.title()} account {label} and returned it to planned posture.",
+        why_now="The iPhone Systems surface needed to pause or reset a connector from native controls.",
+        result_summary=f"Apple disconnected {label}.",
+        route="/settings-center",
+        route_label="Open Settings",
+        related_kind="settings-account",
+        related_label=label,
+        succeeded=True,
+    )
+    focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module="Settings",
+        reason=f"Apple Systems disconnected the {label} account.",
+        route="/settings-center",
+        actor=actor_name,
+    )
+    return {
+        "message": result.get("message") or f"Disconnected {label}.",
+        "account": {
+            "id": str(account.get("account_id") or account_id),
+            "label": label,
+            "provider": provider,
+            "status": str(account.get("status") or "planned"),
+            "login_hint": str(account.get("login_hint") or ""),
+            "detail": str(account.get("notes") or account.get("service_scope") or "Disconnected"),
+        },
+        "focus": focus,
+    }
+
+
 def _record_operator_action(
     *,
     actor: str,
@@ -8831,7 +8937,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                     "provider": str(item.get("provider") or "unknown"),
                     "status": status or "planned",
                     "login_hint": str(item.get("login_hint") or ""),
-                    "detail": str(item.get("service_scope") or item.get("login_hint") or "Awaiting configuration"),
+                    "detail": str(item.get("notes") or item.get("service_scope") or item.get("login_hint") or "Awaiting configuration"),
                 }
             )
 
@@ -9617,6 +9723,25 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         actor_name = str(payload.get("actor") or payload.get("actor_id") or "chris").strip() or "chris"
         try:
             result = _save_apple_settings_profile(runtime, payload, actor_name=actor_name)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _ok(result)
+
+    @app.post("/api/apple/systems/accounts/{account_id}")
+    async def apple_save_systems_account(account_id: str, payload: dict[str, Any]):
+        actor_name = str(payload.get("actor") or payload.get("actor_id") or "chris").strip() or "chris"
+        try:
+            result = _save_apple_settings_account(runtime, account_id, payload, actor_name=actor_name)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _ok(result)
+
+    @app.post("/api/apple/systems/accounts/{account_id}/disconnect")
+    async def apple_disconnect_systems_account(account_id: str, payload: dict[str, Any] | None = None):
+        payload = payload or {}
+        actor_name = str(payload.get("actor") or payload.get("actor_id") or "chris").strip() or "chris"
+        try:
+            result = _disconnect_apple_settings_account(runtime, account_id, actor_name=actor_name)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return _ok(result)
