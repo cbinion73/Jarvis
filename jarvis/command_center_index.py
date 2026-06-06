@@ -1778,7 +1778,7 @@ def _core_modules(
             "roadmap_level": "Level 3",
             "summary": "Publishing now has a dedicated module route with launch, project, calendar, social, and revenue posture inside the JARVIS app shell.",
             "what_became_real": "Publish is now a standalone app module route instead of a backend-only or shared-workspace seam.",
-            "remains_partial": "Cross-launch continuity, broader publishing workflows, and deeper drill-ins still need follow-on slices.",
+            "remains_partial": "Broader publishing workflows and deeper drill-ins still need follow-on slices.",
             "evidence": "Dedicated /publish route now sits on top of live publishing APIs.",
         },
         {

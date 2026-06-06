@@ -11,6 +11,8 @@ public struct PublishOverview: Codable, Sendable {
     public let pendingReviewsCount: Int
     public let launchControl: PublishLaunchControl?
     public let launchWorkspace: PublishLaunchWorkspace?
+    public let launchHistory: PublishHistoryLane
+    public let historyCount: Int
     public let actionItems: [PublishActionItem]
     public let continuity: PublishContinuity?
     public let updatedAt:      String
@@ -23,6 +25,8 @@ public struct PublishOverview: Codable, Sendable {
         case pendingReviewsCount = "pending_reviews_count"
         case launchControl = "launch_control"
         case launchWorkspace = "launch_workspace"
+        case launchHistory = "launch_history"
+        case historyCount = "history_count"
         case actionItems = "action_items"
         case continuity
         case updatedAt      = "updated_at"
@@ -36,6 +40,8 @@ public struct PublishOverview: Codable, Sendable {
         pendingReviewsCount: Int = 0,
         launchControl: PublishLaunchControl? = nil,
         launchWorkspace: PublishLaunchWorkspace? = nil,
+        launchHistory: PublishHistoryLane = PublishHistoryLane(),
+        historyCount: Int = 0,
         actionItems: [PublishActionItem] = [],
         continuity: PublishContinuity? = nil,
         updatedAt: String = ""
@@ -47,6 +53,8 @@ public struct PublishOverview: Codable, Sendable {
         self.pendingReviewsCount = pendingReviewsCount
         self.launchControl = launchControl
         self.launchWorkspace = launchWorkspace
+        self.launchHistory = launchHistory
+        self.historyCount = historyCount
         self.actionItems = actionItems
         self.continuity = continuity
         self.updatedAt = updatedAt
@@ -61,9 +69,50 @@ public struct PublishOverview: Codable, Sendable {
         pendingReviewsCount = try container.decodeIfPresent(Int.self, forKey: .pendingReviewsCount) ?? pendingReviews.count
         launchControl = try container.decodeIfPresent(PublishLaunchControl.self, forKey: .launchControl)
         launchWorkspace = try container.decodeIfPresent(PublishLaunchWorkspace.self, forKey: .launchWorkspace)
+        launchHistory = try container.decodeIfPresent(PublishHistoryLane.self, forKey: .launchHistory) ?? PublishHistoryLane()
+        historyCount = try container.decodeIfPresent(Int.self, forKey: .historyCount) ?? launchHistory.count
         actionItems = try container.decodeIfPresent([PublishActionItem].self, forKey: .actionItems) ?? []
         continuity = try container.decodeIfPresent(PublishContinuity.self, forKey: .continuity)
         updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt) ?? ""
+    }
+}
+
+public struct PublishHistoryLane: Codable, Sendable {
+    public let count: Int
+    public let counts: [String: Int]
+    public let items: [PublishHistoryEntry]
+
+    public init(count: Int = 0, counts: [String: Int] = [:], items: [PublishHistoryEntry] = []) {
+        self.count = count
+        self.counts = counts
+        self.items = items
+    }
+}
+
+public struct PublishHistoryEntry: Codable, Identifiable, Sendable {
+    public let historyId: String
+    public let eventType: String
+    public let title: String
+    public let detail: String
+    public let statusLabel: String
+    public let relatedLabel: String
+    public let projectId: String
+    public let reviewId: String
+    public let step: String
+    public let route: String
+    public let savedAt: String
+
+    public var id: String { historyId }
+
+    enum CodingKeys: String, CodingKey {
+        case historyId = "history_id"
+        case eventType = "event_type"
+        case title, detail, route, step
+        case statusLabel = "status_label"
+        case relatedLabel = "related_label"
+        case projectId = "project_id"
+        case reviewId = "review_id"
+        case savedAt = "saved_at"
     }
 }
 

@@ -1582,7 +1582,11 @@ def render_publish_module_page(payload: dict) -> str:
         <ul id="revenue-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>8. Draft New Handoff Asset · Quick Draft Project</h2>
+        <h2>8. Launch History Lane</h2>
+        <ul id="launch-history-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>9. Draft New Handoff Asset · Quick Draft Project</h2>
         <form id="create-project-form">
           <div class="form-grid">
             <label>Title<input id="project-title" placeholder="Launch-ready book or campaign"></label>
@@ -1600,7 +1604,7 @@ def render_publish_module_page(payload: dict) -> str:
         <p class="status-note" id="create-project-note">Create a small draft to verify the module can write real publishing state.</p>
       </section>
       <section class="panel span-6">
-        <h2>9. JARVIS Supervisory Strip &amp; Recent Publish Continuity</h2>
+        <h2>10. JARVIS Supervisory Strip &amp; Recent Publish Continuity</h2>
         <ul id="recent-activity-list"></ul>
       </section>
       <section class="panel span-12">
@@ -1633,6 +1637,7 @@ def render_publish_module_page(payload: dict) -> str:
     const calendarList = document.getElementById("calendar-list");
     const socialList = document.getElementById("social-list");
     const revenueList = document.getElementById("revenue-list");
+    const launchHistoryList = document.getElementById("launch-history-list");
     const recentActivityList = document.getElementById("recent-activity-list");
     const payloadPreview = document.getElementById("payload-preview");
 
@@ -1665,9 +1670,11 @@ def render_publish_module_page(payload: dict) -> str:
       const social = payload.social || {{}};
       const revenue = payload.revenue || {{}};
       const launchWorkspace = payload.launch_workspace || {{}};
+      const launchHistory = payload.launch_history || {{}};
       const projects = Array.isArray(payload.projects) ? payload.projects : [];
       const pendingReviews = Array.isArray(payload.pending_reviews) ? payload.pending_reviews : [];
       const checklist = Array.isArray(launchWorkspace.checklist) ? launchWorkspace.checklist : [];
+      const historyItems = Array.isArray(launchHistory.items) ? launchHistory.items : [];
       const posts = Array.isArray(social.posts) ? social.posts : [];
 
       heroStatus.textContent = payload.status || "Stubbed";
@@ -1739,6 +1746,9 @@ def render_publish_module_page(payload: dict) -> str:
         li("Active Streams", String(revenue.active_stream_count ?? 0), "Live monetization channels under supervision"),
         li("Attention Flags", String(revenue.attention_count ?? 0), "Launch integrity or commercial pressure signals"),
       ].join("");
+      launchHistoryList.innerHTML = historyItems.length
+        ? historyItems.map((item) => li(item.title || "Publish history", item.status_label || item.event_type || "Updated", item.detail || item.related_label || "")).join("")
+        : '<li><strong>No launch history recorded yet.</strong><span>Approve a review, advance a checklist step, or create a draft project to build the live history lane.</span></li>';
       recentActivityList.innerHTML = (Array.isArray(payload.recent_activity) ? payload.recent_activity : []).length
         ? payload.recent_activity.map((item) => li(item.title || "Publish action", item.subtitle || item.actor || "Operator continuity", item.detail || item.route_label || "")).join("")
         : '<li><strong>No publish continuity recorded yet.</strong><span>Create a draft project or clear a review and publish-side activity will appear here.</span></li>';

@@ -642,7 +642,7 @@ class CommandCenterIndexTests(unittest.TestCase):
                             "api_path": "/api/publish/module",
                             "summary": "Publishing now has a dedicated module route with launch, project, calendar, social, and revenue posture.",
                             "what_became_real": "Publish is now a standalone app module route.",
-                            "remains_partial": "Broader publishing workflows still need follow-on slices.",
+                            "remains_partial": "Broader publishing workflows and deeper drill-ins still need follow-on slices.",
                             "evidence": "Dedicated /publish route now sits on top of live publishing APIs.",
                         },
                         {

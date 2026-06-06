@@ -26,6 +26,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
     private var publishQueue: [CarPlayPublishQueueEntry] = []
     private var publishReviews: [PublishReview] = []
     private var publishLaunchWorkspace: PublishLaunchWorkspace?
+    private var publishHistory: [PublishHistoryEntry] = []
     private var opsOverview: CarPlayOpsOverview?
 
     init(interfaceController: CPInterfaceController) {
@@ -273,6 +274,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
             publishReviews = overview.pendingReviews
             publishQueue = JarvisCarPlayPresentation.publishQueue(from: overview)
             publishLaunchWorkspace = overview.launchWorkspace
+            publishHistory = overview.launchHistory.items
 
             var sections: [CPListSection] = []
             if let launchControl = overview.launchControl {
@@ -344,6 +346,18 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                     return item
                 }
                 sections.append(CPListSection(items: items, header: "Launch Ops", sectionIndexTitle: nil))
+            }
+
+            if !publishHistory.isEmpty {
+                let items = publishHistory.prefix(3).map { history in
+                    let item = CPListItem(text: history.title, detailText: history.detail.isEmpty ? history.statusLabel : history.detail)
+                    item.setImage(
+                        UIImage(systemName: "clock.arrow.trianglehead.counterclockwise.rotate.90")?
+                            .withTintColor(.systemTeal, renderingMode: .alwaysOriginal)
+                    )
+                    return item
+                }
+                sections.append(CPListSection(items: items, header: "Launch History", sectionIndexTitle: nil))
             }
 
             publishTemplate.updateSections(sections)

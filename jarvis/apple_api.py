@@ -47,6 +47,7 @@ from .chronicle_reviews import ChronicleReviewStore
 from .health_checkins import HealthCheckInStore
 from .nav_bridge import NavBridge, haversine, min_distance_to_route, sample_route_points
 from .persistence import append_jsonl as persistence_append_jsonl, atomic_write_json
+from .publish_history import PublishHistoryStore
 from .recovery_cases import RecoveryCaseStore
 from .settings import LOCATION_SETTINGS_PATH, VoiceSettingsStore
 
@@ -12455,6 +12456,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                     "kind": "calendar",
                     "priority": "medium",
                 })
+            launch_history = PublishHistoryStore().summary(actor_id="chris", limit=6)
 
             return _ok({
                 "projects":        projects,
@@ -12464,6 +12466,8 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 "pending_reviews_count": len(pending_reviews),
                 "launch_control": active_project,
                 "launch_workspace": launch_workspace,
+                "launch_history": launch_history,
+                "history_count": int(launch_history.get("count") or 0),
                 "action_items": action_items,
                 "continuity": _build_publishing_continuity(
                     "chris",
@@ -12484,6 +12488,8 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 "pending_reviews_count": 0,
                 "launch_control": None,
                 "launch_workspace": None,
+                "launch_history": {"count": 0, "counts": {}, "items": []},
+                "history_count": 0,
                 "action_items": [],
                 "continuity": {
                     "subject_display_name": "Chris",
@@ -12651,6 +12657,16 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             route="/publish",
             actor=actor,
         )
+        history_entry = _record_publish_history(
+            actor_id=actor,
+            event_type="checklist-completed" if completed else "checklist-reopened",
+            title=action,
+            detail=detail,
+            status_label="Completed" if completed else "Reopened",
+            related_label=str(project_dict.get("title") or project_id).strip() or project_id,
+            project_id=project_id,
+            step=str(mutation.get("step") or ""),
+        )
         return {
             "status": "completed" if completed else "reopened",
             "project_id": project_id,
@@ -12661,7 +12677,33 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             "percent": int(mutation.get("percent") or 0),
             "workspace": workspace,
             "focus": focus,
+            "history_entry": history_entry,
         }
+
+    def _record_publish_history(
+        *,
+        actor_id: str,
+        event_type: str,
+        title: str,
+        detail: str,
+        status_label: str,
+        related_label: str = "",
+        project_id: str = "",
+        review_id: str = "",
+        step: str = "",
+    ) -> dict[str, Any]:
+        return PublishHistoryStore().record_event(
+            actor_id=actor_id,
+            event_type=event_type,
+            title=title,
+            detail=detail,
+            status_label=status_label,
+            route="/publish",
+            related_label=related_label,
+            project_id=project_id,
+            review_id=review_id,
+            step=step,
+        )
 
     @app.post("/api/apple/publishing/reviews/{review_id}/approve")
     async def apple_publishing_approve_review(review_id: str):
@@ -12694,6 +12736,15 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             actor="Chris",
         )
         result["focus"] = focus
+        result["history_entry"] = _record_publish_history(
+            actor_id="Chris",
+            event_type="review-approved",
+            title="Approve Publish Review",
+            detail=f"Approved publishing review {str(result.get('review', {}).get('title') or review_id).strip() or review_id}.",
+            status_label="Approved",
+            related_label=str(result.get("review", {}).get("title") or review_id).strip() or review_id,
+            review_id=review_id,
+        )
         return _ok(result)
 
     @app.post("/api/apple/publishing/reviews/{review_id}/revise")
@@ -12729,6 +12780,15 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             actor="Chris",
         )
         result["focus"] = focus
+        result["history_entry"] = _record_publish_history(
+            actor_id="Chris",
+            event_type="review-revision",
+            title="Request Publish Revision",
+            detail=f"Requested revision for publishing review {str(result.get('review', {}).get('title') or review_id).strip() or review_id}.",
+            status_label="Revision Requested",
+            related_label=str(result.get("review", {}).get("title") or review_id).strip() or review_id,
+            review_id=review_id,
+        )
         return _ok(result)
 
     @app.post("/api/apple/publishing/checklist/{project_id}/{step}")

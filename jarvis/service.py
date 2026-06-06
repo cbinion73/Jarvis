@@ -44,6 +44,7 @@ from .audit import ActivityReviewStore, AuditLog, ProgressFocusStore, ProgressSn
 from .chronicle_reviews import ChronicleReviewStore
 from .health_checkins import HealthCheckInStore
 from . import layout_engine as _layout_engine
+from .publish_history import PublishHistoryStore
 from .recovery_cases import RecoveryCaseStore
 
 try:
@@ -6618,7 +6619,16 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "source_kind": "operator-action",
             },
         )
-        return _json({"status": "approved", "review": result, "focus": focus_entry})
+        history_entry = _record_publish_history(
+            actor_id=actor,
+            event_type="review-approved",
+            title="Approve Publish Review",
+            detail=f"Approved publishing review {str(result.get('title') or review_id).strip() or review_id}.",
+            status_label="Approved",
+            related_label=str(result.get("title") or review_id).strip() or review_id,
+            review_id=review_id,
+        )
+        return _json({"status": "approved", "review": result, "focus": focus_entry, "history_entry": history_entry})
 
     @app.post("/api/publishing/draft/revise")
     async def api_publishing_draft_revise(payload: dict[str, Any]) -> JSONResponse:
@@ -6657,7 +6667,16 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "source_kind": "operator-action",
             },
         )
-        return _json({"status": "needs_revision", "review": result, "focus": focus_entry})
+        history_entry = _record_publish_history(
+            actor_id=actor,
+            event_type="review-revision",
+            title="Request Publish Revision",
+            detail=f"Requested revision for publishing review {str(result.get('title') or review_id).strip() or review_id}.",
+            status_label="Revision Requested",
+            related_label=str(result.get("title") or review_id).strip() or review_id,
+            review_id=review_id,
+        )
+        return _json({"status": "needs_revision", "review": result, "focus": focus_entry, "history_entry": history_entry})
 
     @app.post("/api/publishing/checklist/step")
     async def api_publishing_checklist_step(payload: dict[str, Any]) -> JSONResponse:
@@ -8650,6 +8669,31 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         _write_publishing_review_rows(rows)
         return updated
 
+    def _record_publish_history(
+        *,
+        actor_id: str,
+        event_type: str,
+        title: str,
+        detail: str,
+        status_label: str,
+        related_label: str = "",
+        project_id: str = "",
+        review_id: str = "",
+        step: str = "",
+    ) -> dict[str, Any]:
+        return PublishHistoryStore().record_event(
+            actor_id=actor_id,
+            event_type=event_type,
+            title=title,
+            detail=detail,
+            status_label=status_label,
+            route="/publish",
+            related_label=related_label,
+            project_id=project_id,
+            review_id=review_id,
+            step=step,
+        )
+
     def _build_publish_launch_workspace(pub: Any, project_id: str, *, generated_at: str = "") -> dict[str, Any] | None:
         if not project_id:
             return None
@@ -8724,6 +8768,16 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             route="/publish",
             actor=actor_name,
         )
+        history_entry = _record_publish_history(
+            actor_id=actor_name,
+            event_type="checklist-completed" if completed else "checklist-reopened",
+            title=action_title,
+            detail=detail,
+            status_label="Completed" if completed else "Reopened",
+            related_label=project_title,
+            project_id=project_id,
+            step=step,
+        )
         return {
             "status": "completed" if completed else "reopened",
             "project_id": project_id,
@@ -8734,6 +8788,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "percent": int(result.get("percent") or 0),
             "workspace": workspace,
             "focus": focus,
+            "history_entry": history_entry,
         }
 
     def _build_publish_module_payload() -> dict[str, Any]:
@@ -8748,7 +8803,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "status": "Stubbed",
             "summary": "Publish now has a dedicated module route, but backend publishing sources are not initialised in this runtime.",
             "what_became_real": "JARVIS now exposes Publish as a dedicated app module route instead of leaving it hidden behind APIs and shared workspaces.",
-            "remains_partial": "Cross-launch continuity, richer drill-ins, and broader publishing controls still need follow-on slices.",
+            "remains_partial": "Broader publishing controls and deeper drill-ins still need follow-on slices.",
             "project_count": 0,
             "active_project_count": 0,
             "review_count": 0,
@@ -8758,6 +8813,8 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "projects": [],
             "pending_reviews": [],
             "launch_workspace": None,
+            "launch_history": {"count": 0, "counts": {}, "items": []},
+            "history_count": 0,
             "calendar": {"upcoming": [], "overdue": []},
             "social": {"posts": []},
             "revenue": {
@@ -8776,11 +8833,19 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "review_approve_api": "/api/publishing/draft/approve",
                 "review_revise_api": "/api/publishing/draft/revise",
                 "checklist_step_api": "/api/publishing/checklist/step",
+                "history_api": "/api/publish/module",
                 "calendar_api": "/api/publishing/calendar",
                 "social_api": "/api/publishing/social/posts",
             },
             "errors": [],
         }
+
+        try:
+            history_summary = PublishHistoryStore().summary(actor_id="chris", limit=6)
+            payload["launch_history"] = history_summary
+            payload["history_count"] = int(history_summary.get("count") or 0)
+        except Exception as exc:
+            payload["errors"].append(f"publish_history: {exc}")
 
         try:
             pending_reviews = _pending_publishing_reviews()
@@ -8900,6 +8965,15 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             notes=str(payload.get("notes", "")),
         )
         await asyncio.to_thread(pub._store.save_project, project)
+        _record_publish_history(
+            actor_id="Chris",
+            event_type="project-created",
+            title="Create Draft Project",
+            detail=f"Created draft publishing project {project.title.strip() or project.project_id}.",
+            status_label="Draft Created",
+            related_label=project.title.strip() or project.project_id,
+            project_id=project.project_id,
+        )
         return _json(project.to_dict(), status_code=201)
 
     @app.get("/api/publishing/projects/{project_id}")

@@ -97,6 +97,10 @@ struct PublishView: View {
                     continuitySection(continuity)
                 }
 
+                if ov.historyCount > 0 || !ov.launchHistory.items.isEmpty {
+                    launchHistorySection(ov.launchHistory)
+                }
+
                 // ── Revenue banner ────────────────────────────────
                 revenueBanner(ov.revenueSummary)
 
@@ -482,6 +486,54 @@ struct PublishView: View {
                     }
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func launchHistorySection(_ history: PublishHistoryLane) -> some View {
+        PressSection(title: "Launch History Lane", icon: "clock.arrow.trianglehead.counterclockwise.rotate.90", accent: green) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 10) {
+                    metricPill("\(history.count)", "Events", tint: green)
+                    metricPill("\(history.counts["approved"] ?? 0)", "Approved", tint: .cyan)
+                    metricPill("\(history.counts["completed"] ?? 0)", "Steps", tint: .orange)
+                }
+
+                ForEach(history.items) { item in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 8) {
+                            Text(item.title)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                            Spacer()
+                            if !item.statusLabel.isEmpty {
+                                badge(item.statusLabel, color: launchHistoryTint(for: item.eventType))
+                            }
+                        }
+                        if !item.detail.isEmpty {
+                            Text(item.detail)
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.74))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Text(String(item.savedAt.prefix(19)).replacingOccurrences(of: "T", with: " "))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    if item.id != history.items.last?.id { Divider().opacity(0.2) }
+                }
+            }
+        }
+    }
+
+    private func launchHistoryTint(for eventType: String) -> Color {
+        switch eventType {
+        case "review-approved": return .cyan
+        case "review-revision": return .yellow
+        case "checklist-completed": return green
+        case "checklist-reopened": return .orange
+        case "project-created": return .mint
+        default: return .secondary
         }
     }
 

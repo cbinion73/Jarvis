@@ -3495,7 +3495,59 @@
           }
         ]
       },
-    "action_items": [
+      "launch_history": {
+        "count": 3,
+        "counts": {
+          "approved": 1,
+          "revision": 0,
+          "completed": 1,
+          "reopened": 0,
+          "drafted": 1
+        },
+        "items": [
+          {
+            "history_id": "pubhist-3",
+            "event_type": "review-approved",
+            "title": "Approve Publish Review",
+            "detail": "Approved publishing review Chapter 3.",
+            "status_label": "Approved",
+            "related_label": "Chapter 3",
+            "project_id": "",
+            "review_id": "rev-1",
+            "step": "",
+            "route": "/publish",
+            "saved_at": "2026-06-01T08:02:00Z"
+          },
+          {
+            "history_id": "pubhist-2",
+            "event_type": "checklist-completed",
+            "title": "Complete Publish Checklist Step",
+            "detail": "Pricing set marked complete for Jarvis Civilization.",
+            "status_label": "Completed",
+            "related_label": "Jarvis Civilization",
+            "project_id": "pub-1",
+            "review_id": "",
+            "step": "pricing_set",
+            "route": "/publish",
+            "saved_at": "2026-06-01T07:40:00Z"
+          },
+          {
+            "history_id": "pubhist-1",
+            "event_type": "project-created",
+            "title": "Create Draft Project",
+            "detail": "Created draft publishing project Jarvis Civilization.",
+            "status_label": "Draft Created",
+            "related_label": "Jarvis Civilization",
+            "project_id": "pub-1",
+            "review_id": "",
+            "step": "",
+            "route": "/publish",
+            "saved_at": "2026-06-01T06:20:00Z"
+          }
+        ]
+      },
+      "history_count": 3,
+      "action_items": [
       {
         "title": "Approve teaser thread",
         "detail": "Marketing copy is ready for review.",
