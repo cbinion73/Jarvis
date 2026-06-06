@@ -1023,7 +1023,7 @@ def _mission_task_board() -> dict[str, Any]:
                 "completed_count": len(completed_subtasks),
                 "next_step": str((active_subtasks[0] if active_subtasks else (subtasks[0] if subtasks else {})).get("title", "")).strip() or "Review mission brief",
                 "what_became_real": str(dossier.get("brief", "")).strip() or "Mission board record loaded from the local mission store.",
-                "remains_partial": "Dedicated mission route, persistence edits, and task mutation controls still need a later slice.",
+                "remains_partial": "Mission workspaces are live now, but broader mission creation/edit flows, richer handoff authoring, and deeper seam linkage still need a later slice.",
                 "updated_at": str(dossier.get("updated_at", "")).strip() or str(dossier.get("created_at", "")).strip() or "not recorded",
             }
         )
@@ -1354,7 +1354,7 @@ def _level3_checklist(
                 "tests/test_command_center_service_surface.py",
             ],
             "proof_routes": ["/mission-board", "/api/mission-board/module", "/api/missions"],
-            "next_slice": "Add task-level mutation plus mission create-edit flows, then expose seam and module linkage from the selected mission detail pane.",
+            "next_slice": "Deepen handoff authoring, mission create-edit flows, and seam linkage now that mission workspaces and per-agent work-state controls are live on the standalone route.",
         },
         {
             "title": "Agent Operations Assignment and Continuity Controls",
@@ -1998,8 +1998,8 @@ def _seam_tracker(
             "branch": branch,
             "worktree": "primary worktree",
             "surface_path": "/mission-board",
-            "what_became_real": "The mission board now has a dedicated route with lane-based mission visibility, selected mission detail, and direct mission status mutation inside the app shell.",
-            "remains_partial": "Deeper task mutation, broader mission creation/edit flows, and richer seam linkage still need follow-on slices.",
+            "what_became_real": "The mission board now has a dedicated route with lane-based mission visibility, selected mission detail, mission workspace review, and per-agent work-state controls inside the app shell.",
+            "remains_partial": "Broader mission creation/edit flows, richer handoff authoring, and deeper seam linkage still need follow-on slices.",
             "tests": [
                 "tests/test_command_center_index.py",
                 "tests/test_command_center_service_surface.py",

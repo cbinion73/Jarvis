@@ -206,6 +206,65 @@ class _StubRuntime:
     def execute_sandbox_job(self, *, actor_name: str, job_id: str, triggered_by: str) -> dict:
         return {"ok": True, "accepted": True, "job": {"job_id": job_id, "status": "sandbox-queued"}}
 
+    def mission_snapshot(self, mission_id: str) -> dict:
+        return {
+            "mission_id": mission_id,
+            "title": "Stub Mission",
+            "status": "active",
+            "selected_agents": ["ambient-router", "storm"],
+            "task_agent_labels": ["Mission Planner"],
+            "work_state_summary": {
+                "agents": 2,
+                "active_tasks": 1,
+                "blocked_tasks": 0,
+                "pending_reviews": 1,
+                "pending_handoffs": 0,
+                "pending_transfers": 0,
+                "escalations": 0,
+                "duplicate_suppressions": 0,
+            },
+        }
+
+    def mission_work_state_snapshot(self, mission_id: str) -> dict:
+        return {
+            "mission_id": mission_id,
+            "summary": {
+                "agents": 2,
+                "active_tasks": 1,
+                "blocked_tasks": 0,
+                "pending_reviews": 1,
+                "pending_handoffs": 0,
+                "pending_transfers": 0,
+                "escalations": 0,
+                "duplicate_suppressions": 0,
+            },
+            "agent_work_states": {
+                "ambient-router": {
+                    "role": "orchestrator",
+                    "status": "active",
+                    "ownership_mode": "lead",
+                    "current_focus": "Keep mission continuity visible.",
+                    "active_tasks": [{"title": "Support mission continuity"}],
+                    "blocked_tasks": [],
+                    "pending_reviews": [],
+                    "last_handoff_at": "",
+                },
+                "storm": {
+                    "role": "weather-intelligence",
+                    "status": "ready",
+                    "ownership_mode": "supporting",
+                    "current_focus": "Review the mission brief.",
+                    "active_tasks": [],
+                    "blocked_tasks": [],
+                    "pending_reviews": [{"title": "Review mission brief"}],
+                    "last_handoff_at": "",
+                },
+            },
+            "handoffs": [],
+            "escalations": [],
+            "duplicate_suppressions": [],
+        }
+
 
 class CommandCenterServiceSurfaceTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -439,11 +498,19 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("JARVIS Mission &amp; Task Board", mission_board_html)
         self.assertIn("Refresh Mission Board", mission_board_html)
         self.assertIn("Inspect Mission", mission_board_html)
+        self.assertIn("Mission Workspaces", mission_board_html)
+        self.assertIn("Mark Active", mission_board_html)
+        self.assertIn("Mark Ready", mission_board_html)
+        self.assertIn("Mark Blocked", mission_board_html)
+        self.assertIn("/api/missions/", mission_board_html)
+        self.assertIn("/work-state", mission_board_html)
         self.assertIn("/api/activity/operator-action", mission_board_html)
         self.assertIn("recordMissionActivity", mission_board_html)
         self.assertIn("recorded in shared activity", mission_board_html)
         self.assertIn("status", mission_board_snapshot)
         self.assertIn("mission_task_board", mission_board_snapshot)
+        self.assertIn("mission_details", mission_board_snapshot)
+        self.assertTrue(any("work_state" in detail for detail in mission_board_snapshot["mission_details"].values()))
         self.assertIn("proof_paths", mission_board_snapshot)
         self.assertEqual(mission_board_snapshot["proof_paths"]["module_route"], "/mission-board")
         self.assertEqual(mission_board_snapshot["proof_paths"]["module_api"], "/api/mission-board/module")

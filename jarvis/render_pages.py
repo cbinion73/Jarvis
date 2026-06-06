@@ -869,6 +869,15 @@ def render_publish_module_page(payload: dict) -> str:
       font: inherit;
       cursor: pointer;
     }}
+    input {{
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(3, 10, 18, 0.92);
+      color: var(--text);
+      font: inherit;
+    }}
     form {{ display: grid; gap: 12px; }}
     .form-grid {{
       display: grid;
@@ -2409,6 +2418,10 @@ def render_mission_board_module_page(payload: dict) -> str:
         <h2>Mission Evidence</h2>
         <ul id="mission-evidence-list"></ul>
       </section>
+      <section class="panel span-12">
+        <h2>Mission Workspaces</h2>
+        <div id="mission-workspaces" class="board-grid"></div>
+      </section>
       <section class="panel span-8">
         <h2>Mission API Proof</h2>
         <ul id="proof-list"></ul>
@@ -2432,6 +2445,7 @@ def render_mission_board_module_page(payload: dict) -> str:
     const boardEl = document.getElementById("mission-board");
     const detailEl = document.getElementById("mission-detail");
     const evidenceEl = document.getElementById("mission-evidence-list");
+    const workspacesEl = document.getElementById("mission-workspaces");
     const proofEl = document.getElementById("proof-list");
     const payloadPreview = document.getElementById("payload-preview");
     const statusNote = document.getElementById("mission-status-note");
@@ -2463,6 +2477,13 @@ def render_mission_board_module_page(payload: dict) -> str:
       return items.find((item) => item.mission_id === selectedMissionId) || items[0] || null;
     }}
 
+    function currentMissionDetail(payload) {{
+      const mission = currentMission(payload);
+      if (!mission || !mission.mission_id) return null;
+      const details = payload.mission_details || {{}};
+      return details[mission.mission_id] || null;
+    }}
+
     async function recordMissionActivity(payload) {{
       try {{
         const response = await fetch("/api/activity/operator-action", {{
@@ -2475,6 +2496,67 @@ def render_mission_board_module_page(payload: dict) -> str:
         return true;
       }} catch (_error) {{
         return false;
+      }}
+    }}
+
+    async function updateAgentWorkspace(missionId, agentId, status, workspace) {{
+      if (!missionId || !agentId) return;
+      const focusInput = document.querySelector(`[data-workspace-focus="${{agentId}}"]`);
+      const noteInput = document.querySelector(`[data-workspace-note="${{agentId}}"]`);
+      const currentFocus = String(focusInput?.value || workspace?.current_focus || "").trim();
+      const note = String(noteInput?.value || "").trim();
+      actionNote.textContent = `Updating workspace for ${{agentId}}…`;
+      try {{
+        const response = await fetch(`/api/missions/${{encodeURIComponent(missionId)}}/agents/${{encodeURIComponent(agentId)}}/work-state`, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            status,
+            current_focus: currentFocus,
+            note: note || `Updated from mission board workspace control to ${{status}}.`,
+          }}),
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Mission workspace update failed");
+        }}
+        const recorded = await recordMissionActivity({{
+          actor: "Chris",
+          domain: "mission-board",
+          action: "Update Mission Workspace",
+          title: workspace?.role || agentId,
+          status: status || "updated",
+          detail: `Action succeeded: /api/missions/${{missionId}}/agents/${{agentId}}/work-state`,
+          why_now: currentFocus || note || `Mission workspace for ${{agentId}} changed to ${{status}}.`,
+          result_summary: `Workspace update result: ${{status || "updated"}}`,
+          route: "/mission-board",
+          route_label: "Open Mission Board",
+          related_kind: "mission",
+          related_label: missionId,
+          succeeded: true,
+        }});
+        actionNote.textContent = recorded
+          ? `Updated workspace for ${{agentId}} to ${{status}} and recorded it in shared activity.`
+          : `Updated workspace for ${{agentId}} to ${{status}}.`;
+        await refreshMissionBoard();
+      }} catch (error) {{
+        const errorText = String(error);
+        await recordMissionActivity({{
+          actor: "Chris",
+          domain: "mission-board",
+          action: "Update Mission Workspace",
+          title: workspace?.role || agentId,
+          status: "failed",
+          detail: `Action failed: /api/missions/${{missionId}}/agents/${{agentId}}/work-state`,
+          why_now: errorText,
+          result_summary: `Workspace update failed: ${{errorText}}`,
+          route: "/mission-board",
+          route_label: "Open Mission Board",
+          related_kind: "mission",
+          related_label: missionId,
+          succeeded: false,
+        }});
+        actionNote.textContent = `Mission workspace update failed: ${{errorText}}`;
       }}
     }}
 
@@ -2542,14 +2624,19 @@ def render_mission_board_module_page(payload: dict) -> str:
 
     function renderDetail(payload) {{
       const mission = currentMission(payload);
+      const detail = currentMissionDetail(payload) || {{}};
+      const workState = detail.work_state || {{}};
       if (!mission) {{
         detailEl.innerHTML = "<p class=\\"status-note\\">No mission detail available right now.</p>";
         evidenceEl.innerHTML = "<li><strong>No mission evidence.</strong><span>Mission records will appear once the board is hydrated.</span></li>";
+        workspacesEl.innerHTML = '<div class="mission-card"><strong>No mission workspaces.</strong><span>Mission work-state will appear once a selected mission is hydrated.</span></div>';
         return;
       }}
       selectedMissionId = mission.mission_id || "";
       const selectedAgents = Array.isArray(mission.selected_agents) ? mission.selected_agents : [];
       const taskAgents = Array.isArray(mission.task_agent_labels) ? mission.task_agent_labels : [];
+      const summary = workState.summary || {{}};
+      const relatedRoutes = Array.isArray(detail.related_routes) ? detail.related_routes : [];
       detailEl.innerHTML = `
         <div class="mission-card">
           <strong>${{esc(mission.title || mission.mission_id || "Mission")}}</strong>
@@ -2564,6 +2651,10 @@ def render_mission_board_module_page(payload: dict) -> str:
             <div><label>Next Step</label><strong>${{esc(mission.next_step || "Review mission brief")}}</strong></div>
             <div><label>Updated</label><strong>${{esc(mission.updated_at || "not recorded")}}</strong></div>
             <div><label>Subtasks</label><strong>${{esc(`${{mission.subtask_count || 0}} total / ${{mission.active_count || 0}} active / ${{mission.blocked_count || 0}} blocked / ${{mission.completed_count || 0}} completed`)}}</strong></div>
+            <div><label>Workspace Agents</label><strong>${{esc(summary.agents || 0)}}</strong></div>
+            <div><label>Pending Handoffs</label><strong>${{esc(summary.pending_handoffs || 0)}}</strong></div>
+            <div><label>Pending Reviews</label><strong>${{esc(summary.pending_reviews || 0)}}</strong></div>
+            <div><label>Duplicate Suppressions</label><strong>${{esc(summary.duplicate_suppressions || 0)}}</strong></div>
           </div>
           <div class="chips">
             ${{selectedAgents.length ? selectedAgents.map((item) => chip(item)).join("") : chip("No selected agents")}}
@@ -2573,6 +2664,8 @@ def render_mission_board_module_page(payload: dict) -> str:
             <button type="button" data-mission-status="active">Move to Now</button>
             <button type="button" data-mission-status="blocked">Mark Blocked</button>
             <button type="button" data-mission-status="completed">Mark Completed</button>
+            <a href="/agent-ops-center">Open Agent Ops</a>
+            <a href="/activity-center">Open Activity Feed</a>
           </div>
         </div>
       `;
@@ -2590,7 +2683,68 @@ def render_mission_board_module_page(payload: dict) -> str:
         li("Owner Agent", mission.owner_agent || "jarvis-orchestrator"),
         li("Selected Agents", selectedAgents.join(", ") || "none recorded"),
         li("Task Agents", taskAgents.join(", ") || "none recorded"),
+        li("Pending Handoffs", String(summary.pending_handoffs || 0), String(summary.pending_transfers || 0) + " transfer(s) waiting"),
+        li("Escalations", String(summary.escalations || 0), String(summary.duplicate_suppressions || 0) + " duplicate suppression record(s)"),
+        ...relatedRoutes.map((item) => li(item.label || "Related Route", item.href || "")),
       ].join("");
+
+      const agentWorkStates = Object.entries(workState.agent_work_states || {{}});
+      workspacesEl.innerHTML = agentWorkStates.length
+        ? agentWorkStates.map(([agentId, workspace]) => {{
+            const activeTasks = Array.isArray(workspace.active_tasks) ? workspace.active_tasks : [];
+            const blockedTasks = Array.isArray(workspace.blocked_tasks) ? workspace.blocked_tasks : [];
+            const pendingReviews = Array.isArray(workspace.pending_reviews) ? workspace.pending_reviews : [];
+            return `
+              <div class="mission-card">
+                <strong>${{esc(workspace.role || agentId)}}</strong>
+                <span>${{esc(workspace.current_focus || "No current focus recorded.")}}</span>
+                <div class="chips">
+                  ${{chip(agentId)}}
+                  ${{chip(workspace.status || "unknown", workspace.status === "blocked" ? "regressed" : workspace.status === "active" ? "accepted" : "steady")}}
+                  ${{chip(workspace.ownership_mode || "supporting")}}
+                </div>
+                <div class="meta">
+                  <div><label>Active Tasks</label><strong>${{esc(activeTasks.length)}}</strong></div>
+                  <div><label>Blocked Tasks</label><strong>${{esc(blockedTasks.length)}}</strong></div>
+                  <div><label>Pending Reviews</label><strong>${{esc(pendingReviews.length)}}</strong></div>
+                  <div><label>Last Handoff</label><strong>${{esc(workspace.last_handoff_at || "not recorded")}}</strong></div>
+                </div>
+                <div class="meta">
+                  <div>
+                    <label>Current Focus</label>
+                    <input data-workspace-focus="${{esc(agentId)}}" value="${{esc(workspace.current_focus || "")}}" />
+                  </div>
+                  <div>
+                    <label>Operator Note</label>
+                    <input data-workspace-note="${{esc(agentId)}}" value="" placeholder="Add a quick note or instruction" />
+                  </div>
+                </div>
+                <div class="action-row">
+                  <button type="button" data-workspace-update="${{esc(agentId)}}" data-workspace-status="active">Mark Active</button>
+                  <button type="button" data-workspace-update="${{esc(agentId)}}" data-workspace-status="ready">Mark Ready</button>
+                  <button type="button" data-workspace-update="${{esc(agentId)}}" data-workspace-status="blocked">Mark Blocked</button>
+                </div>
+                <div class="chips">
+                  ${{activeTasks.slice(0, 2).map((task) => chip(task.title || task.status || "task")).join("") || chip("No active tasks")}}
+                  ${{pendingReviews.slice(0, 2).map((task) => chip(task.title || task.status || "review", "steady")).join("") || ""}}
+                </div>
+              </div>
+            `;
+          }}).join("")
+        : '<div class="mission-card"><strong>No mission workspaces.</strong><span>This mission does not yet expose per-agent work-state.</span></div>';
+
+      document.querySelectorAll("[data-workspace-update]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          const agentId = button.getAttribute("data-workspace-update") || "";
+          const status = button.getAttribute("data-workspace-status") || "";
+          const workspace = (workState.agent_work_states || {{}})[agentId] || {{}};
+          if (agentId && selectedMissionId) {{
+            updateAgentWorkspace(selectedMissionId, agentId, status, workspace).catch((error) => {{
+              actionNote.textContent = `Mission workspace update failed: ${{String(error)}}`;
+            }});
+          }}
+        }});
+      }});
     }}
 
     function render(payload) {{

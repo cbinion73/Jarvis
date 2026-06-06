@@ -2073,9 +2073,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "generated_at": command_center.get("generated_at", ""),
             "available": True,
             "status": "Useful" if int(mission_task_board.get("item_count", 0) or 0) else "Wired",
-            "summary": "Mission & Task Board now has a dedicated module route with live lane posture, mission detail, and mission status mutation inside JARVIS.",
-            "what_became_real": "Mission & Task Board is now a standalone app module instead of only a command-center panel and mission API proof path.",
-            "remains_partial": "Deeper task mutation, broader mission creation/edit flows, and richer cross-seam linkage still need follow-on slices.",
+            "summary": "Mission & Task Board now has a dedicated module route with live lane posture, mission detail, mission workspaces, and mission status mutation inside JARVIS.",
+            "what_became_real": "Mission & Task Board is now a standalone app module with workspace review and per-agent work-state controls instead of only a command-center panel and mission API proof path.",
+            "remains_partial": "Broader mission creation or edit flows, richer handoff authoring, and deeper seam linkage still need follow-on slices.",
             "mission_task_board": mission_task_board,
             "mission_details": {},
             "counts": {
@@ -2095,6 +2095,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         }
 
         mission_snapshot = getattr(runtime, "mission_snapshot", None)
+        mission_work_state_snapshot = getattr(runtime, "mission_work_state_snapshot", None)
         if callable(mission_snapshot):
             details: dict[str, Any] = {}
             for item in items[:4]:
@@ -2102,7 +2103,20 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 if not mission_id:
                     continue
                 try:
-                    details[mission_id] = await asyncio.to_thread(mission_snapshot, mission_id)
+                    detail = await asyncio.to_thread(mission_snapshot, mission_id)
+                    if isinstance(detail, dict):
+                        if callable(mission_work_state_snapshot):
+                            try:
+                                detail["work_state"] = await asyncio.to_thread(mission_work_state_snapshot, mission_id)
+                            except Exception as exc:
+                                payload["errors"].append(f"mission_work_state[{mission_id}]: {exc}")
+                        detail["related_routes"] = [
+                            {"label": "Open Agent Ops", "href": "/agent-ops-center"},
+                            {"label": "Open Activity Feed", "href": "/activity-center"},
+                            {"label": "Open Command Center", "href": "/command-center"},
+                            {"label": "Mission Work-State API", "href": f"/api/missions/{mission_id}/work-state"},
+                        ]
+                    details[mission_id] = detail
                 except Exception as exc:
                     payload["errors"].append(f"mission_snapshot[{mission_id}]: {exc}")
             payload["mission_details"] = details
@@ -2111,7 +2125,8 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["summary"] = (
                 f"Mission board loaded {len(items)} mission(s): "
                 f"{payload['counts']['now']} now, {payload['counts']['next']} next, "
-                f"{payload['counts']['blocked']} blocked, and {payload['counts']['completed']} completed."
+                f"{payload['counts']['blocked']} blocked, and {payload['counts']['completed']} completed, "
+                f"with mission detail and work-state review available for the leading board items."
             )
 
         if payload["errors"] and not items:
