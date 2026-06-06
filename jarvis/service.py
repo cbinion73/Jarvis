@@ -41,6 +41,7 @@ except Exception:  # pragma: no cover
         return render_voice_shell(runtime, initial_packet=initial_packet)
 from .apple_api import _register_apple_api
 from .audit import AuditLog, ProgressFocusStore, ProgressSnapshotStore, RecoveryActionStore, SeamTrackerStore
+from .health_checkins import HealthCheckInStore
 from . import layout_engine as _layout_engine
 from .recovery_cases import RecoveryCaseStore
 
@@ -9479,109 +9480,6 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     # ── End Forge ──────────────────────────────────────────────────────────────
 
     # ------------------------------------------------------------------
-    # Legacy catch-all (MUST be last — any specific POST route defined
-    # above takes priority because it's registered first in FastAPI)
-    # ------------------------------------------------------------------
-
-    @app.post("/api/{legacy_path:path}")
-    async def api_legacy_post(
-        legacy_path: str,
-        payload: dict[str, Any],
-        background_tasks: BackgroundTasks,
-    ) -> JSONResponse:
-        path = f"/api/{legacy_path}"
-        actor = str(payload.get("actor", "Chris"))
-        room = str(payload.get("room", "office"))
-        request_text = str(payload.get("request", ""))
-        try:
-            if path in {
-                "/api/plan",
-                "/api/respond",
-                "/api/mode-brief",
-                "/api/family-plan",
-                "/api/departure-plan",
-                "/api/rebekah-center",
-                "/api/troop-plan",
-                "/api/grocery-support",
-                "/api/meal-plan",
-                "/api/vehicle-plan",
-                "/api/weather-contingency",
-            }:
-                result = _mode_brief_payload(actor, room, request_text, path, payload)
-                if path in {"/api/respond", "/api/family-plan", "/api/rebekah-center", "/api/troop-plan", "/api/grocery-support", "/api/meal-plan", "/api/vehicle-plan", "/api/weather-contingency", "/api/departure-plan"}:
-                    background_tasks.add_task(_broadcast_dashboard, "workflow.updated")
-                return _json(result)
-
-            if path in {"/api/message-draft", "/api/parent-message", "/api/voice-note"}:
-                background_tasks.add_task(_broadcast_dashboard, "communications.updated")
-                return _json(_communications_payload(actor, payload, path))
-
-            if path in {
-                "/api/room-scene",
-                "/api/climate-control",
-                "/api/access-control",
-                "/api/garage-check",
-                "/api/energy-window",
-                "/api/mic-ingress",
-                "/api/presence-update",
-                "/api/phone-presence",
-                "/api/camera-event",
-                "/api/package-rule",
-                "/api/object-recognition",
-                "/api/environmental-anomaly",
-                "/api/privacy-update",
-            }:
-                background_tasks.add_task(_broadcast_dashboard, "home.updated")
-                return _json(_home_ops_payload(actor, payload, path))
-
-            if path in {"/api/memory-remember", "/api/memory-forget", "/api/memory-approve"}:
-                background_tasks.add_task(_broadcast_dashboard, "memory.updated")
-                return _json(_memory_payload(actor, payload, path))
-
-            if path.startswith("/api/catalyst-"):
-                background_tasks.add_task(_broadcast_dashboard, "catalyst.updated")
-                return _json(_catalyst_payload(actor, payload, path))
-
-            if path in {"/api/security-event", "/api/safety-alert", "/api/weather-alert", "/api/child-arrival", "/api/unlock-policy"}:
-                background_tasks.add_task(_broadcast_dashboard, "security.updated")
-                return _json(_security_payload(actor, payload, path))
-
-            if path in {"/api/devotional-pause", "/api/family-devotional", "/api/chronicle-capture"}:
-                background_tasks.add_task(_broadcast_dashboard, "formation.updated")
-                return _json(_formation_payload(actor, payload, path))
-
-            if path in {
-                "/api/tutor",
-                "/api/device-boundary",
-            }:
-                background_tasks.add_task(_broadcast_dashboard, "tutoring.updated")
-                return _json(_tutoring_payload(actor, payload, path, request_text))
-
-            if path in {
-                "/api/workshop-plan",
-                "/api/concept-studio/chat",
-                "/api/material-recommendation",
-                "/api/cad-package",
-                "/api/print-prep",
-                "/api/safety-check",
-                "/api/inspect-part",
-                "/api/vendor-prep",
-            }:
-                background_tasks.add_task(_broadcast_dashboard, "workshop.updated")
-                return _json(_workshop_payload(actor, payload, path, request_text))
-
-            if path == "/api/executive-task":
-                return _json(_executive_payload(actor, payload, path))
-        except KeyError as exc:
-            raise HTTPException(status_code=400, detail=f"Missing required field: {exc.args[0]}") from exc
-        except PermissionError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-        raise HTTPException(status_code=404, detail="Not found")
-
-    # ------------------------------------------------------------------
     # Phase 4: Symptom Triage Engine (Oracle-First Protocol)
     # ------------------------------------------------------------------
 
@@ -9665,6 +9563,21 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["errors"].append(f"red_flags: {exc}")
 
         payload["recent_activity"] = _module_recent_activity(route="/health-center", domain="health")
+        checkin_store = HealthCheckInStore()
+        recent_checkins = checkin_store.list_checkins("chris", limit=6)
+        payload["recent_checkins"] = recent_checkins
+        payload["checkin_count"] = len(recent_checkins)
+        payload["proof_paths"]["checkins_api"] = "/api/health/checkins"
+        if recent_checkins:
+            latest_checkin = recent_checkins[0]
+            payload["summary"] = (
+                f"{payload['summary']} {len(recent_checkins)} manual health check-in(s) are now available for continuity and review."
+            )
+            if payload["status"] == "Wired":
+                payload["status"] = "Useful"
+                payload["available"] = True
+                payload["remains_partial"] = "Live health sources are still partially hydrated, but manual check-ins and route-owned continuity now keep the module useful."
+            payload["latest_checkin"] = latest_checkin
 
         if payload["errors"] and payload["status"] == "Useful":
             payload["remains_partial"] = "Some health sources still failed to hydrate; inspect the payload preview for details."
@@ -9673,6 +9586,60 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/health/module")
     async def api_health_module() -> JSONResponse:
         return _json(await _build_health_module_payload())
+
+    @app.get("/api/health/checkins")
+    async def api_health_checkins_get(actor: str = "chris") -> JSONResponse:
+        store = HealthCheckInStore()
+        entries = store.list_checkins(actor, limit=12)
+        return _json({"entries": entries, "count": len(entries)})
+
+    @app.post("/api/health/checkins")
+    async def api_health_checkins_post(request: Request) -> JSONResponse:
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        actor = str(body.get("actor") or "Chris").strip() or "Chris"
+        actor_id = str(body.get("actor_id") or actor).strip().lower() or "chris"
+        entry = HealthCheckInStore().save_checkin(
+            actor_id=actor_id,
+            symptoms=str(body.get("symptoms") or "").strip(),
+            note=str(body.get("note") or "").strip(),
+            energy_level=body.get("energy_level"),
+            sleep_hours=body.get("sleep_hours"),
+            stress_level=body.get("stress_level"),
+            source=str(body.get("source") or "manual").strip() or "manual",
+        )
+        detail = (
+            f"Energy {entry.get('energy_level') if entry.get('energy_level') is not None else 'n/a'} · "
+            f"Sleep {entry.get('sleep_hours') if entry.get('sleep_hours') is not None else 'n/a'}h · "
+            f"Stress {entry.get('stress_level') if entry.get('stress_level') is not None else 'n/a'}"
+        )
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": "health",
+                "action": "Save Health Check-In",
+                "title": str(entry.get("symptoms") or "Health check-in").strip() or "Health check-in",
+                "detail": detail,
+                "why_now": str(entry.get("note") or "Health route captured a manual check-in for continuity and longitudinal review.").strip(),
+                "result_summary": "Manual health check-in saved.",
+                "related_route": "/health-center",
+                "route_label": "Open Health",
+                "related_kind": "health-checkin",
+                "related_label": str(entry.get("checkin_id") or "").strip(),
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        focus_entry = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module="Health",
+            reason=str(entry.get("note") or "Health check-in updated the shared health continuity lane.").strip(),
+            route="/health-center",
+            actor=actor,
+        )
+        return _json({"status": "recorded", "checkin": entry, "focus": focus_entry})
 
     @app.post("/api/health/symptom/triage")
     async def api_symptom_triage(request: Request) -> JSONResponse:
@@ -9822,6 +9789,109 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         except ImportError:
             from quarterly_review import generate_doctor_packet
         return _json(await generate_doctor_packet())
+
+    # ------------------------------------------------------------------
+    # Legacy catch-all (MUST be last — any specific POST route defined
+    # above takes priority because it's registered first in FastAPI)
+    # ------------------------------------------------------------------
+
+    @app.post("/api/{legacy_path:path}")
+    async def api_legacy_post(
+        legacy_path: str,
+        payload: dict[str, Any],
+        background_tasks: BackgroundTasks,
+    ) -> JSONResponse:
+        path = f"/api/{legacy_path}"
+        actor = str(payload.get("actor", "Chris"))
+        room = str(payload.get("room", "office"))
+        request_text = str(payload.get("request", ""))
+        try:
+            if path in {
+                "/api/plan",
+                "/api/respond",
+                "/api/mode-brief",
+                "/api/family-plan",
+                "/api/departure-plan",
+                "/api/rebekah-center",
+                "/api/troop-plan",
+                "/api/grocery-support",
+                "/api/meal-plan",
+                "/api/vehicle-plan",
+                "/api/weather-contingency",
+            }:
+                result = _mode_brief_payload(actor, room, request_text, path, payload)
+                if path in {"/api/respond", "/api/family-plan", "/api/rebekah-center", "/api/troop-plan", "/api/grocery-support", "/api/meal-plan", "/api/vehicle-plan", "/api/weather-contingency", "/api/departure-plan"}:
+                    background_tasks.add_task(_broadcast_dashboard, "workflow.updated")
+                return _json(result)
+
+            if path in {"/api/message-draft", "/api/parent-message", "/api/voice-note"}:
+                background_tasks.add_task(_broadcast_dashboard, "communications.updated")
+                return _json(_communications_payload(actor, payload, path))
+
+            if path in {
+                "/api/room-scene",
+                "/api/climate-control",
+                "/api/access-control",
+                "/api/garage-check",
+                "/api/energy-window",
+                "/api/mic-ingress",
+                "/api/presence-update",
+                "/api/phone-presence",
+                "/api/camera-event",
+                "/api/package-rule",
+                "/api/object-recognition",
+                "/api/environmental-anomaly",
+                "/api/privacy-update",
+            }:
+                background_tasks.add_task(_broadcast_dashboard, "home.updated")
+                return _json(_home_ops_payload(actor, payload, path))
+
+            if path in {"/api/memory-remember", "/api/memory-forget", "/api/memory-approve"}:
+                background_tasks.add_task(_broadcast_dashboard, "memory.updated")
+                return _json(_memory_payload(actor, payload, path))
+
+            if path.startswith("/api/catalyst-"):
+                background_tasks.add_task(_broadcast_dashboard, "catalyst.updated")
+                return _json(_catalyst_payload(actor, payload, path))
+
+            if path in {"/api/security-event", "/api/safety-alert", "/api/weather-alert", "/api/child-arrival", "/api/unlock-policy"}:
+                background_tasks.add_task(_broadcast_dashboard, "security.updated")
+                return _json(_security_payload(actor, payload, path))
+
+            if path in {"/api/devotional-pause", "/api/family-devotional", "/api/chronicle-capture"}:
+                background_tasks.add_task(_broadcast_dashboard, "formation.updated")
+                return _json(_formation_payload(actor, payload, path))
+
+            if path in {
+                "/api/tutor",
+                "/api/device-boundary",
+            }:
+                background_tasks.add_task(_broadcast_dashboard, "tutoring.updated")
+                return _json(_tutoring_payload(actor, payload, path, request_text))
+
+            if path in {
+                "/api/workshop-plan",
+                "/api/concept-studio/chat",
+                "/api/material-recommendation",
+                "/api/cad-package",
+                "/api/print-prep",
+                "/api/safety-check",
+                "/api/inspect-part",
+                "/api/vendor-prep",
+            }:
+                background_tasks.add_task(_broadcast_dashboard, "workshop.updated")
+                return _json(_workshop_payload(actor, payload, path, request_text))
+
+            if path == "/api/executive-task":
+                return _json(_executive_payload(actor, payload, path))
+        except KeyError as exc:
+            raise HTTPException(status_code=400, detail=f"Missing required field: {exc.args[0]}") from exc
+        except PermissionError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        raise HTTPException(status_code=404, detail="Not found")
 
     return app
 

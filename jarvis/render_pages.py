@@ -7559,8 +7559,35 @@ def render_health_module_page(payload: dict) -> str:
         <pre id="objective-output">Awaiting objective save.</pre>
       </section>
       <section class="panel span-6">
+        <h2>Manual Health Check-In</h2>
+        <form id="checkin-form">
+          <label>Symptoms or Focus
+            <input id="checkin-symptoms" placeholder="Low energy after poor sleep">
+          </label>
+          <label>Energy (1-10)
+            <input id="checkin-energy" type="number" min="1" max="10" step="1" value="5">
+          </label>
+          <label>Sleep Hours
+            <input id="checkin-sleep" type="number" min="0" max="24" step="0.5" value="7">
+          </label>
+          <label>Stress (1-10)
+            <input id="checkin-stress" type="number" min="1" max="10" step="1" value="4">
+          </label>
+          <label>Context Note
+            <textarea id="checkin-note" placeholder="Late night, heavy dinner, and no walk."></textarea>
+          </label>
+          <button type="submit">Save Health Check-In</button>
+        </form>
+        <p class="status-note" id="checkin-note-status">Use this to capture a durable manual health entry when live signal sources are sparse.</p>
+        <pre id="checkin-output">Awaiting health check-in.</pre>
+      </section>
+      <section class="panel span-6">
         <h2>Recent Health Continuity</h2>
         <ul id="recent-activity-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Recent Manual Check-Ins</h2>
+        <ul id="recent-checkins-list"></ul>
       </section>
       <section class="panel span-6">
         <h2>Payload Preview</h2>
@@ -7585,7 +7612,10 @@ def render_health_module_page(payload: dict) -> str:
     const triageOutput = document.getElementById("triage-output");
     const objectiveNote = document.getElementById("objective-note");
     const objectiveOutput = document.getElementById("objective-output");
+    const checkinNoteStatus = document.getElementById("checkin-note-status");
+    const checkinOutput = document.getElementById("checkin-output");
     const recentActivityList = document.getElementById("recent-activity-list");
+    const recentCheckinsList = document.getElementById("recent-checkins-list");
     const payloadPreview = document.getElementById("payload-preview");
 
     function esc(value) {{
@@ -7621,7 +7651,7 @@ def render_health_module_page(payload: dict) -> str:
       heroStatus.textContent = payload.status || "Stubbed";
       heroSignals.textContent = String(payload.signal_count || 0);
       heroClusters.textContent = String(payload.active_cluster_count || 0);
-      heroObjectives.textContent = String(payload.objective_count || 0);
+      heroObjectives.textContent = String((payload.objective_count || 0) + (payload.checkin_count || 0));
       statusNote.textContent = payload.summary || "No health summary captured yet.";
 
       moduleStatusList.innerHTML = [
@@ -7629,6 +7659,7 @@ def render_health_module_page(payload: dict) -> str:
         li("What Became Real", payload.what_became_real || "No health seam note recorded yet."),
         li("What Remains Partial", payload.remains_partial || "No partial work recorded."),
         li("Proof API", "/api/health/module", "/api/health/drift/scan"),
+        li("Manual Check-Ins", String(payload.checkin_count || 0), payload.proof_paths?.checkins_api || "/api/health/checkins"),
       ].join("");
 
       driftOverviewList.innerHTML = [
@@ -7664,6 +7695,13 @@ def render_health_module_page(payload: dict) -> str:
       recentActivityList.innerHTML = (Array.isArray(payload.recent_activity) ? payload.recent_activity : []).length
         ? payload.recent_activity.map((item) => li(item.title || "Health action", item.subtitle || item.actor || "Operator continuity", item.detail || item.route_label || "")).join("")
         : '<li><strong>No health continuity recorded yet.</strong><span>Run triage or save a health objective to begin the route-level continuity trail.</span></li>';
+      recentCheckinsList.innerHTML = (Array.isArray(payload.recent_checkins) ? payload.recent_checkins : []).length
+        ? payload.recent_checkins.map((item) => li(
+            item.symptoms || "Health check-in",
+            `Energy ${{item.energy_level ?? "n/a"}} · Sleep ${{item.sleep_hours ?? "n/a"}}h · Stress ${{item.stress_level ?? "n/a"}}`,
+            item.note || item.saved_at || ""
+          )).join("")
+        : '<li><strong>No manual check-ins recorded yet.</strong><span>Save a health check-in to create durable longitudinal review data.</span></li>';
 
       payloadPreview.textContent = JSON.stringify(payload, null, 2);
     }}
@@ -7769,6 +7807,37 @@ def render_health_module_page(payload: dict) -> str:
       }}
     }}
 
+    async function saveCheckin(event) {{
+      event.preventDefault();
+      checkinNoteStatus.textContent = "Saving health check-in…";
+      try {{
+        const response = await fetch("/api/health/checkins", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            actor: "Chris",
+            actor_id: "chris",
+            symptoms: document.getElementById("checkin-symptoms").value,
+            energy_level: Number(document.getElementById("checkin-energy").value || "0"),
+            sleep_hours: Number(document.getElementById("checkin-sleep").value || "0"),
+            stress_level: Number(document.getElementById("checkin-stress").value || "0"),
+            note: document.getElementById("checkin-note").value,
+            source: "web-health-center",
+          }}),
+        }});
+        const payload = await response.json();
+        checkinOutput.textContent = JSON.stringify(payload, null, 2);
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Health check-in save failed");
+        }}
+        checkinNoteStatus.textContent = "Health check-in saved.";
+        document.getElementById("checkin-form").reset();
+        await refreshHealthState();
+      }} catch (error) {{
+        checkinNoteStatus.textContent = `Health check-in save failed: ${{String(error)}}`;
+      }}
+    }}
+
     document.getElementById("refresh-health").addEventListener("click", () => {{
       refreshHealthState().catch((error) => {{
         statusNote.textContent = `Refresh failed: ${{String(error)}}`;
@@ -7776,6 +7845,7 @@ def render_health_module_page(payload: dict) -> str:
     }});
     document.getElementById("triage-form").addEventListener("submit", runTriage);
     document.getElementById("objective-form").addEventListener("submit", saveObjective);
+    document.getElementById("checkin-form").addEventListener("submit", saveCheckin);
     render(initialPayload);
   </script>
 </body>

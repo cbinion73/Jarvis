@@ -23,6 +23,7 @@ public struct HealthSummary: Codable, Sendable {
     public let alerts: [HealthAlert]
     public let nextActions: [String]
     public let continuity: HealthContinuity?
+    public let manualCheckinCount: Int
 
     public init(
         stepsToday: Int,
@@ -42,7 +43,8 @@ public struct HealthSummary: Codable, Sendable {
         protocolItems: [HealthProtocolItem] = [],
         alerts: [HealthAlert] = [],
         nextActions: [String] = [],
-        continuity: HealthContinuity? = nil
+        continuity: HealthContinuity? = nil,
+        manualCheckinCount: Int = 0
     ) {
         self.stepsToday = stepsToday
         self.heartRateAvg = heartRateAvg
@@ -62,6 +64,7 @@ public struct HealthSummary: Codable, Sendable {
         self.alerts = alerts
         self.nextActions = nextActions
         self.continuity = continuity
+        self.manualCheckinCount = manualCheckinCount
     }
 
     enum CodingKeys: String, CodingKey {
@@ -83,6 +86,7 @@ public struct HealthSummary: Codable, Sendable {
         case alerts
         case nextActions = "next_actions"
         case continuity
+        case manualCheckinCount = "manual_checkin_count"
     }
 
     public init(from decoder: Decoder) throws {
@@ -105,7 +109,44 @@ public struct HealthSummary: Codable, Sendable {
         alerts = try container.decodeIfPresent([HealthAlert].self, forKey: .alerts) ?? []
         nextActions = try container.decodeIfPresent([String].self, forKey: .nextActions) ?? []
         continuity = try container.decodeIfPresent(HealthContinuity.self, forKey: .continuity)
+        manualCheckinCount = try container.decodeIfPresent(Int.self, forKey: .manualCheckinCount) ?? 0
     }
+}
+
+public struct HealthCheckInEntry: Codable, Sendable, Identifiable {
+    public let checkinId: String
+    public let actorId: String
+    public let symptoms: String
+    public let note: String
+    public let energyLevel: Int?
+    public let sleepHours: Double?
+    public let stressLevel: Int?
+    public let source: String
+    public let savedAt: String
+
+    public var id: String { checkinId }
+
+    enum CodingKeys: String, CodingKey {
+        case checkinId = "checkin_id"
+        case actorId = "actor_id"
+        case symptoms
+        case note
+        case energyLevel = "energy_level"
+        case sleepHours = "sleep_hours"
+        case stressLevel = "stress_level"
+        case source
+        case savedAt = "saved_at"
+    }
+}
+
+public struct HealthCheckInOverview: Codable, Sendable {
+    public let entries: [HealthCheckInEntry]
+    public let count: Int
+}
+
+public struct HealthCheckInActionResult: Codable, Sendable {
+    public let status: String
+    public let checkin: HealthCheckInEntry
 }
 
 public struct HealthContinuity: Codable, Sendable {

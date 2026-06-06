@@ -762,14 +762,20 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Health command center", health_html)
         self.assertIn("Daily Readiness", health_html)
         self.assertIn("Save Health Objective", health_html)
+        self.assertIn("Manual Health Check-In", health_html)
+        self.assertIn("Save Health Check-In", health_html)
+        self.assertIn("Recent Manual Check-Ins", health_html)
         self.assertIn("Recent Health Continuity", health_html)
         self.assertIn("/api/activity/operator-action", health_html)
         self.assertIn("status", health_snapshot)
         self.assertIn("current_signals", health_snapshot)
         self.assertIn("recent_activity", health_snapshot)
+        self.assertIn("recent_checkins", health_snapshot)
+        self.assertIn("checkin_count", health_snapshot)
         self.assertIn("proof_paths", health_snapshot)
         self.assertEqual(health_snapshot["proof_paths"]["module_route"], "/health-center")
         self.assertEqual(health_snapshot["proof_paths"]["module_api"], "/api/health/module")
+        self.assertEqual(health_snapshot["proof_paths"]["checkins_api"], "/api/health/checkins")
 
     def test_home_action_events_persist_into_shared_activity_surfaces(self) -> None:
         record_response = asyncio.run(
@@ -1359,6 +1365,44 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertTrue(any(item.get("title") == "Save Health Objective" for item in health_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("related_label") == "Lower A1c by improving post-meal glucose control" for item in health_snapshot["recent_activity"]))
         progress_snapshot = self._json_body(asyncio.run(self._route("/api/progress/module", "GET")()))
+        self.assertEqual(progress_snapshot["progress_next_focus"], "Health")
+        self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Health")
+
+    def test_health_checkin_mutation_persists_into_health_and_activity(self) -> None:
+        async def _payload() -> dict[str, object]:
+            return {
+                "actor": "Chris",
+                "actor_id": "chris",
+                "symptoms": "Low energy after poor sleep",
+                "note": "Late night, no walk, and heavier dinner than normal.",
+                "energy_level": 4,
+                "sleep_hours": 5.5,
+                "stress_level": 7,
+                "source": "test-health-route",
+            }
+
+        response = asyncio.run(
+            self._route("/api/health/checkins", "POST")(
+                SimpleNamespace(json=_payload)
+            )
+        )
+        listing = self._json_body(asyncio.run(self._route("/api/health/checkins", "GET")(actor="chris")))
+        health_snapshot = self._json_body(asyncio.run(self._route("/api/health/module", "GET")()))
+        activity_snapshot = self._json_body(asyncio.run(self._route("/api/activity", "GET")()))
+        progress_snapshot = self._json_body(asyncio.run(self._route("/api/progress/module", "GET")()))
+
+        result = self._json_body(response)
+
+        self.assertEqual(result["status"], "recorded")
+        self.assertEqual(result["checkin"]["symptoms"], "Low energy after poor sleep")
+        self.assertEqual(result["focus"]["module"], "Health")
+        self.assertEqual(listing["count"], 1)
+        self.assertEqual(health_snapshot["checkin_count"], 1)
+        self.assertEqual(health_snapshot["latest_checkin"]["symptoms"], "Low energy after poor sleep")
+        self.assertTrue(any(item.get("symptoms") == "Low energy after poor sleep" for item in health_snapshot["recent_checkins"]))
+        self.assertTrue(any(item.get("title") == "Save Health Check-In" for item in health_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("subtitle") == "Late night, no walk, and heavier dinner than normal." for item in health_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("related_kind") == "health-checkin" for item in activity_snapshot))
         self.assertEqual(progress_snapshot["progress_next_focus"], "Health")
         self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Health")
 

@@ -43,6 +43,7 @@ from urllib.parse import quote
 from fastapi import FastAPI, HTTPException
 
 from .audit import AuditLog, ProgressFocusStore, RecoveryActionStore
+from .health_checkins import HealthCheckInStore
 from .nav_bridge import NavBridge, haversine, min_distance_to_route, sample_route_points
 from .persistence import append_jsonl as persistence_append_jsonl, atomic_write_json
 from .recovery_cases import RecoveryCaseStore
@@ -8404,6 +8405,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 watchlist=watchlist,
                 next_actions=next_actions,
             ),
+            "manual_checkin_count": len(HealthCheckInStore().list_checkins(actor, limit=12)),
         }
         return _ok(data)
 
@@ -8423,6 +8425,45 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
 
         logged = _health_store.log_samples(actor_id, samples)
         return _ok({"logged": logged})
+
+    @app.get("/api/apple/health/checkins")
+    async def apple_health_checkins(actor: str = "chris"):
+        entries = HealthCheckInStore().list_checkins(actor, limit=8)
+        return _ok({"entries": entries, "count": len(entries)})
+
+    @app.post("/api/apple/health/checkins")
+    async def apple_health_checkins_post(payload: dict):
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        actor_id = str(payload.get("actor_id") or actor).strip().lower() or "chris"
+        entry = HealthCheckInStore().save_checkin(
+            actor_id=actor_id,
+            symptoms=str(payload.get("symptoms") or "").strip(),
+            note=str(payload.get("note") or "").strip(),
+            energy_level=payload.get("energy_level"),
+            sleep_hours=payload.get("sleep_hours"),
+            stress_level=payload.get("stress_level"),
+            source=str(payload.get("source") or "apple-health").strip() or "apple-health",
+        )
+        _record_operator_action(
+            actor=actor,
+            domain="health",
+            action="Save Apple Health Check-In",
+            detail=str(entry.get("note") or "Health manual check-in saved from the iPhone.").strip() or "Health manual check-in saved from the iPhone.",
+            why_now="The iPhone health surface captured a manual check-in directly into the shared health continuity lane.",
+            result_summary="Manual health check-in saved from Apple surface.",
+            route="/health-center",
+            route_label="Open Health",
+            related_kind="health-checkin",
+            related_label=str(entry.get("checkin_id") or "").strip(),
+            succeeded=True,
+        )
+        focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+            module="Health",
+            reason=str(entry.get("note") or "Manual health check-in updated the shared health lane.").strip(),
+            route="/health-center",
+            actor=actor,
+        )
+        return _ok({"status": "recorded", "checkin": entry, "focus": focus})
 
     # ------------------------------------------------------------------
     # GET /api/apple/home/state

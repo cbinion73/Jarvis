@@ -445,6 +445,43 @@ public final class AppleAPIClient: Sendable {
         try await get("/api/apple/health/summary?actor=\(actor)")
     }
 
+    public func fetchHealthCheckins(actor: String = "chris") async throws -> HealthCheckInOverview {
+        try await get("/api/apple/health/checkins?actor=\(actor)")
+    }
+
+    public func submitHealthCheckin(
+        symptoms: String,
+        note: String,
+        energyLevel: Int,
+        sleepHours: Double,
+        stressLevel: Int,
+        actor: String = "chris"
+    ) async throws -> HealthCheckInActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let actor_id: String
+            let symptoms: String
+            let note: String
+            let energy_level: Int
+            let sleep_hours: Double
+            let stress_level: Int
+            let source: String
+        }
+        return try await post(
+            "/api/apple/health/checkins",
+            body: Body(
+                actor: actor,
+                actor_id: actor,
+                symptoms: symptoms,
+                note: note,
+                energy_level: energyLevel,
+                sleep_hours: sleepHours,
+                stress_level: stressLevel,
+                source: "iphone-health"
+            )
+        )
+    }
+
     /// Push HealthKit samples from the iPhone to JARVIS for storage and analysis.
     ///
     /// - Returns: The number of samples successfully logged on the server.

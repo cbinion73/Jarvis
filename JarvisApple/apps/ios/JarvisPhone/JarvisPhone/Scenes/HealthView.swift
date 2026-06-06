@@ -7,6 +7,13 @@ struct HealthView: View {
 
     @ObservedObject var viewModel: HealthViewModel
     @ObservedObject private var syncManager = HealthSyncManager.shared
+    @State private var checkinSymptoms = ""
+    @State private var checkinNote = ""
+    @State private var checkinEnergy = 5.0
+    @State private var checkinSleep = 7.0
+    @State private var checkinStress = 4.0
+    @State private var isSavingCheckin = false
+    @State private var checkinStatusMessage = "Capture a manual health check-in when live signals are sparse or you want extra context."
 
     var body: some View {
         NavigationStack {
@@ -137,6 +144,10 @@ struct HealthView: View {
                 .glassEffect(in: RoundedRectangle(cornerRadius: 16))
 
                 quickActionDock(summary: s)
+
+                manualCheckInCard
+
+                recentCheckinsCard
 
                 HStack(spacing: 8) {
                     if syncManager.isSyncing {
@@ -394,6 +405,105 @@ struct HealthView: View {
                 tint: .cyan
             )
         }
+    }
+
+    private var manualCheckInCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Manual Check-In", systemImage: "square.and.pencil")
+                .font(.system(size: 11, weight: .bold))
+                .tracking(1.0)
+                .foregroundStyle(Color(red: 0.67, green: 0.94, blue: 0.78).opacity(0.95))
+
+            TextField("Symptoms or focus", text: $checkinSymptoms)
+                .textFieldStyle(.roundedBorder)
+
+            TextField("Context note", text: $checkinNote, axis: .vertical)
+                .textFieldStyle(.roundedBorder)
+                .lineLimit(2...4)
+
+            VStack(spacing: 10) {
+                sliderRow("Energy", value: $checkinEnergy)
+                sliderRow("Sleep", value: $checkinSleep, format: { String(format: "%.1f h", $0) })
+                sliderRow("Stress", value: $checkinStress)
+            }
+
+            Button {
+                Task { await submitCheckin() }
+            } label: {
+                HStack {
+                    if isSavingCheckin {
+                        ProgressView().tint(.white).scaleEffect(0.8)
+                    }
+                    Text(isSavingCheckin ? "Saving Check-In…" : "Save Health Check-In")
+                        .font(.caption.weight(.semibold))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Color(red: 0.2, green: 0.9, blue: 0.5).opacity(0.82), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(isSavingCheckin)
+            .opacity(isSavingCheckin ? 0.7 : 1.0)
+
+            Text(checkinStatusMessage)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.68))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var recentCheckinsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Recent Manual Check-Ins", systemImage: "clock.arrow.circlepath")
+                    .font(.system(size: 11, weight: .bold))
+                    .tracking(1.0)
+                    .foregroundStyle(.cyan.opacity(0.95))
+                Spacer()
+                if let summary = viewModel.summary, summary.manualCheckinCount > 0 {
+                    Text("\(summary.manualCheckinCount)")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.cyan)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(.cyan.opacity(0.12), in: Capsule())
+                }
+            }
+
+            if viewModel.checkins.isEmpty {
+                Text("No manual check-ins recorded yet. Save one here and it will flow into the shared health continuity lane.")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.68))
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                ForEach(viewModel.checkins.prefix(4)) { checkin in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(checkin.symptoms.isEmpty ? "Health check-in" : checkin.symptoms)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Text("Energy \(checkin.energyLevel ?? 0) · Sleep \(checkin.sleepHours ?? 0, specifier: "%.1f")h · Stress \(checkin.stressLevel ?? 0)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        if !checkin.note.isEmpty {
+                            Text(checkin.note)
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.72))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(10)
+                    .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
     }
 
     private func continuityCard(_ continuity: HealthContinuity) -> some View {
@@ -809,6 +919,45 @@ struct HealthView: View {
             return Int(value).formatted() + " steps"
         default:
             return String(format: "%.0f", value)
+        }
+    }
+
+    private func sliderRow(_ title: String, value: Binding<Double>, format: @escaping (Double) -> String = { String(Int($0)) }) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white)
+                Spacer()
+                Text(format(value.wrappedValue))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Slider(value: value, in: title == "Sleep" ? 0...12 : 1...10, step: title == "Sleep" ? 0.5 : 1)
+                .tint(Color(red: 0.2, green: 0.9, blue: 0.5))
+        }
+    }
+
+    private func submitCheckin() async {
+        isSavingCheckin = true
+        checkinStatusMessage = "Saving health check-in…"
+        defer { isSavingCheckin = false }
+        do {
+            try await viewModel.submitCheckin(
+                symptoms: checkinSymptoms,
+                note: checkinNote,
+                energyLevel: Int(checkinEnergy.rounded()),
+                sleepHours: checkinSleep,
+                stressLevel: Int(checkinStress.rounded())
+            )
+            checkinSymptoms = ""
+            checkinNote = ""
+            checkinEnergy = 5
+            checkinSleep = 7
+            checkinStress = 4
+            checkinStatusMessage = "Health check-in saved to JARVIS."
+        } catch {
+            checkinStatusMessage = "Unable to save check-in: \(error.localizedDescription)"
         }
     }
 
