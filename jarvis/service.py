@@ -2059,6 +2059,54 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         )
         return surface_item
 
+    def _match_recovery_case(
+        *,
+        target_kind: str,
+        item: dict[str, Any],
+        recovery_cases: Sequence[dict[str, Any]],
+        index: int = 0,
+    ) -> dict[str, Any] | None:
+        if target_kind == "integration":
+            name = str(item.get("name", "")).strip()
+            key = f"integration:{name.lower()}" if name else ""
+            for case in recovery_cases:
+                if str(case.get("related_key", "")).strip() == key:
+                    return dict(case)
+            return None
+        if target_kind == "failure":
+            title = str(item.get("title", "")).strip().lower()
+            timestamp = str(item.get("timestamp", "")).strip()
+            exact_key = f"failure:{timestamp}:{title}" if timestamp and title else ""
+            for case in recovery_cases:
+                if exact_key and str(case.get("related_key", "")).strip() == exact_key:
+                    return dict(case)
+            fallback_key = f"failure:{index}:{title}" if title else ""
+            for case in recovery_cases:
+                if fallback_key and str(case.get("related_key", "")).strip() == fallback_key:
+                    return dict(case)
+            return None
+        return None
+
+    def _attach_recovery_case_context(
+        *,
+        items: Sequence[dict[str, Any]],
+        target_kind: str,
+        recovery_cases: Sequence[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        enriched: list[dict[str, Any]] = []
+        for index, item in enumerate(items):
+            row = dict(item or {})
+            case = _match_recovery_case(target_kind=target_kind, item=row, recovery_cases=recovery_cases, index=index)
+            if case:
+                row["case_id"] = str(case.get("case_id", "")).strip()
+                row["case_status"] = str(case.get("status", "")).strip()
+                row["case_status_label"] = str(case.get("status_label", "")).strip()
+                row["execution_count"] = int(case.get("execution_count", 0) or 0)
+                row["last_execution_at"] = str(case.get("last_execution_at", "")).strip()
+                row["last_execution_action"] = str(case.get("last_execution_action", "")).strip()
+            enriched.append(row)
+        return enriched
+
     def _recovery_bridge_summary(limit: int = 6, target_kinds: Sequence[str] | None = None) -> dict[str, Any]:
         summary = RecoveryActionStore(DEFAULT_AUDIT_ROOT).summary(limit=max(limit, 8))
         recent = [_decorate_recovery_action(item) for item in list(summary.get("recent") or []) if isinstance(item, dict)]
@@ -2241,6 +2289,17 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             recovery_cases = []
         summary = "Failure & Recovery now has a dedicated module route with live recovery posture, pending approval gates, and recent failure signals inside JARVIS."
 
+        failing_integrations = _attach_recovery_case_context(
+            items=failing_integrations,
+            target_kind="integration",
+            recovery_cases=recovery_cases,
+        )
+        recent_failures = _attach_recovery_case_context(
+            items=recent_failures,
+            target_kind="failure",
+            recovery_cases=recovery_cases,
+        )
+
         if action_items:
             summary = (
                 f"Failure and recovery surfaced {len(action_items)} recovery action(s), "
@@ -2283,12 +2342,14 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "recovery_case_investigating_count": sum(1 for item in recovery_cases if str(item.get("status", "")).strip().lower() == "investigating"),
                 "recovery_case_watch_count": sum(1 for item in recovery_cases if str(item.get("status", "")).strip().lower() == "watch"),
                 "recovery_case_resolved_count": sum(1 for item in recovery_cases if str(item.get("status", "")).strip().lower() == "resolved"),
+                "recovery_case_execution_count": sum(int(item.get("execution_count", 0) or 0) for item in recovery_cases),
             },
             "proof_paths": {
                 "module_route": "/recovery-center",
                 "module_api": "/api/recovery/module",
                 "recovery_action_api": "/api/recovery/action",
                 "recovery_case_api_prefix": "/api/recovery/cases/",
+                "recovery_case_execute_suffix": "/execute",
                 "supervision_route": "/supervision-snapshot",
                 "supervision_api": "/api/supervision-snapshot",
                 "approval_queue_route": "/approval-queue",
@@ -2351,6 +2412,60 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             },
         )
         return _json({"status": "recorded", "case": case})
+
+    @app.post("/api/recovery/cases/{case_id}/execute")
+    async def api_recovery_case_execute(case_id: str, payload: dict[str, Any]) -> JSONResponse:
+        actor = str(payload.get("actor") or "Chris").strip() or "Chris"
+        action_type = str(payload.get("action_type") or "retry").strip().lower() or "retry"
+        note = str(payload.get("note") or "").strip()
+        store = RecoveryCaseStore()
+        try:
+            case = store.record_execution(
+                case_id,
+                actor=actor,
+                action_type=action_type,
+                note=note,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        action_entry = RecoveryActionStore(DEFAULT_AUDIT_ROOT).record_action(
+            action_type=action_type,
+            target_kind="recovery-case",
+            target_label=str(case.get("title") or "Recovery case").strip() or "Recovery case",
+            target_id=str(case.get("case_id") or case_id).strip(),
+            detail=note
+            or (
+                f"Recovery retry loop executed for {str(case.get('title') or case_id).strip()}."
+                if action_type == "retry"
+                else f"Recovery stabilization loop executed for {str(case.get('title') or case_id).strip()}."
+            ),
+            route="/recovery-center",
+            status="executed" if action_type == "retry" else "stabilized",
+        )
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": "recovery",
+                "action": "Execute Recovery Retry Loop" if action_type == "retry" else "Stabilize Recovery Loop",
+                "title": str(case.get("title") or "Recovery case").strip() or "Recovery case",
+                "detail": note or str(case.get("detail") or "").strip() or "Recovery execution requested.",
+                "why_now": f"Recovery center executed a durable non-approval loop for {str(case.get('related_key') or case_id).strip()}.",
+                "result_summary": (
+                    f"Recovery loop status: {str(case.get('status_label') or case.get('status') or 'Investigating').strip()}"
+                ),
+                "related_route": str(case.get("related_route") or "/recovery-center").strip() or "/recovery-center",
+                "route_label": "Open Related Surface",
+                "related_kind": "recovery-case",
+                "related_label": str(case.get("case_id") or case_id).strip(),
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        return _json({"status": "recorded", "case": case, "action": action_entry})
 
     async def _build_mission_board_module_payload() -> dict[str, Any]:
         command_center = build_command_center_index()

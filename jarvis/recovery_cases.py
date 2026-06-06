@@ -158,3 +158,60 @@ class RecoveryCaseStore:
         target["history"] = history[-12:]
         self._save(records)
         return deepcopy(target)
+
+    def record_execution(
+        self,
+        case_id: str,
+        *,
+        actor: str,
+        action_type: str,
+        note: str = "",
+    ) -> dict[str, Any]:
+        normalized_action = action_type.strip().lower()
+        if normalized_action not in {"retry", "stabilize"}:
+            raise ValueError("Unsupported recovery case execution action.")
+        records = self._load_json()
+        target = None
+        for item in records:
+            if str(item.get("case_id", "")).strip() == case_id.strip():
+                target = item
+                break
+        if target is None:
+            raise KeyError("Recovery case not found.")
+
+        now = _now_iso()
+        execution_count = int(target.get("execution_count", 0) or 0) + 1
+        transition_status = "investigating" if normalized_action == "retry" else "watch"
+        transition_label = {
+            "investigating": "Investigating",
+            "watch": "Watch",
+        }[transition_status]
+
+        target["status"] = transition_status
+        target["status_label"] = transition_label
+        target["execution_count"] = execution_count
+        target["last_execution_at"] = now
+        target["last_execution_action"] = normalized_action
+        target["last_execution_status"] = "executed" if normalized_action == "retry" else "stabilized"
+        target["updated_at"] = now
+        target["last_action_at"] = now
+        target["last_action"] = normalized_action
+
+        history = list(target.get("history") or [])
+        history.append(
+            {
+                "timestamp": now,
+                "action": normalized_action,
+                "status": transition_status,
+                "actor": actor.strip() or "Chris",
+                "detail": note.strip()
+                or (
+                    "Recovery retry execution loop started."
+                    if normalized_action == "retry"
+                    else "Recovery case moved into watch stabilization."
+                ),
+            }
+        )
+        target["history"] = history[-16:]
+        self._save(records)
+        return deepcopy(target)

@@ -2305,6 +2305,33 @@ def render_recovery_module_page(payload: dict) -> str:
       }}
     }}
 
+    async function executeRecoveryCase(caseId, actionType, detail, fallbackLabel = "Recovery case") {{
+      if (!caseId) return;
+      actionNote.textContent = `${{actionType === "retry" ? "Executing retry loop" : "Stabilizing"}} for ${{fallbackLabel}}…`;
+      try {{
+        const response = await fetch(`/api/recovery/cases/${{encodeURIComponent(caseId)}}/execute`, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            actor: "Chris",
+            action_type: actionType,
+            note: detail,
+          }}),
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Recovery execution failed");
+        }}
+        const updatedCase = payload.case || {{}};
+        actionNote.textContent = actionType === "retry"
+          ? `Recovery retry loop executed for ${{updatedCase.title || fallbackLabel}}.`
+          : `Recovery case moved into watch for ${{updatedCase.title || fallbackLabel}}.`;
+        await refreshRecoveryState();
+      }} catch (error) {{
+        actionNote.textContent = `Recovery execution failed: ${{String(error)}}`;
+      }}
+    }}
+
     function selectedItem(payload) {{
       const failure = payload.failure_recovery || {{}};
       const pending = Array.isArray(payload.pending_approvals) ? payload.pending_approvals : [];
@@ -2356,6 +2383,8 @@ def render_recovery_module_page(payload: dict) -> str:
             ${{item.case_id ? `<button type="button" data-case-status="investigating" data-case-id="${{esc(item.case_id)}}">Mark Investigating</button>` : ""}}
             ${{item.case_id ? `<button type="button" class="alt" data-case-status="watch" data-case-id="${{esc(item.case_id)}}">Mark Watch</button>` : ""}}
             ${{item.case_id ? `<button type="button" class="alt" data-case-status="resolved" data-case-id="${{esc(item.case_id)}}">Mark Resolved</button>` : ""}}
+            ${{item.case_id ? `<button type="button" data-case-execute="retry" data-case-id="${{esc(item.case_id)}}" data-case-label="${{esc(title)}}" data-case-detail="${{esc(summary)}}">Execute Retry Loop</button>` : ""}}
+            ${{item.case_id ? `<button type="button" class="alt" data-case-execute="stabilize" data-case-id="${{esc(item.case_id)}}" data-case-label="${{esc(title)}}" data-case-detail="${{esc(summary)}}">Stabilize Recovery Loop</button>` : ""}}
             <button type="button" data-recovery-action="retry" data-recovery-kind="${{esc(item.request_id ? "approval" : item.name ? "integration" : "failure")}}" data-recovery-label="${{esc(title)}}" data-recovery-detail="${{esc(summary)}}" data-recovery-target-id="${{esc(item.request_id || "")}}">Stage Retry</button>
             <button type="button" class="alt" data-recovery-action="stabilize" data-recovery-kind="${{esc(item.request_id ? "approval" : item.name ? "integration" : "failure")}}" data-recovery-label="${{esc(title)}}" data-recovery-detail="${{esc(summary)}}">Mark Stabilized</button>
           </div>
@@ -2407,6 +2436,18 @@ def render_recovery_module_page(payload: dict) -> str:
             button.getAttribute("data-case-status") || "investigating",
           ).catch((error) => {{
             actionNote.textContent = `Recovery case update failed: ${{String(error)}}`;
+          }});
+        }});
+      }});
+      document.querySelectorAll("[data-case-execute]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          executeRecoveryCase(
+            button.getAttribute("data-case-id") || "",
+            button.getAttribute("data-case-execute") || "retry",
+            button.getAttribute("data-case-detail") || "Recovery execution requested.",
+            button.getAttribute("data-case-label") || "Recovery case",
+          ).catch((error) => {{
+            actionNote.textContent = `Recovery execution failed: ${{String(error)}}`;
           }});
         }});
       }});
@@ -2512,12 +2553,15 @@ def render_recovery_module_page(payload: dict) -> str:
               ${{chip(item.status_label || item.status || "Open", item.status === "resolved" ? "accepted" : item.status === "watch" ? "steady" : "regressed")}}
               ${{item.source_kind ? chip(item.source_kind.replaceAll("-", " ")) : ""}}
               ${{item.last_action_at ? chip(item.last_action_at, "steady") : ""}}
+              ${{Number(item.execution_count || 0) > 0 ? chip(`executions ${{String(item.execution_count)}}`, "steady") : ""}}
             </div>
             <div class="action-row">
               <button type="button" data-select-kind="case" data-select-index="${{esc(String(index))}}">Inspect Case</button>
               <button type="button" data-case-status="investigating" data-case-id="${{esc(item.case_id || "")}}">Mark Investigating</button>
               <button type="button" class="alt" data-case-status="watch" data-case-id="${{esc(item.case_id || "")}}">Mark Watch</button>
               <button type="button" class="alt" data-case-status="resolved" data-case-id="${{esc(item.case_id || "")}}">Mark Resolved</button>
+              <button type="button" data-case-execute="retry" data-case-id="${{esc(item.case_id || "")}}" data-case-label="${{esc(item.title || "Recovery case")}}" data-case-detail="${{esc(item.detail || "Recovery retry requested.")}}">Execute Retry Loop</button>
+              <button type="button" class="alt" data-case-execute="stabilize" data-case-id="${{esc(item.case_id || "")}}" data-case-label="${{esc(item.title || "Recovery case")}}" data-case-detail="${{esc(item.detail || "Recovery stabilization requested.")}}">Stabilize Recovery Loop</button>
               <a href="${{esc(item.related_route || "/recovery-center")}}">Open Related Surface</a>
             </div>
           </div>
@@ -2629,6 +2673,18 @@ def render_recovery_module_page(payload: dict) -> str:
             button.getAttribute("data-case-status") || "investigating",
           ).catch((error) => {{
             actionNote.textContent = `Recovery case update failed: ${{String(error)}}`;
+          }});
+        }});
+      }});
+      document.querySelectorAll("[data-case-execute]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          executeRecoveryCase(
+            button.getAttribute("data-case-id") || "",
+            button.getAttribute("data-case-execute") || "retry",
+            button.getAttribute("data-case-detail") || "Recovery execution requested.",
+            button.getAttribute("data-case-label") || "Recovery case",
+          ).catch((error) => {{
+            actionNote.textContent = `Recovery execution failed: ${{String(error)}}`;
           }});
         }});
       }});

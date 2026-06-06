@@ -517,6 +517,8 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Mark Investigating", recovery_html)
         self.assertIn("Mark Watch", recovery_html)
         self.assertIn("Mark Resolved", recovery_html)
+        self.assertIn("Execute Retry Loop", recovery_html)
+        self.assertIn("Stabilize Recovery Loop", recovery_html)
         self.assertIn("/api/recovery/action", recovery_html)
         self.assertIn("status", recovery_snapshot)
         self.assertIn("failure_recovery", recovery_snapshot)
@@ -525,10 +527,12 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("recovery_cases", recovery_snapshot)
         self.assertIn("recorded_recovery_actions", recovery_snapshot["counts"])
         self.assertIn("recovery_case_count", recovery_snapshot["counts"])
+        self.assertIn("recovery_case_execution_count", recovery_snapshot["counts"])
         self.assertIn("proof_paths", recovery_snapshot)
         self.assertEqual(recovery_snapshot["proof_paths"]["module_route"], "/recovery-center")
         self.assertEqual(recovery_snapshot["proof_paths"]["module_api"], "/api/recovery/module")
         self.assertEqual(recovery_snapshot["proof_paths"]["recovery_action_api"], "/api/recovery/action")
+        self.assertEqual(recovery_snapshot["proof_paths"]["recovery_case_execute_suffix"], "/execute")
         self.assertIn("JARVIS Mission &amp; Task Board", mission_board_html)
         self.assertIn("Refresh Mission Board", mission_board_html)
         self.assertIn("Mission Authoring", mission_board_html)
@@ -765,6 +769,36 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         activity_response = asyncio.run(self._route("/api/activity", "GET")())
         activity_payload = self._json_body(activity_response)
         self.assertTrue(any(item.get("entry_type") == "operator-action" for item in activity_payload))
+        self.assertTrue(any(item.get("related_kind") == "recovery-case" for item in activity_payload))
+
+    def test_recovery_case_execution_persists_into_recovery_and_activity(self) -> None:
+        recovery_module_response = asyncio.run(self._route("/api/recovery/module", "GET")())
+        recovery_payload = self._json_body(recovery_module_response)
+        self.assertGreaterEqual(len(recovery_payload["recovery_cases"]), 1)
+        case_id = recovery_payload["recovery_cases"][0]["case_id"]
+
+        execute_response = asyncio.run(
+            self._route("/api/recovery/cases/{case_id}/execute", "POST")(
+                case_id,
+                {
+                    "actor": "Chris",
+                    "action_type": "retry",
+                    "note": "Executing retry loop from Recovery Center.",
+                },
+            )
+        )
+        execute_payload = self._json_body(execute_response)
+        self.assertEqual(execute_payload["status"], "recorded")
+        self.assertEqual(execute_payload["case"]["status"], "investigating")
+        self.assertEqual(execute_payload["case"]["execution_count"], 1)
+        self.assertEqual(execute_payload["action"]["target_kind"], "recovery-case")
+        self.assertEqual(execute_payload["action"]["status"], "executed")
+
+        refreshed_recovery = self._json_body(asyncio.run(self._route("/api/recovery/module", "GET")()))
+        activity_payload = self._json_body(asyncio.run(self._route("/api/activity", "GET")()))
+
+        self.assertTrue(any(item.get("case_id") == case_id and int(item.get("execution_count", 0) or 0) >= 1 for item in refreshed_recovery["recovery_cases"]))
+        self.assertTrue(any(item.get("target_id") == case_id for item in refreshed_recovery["recovery_actions"]["recent"]))
         self.assertTrue(any(item.get("related_kind") == "recovery-case" for item in activity_payload))
 
     def test_module_activity_continuity_populates_publish_huddle_and_navigation_payloads(self) -> None:

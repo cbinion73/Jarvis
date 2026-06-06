@@ -54,6 +54,35 @@ class RecoveryCaseStoreTests(unittest.TestCase):
             snapshot = json.loads(store.path.read_text(encoding="utf-8"))
             self.assertEqual(snapshot[0]["status"], "resolved")
 
+    def test_record_execution_persists_execution_state_and_history(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            store = RecoveryCaseStore(root)
+            created = store.upsert_case(
+                source_kind="integration-failure",
+                title="Repair Gmail bridge",
+                detail="Bridge sync drift needs a retry loop.",
+                related_route="/supervision-snapshot",
+                related_key="integration:gmail-bridge",
+            )
+
+            updated = store.record_execution(
+                created["case_id"],
+                actor="Chris",
+                action_type="retry",
+                note="Executing retry loop from Recovery Center.",
+            )
+
+            self.assertEqual(updated["status"], "investigating")
+            self.assertEqual(updated["status_label"], "Investigating")
+            self.assertEqual(updated["execution_count"], 1)
+            self.assertEqual(updated["last_execution_action"], "retry")
+            self.assertEqual(updated["last_execution_status"], "executed")
+            self.assertEqual(updated["history"][-1]["detail"], "Executing retry loop from Recovery Center.")
+
+            snapshot = json.loads(store.path.read_text(encoding="utf-8"))
+            self.assertEqual(snapshot[0]["execution_count"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()
