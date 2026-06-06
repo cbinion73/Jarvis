@@ -4639,6 +4639,10 @@ def render_approval_module_page(payload: dict) -> str:
         <div id="recovery-bridge-list" class="entry-list"></div>
       </section>
       <section class="panel span-8">
+        <h2>Recent Approval Continuity</h2>
+        <ul id="recent-activity-list"></ul>
+      </section>
+      <section class="panel span-8">
         <h2>Proof Paths</h2>
         <ul id="proof-list"></ul>
       </section>
@@ -4664,6 +4668,7 @@ def render_approval_module_page(payload: dict) -> str:
     const detailEl = document.getElementById("approval-detail");
     const needsReviewEl = document.getElementById("needs-review-list");
     const recoveryBridgeEl = document.getElementById("recovery-bridge-list");
+    const recentActivityEl = document.getElementById("recent-activity-list");
     const proofEl = document.getElementById("proof-list");
     const payloadPreview = document.getElementById("payload-preview");
     const statusNote = document.getElementById("approval-status-note");
@@ -4689,6 +4694,14 @@ def render_approval_module_page(payload: dict) -> str:
     function routeLinks(routes) {{
       const entries = Array.isArray(routes) ? routes : [];
       return entries.map((item) => `<a href="${{esc(item.route || "/command-center")}}">${{esc(item.label || "Open Route")}}</a>`).join("");
+    }}
+
+    async function recordOperatorAction(payload) {{
+      await fetch("/api/activity/operator-action", {{
+        method: "POST",
+        headers: {{ "Content-Type": "application/json" }},
+        body: JSON.stringify(payload),
+      }});
     }}
 
     function filteredPending(payload) {{
@@ -4781,6 +4794,28 @@ def render_approval_module_page(payload: dict) -> str:
               body: body ? JSON.stringify(body) : undefined,
             }});
             const result = await response.json();
+            await recordOperatorAction({{
+              actor: "Chris",
+              domain: "approval",
+              action: `${{action.charAt(0).toUpperCase() + action.slice(1)}} Approval Request`,
+              title: item.title || "Approval Request",
+              detail: result.status
+                ? `Approval action ${{
+                    action
+                  }} recorded from the Approval Queue.`
+                : `Approval action ${{
+                    action
+                  }} completed from the Approval Queue.`,
+              why_now: "Approval Queue changed a live review item from the route-level operator flow.",
+              result_summary: result.status
+                ? `Approval action status: ${{result.status}}`
+                : `Approval action completed: ${{action}}`,
+              route: "/approval-queue",
+              route_label: "Open Approval Queue",
+              related_kind: "approval",
+              related_label: item.title || item.request_id || "Approval Request",
+              succeeded: response.ok,
+            }});
             await refreshApprovalQueue();
             actionNote.textContent = result.status
               ? `Approval action recorded: ${{result.status}}.`
@@ -4859,6 +4894,9 @@ def render_approval_module_page(payload: dict) -> str:
             </div>
           `).join("")
         : `<div class="entry-card"><strong>No recovery continuity recorded.</strong><span>Recovery actions linked to approvals will surface here with routes back to the failure and supervision stack.</span></div>`;
+      recentActivityEl.innerHTML = (Array.isArray(payload.recent_activity) ? payload.recent_activity : []).length
+        ? payload.recent_activity.map((item) => li(item.title || "Approval action", item.subtitle || item.actor || "Operator continuity", item.detail || item.route_label || "")).join("")
+        : `<li><strong>No approval continuity recorded yet.</strong><span>Approve, reject, cancel, or execute a request to begin the route-level continuity trail.</span></li>`;
 
       document.querySelectorAll("[data-select-kind]").forEach((button) => {{
         button.addEventListener("click", () => {{
@@ -5124,6 +5162,10 @@ def render_supervision_module_page(payload: dict) -> str:
         <div id="recovery-bridge-list" class="entry-list"></div>
       </section>
       <section class="panel span-12">
+        <h2>Recent Supervision Continuity</h2>
+        <ul id="recent-activity-list"></ul>
+      </section>
+      <section class="panel span-12">
         <h2>Payload Preview</h2>
         <pre id="payload-preview"></pre>
       </section>
@@ -5146,6 +5188,7 @@ def render_supervision_module_page(payload: dict) -> str:
     const laneResidueEl = document.getElementById("lane-residue-list");
     const registryMemoryEl = document.getElementById("registry-memory-list");
     const recoveryBridgeEl = document.getElementById("recovery-bridge-list");
+    const recentActivityEl = document.getElementById("recent-activity-list");
     const proofEl = document.getElementById("proof-list");
     const payloadPreview = document.getElementById("payload-preview");
     const statusNote = document.getElementById("supervision-status-note");
@@ -5171,6 +5214,14 @@ def render_supervision_module_page(payload: dict) -> str:
     function routeLinks(routes) {{
       const entries = Array.isArray(routes) ? routes : [];
       return entries.map((item) => `<a href="${{esc(item.route || "/command-center")}}">${{esc(item.label || "Open Route")}}</a>`).join("");
+    }}
+
+    async function recordOperatorAction(payload) {{
+      await fetch("/api/activity/operator-action", {{
+        method: "POST",
+        headers: {{ "Content-Type": "application/json" }},
+        body: JSON.stringify(payload),
+      }});
     }}
 
     function selectedAttention(payload) {{
@@ -5230,6 +5281,28 @@ def render_supervision_module_page(payload: dict) -> str:
             if (!response.ok) {{
               throw new Error(result.detail || `HTTP ${{response.status}}`);
             }}
+            await recordOperatorAction({{
+              actor: "Chris",
+              domain: "supervision",
+              action: `${{action.charAt(0).toUpperCase() + action.slice(1)}} Supervision Item`,
+              title: item.title || "Supervision Item",
+              detail: result.status
+                ? `Supervision action ${{
+                    action
+                  }} recorded from the Supervision Snapshot.`
+                : `Supervision action ${{
+                    action
+                  }} completed from the Supervision Snapshot.`,
+              why_now: "Supervision changed a live review item from the route-level operator flow.",
+              result_summary: result.status
+                ? `Supervision action status: ${{result.status}}`
+                : `Supervision action completed: ${{action}}`,
+              route: "/supervision-snapshot",
+              route_label: "Open Supervision Snapshot",
+              related_kind: "supervision-item",
+              related_label: item.title || item.request_id || "Supervision Item",
+              succeeded: true,
+            }});
             await refreshSupervisionState();
             actionNote.textContent = result.status
               ? `Supervision action recorded: ${{result.status}}.`
@@ -5318,6 +5391,9 @@ def render_supervision_module_page(payload: dict) -> str:
             </div>
           `).join("")
         : `<div class="entry-card"><strong>No recovery continuity recorded.</strong><span>Retry and stabilization actions will surface here with links into the related routes once the failure stack is exercised.</span></div>`;
+      recentActivityEl.innerHTML = (Array.isArray(payload.recent_activity) ? payload.recent_activity : []).length
+        ? payload.recent_activity.map((item) => li(item.title || "Supervision action", item.subtitle || item.actor || "Operator continuity", item.detail || item.route_label || "")).join("")
+        : `<li><strong>No supervision continuity recorded yet.</strong><span>Approve, reject, cancel, or execute a supervision item to begin the route-level continuity trail.</span></li>`;
 
       document.querySelectorAll("[data-select-index]").forEach((button) => {{
         button.addEventListener("click", () => {{

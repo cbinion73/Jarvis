@@ -2173,6 +2173,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         memory = dict(snapshot.get("memory") or {})
         registry = dict(snapshot.get("registry") or {})
         recovery_bridge = _recovery_bridge_summary(limit=5, target_kinds=("approval", "integration", "failure", "recovery"))
+        recent_activity = _module_recent_activity(route="/supervision-snapshot", domain="supervision")
         issue_count = sum(1 for item in integrations if not bool(item.get("ok")))
         summary = str((snapshot.get("return_brief") or {}).get("summary", "")).strip() or (
             "Supervision Snapshot now has a dedicated module route with live lane posture, approval attention, integration issues, and memory cues inside JARVIS."
@@ -2183,7 +2184,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "available": True,
             "status": "Useful" if (attention_queue or what_needs_me or issue_count or int(lane.get("dirty_count", 0) or 0)) else "Wired",
             "summary": summary,
-            "what_became_real": "Supervision Snapshot is now represented as a dedicated app module instead of only an older proof-style surface.",
+            "what_became_real": "Supervision Snapshot is now represented as a dedicated app module with visible route-owned continuity instead of only an older proof-style surface.",
             "remains_partial": "Deeper supervision mutation, broader lane recovery controls, and richer continuity into linked modules still need follow-on slices.",
             "lane": lane,
             "return_brief": dict(snapshot.get("return_brief") or {}),
@@ -2193,6 +2194,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "integrations": integrations,
             "what_needs_me": what_needs_me,
             "recovery_bridge": recovery_bridge,
+            "recent_activity": recent_activity,
             "counts": {
                 "needs_review_count": len(what_needs_me),
                 "pending_approval_count": len(attention_queue),
@@ -2200,6 +2202,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "memory_proposal_count": int(memory.get("proposal_count", 0) or 0),
                 "registered_agent_count": int(registry.get("agent_count", 0) or 0),
                 "recovery_bridge_count": int(recovery_bridge.get("count", 0) or 0),
+                "recent_activity_count": len(recent_activity),
             },
             "proof_paths": {
                 "module_route": "/supervision-snapshot",
@@ -2210,6 +2213,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "command_center_route": "/command-center",
                 "recovery_route": "/recovery-center",
                 "recovery_action_api": "/api/recovery/action",
+                "activity_api": "/api/activity/operator-action",
             },
         }
 
@@ -2219,6 +2223,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         history = list(snapshot.get("history") or [])
         what_needs_me = list(snapshot.get("what_needs_me") or [])
         recovery_bridge = _recovery_bridge_summary(limit=4, target_kinds=("approval",))
+        recent_activity = _module_recent_activity(route="/approval-queue", domain="approval")
         high_risk_pending_count = sum(1 for item in pending if str(item.get("risk_tier", "")).lower() in {"high", "critical"})
         approval_ready_count = sum(
             1
@@ -2238,18 +2243,20 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "available": not bool(snapshot.get("error")),
             "status": "Useful" if (pending or history or what_needs_me) else "Wired",
             "summary": summary,
-            "what_became_real": "Approval Queue is now represented as a dedicated app module instead of only an older standalone proof surface.",
+            "what_became_real": "Approval Queue is now represented as a dedicated app module with visible route-owned continuity instead of only an older standalone proof surface.",
             "remains_partial": "Broader approval creation/edit workflows, deeper trust-zone drill-ins, and richer continuity back into linked modules still need follow-on slices.",
             "pending": pending,
             "history": history,
             "what_needs_me": what_needs_me,
             "recovery_bridge": recovery_bridge,
+            "recent_activity": recent_activity,
             "counts": {
                 "pending_count": len(pending),
                 "history_count": len(history),
                 "high_risk_pending_count": high_risk_pending_count,
                 "approval_ready_count": approval_ready_count,
                 "recovery_bridge_count": int(recovery_bridge.get("count", 0) or 0),
+                "recent_activity_count": len(recent_activity),
             },
             "proof_paths": {
                 "module_route": "/approval-queue",
@@ -2261,6 +2268,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "command_center_route": "/command-center",
                 "recovery_route": "/recovery-center",
                 "recovery_action_api": "/api/recovery/action",
+                "activity_api": "/api/activity/operator-action",
             },
             "errors": [],
         }

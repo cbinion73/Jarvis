@@ -439,10 +439,14 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Refresh Approval Queue", approval_html)
         self.assertIn("Inspect Request", approval_html)
         self.assertIn("Recovery Continuity", approval_html)
+        self.assertIn("Recent Approval Continuity", approval_html)
+        self.assertIn("/api/activity/operator-action", approval_html)
         self.assertIn("status", approval_snapshot)
         self.assertIn("pending", approval_snapshot)
         self.assertIn("history", approval_snapshot)
         self.assertIn("recovery_bridge", approval_snapshot)
+        self.assertIn("recent_activity", approval_snapshot)
+        self.assertIn("recent_activity_count", approval_snapshot["counts"])
         self.assertIn("proof_paths", approval_snapshot)
         self.assertEqual(approval_snapshot["proof_paths"]["module_route"], "/approval-queue")
         self.assertEqual(approval_snapshot["proof_paths"]["module_api"], "/api/approval/module")
@@ -451,10 +455,14 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Refresh Supervision State", supervision_html)
         self.assertIn("Inspect Supervision Item", supervision_html)
         self.assertIn("Recovery Continuity", supervision_html)
+        self.assertIn("Recent Supervision Continuity", supervision_html)
+        self.assertIn("/api/activity/operator-action", supervision_html)
         self.assertIn("status", supervision_snapshot)
         self.assertIn("attention_queue", supervision_snapshot)
         self.assertIn("integrations", supervision_snapshot)
         self.assertIn("recovery_bridge", supervision_snapshot)
+        self.assertIn("recent_activity", supervision_snapshot)
+        self.assertIn("recent_activity_count", supervision_snapshot["counts"])
         self.assertIn("proof_paths", supervision_snapshot)
         self.assertEqual(supervision_snapshot["proof_paths"]["module_route"], "/supervision-snapshot")
         self.assertEqual(supervision_snapshot["proof_paths"]["module_api"], "/api/supervision/module")
@@ -924,6 +932,54 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
 
         self.assertTrue(any(item.get("title") == "Move Mission to Now" for item in mission_board_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("related_label") == "weather-family" for item in mission_board_snapshot["recent_activity"]))
+
+    def test_approval_activity_populates_approval_queue_continuity(self) -> None:
+        asyncio.run(
+            self._route("/api/activity/operator-action", "POST")(
+                {
+                    "actor": "Chris",
+                    "domain": "approval",
+                    "action": "Approve Approval Request",
+                    "detail": "Approval action approve recorded from the Approval Queue.",
+                    "why_now": "Approval Queue continuity smoke test.",
+                    "result_summary": "Approval action status: approved",
+                    "route": "/approval-queue",
+                    "route_label": "Open Approval Queue",
+                    "related_kind": "approval",
+                    "related_label": "Promote storm agent tooling",
+                    "succeeded": True,
+                }
+            )
+        )
+
+        approval_snapshot = self._json_body(asyncio.run(self._route("/api/approval/module", "GET")()))
+
+        self.assertTrue(any(item.get("title") == "Approve Approval Request" for item in approval_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("related_label") == "Promote storm agent tooling" for item in approval_snapshot["recent_activity"]))
+
+    def test_supervision_activity_populates_supervision_continuity(self) -> None:
+        asyncio.run(
+            self._route("/api/activity/operator-action", "POST")(
+                {
+                    "actor": "Chris",
+                    "domain": "supervision",
+                    "action": "Reject Supervision Item",
+                    "detail": "Supervision action reject recorded from the Supervision Snapshot.",
+                    "why_now": "Supervision continuity smoke test.",
+                    "result_summary": "Supervision action status: rejected",
+                    "route": "/supervision-snapshot",
+                    "route_label": "Open Supervision Snapshot",
+                    "related_kind": "supervision-item",
+                    "related_label": "Watchtower deployment proposal",
+                    "succeeded": True,
+                }
+            )
+        )
+
+        supervision_snapshot = self._json_body(asyncio.run(self._route("/api/supervision/module", "GET")()))
+
+        self.assertTrue(any(item.get("title") == "Reject Supervision Item" for item in supervision_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("related_label") == "Watchtower deployment proposal" for item in supervision_snapshot["recent_activity"]))
 
     def test_chronicle_activity_populates_chronicle_continuity(self) -> None:
         asyncio.run(
