@@ -921,6 +921,31 @@ def render_publish_module_page(payload: dict) -> str:
     .span-6 {{ grid-column: span 6; }}
     .span-8 {{ grid-column: span 8; }}
     .span-12 {{ grid-column: span 12; }}
+    .storyboard-strip {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }}
+    .storyboard-step {{
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.028);
+    }}
+    .storyboard-step strong {{
+      display: block;
+      margin-bottom: 8px;
+      color: var(--amber);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }}
+    .storyboard-step span {{
+      display: block;
+      color: var(--muted);
+      line-height: 1.5;
+    }}
     ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
     li {{
       padding: 12px 14px;
@@ -6505,6 +6530,31 @@ def render_health_module_page(payload: dict) -> str:
       color: var(--muted);
       line-height: 1.55;
     }}
+    .storyboard-strip {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 12px;
+    }}
+    .storyboard-step {{
+      padding: 14px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.028);
+    }}
+    .storyboard-step strong {{
+      display: block;
+      margin-bottom: 8px;
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }}
+    .storyboard-step span {{
+      display: block;
+      color: var(--muted);
+      line-height: 1.5;
+    }}
     .layout {{
       margin-top: 18px;
       display: grid;
@@ -6570,7 +6620,8 @@ def render_health_module_page(payload: dict) -> str:
     .status-note {{ min-height: 1.3em; color: var(--muted); margin-top: 10px; }}
     @media (max-width: 980px) {{
       .hero,
-      .glance-strip {{
+      .glance-strip,
+      .storyboard-strip {{
         grid-template-columns: 1fr;
       }}
       .span-4, .span-5, .span-6, .span-7, .span-8 {{ grid-column: span 12; }}
@@ -6631,6 +6682,14 @@ def render_health_module_page(payload: dict) -> str:
           </ul>
         </div>
       </aside>
+    </section>
+    <section class="storyboard-strip">
+      <div class="storyboard-step"><strong>1. Health Command</strong><span>Readiness, sync posture, and the one-next-action stay visible at the top of the route.</span></div>
+      <div class="storyboard-step"><strong>2. Morning Brief</strong><span>Daily health posture is framed like the mockup while still reading live payload state.</span></div>
+      <div class="storyboard-step"><strong>3. Vitals &amp; Trends</strong><span>Signals and deviations remain real module evidence instead of decorative charts only.</span></div>
+      <div class="storyboard-step"><strong>4. Recovery Studio</strong><span>Coaching and triage sit inside the same chamber rather than separate fake screens.</span></div>
+      <div class="storyboard-step"><strong>5. Care Command</strong><span>Objectives, red flags, and future Helen Cho continuity still have a home here.</span></div>
+      <div class="storyboard-step"><strong>6. Voice Consult</strong><span>The route stays ready for deeper conversational health flows as the Apple surfaces mature.</span></div>
     </section>
     <section class="glance-strip">
       <div class="glance-card">
@@ -7132,6 +7191,9 @@ def render_huddle_module_page(payload: dict) -> str:
     .status-note {{ min-height: 1.3em; color: var(--muted); margin-top: 10px; }}
     @media (max-width: 980px) {{
       .hero {{ grid-template-columns: 1fr; }}
+      .storyboard-strip {{
+        grid-template-columns: 1fr;
+      }}
       .span-4, .span-5, .span-6, .span-7, .span-8, .span-12 {{ grid-column: span 12; }}
     }}
   </style>
@@ -7173,6 +7235,12 @@ def render_huddle_module_page(payload: dict) -> str:
           <div id="delegate-copy">Recent huddle continuity and delegation pressure will appear here once actions are recorded.</div>
         </div>
       </div>
+    </section>
+    <section class="storyboard-strip">
+      <div class="storyboard-step"><strong>1. Council Chamber</strong><span>Agent report-ins and chamber posture stay visible before diving into problem solve mode.</span></div>
+      <div class="storyboard-step"><strong>2. Problem Solve</strong><span>Party mode and overnight research still route through the live backend mutation flow.</span></div>
+      <div class="storyboard-step"><strong>3. Mission Pressure</strong><span>Approvals, blockers, and active work remain tied to the current huddle packet.</span></div>
+      <div class="storyboard-step"><strong>4. Delegate Back Out</strong><span>Dossiers and continuity keep the mockup’s resolution lane grounded in real module state.</span></div>
     </section>
     <div class="layout">
       <section class="panel span-8">

@@ -174,7 +174,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
 
             var sections: [CPListSection] = []
             let overviewItem = CPListItem(
-                text: "Route Intelligence",
+                text: "Navigation Command Center",
                 detailText: routeHeadline?.detail.isEmpty == false
                     ? routeHeadline?.detail
                     : "Live route timing, hazard posture, and smart stop continuity."
@@ -183,7 +183,17 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                 UIImage(systemName: "point.bottomleft.forward.to.point.topright.scurvepath")?
                     .withTintColor(.systemBlue, renderingMode: .alwaysOriginal)
             )
-            sections.append(CPListSection(items: [overviewItem], header: "Command Center", sectionIndexTitle: nil))
+            let weatherItem = CPListItem(
+                text: "Weather Along Route",
+                detailText: currentRoute?.hazardActive == true
+                    ? "Hazard active. Use voice guidance before leaving."
+                    : "No major route hazard surfaced in the live preview."
+            )
+            weatherItem.setImage(
+                UIImage(systemName: "cloud.sun.rain.fill")?
+                    .withTintColor(.systemTeal, renderingMode: .alwaysOriginal)
+            )
+            sections.append(CPListSection(items: [overviewItem, weatherItem], header: "Command Center", sectionIndexTitle: nil))
 
             routeCurrentItemSelectable = routeHeadline != nil
             if let routeHeadline {
@@ -192,7 +202,17 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                     UIImage(systemName: "point.bottomleft.forward.to.point.topright.scurvepath")?
                         .withTintColor(.systemBlue, renderingMode: .alwaysOriginal)
                 )
-                sections.append(CPListSection(items: [currentItem], header: "Current Route", sectionIndexTitle: nil))
+                let voiceItem = CPListItem(
+                    text: "Voice Navigation",
+                    detailText: currentRoute?.hazardActive == true
+                        ? "Ask JARVIS about weather, delays, and leave-by timing."
+                        : "Hands-free guidance is ready for the next route question."
+                )
+                voiceItem.setImage(
+                    UIImage(systemName: "waveform")?
+                        .withTintColor(.systemGreen, renderingMode: .alwaysOriginal)
+                )
+                sections.append(CPListSection(items: [currentItem, voiceItem], header: "Current Route", sectionIndexTitle: nil))
             }
 
             if navigationChoices.isEmpty {
@@ -211,7 +231,17 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                 text: "Origin",
                 detailText: JarvisCarPlayPresentation.preferredOriginLabel(from: overview)
             )
-            sections.append(CPListSection(items: [originItem], header: "Planner", sectionIndexTitle: nil))
+            let plannerItem = CPListItem(
+                text: "Planner Mode",
+                detailText: overview.navigationState?.selectedOriginMode == "current"
+                    ? "Using live location as the route origin."
+                    : "Using your preferred saved origin."
+            )
+            plannerItem.setImage(
+                UIImage(systemName: "slider.horizontal.3")?
+                    .withTintColor(.systemOrange, renderingMode: .alwaysOriginal)
+            )
+            sections.append(CPListSection(items: [originItem, plannerItem], header: "Planner", sectionIndexTitle: nil))
             routeTemplate.updateSections(sections)
         } catch {
             let item = CPListItem(text: "Couldn't load route planner", detailText: error.localizedDescription)
@@ -450,7 +480,17 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                 UIImage(systemName: persistSelection ? "location.fill" : "location.circle.fill")?
                     .withTintColor(.systemBlue, renderingMode: .alwaysOriginal)
             )
-            sections.append(CPListSection(items: [summaryItem], header: "Route Summary", sectionIndexTitle: nil))
+            let recommendationItem = CPListItem(
+                text: "Recommended Next Action",
+                detailText: route.hazardActive
+                    ? "Review hazards and ask for voice guidance before leaving."
+                    : "Leave on schedule and keep smart stops ready."
+            )
+            recommendationItem.setImage(
+                UIImage(systemName: "checkmark.shield.fill")?
+                    .withTintColor(.systemGreen, renderingMode: .alwaysOriginal)
+            )
+            sections.append(CPListSection(items: [summaryItem, recommendationItem], header: "Route Summary", sectionIndexTitle: nil))
 
             if !route.route.steps.isEmpty {
                 let stepItems = route.route.steps.prefix(4).map { step in
@@ -464,7 +504,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                     item.setImage(UIImage(systemName: "arrow.turn.up.right"))
                     return item
                 }
-                sections.append(CPListSection(items: stepItems, header: "Next Steps", sectionIndexTitle: nil))
+                sections.append(CPListSection(items: stepItems, header: "Voice & Maneuvers", sectionIndexTitle: nil))
             }
 
             if activeRouteStops.isEmpty {

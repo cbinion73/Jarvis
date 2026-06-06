@@ -67,15 +67,18 @@ struct HealthView: View {
     private func summaryView(_ s: HealthSummary) -> some View {
         ScrollView {
             VStack(spacing: 14) {
+                commandHeader(summary: s)
 
-                // ── Readiness gradient banner ──────────────────────
+                storyboardStrip(summary: s)
+
                 ReadinessBanner(status: s.readiness, note: s.thorNote)
 
                 if let dailyScore = s.dailyScore {
                     scoreStrip(dailyScore)
                 }
 
-                // ── Metrics 2-column grid ──────────────────────────
+                briefingDeck(summary: s)
+
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 6) {
                         Image(systemName: "chart.bar.fill")
@@ -133,7 +136,8 @@ struct HealthView: View {
                 .padding(14)
                 .glassEffect(in: RoundedRectangle(cornerRadius: 16))
 
-                // ── Sync status ────────────────────────────────────
+                quickActionDock(summary: s)
+
                 HStack(spacing: 8) {
                     if syncManager.isSyncing {
                         ProgressView().tint(Color(red: 0.2, green: 0.9, blue: 0.5)).scaleEffect(0.7)
@@ -216,6 +220,122 @@ struct HealthView: View {
         }
     }
 
+    private func commandHeader(summary: HealthSummary) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("JARVIS Health Intelligence")
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text("Personalized. Proactive. Private.")
+                        .font(.caption.weight(.semibold))
+                        .tracking(1.4)
+                        .foregroundStyle(Color(red: 0.67, green: 0.94, blue: 0.78))
+                    Text("Morning brief, vitals, coaching, and voice consultation are gathered into one live command deck without losing the real sync and recovery seams.")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.72))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 8) {
+                    Label(summary.readiness.capitalized, systemImage: readinessBadgeSymbol(summary.readiness))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(readinessTint(summary.readiness))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(readinessTint(summary.readiness).opacity(0.14), in: Capsule())
+                    Text(syncSummary(summary))
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color(red: 0.08, green: 0.18, blue: 0.16),
+                    Color(red: 0.04, green: 0.08, blue: 0.13)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+    }
+
+    private func storyboardStrip(summary: HealthSummary) -> some View {
+        let cards = [
+            ("1", "Health Command", summary.readiness.capitalized + " readiness"),
+            ("2", "Morning Brief", summary.dailyScore?.message ?? summary.thorNote),
+            ("3", "Vitals & Trends", "\(summary.heartRateAvg)bpm · \(summary.hrv)ms HRV"),
+            ("4", "Recovery Studio", summary.thorSnapshot?.thorNote ?? "Recovery posture ready"),
+            ("5", "Care Command", summary.watchlist.first?.title ?? "Care lane standing by"),
+            ("6", "Voice Consult", summary.nextActions.first ?? "Ask health follow-ups naturally"),
+        ]
+
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(cards, id: \.0) { card in
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 8) {
+                            Text(card.0)
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(Color(red: 0.67, green: 0.94, blue: 0.78))
+                                .frame(width: 24, height: 24)
+                                .background(Color.white.opacity(0.08), in: Circle())
+                            Text(card.1)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white)
+                        }
+                        Text(card.2)
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.62))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(width: 168, alignment: .leading)
+                    .padding(12)
+                    .background(Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                    )
+                }
+            }
+        }
+    }
+
+    private func briefingDeck(summary: HealthSummary) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            infoDeckCard(
+                title: "Morning Health Brief",
+                systemImage: "waveform",
+                tint: Color(red: 0.36, green: 0.88, blue: 0.95),
+                primary: summary.dailyScore.map { "\($0.value) \($0.grade)" } ?? summary.readiness.capitalized,
+                detail: summary.dailyScore?.message ?? summary.thorNote
+            )
+            infoDeckCard(
+                title: "Key Risk To Watch",
+                systemImage: "exclamationmark.triangle.fill",
+                tint: .orange,
+                primary: summary.alerts.first?.title ?? summary.watchlist.first?.title ?? "No critical risk",
+                detail: summary.alerts.first?.detail ?? summary.watchlist.first?.detail ?? "No acute issue surfaced in the current packet."
+            )
+            infoDeckCard(
+                title: "Today's Recommendation",
+                systemImage: "figure.walk.motion",
+                tint: Color(red: 0.2, green: 0.9, blue: 0.5),
+                primary: summary.nextActions.first ?? "Protect your momentum",
+                detail: summary.continuity?.guidanceLines.first ?? "JARVIS is preserving the next best health move in continuity."
+            )
+        }
+    }
+
     private func scoreStrip(_ score: HealthDailyScore) -> some View {
         HStack(alignment: .top, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
@@ -251,6 +371,29 @@ struct HealthView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func quickActionDock(summary: HealthSummary) -> some View {
+        HStack(spacing: 10) {
+            quickActionTile(
+                title: "Coach",
+                subtitle: summary.thorSnapshot?.readiness.replacingOccurrences(of: "_", with: " ").capitalized ?? "Recovery",
+                icon: "figure.run",
+                tint: .orange
+            )
+            quickActionTile(
+                title: "Care",
+                subtitle: summary.watchlist.isEmpty ? "Clear" : "\(summary.watchlist.count) watching",
+                icon: "cross.case.fill",
+                tint: .pink
+            )
+            quickActionTile(
+                title: "Voice",
+                subtitle: "Ask follow-ups",
+                icon: "mic.fill",
+                tint: .cyan
+            )
+        }
     }
 
     private func continuityCard(_ continuity: HealthContinuity) -> some View {
@@ -553,6 +696,90 @@ struct HealthView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func infoDeckCard(
+        title: String,
+        systemImage: String,
+        tint: Color,
+        primary: String,
+        detail: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(title, systemImage: systemImage)
+                .font(.system(size: 11, weight: .bold))
+                .tracking(1.0)
+                .foregroundStyle(tint.opacity(0.95))
+            Text(primary)
+                .font(.headline)
+                .foregroundStyle(.white)
+            Text(detail)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.7))
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
+        .padding(14)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 18))
+    }
+
+    private func quickActionTile(title: String, subtitle: String, icon: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundStyle(tint)
+                Spacer()
+                Circle()
+                    .fill(tint.opacity(0.22))
+                    .frame(width: 9, height: 9)
+            }
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+            Text(subtitle)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.65))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+        )
+    }
+
+    private func readinessTint(_ status: String) -> Color {
+        switch status {
+        case "good":
+            return Color(red: 0.2, green: 0.9, blue: 0.5)
+        case "moderate":
+            return .yellow
+        default:
+            return .red
+        }
+    }
+
+    private func readinessBadgeSymbol(_ status: String) -> String {
+        switch status {
+        case "good":
+            return "checkmark.circle.fill"
+        case "moderate":
+            return "minus.circle.fill"
+        default:
+            return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private func syncSummary(_ summary: HealthSummary) -> String {
+        if syncManager.isSyncing {
+            return "Syncing now"
+        }
+        if let date = syncManager.lastSyncDate {
+            return "Synced \(date.formatted(.relative(presentation: .named)))"
+        }
+        return "Last sync \(summary.lastSync)"
     }
 
     private func miniStat(_ label: String, _ value: String, tint: Color) -> some View {
