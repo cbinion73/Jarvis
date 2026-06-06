@@ -431,6 +431,7 @@ public struct ChroniclePrayerActionResult: Codable, Sendable {
     public let timesPrayed: Int?
     public let lastPrayedAt: String?
     public let answeredAt: String?
+    public let focus: ChronicleProgressFocus?
 
     enum CodingKeys: String, CodingKey {
         case status
@@ -438,6 +439,7 @@ public struct ChroniclePrayerActionResult: Codable, Sendable {
         case timesPrayed = "times_prayed"
         case lastPrayedAt = "last_prayed_at"
         case answeredAt = "answered_at"
+        case focus
     }
 }
 
@@ -463,9 +465,39 @@ public struct ChronicleStudySavePayload: Codable, Sendable {
 public struct ChronicleStudySaveResult: Codable, Sendable {
     public let captured: Bool
     public let entryId: String
+    public let focus: ChronicleProgressFocus?
 
     enum CodingKeys: String, CodingKey {
         case captured
         case entryId = "entry_id"
+        case focus
+    }
+}
+
+public struct ChronicleCaptureResult: Codable, Sendable {
+    public let captured: Bool
+    public let entryId: String
+    public let reason: String?
+    public let focus: ChronicleProgressFocus?
+
+    enum CodingKeys: String, CodingKey {
+        case captured
+        case entryId = "entry_id"
+        case reason
+        case focus
+    }
+}
+
+public struct ChronicleProgressFocus: Codable, Equatable, Sendable {
+    public let module: String
+    public let reason: String
+    public let route: String
+    public let savedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case module
+        case reason
+        case route
+        case savedAt = "saved_at"
     }
 }

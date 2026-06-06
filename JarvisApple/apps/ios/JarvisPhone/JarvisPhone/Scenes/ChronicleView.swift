@@ -6,6 +6,13 @@ import JarvisKit
 
 struct ChronicleView: View {
 
+    private struct ChronicleStoryboardStage: Identifiable {
+        let id: String
+        let number: String
+        let title: String
+        let detail: String
+    }
+
     @State private var overview: ChronicleOverview?
     @State private var isLoading  = false
     @State private var error: String?
@@ -19,6 +26,17 @@ struct ChronicleView: View {
     @FocusState private var captureFieldFocused: Bool
 
     private let amber = Color(red: 0.9, green: 0.65, blue: 0.25)
+
+    private var storyboardStages: [ChronicleStoryboardStage] {
+        [
+            .init(id: "home", number: "1", title: "Memory Hub", detail: "Recent entries, themes, and living prompts."),
+            .init(id: "capture", number: "2", title: "Capture", detail: "Reflection, prayer, gratitude, and notes."),
+            .init(id: "thread", number: "3", title: "Story Thread", detail: "Connected moments and recurring themes."),
+            .init(id: "family", number: "4", title: "Family History", detail: "People, prayers, and legacy continuity."),
+            .init(id: "reflection", number: "5", title: "Reflection", detail: "Narrative synthesis and study posture."),
+            .init(id: "voice", number: "6", title: "Voice", detail: "Hands-free recall and follow-up."),
+        ]
+    }
 
     var body: some View {
         NavigationStack {
@@ -97,6 +115,8 @@ struct ChronicleView: View {
     private func entriesList(_ ov: ChronicleOverview) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
+                conceptHeader
+
                 if let context = ov.context {
                     contextSection(context)
                 }
@@ -201,6 +221,101 @@ struct ChronicleView: View {
         }
         .padding(16)
         .glassEffect(in: RoundedRectangle(cornerRadius: 18))
+    }
+
+    private var conceptHeader: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("JARVIS")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .tracking(2.0)
+                        .foregroundStyle(amber.opacity(0.92))
+                    Text("Chronicle")
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text("Concept storyboard with live memory, prayer, and study continuity.")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.68))
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "feather.fill")
+                            .font(.caption.bold())
+                            .foregroundStyle(amber)
+                        Text("EVERY MOMENT MATTERS")
+                            .font(.caption2.weight(.semibold))
+                            .tracking(1.1)
+                            .foregroundStyle(.white.opacity(0.72))
+                    }
+                    Text("Your life, beautifully preserved.")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.48))
+                }
+            }
+
+            heroMemoryCard
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(storyboardStages) { stage in
+                        storyboardCard(stage)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+
+            HStack(spacing: 10) {
+                capabilityPill(title: "Life Themes", detail: "Meaning over time")
+                capabilityPill(title: "Family", detail: "Generations connected")
+                capabilityPill(title: "Voice", detail: "Living story engine")
+            }
+        }
+    }
+
+    private var heroMemoryCard: some View {
+        let entryTitle = overview?.entries.first?.title.isEmpty == false
+            ? overview?.entries.first?.title
+            : "Your story is being written one moment at a time."
+        let subtitle = overview?.entries.first?.body.isEmpty == false
+            ? overview?.entries.first?.body
+            : "Recent reflections, prayer arcs, and study context stay connected in one living memory lane."
+
+        return ZStack(alignment: .bottomLeading) {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.19, green: 0.13, blue: 0.06),
+                    Color(red: 0.09, green: 0.07, blue: 0.03),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Good evening, Chris.")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text(entryTitle ?? "Chronicle")
+                    .font(.title3.bold())
+                    .foregroundStyle(.white)
+                Text(subtitle ?? "")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.76))
+                    .lineLimit(3)
+                HStack(spacing: 8) {
+                    contextMetricChip(title: "Entries", value: "\(overview?.entries.count ?? 0)")
+                    contextMetricChip(title: "Themes", value: "\(overview?.patterns?.recurringThemes.count ?? 0)")
+                    contextMetricChip(title: "Prayers", value: "\(overview?.context?.activePrayerCount ?? 0)")
+                }
+            }
+            .padding(18)
+        }
+        .frame(maxWidth: .infinity, minHeight: 170, alignment: .bottomLeading)
+        .clipShape(RoundedRectangle(cornerRadius: 22))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(.white.opacity(0.08), lineWidth: 1)
+        )
     }
 
     @ViewBuilder
@@ -406,6 +521,65 @@ struct ChronicleView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
         .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func contextMetricChip(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white)
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.58))
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func storyboardCard(_ stage: ChronicleStoryboardStage) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(stage.number)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.black)
+                    .frame(width: 22, height: 22)
+                    .background(amber, in: Circle())
+                Text(stage.title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.92))
+            }
+            Text(stage.detail)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.6))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(width: 158, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(.white.opacity(0.05), lineWidth: 1)
+        )
+    }
+
+    private func capabilityPill(title: String, detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(amber.opacity(0.9))
+            Text(detail)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.68))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(.white.opacity(0.05), lineWidth: 1)
+        )
     }
 
     private func themeChipWrap(_ themes: [ChronicleThemeCount], showsCounts: Bool) -> some View {

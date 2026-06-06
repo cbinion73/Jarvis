@@ -746,6 +746,198 @@ def _resolve_catalyst_supervision_item(
     }
 
 
+def _record_chronicle_progress_focus(
+    *,
+    actor: str,
+    action: str,
+    detail: str,
+    why_now: str,
+    result_summary: str,
+    related_kind: str,
+    related_label: str,
+) -> dict[str, Any]:
+    _record_operator_action(
+        actor=actor,
+        domain="chronicle",
+        action=action,
+        detail=detail,
+        why_now=why_now,
+        result_summary=result_summary,
+        route="/chronicle-center",
+        route_label="Open Chronicle",
+        related_kind=related_kind,
+        related_label=related_label,
+        succeeded=True,
+    )
+    return ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module="Chronicle",
+        reason=detail,
+        route="/chronicle-center",
+        actor=actor,
+    )
+
+
+def _capture_chronicle_entry(*, entry_type: str, note: str, actor: str) -> dict[str, Any]:
+    trimmed_note = str(note or "").strip()
+    if not trimmed_note:
+        return {"captured": False, "reason": "empty", "entry_id": "", "focus": None}
+
+    entry = {
+        "entry_id": str(uuid.uuid4()),
+        "entry_type": str(entry_type or "reflection").strip() or "reflection",
+        "title": trimmed_note[:50],
+        "body": trimmed_note,
+        "note": trimmed_note,
+        "actor": actor,
+        "timestamp": _ts(),
+        "created_at": _ts(),
+        "source": "apple_phone",
+    }
+    entries_path = Path("data/chronicle/entries.jsonl")
+    entries_path.parent.mkdir(parents=True, exist_ok=True)
+    with entries_path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(entry) + "\n")
+
+    focus = _record_chronicle_progress_focus(
+        actor=actor,
+        action="Capture Chronicle Note",
+        detail=f"Chronicle captured a {entry['entry_type']} note from JarvisPhone.",
+        why_now="The native Chronicle screen captured a real reflection and fed shared continuity back into the product.",
+        result_summary="Chronicle timeline advanced from the iPhone capture flow.",
+        related_kind="chronicle-entry",
+        related_label=str(entry.get("title") or "Chronicle note"),
+    )
+    return {"captured": True, "entry_id": entry["entry_id"], "focus": focus}
+
+
+def _mark_chronicle_prayer_prayed(*, prayer_id: str, actor: str, note: str = "") -> dict[str, Any]:
+    today = datetime.now(timezone.utc).date().isoformat()
+    activity = _load_chronicle_prayer_activity()
+    state = activity.get(prayer_id, {"times_prayed": 0, "last_prayed_at": ""})
+    state["times_prayed"] = int(state.get("times_prayed") or 0) + 1
+    state["last_prayed_at"] = today
+    activity[prayer_id] = state
+    _persist_chronicle_prayer_activity(activity)
+
+    if note:
+        entry = {
+            "entry_id": str(uuid.uuid4()),
+            "entry_type": "prayer",
+            "title": "Prayer note",
+            "body": note,
+            "note": note,
+            "actor": actor,
+            "timestamp": _ts(),
+            "created_at": _ts(),
+            "source": "apple_chronicle_prayer",
+        }
+        entries_path = Path("data/chronicle/entries.jsonl")
+        entries_path.parent.mkdir(parents=True, exist_ok=True)
+        with entries_path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(entry) + "\n")
+
+    focus = _record_chronicle_progress_focus(
+        actor=actor,
+        action="Log Chronicle Prayer",
+        detail="Chronicle logged a lived prayer moment from the iPhone reflection flow.",
+        why_now="The native Chronicle prayer lane advanced shared formation continuity.",
+        result_summary=f"Prayer activity count is now {int(state.get('times_prayed') or 0)}.",
+        related_kind="chronicle-prayer",
+        related_label=prayer_id,
+    )
+    return {
+        "status": "prayed",
+        "prayer_id": prayer_id,
+        "times_prayed": int(state.get("times_prayed") or 0),
+        "last_prayed_at": str(state.get("last_prayed_at") or ""),
+        "focus": focus,
+    }
+
+
+def _mark_chronicle_prayer_answered(*, prayer_id: str, actor: str, note: str = "") -> dict[str, Any]:
+    answered_at = _ts()
+    _append_jsonl(
+        _CHRONICLE_ANSWERED_PRAYERS_PATH,
+        {
+            "id": prayer_id,
+            "actor_id": actor,
+            "answerSummary": note or "Marked answered from JarvisPhone.",
+            "answered_at": answered_at,
+            "received_at": answered_at,
+            "surfaced": False,
+        },
+    )
+    if note:
+        entry = {
+            "entry_id": str(uuid.uuid4()),
+            "entry_type": "milestone",
+            "title": "Answered prayer",
+            "body": note,
+            "note": note,
+            "actor": actor,
+            "timestamp": answered_at,
+            "created_at": answered_at,
+            "source": "apple_chronicle_answered_prayer",
+        }
+        entries_path = Path("data/chronicle/entries.jsonl")
+        entries_path.parent.mkdir(parents=True, exist_ok=True)
+        with entries_path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(entry) + "\n")
+
+    focus = _record_chronicle_progress_focus(
+        actor=actor,
+        action="Mark Chronicle Prayer Answered",
+        detail="Chronicle recorded an answered prayer from the iPhone follow-up flow.",
+        why_now="The native Chronicle prayer lane closed a reflection loop and promoted that continuity into shared progress state.",
+        result_summary="Chronicle answered-prayer continuity was updated.",
+        related_kind="chronicle-prayer",
+        related_label=prayer_id,
+    )
+    return {
+        "status": "answered",
+        "prayer_id": prayer_id,
+        "answered_at": answered_at,
+        "focus": focus,
+    }
+
+
+def _save_chronicle_study_entry(*, actor: str, title: str, passage: str, notes: str) -> dict[str, Any]:
+    trimmed_notes = str(notes or "").strip()
+    if not trimmed_notes:
+        return {"captured": False, "entry_id": "", "focus": None}
+
+    entry_id = str(uuid.uuid4())
+    entry = {
+        "entry_id": entry_id,
+        "entry_type": "study",
+        "title": str(title or "").strip() or (f"Bible Study — {passage}" if passage else "Bible Study"),
+        "body": trimmed_notes,
+        "note": trimmed_notes,
+        "actor": actor,
+        "timestamp": _ts(),
+        "created_at": _ts(),
+        "source": "apple_chronicle_study",
+    }
+    if passage:
+        entry["passage"] = passage
+        entry["scripture_ref"] = passage
+    entries_path = Path("data/chronicle/entries.jsonl")
+    entries_path.parent.mkdir(parents=True, exist_ok=True)
+    with entries_path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(entry) + "\n")
+
+    focus = _record_chronicle_progress_focus(
+        actor=actor,
+        action="Save Chronicle Study",
+        detail="Chronicle saved a study reflection from the native study workspace.",
+        why_now="The iPhone Chronicle study lane turned a live reflection into shared continuity and progress focus.",
+        result_summary="Chronicle study notes were saved into the live timeline.",
+        related_kind="chronicle-study",
+        related_label=str(entry.get("title") or "Bible Study"),
+    )
+    return {"captured": True, "entry_id": entry_id, "focus": focus}
+
+
 async def _timeboxed_to_thread(
     func: Any,
     *args: Any,
@@ -10555,26 +10747,9 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         """Capture a quick reflection or prayer from the phone."""
         try:
             entry_type = str(payload.get("type") or "reflection")
-            note       = str(payload.get("note") or "").strip()
-            actor      = str(payload.get("actor_id") or "chris")
-            if not note:
-                return _ok({"captured": False, "reason": "empty"})
-            entry = {
-                "entry_id":   str(uuid.uuid4()),
-                "entry_type": entry_type,
-                "title":      note[:50],
-                "body":       note,
-                "note":       note,
-                "actor":      actor,
-                "timestamp":  _ts(),
-                "created_at": _ts(),
-                "source":     "apple_phone",
-            }
-            entries_path = Path("data/chronicle/entries.jsonl")
-            entries_path.parent.mkdir(parents=True, exist_ok=True)
-            with entries_path.open("a") as f:
-                f.write(json.dumps(entry) + "\n")
-            return _ok({"captured": True, "entry_id": entry["entry_id"]})
+            note = str(payload.get("note") or "").strip()
+            actor = str(payload.get("actor_id") or "chris")
+            return _ok(_capture_chronicle_entry(entry_type=entry_type, note=note, actor=actor))
         except Exception as exc:
             return _ok({"captured": False, "reason": str(exc)})
 
@@ -10582,80 +10757,13 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
     async def apple_chronicle_prayer_prayed(prayer_id: str, payload: dict):
         actor = str(payload.get("actor_id") or "chris").strip() or "chris"
         note = str(payload.get("note") or "").strip()
-        today = datetime.now(timezone.utc).date().isoformat()
-
-        activity = _load_chronicle_prayer_activity()
-        state = activity.get(prayer_id, {"times_prayed": 0, "last_prayed_at": ""})
-        state["times_prayed"] = int(state.get("times_prayed") or 0) + 1
-        state["last_prayed_at"] = today
-        activity[prayer_id] = state
-        _persist_chronicle_prayer_activity(activity)
-
-        if note:
-            entry = {
-                "entry_id": str(uuid.uuid4()),
-                "entry_type": "prayer",
-                "title": "Prayer note",
-                "body": note,
-                "note": note,
-                "actor": actor,
-                "timestamp": _ts(),
-                "created_at": _ts(),
-                "source": "apple_chronicle_prayer",
-            }
-            entries_path = Path("data/chronicle/entries.jsonl")
-            entries_path.parent.mkdir(parents=True, exist_ok=True)
-            with entries_path.open("a", encoding="utf-8") as fh:
-                fh.write(json.dumps(entry) + "\n")
-
-        return _ok(
-            {
-                "status": "prayed",
-                "prayer_id": prayer_id,
-                "times_prayed": int(state.get("times_prayed") or 0),
-                "last_prayed_at": str(state.get("last_prayed_at") or ""),
-            }
-        )
+        return _ok(_mark_chronicle_prayer_prayed(prayer_id=prayer_id, actor=actor, note=note))
 
     @app.post("/api/apple/chronicle/prayers/{prayer_id}/answer")
     async def apple_chronicle_prayer_answered(prayer_id: str, payload: dict):
         actor = str(payload.get("actor_id") or "chris").strip() or "chris"
         note = str(payload.get("note") or "").strip()
-        answered_at = _ts()
-        _append_jsonl(
-            _CHRONICLE_ANSWERED_PRAYERS_PATH,
-            {
-                "id": prayer_id,
-                "actor_id": actor,
-                "answerSummary": note or "Marked answered from JarvisPhone.",
-                "answered_at": answered_at,
-                "received_at": answered_at,
-                "surfaced": False,
-            },
-        )
-        if note:
-            entry = {
-                "entry_id": str(uuid.uuid4()),
-                "entry_type": "milestone",
-                "title": "Answered prayer",
-                "body": note,
-                "note": note,
-                "actor": actor,
-                "timestamp": answered_at,
-                "created_at": answered_at,
-                "source": "apple_chronicle_answered_prayer",
-            }
-            entries_path = Path("data/chronicle/entries.jsonl")
-            entries_path.parent.mkdir(parents=True, exist_ok=True)
-            with entries_path.open("a", encoding="utf-8") as fh:
-                fh.write(json.dumps(entry) + "\n")
-        return _ok(
-            {
-                "status": "answered",
-                "prayer_id": prayer_id,
-                "answered_at": answered_at,
-            }
-        )
+        return _ok(_mark_chronicle_prayer_answered(prayer_id=prayer_id, actor=actor, note=note))
 
     @app.post("/api/apple/chronicle/study/save")
     async def apple_chronicle_study_save(payload: dict):
@@ -10663,29 +10771,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         title = str(payload.get("title") or "").strip()
         passage = str(payload.get("passage") or "").strip()
         notes = str(payload.get("notes") or "").strip()
-        if not notes:
-            return _ok({"captured": False, "entry_id": ""})
-
-        entry_id = str(uuid.uuid4())
-        entry = {
-            "entry_id": entry_id,
-            "entry_type": "study",
-            "title": title or (f"Bible Study — {passage}" if passage else "Bible Study"),
-            "body": notes,
-            "note": notes,
-            "actor": actor,
-            "timestamp": _ts(),
-            "created_at": _ts(),
-            "source": "apple_chronicle_study",
-        }
-        if passage:
-            entry["passage"] = passage
-            entry["scripture_ref"] = passage
-        entries_path = Path("data/chronicle/entries.jsonl")
-        entries_path.parent.mkdir(parents=True, exist_ok=True)
-        with entries_path.open("a", encoding="utf-8") as fh:
-            fh.write(json.dumps(entry) + "\n")
-        return _ok({"captured": True, "entry_id": entry_id})
+        return _ok(_save_chronicle_study_entry(actor=actor, title=title, passage=passage, notes=notes))
 
     # ── Faith daily word ──────────────────────────────────────────────────────
 

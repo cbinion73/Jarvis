@@ -634,10 +634,8 @@ public final class AppleAPIClient: Sendable {
     }
 
     @discardableResult
-    public func captureChronicle(_ capture: ChronicleCapture) async throws -> Bool {
-        struct Result: Decodable { let captured: Bool }
-        let r: Result = try await post("/api/apple/chronicle/capture", body: capture)
-        return r.captured
+    public func captureChronicle(_ capture: ChronicleCapture) async throws -> ChronicleCaptureResult {
+        try await post("/api/apple/chronicle/capture", body: capture)
     }
 
     public func markChroniclePrayerPrayed(_ prayerId: String, payload: ChroniclePrayerActionPayload) async throws -> ChroniclePrayerActionResult {
