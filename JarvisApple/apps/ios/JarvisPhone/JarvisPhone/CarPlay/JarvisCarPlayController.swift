@@ -465,6 +465,50 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
             }
             sections.append(CPListSection(items: supervisionItems, header: "6. Supervision", sectionIndexTitle: nil))
 
+            let huddleSummary = overview.huddleSummary
+            let huddleSummaryItem = CPListItem(
+                text: "Huddle Chamber",
+                detailText: huddleSummary.headline
+            )
+            huddleSummaryItem.setImage(
+                UIImage(systemName: "person.3.sequence.fill")?
+                    .withTintColor(.systemYellow, renderingMode: .alwaysOriginal)
+            )
+            let huddlePartyItem = CPListItem(
+                text: huddleSummary.partyModeStatus.lowercased() == "running" ? "Agents Working Overnight" : "Wake Agents",
+                detailText: huddleSummary.partyModeStatus.lowercased() == "running"
+                    ? "Party mode is running. Keep the lane warm and review queued ideas."
+                    : "Start overnight research from the in-car Huddle lane."
+            )
+            huddlePartyItem.setImage(
+                UIImage(systemName: huddleSummary.partyModeStatus.lowercased() == "running" ? "moon.stars.fill" : "sparkles")?
+                    .withTintColor(.systemPurple, renderingMode: .alwaysOriginal)
+            )
+            sections.append(CPListSection(items: [huddleSummaryItem, huddlePartyItem], header: "7. Huddle Chamber", sectionIndexTitle: nil))
+
+            let huddleIdeaItems: [CPListItem]
+            if overview.huddleIdeas.isEmpty {
+                let item = CPListItem(text: "No huddle ideas waiting", detailText: "Capture ideas on desktop or phone and triage them from CarPlay.")
+                item.setImage(
+                    UIImage(systemName: "lightbulb.slash.fill")?
+                        .withTintColor(.systemGray, renderingMode: .alwaysOriginal)
+                )
+                huddleIdeaItems = [item]
+            } else {
+                huddleIdeaItems = overview.huddleIdeas.prefix(4).map { idea in
+                    let item = CPListItem(
+                        text: idea.text,
+                        detailText: "\(idea.domain.capitalized) · \(idea.status.replacingOccurrences(of: "_", with: " ").capitalized)"
+                    )
+                    item.setImage(
+                        UIImage(systemName: idea.status.lowercased() == "researching" ? "waveform.path.ecg" : "lightbulb.max.fill")?
+                            .withTintColor(idea.status.lowercased() == "researching" ? .systemPurple : .systemOrange, renderingMode: .alwaysOriginal)
+                    )
+                    return item
+                }
+            }
+            sections.append(CPListSection(items: huddleIdeaItems, header: "8. Huddle Ideas", sectionIndexTitle: nil))
+
             let missionHeadline = overview.missionSummary.headline.isEmpty
                 ? "\(overview.missionSummary.activeCount) active mission(s) are flowing through JARVIS."
                 : overview.missionSummary.headline
@@ -497,8 +541,8 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                     return item
                 }
             }
-            sections.append(CPListSection(items: [missionItem, agentItem], header: "7. Mission Pressure", sectionIndexTitle: nil))
-            sections.append(CPListSection(items: activityItems, header: "8. Recent Continuity", sectionIndexTitle: nil))
+            sections.append(CPListSection(items: [missionItem, agentItem], header: "9. Mission Pressure", sectionIndexTitle: nil))
+            sections.append(CPListSection(items: activityItems, header: "10. Recent Continuity", sectionIndexTitle: nil))
 
             opsTemplate.updateSections(sections)
         } catch {
@@ -677,6 +721,16 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
         let supervisionSectionIndex = opsTemplate.sections.firstIndex { $0.header == "6. Supervision" }
         if let supervisionSectionIndex, indexPath.section == supervisionSectionIndex, indexPath.item < overview.supervisionItems.count {
             presentCarPlaySupervisionAlert(for: overview.supervisionItems[indexPath.item])
+            return
+        }
+        let huddleSectionIndex = opsTemplate.sections.firstIndex { $0.header == "7. Huddle Chamber" }
+        if let huddleSectionIndex, indexPath.section == huddleSectionIndex {
+            presentCarPlayHuddleSummaryAlert(summary: overview.huddleSummary)
+            return
+        }
+        let huddleIdeasSectionIndex = opsTemplate.sections.firstIndex { $0.header == "8. Huddle Ideas" }
+        if let huddleIdeasSectionIndex, indexPath.section == huddleIdeasSectionIndex, indexPath.item < overview.huddleIdeas.count {
+            presentCarPlayHuddleIdeaAlert(for: overview.huddleIdeas[indexPath.item])
         }
     }
 
@@ -953,6 +1007,66 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
         let alert = CPAlertTemplate(
             titleVariants: [item.title, item.detail],
             actions: [approveAction, rejectAction, cancelAction]
+        )
+        interfaceController.presentTemplate(alert, animated: true, completion: nil)
+    }
+
+    private func presentCarPlayHuddleSummaryAlert(summary: CarPlayHuddleSummary) {
+        let focusAction = CPAlertAction(title: "Set Focus", style: .default) { [weak self] _ in
+            guard let self else { return }
+            Task {
+                _ = try? await self.client.saveCarPlayOpsFocus(
+                    module: "Huddle",
+                    route: "/huddle-center",
+                    reason: "CarPlay elevated Huddle as the next live operating focus."
+                )
+                await self.loadOps()
+            }
+        }
+        let partyModeAction = CPAlertAction(
+            title: summary.partyModeStatus.lowercased() == "running" ? "Refresh Huddle" : "Wake Agents",
+            style: .default
+        ) { [weak self] _ in
+            guard let self else { return }
+            Task {
+                _ = try? await self.client.startCarPlayHuddlePartyMode()
+                await self.loadOps()
+            }
+        }
+        let cancelAction = CPAlertAction(title: "Close", style: .cancel) { _ in }
+        let alert = CPAlertTemplate(
+            titleVariants: ["Huddle Chamber", summary.headline],
+            actions: [focusAction, partyModeAction, cancelAction]
+        )
+        interfaceController.presentTemplate(alert, animated: true, completion: nil)
+    }
+
+    private func presentCarPlayHuddleIdeaAlert(for idea: CarPlayHuddleIdeaEntry) {
+        let queueAction = CPAlertAction(title: "Queue", style: .default) { [weak self] _ in
+            guard let self else { return }
+            Task {
+                _ = try? await self.client.queueCarPlayHuddleIdea(idea.id)
+                await self.loadOps()
+            }
+        }
+        let researchAction = CPAlertAction(title: "Research", style: .default) { [weak self] _ in
+            guard let self else { return }
+            Task {
+                _ = try? await self.client.researchCarPlayHuddleIdeaNow(idea.id)
+                await self.loadOps()
+            }
+        }
+        let passAction = CPAlertAction(title: "Pass", style: .destructive) { [weak self] _ in
+            guard let self else { return }
+            Task {
+                _ = try? await self.client.passCarPlayHuddleIdea(idea.id)
+                await self.loadOps()
+            }
+        }
+        let cancelAction = CPAlertAction(title: "Close", style: .cancel) { _ in }
+        let alert = CPAlertTemplate(
+            titleVariants: [idea.text, "\(idea.domain.capitalized) · \(idea.status.replacingOccurrences(of: "_", with: " ").capitalized)"],
+            actions: [queueAction, researchAction, passAction, cancelAction]
         )
         interfaceController.presentTemplate(alert, animated: true, completion: nil)
     }

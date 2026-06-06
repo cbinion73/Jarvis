@@ -371,6 +371,38 @@ public final class AppleAPIClient: Sendable {
         return response.status == "approved" || response.status == "rejected"
     }
 
+    public func startCarPlayHuddlePartyMode(actor: String = "chris") async throws -> HuddlePartyModeActionResult {
+        struct Body: Encodable { let actor: String }
+        return try await post(
+            "/api/apple/carplay/huddle/party-mode/start",
+            body: Body(actor: actor)
+        )
+    }
+
+    public func queueCarPlayHuddleIdea(_ ideaId: String, actor: String = "chris") async throws -> HuddleIdeaActionResult {
+        struct Body: Encodable { let actor: String }
+        return try await post(
+            "/api/apple/carplay/huddle/ideas/\(ideaId)/queue",
+            body: Body(actor: actor)
+        )
+    }
+
+    public func passCarPlayHuddleIdea(_ ideaId: String, actor: String = "chris") async throws -> HuddleIdeaActionResult {
+        struct Body: Encodable { let actor: String }
+        return try await post(
+            "/api/apple/carplay/huddle/ideas/\(ideaId)/pass",
+            body: Body(actor: actor)
+        )
+    }
+
+    public func researchCarPlayHuddleIdeaNow(_ ideaId: String, actor: String = "chris") async throws -> HuddleIdeaResearchActionResult {
+        struct Body: Encodable { let actor: String }
+        return try await post(
+            "/api/apple/carplay/huddle/ideas/\(ideaId)/research-now",
+            body: Body(actor: actor)
+        )
+    }
+
     // MARK: - Voice
 
     /// Send a text command and receive an agent response.

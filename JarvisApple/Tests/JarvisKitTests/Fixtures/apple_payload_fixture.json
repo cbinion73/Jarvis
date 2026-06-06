@@ -1721,6 +1721,123 @@
       }
     }
   },
+  "/api/apple/carplay/ops": {
+    "ok": true,
+    "data": {
+      "generated_at": "2026-06-01T08:00:00Z",
+      "current_focus": {
+        "module": "Huddle",
+        "reason": "CarPlay elevated Huddle for live family launch coordination.",
+        "route": "/huddle-center",
+        "saved_at": "2026-06-01T07:58:00Z"
+      },
+      "focus_candidates": [
+        {
+          "module": "Recovery",
+          "route": "/recovery-center",
+          "label": "Stabilize recovery loops"
+        },
+        {
+          "module": "Huddle",
+          "route": "/huddle-center",
+          "label": "Wake the Huddle chamber"
+        }
+      ],
+      "approvals": [
+        {
+          "request_id": "approval-1",
+          "title": "Approve route shift",
+          "agent": "Mercury",
+          "risk": "high",
+          "action_class": "approval"
+        }
+      ],
+      "recovery_cases": [
+        {
+          "case_id": "recovery-1",
+          "title": "Weather relay drift",
+          "status_label": "Investigating",
+          "detail": "Apple weather relay needs investigation.",
+          "execution_count": 1,
+          "related_route": "/recovery-center"
+        }
+      ],
+      "agent_ops": [
+        {
+          "agent_id": "sam-wilson",
+          "name": "Sam Wilson",
+          "status": "awake",
+          "assignment": "Route intelligence",
+          "purpose": "Keep family launch timing steady.",
+          "attention_reason": "Morning route handoff needs a fresh run.",
+          "queue_action_label": "Queue Run"
+        }
+      ],
+      "supervision_items": [
+        {
+          "request_id": "supervision-1",
+          "title": "Review route-side family systems sync",
+          "agent": "Sam Wilson",
+          "risk": "high",
+          "detail": "Bounded review is needed before sunrise.",
+          "approve_label": "Approve",
+          "reject_label": "Reject"
+        }
+      ],
+      "huddle_summary": {
+        "reports_count": 3,
+        "blockers_count": 1,
+        "approvals_count": 1,
+        "ready_dossier_count": 2,
+        "queued_idea_count": 2,
+        "party_mode_status": "idle",
+        "headline": "3 standup reports, 1 approval, and 2 queued ideas are ready."
+      },
+      "huddle_ideas": [
+        {
+          "id": "idea-1",
+          "text": "Research a tighter family launch cadence",
+          "status": "queued",
+          "domain": "family",
+          "created_at": "2026-06-01T07:45:00Z"
+        },
+        {
+          "id": "idea-2",
+          "text": "Queue a morning route buffer experiment",
+          "status": "captured",
+          "domain": "operations",
+          "created_at": "2026-06-01T07:40:00Z"
+        }
+      ],
+      "recent_activity": [
+        {
+          "title": "Queue CarPlay Huddle Idea",
+          "detail": "CarPlay queued Research a tighter family launch cadence for background research.",
+          "route_label": "Open Huddle",
+          "actor": "chris"
+        }
+      ],
+      "mission_summary": {
+        "active_count": 2,
+        "pending_approvals": 1,
+        "headline": "Recovery and approvals need a deliberate handoff before sunrise."
+      },
+      "agent_summary": {
+        "awake_count": 2,
+        "blocked_count": 1,
+        "total_count": 3
+      },
+      "counts": {
+        "approval_count": 1,
+        "recovery_case_count": 1,
+        "recent_activity_count": 1,
+        "recovery_action_count": 1,
+        "agent_ops_count": 1,
+        "supervision_count": 1,
+        "huddle_idea_count": 2
+      }
+    }
+  },
   "/api/apple/navigation/route?origin=8384%20Riley%20Rd%2C%20Alexandria%2C%20KY%2041001&destination=Cincinnati%2C%20OH": {
     "ok": true,
     "data": {
@@ -4413,6 +4530,77 @@
         "reason": "Huddle launched live dossier research for Research a tighter family launch cadence.",
         "route": "/huddle-center",
         "saved_at": "2026-06-01T07:48:00Z"
+      }
+    }
+  },
+  "/api/apple/carplay/huddle/party-mode/start": {
+    "ok": true,
+    "data": {
+      "status": "started",
+      "focus": {
+        "module": "Huddle",
+        "reason": "CarPlay launched the overnight research cycle from the Huddle lane.",
+        "route": "/huddle-center",
+        "saved_at": "2026-06-01T07:49:00Z"
+      }
+    }
+  },
+  "/api/apple/carplay/huddle/ideas/idea-1/queue": {
+    "ok": true,
+    "data": {
+      "status": "queued",
+      "idea": {
+        "id": "idea-1",
+        "text": "Research a tighter family launch cadence",
+        "status": "queued",
+        "domain": "family",
+        "created_at": "2026-06-01T07:45:00Z"
+      },
+      "focus": {
+        "module": "Huddle",
+        "reason": "CarPlay queued Research a tighter family launch cadence for background research.",
+        "route": "/huddle-center",
+        "saved_at": "2026-06-01T07:50:00Z"
+      }
+    }
+  },
+  "/api/apple/carplay/huddle/ideas/idea-1/pass": {
+    "ok": true,
+    "data": {
+      "status": "passed",
+      "idea": {
+        "id": "idea-1",
+        "text": "Research a tighter family launch cadence",
+        "status": "passed",
+        "domain": "family",
+        "created_at": "2026-06-01T07:45:00Z"
+      },
+      "focus": {
+        "module": "Huddle",
+        "reason": "CarPlay passed on Research a tighter family launch cadence after review.",
+        "route": "/huddle-center",
+        "saved_at": "2026-06-01T07:51:00Z"
+      }
+    }
+  },
+  "/api/apple/carplay/huddle/ideas/idea-1/research-now": {
+    "ok": true,
+    "data": {
+      "queued": true,
+      "work_id": "carplay-huddle-work-1",
+      "message": "Research started - check /api/dossiers for results.",
+      "idea": {
+        "id": "idea-1",
+        "text": "Research a tighter family launch cadence",
+        "status": "researching",
+        "domain": "family",
+        "created_at": "2026-06-01T07:45:00Z"
+      },
+      "focus": {
+        "module": "Huddle",
+        "reason": "CarPlay launched live dossier research for Research a tighter family launch cadence.",
+        "route": "/huddle-center",
+        "saved_at": "2026-06-01T07:52:00Z"
       }
     }
   },

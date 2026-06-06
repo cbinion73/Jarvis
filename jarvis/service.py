@@ -6311,7 +6311,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "status": "Useful",
             "summary": "Huddle now has a dedicated module route with live standups, runtime posture, dossiers, and idea capture.",
             "what_became_real": "Huddle is now represented as a dedicated app module instead of a shell-only packet path.",
-            "remains_partial": "CarPlay parity, broader decision workflows, and richer cross-route continuity review still need follow-on slices.",
+            "remains_partial": "Broader decision workflows and richer cross-route continuity review still need follow-on slices.",
             "total_active_work": 0,
             "approvals_count": 0,
             "blocker_count": 0,

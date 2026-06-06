@@ -3,14 +3,19 @@ from __future__ import annotations
 import os
 import tempfile
 import unittest
+from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import patch
 
 from jarvis.apple_api import (
     _build_carplay_ops_overview,
+    _pass_carplay_huddle_idea,
     _queue_carplay_agent_run,
+    _queue_carplay_huddle_idea,
+    _research_carplay_huddle_idea_now,
     _resolve_carplay_supervision_item,
     _save_carplay_ops_focus,
+    _start_carplay_huddle_party_mode,
 )
 from jarvis.audit import AuditLog, ProgressFocusStore
 from jarvis.recovery_cases import RecoveryCaseStore
@@ -114,7 +119,52 @@ class CarPlayOpsAppleAPITests(unittest.TestCase):
             },
         )
 
-        overview = _build_carplay_ops_overview(_StubRuntime())
+        @dataclass
+        class _StubHuddle:
+            agent_reports: list[dict]
+            blockers: list[str]
+            approvals_needed: list[dict]
+
+        class _StubPartyController:
+            def get_status(self) -> dict:
+                return {"status": "idle"}
+
+        class _StubDossier:
+            status = "ready"
+
+        class _StubDossierStore:
+            def get_all(self) -> list:
+                return [_StubDossier(), _StubDossier()]
+
+        with (
+            patch(
+                "jarvis.standup.collect_all_standups",
+                return_value=_StubHuddle(
+                    agent_reports=[{"agent_id": "sam-wilson"}],
+                    blockers=["Need a tighter family launch decision lane."],
+                    approvals_needed=[{"work_id": "approval-1"}],
+                ),
+            ),
+            patch("jarvis.party_mode.get_party_controller", return_value=_StubPartyController()),
+            patch("jarvis.dossier.get_dossier_store", return_value=_StubDossierStore()),
+            patch(
+                "jarvis.ideas.list_ideas",
+                return_value=[
+                    {
+                        "id": "idea-1",
+                        "text": "Research a calmer school launch cadence",
+                        "status": "captured",
+                        "domain": "family",
+                        "created_at": "2026-06-06T08:00:00Z",
+                    }
+                ],
+            ),
+            patch(
+                "jarvis.ideas.stats",
+                return_value={"total": 1, "by_status": {"captured": 1, "queued": 0}},
+            ),
+        ):
+            overview = _build_carplay_ops_overview(_StubRuntime())
 
         self.assertEqual(overview["current_focus"]["module"], "Health")
         self.assertEqual(overview["counts"]["approval_count"], 1)
@@ -123,8 +173,12 @@ class CarPlayOpsAppleAPITests(unittest.TestCase):
         self.assertEqual(overview["mission_summary"]["active_count"], 2)
         self.assertEqual(overview["recovery_cases"][0]["status_label"], "Investigating")
         self.assertEqual(overview["recent_activity"][0]["title"], "Queue Agent Run")
+        self.assertEqual(overview["huddle_summary"]["queued_idea_count"], 1)
+        self.assertEqual(overview["huddle_ideas"][0]["domain"], "family")
         self.assertIn("agent_ops", overview)
         self.assertIn("supervision_items", overview)
+        self.assertIn("huddle_summary", overview)
+        self.assertIn("huddle_ideas", overview)
 
     def test_save_carplay_ops_focus_persists_progress_and_activity(self) -> None:
         entry = _save_carplay_ops_focus(
@@ -186,6 +240,59 @@ class CarPlayOpsAppleAPITests(unittest.TestCase):
         titles = [item.get("action") for item in recent]
         self.assertIn("Queue CarPlay Agent Run", titles)
         self.assertIn("Approve CarPlay Supervision Review", titles)
+
+    def test_carplay_huddle_actions_persist_continuity(self) -> None:
+        from jarvis.ideas import add_idea
+        from unittest.mock import patch
+
+        idea = add_idea(
+            "Research a tighter morning route handoff",
+            "user",
+            "Captured for in-car Huddle triage.",
+            "operations",
+            [],
+        )
+        queued = _queue_carplay_huddle_idea(idea_id=idea["id"], actor="chris")
+        self.assertEqual(queued["status"], "queued")
+
+        passed = _pass_carplay_huddle_idea(idea_id=idea["id"], actor="chris")
+        self.assertEqual(passed["status"], "passed")
+
+        research_idea = add_idea(
+            "Research family launch ops in the car lane",
+            "user",
+            "Ready for immediate research.",
+            "family",
+            [],
+        )
+
+        class _StubWorkItem:
+            work_id = "carplay-huddle-work-1"
+
+        class _StubWorkStore:
+            def dream_idea(self, *args, **kwargs):
+                return _StubWorkItem()
+
+        with (
+            patch("jarvis.llm_gateway.get_gateway", return_value=object()),
+            patch("jarvis.agent_work.get_work_store", return_value=_StubWorkStore()),
+        ):
+            researched = _research_carplay_huddle_idea_now(idea_id=research_idea["id"], actor="chris")
+
+        self.assertTrue(researched["queued"])
+        self.assertEqual(researched["work_id"], "carplay-huddle-work-1")
+
+        started = _start_carplay_huddle_party_mode(_StubRuntime(), actor="chris")
+        self.assertIn(started["status"], {"started", "already_running"})
+
+        summary = ProgressFocusStore(Path("data/logs")).summary(limit=8)
+        self.assertEqual(summary["latest"]["module"], "Huddle")
+        recent = AuditLog(Path("data/logs")).list_recent(limit=8, entry_type="operator-action")
+        titles = [item.get("action") for item in recent]
+        self.assertIn("Queue CarPlay Huddle Idea", titles)
+        self.assertIn("Pass CarPlay Huddle Idea", titles)
+        self.assertIn("Research CarPlay Huddle Idea Now", titles)
+        self.assertIn("Start CarPlay Huddle Party Mode", titles)
 
 
 if __name__ == "__main__":

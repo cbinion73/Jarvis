@@ -89,6 +89,10 @@ struct ApplePayloadDecodingTests {
         try decode(HuddleIdeaActionResult.self, from: payloads, key: "/api/apple/huddle/ideas/idea-1/queue", decoder: decoder)
         try decode(HuddleIdeaActionResult.self, from: payloads, key: "/api/apple/huddle/ideas/idea-1/pass", decoder: decoder)
         try decode(HuddleIdeaResearchActionResult.self, from: payloads, key: "/api/apple/huddle/ideas/idea-1/research-now", decoder: decoder)
+        try decode(HuddlePartyModeActionResult.self, from: payloads, key: "/api/apple/carplay/huddle/party-mode/start", decoder: decoder)
+        try decode(HuddleIdeaActionResult.self, from: payloads, key: "/api/apple/carplay/huddle/ideas/idea-1/queue", decoder: decoder)
+        try decode(HuddleIdeaActionResult.self, from: payloads, key: "/api/apple/carplay/huddle/ideas/idea-1/pass", decoder: decoder)
+        try decode(HuddleIdeaResearchActionResult.self, from: payloads, key: "/api/apple/carplay/huddle/ideas/idea-1/research-now", decoder: decoder)
         try decode(ForgeWrapper.self, from: payloads, key: "/api/apple/forge", decoder: decoder)
     }
 

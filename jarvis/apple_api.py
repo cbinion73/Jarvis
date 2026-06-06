@@ -232,6 +232,10 @@ def _record_operator_action(
 
 def _build_carplay_ops_overview(runtime: Any) -> dict[str, Any]:
     from .command_center_index import _agent_ops_roster
+    from .dossier import get_dossier_store
+    from .ideas import list_ideas, stats as idea_stats
+    from .party_mode import get_party_controller
+    from .standup import collect_all_standups
     from .supervision_snapshot import build_supervision_snapshot
 
     focus_summary = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).summary(limit=5)
@@ -253,6 +257,33 @@ def _build_carplay_ops_overview(runtime: Any) -> dict[str, Any]:
         for item in list(supervision_snapshot.get("attention_queue") or [])
         if isinstance(item, dict)
     ]
+    try:
+        huddle_packet = asdict(collect_all_standups(None, runtime, False))
+    except Exception:
+        huddle_packet = {}
+    huddle_reports = [dict(item) for item in list(huddle_packet.get("agent_reports") or []) if isinstance(item, dict)]
+    huddle_blockers = [str(item) for item in list(huddle_packet.get("blockers") or []) if str(item).strip()]
+    huddle_approvals = [dict(item) for item in list(huddle_packet.get("approvals_needed") or []) if isinstance(item, dict)]
+    try:
+        party_status = get_party_controller(runtime).get_status()
+    except Exception:
+        party_status = {}
+    try:
+        ready_dossiers = [
+            dossier
+            for dossier in get_dossier_store().get_all()
+            if str(getattr(dossier, "status", "") or "").strip().lower() != "presented"
+        ]
+    except Exception:
+        ready_dossiers = []
+    try:
+        idea_summary = idea_stats()
+        idea_items = [dict(item) for item in list_ideas() if isinstance(item, dict)]
+    except Exception:
+        idea_summary = {}
+        idea_items = []
+    idea_counts = dict(idea_summary.get("by_status") or {})
+    queued_idea_count = int(idea_counts.get("queued") or 0) + int(idea_counts.get("captured") or 0)
 
     return {
         "generated_at": _ts(),
@@ -312,6 +343,30 @@ def _build_carplay_ops_overview(runtime: Any) -> dict[str, Any]:
             for item in supervision_items[:4]
             if str(item.get("request_id") or "").strip()
         ],
+        "huddle_summary": {
+            "reports_count": len(huddle_reports),
+            "blockers_count": len(huddle_blockers),
+            "approvals_count": len(huddle_approvals),
+            "ready_dossier_count": len(ready_dossiers),
+            "queued_idea_count": queued_idea_count,
+            "party_mode_status": str(party_status.get("status") or "idle").strip() or "idle",
+            "headline": (
+                f"{len(huddle_reports)} standup reports, {len(huddle_approvals)} approvals, and {queued_idea_count} queued idea(s) are ready."
+                if huddle_reports or huddle_approvals or queued_idea_count
+                else "Huddle is steady. Wake agents or triage a queued idea from the in-car lane."
+            ),
+        },
+        "huddle_ideas": [
+            {
+                "id": str(item.get("id") or "").strip(),
+                "text": str(item.get("text") or "Idea").strip() or "Idea",
+                "status": str(item.get("status") or "captured").strip() or "captured",
+                "domain": str(item.get("domain") or "general").strip() or "general",
+                "created_at": str(item.get("created_at") or "").strip(),
+            }
+            for item in idea_items[:4]
+            if str(item.get("id") or "").strip()
+        ],
         "recent_activity": [
             {
                 "title": str(item.get("action") or item.get("entry_type") or "Activity").strip() or "Activity",
@@ -339,6 +394,7 @@ def _build_carplay_ops_overview(runtime: Any) -> dict[str, Any]:
             "recovery_action_count": int(recovery_actions.get("count", 0) or 0),
             "agent_ops_count": len(agent_items),
             "supervision_count": len(supervision_items),
+            "huddle_idea_count": len(idea_items),
         },
     }
 
@@ -461,6 +517,158 @@ def _resolve_carplay_supervision_item(
         "title": title,
         "focus": focus,
         "request": updated,
+    }
+
+
+def _record_carplay_huddle_focus(
+    *,
+    actor: str,
+    action: str,
+    detail: str,
+    why_now: str,
+    result_summary: str,
+    related_kind: str,
+    related_label: str,
+) -> dict[str, Any]:
+    _record_operator_action(
+        actor=actor,
+        domain="carplay",
+        action=action,
+        detail=detail,
+        why_now=why_now,
+        result_summary=result_summary,
+        route="/huddle-center",
+        route_label="Open Huddle",
+        related_kind=related_kind,
+        related_label=related_label,
+        succeeded=True,
+    )
+    return ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module="Huddle",
+        reason=detail,
+        route="/huddle-center",
+        actor=actor,
+    )
+
+
+def _start_carplay_huddle_party_mode(runtime: Any, *, actor: str) -> dict[str, Any]:
+    from .party_mode import get_party_controller
+
+    controller = get_party_controller(runtime)
+    status = controller.get_status()
+    if str(status.get("status") or "").strip().lower() == "running":
+        focus = _record_carplay_huddle_focus(
+            actor=actor,
+            action="Start CarPlay Huddle Party Mode",
+            detail="CarPlay confirmed the overnight research lane is already running.",
+            why_now="The in-car Huddle lane checked the overnight agents before creating duplicate work.",
+            result_summary="Party mode was already running from CarPlay.",
+            related_kind="party-mode",
+            related_label="Overnight Orchestration",
+        )
+        return {"status": "already_running", "focus": focus}
+
+    controller.start(True)
+    focus = _record_carplay_huddle_focus(
+        actor=actor,
+        action="Start CarPlay Huddle Party Mode",
+        detail="CarPlay launched the overnight research cycle from the Huddle lane.",
+        why_now="The in-car Huddle lane escalated the overnight research loop without leaving the vehicle surface.",
+        result_summary="Party mode started from CarPlay.",
+        related_kind="party-mode",
+        related_label="Overnight Orchestration",
+    )
+    return {"status": "started", "focus": focus}
+
+
+def _queue_carplay_huddle_idea(*, idea_id: str, actor: str) -> dict[str, Any]:
+    from .ideas import queue_idea
+
+    idea = queue_idea(idea_id)
+    if idea is None:
+        raise KeyError("Idea not found.")
+    focus = _record_carplay_huddle_focus(
+        actor=actor,
+        action="Queue CarPlay Huddle Idea",
+        detail=f"CarPlay queued {str(idea.get('text') or idea_id).strip() or idea_id} for background research.",
+        why_now="The in-car Huddle lane promoted a captured idea into the queued research stack.",
+        result_summary="Huddle idea queued from CarPlay.",
+        related_kind="idea",
+        related_label=str(idea.get("text") or idea.get("id") or idea_id),
+    )
+    return {"status": "queued", "idea": idea, "focus": focus}
+
+
+def _pass_carplay_huddle_idea(*, idea_id: str, actor: str) -> dict[str, Any]:
+    from .ideas import pass_idea
+
+    idea = pass_idea(idea_id)
+    if idea is None:
+        raise KeyError("Idea not found.")
+    focus = _record_carplay_huddle_focus(
+        actor=actor,
+        action="Pass CarPlay Huddle Idea",
+        detail=f"CarPlay passed on {str(idea.get('text') or idea_id).strip() or idea_id} after review.",
+        why_now="The in-car Huddle lane intentionally dismissed a low-leverage idea instead of leaving it stalled.",
+        result_summary="Huddle idea passed from CarPlay.",
+        related_kind="idea",
+        related_label=str(idea.get("text") or idea.get("id") or idea_id),
+    )
+    return {"status": "passed", "idea": idea, "focus": focus}
+
+
+def _research_carplay_huddle_idea_now(*, idea_id: str, actor: str) -> dict[str, Any]:
+    from .agent_work import get_work_store
+    from .ideas import get_idea, mark_researching, queue_idea
+    from .llm_gateway import get_gateway
+
+    idea = get_idea(idea_id)
+    if idea is None:
+        raise KeyError("Idea not found.")
+    if idea.get("status") == "researching":
+        focus = _record_carplay_huddle_focus(
+            actor=actor,
+            action="Research CarPlay Huddle Idea Now",
+            detail=f"CarPlay confirmed {str(idea.get('text') or idea_id).strip() or idea_id} is already researching.",
+            why_now="The in-car Huddle lane checked whether a queued idea was already moving.",
+            result_summary="Huddle idea was already researching from CarPlay.",
+            related_kind="idea",
+            related_label=str(idea.get("text") or idea.get("id") or idea_id),
+        )
+        return {"status": "already_researching", "idea": idea, "work_id": str(idea.get("work_id") or ""), "focus": focus}
+
+    if idea.get("status") == "captured":
+        queue_idea(idea_id)
+
+    gw = get_gateway()
+    if gw is None:
+        raise ValueError("LLM gateway not available")
+
+    store = get_work_store("catalyst-personal")
+    work_item = store.dream_idea(
+        idea["text"][:80],
+        idea["text"],
+        idea.get("domain", "passive-income"),
+        idea.get("tags", []),
+    )
+    work_id = work_item.work_id
+    mark_researching(idea_id, work_id)
+    refreshed = get_idea(idea_id) or idea
+    focus = _record_carplay_huddle_focus(
+        actor=actor,
+        action="Research CarPlay Huddle Idea Now",
+        detail=f"CarPlay launched live dossier research for {str(refreshed.get('text') or idea_id).strip() or idea_id}.",
+        why_now="The in-car Huddle lane escalated a live idea directly into research instead of waiting for a later sweep.",
+        result_summary="Huddle idea research started from CarPlay.",
+        related_kind="idea",
+        related_label=str(refreshed.get("text") or refreshed.get("id") or idea_id),
+    )
+    return {
+        "queued": True,
+        "work_id": work_id,
+        "message": "Research started - check /api/dossiers for results.",
+        "idea": refreshed,
+        "focus": focus,
     }
 
 
@@ -6699,6 +6907,45 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _ok(result)
+
+    @app.post("/api/apple/carplay/huddle/party-mode/start")
+    async def apple_carplay_huddle_start(payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        result = await asyncio.to_thread(_start_carplay_huddle_party_mode, runtime, actor=actor)
+        return _ok(result)
+
+    @app.post("/api/apple/carplay/huddle/ideas/{idea_id}/queue")
+    async def apple_carplay_huddle_queue(idea_id: str, payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        try:
+            result = await asyncio.to_thread(_queue_carplay_huddle_idea, idea_id=idea_id, actor=actor)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _ok(result)
+
+    @app.post("/api/apple/carplay/huddle/ideas/{idea_id}/pass")
+    async def apple_carplay_huddle_pass(idea_id: str, payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        try:
+            result = await asyncio.to_thread(_pass_carplay_huddle_idea, idea_id=idea_id, actor=actor)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _ok(result)
+
+    @app.post("/api/apple/carplay/huddle/ideas/{idea_id}/research-now")
+    async def apple_carplay_huddle_research(idea_id: str, payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        try:
+            result = await asyncio.to_thread(_research_carplay_huddle_idea_now, idea_id=idea_id, actor=actor)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
         return _ok(result)
 
     @app.get("/api/apple/while-you-were-away")
