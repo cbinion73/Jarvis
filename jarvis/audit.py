@@ -223,6 +223,16 @@ class ProgressSnapshotStore:
                     "module": str(item.get("module", "")).strip(),
                     "what_became_real": str(item.get("what_became_real", "")).strip(),
                     "remains_partial": str(item.get("remains_partial", "")).strip(),
+                    "related_missions": [
+                        {
+                            "mission_id": str(mission.get("mission_id", "")).strip(),
+                            "title": str(mission.get("title", "")).strip(),
+                            "lane": str(mission.get("lane", "")).strip(),
+                            "route": str(mission.get("route", "")).strip() or "/mission-board",
+                        }
+                        for mission in list(item.get("related_missions") or [])
+                        if isinstance(mission, dict)
+                    ][:3],
                 }
                 for item in list(seam_tracker.get("items") or [])
                 if isinstance(item, dict)

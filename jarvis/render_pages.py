@@ -1007,6 +1007,15 @@ def render_publish_module_page(payload: dict) -> str:
       return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
     }}
 
+    function missionRouteLinks(missions) {{
+      return (Array.isArray(missions) ? missions : []).map((mission) => {{
+        const route = String(mission.route || "/mission-board").trim() || "/mission-board";
+        const label = String(mission.title || mission.mission_id || "Mission").trim() || "Mission";
+        const lane = String(mission.lane || "next").trim() || "next";
+        return `<a href="${{esc(route)}}">${{esc(`${{label}} · ${{lane}}`)}}</a>`;
+      }}).join("");
+    }}
+
     function render(payload) {{
       const launch = payload.launch_control || {{}};
       const activeProject = launch.active_project || null;
@@ -5008,11 +5017,14 @@ def render_progress_module_page(payload: dict) -> str:
       const checklist = payload.level3_checklist || {{}};
       level3ChecklistList.innerHTML = (Array.isArray(checklist.items) ? checklist.items : []).map((item) => checklistRow(item)).join("") || '<li><strong>No remaining Level 3 checklist loaded.</strong><span>The live progress module will surface remaining slices here.</span></li>';
 
-      seamHighlightsList.innerHTML = (Array.isArray(seamTracker.items) ? seamTracker.items : []).slice(0, 4).map((item) => li(
-        item.name || "Seam",
-        item.what_became_real || item.module || "No seam outcome recorded.",
-        item.remains_partial || item.commit_status || ""
-      )).join("") || '<li><strong>No seam highlights loaded.</strong><span>Seam tracker evidence will appear here.</span></li>';
+      seamHighlightsList.innerHTML = (Array.isArray(seamTracker.items) ? seamTracker.items : []).slice(0, 4).map((item) => `
+        <li>
+          <strong>${{esc(item.name || "Seam")}}</strong>
+          <span>${{esc(item.what_became_real || item.module || "No seam outcome recorded.")}}</span>
+          <span>${{esc(item.remains_partial || item.commit_status || "")}}</span>
+          <div class="route-links">${{missionRouteLinks(item.related_missions || [])}}</div>
+        </li>
+      `).join("") || '<li><strong>No seam highlights loaded.</strong><span>Seam tracker evidence will appear here.</span></li>';
 
       laneFailureList.innerHTML = [
         li("Lane Posture", `${{laneProgress.branch || "unknown branch"}} · ${{laneProgress.head || "unknown head"}}`, `${{laneProgress.dirty_count || 0}} local change(s)`),
@@ -5034,6 +5046,14 @@ def render_progress_module_page(payload: dict) -> str:
           `Dirty: ${{entry.dirty_count ?? 0}} · Next Focus: ${{entry.next_focus || "none"}}`,
           `${{Object.entries(entry.progress_counts || {{}}).map(([key, value]) => `${{key}}=${{value}}`).join(" · ") || "No readiness counts"}}`
         )) : []),
+        ...(Array.isArray(progressPersistence.latest?.seam_items) ? progressPersistence.latest.seam_items.slice(0, 3).map((entry) => `
+          <li>
+            <strong>${{esc(`Seam History: ${{entry.name || "Seam"}}`)}}</strong>
+            <span>${{esc(entry.what_became_real || entry.module || "No seam outcome recorded.")}}</span>
+            <span>${{esc(entry.remains_partial || entry.status || "")}}</span>
+            <div class="route-links">${{missionRouteLinks(entry.related_missions || [])}}</div>
+          </li>
+        `) : []),
       ].join("");
 
       moduleLinksList.innerHTML = moduleLinks.slice(0, 6).map((item) => li(

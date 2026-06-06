@@ -1855,6 +1855,7 @@ def _seam_tracker(
     lane_progress: dict[str, Any],
     registry: dict[str, Any],
     surfaces: list[dict[str, Any]],
+    mission_task_board: dict[str, Any],
 ) -> dict[str, Any]:
     branch = str(lane_progress.get("branch", "") or "").strip() or "unknown branch"
     head = str(lane_progress.get("head", "") or "").strip() or "unknown head"
@@ -1865,6 +1866,45 @@ def _seam_tracker(
     commit_posture = "clean head" if dirty_count == 0 else f"{dirty_count} local changes still need reconciliation"
     agent_count = int(registry.get("agent_count", 0) or 0)
     domain_count = len([item for item in list(registry.get("domains") or []) if str(item).strip()])
+    mission_items = [item for item in list(mission_task_board.get("items") or []) if isinstance(item, dict)]
+
+    def related_missions_for(module: str) -> list[dict[str, Any]]:
+        module_key = str(module or "").strip().lower()
+        results: list[dict[str, Any]] = []
+        for mission in mission_items:
+            lane = str(mission.get("lane", "")).strip().lower()
+            if lane == "completed":
+                continue
+            domain = str(mission.get("primary_domain", "")).strip().lower()
+            title = str(mission.get("title", "")).strip()
+            if not title:
+                continue
+            matched = False
+            if module_key in {"mission board", "activity feed", "agent operations", "progress", "failure & recovery", "command center/home"}:
+                matched = True
+            elif module_key == "publish" and domain in {"communications", "content"}:
+                matched = True
+            elif module_key == "chronicle" and domain in {"formation"}:
+                matched = True
+            elif module_key == "navigation" and domain in {"weather", "travel"}:
+                matched = True
+            elif module_key == "health" and domain in {"health", "family"}:
+                matched = True
+            elif module_key == "daily brief" and domain in {"general", "family"}:
+                matched = True
+            if matched:
+                results.append(
+                    {
+                        "mission_id": str(mission.get("mission_id", "")).strip(),
+                        "title": title,
+                        "lane": str(mission.get("lane", "")).strip() or "next",
+                        "route": "/mission-board",
+                    }
+                )
+            if len(results) >= 3:
+                break
+        return results
+
     seams = [
         {
             "name": "Command Center Working Base",
@@ -1884,6 +1924,7 @@ def _seam_tracker(
             "surface_path": primary_surface,
             "what_became_real": "The app now exposes a single command-center route with live needs, memory, daily brief, activity, registry, progress, and inspectable detail state.",
             "remains_partial": "Mission board, module drill-ins, and persistent seam storage still need dedicated Level 3 routes.",
+            "related_missions": related_missions_for("Command Center/Home"),
             "tests": [
                 "tests/test_command_center_index.py",
                 "tests/test_command_center_service_surface.py",
@@ -1907,6 +1948,7 @@ def _seam_tracker(
             "surface_path": "/command-center",
             "what_became_real": f"The command center now surfaces {agent_count} registered agent contracts across {domain_count} domain lane(s) with live maturity, authority, and seeded task-agent metadata.",
             "remains_partial": "Command-center roster continuity still needs deeper last-activity drill-ins and stronger mission-linked assignment context.",
+            "related_missions": related_missions_for("Agent Operations"),
             "tests": [
                 "tests/test_command_center_index.py",
             ],
@@ -1930,6 +1972,7 @@ def _seam_tracker(
             "surface_path": "/agent-ops-center",
             "what_became_real": "Agent operations now has a dedicated route with live core and task-agent roster posture, selected-agent detail, mission-linked assignment editing, queue-run controls, and task-agent promotion or retirement controls inside the app shell.",
             "remains_partial": "Broader route-to-route ops continuity and deeper per-agent outcome review still need follow-on slices.",
+            "related_missions": related_missions_for("Agent Operations"),
             "tests": [
                 "tests/test_command_center_index.py",
                 "tests/test_command_center_service_surface.py",
@@ -2026,6 +2069,7 @@ def _seam_tracker(
             "surface_path": "/mission-board",
             "what_became_real": "The mission board now has a dedicated route with lane-based mission visibility, selected mission detail, mission authoring, mission editing, mission workspace review, handoff authoring, seam linkage, and per-agent work-state controls inside the app shell.",
             "remains_partial": "Mission edit flows and seam linkage are now real at the first pass, but they still need deeper breadth and richer linkage coverage in later slices.",
+            "related_missions": related_missions_for("Mission Board"),
             "tests": [
                 "tests/test_command_center_index.py",
                 "tests/test_command_center_service_surface.py",
@@ -2050,6 +2094,7 @@ def _seam_tracker(
             "surface_path": "/activity-center",
             "what_became_real": "The activity stream now has a dedicated route with event drill-ins, journal context, and direct jumps into related app surfaces.",
             "remains_partial": "Richer audit filters, broader event mutation, and deeper cross-surface continuity still need follow-on slices.",
+            "related_missions": related_missions_for("Activity Feed"),
             "tests": [
                 "tests/test_command_center_index.py",
                 "tests/test_command_center_service_surface.py",
@@ -2073,6 +2118,7 @@ def _seam_tracker(
             "surface_path": "/command-center",
             "what_became_real": "Structured seam records are now inspectable inside the command center with branch, worktree, maturity, tests, and commit posture in one place.",
             "remains_partial": "Seam entries are still branch-scoped local records; durable persistence and mission linkage come in a later Level 3 slice.",
+            "related_missions": related_missions_for("Progress"),
             "tests": [
                 "tests/test_command_center_index.py",
                 "tests/test_command_center_service_surface.py",
@@ -2096,6 +2142,7 @@ def _seam_tracker(
             "surface_path": "/progress-center",
             "what_became_real": "Progress now has its own dedicated route and module payload, instead of relying only on the command-center panel.",
             "remains_partial": "The progress module still needs richer route-to-route actions, deeper per-module mutation flows, and broader persistence.",
+            "related_missions": related_missions_for("Progress"),
             "tests": [
                 "tests/test_command_center_service_surface.py",
             ],
@@ -2411,6 +2458,7 @@ def build_command_center_index() -> dict[str, Any]:
         },
         registry=registry,
         surfaces=surfaces,
+        mission_task_board=mission_task_board,
     )
     core_modules = _core_modules(
         lane_progress={
