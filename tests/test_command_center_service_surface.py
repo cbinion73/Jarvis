@@ -9,9 +9,11 @@ import types
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import jarvis.approvals as approvals_module
 import jarvis.command_center_index as command_center_index_module
+import jarvis.quarterly_review as quarterly_review_module
 from jarvis.approvals import ApprovalQueue, init_approvals
 
 if "fastapi" not in sys.modules:
@@ -697,8 +699,12 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Refresh Health State", health_html)
         self.assertIn("Health command center", health_html)
         self.assertIn("Daily Readiness", health_html)
+        self.assertIn("Save Health Objective", health_html)
+        self.assertIn("Recent Health Continuity", health_html)
+        self.assertIn("/api/activity/operator-action", health_html)
         self.assertIn("status", health_snapshot)
         self.assertIn("current_signals", health_snapshot)
+        self.assertIn("recent_activity", health_snapshot)
         self.assertIn("proof_paths", health_snapshot)
         self.assertEqual(health_snapshot["proof_paths"]["module_route"], "/health-center")
         self.assertEqual(health_snapshot["proof_paths"]["module_api"], "/api/health/module")
@@ -980,6 +986,72 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
 
         self.assertTrue(any(item.get("title") == "Reject Supervision Item" for item in supervision_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("related_label") == "Watchtower deployment proposal" for item in supervision_snapshot["recent_activity"]))
+
+    def test_health_objective_mutation_persists_into_health_and_activity(self) -> None:
+        objectives_path = Path(self.tempdir.name) / "health" / "quarterly_objectives.json"
+        objectives_log_path = objectives_path.with_name("quarterly_objectives_log.jsonl")
+        objectives_state_log_path = objectives_path.with_name("quarterly_objectives_state_log.jsonl")
+        objectives_path.parent.mkdir(parents=True, exist_ok=True)
+
+        class _JSONRequest:
+            def __init__(self, payload: dict) -> None:
+                self._payload = payload
+
+            async def json(self) -> dict:
+                return self._payload
+
+        with (
+            patch.object(quarterly_review_module, "_OBJECTIVES_PATH", objectives_path),
+            patch.object(quarterly_review_module, "_OBJECTIVES_LOG_PATH", objectives_log_path),
+            patch.object(quarterly_review_module, "_OBJECTIVES_STATE_LOG_PATH", objectives_state_log_path),
+        ):
+            response = asyncio.run(
+                self._route("/api/health/quarterly/objectives", "POST")(
+                    _JSONRequest(
+                        {
+                            "objectives": [
+                                {
+                                    "objective": "Lower A1c by improving post-meal glucose control",
+                                    "domain": "metabolic health",
+                                    "why_it_matters": "A1c drift is one of the clearest live risks in the health posture.",
+                                    "baseline": "A1c 7.3%",
+                                    "target": "A1c under 6.8%",
+                                    "weekly_actions": ["Walk after dinner five nights a week"],
+                                    "measurement_plan": "Review weekly glucose and adherence signals every Sunday.",
+                                }
+                            ]
+                        }
+                    )
+                )
+            )
+            activity_response = asyncio.run(
+                self._route("/api/activity/operator-action", "POST")(
+                    {
+                        "actor": "Chris",
+                        "domain": "health",
+                        "action": "Save Health Objective",
+                        "detail": "Health objective saved into the quarterly objective store.",
+                        "why_now": "Health route persisted a real coaching objective directly from the operator flow.",
+                        "result_summary": "Saved 1 health objective.",
+                        "route": "/health-center",
+                        "route_label": "Open Health",
+                        "related_kind": "health-objective",
+                        "related_label": "Lower A1c by improving post-meal glucose control",
+                        "succeeded": True,
+                    }
+                )
+            )
+            health_snapshot = self._json_body(asyncio.run(self._route("/api/health/module", "GET")()))
+
+        result = self._json_body(response)
+        activity_result = self._json_body(activity_response)
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["count"], 1)
+        self.assertEqual(activity_result["status"], "recorded")
+        self.assertTrue(any(item.get("objective") == "Lower A1c by improving post-meal glucose control" for item in health_snapshot["objectives"]))
+        self.assertTrue(any(item.get("title") == "Save Health Objective" for item in health_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("related_label") == "Lower A1c by improving post-meal glucose control" for item in health_snapshot["recent_activity"]))
 
     def test_chronicle_activity_populates_chronicle_continuity(self) -> None:
         asyncio.run(

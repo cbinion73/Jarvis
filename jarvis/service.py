@@ -8823,7 +8823,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "available": True,
             "status": "Useful",
             "summary": "Health now has a dedicated module route with live drift, objective, and triage posture inside JARVIS.",
-            "what_became_real": "Health is now represented as a dedicated app module instead of a storyboard-only route.",
+            "what_became_real": "Health is now represented as a dedicated app module with visible route-owned continuity instead of a storyboard-only route.",
             "remains_partial": "Deeper health workflows, historical review, and broader manual data entry still need follow-on slices.",
             "signal_count": 0,
             "active_cluster_count": 0,
@@ -8838,12 +8838,14 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             },
             "objectives": [],
             "red_flags": {},
+            "recent_activity": [],
             "proof_paths": {
                 "module_route": "/health-center",
                 "module_api": "/api/health/module",
                 "drift_scan_api": "/api/health/drift/scan",
                 "objectives_api": "/api/health/quarterly/objectives",
                 "triage_api": "/api/health/symptom/triage",
+                "activity_api": "/api/activity/operator-action",
             },
             "errors": [],
         }
@@ -8885,6 +8887,8 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["red_flags"] = get_red_flags_for_patient()
         except Exception as exc:
             payload["errors"].append(f"red_flags: {exc}")
+
+        payload["recent_activity"] = _module_recent_activity(route="/health-center", domain="health")
 
         if payload["errors"] and payload["status"] == "Useful":
             payload["remains_partial"] = "Some health sources still failed to hydrate; inspect the payload preview for details."

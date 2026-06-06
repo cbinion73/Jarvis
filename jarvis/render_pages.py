@@ -1095,6 +1095,7 @@ def render_publish_module_page(payload: dict) -> str:
   </main>
   <script>
     const initialPayload = {raw_json};
+    let currentPayload = initialPayload;
     const heroStatus = document.getElementById("hero-status");
     const heroProjects = document.getElementById("hero-projects");
     const heroReviews = document.getElementById("hero-reviews");
@@ -6639,6 +6640,39 @@ def render_health_module_page(payload: dict) -> str:
         <pre id="triage-output">Awaiting symptom triage.</pre>
       </section>
       <section class="panel span-6">
+        <h2>Save Health Objective</h2>
+        <form id="objective-form">
+          <label>Objective
+            <input id="objective-title" placeholder="Lower A1c by improving post-meal glucose control">
+          </label>
+          <label>Domain
+            <input id="objective-domain" placeholder="metabolic health">
+          </label>
+          <label>Why It Matters
+            <textarea id="objective-why" placeholder="Connect this objective to current drift, quality of life, or long-term risk reduction."></textarea>
+          </label>
+          <label>Baseline
+            <input id="objective-baseline" placeholder="A1c 7.3%, post-dinner walks inconsistent">
+          </label>
+          <label>Target
+            <input id="objective-target" placeholder="A1c under 6.8% and post-dinner walk 5x/week">
+          </label>
+          <label>Weekly Actions
+            <textarea id="objective-actions" placeholder="One action per line"></textarea>
+          </label>
+          <label>Measurement Plan
+            <textarea id="objective-measurement" placeholder="How will progress be measured each week?"></textarea>
+          </label>
+          <button type="submit">Save Health Objective</button>
+        </form>
+        <p class="status-note" id="objective-note">Use this to persist a real health objective into the quarterly store.</p>
+        <pre id="objective-output">Awaiting objective save.</pre>
+      </section>
+      <section class="panel span-6">
+        <h2>Recent Health Continuity</h2>
+        <ul id="recent-activity-list"></ul>
+      </section>
+      <section class="panel span-6">
         <h2>Payload Preview</h2>
         <pre id="payload-preview"></pre>
       </section>
@@ -6659,6 +6693,9 @@ def render_health_module_page(payload: dict) -> str:
     const objectivesList = document.getElementById("objectives-list");
     const redFlagsList = document.getElementById("red-flags-list");
     const triageOutput = document.getElementById("triage-output");
+    const objectiveNote = document.getElementById("objective-note");
+    const objectiveOutput = document.getElementById("objective-output");
+    const recentActivityList = document.getElementById("recent-activity-list");
     const payloadPreview = document.getElementById("payload-preview");
 
     function esc(value) {{
@@ -6674,7 +6711,16 @@ def render_health_module_page(payload: dict) -> str:
       return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
     }}
 
+    async function recordOperatorAction(payload) {{
+      await fetch("/api/activity/operator-action", {{
+        method: "POST",
+        headers: {{ "Content-Type": "application/json" }},
+        body: JSON.stringify(payload),
+      }});
+    }}
+
     function render(payload) {{
+      currentPayload = payload || {{}};
       const drift = payload.drift_scan || {{}};
       const signals = payload.current_signals || {{}};
       const deviations = Array.isArray(payload.baseline_deviations) ? payload.baseline_deviations : [];
@@ -6725,6 +6771,9 @@ def render_health_module_page(payload: dict) -> str:
         ...emergency.slice(0, 3).map((item) => li("ER", item)),
         ...critical.slice(0, 2).map((item) => li(item.trigger || "Contraindication", item.action || "Critical rule")),
       ].join("") || '<li><strong>No red flags loaded.</strong><span>Personalized health red flags are unavailable right now.</span></li>';
+      recentActivityList.innerHTML = (Array.isArray(payload.recent_activity) ? payload.recent_activity : []).length
+        ? payload.recent_activity.map((item) => li(item.title || "Health action", item.subtitle || item.actor || "Operator continuity", item.detail || item.route_label || "")).join("")
+        : '<li><strong>No health continuity recorded yet.</strong><span>Run triage or save a health objective to begin the route-level continuity trail.</span></li>';
 
       payloadPreview.textContent = JSON.stringify(payload, null, 2);
     }}
@@ -6756,11 +6805,77 @@ def render_health_module_page(payload: dict) -> str:
         }});
         const payload = await response.json();
         triageOutput.textContent = JSON.stringify(payload, null, 2);
+        await recordOperatorAction({{
+          actor: "Chris",
+          domain: "health",
+          action: "Run Symptom Triage",
+          title: document.getElementById("triage-symptoms").value || "Health triage",
+          detail: payload.oracle_pathway
+            ? `Health triage routed to ${{payload.oracle_pathway}}.`
+            : "Health triage completed from the live route.",
+          why_now: "Health route ran a real symptom triage directly from the operator flow.",
+          result_summary: payload.oracle_pathway
+            ? `Triage pathway: ${{payload.oracle_pathway}}`
+            : "Health triage completed.",
+          route: "/health-center",
+          route_label: "Open Health",
+          related_kind: "health-triage",
+          related_label: document.getElementById("triage-symptoms").value || "Health triage",
+          succeeded: true,
+        }});
         triageNote.textContent = payload.oracle_pathway
           ? `Triage complete: ${{payload.oracle_pathway}}`
           : "Triage complete.";
+        await refreshHealthState();
       }} catch (error) {{
         triageNote.textContent = `Triage failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function saveObjective(event) {{
+      event.preventDefault();
+      objectiveNote.textContent = "Saving health objective…";
+      try {{
+        const existingObjectives = Array.isArray(currentPayload.objectives) ? [...currentPayload.objectives] : [];
+        const newObjective = {{
+          objective: document.getElementById("objective-title").value,
+          domain: document.getElementById("objective-domain").value,
+          why_it_matters: document.getElementById("objective-why").value,
+          baseline: document.getElementById("objective-baseline").value,
+          target: document.getElementById("objective-target").value,
+          weekly_actions: document.getElementById("objective-actions").value.split("\\n").map((item) => item.trim()).filter(Boolean),
+          measurement_plan: document.getElementById("objective-measurement").value,
+        }};
+        const objectives = [...existingObjectives, newObjective];
+        const response = await fetch("/api/health/quarterly/objectives", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{ objectives }}),
+        }});
+        const payload = await response.json();
+        objectiveOutput.textContent = JSON.stringify(payload, null, 2);
+        if (!response.ok || payload.ok === false) {{
+          throw new Error((payload.errors || []).join(" | ") || payload.error || "Objective save failed");
+        }}
+        await recordOperatorAction({{
+          actor: "Chris",
+          domain: "health",
+          action: "Save Health Objective",
+          title: newObjective.objective || "Health objective",
+          detail: "Health objective saved into the quarterly objective store.",
+          why_now: "Health route persisted a real coaching objective directly from the operator flow.",
+          result_summary: `Saved ${{payload.count || objectives.length}} health objective(s).`,
+          route: "/health-center",
+          route_label: "Open Health",
+          related_kind: "health-objective",
+          related_label: newObjective.objective || "Health objective",
+          succeeded: true,
+        }});
+        objectiveNote.textContent = "Health objective saved.";
+        document.getElementById("objective-form").reset();
+        await refreshHealthState();
+      }} catch (error) {{
+        objectiveNote.textContent = `Objective save failed: ${{String(error)}}`;
       }}
     }}
 
@@ -6770,6 +6885,7 @@ def render_health_module_page(payload: dict) -> str:
       }});
     }});
     document.getElementById("triage-form").addEventListener("submit", runTriage);
+    document.getElementById("objective-form").addEventListener("submit", saveObjective);
     render(initialPayload);
   </script>
 </body>
