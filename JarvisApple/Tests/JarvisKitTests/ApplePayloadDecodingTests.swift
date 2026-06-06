@@ -78,6 +78,7 @@ struct ApplePayloadDecodingTests {
         try decode(HealthSummary.self, from: payloads, key: "/api/apple/health/summary?actor=chris", decoder: decoder)
         try decode(HomeState.self, from: payloads, key: "/api/apple/home/state", decoder: decoder)
         try decode(CatalystOverview.self, from: payloads, key: "/api/apple/catalyst", decoder: decoder)
+        try decode(CatalystOpsOverview.self, from: payloads, key: "/api/apple/catalyst/ops", decoder: decoder)
         try decode(ChronicleOverview.self, from: payloads, key: "/api/apple/chronicle", decoder: decoder)
         try decode(FaithOverview.self, from: payloads, key: "/api/apple/faith?actor=chris", decoder: decoder)
         try decode(PublishOverview.self, from: payloads, key: "/api/apple/publishing", decoder: decoder)

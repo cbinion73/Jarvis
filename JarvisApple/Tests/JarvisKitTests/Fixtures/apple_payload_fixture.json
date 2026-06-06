@@ -2887,6 +2887,67 @@
       "updated_at": "2026-06-01T08:00:00Z"
     }
   },
+  "/api/apple/catalyst/ops": {
+    "ok": true,
+    "data": {
+      "generated_at": "2026-06-01T08:00:00Z",
+      "current_focus": {
+        "module": "Recovery",
+        "reason": "Catalyst elevated recovery after an overnight integration drift.",
+        "route": "/recovery-center",
+        "saved_at": "2026-06-01T08:00:00Z"
+      },
+      "focus_candidates": [
+        {
+          "module": "Progress",
+          "route": "/progress-center",
+          "label": "Progress Studio"
+        },
+        {
+          "module": "Approval Queue",
+          "route": "/approval-queue",
+          "label": "Approval Lane"
+        }
+      ],
+      "approvals": [
+        {
+          "request_id": "approval-1",
+          "title": "Approve storm comms handoff",
+          "agent": "Sam Wilson",
+          "risk": "high",
+          "detail": "Queued from the overnight operator lane.",
+          "related_route": "/approval-queue"
+        }
+      ],
+      "recovery_cases": [
+        {
+          "case_id": "recovery-1",
+          "title": "Weather relay drift",
+          "status": "investigating",
+          "status_label": "Investigating",
+          "detail": "Apple weather relay needs a retry before the commute surface opens.",
+          "execution_count": 2,
+          "related_route": "/recovery-center",
+          "next_action_type": "retry",
+          "next_action_label": "Execute Retry Loop"
+        }
+      ],
+      "recent_activity": [
+        {
+          "title": "Set Catalyst Focus",
+          "detail": "Catalyst moved the shared progress focus to Recovery.",
+          "route_label": "Open Recovery",
+          "actor": "chris"
+        }
+      ],
+      "counts": {
+        "approval_count": 1,
+        "recovery_case_count": 1,
+        "recent_activity_count": 1,
+        "focus_history_count": 3
+      }
+    }
+  },
   "/api/apple/chronicle": {
     "ok": true,
     "data": {

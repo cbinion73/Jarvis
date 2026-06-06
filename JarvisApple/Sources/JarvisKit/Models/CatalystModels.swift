@@ -175,3 +175,121 @@ public struct CatalystRunSummary: Codable, Identifiable, Sendable {
     public let title: String
     public let timestamp: String
 }
+
+public struct CatalystProgressFocus: Codable, Equatable, Sendable {
+    public let module: String
+    public let reason: String
+    public let route: String
+    public let savedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case module
+        case reason
+        case route
+        case savedAt = "saved_at"
+    }
+}
+
+public struct CatalystOpsFocusCandidate: Codable, Equatable, Identifiable, Sendable {
+    public let module: String
+    public let route: String
+    public let label: String
+
+    public var id: String { "\(module)|\(route)|\(label)" }
+}
+
+public struct CatalystApprovalEntry: Codable, Equatable, Identifiable, Sendable {
+    public let requestId: String
+    public let title: String
+    public let agent: String
+    public let risk: String
+    public let detail: String
+    public let relatedRoute: String
+
+    public var id: String { requestId }
+
+    enum CodingKeys: String, CodingKey {
+        case requestId = "request_id"
+        case title
+        case agent
+        case risk
+        case detail
+        case relatedRoute = "related_route"
+    }
+}
+
+public struct CatalystRecoveryCaseEntry: Codable, Equatable, Identifiable, Sendable {
+    public let caseId: String
+    public let title: String
+    public let status: String
+    public let statusLabel: String
+    public let detail: String
+    public let executionCount: Int
+    public let relatedRoute: String
+    public let nextActionType: String
+    public let nextActionLabel: String
+
+    public var id: String { caseId }
+
+    enum CodingKeys: String, CodingKey {
+        case caseId = "case_id"
+        case title
+        case status
+        case statusLabel = "status_label"
+        case detail
+        case executionCount = "execution_count"
+        case relatedRoute = "related_route"
+        case nextActionType = "next_action_type"
+        case nextActionLabel = "next_action_label"
+    }
+}
+
+public struct CatalystOpsActivityEntry: Codable, Equatable, Identifiable, Sendable {
+    public let title: String
+    public let detail: String
+    public let routeLabel: String
+    public let actor: String
+
+    public var id: String { "\(title)|\(detail)|\(routeLabel)|\(actor)" }
+
+    enum CodingKeys: String, CodingKey {
+        case title
+        case detail
+        case routeLabel = "route_label"
+        case actor
+    }
+}
+
+public struct CatalystOpsCounts: Codable, Equatable, Sendable {
+    public let approvalCount: Int
+    public let recoveryCaseCount: Int
+    public let recentActivityCount: Int
+    public let focusHistoryCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case approvalCount = "approval_count"
+        case recoveryCaseCount = "recovery_case_count"
+        case recentActivityCount = "recent_activity_count"
+        case focusHistoryCount = "focus_history_count"
+    }
+}
+
+public struct CatalystOpsOverview: Codable, Equatable, Sendable {
+    public let generatedAt: String
+    public let currentFocus: CatalystProgressFocus
+    public let focusCandidates: [CatalystOpsFocusCandidate]
+    public let approvals: [CatalystApprovalEntry]
+    public let recoveryCases: [CatalystRecoveryCaseEntry]
+    public let recentActivity: [CatalystOpsActivityEntry]
+    public let counts: CatalystOpsCounts
+
+    enum CodingKeys: String, CodingKey {
+        case generatedAt = "generated_at"
+        case currentFocus = "current_focus"
+        case focusCandidates = "focus_candidates"
+        case approvals
+        case recoveryCases = "recovery_cases"
+        case recentActivity = "recent_activity"
+        case counts
+    }
+}

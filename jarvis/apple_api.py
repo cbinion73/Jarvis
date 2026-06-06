@@ -77,6 +77,14 @@ _CARPLAY_OPS_FOCUS_CANDIDATES = [
     {"module": "Mission Board", "route": "/mission-board", "label": "Mission Pressure"},
     {"module": "Agent Ops", "route": "/agent-ops-center", "label": "Agent Operations"},
 ]
+_CATALYST_OPS_FOCUS_CANDIDATES = [
+    {"module": "Progress", "route": "/progress-center", "label": "Progress Studio"},
+    {"module": "Recovery", "route": "/recovery-center", "label": "Recovery Studio"},
+    {"module": "Approval Queue", "route": "/approval-queue", "label": "Approval Lane"},
+    {"module": "Mission Board", "route": "/mission-board", "label": "Mission Board"},
+    {"module": "Activity Feed", "route": "/activity-center", "label": "Activity Feed"},
+    {"module": "Supervision", "route": "/supervision-snapshot", "label": "Supervision"},
+]
 
 _NAV_STOP_LABELS = {
     "food": "Food",
@@ -243,6 +251,172 @@ def _save_carplay_ops_focus(*, module: str, route: str, actor: str, reason: str)
         succeeded=True,
     )
     return entry
+
+
+def _build_catalyst_ops_overview(runtime: Any) -> dict[str, Any]:
+    focus_summary = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).summary(limit=6)
+    recovery_cases = RecoveryCaseStore(_ACTIVITY_AUDIT_ROOT).list_cases()
+    approvals = list(runtime.list_pending_approvals() or [])
+    activity = AuditLog(_ACTIVITY_AUDIT_ROOT).list_recent(limit=8)
+
+    latest_focus = dict(focus_summary.get("latest") or {})
+    current_focus = {
+        "module": str(latest_focus.get("module") or "Progress").strip() or "Progress",
+        "reason": str(latest_focus.get("reason") or "No shared focus recorded yet.").strip() or "No shared focus recorded yet.",
+        "route": str(latest_focus.get("route") or "/progress-center").strip() or "/progress-center",
+        "saved_at": str(latest_focus.get("saved_at") or "").strip(),
+    }
+
+    return {
+        "generated_at": _ts(),
+        "current_focus": current_focus,
+        "focus_candidates": deepcopy(_CATALYST_OPS_FOCUS_CANDIDATES),
+        "approvals": [
+            {
+                "request_id": str(item.get("request_id") or "").strip(),
+                "title": str(item.get("request") or item.get("title") or "Approval").strip() or "Approval",
+                "agent": str(item.get("agent") or item.get("agent_label") or "Unknown agent").strip() or "Unknown agent",
+                "risk": str(item.get("risk_tier") or item.get("risk") or "medium").strip() or "medium",
+                "detail": str(item.get("summary") or item.get("detail") or item.get("action_class") or "Pending review").strip() or "Pending review",
+                "related_route": "/approval-queue",
+            }
+            for item in approvals[:4]
+            if isinstance(item, dict)
+        ],
+        "recovery_cases": [
+            {
+                "case_id": str(item.get("case_id") or "").strip(),
+                "title": str(item.get("title") or "Recovery case").strip() or "Recovery case",
+                "status": str(item.get("status") or "open").strip() or "open",
+                "status_label": str(item.get("status_label") or item.get("status") or "Open").strip() or "Open",
+                "detail": str(item.get("detail") or "").strip() or "Recovery case needs review.",
+                "execution_count": int(item.get("execution_count", 0) or 0),
+                "related_route": str(item.get("related_route") or "/recovery-center").strip() or "/recovery-center",
+                "next_action_type": "retry" if str(item.get("status") or "").strip().lower() not in {"watch", "resolved"} else "stabilize",
+                "next_action_label": (
+                    "Execute Retry Loop"
+                    if str(item.get("status") or "").strip().lower() not in {"watch", "resolved"}
+                    else "Stabilize Watch"
+                ),
+            }
+            for item in recovery_cases[:4]
+            if isinstance(item, dict)
+        ],
+        "recent_activity": [
+            {
+                "title": str(item.get("action") or item.get("entry_type") or "Activity").strip() or "Activity",
+                "detail": str(item.get("detail") or item.get("result_summary") or "").strip(),
+                "route_label": str(item.get("route_label") or item.get("related_route") or "").strip(),
+                "actor": str(item.get("actor") or "").strip(),
+            }
+            for item in activity[:6]
+            if isinstance(item, dict)
+        ],
+        "counts": {
+            "approval_count": len(approvals),
+            "recovery_case_count": len(recovery_cases),
+            "recent_activity_count": len(activity),
+            "focus_history_count": int(focus_summary.get("history_count", 0) or 0),
+        },
+    }
+
+
+def _save_catalyst_progress_focus(*, module: str, route: str, actor: str, reason: str) -> dict[str, Any]:
+    entry = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module=module,
+        reason=reason,
+        route=route,
+        actor=actor,
+    )
+    _record_operator_action(
+        actor=actor,
+        domain="catalyst",
+        action="Set Catalyst Focus",
+        detail=f"Catalyst moved the shared progress focus to {module}.",
+        why_now="The iPhone ops studio elevated a new Level 3 closure target.",
+        result_summary=f"Shared progress focus now points at {module}.",
+        route=route,
+        route_label=f"Open {module}",
+        related_kind="progress-focus",
+        related_label=module,
+        succeeded=True,
+    )
+    return entry
+
+
+def _approve_catalyst_approval(runtime: Any, *, request_id: str, actor: str) -> dict[str, Any]:
+    approvals = [dict(item) for item in list(runtime.list_pending_approvals() or []) if isinstance(item, dict)]
+    target = next((item for item in approvals if str(item.get("request_id") or "").strip() == request_id.strip()), None)
+    updated = runtime.approval_store.update_status(request_id, "approved")
+    if updated is None:
+        raise KeyError("Pending approval request not found.")
+
+    title = str((target or {}).get("request") or (target or {}).get("title") or request_id).strip() or request_id
+    focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module="Approval Queue",
+        reason=f"Catalyst approved {title} from the native ops studio.",
+        route="/approval-queue",
+        actor=actor,
+    )
+    _record_operator_action(
+        actor=actor,
+        domain="catalyst",
+        action="Approve Catalyst Approval",
+        detail=f"Catalyst approved {title}.",
+        why_now="A pending approval was cleared from the native iPhone ops lane.",
+        result_summary="Approval queue advanced from Catalyst.",
+        route="/approval-queue",
+        route_label="Open Approval Queue",
+        related_kind="approval",
+        related_label=title,
+        succeeded=True,
+    )
+    return {
+        "status": "approved",
+        "request_id": request_id,
+        "title": title,
+        "focus": focus,
+        "request": updated,
+    }
+
+
+def _execute_catalyst_recovery_case(*, case_id: str, actor: str, action_type: str, note: str = "") -> dict[str, Any]:
+    store = RecoveryCaseStore(_ACTIVITY_AUDIT_ROOT)
+    case = store.record_execution(case_id, actor=actor, action_type=action_type, note=note)
+    detail = note or (
+        f"Recovery retry loop executed for {str(case.get('title') or case_id).strip()}."
+        if action_type == "retry"
+        else f"Recovery stabilization loop executed for {str(case.get('title') or case_id).strip()}."
+    )
+    action_entry = RecoveryActionStore(_ACTIVITY_AUDIT_ROOT).record_action(
+        action_type=action_type,
+        target_kind="recovery-case",
+        target_label=str(case.get("title") or "Recovery case").strip() or "Recovery case",
+        target_id=str(case.get("case_id") or case_id).strip(),
+        detail=detail,
+        route="/recovery-center",
+        status="executed" if action_type == "retry" else "stabilized",
+    )
+    _record_operator_action(
+        actor=actor,
+        domain="catalyst",
+        action="Execute Catalyst Recovery Loop" if action_type == "retry" else "Stabilize Catalyst Recovery Loop",
+        detail=detail,
+        why_now="The native iPhone ops studio advanced a durable recovery case directly from the phone surface.",
+        result_summary=f"Recovery case moved to {str(case.get('status_label') or case.get('status') or 'Investigating').strip()}",
+        route=str(case.get("related_route") or "/recovery-center").strip() or "/recovery-center",
+        route_label="Open Recovery Center",
+        related_kind="recovery-case",
+        related_label=str(case.get("case_id") or case_id).strip(),
+        succeeded=True,
+    )
+    focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module="Recovery",
+        reason=detail,
+        route="/recovery-center",
+        actor=actor,
+    )
+    return {"status": "recorded", "case": case, "action": action_entry, "focus": focus}
 
 
 async def _timeboxed_to_thread(
@@ -9793,6 +9967,60 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 },
                 "updated_at": _ts(),
             })
+
+    @app.get("/api/apple/catalyst/ops")
+    async def apple_catalyst_ops():
+        overview = await asyncio.to_thread(_build_catalyst_ops_overview, runtime)
+        return _ok(overview)
+
+    @app.post("/api/apple/catalyst/progress-focus")
+    async def apple_catalyst_progress_focus(payload: dict):
+        module = str(payload.get("module") or "").strip()
+        route = str(payload.get("route") or "/progress-center").strip() or "/progress-center"
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        reason = str(payload.get("reason") or "").strip()
+        if not module:
+            raise HTTPException(status_code=400, detail="module is required")
+        if not reason:
+            reason = f"Catalyst moved the shared progress focus to {module}."
+        entry = await asyncio.to_thread(
+            _save_catalyst_progress_focus,
+            module=module,
+            route=route,
+            actor=actor,
+            reason=reason,
+        )
+        return _ok(entry)
+
+    @app.post("/api/apple/catalyst/approvals/{request_id}/approve")
+    async def apple_catalyst_approve(request_id: str, payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        try:
+            result = await asyncio.to_thread(_approve_catalyst_approval, runtime, request_id=request_id, actor=actor)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _ok(result)
+
+    @app.post("/api/apple/catalyst/recovery-cases/{case_id}/execute")
+    async def apple_catalyst_recovery_execute(case_id: str, payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        action_type = str(payload.get("action_type") or "retry").strip().lower() or "retry"
+        note = str(payload.get("note") or "").strip()
+        try:
+            result = await asyncio.to_thread(
+                _execute_catalyst_recovery_case,
+                case_id=case_id,
+                actor=actor,
+                action_type=action_type,
+                note=note,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _ok(result)
 
     # ── Chronicle overview ────────────────────────────────────────────────────
 

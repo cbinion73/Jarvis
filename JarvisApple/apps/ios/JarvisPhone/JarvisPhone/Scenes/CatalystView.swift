@@ -8,8 +8,11 @@ import SafariServices
 struct CatalystView: View {
 
     @State private var overview: CatalystOverview?
+    @State private var opsOverview: CatalystOpsOverview?
     @State private var isLoading  = false
     @State private var error: String?
+    @State private var opsMessage: String?
+    @State private var actionInFlight: String?
     @State private var selectedModule: CatalystOpsModule?
 
     private let blue = Color(red: 0.25, green: 0.55, blue: 1.0)
@@ -82,6 +85,8 @@ struct CatalystView: View {
                 opsCommandHeader(overview: ov)
 
                 opsStoryboardStrip
+
+                opsNativeStudio
 
                 opsLauncherGrid(overview: ov)
 
@@ -399,6 +404,133 @@ struct CatalystView: View {
         }
     }
 
+    private var opsNativeStudio: some View {
+        CatSection(title: "Native Ops Studio", icon: "switch.2", accent: blue.opacity(0.92)) {
+            if let opsOverview {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .top, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Shared Focus")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.88))
+                            Text(opsOverview.currentFocus.module)
+                                .font(.title3.weight(.bold))
+                                .foregroundStyle(.white)
+                            Text(opsOverview.currentFocus.reason)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 6) {
+                            opsMetricPill(label: "approvals", value: opsOverview.counts.approvalCount)
+                            opsMetricPill(label: "recovery", value: opsOverview.counts.recoveryCaseCount)
+                        }
+                    }
+
+                    if let opsMessage, !opsMessage.isEmpty {
+                        Text(opsMessage)
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.72))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Focus Moves")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.88))
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(opsOverview.focusCandidates.prefix(6)) { candidate in
+                                    Button {
+                                        Task { await setCatalystFocus(candidate) }
+                                    } label: {
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text(candidate.label)
+                                                .font(.caption.weight(.semibold))
+                                            Text(candidate.module)
+                                                .font(.caption2)
+                                                .foregroundStyle(.white.opacity(0.62))
+                                        }
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 10)
+                                        .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .disabled(actionInFlight != nil)
+                                    .opacity(actionInFlight != nil ? 0.7 : 1.0)
+                                }
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Approval Lane")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.88))
+                        if opsOverview.approvals.isEmpty {
+                            opsEmptyCard("No approvals are waiting right now.")
+                        } else {
+                            ForEach(opsOverview.approvals.prefix(3)) { approval in
+                                opsApprovalRow(approval)
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Recovery Loops")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.88))
+                        if opsOverview.recoveryCases.isEmpty {
+                            opsEmptyCard("No durable recovery cases need attention right now.")
+                        } else {
+                            ForEach(opsOverview.recoveryCases.prefix(3)) { entry in
+                                opsRecoveryRow(entry)
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Recent Continuity")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.88))
+                        if opsOverview.recentActivity.isEmpty {
+                            opsEmptyCard("Native ops actions will echo back here when they run.")
+                        } else {
+                            ForEach(opsOverview.recentActivity.prefix(4)) { entry in
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(entry.title)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.white)
+                                    Text([entry.detail, entry.routeLabel].filter { !$0.isEmpty }.joined(separator: " · "))
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(10)
+                                .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            }
+                        }
+                    }
+                }
+            } else if isLoading {
+                HStack(spacing: 10) {
+                    ProgressView().tint(.white)
+                    Text("Loading native ops studio…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                opsEmptyCard(opsMessage ?? "Native ops studio is unavailable for the moment.")
+            }
+        }
+    }
+
     private func opsModuleCard(module: CatalystOpsModule, overview: CatalystOverview) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
@@ -479,10 +611,70 @@ struct CatalystView: View {
         error = nil
         do {
             overview = try await AppleAPIClient.shared.fetchCatalyst()
+            await loadOpsStudio()
         } catch {
             self.error = error.localizedDescription
         }
         isLoading = false
+    }
+
+    private func loadOpsStudio() async {
+        do {
+            opsOverview = try await AppleAPIClient.shared.fetchCatalystOps()
+            if actionInFlight == nil, opsMessage?.hasPrefix("Native ops studio is unavailable") == true {
+                opsMessage = nil
+            }
+        } catch {
+            opsOverview = nil
+            opsMessage = "Native ops studio is unavailable: \(error.localizedDescription)"
+        }
+    }
+
+    private func setCatalystFocus(_ candidate: CatalystOpsFocusCandidate) async {
+        actionInFlight = "focus:\(candidate.id)"
+        opsMessage = "Promoting \(candidate.module) into shared focus…"
+        defer { actionInFlight = nil }
+        do {
+            _ = try await AppleAPIClient.shared.saveCatalystProgressFocus(
+                module: candidate.module,
+                route: candidate.route,
+                reason: "Catalyst promoted \(candidate.module) from the native ops studio."
+            )
+            await loadOpsStudio()
+            opsMessage = "Shared focus now points at \(candidate.module)."
+        } catch {
+            opsMessage = "Unable to move focus: \(error.localizedDescription)"
+        }
+    }
+
+    private func approveCatalystApproval(_ approval: CatalystApprovalEntry) async {
+        actionInFlight = "approval:\(approval.id)"
+        opsMessage = "Approving \(approval.title)…"
+        defer { actionInFlight = nil }
+        do {
+            _ = try await AppleAPIClient.shared.approveCatalystApproval(approval.requestId)
+            await loadOpsStudio()
+            opsMessage = "Approved \(approval.title)."
+        } catch {
+            opsMessage = "Unable to approve \(approval.title): \(error.localizedDescription)"
+        }
+    }
+
+    private func executeCatalystRecovery(_ entry: CatalystRecoveryCaseEntry) async {
+        actionInFlight = "recovery:\(entry.id)"
+        opsMessage = "\(entry.nextActionLabel) for \(entry.title)…"
+        defer { actionInFlight = nil }
+        do {
+            _ = try await AppleAPIClient.shared.executeCatalystRecoveryCase(
+                entry.caseId,
+                actionType: entry.nextActionType,
+                note: "Catalyst ran \(entry.nextActionLabel.lowercased()) from the native ops studio."
+            )
+            await loadOpsStudio()
+            opsMessage = "\(entry.nextActionLabel) finished for \(entry.title)."
+        } catch {
+            opsMessage = "Unable to update recovery case: \(error.localizedDescription)"
+        }
     }
 
     private func opsBadge(title: String, detail: String, tint: Color) -> some View {
@@ -512,6 +704,106 @@ struct CatalystView: View {
             .background(.white.opacity(0.06), in: Capsule())
         }
         .buttonStyle(.plain)
+    }
+
+    private func opsMetricPill(label: String, value: Int) -> some View {
+        VStack(alignment: .trailing, spacing: 2) {
+            Text("\(value)")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(.white.opacity(0.05), in: Capsule())
+    }
+
+    private func opsEmptyCard(_ text: String) -> some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func opsApprovalRow(_ approval: CatalystApprovalEntry) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(approval.title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text("\(approval.agent) · \(approval.risk.capitalized) risk")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                if !approval.detail.isEmpty {
+                    Text(approval.detail)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary.opacity(0.9))
+                }
+            }
+            Spacer()
+            Button {
+                Task { await approveCatalystApproval(approval) }
+            } label: {
+                Text("Approve")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(approvalTint(for: approval.risk), in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .disabled(actionInFlight != nil)
+            .opacity(actionInFlight != nil ? 0.7 : 1.0)
+        }
+        .padding(10)
+        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func approvalTint(for risk: String) -> Color {
+        switch risk.lowercased() {
+        case "high", "critical":
+            return .red.opacity(0.75)
+        case "medium":
+            return .orange.opacity(0.75)
+        default:
+            return blue.opacity(0.85)
+        }
+    }
+
+    private func opsRecoveryRow(_ entry: CatalystRecoveryCaseEntry) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(entry.title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text("\(entry.statusLabel) · \(entry.executionCount)x loop")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text(entry.detail)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary.opacity(0.9))
+            }
+            Spacer()
+            Button {
+                Task { await executeCatalystRecovery(entry) }
+            } label: {
+                Text(entry.nextActionLabel)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(.pink.opacity(0.75), in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .disabled(actionInFlight != nil)
+            .opacity(actionInFlight != nil ? 0.7 : 1.0)
+        }
+        .padding(10)
+        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 

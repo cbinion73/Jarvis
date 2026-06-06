@@ -488,6 +488,59 @@ public final class AppleAPIClient: Sendable {
         try await get("/api/apple/catalyst")
     }
 
+    public func fetchCatalystOps() async throws -> CatalystOpsOverview {
+        try await get("/api/apple/catalyst/ops")
+    }
+
+    public func saveCatalystProgressFocus(
+        module: String,
+        route: String,
+        reason: String,
+        actor: String = "chris"
+    ) async throws -> CatalystProgressFocus {
+        struct Body: Encodable {
+            let module: String
+            let route: String
+            let reason: String
+            let actor: String
+        }
+        return try await post(
+            "/api/apple/catalyst/progress-focus",
+            body: Body(module: module, route: route, reason: reason, actor: actor)
+        )
+    }
+
+    @discardableResult
+    public func approveCatalystApproval(_ requestId: String, actor: String = "chris") async throws -> Bool {
+        struct Body: Encodable { let actor: String }
+        struct Response: Decodable { let status: String }
+        let response: Response = try await post(
+            "/api/apple/catalyst/approvals/\(requestId)/approve",
+            body: Body(actor: actor)
+        )
+        return response.status == "approved"
+    }
+
+    @discardableResult
+    public func executeCatalystRecoveryCase(
+        _ caseId: String,
+        actionType: String,
+        note: String = "",
+        actor: String = "chris"
+    ) async throws -> Bool {
+        struct Body: Encodable {
+            let action_type: String
+            let note: String
+            let actor: String
+        }
+        struct Response: Decodable { let status: String }
+        let response: Response = try await post(
+            "/api/apple/catalyst/recovery-cases/\(caseId)/execute",
+            body: Body(action_type: actionType, note: note, actor: actor)
+        )
+        return response.status == "recorded"
+    }
+
     // MARK: - Chronicle
 
     public func fetchChronicle() async throws -> ChronicleOverview {
