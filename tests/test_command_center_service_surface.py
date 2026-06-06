@@ -609,6 +609,8 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("JARVIS Chronicle", chronicle_html)
         self.assertIn("Generate Devotional Pause", chronicle_html)
         self.assertIn("Capture Chronicle Note", chronicle_html)
+        self.assertIn("Living story engine", chronicle_html)
+        self.assertIn("Chronicle tracks", chronicle_html)
 
         self.assertIn("status", chronicle_snapshot)
         self.assertIn("timeline", chronicle_snapshot)
@@ -650,6 +652,8 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("JARVIS Health", health_html)
         self.assertIn("Symptom Triage", health_html)
         self.assertIn("Refresh Health State", health_html)
+        self.assertIn("Health command center", health_html)
+        self.assertIn("Daily Readiness", health_html)
         self.assertIn("status", health_snapshot)
         self.assertIn("current_signals", health_snapshot)
         self.assertIn("proof_paths", health_snapshot)

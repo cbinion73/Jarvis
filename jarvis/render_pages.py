@@ -5854,50 +5854,180 @@ def render_health_module_page(payload: dict) -> str:
   <style>
     :root {{
       color-scheme: dark;
-      --bg: #07111b;
-      --bg-2: #0b1724;
-      --panel: rgba(9, 21, 34, 0.9);
-      --line: rgba(121, 216, 255, 0.14);
+      --bg: #050d14;
+      --bg-2: #09131d;
+      --panel: rgba(8, 18, 29, 0.92);
+      --panel-2: rgba(13, 27, 39, 0.9);
+      --line: rgba(133, 224, 187, 0.12);
+      --line-strong: rgba(133, 224, 187, 0.24);
       --text: #ecf7ff;
       --muted: #9db7cc;
       --good: #9ce7bf;
       --warn: #ffd37d;
       --alert: #ff9d9d;
+      --accent: #79e0ab;
+      --accent-2: #8ee2ff;
     }}
     * {{ box-sizing: border-box; }}
     body {{
       margin: 0;
       font-family: "SF Pro Display", "Segoe UI", sans-serif;
       background:
-        radial-gradient(circle at top, rgba(121, 216, 255, 0.16), transparent 38%),
-        linear-gradient(180deg, #040b13 0%, var(--bg) 42%, var(--bg-2) 100%);
+        radial-gradient(circle at top left, rgba(133, 224, 187, 0.18), transparent 22%),
+        radial-gradient(circle at top right, rgba(142, 226, 255, 0.12), transparent 20%),
+        radial-gradient(circle at 50% 100%, rgba(255, 211, 125, 0.08), transparent 24%),
+        linear-gradient(180deg, #030910 0%, var(--bg) 42%, var(--bg-2) 100%);
       color: var(--text);
     }}
-    .shell {{ max-width: 1360px; margin: 0 auto; padding: 36px 24px 60px; }}
+    body::before {{
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(135deg, rgba(255,255,255,0.025), transparent 36%);
+      opacity: 0.9;
+    }}
+    .shell {{ position: relative; max-width: 1360px; margin: 0 auto; padding: 24px 24px 60px; }}
+    .topbar {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+      padding: 14px 18px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: rgba(7, 14, 23, 0.72);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 16px 44px rgba(0, 0, 0, 0.22);
+    }}
+    .topbar strong {{
+      display: block;
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }}
+    .topbar span {{
+      display: block;
+      color: var(--muted);
+      margin-top: 4px;
+      line-height: 1.45;
+    }}
+    .topbar-links {{
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 10px;
+    }}
     .hero {{
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.85fr);
+      gap: 18px;
       padding: 28px;
       border: 1px solid var(--line);
-      border-radius: 28px;
-      background: linear-gradient(180deg, rgba(11, 24, 38, 0.94), rgba(8, 17, 28, 0.9));
-      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+      border-radius: 30px;
+      background: linear-gradient(180deg, rgba(10, 22, 34, 0.96), rgba(7, 15, 25, 0.92));
+      box-shadow: 0 24px 56px rgba(0, 0, 0, 0.32);
+      backdrop-filter: blur(18px);
     }}
-    .eyebrow {{ color: #79d8ff; letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
-    h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
+    .eyebrow {{
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--accent);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-size: 12px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(133, 224, 187, 0.22);
+      background: rgba(133, 224, 187, 0.07);
+    }}
+    .eyebrow::before {{
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: currentColor;
+      box-shadow: 0 0 16px currentColor;
+    }}
+    h1 {{ margin: 14px 0 12px; font-size: clamp(34px, 5vw, 60px); line-height: 0.95; letter-spacing: -0.05em; }}
     p {{ color: var(--muted); line-height: 1.6; }}
+    .hero-copy p {{ max-width: 68ch; font-size: 1.02rem; }}
     .stats {{
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
       gap: 12px;
       margin-top: 22px;
     }}
     .stat, .panel {{
-      background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 22px;
       padding: 18px;
     }}
+    .stat {{
+      background:
+        linear-gradient(180deg, rgba(13, 27, 39, 0.92), rgba(8, 18, 29, 0.98)),
+        radial-gradient(circle at top right, rgba(142, 226, 255, 0.14), transparent 35%);
+    }}
     .stat span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
     .stat strong {{ display: block; margin-top: 6px; font-size: 24px; }}
+    .panel {{
+      background: var(--panel);
+      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.22);
+    }}
+    .hero-side {{
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }}
+    .hero-note {{
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+    }}
+    .hero-note strong,
+    .section-label {{
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }}
+    .hero-note p {{ margin: 0; color: var(--text); }}
+    .hero-note ul {{ margin-top: 10px; }}
+    .hero-note li {{
+      background: rgba(255,255,255,0.025);
+      border-radius: 16px;
+    }}
+    .glance-strip {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }}
+    .glance-card {{
+      padding: 16px;
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(12, 23, 35, 0.9), rgba(7, 15, 25, 0.96));
+    }}
+    .glance-card strong {{
+      display: block;
+      margin-bottom: 8px;
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }}
+    .glance-card span {{
+      display: block;
+      color: var(--muted);
+      line-height: 1.55;
+    }}
     .layout {{
       margin-top: 18px;
       display: grid;
@@ -5909,6 +6039,7 @@ def render_health_module_page(payload: dict) -> str:
     .span-6 {{ grid-column: span 6; }}
     .span-7 {{ grid-column: span 7; }}
     .span-8 {{ grid-column: span 8; }}
+    h2 {{ margin: 0 0 12px; font-size: 1.2rem; letter-spacing: -0.03em; }}
     ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
     li {{
       padding: 12px 14px;
@@ -5926,12 +6057,13 @@ def render_health_module_page(payload: dict) -> str:
       padding: 10px 14px;
       border-radius: 999px;
       border: 1px solid var(--line);
-      background: rgba(121, 216, 255, 0.12);
+      background: linear-gradient(135deg, rgba(133, 224, 187, 0.16), rgba(142, 226, 255, 0.12));
       color: var(--text);
       text-decoration: none;
       font: inherit;
       cursor: pointer;
     }}
+    a:hover, button:hover {{ border-color: var(--line-strong); }}
     .good {{ color: var(--good); }}
     .warn {{ color: var(--warn); }}
     .alert {{ color: var(--alert); }}
@@ -5960,27 +6092,86 @@ def render_health_module_page(payload: dict) -> str:
     }}
     .status-note {{ min-height: 1.3em; color: var(--muted); margin-top: 10px; }}
     @media (max-width: 980px) {{
+      .hero,
+      .glance-strip {{
+        grid-template-columns: 1fr;
+      }}
       .span-4, .span-5, .span-6, .span-7, .span-8 {{ grid-column: span 12; }}
+      .topbar {{
+        flex-direction: column;
+        align-items: flex-start;
+      }}
+      .topbar-links {{
+        justify-content: flex-start;
+      }}
     }}
   </style>
 </head>
 <body>
   <main class="shell">
+    <section class="topbar">
+      <div>
+        <strong>JARVIS Health Intelligence Desktop Experience</strong>
+        <span>Live health command center with drift posture, triage, objectives, red-flag continuity, and room for Helen Cho and the health agent stack.</span>
+      </div>
+      <div class="topbar-links">
+        <a href="/api/health/module">Module JSON</a>
+        <a href="/api/health/drift/scan">Drift Scan API</a>
+        <a href="/command-center">Command Center</a>
+      </div>
+    </section>
     <section class="hero">
-      <div class="eyebrow">Level 3 Core Module</div>
-      <h1>JARVIS Health</h1>
-      <p>A dedicated health workspace inside JARVIS with live drift posture, baseline deviation evidence, current objectives, and symptom triage. This replaces the old storyboard-only entry with a real module surface.</p>
-      <div class="actions">
-        <a href="/command-center">Back to Command Center</a>
-        <button type="button" id="refresh-health">Refresh Health State</button>
+      <div class="hero-copy">
+        <div class="eyebrow">Level 3 Core Module</div>
+        <h1>JARVIS Health</h1>
+        <p>A dedicated health workspace inside JARVIS with live drift posture, baseline deviation evidence, current objectives, recovery coaching context, and symptom triage. This is now a real module surface, not a storyboard-only placeholder.</p>
+        <div class="actions">
+          <a href="/command-center">Back to Command Center</a>
+          <button type="button" id="refresh-health">Refresh Health State</button>
+        </div>
+        <div class="stats">
+          <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
+          <div class="stat"><span>Signals</span><strong id="hero-signals">0</strong></div>
+          <div class="stat"><span>Active Clusters</span><strong id="hero-clusters">0</strong></div>
+          <div class="stat"><span>Objectives</span><strong id="hero-objectives">0</strong></div>
+        </div>
+        <p class="status-note" id="health-status-note">Loading health module state…</p>
       </div>
-      <div class="stats">
-        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
-        <div class="stat"><span>Signals</span><strong id="hero-signals">0</strong></div>
-        <div class="stat"><span>Active Clusters</span><strong id="hero-clusters">0</strong></div>
-        <div class="stat"><span>Objectives</span><strong id="hero-objectives">0</strong></div>
+      <aside class="hero-side">
+        <div class="hero-note">
+          <strong>Health command center</strong>
+          <p>The mockup direction is now anchored to the real product state: vitals and drift on the left, coaching and triage in the same operating surface, and room for future deeper care workflows.</p>
+          <ul>
+            <li><strong>Personalized and private</strong><span>State stays tied to the real module payload instead of decorative cards.</span></li>
+            <li><strong>Family and care aware</strong><span>Designed to leave space for Helen Cho, care circles, and continuity-driven escalation.</span></li>
+          </ul>
+        </div>
+        <div class="hero-note">
+          <div class="section-label">Storyboards preserved, product made real</div>
+          <ul>
+            <li><strong>Vitals &amp; Trends</strong><span>Current signals and deviations render from live or seeded module state.</span></li>
+            <li><strong>Recovery &amp; Coaching</strong><span>Objectives, red flags, and triage stay actionable from one view.</span></li>
+          </ul>
+        </div>
+      </aside>
+    </section>
+    <section class="glance-strip">
+      <div class="glance-card">
+        <strong>Daily Readiness</strong>
+        <span>Health posture, baseline drift, and one-next-action stay visible in the same command chamber.</span>
       </div>
-      <p class="status-note" id="health-status-note">Loading health module state…</p>
+      <div class="glance-card">
+        <strong>Vitals &amp; Trends</strong>
+        <span>Signal freshness and deviations are presented as operating context instead of buried JSON only.</span>
+      </div>
+      <div class="glance-card">
+        <strong>Recovery &amp; Coaching</strong>
+        <span>Objectives, flags, and triage keep the coaching thread connected to real state.</span>
+      </div>
+      <div class="glance-card">
+        <strong>Family &amp; Care Circle</strong>
+        <span>Leaves space for broader care workflows without losing the current Level 3 truth.</span>
+      </div>
     </section>
     <div class="layout">
       <section class="panel span-8">
@@ -6514,34 +6705,105 @@ def render_chronicle_module_page(payload: dict) -> str:
   <style>
     :root {{
       color-scheme: dark;
-      --bg: #071018;
-      --bg-2: #0a1420;
-      --panel: rgba(9, 20, 33, 0.92);
-      --line: rgba(121, 216, 255, 0.14);
+      --bg: #060c14;
+      --bg-2: #0a121b;
+      --panel: rgba(10, 19, 30, 0.92);
+      --panel-2: rgba(17, 26, 38, 0.9);
+      --line: rgba(219, 178, 105, 0.14);
+      --line-strong: rgba(219, 178, 105, 0.24);
       --text: #edf7ff;
       --muted: #9eb8cb;
+      --accent: #dbb269;
+      --accent-2: #a8d5ff;
     }}
     * {{ box-sizing: border-box; }}
     body {{
       margin: 0;
       font-family: "SF Pro Display", "Segoe UI", sans-serif;
       background:
-        radial-gradient(circle at top, rgba(121, 216, 255, 0.12), transparent 36%),
-        linear-gradient(180deg, #040b12 0%, var(--bg) 44%, var(--bg-2) 100%);
+        radial-gradient(circle at top left, rgba(219, 178, 105, 0.16), transparent 22%),
+        radial-gradient(circle at top right, rgba(168, 213, 255, 0.08), transparent 24%),
+        radial-gradient(circle at 50% 100%, rgba(219, 178, 105, 0.06), transparent 28%),
+        linear-gradient(180deg, #04080f 0%, var(--bg) 44%, var(--bg-2) 100%);
       color: var(--text);
     }}
-    .shell {{ max-width: 1400px; margin: 0 auto; padding: 36px 24px 60px; }}
+    body::before {{
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(135deg, rgba(255,255,255,0.025), transparent 36%);
+      opacity: 0.9;
+    }}
+    .shell {{ position: relative; max-width: 1400px; margin: 0 auto; padding: 24px 24px 60px; }}
+    .topbar {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+      padding: 14px 18px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: rgba(7, 13, 21, 0.72);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 16px 44px rgba(0, 0, 0, 0.22);
+    }}
+    .topbar strong {{
+      display: block;
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }}
+    .topbar span {{
+      display: block;
+      color: var(--muted);
+      margin-top: 4px;
+      line-height: 1.45;
+    }}
+    .topbar-links {{
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 10px;
+    }}
     .hero {{
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.85fr);
+      gap: 18px;
       padding: 28px;
       border: 1px solid var(--line);
-      border-radius: 28px;
-      background: linear-gradient(180deg, rgba(10, 22, 35, 0.96), rgba(7, 16, 27, 0.92));
-      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+      border-radius: 30px;
+      background: linear-gradient(180deg, rgba(11, 20, 31, 0.96), rgba(8, 15, 24, 0.92));
+      box-shadow: 0 24px 56px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(18px);
     }}
-    .eyebrow {{ color: #79d8ff; letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
-    h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
-    h2 {{ margin-top: 0; }}
+    .eyebrow {{
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--accent);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-size: 12px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(219, 178, 105, 0.22);
+      background: rgba(219, 178, 105, 0.07);
+    }}
+    .eyebrow::before {{
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: currentColor;
+      box-shadow: 0 0 16px currentColor;
+    }}
+    h1 {{ margin: 14px 0 12px; font-size: clamp(34px, 5vw, 60px); line-height: 0.95; letter-spacing: -0.05em; }}
+    h2 {{ margin: 0 0 12px; font-size: 1.2rem; letter-spacing: -0.03em; }}
     p {{ color: var(--muted); line-height: 1.6; }}
+    .hero-copy p {{ max-width: 68ch; font-size: 1.02rem; }}
     .stats {{
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -6549,13 +6811,72 @@ def render_chronicle_module_page(payload: dict) -> str:
       margin-top: 22px;
     }}
     .stat, .panel {{
-      background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 22px;
       padding: 18px;
     }}
+    .stat {{
+      background:
+        linear-gradient(180deg, rgba(17, 26, 38, 0.92), rgba(10, 19, 30, 0.98)),
+        radial-gradient(circle at top right, rgba(219, 178, 105, 0.12), transparent 35%);
+    }}
     .stat span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
     .stat strong {{ display: block; margin-top: 6px; font-size: 24px; }}
+    .panel {{
+      background: var(--panel);
+      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.22);
+    }}
+    .hero-side {{
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }}
+    .hero-note {{
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+    }}
+    .hero-note strong,
+    .section-label {{
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }}
+    .hero-note p {{ margin: 0; color: var(--text); }}
+    .hero-note ul {{ margin-top: 10px; }}
+    .hero-note li {{
+      background: rgba(255,255,255,0.025);
+      border-radius: 16px;
+    }}
+    .glance-strip {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }}
+    .glance-card {{
+      padding: 16px;
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(12, 21, 32, 0.9), rgba(8, 15, 24, 0.96));
+    }}
+    .glance-card strong {{
+      display: block;
+      margin-bottom: 8px;
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }}
+    .glance-card span {{
+      display: block;
+      color: var(--muted);
+      line-height: 1.55;
+    }}
     .layout {{
       margin-top: 18px;
       display: grid;
@@ -6584,12 +6905,13 @@ def render_chronicle_module_page(payload: dict) -> str:
       padding: 10px 14px;
       border-radius: 999px;
       border: 1px solid var(--line);
-      background: rgba(121, 216, 255, 0.12);
+      background: linear-gradient(135deg, rgba(219, 178, 105, 0.16), rgba(168, 213, 255, 0.1));
       color: var(--text);
       text-decoration: none;
       font: inherit;
       cursor: pointer;
     }}
+    a:hover, button:hover {{ border-color: var(--line-strong); }}
     form {{ display: grid; gap: 12px; }}
     label {{ display: grid; gap: 6px; color: var(--muted); font-size: 13px; }}
     textarea, input, select {{
@@ -6615,28 +6937,87 @@ def render_chronicle_module_page(payload: dict) -> str:
     }}
     .status-note {{ min-height: 1.3em; color: var(--muted); margin-top: 10px; }}
     @media (max-width: 980px) {{
+      .hero,
+      .glance-strip {{
+        grid-template-columns: 1fr;
+      }}
       .span-4, .span-5, .span-6, .span-7, .span-8 {{ grid-column: span 12; }}
+      .topbar {{
+        flex-direction: column;
+        align-items: flex-start;
+      }}
+      .topbar-links {{
+        justify-content: flex-start;
+      }}
     }}
   </style>
 </head>
 <body>
   <main class="shell">
+    <section class="topbar">
+      <div>
+        <strong>JARVIS Chronicle Desktop Experience</strong>
+        <span>Live Chronicle memory, devotional, reflection, and family-story continuity shaped by the new desktop storyboard language.</span>
+      </div>
+      <div class="topbar-links">
+        <a href="/api/chronicle/module">Module JSON</a>
+        <a href="/api/devotional-pause">Devotional API</a>
+        <a href="/command-center">Command Center</a>
+      </div>
+    </section>
     <section class="hero">
-      <div class="eyebrow">Level 3 Core Module</div>
-      <h1>JARVIS Chronicle</h1>
-      <p>A dedicated Chronicle workspace inside JARVIS with devotional generation, family-devotional prep, reflection capture, recurring theme visibility, morning formation context, and continuity status. This promotes Chronicle out of the shell packet into a real module surface.</p>
-      <div class="actions">
-        <a href="/command-center">Back to Command Center</a>
-        <button type="button" id="refresh-chronicle">Refresh Chronicle State</button>
+      <div class="hero-copy">
+        <div class="eyebrow">Level 3 Core Module</div>
+        <h1>JARVIS Chronicle</h1>
+        <p>A dedicated Chronicle workspace inside JARVIS with devotional generation, family-devotional prep, reflection capture, recurring theme visibility, morning formation context, and continuity status. This promotes Chronicle out of the shell packet into a real module surface.</p>
+        <div class="actions">
+          <a href="/command-center">Back to Command Center</a>
+          <button type="button" id="refresh-chronicle">Refresh Chronicle State</button>
+        </div>
+        <div class="stats">
+          <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
+          <div class="stat"><span>Entries</span><strong id="hero-entries">0</strong></div>
+          <div class="stat"><span>Themes</span><strong id="hero-themes">0</strong></div>
+          <div class="stat"><span>Insights</span><strong id="hero-insights">0</strong></div>
+          <div class="stat"><span>Pending Bridge</span><strong id="hero-pending">0</strong></div>
+        </div>
+        <p class="status-note" id="chronicle-status-note">Loading chronicle module state…</p>
       </div>
-      <div class="stats">
-        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
-        <div class="stat"><span>Entries</span><strong id="hero-entries">0</strong></div>
-        <div class="stat"><span>Themes</span><strong id="hero-themes">0</strong></div>
-        <div class="stat"><span>Insights</span><strong id="hero-insights">0</strong></div>
-        <div class="stat"><span>Pending Bridge</span><strong id="hero-pending">0</strong></div>
+      <aside class="hero-side">
+        <div class="hero-note">
+          <strong>Living story engine</strong>
+          <p>The Chronicle shell now follows the real mockup language: memory hub, family legacy, timeline studio, and voice consultation all orbit the actual module state and capture flows.</p>
+          <ul>
+            <li><strong>Family and faith</strong><span>Devotional and family-story work stay together instead of being scattered across fake surfaces.</span></li>
+            <li><strong>Continuity over time</strong><span>Themes, insights, and entries remain wired to payload-backed continuity.</span></li>
+          </ul>
+        </div>
+        <div class="hero-note">
+          <div class="section-label">Chronicle tracks</div>
+          <ul>
+            <li><strong>Memory capture</strong><span>Reflection intake and notes append to the real Chronicle state.</span></li>
+            <li><strong>Narrative synthesis</strong><span>Devotional outputs and bridge insights remain visible in one operating room.</span></li>
+          </ul>
+        </div>
+      </aside>
+    </section>
+    <section class="glance-strip">
+      <div class="glance-card">
+        <strong>Memory Hub</strong>
+        <span>Story, legacy, and living timeline surfaces are framed as an actual product workspace.</span>
       </div>
-      <p class="status-note" id="chronicle-status-note">Loading chronicle module state…</p>
+      <div class="glance-card">
+        <strong>Devotional Intake</strong>
+        <span>Prayer, scripture, and family-devotional generation stay directly executable from the screen.</span>
+      </div>
+      <div class="glance-card">
+        <strong>Story Threads</strong>
+        <span>Themes and timeline entries remain visible as real continuity data, not just storyboard copy.</span>
+      </div>
+      <div class="glance-card">
+        <strong>Voice Chronicle</strong>
+        <span>Leaves space for richer voice-guided Chronicle workflows while preserving today&apos;s live state.</span>
+      </div>
     </section>
     <div class="layout">
       <section class="panel span-4">
