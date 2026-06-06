@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .audit import AuditLog
+from .audit import AuditLog, ProgressSnapshotStore
 from .agent_registry_contract import load_contract_bundle
 from .approval_queue_surface import build_approval_queue_snapshot
 from .supervision_snapshot import build_supervision_snapshot
@@ -58,7 +58,33 @@ def _activity_items(limit: int = 8) -> list[dict[str, Any]]:
                 "related_label": str(item.get("related_label", "")),
             }
         )
-    return rows
+    progress_store = ProgressSnapshotStore(DEFAULT_AUDIT_ROOT)
+    for snapshot in list(progress_store.summary(limit=max(1, limit // 2)).get("recent") or []):
+        if not isinstance(snapshot, dict):
+            continue
+        progress_counts = dict(snapshot.get("progress_counts") or {})
+        seam_counts = dict(snapshot.get("seam_counts") or {})
+        rows.append(
+            {
+                "entry_type": "progress-snapshot",
+                "timestamp": str(snapshot.get("saved_at", "")),
+                "title": "Progress Snapshot Persisted",
+                "subtitle": str(snapshot.get("next_focus", "")).strip() or "No next focus recorded yet.",
+                "actor": "JARVIS",
+                "result": "Durable progress history updated.",
+                "detail": (
+                    f"Useful={int(progress_counts.get('useful', 0) or 0)} · "
+                    f"Wired={int(progress_counts.get('wired', 0) or 0)} · "
+                    f"Seams={int(seam_counts.get('Useful', 0) or 0)} useful / {int(seam_counts.get('Wired', 0) or 0)} wired."
+                ),
+                "related_route": "/progress-center",
+                "route_label": "Open Progress Center",
+                "related_kind": "progress",
+                "related_label": str(snapshot.get("next_focus", "")).strip() or "Progress",
+            }
+        )
+    rows.sort(key=lambda item: str(item.get("timestamp", "")), reverse=True)
+    return rows[:limit]
 
 
 def _read_json_list(path: Path) -> list[dict[str, Any]]:

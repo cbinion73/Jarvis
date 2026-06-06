@@ -2186,6 +2186,8 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 return "/agent-ops-center"
             if any(token in haystack for token in ("brief", "daily")):
                 return "/briefing-center"
+            if any(token in haystack for token in ("progress", "readiness", "snapshot", "seam")):
+                return "/progress-center"
             return "/command-center"
 
         enriched_activity = []
