@@ -40,7 +40,7 @@ except Exception:  # pragma: no cover
     def _render_glass_shell(runtime, initial_packet=""):  # type: ignore[misc]
         return render_voice_shell(runtime, initial_packet=initial_packet)
 from .apple_api import _register_apple_api
-from .audit import AuditLog, ProgressSnapshotStore, RecoveryActionStore
+from .audit import AuditLog, ProgressFocusStore, ProgressSnapshotStore, RecoveryActionStore
 from . import layout_engine as _layout_engine
 from .recovery_cases import RecoveryCaseStore
 
@@ -1948,6 +1948,11 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 break
         if not next_focus:
             next_focus = str((progress_items[0] if progress_items else {}).get("module", "")).strip()
+        focus_store = ProgressFocusStore(DEFAULT_AUDIT_ROOT)
+        focus_summary = focus_store.summary(limit=6)
+        operator_focus = dict(focus_summary.get("latest") or {})
+        if str(operator_focus.get("module", "")).strip():
+            next_focus = str(operator_focus.get("module", "")).strip()
         progress_store = ProgressSnapshotStore(DEFAULT_AUDIT_ROOT)
         persisted_snapshot = progress_store.save_snapshot(
             progress_dashboard=progress_dashboard,
@@ -1971,6 +1976,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "hosted_deployment": hosted_deployment,
             "core_modules": core_modules,
             "progress_persistence": persistence_summary,
+            "focus_control": focus_summary,
             "counts": {
                 "useful": int(counts.get("useful", 0) or 0),
                 "wired": int(counts.get("wired", 0) or 0),
@@ -1978,12 +1984,14 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "compounding": int(counts.get("compounding", 0) or 0),
                 "seam_count": int(seam_tracker.get("item_count", 0) or 0),
                 "history_count": int(persistence_summary.get("history_count", 0) or 0),
+                "focus_history_count": int(focus_summary.get("history_count", 0) or 0),
             },
             "progress_next_focus": next_focus or "No next progress focus recorded yet.",
             "latest_progress_snapshot": persisted_snapshot,
             "proof_paths": {
                 "module_route": "/progress-center",
                 "module_api": "/api/progress/module",
+                "focus_api": "/api/progress/focus",
                 "command_center_api": "/api/command-center",
                 "agent_registry_api": "/api/agent-registry",
                 "open_loops_api": "/api/open-loops?actor=Chris",
@@ -1992,12 +2000,48 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "deploy_workflow": ".github/workflows/deploy.yml",
                 "progress_snapshot_json": str((DEFAULT_AUDIT_ROOT / "progress_snapshot.json")),
                 "progress_snapshot_history": str((DEFAULT_AUDIT_ROOT / "progress_snapshot_log.jsonl")),
+                "progress_focus_json": str((DEFAULT_AUDIT_ROOT / "progress_focus.json")),
+                "progress_focus_history": str((DEFAULT_AUDIT_ROOT / "progress_focus_log.jsonl")),
             },
         }
 
     @app.get("/api/progress/module")
     async def api_progress_module() -> JSONResponse:
         return _json(await _build_progress_module_payload())
+
+    @app.post("/api/progress/focus")
+    async def api_progress_focus(payload: dict[str, Any]) -> JSONResponse:
+        module = str(payload.get("module") or "").strip()
+        if not module:
+            raise HTTPException(status_code=400, detail="module is required")
+        actor = str(payload.get("actor") or "Chris").strip() or "Chris"
+        reason = str(payload.get("reason") or "").strip() or f"Progress focus moved to {module}."
+        route = str(payload.get("route") or "/progress-center").strip() or "/progress-center"
+        focus_entry = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module=module,
+            reason=reason,
+            route=route,
+            actor=actor,
+        )
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": "progress",
+                "action": "Set Progress Focus",
+                "title": module,
+                "detail": reason,
+                "why_now": "Progress center advanced the next Level 3 closure target.",
+                "result_summary": f"Next progress focus set to {module}.",
+                "related_route": "/progress-center",
+                "route_label": "Open Progress Center",
+                "related_kind": "progress-focus",
+                "related_label": module,
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        return _json({"status": "recorded", "focus": focus_entry})
 
     def _recovery_related_routes(target_kind: str, *, route: str = "/recovery-center") -> list[dict[str, str]]:
         normalized = str(target_kind).strip().lower() or "recovery"

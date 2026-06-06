@@ -5425,8 +5425,23 @@ def render_progress_module_page(payload: dict) -> str:
       gap: 8px;
       margin-top: 10px;
     }}
+    .controls {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }}
+    input, select {{
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(4, 12, 20, 0.92);
+      color: var(--text);
+      padding: 10px 12px;
+      font: inherit;
+    }}
     @media (max-width: 980px) {{
       .span-4, .span-6, .span-8, .span-12 {{ grid-column: span 12; }}
+      .controls {{ flex-direction: column; align-items: stretch; }}
     }}
   </style>
 </head>
@@ -5448,6 +5463,12 @@ def render_progress_module_page(payload: dict) -> str:
         <div class="stat"><span>Visible Seams</span><strong id="hero-seams">0</strong></div>
       </div>
       <p class="status-note" id="progress-status-note">Loading progress module state…</p>
+      <div class="controls" style="margin-top:16px;">
+        <select id="progress-focus-module"></select>
+        <input id="progress-focus-reason" placeholder="Why this is the next Level 3 closure target" />
+        <button type="button" id="save-progress-focus">Save Next Focus</button>
+      </div>
+      <p class="status-note" id="progress-focus-note">Persist the next Level 3 focus so progress history and shared activity stay aligned.</p>
     </section>
     <div class="layout">
       <section class="panel span-4">
@@ -5499,6 +5520,9 @@ def render_progress_module_page(payload: dict) -> str:
     const heroWired = document.getElementById("hero-wired");
     const heroSeams = document.getElementById("hero-seams");
     const statusNote = document.getElementById("progress-status-note");
+    const focusSelect = document.getElementById("progress-focus-module");
+    const focusReason = document.getElementById("progress-focus-reason");
+    const focusNote = document.getElementById("progress-focus-note");
     const moduleStatusList = document.getElementById("module-status-list");
     const progressItemsList = document.getElementById("progress-items-list");
     const level3ChecklistList = document.getElementById("level3-checklist-list");
@@ -5523,6 +5547,14 @@ def render_progress_module_page(payload: dict) -> str:
 
     function li(title, summary, detail = "") {{
       return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
+    }}
+
+    function moduleOptionsMarkup(items, selected) {{
+      return (Array.isArray(items) ? items : []).map((item) => {{
+        const moduleName = String(item.module || item.title || "").trim() || "Progress";
+        const chosen = moduleName === selected ? " selected" : "";
+        return `<option value="${{esc(moduleName)}}"${{chosen}}>${{esc(moduleName)}}</option>`;
+      }}).join("");
     }}
 
     function progressRow(item, index) {{
@@ -5582,6 +5614,8 @@ def render_progress_module_page(payload: dict) -> str:
       const failureRecovery = payload.failure_recovery || {{}};
       const hostedDeployment = payload.hosted_deployment || {{}};
       const progressPersistence = payload.progress_persistence || {{}};
+      const focusControl = payload.focus_control || {{}};
+      const latestFocus = focusControl.latest || {{}};
       const moduleLinks = Array.isArray((payload.core_modules || {{}}).items) ? payload.core_modules.items : [];
 
       heroStatus.textContent = payload.status || "Wired";
@@ -5595,7 +5629,11 @@ def render_progress_module_page(payload: dict) -> str:
         li("What Remains Partial", payload.remains_partial || "No remaining partials recorded."),
         li("Proof API", "/api/progress/module", "/api/command-center"),
         li("Seam Summary", seamTracker.summary || "No seam summary captured."),
+        li("Current Next Focus", payload.progress_next_focus || "No next focus recorded yet.", latestFocus.reason || "No operator rationale recorded yet."),
       ].join("");
+
+      focusSelect.innerHTML = moduleOptionsMarkup(board.items || [], payload.progress_next_focus || "");
+      focusReason.value = latestFocus.reason || "";
 
       progressItemsList.innerHTML = (Array.isArray(board.items) ? board.items : []).map((item, index) => progressRow(item, index)).join("") || '<li><strong>No progress rows loaded.</strong><span>The dedicated progress module will surface readiness rows here.</span></li>';
 
@@ -5626,10 +5664,16 @@ def render_progress_module_page(payload: dict) -> str:
       progressHistoryList.innerHTML = [
         li("History Count", String(payload.counts?.history_count ?? progressPersistence.history_count ?? 0), payload.proof_paths?.progress_snapshot_history || "No history proof path recorded."),
         li("Latest Snapshot", progressPersistence.latest?.saved_at || "No snapshot recorded yet.", progressPersistence.latest?.next_focus || "No next focus recorded yet."),
+        li("Focus History", String(payload.counts?.focus_history_count ?? focusControl.history_count ?? 0), payload.proof_paths?.progress_focus_history || "No focus history proof path recorded."),
         ...(Array.isArray(progressPersistence.recent) ? progressPersistence.recent.slice(0, 4).map((entry) => li(
           `${{entry.branch || "unknown branch"}} @ ${{entry.head || "unknown head"}}`,
           `Dirty: ${{entry.dirty_count ?? 0}} · Next Focus: ${{entry.next_focus || "none"}}`,
           `${{Object.entries(entry.progress_counts || {{}}).map(([key, value]) => `${{key}}=${{value}}`).join(" · ") || "No readiness counts"}}`
+        )) : []),
+        ...(Array.isArray(focusControl.recent) ? focusControl.recent.slice(0, 3).map((entry) => li(
+          `Operator Focus: ${{entry.module || "Progress"}}`,
+          entry.reason || "No operator rationale recorded.",
+          `${{entry.actor || "Chris"}} · ${{entry.saved_at || "unknown time"}}`
         )) : []),
         ...(Array.isArray(progressPersistence.latest?.seam_items) ? progressPersistence.latest.seam_items.slice(0, 3).map((entry) => `
           <li>
@@ -5651,6 +5695,36 @@ def render_progress_module_page(payload: dict) -> str:
       renderDetail(payload, currentDetailIndex);
     }}
 
+    async function saveProgressFocus() {{
+      const module = String(focusSelect.value || "").trim();
+      const reason = String(focusReason.value || "").trim();
+      if (!module) {{
+        focusNote.textContent = "Choose a module before saving the next focus.";
+        return;
+      }}
+      focusNote.textContent = `Saving next focus for ${{module}}…`;
+      try {{
+        const response = await fetch("/api/progress/focus", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            actor: "Chris",
+            module,
+            reason: reason || `Progress focus moved to ${{module}}.`,
+            route: "/progress-center",
+          }}),
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Progress focus save failed");
+        }}
+        focusNote.textContent = `Next focus saved for ${{payload.focus?.module || module}}.`;
+        await refreshProgressState();
+      }} catch (error) {{
+        focusNote.textContent = `Save failed: ${{String(error)}}`;
+      }}
+    }}
+
     async function refreshProgressState() {{
       statusNote.textContent = "Refreshing progress module state…";
       try {{
@@ -5666,6 +5740,11 @@ def render_progress_module_page(payload: dict) -> str:
     document.getElementById("refresh-progress").addEventListener("click", () => {{
       refreshProgressState().catch((error) => {{
         statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }});
+    }});
+    document.getElementById("save-progress-focus").addEventListener("click", () => {{
+      saveProgressFocus().catch((error) => {{
+        focusNote.textContent = `Save failed: ${{String(error)}}`;
       }});
     }});
 

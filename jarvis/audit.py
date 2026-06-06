@@ -266,6 +266,96 @@ class ProgressSnapshotStore:
         }
 
 
+class ProgressFocusStore:
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self.root.mkdir(parents=True, exist_ok=True)
+        self.current_path = self.root / "progress_focus.json"
+        self.history_path = self.root / "progress_focus_log.jsonl"
+        self.history_state_log_path = self.root / "progress_focus_state_log.jsonl"
+
+    def _load_current(self) -> dict:
+        if not self.current_path.exists():
+            history = self._load_history()
+            return dict(history[-1]) if history else {}
+        try:
+            payload = json.loads(self.current_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            history = self._load_history()
+            return dict(history[-1]) if history else {}
+        return dict(payload) if isinstance(payload, dict) else {}
+
+    def _load_history(self) -> list[dict]:
+        if not self.history_path.exists():
+            return self._load_history_from_state_log()
+        try:
+            lines = self.history_path.read_text(encoding="utf-8").splitlines()
+            records = [json.loads(line) for line in lines if line.strip()]
+        except (OSError, json.JSONDecodeError):
+            return self._load_history_from_state_log()
+        return [dict(item) for item in records if isinstance(item, dict)] or self._load_history_from_state_log()
+
+    def _load_history_from_state_log(self) -> list[dict]:
+        if not self.history_state_log_path.exists():
+            return []
+        latest: list[dict] = []
+        try:
+            for line in self.history_state_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return []
+        return latest
+
+    def save_focus(
+        self,
+        *,
+        module: str,
+        reason: str,
+        route: str = "",
+        actor: str = "Chris",
+    ) -> dict:
+        history = self._load_history()
+        entry = {
+            "entry_type": "progress-focus",
+            "saved_at": datetime.now(timezone.utc).isoformat(),
+            "module": str(module).strip() or "Progress",
+            "reason": str(reason).strip() or "No progress focus rationale recorded.",
+            "route": str(route).strip() or "/progress-center",
+            "actor": str(actor).strip() or "Chris",
+        }
+        history.append(entry)
+        history = history[-40:]
+        atomic_write_json(self.current_path, entry)
+        atomic_write_jsonl(self.history_path, history)
+        append_jsonl(
+            self.history_state_log_path,
+            {
+                "saved_at": entry["saved_at"],
+                "records": history,
+            },
+        )
+        return entry
+
+    def summary(self, limit: int = 6) -> dict:
+        history = self._load_history()
+        current = self._load_current()
+        recent = list(reversed(history[-max(1, limit):]))
+        return {
+            "latest": current,
+            "history_count": len(history),
+            "recent": recent,
+            "proof_paths": {
+                "current": str(self.current_path),
+                "history": str(self.history_path),
+            },
+        }
+
+
 class RecoveryActionStore:
     def __init__(self, root: Path) -> None:
         self.root = root

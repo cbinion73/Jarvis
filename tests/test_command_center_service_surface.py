@@ -480,6 +480,7 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Hosted Readiness", progress_html)
         self.assertIn("Durable Progress History", progress_html)
         self.assertIn("Seam History:", progress_html)
+        self.assertIn("Save Next Focus", progress_html)
         self.assertIn("deploy/deploy.sh", progress_html)
         self.assertIn("https://jarvis.teambinion.org", progress_html)
         self.assertIn("Inspect Readiness", progress_html)
@@ -491,7 +492,9 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("seam_tracker", progress_snapshot)
         self.assertIn("level3_checklist", progress_snapshot)
         self.assertIn("progress_persistence", progress_snapshot)
+        self.assertIn("focus_control", progress_snapshot)
         self.assertIn("history_count", progress_snapshot["counts"])
+        self.assertIn("focus_history_count", progress_snapshot["counts"])
         self.assertIn("latest", progress_snapshot["progress_persistence"])
         self.assertIn("recent", progress_snapshot["progress_persistence"])
         self.assertTrue(any(item.get("related_missions") for item in progress_snapshot["seam_tracker"]["items"]))
@@ -503,9 +506,12 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("proof_paths", progress_snapshot)
         self.assertEqual(progress_snapshot["proof_paths"]["module_route"], "/progress-center")
         self.assertEqual(progress_snapshot["proof_paths"]["module_api"], "/api/progress/module")
+        self.assertEqual(progress_snapshot["proof_paths"]["focus_api"], "/api/progress/focus")
         self.assertEqual(progress_snapshot["proof_paths"]["hosted_url"], "https://jarvis.teambinion.org")
         self.assertIn("progress_snapshot_json", progress_snapshot["proof_paths"])
         self.assertIn("progress_snapshot_history", progress_snapshot["proof_paths"])
+        self.assertIn("progress_focus_json", progress_snapshot["proof_paths"])
+        self.assertIn("progress_focus_history", progress_snapshot["proof_paths"])
         self.assertIn("JARVIS Failure &amp; Recovery", recovery_html)
         self.assertIn("Refresh Failure State", recovery_html)
         self.assertIn("Inspect Recovery Item", recovery_html)
@@ -904,6 +910,29 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertTrue(any(item.get("related_kind") == "open-loop" for item in activity_payload))
         self.assertTrue(any(item.get("title") == "Defer 1D" for item in briefing_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("related_label") == "Confirm family note" for item in briefing_snapshot["recent_activity"]))
+
+    def test_progress_focus_mutation_persists_into_progress_and_activity(self) -> None:
+        response = asyncio.run(
+            self._route("/api/progress/focus", "POST")(
+                {
+                    "actor": "Chris",
+                    "module": "Recovery",
+                    "reason": "Recovery is the highest-risk remaining Level 3 seam.",
+                    "route": "/progress-center",
+                }
+            )
+        )
+        focus_payload = self._json_body(response)
+        progress_snapshot = self._json_body(asyncio.run(self._route("/api/progress/module", "GET")()))
+        activity_payload = self._json_body(asyncio.run(self._route("/api/activity", "GET")()))
+
+        self.assertEqual(focus_payload["status"], "recorded")
+        self.assertEqual(focus_payload["focus"]["module"], "Recovery")
+        self.assertEqual(progress_snapshot["progress_next_focus"], "Recovery")
+        self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Recovery")
+        self.assertTrue(any(item.get("title") == "Set Progress Focus" for item in activity_payload))
+        self.assertTrue(any(item.get("related_label") == "Recovery" for item in activity_payload))
+        self.assertTrue(any(item.get("related_kind") == "progress-focus" for item in activity_payload))
 
 
 if __name__ == "__main__":
