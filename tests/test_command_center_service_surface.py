@@ -545,6 +545,7 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Create Mission", mission_board_html)
         self.assertIn("Save Mission Detail", mission_board_html)
         self.assertIn("Inspect Mission", mission_board_html)
+        self.assertIn("Recent Mission Continuity", mission_board_html)
         self.assertIn("Mission Workspaces", mission_board_html)
         self.assertIn("Handoff Console", mission_board_html)
         self.assertIn("Create Handoff", mission_board_html)
@@ -570,6 +571,8 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("status", mission_board_snapshot)
         self.assertIn("mission_task_board", mission_board_snapshot)
         self.assertIn("mission_details", mission_board_snapshot)
+        self.assertIn("recent_activity", mission_board_snapshot)
+        self.assertIn("recent_activity_count", mission_board_snapshot["counts"])
         self.assertTrue(any("work_state" in detail for detail in mission_board_snapshot["mission_details"].values()))
         self.assertIn("proof_paths", mission_board_snapshot)
         self.assertEqual(mission_board_snapshot["proof_paths"]["module_route"], "/mission-board")
@@ -894,6 +897,30 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
 
         self.assertTrue(any(item.get("title") == "Queue Agent Run" for item in agent_ops_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("related_label") == "storm" for item in agent_ops_snapshot["recent_activity"]))
+
+    def test_mission_activity_populates_mission_board_continuity(self) -> None:
+        asyncio.run(
+            self._route("/api/activity/operator-action", "POST")(
+                {
+                    "actor": "Chris",
+                    "domain": "mission-board",
+                    "action": "Move Mission to Now",
+                    "detail": "Moved mission into the now lane from Mission Board.",
+                    "why_now": "Mission Board continuity smoke test.",
+                    "result_summary": "Mission moved into the now lane.",
+                    "route": "/mission-board",
+                    "route_label": "Open Mission Board",
+                    "related_kind": "mission",
+                    "related_label": "weather-family",
+                    "succeeded": True,
+                }
+            )
+        )
+
+        mission_board_snapshot = self._json_body(asyncio.run(self._route("/api/mission-board/module", "GET")()))
+
+        self.assertTrue(any(item.get("title") == "Move Mission to Now" for item in mission_board_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("related_label") == "weather-family" for item in mission_board_snapshot["recent_activity"]))
 
     def test_open_loop_action_populates_daily_brief_continuity(self) -> None:
         self.runtime.apply_open_loop_action = lambda actor_name, **kwargs: {

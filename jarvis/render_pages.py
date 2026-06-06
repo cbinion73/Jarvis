@@ -3094,6 +3094,10 @@ def render_mission_board_module_page(payload: dict) -> str:
         <h2>Handoff Console</h2>
         <div id="mission-handoffs" class="board-grid"></div>
       </section>
+      <section class="panel span-4">
+        <h2>Recent Mission Continuity</h2>
+        <ul id="mission-activity-list"></ul>
+      </section>
       <section class="panel span-8">
         <h2>Mission API Proof</h2>
         <ul id="proof-list"></ul>
@@ -3120,6 +3124,7 @@ def render_mission_board_module_page(payload: dict) -> str:
     const evidenceEl = document.getElementById("mission-evidence-list");
     const workspacesEl = document.getElementById("mission-workspaces");
     const handoffsEl = document.getElementById("mission-handoffs");
+    const missionActivityEl = document.getElementById("mission-activity-list");
     const proofEl = document.getElementById("proof-list");
     const payloadPreview = document.getElementById("payload-preview");
     const statusNote = document.getElementById("mission-status-note");
@@ -3953,6 +3958,9 @@ def render_mission_board_module_page(payload: dict) -> str:
         }});
       }});
 
+      missionActivityEl.innerHTML = (Array.isArray(payload.recent_activity) ? payload.recent_activity : []).length
+        ? payload.recent_activity.map((item) => `<li><strong>${{esc(item.title || "Mission action")}}</strong><span>${{esc(item.subtitle || item.actor || "Operator continuity")}}</span><span>${{esc(item.detail || item.route_label || "")}}</span></li>`).join("")
+        : '<li><strong>No mission continuity recorded yet.</strong><span>Create a mission, move a lane, or hand off work to start the route-level continuity trail.</span></li>';
       proofEl.innerHTML = Object.entries(payload.proof_paths || {{}}).map(([key, value]) => li(key, value)).join("");
       payloadPreview.textContent = JSON.stringify(payload, null, 2);
       renderDetail(payload);

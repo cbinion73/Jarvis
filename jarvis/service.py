@@ -2523,14 +2523,16 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "status": "Useful" if int(mission_task_board.get("item_count", 0) or 0) else "Wired",
             "summary": "Mission & Task Board now has a dedicated module route with live lane posture, mission detail, mission authoring, mission workspaces, handoff authoring, seam linkage, and mission status mutation inside JARVIS.",
             "what_became_real": "Mission & Task Board is now a standalone app module with mission authoring, seam linkage, workspace review, handoff flows, and per-agent work-state controls instead of only a command-center panel and mission API proof path.",
-            "remains_partial": "Broader mission edit flows still need follow-on slices, and seam linkage can still deepen beyond this first mission-detail pass.",
+            "remains_partial": "Broader mission workflow depth still needs follow-on slices, but Mission Board actions now feed visible route-level continuity back into the standalone screen.",
             "mission_task_board": mission_task_board,
             "mission_details": {},
+            "recent_activity": [],
             "counts": {
                 "now": int(counts.get("now", 0) or 0),
                 "next": int(counts.get("next", 0) or 0),
                 "blocked": int(counts.get("blocked", 0) or 0),
                 "completed": int(counts.get("completed", 0) or 0),
+                "recent_activity_count": 0,
             },
             "proof_paths": {
                 "module_route": "/mission-board",
@@ -2639,6 +2641,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["status"] = "Useful"
             payload["summary"] = "Mission board route is live with partial mission detail hydration."
             payload["remains_partial"] = "Some mission detail sources still failed to hydrate; inspect the payload preview for details."
+
+        payload["recent_activity"] = _module_recent_activity(route="/mission-board", domain="mission-board")
+        payload["counts"]["recent_activity_count"] = len(payload["recent_activity"])
 
         return payload
 
