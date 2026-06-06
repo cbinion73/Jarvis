@@ -6543,6 +6543,43 @@ body::after {{
     background: rgba(255,255,255,0.13);
     border-color: rgba(255,255,255,0.25);
 }}
+.nav-section-label {{
+    margin: 14px 12px 8px;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-3);
+}}
+.nav-route-links {{
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 8px 10px;
+}}
+.nav-route-link {{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    color: var(--text-2);
+    font-size: 12px;
+    text-decoration: none;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}}
+.nav-route-link:hover {{
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.16);
+    color: var(--text-1);
+}}
+.nav-route-link code {{
+    font-size: 10px;
+    color: var(--text-3);
+    background: transparent;
+}}
 /* ═══════════════════════════════════════════════════════════════
    END NAVIGATION CSS
 ═══════════════════════════════════════════════════════════════ */
@@ -6651,6 +6688,24 @@ body::after {{
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/><circle cx="8" cy="12" r="2" fill="currentColor" stroke="none"/></svg>
       Journey
     </button>
+  </div>
+
+  <div class="nav-section-label">Web Modules</div>
+  <div class="nav-route-links">
+    <a class="nav-route-link" href="/briefing-center"><span>Daily Briefing</span><code>/briefing-center</code></a>
+    <a class="nav-route-link" href="/command-center"><span>Command Center</span><code>/command-center</code></a>
+    <a class="nav-route-link" href="/progress-center"><span>Progress Center</span><code>/progress-center</code></a>
+    <a class="nav-route-link" href="/activity-center"><span>Activity Feed</span><code>/activity-center</code></a>
+    <a class="nav-route-link" href="/recovery-center"><span>Recovery Center</span><code>/recovery-center</code></a>
+    <a class="nav-route-link" href="/agent-ops-center"><span>Agent Ops</span><code>/agent-ops-center</code></a>
+    <a class="nav-route-link" href="/mission-board"><span>Mission Board</span><code>/mission-board</code></a>
+    <a class="nav-route-link" href="/approval-queue"><span>Approval Queue</span><code>/approval-queue</code></a>
+    <a class="nav-route-link" href="/supervision-snapshot"><span>Supervision</span><code>/supervision-snapshot</code></a>
+    <a class="nav-route-link" href="/settings-center"><span>Settings Center</span><code>/settings-center</code></a>
+    <a class="nav-route-link" href="/health-center"><span>Health Center</span><code>/health-center</code></a>
+    <a class="nav-route-link" href="/huddle-center"><span>Huddle Center</span><code>/huddle-center</code></a>
+    <a class="nav-route-link" href="/chronicle-center"><span>Legacy Module</span><code>/chronicle-center</code></a>
+    <a class="nav-route-link" href="/navigation-center"><span>Navigation Center</span><code>/navigation-center</code></a>
   </div>
 
   <div class="nav-right">
