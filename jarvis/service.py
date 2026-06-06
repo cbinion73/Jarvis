@@ -1582,6 +1582,21 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         return _json(result)
 
+    @app.post("/api/agents/{agent_id}/assignment")
+    async def api_update_task_agent_assignment(agent_id: str, payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = await asyncio.to_thread(
+                runtime.update_task_agent_assignment,
+                agent_id,
+                mission_id=str(payload.get("mission_id", "")).strip(),
+                mission_roles=[str(item).strip() for item in list(payload.get("mission_roles") or []) if str(item).strip()],
+                policy_assignment=str(payload.get("policy_assignment", "")).strip(),
+                purpose=str(payload.get("purpose", "")).strip(),
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(result)
+
     @app.get("/api/shell-state")
     async def api_shell_state(request: Request, actor: str = "Chris", device_id: str = "") -> JSONResponse:
         return _json(
@@ -2321,17 +2336,34 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def _build_agent_ops_module_payload() -> dict[str, Any]:
         command_center = build_command_center_index()
         roster = dict(command_center.get("agent_ops_roster") or {})
+        mission_task_board = dict(command_center.get("mission_task_board") or {})
         counts = dict(roster.get("counts") or {})
         runtime_counts = {"registry_count": 0, "runtime_count": 0, "background_count": 0}
+        mission_options = []
+        for item in list(mission_task_board.get("items") or []):
+            if not isinstance(item, dict):
+                continue
+            mission_id = str(item.get("mission_id", "")).strip()
+            if not mission_id:
+                continue
+            mission_options.append(
+                {
+                    "mission_id": mission_id,
+                    "title": str(item.get("title", "")).strip() or mission_id,
+                    "lane": str(item.get("lane", "")).strip() or "next",
+                    "domain": str(item.get("primary_domain", "")).strip() or "general",
+                }
+            )
 
         payload: dict[str, Any] = {
             "generated_at": command_center.get("generated_at", ""),
             "available": True,
             "status": "Useful" if int(roster.get("item_count", 0) or 0) else "Wired",
-            "summary": "Agent Operations now has a dedicated module route with live roster posture, task-agent visibility, and route-level mutation controls inside JARVIS.",
-            "what_became_real": "Agent Operations is now a standalone app module with visible core and task agents instead of being split across command-center summaries and hierarchy/workspace routes.",
-            "remains_partial": "Broader cross-route continuity, deeper assignment editing, and richer per-agent outcome review still need follow-on slices.",
+            "summary": "Agent Operations now has a dedicated module route with live roster posture, task-agent visibility, mission-linked assignment editing, and route-level mutation controls inside JARVIS.",
+            "what_became_real": "Agent Operations is now a standalone app module with visible core and task agents, mission-linked assignment edits, and route-level mutation controls instead of being split across command-center summaries and hierarchy/workspace routes.",
+            "remains_partial": "Broader cross-route continuity and richer per-agent outcome review still need follow-on slices.",
             "agent_ops_roster": roster,
+            "mission_options": mission_options,
             "registry": {},
             "background_agents": {},
             "agent_runtime": {},
@@ -2356,6 +2388,8 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "task_agent_profile_api_prefix": "/api/agents/",
                 "promote_agent_api_prefix": "/api/agents/",
                 "retire_agent_api_prefix": "/api/agents/",
+                "assignment_api_prefix": "/api/agents/",
+                "missions_api": "/api/missions",
                 "scheduler_status_api": "/api/scheduler/status",
                 "queue_run_api_prefix": "/api/scheduler/run/",
                 "activity_api": "/api/activity/operator-action",

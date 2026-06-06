@@ -1388,7 +1388,7 @@ def _level3_checklist(
             "status_class": "steady",
             "area": "Agent Roster and Ops",
             "why_open": str(agent_ops_seam.get("remains_partial", "")).strip()
-            or "Agent operations still need richer assignment edits and last-activity continuity.",
+            or "Agent operations still need broader continuity and deeper per-agent review beyond the new assignment editing flow.",
             "live_signal": str(agent_ops_seam.get("what_became_real", "")).strip()
             or "Dedicated route exists, but deeper agent mutation controls are still missing.",
             "exact_files": [
@@ -1398,7 +1398,7 @@ def _level3_checklist(
                 "tests/test_command_center_index.py",
             ],
             "proof_routes": ["/agent-ops-center", "/api/agent-ops/module"],
-            "next_slice": "Deepen mission-linked assignment editing and per-agent outcome review now that task-agent promotion and retirement controls are live on the standalone route.",
+            "next_slice": "Deepen per-agent outcome review and cross-route continuity now that mission-linked assignment editing, task-agent promotion, and retirement controls are live on the standalone route.",
         },
         {
             "title": "Durable Seam and Progress Persistence",
@@ -1928,8 +1928,8 @@ def _seam_tracker(
             "branch": branch,
             "worktree": "primary worktree",
             "surface_path": "/agent-ops-center",
-            "what_became_real": "Agent operations now has a dedicated route with live core and task-agent roster posture, selected-agent detail, queue-run controls, and task-agent promotion or retirement controls inside the app shell.",
-            "remains_partial": "Broader route-to-route ops continuity, richer assignment editing, and deeper per-agent outcome review still need follow-on slices.",
+            "what_became_real": "Agent operations now has a dedicated route with live core and task-agent roster posture, selected-agent detail, mission-linked assignment editing, queue-run controls, and task-agent promotion or retirement controls inside the app shell.",
+            "remains_partial": "Broader route-to-route ops continuity and deeper per-agent outcome review still need follow-on slices.",
             "tests": [
                 "tests/test_command_center_index.py",
                 "tests/test_command_center_service_surface.py",

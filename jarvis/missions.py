@@ -1159,6 +1159,67 @@ class MissionSupport:
         agent["updated_at"] = _now_iso()
         return self.save_task_agent(agent)
 
+    def update_task_agent_assignment(
+        self,
+        agent_id: str,
+        *,
+        mission_id: str = "",
+        mission_roles: list[str] | None = None,
+        policy_assignment: str = "",
+        purpose: str = "",
+    ) -> dict[str, Any]:
+        agent = self.get_task_agent(agent_id)
+        if agent is None:
+            raise KeyError(f"Unknown task agent: {agent_id}")
+        now = _now_iso()
+        prior_mission_id = str(agent.get("mission_id", "")).strip()
+        next_mission_id = mission_id.strip() or prior_mission_id
+        if next_mission_id:
+            target_mission = self.get_mission(next_mission_id)
+            if target_mission is None:
+                raise KeyError(f"Unknown mission: {next_mission_id}")
+        else:
+            target_mission = None
+
+        def detach_from_mission(detach_mission_id: str) -> None:
+            if not detach_mission_id:
+                return
+            dossier = self.get_mission(detach_mission_id)
+            if dossier is None:
+                return
+            selected_agents = [str(item).strip() for item in list(dossier.get("selected_agents") or []) if str(item).strip()]
+            dossier["selected_agents"] = [item for item in selected_agents if item != agent_id]
+            work_states = dict(dossier.get("agent_work_states") or {})
+            work_states.pop(agent_id, None)
+            dossier["agent_work_states"] = work_states
+            dossier["updated_at"] = now
+            self.save_mission(dossier)
+
+        def attach_to_mission(dossier: dict[str, Any]) -> None:
+            selected_agents = [str(item).strip() for item in list(dossier.get("selected_agents") or []) if str(item).strip()]
+            if agent_id not in selected_agents:
+                selected_agents.append(agent_id)
+            dossier["selected_agents"] = selected_agents
+            dossier["updated_at"] = now
+            self.save_mission(dossier)
+
+        if prior_mission_id and prior_mission_id != next_mission_id:
+            detach_from_mission(prior_mission_id)
+        if target_mission is not None:
+            attach_to_mission(target_mission)
+
+        if mission_roles is not None:
+            cleaned_roles = [str(item).strip() for item in mission_roles if str(item).strip()]
+            if cleaned_roles:
+                agent["mission_roles"] = cleaned_roles
+        if policy_assignment.strip():
+            agent["policy_assignment"] = policy_assignment.strip()
+        if purpose.strip():
+            agent["purpose"] = purpose.strip()
+        agent["mission_id"] = next_mission_id
+        agent["updated_at"] = now
+        return self.save_task_agent(agent)
+
     def spawn_task_agent(
         self,
         *,

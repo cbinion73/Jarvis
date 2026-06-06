@@ -1516,11 +1516,79 @@ def render_agent_ops_module_page(payload: dict) -> str:
       }}
     }}
 
+    async function saveTaskAgentAssignment(agent) {{
+      if (!agent || !agent.is_task_agent || !agent.agent_id) return;
+      const missionSelect = document.getElementById("task-agent-mission-id");
+      const rolesInput = document.getElementById("task-agent-mission-roles");
+      const policyInput = document.getElementById("task-agent-policy-assignment");
+      const purposeInput = document.getElementById("task-agent-purpose");
+      const missionId = String(missionSelect?.value || agent.mission_id || "").trim();
+      const missionRoles = String(rolesInput?.value || "").split(",").map((item) => item.trim()).filter(Boolean);
+      const policyAssignment = String(policyInput?.value || agent.policy_assignment || "").trim();
+      const purpose = String(purposeInput?.value || agent.purpose || "").trim();
+      actionNote.textContent = `Saving assignment for ${{agent.agent_id}}…`;
+      try {{
+        const response = await fetch(`/api/agents/${{encodeURIComponent(agent.agent_id)}}/assignment`, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            mission_id: missionId,
+            mission_roles: missionRoles,
+            policy_assignment: policyAssignment,
+            purpose,
+          }}),
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Assignment update failed");
+        }}
+        const recorded = await recordAgentOpsActivity({{
+          actor: "Chris",
+          domain: "agent-ops",
+          action: "Update Task Agent Assignment",
+          title: agent.name || agent.agent_id,
+          status: String(payload.status || "active"),
+          detail: `Action succeeded: /api/agents/${{agent.agent_id}}/assignment`,
+          why_now: missionId || policyAssignment || `Task agent ${{agent.agent_id}} needed a mission-linked assignment update.`,
+          result_summary: `Task agent assignment now points at ${{missionId || "the current mission posture"}}.`,
+          route: "/agent-ops-center",
+          route_label: "Open Agent Ops",
+          related_kind: "agent",
+          related_label: agent.name || agent.agent_id,
+          succeeded: true,
+        }});
+        actionNote.textContent = recorded
+          ? `Saved assignment for ${{agent.agent_id}} and recorded it in shared activity.`
+          : `Saved assignment for ${{agent.agent_id}}.`;
+        await refreshAgentOpsState();
+        selectedAgentId = agent.agent_id;
+      }} catch (error) {{
+        const errorText = String(error);
+        await recordAgentOpsActivity({{
+          actor: "Chris",
+          domain: "agent-ops",
+          action: "Update Task Agent Assignment",
+          title: agent.name || agent.agent_id,
+          status: "failed",
+          detail: `Action failed: /api/agents/${{agent.agent_id}}/assignment`,
+          why_now: errorText,
+          result_summary: `Task agent assignment failed: ${{errorText}}`,
+          route: "/agent-ops-center",
+          route_label: "Open Agent Ops",
+          related_kind: "agent",
+          related_label: agent.name || agent.agent_id,
+          succeeded: false,
+        }});
+        actionNote.textContent = `Save Assignment failed: ${{errorText}}`;
+      }}
+    }}
+
     function renderDetail(agent) {{
       if (!agent) {{
         detailEl.innerHTML = "<p class=\\"detail-copy\\">No visible agent selected yet.</p>";
         return;
       }}
+      const missionOptions = Array.isArray((latestPayload || {{}}).mission_options) ? latestPayload.mission_options : [];
       const roles = Array.isArray(agent.mission_roles) ? agent.mission_roles : [];
       const taskAgentControls = agent.is_task_agent ? `
         <div class="meta">
@@ -1537,8 +1605,22 @@ def render_agent_ops_module_page(payload: dict) -> str:
             <input id="task-agent-role-name" value="${{esc(agent.name || "")}}" />
           </div>
           <div>
+            <label for="task-agent-mission-id">Mission Assignment</label>
+            <select id="task-agent-mission-id">
+              ${{missionOptions.map((item) => `<option value="${{esc(item.mission_id || "")}}"${{String(item.mission_id || "") === String(agent.mission_id || "") ? " selected" : ""}}>${{esc((item.title || item.mission_id || "Mission") + " · " + (item.lane || "next"))}}</option>`).join("")}}
+            </select>
+          </div>
+          <div>
+            <label for="task-agent-mission-roles">Mission Roles</label>
+            <input id="task-agent-mission-roles" value="${{esc(roles.join(", "))}}" />
+          </div>
+          <div>
             <label for="task-agent-policy-assignment">Policy Assignment</label>
             <input id="task-agent-policy-assignment" value="${{esc(agent.policy_assignment || agent.assignment || "")}}" />
+          </div>
+          <div>
+            <label for="task-agent-purpose">Purpose</label>
+            <input id="task-agent-purpose" value="${{esc(agent.purpose || "")}}" />
           </div>
           <div>
             <label for="task-agent-memory-boundary">Memory Boundary</label>
@@ -1579,11 +1661,17 @@ def render_agent_ops_module_page(payload: dict) -> str:
             <button type="button" data-queue-run="${{esc(agent.agent_id || "")}}">Queue Agent Run</button>
             <a href="/agents/workspace/${{encodeURIComponent(agent.agent_id || "")}}">Open Agent Workspace</a>
             ${{missionLinks}}
+            ${{agent.is_task_agent && agent.status !== "retired" ? '<button type="button" data-save-selected-task-agent-assignment="1">Save Assignment</button>' : ""}}
             ${{agent.is_task_agent && agent.status !== "retired" ? '<button type="button" data-promote-selected-task-agent="1">Promote Task Agent</button>' : ""}}
             ${{agent.is_task_agent && agent.status !== "retired" ? '<button type="button" class="alt" data-retire-selected-task-agent="1">Retire Task Agent</button>' : ""}}
           </div>
         </div>
       `;
+      document.querySelector("[data-save-selected-task-agent-assignment]")?.addEventListener("click", () => {{
+        saveTaskAgentAssignment(agent).catch((error) => {{
+          actionNote.textContent = `Save Assignment failed: ${{String(error)}}`;
+        }});
+      }});
     }}
 
     function render(payload) {{

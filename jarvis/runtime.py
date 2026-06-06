@@ -16754,6 +16754,29 @@ class JarvisRuntime:
     def retire_task_agent(self, agent_id: str) -> dict[str, Any]:
         return self.mission_support.retire_task_agent(agent_id)
 
+    def update_task_agent_assignment(
+        self,
+        agent_id: str,
+        *,
+        mission_id: str = "",
+        mission_roles: list[str] | None = None,
+        policy_assignment: str = "",
+        purpose: str = "",
+    ) -> dict[str, Any]:
+        updated = self.mission_support.update_task_agent_assignment(
+            agent_id,
+            mission_id=mission_id,
+            mission_roles=mission_roles,
+            policy_assignment=policy_assignment,
+            purpose=purpose,
+        )
+        actor_name = "Chris"
+        if mission_id.strip():
+            mission = self.mission_support.get_mission(mission_id.strip()) or {}
+            actor_name = str(mission.get("actor", "Chris")).strip() or "Chris"
+        self._invalidate_snapshot_cache(actor_name, surfaces=("dashboard", "shell_state", "today_board", "proactive_state", "cognitive"))
+        return updated
+
     def background_agent_status(
         self,
         *,
