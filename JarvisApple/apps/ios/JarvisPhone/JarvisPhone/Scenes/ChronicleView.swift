@@ -133,6 +133,10 @@ struct ChronicleView: View {
                     studyWorkspaceSection(studyWorkspace)
                 }
 
+                if !ov.reviewLane.isEmpty {
+                    reviewLaneSection(ov.reviewLane)
+                }
+
                 if ov.entries.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "book.pages")
@@ -148,7 +152,9 @@ struct ChronicleView: View {
                 } else {
                     sectionHeader("Recent Entries", subtitle: "\(ov.entries.count) loaded from live Chronicle")
                     ForEach(ov.entries) { entry in
-                        EntryCard(entry: entry, amber: amber)
+                        EntryCard(entry: entry, amber: amber) { status in
+                            await reviewEntry(entry, status: status)
+                        }
                     }
                 }
             }
@@ -496,6 +502,37 @@ struct ChronicleView: View {
             .padding(16)
             .glassEffect(in: RoundedRectangle(cornerRadius: 18))
         }
+    }
+
+    @ViewBuilder
+    private func reviewLaneSection(_ reviews: [ChronicleReviewEntry]) -> some View {
+        sectionHeader("Review Lane", subtitle: "\(reviews.count) Chronicle thread\(reviews.count == 1 ? "" : "s") with durable follow-up")
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(reviews.prefix(4)) { review in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .center, spacing: 8) {
+                        Text(review.entryTitle)
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.white)
+                        Spacer()
+                        Text(review.reviewStatusLabel)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(amber.opacity(0.95))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(amber.opacity(0.14), in: Capsule())
+                    }
+                    Text([review.entryType.capitalized, review.reviewNote].filter { !$0.isEmpty }.joined(separator: " · "))
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.72))
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 18))
     }
 
     private func sectionHeader(_ title: String, subtitle: String) -> some View {
@@ -874,6 +911,16 @@ struct ChronicleView: View {
         catch { self.error = error.localizedDescription }
         isLoading = false
     }
+
+    private func reviewEntry(_ entry: ChronicleEntry, status: String) async {
+        let payload = ChronicleReviewPayload(
+            status: status,
+            title: entry.title.isEmpty ? "Chronicle entry" : entry.title,
+            entryType: entry.type
+        )
+        _ = try? await AppleAPIClient.shared.reviewChronicleEntry(entry.id, payload: payload)
+        await load()
+    }
 }
 
 // MARK: - Entry card
@@ -881,6 +928,7 @@ struct ChronicleView: View {
 private struct EntryCard: View {
     let entry: ChronicleEntry
     let amber: Color
+    var onReview: (@Sendable (String) async -> Void)? = nil
 
     var typeIcon: String {
         switch entry.type {
@@ -931,9 +979,33 @@ private struct EntryCard: View {
                 Label(scripture, systemImage: "book.closed")
                     .font(.caption2).foregroundStyle(amber.opacity(0.7))
             }
+
+            if let onReview {
+                HStack(spacing: 8) {
+                    reviewButton("Study Next", tint: amber) {
+                        await onReview("study")
+                    }
+                    reviewButton("Family Handoff", tint: .blue) {
+                        await onReview("family")
+                    }
+                    reviewButton("Resolve", tint: .green) {
+                        await onReview("resolved")
+                    }
+                }
+                .padding(.top, 2)
+            }
         }
         .padding(14)
         .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func reviewButton(_ title: String, tint: Color, action: @escaping @Sendable () async -> Void) -> some View {
+        Button(title) {
+            Task { await action() }
+        }
+        .font(.caption2.weight(.semibold))
+        .buttonStyle(.bordered)
+        .tint(tint)
     }
 
     private func relativeDate(_ iso: String) -> String {

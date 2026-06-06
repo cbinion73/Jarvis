@@ -1718,7 +1718,7 @@ def _core_modules(
             "roadmap_level": "Level 3",
             "summary": "Chronicle now has a dedicated app module route with live devotional, capture, continuity, and bridge posture.",
             "what_became_real": "Chronicle is now a standalone app module instead of a shell-only packet.",
-            "remains_partial": "Deeper Chronicle review workflows, richer study surfaces, and broader external handoff continuity still need follow-on slices.",
+            "remains_partial": "Richer study surfaces and broader external handoff continuity still need follow-on slices.",
             "evidence": "Dedicated /chronicle-center route now sits on top of live devotional, capture, timeline, and Chronicle bridge APIs.",
         },
         {
@@ -2283,7 +2283,7 @@ def _seam_tracker(
             "worktree": "primary worktree",
             "surface_path": "/chronicle-center",
             "what_became_real": "Chronicle now has its own dedicated route and module payload, instead of hiding behind the shell chronicle packet.",
-            "remains_partial": "The Chronicle module still needs richer study workflows and deeper handoff continuity beyond devotional, capture, and timeline posture.",
+            "remains_partial": "The Chronicle module still needs richer study workflows and deeper handoff continuity beyond devotional, capture, timeline, and review posture.",
             "tests": [
                 "tests/test_command_center_service_surface.py",
             ],

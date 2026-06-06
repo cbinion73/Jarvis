@@ -9004,6 +9004,10 @@ def render_chronicle_module_page(payload: dict) -> str:
         <ul id="timeline-list"></ul>
       </section>
       <section class="panel span-6">
+        <h2>Review Lane</h2>
+        <ul id="chronicle-review-list"></ul>
+      </section>
+      <section class="panel span-6">
         <h2>Recent Chronicle Continuity</h2>
         <ul id="recent-activity-list"></ul>
       </section>
@@ -9029,6 +9033,7 @@ def render_chronicle_module_page(payload: dict) -> str:
     const morningContextList = document.getElementById("morning-context-list");
     const themesList = document.getElementById("themes-list");
     const timelineList = document.getElementById("timeline-list");
+    const chronicleReviewList = document.getElementById("chronicle-review-list");
     const recentActivityList = document.getElementById("recent-activity-list");
     const insightsList = document.getElementById("insights-list");
     const payloadPreview = document.getElementById("payload-preview");
@@ -9046,11 +9051,46 @@ def render_chronicle_module_page(payload: dict) -> str:
       return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
     }}
 
+    function bindChronicleReviewButtons() {{
+      document.querySelectorAll("[data-chronicle-review]").forEach((button) => {{
+        button.addEventListener("click", async () => {{
+          const entryId = button.getAttribute("data-entry-id") || "";
+          const status = button.getAttribute("data-review-status") || "";
+          const title = button.getAttribute("data-entry-title") || "Chronicle entry";
+          const entryType = button.getAttribute("data-entry-type") || "reflection";
+          const note = window.prompt(`Optional note for ${{title}}`, "") || "";
+          const noteElement = document.getElementById("chronicle-status-note");
+          noteElement.textContent = `Updating Chronicle review for ${{title}}…`;
+          try {{
+            const response = await fetch(`/api/chronicle/entries/${{encodeURIComponent(entryId)}}/review`, {{
+              method: "POST",
+              headers: {{ "Content-Type": "application/json" }},
+              body: JSON.stringify({{
+                actor: document.getElementById("chronicle-actor").value || "Chris",
+                status,
+                note,
+                title,
+                entry_type: entryType,
+              }}),
+            }});
+            const payload = await response.json();
+            noteElement.textContent = payload.review?.review_status_label
+              ? `${{title}} moved to ${{payload.review.review_status_label}}.`
+              : "Chronicle review updated.";
+            await refreshChronicleState();
+          }} catch (error) {{
+            noteElement.textContent = `Chronicle review failed: ${{String(error)}}`;
+          }}
+        }});
+      }});
+    }}
+
     function render(payload) {{
       const timeline = Array.isArray(payload.timeline) ? payload.timeline : [];
       const themes = ((payload.theme_summary || {{}}).themes || []);
       const insights = Array.isArray(payload.insights) ? payload.insights : [];
       const morning = payload.morning_context || {{}};
+      const reviewLane = Array.isArray(payload.review_lane) ? payload.review_lane : [];
 
       heroStatus.textContent = payload.status || "Stubbed";
       heroEntries.textContent = String(payload.entry_count || 0);
@@ -9062,6 +9102,7 @@ def render_chronicle_module_page(payload: dict) -> str:
       moduleStatusList.innerHTML = [
         li("What Became Real", payload.what_became_real || "No chronicle seam note recorded yet."),
         li("What Remains Partial", payload.remains_partial || "No partial work recorded."),
+        li("Review Lane", `${{payload.counts?.review_count || 0}} review state entr${{payload.counts?.review_count === 1 ? "y" : "ies"}} recorded`, "Study, family handoff, and resolution continuity now persist."),
         li("Proof API", "/api/chronicle/module", "/api/chronicle/status and /api/devotional-pause"),
         li("Bridge Status", payload.bridge_status || "unknown", payload.bridge_note || ""),
       ].join("");
@@ -9078,11 +9119,43 @@ def render_chronicle_module_page(payload: dict) -> str:
         (item.recent_reflections || []).slice(0, 2).join(" | ")
       )).join("") || '<li><strong>No Chronicle themes yet.</strong><span>Theme rollups will appear once entries are available.</span></li>';
 
-      timelineList.innerHTML = timeline.slice(0, 8).map((item) => li(
-        item.theme || "Reflection",
-        item.reflection || item.note || "No reflection text available.",
-        `${{item.actor || "unknown"}} · ${{item.timestamp || "undated"}}`
-      )).join("") || '<li><strong>No Chronicle entries yet.</strong><span>Capture a note to seed the timeline.</span></li>';
+      timelineList.innerHTML = timeline.slice(0, 8).map((item) => `
+        <li>
+          <strong>${{esc(item.theme || item.title || "Reflection")}}</strong>
+          <span>${{esc(item.reflection || item.note || "No reflection text available.")}}</span>
+          <span>${{esc(`${{item.actor || "unknown"}} · ${{item.timestamp || "undated"}}`)}}</span>
+          <div class="actions">
+            <button
+              type="button"
+              data-chronicle-review
+              data-entry-id="${{esc(item.entry_id || item.id || item.timestamp || "")}}"
+              data-entry-title="${{esc(item.theme || item.title || "Reflection")}}"
+              data-entry-type="${{esc(item.entry_type || item.type || "reflection")}}"
+              data-review-status="study">Study Next</button>
+            <button
+              type="button"
+              data-chronicle-review
+              data-entry-id="${{esc(item.entry_id || item.id || item.timestamp || "")}}"
+              data-entry-title="${{esc(item.theme || item.title || "Reflection")}}"
+              data-entry-type="${{esc(item.entry_type || item.type || "reflection")}}"
+              data-review-status="family">Queue Family Handoff</button>
+            <button
+              type="button"
+              data-chronicle-review
+              data-entry-id="${{esc(item.entry_id || item.id || item.timestamp || "")}}"
+              data-entry-title="${{esc(item.theme || item.title || "Reflection")}}"
+              data-entry-type="${{esc(item.entry_type || item.type || "reflection")}}"
+              data-review-status="resolved">Resolve Thread</button>
+          </div>
+        </li>
+      `).join("") || '<li><strong>No Chronicle entries yet.</strong><span>Capture a note to seed the timeline.</span></li>';
+      chronicleReviewList.innerHTML = reviewLane.length
+        ? reviewLane.map((item) => li(
+            item.entry_title || "Chronicle entry",
+            item.review_status_label || "Review recorded",
+            [item.entry_type || "", item.review_note || ""].filter(Boolean).join(" · ")
+          )).join("")
+        : '<li><strong>No Chronicle review lane yet.</strong><span>Promote an entry into study, family handoff, or resolution from the live timeline.</span></li>';
       recentActivityList.innerHTML = (Array.isArray(payload.recent_activity) ? payload.recent_activity : []).length
         ? payload.recent_activity.map((item) => li(item.title || "Chronicle action", item.subtitle || item.actor || "Operator continuity", item.detail || item.route_label || "")).join("")
         : '<li><strong>No Chronicle continuity recorded yet.</strong><span>Generate a devotional, prepare a family devotional, or capture a note to start the route-level continuity trail.</span></li>';
@@ -9094,6 +9167,7 @@ def render_chronicle_module_page(payload: dict) -> str:
       )).join("") || '<li><strong>No Chronicle insights yet.</strong><span>Bridge-derived formation insights will appear here when available.</span></li>';
 
       payloadPreview.textContent = JSON.stringify(payload, null, 2);
+      bindChronicleReviewButtons();
     }}
 
     async function refreshChronicleState() {{

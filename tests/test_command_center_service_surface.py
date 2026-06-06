@@ -769,17 +769,23 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("JARVIS Chronicle", chronicle_html)
         self.assertIn("Generate Devotional Pause", chronicle_html)
         self.assertIn("Capture Chronicle Note", chronicle_html)
+        self.assertIn("Review Lane", chronicle_html)
+        self.assertIn("Study Next", chronicle_html)
+        self.assertIn("Queue Family Handoff", chronicle_html)
         self.assertIn("Living story engine", chronicle_html)
         self.assertIn("Chronicle tracks", chronicle_html)
         self.assertIn("Recent Chronicle Continuity", chronicle_html)
-        self.assertIn("/api/activity/operator-action", chronicle_html)
+        self.assertIn("/api/chronicle/entries/", chronicle_html)
 
         self.assertIn("status", chronicle_snapshot)
         self.assertIn("timeline", chronicle_snapshot)
         self.assertIn("recent_activity", chronicle_snapshot)
+        self.assertIn("review_lane", chronicle_snapshot)
+        self.assertIn("review_count", chronicle_snapshot["counts"])
         self.assertIn("proof_paths", chronicle_snapshot)
         self.assertEqual(chronicle_snapshot["proof_paths"]["module_route"], "/chronicle-center")
         self.assertEqual(chronicle_snapshot["proof_paths"]["module_api"], "/api/chronicle/module")
+        self.assertEqual(chronicle_snapshot["proof_paths"]["entry_review_api_suffix"], "/api/chronicle/entries/{entry_id}/review")
         self.assertIn("JARVIS Navigation", navigation_html)
         self.assertIn("Preview Route Intelligence", navigation_html)
         self.assertIn("Navigation Command Center", navigation_html)
@@ -1905,6 +1911,44 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
 
         self.assertTrue(any(item.get("title") == "Capture Chronicle Note" for item in chronicle_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("related_label") == "gratitude in the middle of fatigue" for item in chronicle_snapshot["recent_activity"]))
+
+    def test_chronicle_review_mutation_persists_review_lane_and_progress(self) -> None:
+        self.runtime.chronicle_timeline = lambda limit=10: [
+            {
+                "entry_id": "chronicle-entry-1",
+                "theme": "Gratitude in the middle of fatigue",
+                "reflection": "We found calm after the pressure eased.",
+                "actor": "Chris",
+                "timestamp": "2026-06-06T09:00:00Z",
+                "entry_type": "reflection",
+            }
+        ]
+        self.runtime.chronicle_theme_summary = lambda limit=25: {"themes": [{"theme": "gratitude", "count": 1}]}
+
+        response = self._json_body(
+            asyncio.run(
+                self._route("/api/chronicle/entries/{entry_id}/review", "POST")(
+                    "chronicle-entry-1",
+                    {
+                        "actor": "Chris",
+                        "status": "family",
+                        "title": "Gratitude in the middle of fatigue",
+                        "entry_type": "reflection",
+                        "note": "Bring this into tonight's family devotional.",
+                    }
+                )
+            )
+        )
+        chronicle_snapshot = self._json_body(asyncio.run(self._route("/api/chronicle/module", "GET")()))
+        from jarvis.audit import AuditLog
+        recent_activity = AuditLog(Path("data/logs")).list_recent(limit=6, entry_type="operator-action")
+
+        self.assertEqual(response["status"], "recorded")
+        self.assertEqual(response["review"]["review_status_label"], "Queue Family Handoff")
+        self.assertEqual(response["focus"]["module"], "Chronicle")
+        self.assertTrue(any(item.get("entry_id") == "chronicle-entry-1" for item in chronicle_snapshot["review_lane"]))
+        self.assertGreaterEqual(chronicle_snapshot["counts"]["review_count"], 1)
+        self.assertTrue(any(item.get("related_kind") == "chronicle-review" for item in recent_activity))
 
     def test_open_loop_action_populates_daily_brief_continuity(self) -> None:
         self.runtime.apply_open_loop_action = lambda actor_name, **kwargs: {

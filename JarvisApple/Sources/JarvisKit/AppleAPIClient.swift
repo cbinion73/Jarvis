@@ -851,6 +851,10 @@ public final class AppleAPIClient: Sendable {
         try await post("/api/apple/chronicle/study/save", body: payload)
     }
 
+    public func reviewChronicleEntry(_ entryId: String, payload: ChronicleReviewPayload) async throws -> ChronicleReviewResult {
+        try await post("/api/apple/chronicle/entries/\(entryId)/review", body: payload)
+    }
+
     // MARK: - Faith
 
     public func fetchFaith(actor: String = "chris") async throws -> FaithOverview {

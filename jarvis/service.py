@@ -41,6 +41,7 @@ except Exception:  # pragma: no cover
         return render_voice_shell(runtime, initial_packet=initial_packet)
 from .apple_api import _register_apple_api
 from .audit import ActivityReviewStore, AuditLog, ProgressFocusStore, ProgressSnapshotStore, RecoveryActionStore, SeamTrackerStore
+from .chronicle_reviews import ChronicleReviewStore
 from .health_checkins import HealthCheckInStore
 from . import layout_engine as _layout_engine
 from .recovery_cases import RecoveryCaseStore
@@ -7936,6 +7937,18 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     # ------------------------------------------------------------------
 
     async def _build_chronicle_module_payload() -> dict[str, Any]:
+        def _chronicle_entry_id(item: dict[str, Any]) -> str:
+            candidate = (
+                str(item.get("entry_id") or "").strip()
+                or str(item.get("id") or "").strip()
+                or str(item.get("timestamp") or "").strip()
+            )
+            if candidate:
+                return candidate
+            theme = str(item.get("theme") or item.get("title") or "chronicle-entry").strip().lower().replace(" ", "-")
+            actor = str(item.get("actor") or "chris").strip().lower().replace(" ", "-")
+            return f"{theme}:{actor}"
+
         generated_at = ""
         try:
             from datetime import datetime, timezone
@@ -7950,7 +7963,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "status": "Useful",
             "summary": "Chronicle now has a dedicated module route with live devotional, capture, continuity, and bridge posture.",
             "what_became_real": "Chronicle is now represented as a dedicated app module with visible route-owned continuity instead of a shell-only packet.",
-            "remains_partial": "Deeper Chronicle review workflows, richer study surfaces, and broader external handoff continuity still need follow-on slices.",
+            "remains_partial": "Richer study surfaces and broader external handoff continuity still need follow-on slices.",
             "entry_count": 0,
             "pending_entry_count": 0,
             "timeline": [],
@@ -7959,6 +7972,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "workflow_status": {},
             "insights": [],
             "recent_activity": [],
+            "review_lane": [],
             "bridge_status": "not_loaded",
             "bridge_note": "Chronicle bridge is not initialised in this runtime.",
             "proof_paths": {
@@ -7968,7 +7982,11 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "capture_api": "/api/chronicle-capture",
                 "devotional_api": "/api/devotional-pause",
                 "family_devotional_api": "/api/family-devotional",
+                "entry_review_api_suffix": "/api/chronicle/entries/{entry_id}/review",
                 "activity_api": "/api/activity/operator-action",
+            },
+            "counts": {
+                "review_count": 0,
             },
             "errors": [],
         }
@@ -7976,7 +7994,14 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         try:
             if callable(getattr(runtime, "chronicle_timeline", None)):
                 timeline = runtime.chronicle_timeline(limit=10)
-                payload["timeline"] = timeline if isinstance(timeline, list) else []
+                payload["timeline"] = [
+                    {
+                        **dict(item),
+                        "entry_id": _chronicle_entry_id(dict(item)),
+                    }
+                    for item in (timeline if isinstance(timeline, list) else [])
+                    if isinstance(item, dict)
+                ]
                 payload["entry_count"] = len(payload["timeline"])
             if callable(getattr(runtime, "chronicle_theme_summary", None)):
                 theme_summary = runtime.chronicle_theme_summary(limit=25)
@@ -8029,6 +8054,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 payload["remains_partial"] = "The dedicated Chronicle screen is live, but no Chronicle entries were available in this runtime."
 
         payload["recent_activity"] = _module_recent_activity(route="/chronicle-center", domain="chronicle")
+        review_summary = ChronicleReviewStore().review_summary(actor_id="chris", limit=6)
+        payload["review_lane"] = list(review_summary.get("items") or [])
+        payload["counts"]["review_count"] = int(review_summary.get("count", 0) or 0)
 
         if payload["errors"] and payload["status"] == "Useful":
             payload["remains_partial"] = "Some Chronicle sources still failed to hydrate; inspect the payload preview for details."
@@ -8046,6 +8074,52 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/chronicle/module")
     async def api_chronicle_module() -> JSONResponse:
         return _json(await _build_chronicle_module_payload())
+
+    @app.post("/api/chronicle/entries/{entry_id}/review")
+    async def api_chronicle_review_entry(entry_id: str, payload: dict[str, Any]) -> JSONResponse:
+        actor = str(payload.get("actor") or "Chris").strip() or "Chris"
+        status = str(payload.get("status") or "").strip().lower()
+        note = str(payload.get("note") or "").strip()
+        title = str(payload.get("title") or "Chronicle entry").strip() or "Chronicle entry"
+        entry_type = str(payload.get("entry_type") or "reflection").strip() or "reflection"
+
+        try:
+            review = ChronicleReviewStore().review_entry(
+                entry_id=entry_id,
+                actor_id=actor,
+                title=title,
+                entry_type=entry_type,
+                status=status,
+                note=note,
+                route="/chronicle-center",
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        focus = ProgressFocusStore(Path("data/logs")).save_focus(
+            module="Chronicle",
+            reason=f"Chronicle review moved '{title}' into {review['review_status_label'].lower()}.",
+            route="/chronicle-center",
+            actor=actor,
+        )
+        AuditLog(Path("data/logs")).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": "chronicle",
+                "action": review["review_status_label"],
+                "title": title,
+                "detail": note or f"Chronicle review updated to {review['review_status_label'].lower()}.",
+                "why_now": "Chronicle promoted a real entry into study, family handoff, or resolution continuity from the dedicated route.",
+                "result_summary": f"Chronicle entry is now marked {review['review_status_label'].lower()}.",
+                "related_route": "/chronicle-center",
+                "route_label": "Open Chronicle",
+                "related_kind": "chronicle-review",
+                "related_label": title,
+                "source_kind": "operator-action",
+                "succeeded": True,
+            },
+        )
+        return _json({"status": "recorded", "review": review, "focus": focus})
 
     @app.post("/api/chronicle/entries/{entry_id}/sent")
     async def api_chronicle_mark_sent(entry_id: str) -> JSONResponse:

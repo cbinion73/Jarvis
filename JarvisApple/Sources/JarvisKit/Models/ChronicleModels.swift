@@ -9,11 +9,15 @@ public struct ChronicleOverview: Codable, Sendable {
     public let patterns: ChroniclePatterns?
     public let continuity: ChronicleContinuity?
     public let studyWorkspace: ChronicleStudyWorkspace?
+    public let reviewLane: [ChronicleReviewEntry]
+    public let reviewCount: Int
     public let updatedAt: String
 
     enum CodingKeys: String, CodingKey {
         case entries, context, patterns, continuity
         case studyWorkspace = "study_workspace"
+        case reviewLane = "review_lane"
+        case reviewCount = "review_count"
         case updatedAt = "updated_at"
     }
 
@@ -23,6 +27,8 @@ public struct ChronicleOverview: Codable, Sendable {
         patterns: ChroniclePatterns? = nil,
         continuity: ChronicleContinuity? = nil,
         studyWorkspace: ChronicleStudyWorkspace? = nil,
+        reviewLane: [ChronicleReviewEntry] = [],
+        reviewCount: Int = 0,
         updatedAt: String = ""
     ) {
         self.entries = entries
@@ -30,6 +36,8 @@ public struct ChronicleOverview: Codable, Sendable {
         self.patterns = patterns
         self.continuity = continuity
         self.studyWorkspace = studyWorkspace
+        self.reviewLane = reviewLane
+        self.reviewCount = reviewCount
         self.updatedAt = updatedAt
     }
 
@@ -40,6 +48,8 @@ public struct ChronicleOverview: Codable, Sendable {
         patterns = try container.decodeIfPresent(ChroniclePatterns.self, forKey: .patterns)
         continuity = try container.decodeIfPresent(ChronicleContinuity.self, forKey: .continuity)
         studyWorkspace = try container.decodeIfPresent(ChronicleStudyWorkspace.self, forKey: .studyWorkspace)
+        reviewLane = try container.decodeIfPresent([ChronicleReviewEntry].self, forKey: .reviewLane) ?? []
+        reviewCount = try container.decodeIfPresent(Int.self, forKey: .reviewCount) ?? reviewLane.count
         updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt) ?? ""
     }
 }
@@ -219,6 +229,28 @@ public struct ChronicleStudyWorkspace: Codable, Sendable {
     enum CodingKeys: String, CodingKey {
         case passage, title, date, prompts
         case focusSummary = "focus_summary"
+    }
+}
+
+public struct ChronicleReviewEntry: Codable, Identifiable, Sendable {
+    public let entryId: String
+    public let entryTitle: String
+    public let entryType: String
+    public let reviewStatus: String
+    public let reviewStatusLabel: String
+    public let reviewNote: String
+    public let reviewedAt: String
+
+    public var id: String { entryId }
+
+    enum CodingKeys: String, CodingKey {
+        case entryId = "entry_id"
+        case entryTitle = "entry_title"
+        case entryType = "entry_type"
+        case reviewStatus = "review_status"
+        case reviewStatusLabel = "review_status_label"
+        case reviewNote = "review_note"
+        case reviewedAt = "reviewed_at"
     }
 }
 
@@ -486,6 +518,34 @@ public struct ChronicleCaptureResult: Codable, Sendable {
         case reason
         case focus
     }
+}
+
+public struct ChronicleReviewPayload: Codable, Sendable {
+    public let actorId: String
+    public let status: String
+    public let note: String
+    public let title: String
+    public let entryType: String
+
+    public init(actorId: String = "chris", status: String, note: String = "", title: String, entryType: String) {
+        self.actorId = actorId
+        self.status = status
+        self.note = note
+        self.title = title
+        self.entryType = entryType
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case status, note, title
+        case actorId = "actor_id"
+        case entryType = "entry_type"
+    }
+}
+
+public struct ChronicleReviewResult: Codable, Sendable {
+    public let status: String
+    public let review: ChronicleReviewEntry?
+    public let focus: ChronicleProgressFocus?
 }
 
 public struct ChronicleProgressFocus: Codable, Equatable, Sendable {

@@ -18,6 +18,7 @@ from jarvis.apple_api import (
     _start_carplay_huddle_party_mode,
 )
 from jarvis.audit import AuditLog, ProgressFocusStore
+from jarvis.chronicle_reviews import ChronicleReviewStore
 from jarvis.recovery_cases import RecoveryCaseStore
 
 
@@ -118,6 +119,14 @@ class CarPlayOpsAppleAPITests(unittest.TestCase):
                 "route_label": "Open Agent Ops",
             },
         )
+        ChronicleReviewStore().review_entry(
+            entry_id="chronicle-1",
+            actor_id="chris",
+            title="Remember the calm after the hard conversation",
+            entry_type="reflection",
+            status="study",
+            note="Use this in tomorrow's study lane.",
+        )
 
         @dataclass
         class _StubHuddle:
@@ -175,10 +184,13 @@ class CarPlayOpsAppleAPITests(unittest.TestCase):
         self.assertEqual(overview["recent_activity"][0]["title"], "Queue Agent Run")
         self.assertEqual(overview["huddle_summary"]["queued_idea_count"], 1)
         self.assertEqual(overview["huddle_ideas"][0]["domain"], "family")
+        self.assertEqual(overview["chronicle_summary"]["review_count"], 1)
+        self.assertEqual(overview["chronicle_reviews"][0]["review_status_label"], "Study Next")
         self.assertIn("agent_ops", overview)
         self.assertIn("supervision_items", overview)
         self.assertIn("huddle_summary", overview)
         self.assertIn("huddle_ideas", overview)
+        self.assertIn("chronicle_reviews", overview)
 
     def test_save_carplay_ops_focus_persists_progress_and_activity(self) -> None:
         entry = _save_carplay_ops_focus(

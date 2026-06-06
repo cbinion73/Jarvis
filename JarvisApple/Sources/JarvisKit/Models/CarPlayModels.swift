@@ -144,6 +144,54 @@ public struct CarPlayHuddleIdeaEntry: Codable, Equatable, Identifiable, Sendable
     }
 }
 
+public struct CarPlayChronicleSummary: Codable, Equatable, Sendable {
+    public let latestTitle: String
+    public let activePrayerCount: Int
+    public let studyTitle: String
+    public let reviewCount: Int
+    public let headline: String
+
+    enum CodingKeys: String, CodingKey {
+        case latestTitle = "latest_title"
+        case activePrayerCount = "active_prayer_count"
+        case studyTitle = "study_title"
+        case reviewCount = "review_count"
+        case headline
+    }
+
+    public init(
+        latestTitle: String = "",
+        activePrayerCount: Int = 0,
+        studyTitle: String = "",
+        reviewCount: Int = 0,
+        headline: String = ""
+    ) {
+        self.latestTitle = latestTitle
+        self.activePrayerCount = activePrayerCount
+        self.studyTitle = studyTitle
+        self.reviewCount = reviewCount
+        self.headline = headline
+    }
+}
+
+public struct CarPlayChronicleReviewEntry: Codable, Equatable, Identifiable, Sendable {
+    public let entryId: String
+    public let entryTitle: String
+    public let entryType: String
+    public let reviewStatus: String
+    public let reviewStatusLabel: String
+
+    public var id: String { entryId }
+
+    enum CodingKeys: String, CodingKey {
+        case entryId = "entry_id"
+        case entryTitle = "entry_title"
+        case entryType = "entry_type"
+        case reviewStatus = "review_status"
+        case reviewStatusLabel = "review_status_label"
+    }
+}
+
 public struct CarPlayActivityEntry: Codable, Equatable, Identifiable, Sendable {
     public let title: String
     public let detail: String
@@ -192,6 +240,7 @@ public struct CarPlayOpsCounts: Codable, Equatable, Sendable {
     public let agentOpsCount: Int
     public let supervisionCount: Int
     public let huddleIdeaCount: Int
+    public let chronicleReviewCount: Int
 
     enum CodingKeys: String, CodingKey {
         case approvalCount = "approval_count"
@@ -201,6 +250,39 @@ public struct CarPlayOpsCounts: Codable, Equatable, Sendable {
         case agentOpsCount = "agent_ops_count"
         case supervisionCount = "supervision_count"
         case huddleIdeaCount = "huddle_idea_count"
+        case chronicleReviewCount = "chronicle_review_count"
+    }
+
+    public init(
+        approvalCount: Int = 0,
+        recoveryCaseCount: Int = 0,
+        recentActivityCount: Int = 0,
+        recoveryActionCount: Int = 0,
+        agentOpsCount: Int = 0,
+        supervisionCount: Int = 0,
+        huddleIdeaCount: Int = 0,
+        chronicleReviewCount: Int = 0
+    ) {
+        self.approvalCount = approvalCount
+        self.recoveryCaseCount = recoveryCaseCount
+        self.recentActivityCount = recentActivityCount
+        self.recoveryActionCount = recoveryActionCount
+        self.agentOpsCount = agentOpsCount
+        self.supervisionCount = supervisionCount
+        self.huddleIdeaCount = huddleIdeaCount
+        self.chronicleReviewCount = chronicleReviewCount
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        approvalCount = try container.decodeIfPresent(Int.self, forKey: .approvalCount) ?? 0
+        recoveryCaseCount = try container.decodeIfPresent(Int.self, forKey: .recoveryCaseCount) ?? 0
+        recentActivityCount = try container.decodeIfPresent(Int.self, forKey: .recentActivityCount) ?? 0
+        recoveryActionCount = try container.decodeIfPresent(Int.self, forKey: .recoveryActionCount) ?? 0
+        agentOpsCount = try container.decodeIfPresent(Int.self, forKey: .agentOpsCount) ?? 0
+        supervisionCount = try container.decodeIfPresent(Int.self, forKey: .supervisionCount) ?? 0
+        huddleIdeaCount = try container.decodeIfPresent(Int.self, forKey: .huddleIdeaCount) ?? 0
+        chronicleReviewCount = try container.decodeIfPresent(Int.self, forKey: .chronicleReviewCount) ?? 0
     }
 }
 
@@ -214,6 +296,8 @@ public struct CarPlayOpsOverview: Codable, Equatable, Sendable {
     public let supervisionItems: [CarPlaySupervisionEntry]
     public let huddleSummary: CarPlayHuddleSummary
     public let huddleIdeas: [CarPlayHuddleIdeaEntry]
+    public let chronicleSummary: CarPlayChronicleSummary
+    public let chronicleReviews: [CarPlayChronicleReviewEntry]
     public let recentActivity: [CarPlayActivityEntry]
     public let missionSummary: CarPlayMissionSummary
     public let agentSummary: CarPlayAgentSummary
@@ -229,10 +313,65 @@ public struct CarPlayOpsOverview: Codable, Equatable, Sendable {
         case supervisionItems = "supervision_items"
         case huddleSummary = "huddle_summary"
         case huddleIdeas = "huddle_ideas"
+        case chronicleSummary = "chronicle_summary"
+        case chronicleReviews = "chronicle_reviews"
         case recentActivity = "recent_activity"
         case missionSummary = "mission_summary"
         case agentSummary = "agent_summary"
         case counts
+    }
+
+    public init(
+        generatedAt: String = "",
+        currentFocus: CarPlayProgressFocus,
+        focusCandidates: [CarPlayOpsFocusCandidate] = [],
+        approvals: [CarPlayApprovalEntry] = [],
+        recoveryCases: [CarPlayRecoveryCaseEntry] = [],
+        agentOps: [CarPlayAgentOpsEntry] = [],
+        supervisionItems: [CarPlaySupervisionEntry] = [],
+        huddleSummary: CarPlayHuddleSummary,
+        huddleIdeas: [CarPlayHuddleIdeaEntry] = [],
+        chronicleSummary: CarPlayChronicleSummary = CarPlayChronicleSummary(),
+        chronicleReviews: [CarPlayChronicleReviewEntry] = [],
+        recentActivity: [CarPlayActivityEntry] = [],
+        missionSummary: CarPlayMissionSummary,
+        agentSummary: CarPlayAgentSummary,
+        counts: CarPlayOpsCounts = CarPlayOpsCounts()
+    ) {
+        self.generatedAt = generatedAt
+        self.currentFocus = currentFocus
+        self.focusCandidates = focusCandidates
+        self.approvals = approvals
+        self.recoveryCases = recoveryCases
+        self.agentOps = agentOps
+        self.supervisionItems = supervisionItems
+        self.huddleSummary = huddleSummary
+        self.huddleIdeas = huddleIdeas
+        self.chronicleSummary = chronicleSummary
+        self.chronicleReviews = chronicleReviews
+        self.recentActivity = recentActivity
+        self.missionSummary = missionSummary
+        self.agentSummary = agentSummary
+        self.counts = counts
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        generatedAt = try container.decodeIfPresent(String.self, forKey: .generatedAt) ?? ""
+        currentFocus = try container.decode(CarPlayProgressFocus.self, forKey: .currentFocus)
+        focusCandidates = try container.decodeIfPresent([CarPlayOpsFocusCandidate].self, forKey: .focusCandidates) ?? []
+        approvals = try container.decodeIfPresent([CarPlayApprovalEntry].self, forKey: .approvals) ?? []
+        recoveryCases = try container.decodeIfPresent([CarPlayRecoveryCaseEntry].self, forKey: .recoveryCases) ?? []
+        agentOps = try container.decodeIfPresent([CarPlayAgentOpsEntry].self, forKey: .agentOps) ?? []
+        supervisionItems = try container.decodeIfPresent([CarPlaySupervisionEntry].self, forKey: .supervisionItems) ?? []
+        huddleSummary = try container.decode(CarPlayHuddleSummary.self, forKey: .huddleSummary)
+        huddleIdeas = try container.decodeIfPresent([CarPlayHuddleIdeaEntry].self, forKey: .huddleIdeas) ?? []
+        chronicleSummary = try container.decodeIfPresent(CarPlayChronicleSummary.self, forKey: .chronicleSummary) ?? CarPlayChronicleSummary()
+        chronicleReviews = try container.decodeIfPresent([CarPlayChronicleReviewEntry].self, forKey: .chronicleReviews) ?? []
+        recentActivity = try container.decodeIfPresent([CarPlayActivityEntry].self, forKey: .recentActivity) ?? []
+        missionSummary = try container.decode(CarPlayMissionSummary.self, forKey: .missionSummary)
+        agentSummary = try container.decode(CarPlayAgentSummary.self, forKey: .agentSummary)
+        counts = try container.decodeIfPresent(CarPlayOpsCounts.self, forKey: .counts) ?? CarPlayOpsCounts()
     }
 }
 

@@ -10,6 +10,7 @@ from jarvis.apple_api import (
     _capture_chronicle_entry,
     _mark_chronicle_prayer_answered,
     _mark_chronicle_prayer_prayed,
+    _review_chronicle_entry,
     _save_chronicle_study_entry,
 )
 from jarvis.audit import AuditLog, ProgressFocusStore
@@ -78,6 +79,30 @@ class AppleChronicleOpsTests(unittest.TestCase):
         self.assertIn("Log Chronicle Prayer", titles)
         self.assertIn("Mark Chronicle Prayer Answered", titles)
         self.assertIn("Save Chronicle Study", titles)
+
+    def test_review_chronicle_entry_updates_shared_focus_and_review_lane(self) -> None:
+        capture = _capture_chronicle_entry(
+            entry_type="reflection",
+            note="Remember how calm arrived after the hard conversation.",
+            actor="chris",
+        )
+
+        result = _review_chronicle_entry(
+            entry_id=capture["entry_id"],
+            actor="chris",
+            title="Remember how calm arrived after the hard conversation.",
+            entry_type="reflection",
+            status="family",
+            note="Carry this into family devotional prep.",
+        )
+
+        self.assertEqual(result["status"], "recorded")
+        self.assertEqual(result["review"]["review_status_label"], "Queue Family Handoff")
+        self.assertEqual(result["focus"]["module"], "Chronicle")
+
+        recent = AuditLog(Path("data/logs")).list_recent(limit=4, entry_type="operator-action")
+        self.assertEqual(recent[0]["action"], "Queue Family Handoff")
+        self.assertEqual(recent[0]["related_kind"], "chronicle-review")
 
 
 if __name__ == "__main__":

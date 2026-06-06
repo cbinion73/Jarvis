@@ -511,6 +511,50 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
             }
             sections.append(CPListSection(items: huddleIdeaItems, header: "8. Huddle Ideas", sectionIndexTitle: nil))
 
+            let chronicleSummary = overview.chronicleSummary
+            let chronicleSummaryItem = CPListItem(
+                text: "Chronicle Chamber",
+                detailText: chronicleSummary.headline
+            )
+            chronicleSummaryItem.setImage(
+                UIImage(systemName: "book.closed.fill")?
+                    .withTintColor(.systemYellow, renderingMode: .alwaysOriginal)
+            )
+            let chroniclePromptItem = CPListItem(
+                text: chronicleSummary.latestTitle.isEmpty ? "No Chronicle thread ready" : chronicleSummary.latestTitle,
+                detailText: chronicleSummary.studyTitle.isEmpty
+                    ? "\(chronicleSummary.activePrayerCount) active prayer(s) · \(chronicleSummary.reviewCount) review thread(s)"
+                    : "\(chronicleSummary.studyTitle) · \(chronicleSummary.reviewCount) review thread(s)"
+            )
+            chroniclePromptItem.setImage(
+                UIImage(systemName: "text.book.closed.fill")?
+                    .withTintColor(.systemOrange, renderingMode: .alwaysOriginal)
+            )
+            sections.append(CPListSection(items: [chronicleSummaryItem, chroniclePromptItem], header: "9. Chronicle Chamber", sectionIndexTitle: nil))
+
+            let chronicleReviewItems: [CPListItem]
+            if overview.chronicleReviews.isEmpty {
+                let item = CPListItem(text: "No Chronicle review waiting", detailText: "Move a memory thread into study or family handoff from the phone.")
+                item.setImage(
+                    UIImage(systemName: "checkmark.circle.fill")?
+                        .withTintColor(.systemGreen, renderingMode: .alwaysOriginal)
+                )
+                chronicleReviewItems = [item]
+            } else {
+                chronicleReviewItems = overview.chronicleReviews.prefix(4).map { review in
+                    let item = CPListItem(
+                        text: review.entryTitle,
+                        detailText: "\(review.reviewStatusLabel) · \(review.entryType.capitalized)"
+                    )
+                    item.setImage(
+                        UIImage(systemName: review.reviewStatus == "resolved" ? "checkmark.seal.fill" : "book.pages.fill")?
+                            .withTintColor(review.reviewStatus == "resolved" ? .systemGreen : .systemBlue, renderingMode: .alwaysOriginal)
+                    )
+                    return item
+                }
+            }
+            sections.append(CPListSection(items: chronicleReviewItems, header: "10. Chronicle Reviews", sectionIndexTitle: nil))
+
             let missionHeadline = overview.missionSummary.headline.isEmpty
                 ? "\(overview.missionSummary.activeCount) active mission(s) are flowing through JARVIS."
                 : overview.missionSummary.headline
@@ -543,8 +587,8 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                     return item
                 }
             }
-            sections.append(CPListSection(items: [missionItem, agentItem], header: "9. Mission Pressure", sectionIndexTitle: nil))
-            sections.append(CPListSection(items: activityItems, header: "10. Recent Continuity", sectionIndexTitle: nil))
+            sections.append(CPListSection(items: [missionItem, agentItem], header: "11. Mission Pressure", sectionIndexTitle: nil))
+            sections.append(CPListSection(items: activityItems, header: "12. Recent Continuity", sectionIndexTitle: nil))
 
             opsTemplate.updateSections(sections)
         } catch {
@@ -742,6 +786,16 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
         let huddleIdeasSectionIndex = opsTemplate.sections.firstIndex { $0.header == "8. Huddle Ideas" }
         if let huddleIdeasSectionIndex, indexPath.section == huddleIdeasSectionIndex, indexPath.item < overview.huddleIdeas.count {
             presentCarPlayHuddleIdeaAlert(for: overview.huddleIdeas[indexPath.item])
+            return
+        }
+        let chronicleSectionIndex = opsTemplate.sections.firstIndex { $0.header == "9. Chronicle Chamber" }
+        if let chronicleSectionIndex, indexPath.section == chronicleSectionIndex {
+            presentCarPlayChronicleSummaryAlert(summary: overview.chronicleSummary)
+            return
+        }
+        let chronicleReviewSectionIndex = opsTemplate.sections.firstIndex { $0.header == "10. Chronicle Reviews" }
+        if let chronicleReviewSectionIndex, indexPath.section == chronicleReviewSectionIndex, indexPath.item < overview.chronicleReviews.count {
+            presentCarPlayChronicleReviewAlert(for: overview.chronicleReviews[indexPath.item])
         }
     }
 
@@ -1078,6 +1132,65 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
         let alert = CPAlertTemplate(
             titleVariants: [idea.text, "\(idea.domain.capitalized) · \(idea.status.replacingOccurrences(of: "_", with: " ").capitalized)"],
             actions: [queueAction, researchAction, passAction, cancelAction]
+        )
+        interfaceController.presentTemplate(alert, animated: true, completion: nil)
+    }
+
+    private func presentCarPlayChronicleSummaryAlert(summary: CarPlayChronicleSummary) {
+        let focusAction = CPAlertAction(title: "Set Focus", style: .default) { [weak self] _ in
+            guard let self else { return }
+            Task {
+                _ = try? await self.client.saveCarPlayOpsFocus(
+                    module: "Chronicle",
+                    route: "/chronicle-center",
+                    reason: "CarPlay elevated Chronicle as the next live operating focus."
+                )
+                await self.loadOps()
+            }
+        }
+        let closeAction = CPAlertAction(title: "Close", style: .cancel) { _ in }
+        let alert = CPAlertTemplate(
+            titleVariants: ["Chronicle Chamber", summary.headline],
+            actions: [focusAction, closeAction]
+        )
+        interfaceController.presentTemplate(alert, animated: true, completion: nil)
+    }
+
+    private func presentCarPlayChronicleReviewAlert(for review: CarPlayChronicleReviewEntry) {
+        let studyAction = CPAlertAction(title: "Study Next", style: .default) { [weak self] _ in
+            guard let self else { return }
+            Task {
+                _ = try? await self.client.reviewChronicleEntry(
+                    review.entryId,
+                    payload: ChronicleReviewPayload(status: "study", title: review.entryTitle, entryType: review.entryType)
+                )
+                await self.loadOps()
+            }
+        }
+        let familyAction = CPAlertAction(title: "Family Handoff", style: .default) { [weak self] _ in
+            guard let self else { return }
+            Task {
+                _ = try? await self.client.reviewChronicleEntry(
+                    review.entryId,
+                    payload: ChronicleReviewPayload(status: "family", title: review.entryTitle, entryType: review.entryType)
+                )
+                await self.loadOps()
+            }
+        }
+        let resolveAction = CPAlertAction(title: "Resolve", style: .destructive) { [weak self] _ in
+            guard let self else { return }
+            Task {
+                _ = try? await self.client.reviewChronicleEntry(
+                    review.entryId,
+                    payload: ChronicleReviewPayload(status: "resolved", title: review.entryTitle, entryType: review.entryType)
+                )
+                await self.loadOps()
+            }
+        }
+        let closeAction = CPAlertAction(title: "Close", style: .cancel) { _ in }
+        let alert = CPAlertTemplate(
+            titleVariants: [review.entryTitle, "\(review.reviewStatusLabel) · \(review.entryType.capitalized)"],
+            actions: [studyAction, familyAction, resolveAction, closeAction]
         )
         interfaceController.presentTemplate(alert, animated: true, completion: nil)
     }

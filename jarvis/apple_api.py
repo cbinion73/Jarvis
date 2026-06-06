@@ -43,6 +43,7 @@ from urllib.parse import quote
 from fastapi import FastAPI, HTTPException
 
 from .audit import AuditLog, ProgressFocusStore, RecoveryActionStore
+from .chronicle_reviews import ChronicleReviewStore
 from .health_checkins import HealthCheckInStore
 from .nav_bridge import NavBridge, haversine, min_distance_to_route, sample_route_points
 from .persistence import append_jsonl as persistence_append_jsonl, atomic_write_json
@@ -389,6 +390,10 @@ def _build_carplay_ops_overview(runtime: Any) -> dict[str, Any]:
     except Exception:
         idea_summary = {}
         idea_items = []
+    chronicle_reviews = ChronicleReviewStore().review_summary(actor_id="chris", limit=4)
+    chronicle_entries = _safe_read_jsonl(Path("data/chronicle/entries.jsonl"))
+    chronicle_context = _chronicle_fallback_context(chronicle_entries, "chris")
+    chronicle_latest = _chronicle_fallback_entries(chronicle_entries, "chris")
     idea_counts = dict(idea_summary.get("by_status") or {})
     queued_idea_count = int(idea_counts.get("queued") or 0) + int(idea_counts.get("captured") or 0)
 
@@ -474,6 +479,28 @@ def _build_carplay_ops_overview(runtime: Any) -> dict[str, Any]:
             for item in idea_items[:4]
             if str(item.get("id") or "").strip()
         ],
+        "chronicle_summary": {
+            "latest_title": str((chronicle_latest[0] if chronicle_latest else {}).get("title") or "No Chronicle entry yet").strip() or "No Chronicle entry yet",
+            "active_prayer_count": int((chronicle_context or {}).get("active_prayer_count") or 0),
+            "study_title": str(((chronicle_context or {}).get("study") or {}).get("title") or ((chronicle_context or {}).get("study") or {}).get("passage") or "").strip(),
+            "review_count": int(chronicle_reviews.get("count", 0) or 0),
+            "headline": (
+                f"{int(chronicle_reviews.get('count', 0) or 0)} Chronicle review thread(s) and {int((chronicle_context or {}).get('active_prayer_count') or 0)} active prayer(s) are ready."
+                if int(chronicle_reviews.get("count", 0) or 0) or int((chronicle_context or {}).get("active_prayer_count") or 0)
+                else "Chronicle memory lane is steady. Capture or review story threads from the phone."
+            ),
+        },
+        "chronicle_reviews": [
+            {
+                "entry_id": str(item.get("entry_id") or "").strip(),
+                "entry_title": str(item.get("entry_title") or "Chronicle entry").strip() or "Chronicle entry",
+                "entry_type": str(item.get("entry_type") or "reflection").strip() or "reflection",
+                "review_status": str(item.get("review_status") or "").strip(),
+                "review_status_label": str(item.get("review_status_label") or "Review recorded").strip() or "Review recorded",
+            }
+            for item in list(chronicle_reviews.get("items") or [])[:4]
+            if str(item.get("entry_id") or "").strip()
+        ],
         "recent_activity": [
             {
                 "title": str(item.get("action") or item.get("entry_type") or "Activity").strip() or "Activity",
@@ -502,6 +529,7 @@ def _build_carplay_ops_overview(runtime: Any) -> dict[str, Any]:
             "agent_ops_count": len(agent_items),
             "supervision_count": len(supervision_items),
             "huddle_idea_count": len(idea_items),
+            "chronicle_review_count": int(chronicle_reviews.get("count", 0) or 0),
         },
     }
 
@@ -1426,6 +1454,36 @@ def _save_chronicle_study_entry(*, actor: str, title: str, passage: str, notes: 
         related_label=str(entry.get("title") or "Bible Study"),
     )
     return {"captured": True, "entry_id": entry_id, "focus": focus}
+
+
+def _review_chronicle_entry(
+    *,
+    entry_id: str,
+    actor: str,
+    title: str,
+    entry_type: str,
+    status: str,
+    note: str = "",
+) -> dict[str, Any]:
+    review = ChronicleReviewStore().review_entry(
+        entry_id=entry_id,
+        actor_id=actor,
+        title=title,
+        entry_type=entry_type,
+        status=status,
+        note=note,
+        route="/chronicle-center",
+    )
+    focus = _record_chronicle_progress_focus(
+        actor=actor,
+        action=review["review_status_label"],
+        detail=f"Chronicle moved '{review['entry_title']}' into {review['review_status_label'].lower()} from the native review lane.",
+        why_now="The iPhone Chronicle screen pushed a live memory thread into study, family handoff, or resolution continuity.",
+        result_summary=f"Chronicle review status is now {review['review_status_label'].lower()}.",
+        related_kind="chronicle-review",
+        related_label=str(review.get("entry_title") or "Chronicle entry"),
+    )
+    return {"status": "recorded", "review": review, "focus": focus}
 
 
 def _record_huddle_progress_focus(
@@ -11831,12 +11889,16 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             except Exception as exc:
                 logger.warning("apple_chronicle bridge context fallback: %s", exc)
 
+            review_summary = ChronicleReviewStore().review_summary(actor_id=actor, limit=6)
+
             return _ok({
                 "entries": entries,
                 "context": context,
                 "patterns": patterns,
                 "continuity": _chronicle_continuity_packet(actor, raw_entries, context if isinstance(context, dict) else {}),
                 "study_workspace": _chronicle_study_workspace(context if isinstance(context, dict) else {}),
+                "review_lane": list(review_summary.get("items") or []),
+                "review_count": int(review_summary.get("count", 0) or 0),
                 "updated_at": _ts(),
             })
         except Exception as exc:
@@ -11866,6 +11928,8 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                     "recall_prompt": "",
                 },
                 "study_workspace": None,
+                "review_lane": [],
+                "review_count": 0,
                 "updated_at": _ts(),
             })
 
@@ -11899,6 +11963,27 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         passage = str(payload.get("passage") or "").strip()
         notes = str(payload.get("notes") or "").strip()
         return _ok(_save_chronicle_study_entry(actor=actor, title=title, passage=passage, notes=notes))
+
+    @app.post("/api/apple/chronicle/entries/{entry_id}/review")
+    async def apple_chronicle_review(entry_id: str, payload: dict):
+        actor = str(payload.get("actor_id") or payload.get("actor") or "chris").strip() or "chris"
+        status = str(payload.get("status") or "").strip().lower()
+        note = str(payload.get("note") or "").strip()
+        title = str(payload.get("title") or "Chronicle entry").strip() or "Chronicle entry"
+        entry_type = str(payload.get("entry_type") or "reflection").strip() or "reflection"
+        try:
+            return _ok(
+                _review_chronicle_entry(
+                    entry_id=entry_id,
+                    actor=actor,
+                    title=title,
+                    entry_type=entry_type,
+                    status=status,
+                    note=note,
+                )
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     # ── Faith daily word ──────────────────────────────────────────────────────
 
