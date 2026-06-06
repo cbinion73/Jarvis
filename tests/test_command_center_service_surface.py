@@ -605,17 +605,23 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Inspect Event", activity_html)
         self.assertIn("Home Bridges", activity_html)
         self.assertIn("Progress Snapshot Persisted", activity_html)
+        self.assertIn("Promote to Progress Focus", activity_html)
+        self.assertIn("Shared Progress Focus", activity_html)
         self.assertIn("/progress-center", activity_html)
         self.assertIn("Home Continuity", activity_html)
         self.assertIn("status", activity_snapshot)
         self.assertIn("activity_feed", activity_snapshot)
         self.assertIn("action_journal", activity_snapshot)
         self.assertIn("home_action_result", activity_snapshot)
+        self.assertIn("focus_control", activity_snapshot)
+        self.assertIn("progress_next_focus", activity_snapshot)
         self.assertIn("home_bridge_count", activity_snapshot["counts"])
+        self.assertIn("focus_history_count", activity_snapshot["counts"])
         self.assertTrue(any(item.get("entry_type") == "progress-snapshot" for item in activity_snapshot["activity_feed"]))
         self.assertIn("proof_paths", activity_snapshot)
         self.assertEqual(activity_snapshot["proof_paths"]["module_route"], "/activity-center")
         self.assertEqual(activity_snapshot["proof_paths"]["module_api"], "/api/activity/module")
+        self.assertEqual(activity_snapshot["proof_paths"]["activity_focus_api"], "/api/activity/module/focus")
         self.assertIn("JARVIS Agent Operations", agent_ops_html)
         self.assertIn("Refresh Agent Ops State", agent_ops_html)
         self.assertIn("Queue Agent Run", agent_ops_html)
@@ -785,6 +791,51 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertTrue(any(item.get("entry_type") == "operator-action" for item in activity_module_payload["activity_feed"]))
         self.assertGreaterEqual(int(action_journal.get("operator_count", 0) or 0), 1)
         self.assertTrue(any(item.get("kind") == "operator-action" for item in action_journal.get("entries", [])))
+
+    def test_activity_focus_mutation_updates_progress_and_activity_feed(self) -> None:
+        asyncio.run(
+            self._route("/api/activity/operator-action", "POST")(
+                {
+                    "actor": "Chris",
+                    "domain": "recovery",
+                    "action": "Stabilize Recovery Loop",
+                    "title": "Dropbox sync failure",
+                    "status": "ok",
+                    "detail": "Recovery execution needs a shared follow-through focus.",
+                    "why_now": "Activity Feed focus promotion should be able to advance shared progress state from a live recovery event.",
+                    "result_summary": "Recovery action result: ok",
+                    "route": "/recovery-center",
+                    "route_label": "Open Recovery Center",
+                    "related_kind": "recovery-case",
+                    "related_label": "Dropbox sync failure",
+                    "succeeded": True,
+                }
+            )
+        )
+
+        focus_response = asyncio.run(
+            self._route("/api/activity/module/focus", "POST")(
+                {
+                    "actor": "Chris",
+                    "title": "Dropbox sync failure",
+                    "detail": "Recovery execution needs a shared follow-through focus.",
+                    "related_route": "/recovery-center",
+                    "related_kind": "recovery-case",
+                }
+            )
+        )
+
+        focus_payload = self._json_body(focus_response)
+        activity_module_payload = self._json_body(asyncio.run(self._route("/api/activity/module", "GET")()))
+        progress_snapshot = self._json_body(asyncio.run(self._route("/api/progress/module", "GET")()))
+
+        self.assertEqual(focus_payload["status"], "recorded")
+        self.assertEqual(focus_payload["focus"]["module"], "Recovery")
+        self.assertEqual(activity_module_payload["progress_next_focus"], "Recovery")
+        self.assertEqual(activity_module_payload["focus_control"]["latest"]["module"], "Recovery")
+        self.assertTrue(any(item.get("title") == "Promote Activity Focus" for item in activity_module_payload["activity_feed"]))
+        self.assertEqual(progress_snapshot["progress_next_focus"], "Recovery")
+        self.assertEqual(progress_snapshot["focus_control"]["latest"]["module"], "Recovery")
 
     def test_recovery_case_mutations_persist_into_shared_activity(self) -> None:
         recovery_module_response = asyncio.run(self._route("/api/recovery/module", "GET")())

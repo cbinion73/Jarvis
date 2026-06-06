@@ -4214,6 +4214,10 @@ def render_activity_module_page(payload: dict) -> str:
         <ul id="activity-evidence-list"></ul>
       </section>
       <section class="panel span-8">
+        <h2>Shared Progress Focus</h2>
+        <ul id="focus-list"></ul>
+      </section>
+      <section class="panel span-8">
         <h2>Proof Paths</h2>
         <ul id="proof-list"></ul>
       </section>
@@ -4239,6 +4243,7 @@ def render_activity_module_page(payload: dict) -> str:
     const journalList = document.getElementById("journal-list");
     const detailEl = document.getElementById("activity-detail");
     const evidenceEl = document.getElementById("activity-evidence-list");
+    const focusEl = document.getElementById("focus-list");
     const proofEl = document.getElementById("proof-list");
     const payloadPreview = document.getElementById("payload-preview");
     const statusNote = document.getElementById("activity-status-note");
@@ -4309,6 +4314,7 @@ def render_activity_module_page(payload: dict) -> str:
           </div>
           <div class="action-row">
             <button type="button" data-related-route="${{esc(relatedRoute)}}">Jump to Related</button>
+            <button type="button" data-promote-focus="true">Promote to Progress Focus</button>
             <a href="/api/activity">Open Activity JSON</a>
           </div>
         </div>
@@ -4317,6 +4323,13 @@ def render_activity_module_page(payload: dict) -> str:
         button.addEventListener("click", () => {{
           const route = button.getAttribute("data-related-route") || "/command-center";
           window.location.href = route;
+        }});
+      }});
+      document.querySelectorAll("[data-promote-focus]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          promoteSelectedActivityFocus().catch((error) => {{
+            actionNote.textContent = `Progress focus update failed: ${{String(error)}}`;
+          }});
         }});
       }});
       evidenceEl.innerHTML = [
@@ -4345,6 +4358,7 @@ def render_activity_module_page(payload: dict) -> str:
       heroAutonomous.textContent = String((payload.action_journal || {{}}).autonomous_count || 0);
       heroHomeBridges.textContent = String(counts.home_bridge_count || 0);
       statusNote.textContent = payload.summary || "No activity summary captured yet.";
+      const latestFocus = (payload.focus_control || {{}}).latest || {{}};
 
       activityList.innerHTML = activity.length
         ? activity.map((item, index) => `
@@ -4396,9 +4410,40 @@ def render_activity_module_page(payload: dict) -> str:
         }});
       }});
 
+      focusEl.innerHTML = [
+        li("Current Shared Focus", payload.progress_next_focus || "No next progress focus recorded yet.", latestFocus.reason || "Activity Feed can now promote live events into shared progress continuity."),
+        ...(((payload.focus_control || {{}}).recent) || []).slice(0, 4).map((item) => li(item.module || "Progress", item.reason || "No focus reason recorded.", item.saved_at || "")),
+      ].join("");
       proofEl.innerHTML = Object.entries(payload.proof_paths || {{}}).map(([key, value]) => li(key, value)).join("");
       payloadPreview.textContent = JSON.stringify(payload, null, 2);
       renderDetail(payload);
+    }}
+
+    async function promoteSelectedActivityFocus() {{
+      const item = selectedItem(currentPayload);
+      if (!item) {{
+        actionNote.textContent = "Select an activity item before promoting shared progress focus.";
+        return;
+      }}
+      actionNote.textContent = "Promoting selected activity into shared progress focus…";
+      const response = await fetch("/api/activity/module/focus", {{
+        method: "POST",
+        headers: {{ "Content-Type": "application/json" }},
+        body: JSON.stringify({{
+          actor: "Chris",
+          title: item.title || "Activity focus",
+          detail: item.detail || item.result || item.subtitle || "",
+          related_route: item.related_route || "/command-center",
+          related_kind: item.related_kind || item.entry_type || "activity",
+          reason: item.detail || item.result || "Activity Feed promoted a live event into shared progress continuity.",
+        }}),
+      }});
+      const payload = await response.json();
+      if (!response.ok) {{
+        throw new Error(payload.detail || payload.error || "Progress focus update failed");
+      }}
+      actionNote.textContent = `Shared progress focus moved to ${{payload.focus?.module || "the selected module"}}.`;
+      await refreshActivityFeed();
     }}
 
     async function refreshActivityFeed() {{

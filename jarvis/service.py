@@ -2671,6 +2671,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         action_journal = dict(command_center.get("action_journal") or {})
         home_overview = dict(command_center.get("home_overview") or {})
         home_action_result = dict(home_overview.get("action_result") or {})
+        focus_summary = ProgressFocusStore(DEFAULT_AUDIT_ROOT).summary()
 
         def related_route_for(entry: dict[str, Any]) -> str:
             haystack = " ".join(
@@ -2696,6 +2697,39 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             if any(token in haystack for token in ("progress", "readiness", "snapshot", "seam")):
                 return "/progress-center"
             return "/command-center"
+
+        def module_name_for_route(route: str, related_kind: str = "") -> str:
+            route_value = str(route or "").strip().lower()
+            kind_value = str(related_kind or "").strip().lower()
+            if route_value == "/approval-queue" or "approval" in kind_value:
+                return "Approval Queue"
+            if route_value == "/recovery-center" or any(token in kind_value for token in ("recovery", "failure")):
+                return "Recovery"
+            if route_value == "/mission-board" or "mission" in kind_value:
+                return "Mission Board"
+            if route_value == "/agent-ops-center" or "agent" in kind_value:
+                return "Agent Ops"
+            if route_value == "/briefing-center" or any(token in kind_value for token in ("brief", "open-loop")):
+                return "Daily Brief"
+            if route_value == "/chronicle-center" or "chronicle" in kind_value:
+                return "Chronicle"
+            if route_value == "/health-center" or "health" in kind_value:
+                return "Health"
+            if route_value == "/navigation-center" or any(token in kind_value for token in ("route", "navigation")):
+                return "Navigation"
+            if route_value == "/publish" or any(token in kind_value for token in ("publish", "publishing")):
+                return "Publish"
+            if route_value == "/settings-center" or "settings" in kind_value:
+                return "Settings"
+            if route_value == "/huddle-center" or "huddle" in kind_value:
+                return "Huddle"
+            if route_value == "/supervision-snapshot" or "supervision" in kind_value:
+                return "Supervision"
+            if route_value == "/progress-center" or "progress" in kind_value:
+                return "Progress"
+            if route_value == "/activity-center" or "activity" in kind_value:
+                return "Activity Feed"
+            return "Command Center"
 
         enriched_activity = []
         bridge = dict(home_action_result.get("activity_bridge") or {})
@@ -2738,11 +2772,15 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "activity_count": len(enriched_activity),
                 "journal_count": len(enriched_journal),
                 "home_bridge_count": 1 if bridge else 0,
+                "focus_history_count": int(focus_summary.get("history_count", 0) or 0),
             },
+            "focus_control": focus_summary,
+            "progress_next_focus": str((focus_summary.get("latest") or {}).get("module") or "").strip() or "No next progress focus recorded yet.",
             "proof_paths": {
                 "module_route": "/activity-center",
                 "module_api": "/api/activity/module",
                 "activity_api": "/api/activity",
+                "activity_focus_api": "/api/activity/module/focus",
                 "command_center_route": "/command-center",
                 "approval_queue_route": "/approval-queue",
                 "recovery_route": "/recovery-center",
@@ -2754,6 +2792,74 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/activity/module")
     async def api_activity_module() -> JSONResponse:
         return _json(await _build_activity_module_payload())
+
+    @app.post("/api/activity/module/focus")
+    async def api_activity_module_focus(payload: dict[str, Any]) -> JSONResponse:
+        def module_name_for_route(route: str, related_kind: str = "") -> str:
+            route_value = str(route or "").strip().lower()
+            kind_value = str(related_kind or "").strip().lower()
+            if route_value == "/approval-queue" or "approval" in kind_value:
+                return "Approval Queue"
+            if route_value == "/recovery-center" or any(token in kind_value for token in ("recovery", "failure")):
+                return "Recovery"
+            if route_value == "/mission-board" or "mission" in kind_value:
+                return "Mission Board"
+            if route_value == "/agent-ops-center" or "agent" in kind_value:
+                return "Agent Ops"
+            if route_value == "/briefing-center" or any(token in kind_value for token in ("brief", "open-loop")):
+                return "Daily Brief"
+            if route_value == "/chronicle-center" or "chronicle" in kind_value:
+                return "Chronicle"
+            if route_value == "/health-center" or "health" in kind_value:
+                return "Health"
+            if route_value == "/navigation-center" or any(token in kind_value for token in ("route", "navigation")):
+                return "Navigation"
+            if route_value == "/publish" or any(token in kind_value for token in ("publish", "publishing")):
+                return "Publish"
+            if route_value == "/settings-center" or "settings" in kind_value:
+                return "Settings"
+            if route_value == "/huddle-center" or "huddle" in kind_value:
+                return "Huddle"
+            if route_value == "/supervision-snapshot" or "supervision" in kind_value:
+                return "Supervision"
+            if route_value == "/progress-center" or "progress" in kind_value:
+                return "Progress"
+            if route_value == "/activity-center" or "activity" in kind_value:
+                return "Activity Feed"
+            return "Command Center"
+
+        actor = str(payload.get("actor") or "Chris").strip() or "Chris"
+        related_route = str(payload.get("related_route") or payload.get("route") or "/activity-center").strip() or "/activity-center"
+        related_kind = str(payload.get("related_kind") or "").strip()
+        title = str(payload.get("title") or payload.get("event_title") or "Activity focus").strip() or "Activity focus"
+        detail = str(payload.get("detail") or "").strip()
+        target_module = str(payload.get("target_module") or "").strip() or module_name_for_route(related_route, related_kind)
+        reason = str(payload.get("reason") or detail or f"Activity Feed promoted {title} into shared progress focus.").strip()
+        focus_entry = ProgressFocusStore(DEFAULT_AUDIT_ROOT).save_focus(
+            module=target_module,
+            reason=reason,
+            route="/activity-center",
+            actor=actor,
+        )
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": "activity",
+                "action": "Promote Activity Focus",
+                "title": title,
+                "detail": reason,
+                "why_now": "Activity Feed promoted a live event into shared progress continuity.",
+                "result_summary": f"Shared progress focus moved to {target_module}.",
+                "related_route": "/activity-center",
+                "route_label": "Open Activity Feed",
+                "related_kind": "progress-focus",
+                "related_label": target_module,
+                "succeeded": True,
+                "source_kind": "operator-action",
+            },
+        )
+        return _json({"status": "recorded", "focus": focus_entry})
 
     async def _build_agent_ops_module_payload() -> dict[str, Any]:
         command_center = build_command_center_index()
