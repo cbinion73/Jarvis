@@ -2406,6 +2406,10 @@ def render_mission_board_module_page(payload: dict) -> str:
     </section>
     <div class="layout">
       <section class="panel span-12">
+        <h2>Mission Authoring</h2>
+        <div id="mission-authoring"></div>
+      </section>
+      <section class="panel span-12">
         <h2>Mission Lanes</h2>
         <div id="mission-board" class="board-grid"></div>
       </section>
@@ -2446,6 +2450,7 @@ def render_mission_board_module_page(payload: dict) -> str:
     const heroNext = document.getElementById("hero-next");
     const heroBlocked = document.getElementById("hero-blocked");
     const heroCompleted = document.getElementById("hero-completed");
+    const authoringEl = document.getElementById("mission-authoring");
     const boardEl = document.getElementById("mission-board");
     const detailEl = document.getElementById("mission-detail");
     const evidenceEl = document.getElementById("mission-evidence-list");
@@ -2732,6 +2737,70 @@ def render_mission_board_module_page(payload: dict) -> str:
           succeeded: false,
         }});
         actionNote.textContent = `Mission handoff creation failed: ${{errorText}}`;
+      }}
+    }}
+
+    async function createMission() {{
+      const actor = String(document.getElementById("mission-author-actor")?.value || "Chris").trim() || "Chris";
+      const room = String(document.getElementById("mission-author-room")?.value || "office").trim() || "office";
+      const request = String(document.getElementById("mission-author-request")?.value || "").trim();
+      if (!request) {{
+        actionNote.textContent = "Add a mission request before creating a mission.";
+        return;
+      }}
+      actionNote.textContent = "Creating a new mission from the Mission Board…";
+      try {{
+        const response = await fetch("/api/missions", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            actor,
+            room,
+            request,
+          }}),
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Mission creation failed");
+        }}
+        selectedMissionId = String(payload.mission_id || "").trim();
+        const recorded = await recordMissionActivity({{
+          actor,
+          domain: "mission-board",
+          action: "Create Mission",
+          title: String(payload.title || request).trim() || "New mission",
+          status: String(payload.status || "created").trim() || "created",
+          detail: "Action succeeded: /api/missions",
+          why_now: request,
+          result_summary: `Mission created in ${{room}} and added to the Mission Board.`,
+          route: "/mission-board",
+          route_label: "Open Mission Board",
+          related_kind: "mission",
+          related_label: String(payload.mission_id || payload.title || "mission").trim() || "mission",
+          succeeded: true,
+        }});
+        actionNote.textContent = recorded
+          ? `Created mission ${{selectedMissionId || payload.title || "detail"}} and recorded it in shared activity.`
+          : `Created mission ${{selectedMissionId || payload.title || "detail"}}.`;
+        await refreshMissionBoard();
+      }} catch (error) {{
+        const errorText = String(error);
+        await recordMissionActivity({{
+          actor,
+          domain: "mission-board",
+          action: "Create Mission",
+          title: request.slice(0, 80) || "Mission request",
+          status: "failed",
+          detail: "Action failed: /api/missions",
+          why_now: errorText,
+          result_summary: `Mission creation failed: ${{errorText}}`,
+          route: "/mission-board",
+          route_label: "Open Mission Board",
+          related_kind: "mission",
+          related_label: "mission",
+          succeeded: false,
+        }});
+        actionNote.textContent = `Mission creation failed: ${{errorText}}`;
       }}
     }}
 
@@ -3056,6 +3125,40 @@ def render_mission_board_module_page(payload: dict) -> str:
       heroBlocked.textContent = String(counts.blocked || 0);
       heroCompleted.textContent = String(counts.completed || 0);
       statusNote.textContent = payload.summary || "No mission board summary captured yet.";
+      authoringEl.innerHTML = `
+        <div class="mission-card">
+          <strong>Create Mission</strong>
+          <span>Start a real mission from this standalone board so it immediately appears in the now/next workflow with seeded agents, subtasks, and mission state.</span>
+          <div class="meta">
+            <div>
+              <label>Actor</label>
+              <input id="mission-author-actor" value="Chris" />
+            </div>
+            <div>
+              <label>Room</label>
+              <select id="mission-author-room">
+                <option value="office">office</option>
+                <option value="family">family</option>
+                <option value="workshop">workshop</option>
+                <option value="travel">travel</option>
+              </select>
+            </div>
+            <div>
+              <label>Mission Request</label>
+              <input id="mission-author-request" value="" placeholder="What should JARVIS take forward right now?" />
+            </div>
+          </div>
+          <div class="action-row">
+            <button type="button" id="create-mission-button">Create Mission</button>
+            <a href="/api/missions">Open Missions API</a>
+          </div>
+        </div>
+      `;
+      document.getElementById("create-mission-button")?.addEventListener("click", () => {{
+        createMission().catch((error) => {{
+          actionNote.textContent = `Mission creation failed: ${{String(error)}}`;
+        }});
+      }});
 
       boardEl.innerHTML = lanes.map((lane) => {{
         const laneItems = items.filter((item) => String(item.lane || "next") === lane.key);

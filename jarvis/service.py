@@ -2086,9 +2086,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "generated_at": command_center.get("generated_at", ""),
             "available": True,
             "status": "Useful" if int(mission_task_board.get("item_count", 0) or 0) else "Wired",
-            "summary": "Mission & Task Board now has a dedicated module route with live lane posture, mission detail, mission workspaces, handoff authoring, and mission status mutation inside JARVIS.",
-            "what_became_real": "Mission & Task Board is now a standalone app module with workspace review, handoff flows, and per-agent work-state controls instead of only a command-center panel and mission API proof path.",
-            "remains_partial": "Broader mission creation or edit flows and deeper seam linkage still need follow-on slices.",
+            "summary": "Mission & Task Board now has a dedicated module route with live lane posture, mission detail, mission authoring, mission workspaces, handoff authoring, and mission status mutation inside JARVIS.",
+            "what_became_real": "Mission & Task Board is now a standalone app module with mission authoring, workspace review, handoff flows, and per-agent work-state controls instead of only a command-center panel and mission API proof path.",
+            "remains_partial": "Broader mission edit flows and deeper seam linkage still need follow-on slices.",
             "mission_task_board": mission_task_board,
             "mission_details": {},
             "counts": {
@@ -2101,6 +2101,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "module_route": "/mission-board",
                 "module_api": "/api/mission-board/module",
                 "missions_api": "/api/missions",
+                "mission_create_api": "/api/missions",
                 "mission_status_api_prefix": "/api/missions/",
                 "mission_handoff_api_suffix": "/handoffs",
                 "mission_handoff_ack_suffix": "/handoffs/{handoff_id}/acknowledge",
@@ -2142,7 +2143,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 f"Mission board loaded {len(items)} mission(s): "
                 f"{payload['counts']['now']} now, {payload['counts']['next']} next, "
                 f"{payload['counts']['blocked']} blocked, and {payload['counts']['completed']} completed, "
-                f"with mission detail, work-state review, and handoff flows available for the leading board items."
+                f"with mission detail, mission authoring, work-state review, and handoff flows available for the leading board items."
             )
 
         if payload["errors"] and not items:
