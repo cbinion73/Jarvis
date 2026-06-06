@@ -13,7 +13,17 @@ sourceDocuments:
 
 ## 1. Architectural Thesis
 
-JARVIS should be built as a layered household platform:
+JARVIS should be built as an always-on orchestrator composed of specialized
+agents working continuously on behalf of the household.
+
+Direct interaction is only one operating mode.
+
+When the human engages, the relevant agents come forward.
+
+When the human disengages, those agents continue bounded background work,
+handoffs, monitoring, planning, and stewardship activity.
+
+That requires a layered household platform:
 
 1. Local home state and actuation
 2. Local orchestration, permissions, and memory policy
@@ -21,6 +31,10 @@ JARVIS should be built as a layered household platform:
 4. OpenClaw as operator shell, approvals surface, and future channel bridge
 
 The system should not rely on one giant model prompt. It should route work across cheaper local logic, cheap OpenAI routing models, stronger planning models, and a dedicated voice model where real-time speech matters.
+
+The system should also not be modeled as a request-response app with background
+extras attached. It should be modeled as a persistent orchestration core with
+foreground and background attention routing.
 
 ## 2. Top-Level System
 
@@ -30,6 +44,8 @@ Voice satellites / cameras / sensors
 Local wake word + presence + room inference
         ->
 JARVIS Orchestrator
+        ->
+Agent Runtime + Scheduler + Attention Router
         ->
 Permission Engine
         ->
@@ -95,6 +111,9 @@ Use Python for the first JARVIS domain runtime because:
 - OpenAI and ElevenLabs are already wired here
 - household policy and orchestration are straightforward to express in dataclasses and services
 - later integrations can still expose HTTP/WebSocket boundaries for mixed-language extensions
+
+The runtime should evolve toward a persistent orchestrator that can supervise a
+large society of specialized agents rather than only process one-off requests.
 
 ### ADR-005: Consequential actions require explicit approval
 

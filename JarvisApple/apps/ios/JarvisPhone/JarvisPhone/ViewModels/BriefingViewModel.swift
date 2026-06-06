@@ -8,10 +8,14 @@ final class BriefingViewModel: ObservableObject {
     @Published var appState: AppStateOverview?
     @Published var focusState: FocusStateOverview?
     @Published var controlPlaneState: ControlPlaneOverview?
+    @Published var catalystOverview: CatalystOverview?
+    @Published var chronicleOverview: ChronicleOverview?
+    @Published var publishingOverview: PublishOverview?
     @Published var isLoading = false
     @Published var errorMessage: String?
 
     private let client = AppleAPIClient.shared
+    private let speechManager = SpeechManager.shared
 
     func load() async {
         isLoading = true
@@ -23,8 +27,14 @@ final class BriefingViewModel: ObservableObject {
             appState = try await state
             async let focus = try? client.fetchFocusState()
             async let control = try? client.fetchControlPlaneState()
+            async let catalyst = try? client.fetchCatalyst()
+            async let chronicle = try? client.fetchChronicle()
+            async let publishing = try? client.fetchPublishing()
             focusState = await focus
             controlPlaneState = await control
+            catalystOverview = await catalyst
+            chronicleOverview = await chronicle
+            publishingOverview = await publishing
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -40,8 +50,14 @@ final class BriefingViewModel: ObservableObject {
             appState = try await client.fetchAppState()
             async let focus = try? client.fetchFocusState()
             async let control = try? client.fetchControlPlaneState()
+            async let catalyst = try? client.fetchCatalyst()
+            async let chronicle = try? client.fetchChronicle()
+            async let publishing = try? client.fetchPublishing()
             focusState = await focus
             controlPlaneState = await control
+            catalystOverview = await catalyst
+            chronicleOverview = await chronicle
+            publishingOverview = await publishing
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -61,11 +77,29 @@ final class BriefingViewModel: ObservableObject {
         }
     }
 
+    @discardableResult
+    func stageStewardshipLaneReview(_ laneId: String, note: String = "") async -> StewardshipLaneActionResult? {
+        do {
+            let result = try await client.stageStewardshipLaneReview(laneId, note: note)
+            await load()
+            return result
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
     /// Send a voice command transcript to the JARVIS /speak endpoint.
     func sendVoiceCommand(_ text: String) async {
         guard !text.isEmpty else { return }
-        _ = try? await client.speak(text: text)
-        // Refresh brief after command
-        await load()
+        do {
+            let result = try await client.speak(text: text)
+            if result.speak {
+                speechManager.speak(result.spokenText)
+            }
+            await load()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }

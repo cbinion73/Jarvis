@@ -20,12 +20,16 @@ import urllib.parse
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json
+
 logger = logging.getLogger(__name__)
 
 # ── Cache config ────────────────────────────────────────────────────────────
 _DEVICE_CACHE_TTL = 30          # seconds — devices list (short: state changes)
 _DISCOVERY_CACHE_TTL = 300      # seconds — full discovery scan (expensive)
 _SCENES_PATH = Path("data/settings/kasa_scenes.json")
+_SCENES_LOG_PATH = _SCENES_PATH.with_name("kasa_scenes_log.jsonl")
+_SCENES_STATE_LOG_PATH = _SCENES_PATH.with_name("kasa_scenes_state_log.jsonl")
 
 # ── Stream config ────────────────────────────────────────────────────────────
 _STREAM_HLS_DIR = Path("data/camera_hls")
@@ -95,13 +99,65 @@ def _load_scenes() -> list[dict]:
         try:
             return json.loads(_SCENES_PATH.read_text(encoding="utf-8"))
         except Exception:
+            return _load_scenes_from_state_log() or _load_scenes_from_log()
+    if not _SCENES_PATH.exists():
+        return _load_scenes_from_state_log() or _load_scenes_from_log()
+    return DEFAULT_SCENES
+
+
+def _load_scenes_from_log() -> list[dict]:
+    if _SCENES_LOG_PATH.exists():
+        try:
+            latest: list[dict] = []
+            for line in _SCENES_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+            if latest:
+                return latest
+        except Exception:
             pass
     return DEFAULT_SCENES
 
 
+def _load_scenes_from_state_log() -> list[dict]:
+    if _SCENES_STATE_LOG_PATH.exists():
+        try:
+            latest: list[dict] = []
+            for line in _SCENES_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+            if latest:
+                return latest
+        except Exception:
+            pass
+    return []
+
+
 def _save_scenes(scenes: list[dict]) -> None:
     _SCENES_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _SCENES_PATH.write_text(json.dumps(scenes, indent=2), encoding="utf-8")
+    atomic_write_json(_SCENES_PATH, scenes)
+    append_jsonl(
+        _SCENES_LOG_PATH,
+        {
+            "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "records": scenes,
+        },
+    )
+    append_jsonl(
+        _SCENES_STATE_LOG_PATH,
+        {
+            "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "records": scenes,
+        },
+    )
 
 
 # ── Bridge class ─────────────────────────────────────────────────────────────

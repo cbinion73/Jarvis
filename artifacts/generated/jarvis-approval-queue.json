@@ -1,0 +1,59 @@
+{
+  "generated_at": "2026-06-06T02:07:46.877281+00:00",
+  "pending_count": 0,
+  "history_count": 1,
+  "pending": [],
+  "history": [
+    {
+      "request_id": "pending-1",
+      "title": "Move pediatrician visit",
+      "description": "Move pediatrician visit for Chris",
+      "status": "executed",
+      "risk_tier": "medium",
+      "agent_id": "sam",
+      "agent_label": "Sam Wilson",
+      "actor_id": "chris",
+      "action_type": "calendar_change",
+      "priority": 2,
+      "requested_at": "2026-06-06T01:07:46.869831+00:00",
+      "expires_at": "2026-06-08T01:07:46.869831+00:00",
+      "approved_by": "chris",
+      "approved_at": "2026-06-06T02:07:46.873219+00:00",
+      "executed_at": "2026-06-06T02:07:46.874846+00:00",
+      "rejection_reason": "",
+      "trust_zone_id": "household_schedule",
+      "lane_id": "daily-life",
+      "arena_id": "household.schedule.routing",
+      "requested_outcome": "Reschedule the pediatrician visit",
+      "requires_confirmation": false,
+      "confirmation_phrase": "",
+      "tags": [
+        "calendar",
+        "family"
+      ],
+      "supervision_decision": {
+        "resolution": "stage",
+        "approval_required": true
+      },
+      "commands": {
+        "show": "python3 scripts/manage_approval_queue.py show pending-1",
+        "approve": "python3 scripts/manage_approval_queue.py approve pending-1",
+        "reject": "python3 scripts/manage_approval_queue.py reject pending-1 --reason \"why this is not safe yet\"",
+        "cancel": "python3 scripts/manage_approval_queue.py cancel pending-1",
+        "execute": "python3 scripts/manage_approval_queue.py execute pending-1"
+      },
+      "actions": {
+        "approve": "/api/approvals/pending-1/approve",
+        "reject": "/api/approvals/pending-1/reject",
+        "cancel": "/api/approvals/pending-1/cancel",
+        "execute": "/api/approvals/pending-1/execute"
+      }
+    }
+  ],
+  "what_needs_me": [],
+  "proof_paths": {
+    "generated_html": "/Users/chris/Desktop/JARVIS-clean/artifacts/generated/jarvis-approval-queue.html",
+    "generated_json": "/Users/chris/Desktop/JARVIS-clean/artifacts/generated/jarvis-approval-queue.json",
+    "script": "/Users/chris/Desktop/JARVIS-clean/scripts/manage_approval_queue.py"
+  }
+}

@@ -63,6 +63,7 @@ final class ForgeViewModel: ObservableObject {
     @Published var isUploading    = false
     @Published var uploadProgress: Double = 0
     @Published var uploadStatus   = ""
+    @Published var overview: ForgeOverview?
     @Published var models: [ForgeModel] = []
     @Published var showPicker  = false
     @Published var previewModel: ForgeModel?
@@ -80,13 +81,48 @@ final class ForgeViewModel: ObservableObject {
         selectedImages = images
     }
 
-    // Fetch existing models from server
-    func loadModels() async {
+    var projects: [ForgeProjectSummary] {
+        overview?.projects ?? []
+    }
+
+    var activeProject: ForgeProjectDetail? {
+        overview?.activeProject
+    }
+
+    var summary: ForgeSummary? {
+        overview?.summary
+    }
+
+    var recentJobs: [ForgeJobStatus] {
+        overview?.recentJobs ?? []
+    }
+
+    // Fetch existing forge state from server
+    func loadOverview() async {
         do {
-            let records = try await AppleAPIClient.shared.fetchForgeModels()
-            models = records.map { ForgeModel(record: $0) }
+            let overview = try await AppleAPIClient.shared.fetchForgeOverview()
+            self.overview = overview
+            self.models = overview.models.map { ForgeModel(record: $0) }
         } catch {
-            // Empty state is fine on first launch
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func createProject(title: String, description: String) async {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else { return }
+        errorMessage = nil
+
+        do {
+            _ = try await AppleAPIClient.shared.createForgeProject(
+                ForgeProjectCreatePayload(
+                    title: trimmedTitle,
+                    description: description.trimmingCharacters(in: .whitespacesAndNewlines)
+                )
+            )
+            await loadOverview()
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -127,17 +163,11 @@ final class ForgeViewModel: ObservableObject {
                 : "Submission failed"
 
             if result.queued {
-                // Add a pending model to the list
-                let pending = ForgeModel(
-                    id:         result.jobId,
-                    name:       job.name,
-                    photoCount: selectedImages.count,
-                    createdAt:  ISO8601DateFormatter().string(from: Date()),
-                    usdzPath:   nil
-                )
-                models.insert(pending, at: 0)
                 selectedItems  = []
                 selectedImages = []
+                await loadOverview()
+            } else {
+                errorMessage = "Forge could not queue this capture."
             }
         } catch {
             uploadStatus   = "Upload failed"

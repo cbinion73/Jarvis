@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Next Arc Checklist</title>
+  <style>
+    :root {
+      --bg: #081019;
+      --bg-soft: #0c1723;
+      --panel: rgba(11, 20, 31, 0.92);
+      --panel-2: rgba(14, 26, 39, 0.95);
+      --line: rgba(131, 182, 214, 0.16);
+      --text: #eef6fb;
+      --muted: #89a0b5;
+      --cyan: #63d6df;
+      --green: #62d99d;
+      --amber: #f2b55a;
+      --red: #eb7178;
+      --blue: #83b8ff;
+      --shadow: 0 20px 54px rgba(0, 0, 0, 0.28);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: "SF Pro Display", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(99, 214, 223, 0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(131, 184, 255, 0.12), transparent 24%),
+        linear-gradient(180deg, #081019 0%, #050c14 100%);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 340px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 28px 22px;
+      border-right: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(8, 15, 24, 0.98), rgba(8, 15, 24, 0.94));
+      backdrop-filter: blur(16px);
+      overflow: auto;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      padding: 6px 10px;
+      border: 1px solid rgba(99, 214, 223, 0.3);
+      border-radius: 999px;
+      color: var(--cyan);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 14px 0 10px;
+      font-size: 29px;
+      line-height: 1.03;
+    }
+
+    p, .muted {
+      color: var(--muted);
+    }
+
+    .stats {
+      display: grid;
+      gap: 10px;
+      margin: 24px 0;
+    }
+
+    .stat {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.03);
+      box-shadow: var(--shadow);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+
+    .progress {
+      height: 10px;
+      margin: 16px 0 8px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .progress > span {
+      display: block;
+      width: 80%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--cyan), var(--green));
+    }
+
+    .nav {
+      display: grid;
+      gap: 8px;
+      margin-top: 24px;
+    }
+
+    .nav a {
+      text-decoration: none;
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid transparent;
+    }
+
+    .nav a:hover {
+      border-color: var(--line);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    main {
+      padding: 30px;
+    }
+
+    .hero, .panel {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 26px;
+      margin-bottom: 24px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .hero-card {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--line);
+    }
+
+    .hero-card strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .section {
+      margin-bottom: 24px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .section h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .badge.done { background: rgba(98, 217, 157, 0.12); color: var(--green); }
+    .badge.active { background: rgba(242, 181, 90, 0.12); color: var(--amber); }
+    .badge.next { background: rgba(131, 184, 255, 0.12); color: var(--blue); }
+    .badge.risk { background: rgba(235, 113, 120, 0.12); color: var(--red); }
+
+    .panel {
+      padding: 18px 18px 10px;
+    }
+
+    .checklist {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .item {
+      display: grid;
+      grid-template-columns: 22px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 12px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .item:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .check {
+      width: 22px;
+      height: 22px;
+      margin-top: 1px;
+      border-radius: 7px;
+      border: 1px solid var(--line);
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .item.done .check {
+      color: #042014;
+      background: linear-gradient(180deg, var(--green), #39c383);
+      border-color: transparent;
+    }
+
+    .item.active .check {
+      color: #2f2105;
+      background: linear-gradient(180deg, #ffd58c, var(--amber));
+      border-color: transparent;
+    }
+
+    .item.risk .check {
+      color: #2c070a;
+      background: linear-gradient(180deg, #ff9aa2, var(--red));
+      border-color: transparent;
+    }
+
+    .item-title {
+      font-weight: 650;
+      margin-bottom: 4px;
+    }
+
+    .item-note {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 1100px) {
+      .layout, .grid-2, .hero-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <span class="eyebrow">Temporary Codex Board</span>
+      <h1>JARVIS Next Arc</h1>
+      <p>This board corrects the older plan against current repo truth and turns the next move into a practical sequence we can execute without guessing.</p>
+
+      <div class="stats">
+        <div class="stat">
+          <strong>21</strong>
+          <span class="muted">Phone parity surfaces verified full</span>
+        </div>
+        <div class="stat">
+          <strong>9</strong>
+          <span class="muted">Longitudinal continuity surfaces live: Brief, Home, Voice, Catalyst, Health, Publish, Faith, Forge, Huddle</span>
+        </div>
+        <div class="stat">
+          <strong>Next</strong>
+          <span class="muted">Governance proposal convergence is now live; next up is letting those reviewed proposals actually steer default rollout posture and bounded-lane behavior.</span>
+        </div>
+      </div>
+
+      <div class="progress"><span></span></div>
+      <div class="muted">Progress here reflects practical platform maturity, not just lines of code shipped.</div>
+
+      <nav class="nav">
+        <a href="#truth">Repo Truth</a>
+        <a href="#now">Do Next</a>
+        <a href="#implementation">Implementation Queue</a>
+        <a href="#stale">Stale Items</a>
+        <a href="#later">After That</a>
+      </nav>
+    </aside>
+
+    <main>
+      <section class="hero">
+        <span class="eyebrow">Current Assessment</span>
+        <h2>June 1, 2026</h2>
+        <p class="muted">The old implementation plan is directionally useful, but parts of its Phase 0 are already resolved. The best next move is no longer more parity work. It is merge-stabilization plus one high-leverage intelligence surface that unifies the continuity work already built.</p>
+
+        <div class="hero-grid">
+          <div class="hero-card">
+            <strong>Already True</strong>
+            Systems admin models, book-launch asset loading, Apple governance action routes, parity guardrails, and broad continuity surfaces are already live in repo truth.
+          </div>
+          <div class="hero-card">
+            <strong>Still Real</strong>
+            The branch is still large and dirty, the control plane is ahead of the written plan but not fully closed, and the stewardship lanes still need closed-loop rollout controls beneath the new report surfaces.
+          </div>
+          <div class="hero-card">
+            <strong>Best Next Bet</strong>
+            Now that governance proposals can be reviewed from one queue, let accepted posture changes start feeding the default lane behavior instead of remaining advisory only.
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="truth">
+        <div class="section-head">
+          <h2>Repo Truth</h2>
+          <span class="badge done">Verified</span>
+        </div>
+        <div class="panel">
+          <ul class="checklist">
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Parity closeout is effectively done</div>
+                <div class="item-note">The parity matrix is full across the phone contract surfaces, and the current board reflects that reality rather than an earlier partial snapshot.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Governance action routes already exist</div>
+                <div class="item-note">Promote, demote, suspend, and resume endpoints are already registered in the Apple contract path, so that part of the old blocker list is stale.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Continuity base is no longer theoretical</div>
+                <div class="item-note">Chronicle retrieval, reflective memory, and longitudinal continuity are already live on nine major surfaces. The obvious missing layer is synthesis, not another isolated continuity card.</div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <div class="grid-2">
+        <section class="section" id="now">
+          <div class="section-head">
+            <h2>Do Next</h2>
+            <span class="badge active">Recommended</span>
+          </div>
+          <div class="panel">
+            <ul class="checklist">
+              <li class="item done">
+                <div class="check">✓</div>
+                <div>
+                  <div class="item-title">1. Stabilize trust defaults before adding more weight</div>
+                  <div class="item-note">Completed green. Trust bootstrap now supports a configurable default trust principal with a household-aware fallback instead of hardcoding `chris` into arena defaults.</div>
+                </div>
+              </li>
+              <li class="item done">
+                <div class="check">✓</div>
+                <div>
+                  <div class="item-title">2. Build a real While You Were Away report</div>
+                  <div class="item-note">Completed green. The runtime now synthesizes Family Stewardship, Executive and Calendar, Watcher and Continuity, and Chamber Operations into one absence report with quiet completions, blocked work, prepared next steps, decisions needed, drift signals, and a JARVIS recommendation.</div>
+                </div>
+              </li>
+              <li class="item done">
+                <div class="check">✓</div>
+                <div>
+                  <div class="item-title">3. Reuse that report as the first stewardship-lane signature surface</div>
+                  <div class="item-note">Completed green. The same `While You Were Away` synthesis now feeds the chamber home aggregate, the Apple Home payload, and the phone Home view instead of staying isolated to Brief.</div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="section" id="stale">
+          <div class="section-head">
+            <h2>Stale Plan Items</h2>
+            <span class="badge risk">Needs Rewrite</span>
+          </div>
+          <div class="panel">
+            <ul class="checklist">
+              <li class="item done">
+                <div class="check">✓</div>
+                <div>
+                  <div class="item-title">`SystemsAdminSummary` model missing</div>
+                  <div class="item-note">Already exists and is wired.</div>
+                </div>
+              </li>
+              <li class="item done">
+                <div class="check">✓</div>
+                <div>
+                  <div class="item-title">`book_launch.load_assets()` blocker</div>
+                  <div class="item-note">Already exists and is being imported in the live code path.</div>
+                </div>
+              </li>
+              <li class="item done">
+                <div class="check">✓</div>
+                <div>
+                  <div class="item-title">Governance API routes unregistered</div>
+                  <div class="item-note">The Apple governance action routes are already present, so the issue is hardening and cleanup, not route creation.</div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      <section class="section" id="implementation">
+        <div class="section-head">
+          <h2>Implementation Queue</h2>
+          <span class="badge next">Execution Order</span>
+        </div>
+        <div class="panel">
+          <ul class="checklist">
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Trust default de-hardcoding</div>
+                <div class="item-note">Completed green. Trust bootstrap now accepts a config-driven default trust principal, falls back to the first adult household member when unset, and no longer hardcodes `owner_principal=&quot;chris&quot;` across the default arenas.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">While You Were Away backend synthesis</div>
+                <div class="item-note">Completed green. `while_you_were_away_snapshot()` now synthesizes normalized lane contributions, and Apple exposes the same report through both the briefing payload and a dedicated `/api/apple/while-you-were-away` endpoint.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Apple models + phone surface</div>
+                <div class="item-note">Completed green. Briefing models, fixture coverage, decode tests, contract verification, and a dedicated Brief card now make `While You Were Away` a first-class mobile surface.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Chamber/home reuse</div>
+                <div class="item-note">Completed green. `While You Were Away` is now embedded in `chamber_home_snapshot()`, exposed in the Home Apple contract, and rendered in the Home phone surface, so the absence report is no longer Brief-only.</div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section" id="later">
+        <div class="section-head">
+          <h2>After That</h2>
+          <span class="badge next">Next Horizon</span>
+        </div>
+        <div class="panel">
+          <ul class="checklist">
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Stewardship lane contracts</div>
+                <div class="item-note">Completed green. `While You Were Away` now carries normalized `stewardship_lanes` through the runtime, Apple contract, chamber web preview, bundled fixtures, and the Brief/Home phone surfaces so Family, Executive, Watcher, and Chamber Operations share one reusable lane interface.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Deeper sandbox agency</div>
+                <div class="item-note">Completed green. The sandbox lane is no longer self-improvement-only: Systems/Admin now carries a second bounded execution family for `vendor-prep`, and the existing run, stop, recover, and recent-report controls route through the same prefixed sandbox job interface.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Chamber home aggregation</div>
+                <div class="item-note">Completed green. Chamber, Apple Brief, and Apple Home now all read from one shared chamber-home aggregate for command lanes and household action composition, and the chamber web preview falls back to that same aggregate instead of recomputing adjacent truth separately.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Stewardship lane execution primitives</div>
+                <div class="item-note">Completed green. The shared stewardship lanes now carry normalized execution primitives with trust zone, authority stage, arena status, review surface, packet target, and bounded-action metadata, and Brief/Home can stage a lane review through the Apple contract.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Stewardship lane review convergence</div>
+                <div class="item-note">Completed green. Systems/Admin governed workflows now surface staged stewardship reviews as a first-class queue with shared counts and recent review rows, so lane reviews stop living only as local Brief/Home confirmations.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Stewardship lane rollout controls</div>
+                <div class="item-note">Completed green. Systems/Admin now has shared approve, route, and retire controls for staged stewardship reviews, backed by a durable review queue and shared Apple contract actions instead of visibility-only rows.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Stewardship governance history</div>
+                <div class="item-note">Completed green. Approved, rerouted, and retired stewardship reviews now flow into Systems/Admin authority history and reflective memory, so the control plane records real rollout outcomes instead of only open review rows.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Governance learning synthesis</div>
+                <div class="item-note">Completed green. Systems/Admin now groups stewardship decisions by lane, synthesizes learned rollout posture, folds that guidance into reflective memory, and surfaces explicit governance-learning recommendations instead of leaving you with only raw history rows.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Governance proposal convergence</div>
+                <div class="item-note">Completed green. Systems/Admin now turns governance-learning signals into explicit rollout-posture proposals, exposes them through the governed-workflows payload, and lets you promote or dismiss them through the shared doctrine review path.</div>
+              </div>
+            </li>
+            <li class="item active">
+              <div class="check">•</div>
+              <div>
+                <div class="item-title">Governance rollout posture automation</div>
+                <div class="item-note">The next strongest move is letting promoted governance proposals actually influence default lane posture and bounded-review behavior, so the control plane changes how it stages future work instead of only recording and reviewing suggestions.</div>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="footer-note">Temporary HTML board generated from current repo truth and the corrected next-arc recommendation. We can keep updating this as each slice turns green.</div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

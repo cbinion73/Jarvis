@@ -46,6 +46,7 @@ from .memory import MemoryStore, MemorySupport
 from .missions import MissionStore, MissionSupport
 from .microsoft_graph import MicrosoftGraphSupport
 from .models import ApprovalRequest, AuthorityStage, AutonomyMode, AutonomyPolicy, EmailDraftStagingRequest, EmailDraftStagingResponse, HouseholdProfile, PrivacyLevel, PromotionRecord, RequestPlan, ResourceArena, RiskLevel, RoutingTier, StagedActionQueueItem, TrustZone, UserProfile, WorkLifecycleRecord, WorkLifecycleStage
+from .promotion import PromotionEngine
 from .models import HouseholdSnapshot
 from .models import WeatherAdvisory
 from .openai_tasks import JarvisOpenAIClient, OpenAIResult
@@ -16542,6 +16543,7 @@ class JarvisRuntime:
                 "pending_handoffs": int((summary.get("summary") or {}).get("pending_handoffs", 0) or 0),
                 "ownership_conflicts": int((summary.get("summary") or {}).get("ownership_conflicts", 0) or 0),
             },
+            "agent_society": dict(summary.get("agent_society") or {}),
             "trust_zones": self.list_trust_zones(),
             "agent_registry": {
                 "core_agents": self.agent_registry_snapshot().get("core_agents", 0),
@@ -19427,6 +19429,453 @@ class JarvisRuntime:
     def list_promotion_records(self, limit: int = 50) -> list[dict]:
         return self.trust_support.list_promotion_records(limit=limit)
 
+    def list_promotion_recommendations(self, limit: int = 12) -> list[dict[str, object]]:
+        recommendations: list[dict[str, object]] = []
+
+        def _append_recommendation(
+            *,
+            subject_kind: str,
+            subject_id: str,
+            target_stage: str,
+            actor: str,
+            basis: str,
+            title: str,
+        ) -> None:
+            try:
+                verdict = self.evaluate_promotion_claim(
+                    subject_kind=subject_kind,
+                    subject_id=subject_id,
+                    target_stage=target_stage,
+                    actor=actor,
+                    basis=basis,
+                    human_consent=False,
+                )
+            except (KeyError, ValueError):
+                return
+            decision = str(verdict.get("decision") or "").strip().lower()
+            if decision not in {"promote", "pending_consent", "hold", "suspend"}:
+                return
+            metrics = dict(verdict.get("metrics") or {})
+            summary = (
+                f"{title} -> {target_stage}: {decision.replace('_', ' ')}. "
+                f"Runs {metrics.get('total_reviews', 0)}, success {float(metrics.get('success_rate', 0.0)):.0%}, "
+                f"rollbacks {metrics.get('rollback_count', 0)}."
+            )
+            recommendations.append(
+                {
+                    "id": str(verdict.get("claim", {}).get("claim_id") or ""),
+                    "subject_kind": subject_kind,
+                    "subject_id": subject_id,
+                    "title": title,
+                    "decision": decision,
+                    "current_stage": str(verdict.get("current_stage") or ""),
+                    "target_stage": str(verdict.get("target_stage") or target_stage),
+                    "summary": summary,
+                    "reason": str(verdict.get("reason") or ""),
+                    "trust_zone": str(verdict.get("trust_zone") or ""),
+                    "arena_id": str(verdict.get("arena_id") or ""),
+                    "metrics": metrics,
+                    "human_consent_required": bool(verdict.get("human_consent_required", False)),
+                }
+            )
+
+        for zone in self.list_trust_zones():
+            if not isinstance(zone, dict):
+                continue
+            zone_id = str(zone.get("zone_id") or "").strip()
+            title = str(zone.get("name") or zone_id or "Trust zone")
+            current_stage = str(zone.get("authority_stage") or "observe").strip()
+            promotion_rules = dict(zone.get("promotion_rules") or {})
+            targets = [
+                str(item).strip()
+                for item in list(promotion_rules.get("eligible_next_stages", []) or [])
+                if str(item).strip()
+            ]
+            if not targets:
+                stages = sorted(self.list_authority_stages(), key=lambda item: int(item.get("sequence") or 0))
+                active = [item for item in stages if str(item.get("stage_id") or "").strip().lower() != "suspended"]
+                current_index = next((index for index, item in enumerate(active) if str(item.get("stage_id") or "") == current_stage), -1)
+                if current_index >= 0 and current_index + 1 < len(active):
+                    targets = [str(active[current_index + 1].get("stage_id") or current_stage)]
+            if zone_id and targets:
+                _append_recommendation(
+                    subject_kind="trust_zone",
+                    subject_id=zone_id,
+                    target_stage=targets[0],
+                    actor="system-steward",
+                    basis="auto-promotion-recommendation",
+                    title=title,
+                )
+
+        for arena in self.list_resource_arenas():
+            if not isinstance(arena, dict):
+                continue
+            arena_id = str(arena.get("arena_id") or "").strip()
+            target_stage = str((arena.get("promotion_eligibility") or {}).get("target_stage") or "").strip()
+            if arena_id and target_stage:
+                _append_recommendation(
+                    subject_kind="resource_arena",
+                    subject_id=arena_id,
+                    target_stage=target_stage,
+                    actor="system-steward",
+                    basis="auto-arena-promotion-recommendation",
+                    title=str(arena.get("name") or arena_id or "Resource arena"),
+                )
+
+        for contract in self.list_agent_supervision_contracts():
+            if not isinstance(contract, dict):
+                continue
+            agent_id = str(contract.get("agent_id") or "").strip()
+            current_stage = str(contract.get("authority_stage") or "observe").strip()
+            if not agent_id:
+                continue
+            if current_stage == "observe":
+                target_stage = "draft"
+            elif current_stage == "draft":
+                target_stage = "stage_alert"
+            elif current_stage == "stage_alert":
+                target_stage = "sandbox_live"
+            elif current_stage == "sandbox_live":
+                target_stage = "mature_live"
+            else:
+                continue
+            _append_recommendation(
+                subject_kind="agent",
+                subject_id=agent_id,
+                target_stage=target_stage,
+                actor="system-steward",
+                basis="auto-agent-promotion-recommendation",
+                title=str(contract.get("label") or agent_id or "Agent"),
+            )
+
+        decision_rank = {"pending_consent": 0, "promote": 1, "suspend": 2, "hold": 3}
+        recommendations.sort(
+            key=lambda item: (
+                decision_rank.get(str(item.get("decision") or ""), 9),
+                -int(dict(item.get("metrics") or {}).get("total_reviews", 0) or 0),
+                -float(dict(item.get("metrics") or {}).get("success_rate", 0.0) or 0.0),
+                str(item.get("title") or ""),
+            )
+        )
+        return recommendations[: max(1, int(limit))]
+
+    def evaluate_promotion_claim(
+        self,
+        *,
+        subject_kind: str,
+        subject_id: str,
+        target_stage: str = "",
+        actor: str = "system",
+        basis: str = "promotion-evaluation",
+        human_consent: bool = False,
+    ) -> dict[str, object]:
+        kind = str(subject_kind or "").strip().lower()
+        subject_key = str(subject_id or "").strip()
+        if not kind or not subject_key:
+            raise ValueError("subject_kind and subject_id are required")
+
+        trust_zone = ""
+        arena_id = ""
+        current_stage = "observe"
+        resolved_target_stage = str(target_stage or "").strip()
+
+        if kind == "trust_zone":
+            zone = self.trust_support.get_trust_zone(subject_key)
+            if zone is None:
+                raise KeyError(f"Unknown trust zone: {subject_key}")
+            trust_zone = str(zone.get("zone_id") or subject_key)
+            current_stage = str(zone.get("authority_stage") or "observe")
+            if not resolved_target_stage:
+                stages = sorted(self.trust_support.list_authority_stages(), key=lambda item: int(item.get("sequence") or 0))
+                active = [item for item in stages if str(item.get("stage_id") or "").strip().lower() != "suspended"]
+                current_index = next((index for index, item in enumerate(active) if str(item.get("stage_id") or "") == current_stage), 0)
+                next_index = min(current_index + 1, max(len(active) - 1, 0))
+                resolved_target_stage = str((active[next_index] if active else {}).get("stage_id") or current_stage)
+        elif kind == "resource_arena":
+            arena = self.trust_support.get_resource_arena(subject_key)
+            if arena is None:
+                raise KeyError(f"Unknown resource arena: {subject_key}")
+            arena_id = str(arena.get("arena_id") or subject_key)
+            trust_zone = str(arena.get("linked_zone_id") or "")
+            zone = self.trust_support.get_trust_zone(trust_zone) if trust_zone else None
+            current_stage = str((zone or {}).get("authority_stage") or "observe")
+            if not resolved_target_stage:
+                resolved_target_stage = str((arena.get("promotion_eligibility") or {}).get("target_stage") or current_stage)
+        elif kind == "agent":
+            contract = self.supervision_support.get_contract(subject_key)
+            if contract is None:
+                raise KeyError(f"Unknown supervised agent: {subject_key}")
+            trust_zone = str(contract.get("trust_zone_id") or "")
+            current_stage = str(contract.get("authority_stage") or "observe")
+            if not resolved_target_stage:
+                resolved_target_stage = "mature_live" if current_stage == "sandbox_live" else "sandbox_live"
+        else:
+            raise ValueError(f"Unsupported subject_kind: {subject_kind}")
+
+        stage = self.trust_support.get_authority_stage(resolved_target_stage)
+        if stage is None:
+            raise KeyError(f"Unknown authority stage: {resolved_target_stage}")
+
+        evidence = self.supervision_support.promotion_evidence(subject_kind=kind, subject_id=subject_key)
+        engine = PromotionEngine()
+        claim = engine.new_claim(
+            subject_kind=kind,
+            subject_id=subject_key,
+            current_stage=current_stage,
+            target_stage=resolved_target_stage,
+            actor=actor,
+            basis=basis,
+            trust_zone=trust_zone,
+            arena_id=arena_id,
+            human_consent=human_consent,
+            evidence_summary=dict(evidence.get("summary") or {}),
+        )
+        verdict = engine.evaluate_claim(
+            claim,
+            list(evidence.get("reviews") or []),
+            threshold=engine.threshold_from_stage(stage),
+        )
+        payload = engine.to_dict(verdict)
+        payload["claim"] = {
+            "claim_id": claim.claim_id,
+            "subject_kind": claim.subject_kind,
+            "subject_id": claim.subject_id,
+            "current_stage": claim.current_stage,
+            "target_stage": claim.target_stage,
+            "actor": claim.actor,
+            "basis": claim.basis,
+            "trust_zone": claim.trust_zone,
+            "arena_id": claim.arena_id,
+            "human_consent": claim.human_consent,
+            "submitted_at": claim.submitted_at,
+            "evidence_summary": dict(claim.evidence_summary),
+        }
+        payload["evidence"] = evidence
+        self._append_promotion_record(
+            event_type="promotion_evaluation",
+            subject_kind=kind,
+            subject_id=subject_key,
+            status=str(payload.get("decision") or "hold"),
+            actor=actor,
+            basis=basis,
+            trust_zone=trust_zone,
+            arena_id=arena_id,
+            authority_stage=resolved_target_stage,
+            evidence={
+                "current_stage": current_stage,
+                "target_stage": resolved_target_stage,
+                "metrics": dict(payload.get("metrics") or {}),
+                "human_consent_required": bool(payload.get("human_consent_required")),
+                "human_consent_present": bool(payload.get("human_consent_present")),
+            },
+        )
+        return payload
+
+    def apply_promotion_decision(
+        self,
+        *,
+        subject_kind: str,
+        subject_id: str,
+        target_stage: str = "",
+        actor: str = "system-steward",
+        basis: str = "promotion-application",
+        human_consent: bool = False,
+    ) -> dict[str, object]:
+        verdict = self.evaluate_promotion_claim(
+            subject_kind=subject_kind,
+            subject_id=subject_id,
+            target_stage=target_stage,
+            actor=actor,
+            basis=basis,
+            human_consent=human_consent,
+        )
+        kind = str(subject_kind or "").strip().lower()
+        subject_key = str(subject_id or "").strip()
+        decision = str(verdict.get("decision") or "hold").strip().lower()
+        resolved_target_stage = str(verdict.get("target_stage") or target_stage or "").strip()
+        current_stage = str(verdict.get("current_stage") or "observe").strip()
+
+        if decision == "hold":
+            return {
+                "applied": False,
+                "decision": decision,
+                "reason": str(verdict.get("reason") or ""),
+                "subject_kind": kind,
+                "subject_id": subject_key,
+                "target_stage": resolved_target_stage,
+                "verdict": verdict,
+            }
+        if decision == "pending_consent" and not human_consent:
+            raise PermissionError(str(verdict.get("reason") or "Explicit human consent is required before applying this promotion."))
+
+        now = datetime.now(timezone.utc).isoformat()
+        event_type = "promotion"
+        action = "promote"
+        updated: dict[str, object] | None = None
+
+        if decision in {"promote", "pending_consent"}:
+            if kind == "trust_zone":
+                updated = self.promote_trust_zone(subject_key, actor=actor, basis=basis)
+            elif kind == "agent":
+                contract = self.supervision_support.get_contract(subject_key)
+                if contract is None:
+                    raise KeyError(f"Unknown supervised agent: {subject_key}")
+                updated = self.supervision_support.update_contract(
+                    subject_key,
+                    {
+                        "authority_stage": resolved_target_stage,
+                        "status": "active",
+                        "updated_at": now,
+                    },
+                )
+                if updated is None:
+                    raise KeyError(f"Unknown supervised agent: {subject_key}")
+                self._append_promotion_record(
+                    event_type="promotion",
+                    subject_kind="agent",
+                    subject_id=subject_key,
+                    status=str(updated.get("status") or "active"),
+                    actor=actor,
+                    basis=basis,
+                    trust_zone=str(updated.get("trust_zone_id") or verdict.get("trust_zone") or ""),
+                    authority_stage=str(updated.get("authority_stage") or resolved_target_stage),
+                    evidence={
+                        "previous_stage": current_stage,
+                        "target_stage": resolved_target_stage,
+                        "human_consent_present": bool(human_consent),
+                    },
+                )
+            elif kind == "resource_arena":
+                return {
+                    "applied": False,
+                    "decision": decision,
+                    "reason": "Resource arena promotion is not yet directly actionable because arenas do not persist an independent authority stage.",
+                    "subject_kind": kind,
+                    "subject_id": subject_key,
+                    "target_stage": resolved_target_stage,
+                    "verdict": verdict,
+                }
+        elif decision == "suspend":
+            event_type = "suspension"
+            action = "suspend"
+            if kind == "trust_zone":
+                action = "demote"
+                event_type = "demotion"
+                updated = self.demote_trust_zone(subject_key, actor=actor, reason=basis)
+            elif kind == "agent":
+                contract = self.supervision_support.get_contract(subject_key)
+                if contract is None:
+                    raise KeyError(f"Unknown supervised agent: {subject_key}")
+                updated = self.supervision_support.update_contract(
+                    subject_key,
+                    {
+                        "status": "suspended",
+                        "updated_at": now,
+                    },
+                )
+                if updated is None:
+                    raise KeyError(f"Unknown supervised agent: {subject_key}")
+                self._append_promotion_record(
+                    event_type="suspension",
+                    subject_kind="agent",
+                    subject_id=subject_key,
+                    status=str(updated.get("status") or "suspended"),
+                    actor=actor,
+                    basis=basis,
+                    trust_zone=str(updated.get("trust_zone_id") or verdict.get("trust_zone") or ""),
+                    authority_stage=str(updated.get("authority_stage") or current_stage),
+                    evidence={
+                        "previous_stage": current_stage,
+                        "target_stage": resolved_target_stage,
+                        "decision": decision,
+                    },
+                )
+            elif kind == "resource_arena":
+                updated = self.suspend_resource_arena(subject_key, actor=actor, reason=basis)
+        else:
+            raise ValueError(f"Unsupported promotion decision: {decision}")
+
+        return {
+            "applied": True,
+            "action": action,
+            "decision": "promote" if decision == "pending_consent" else decision,
+            "event_type": event_type,
+            "subject_kind": kind,
+            "subject_id": subject_key,
+            "target_stage": resolved_target_stage,
+            "updated": dict(updated or {}),
+            "verdict": verdict,
+        }
+
+    def apply_promotion_recommendations(
+        self,
+        *,
+        actor: str = "system-steward",
+        basis: str = "auto-apply-promotion-recommendations",
+        limit: int = 12,
+    ) -> dict[str, object]:
+        recommendations = self.list_promotion_recommendations(limit=limit)
+        applied: list[dict[str, object]] = []
+        skipped: list[dict[str, object]] = []
+        failed: list[dict[str, object]] = []
+
+        for item in recommendations:
+            decision = str(item.get("decision") or "").strip().lower()
+            subject_kind = str(item.get("subject_kind") or "").strip()
+            subject_id = str(item.get("subject_id") or "").strip()
+            target_stage = str(item.get("target_stage") or "").strip()
+            if decision not in {"promote", "suspend"}:
+                skipped.append(
+                    {
+                        "subject_kind": subject_kind,
+                        "subject_id": subject_id,
+                        "decision": decision,
+                        "reason": str(item.get("reason") or "Recommendation requires review before application."),
+                    }
+                )
+                continue
+            try:
+                result = self.apply_promotion_decision(
+                    subject_kind=subject_kind,
+                    subject_id=subject_id,
+                    target_stage=target_stage,
+                    actor=actor,
+                    basis=basis,
+                    human_consent=False,
+                )
+            except (KeyError, PermissionError, ValueError) as exc:
+                failed.append(
+                    {
+                        "subject_kind": subject_kind,
+                        "subject_id": subject_id,
+                        "decision": decision,
+                        "error": str(exc),
+                    }
+                )
+                continue
+            if bool(result.get("applied")):
+                applied.append(result)
+            else:
+                skipped.append(
+                    {
+                        "subject_kind": subject_kind,
+                        "subject_id": subject_id,
+                        "decision": decision,
+                        "reason": str(result.get("reason") or "Recommendation was not applied."),
+                    }
+                )
+
+        return {
+            "status": "ok",
+            "recommendation_count": len(recommendations),
+            "applied_count": len(applied),
+            "skipped_count": len(skipped),
+            "failed_count": len(failed),
+            "applied": applied,
+            "skipped": skipped,
+            "failed": failed,
+        }
+
     def promote_trust_zone(self, zone_id: str, *, actor: str = "Chris", basis: str = "manual-promotion") -> dict:
         zone = self.trust_support.get_trust_zone(zone_id)
         if zone is None:
@@ -20307,6 +20756,98 @@ class JarvisRuntime:
     def _vendor_prep_sandbox_job_id(self, prep_id: str) -> str:
         return f"vendor-prep:{str(prep_id).strip()}"
 
+    def _calendar_route_sandbox_queue_path(self) -> Path:
+        return self._repo_root() / "data" / "state" / "calendar_route_sandbox_jobs.json"
+
+    def _load_calendar_route_sandbox_store(self) -> dict[str, Any]:
+        path = self._calendar_route_sandbox_queue_path()
+        if not path.exists():
+            return {"jobs": []}
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return {"jobs": []}
+        jobs = payload.get("jobs") if isinstance(payload, dict) else []
+        if not isinstance(jobs, list):
+            jobs = []
+        return {"jobs": [dict(item) for item in jobs if isinstance(item, dict)]}
+
+    def _save_calendar_route_sandbox_store(self, payload: dict[str, Any]) -> None:
+        path = self._calendar_route_sandbox_queue_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    def _calendar_route_sandbox_job_id(self, event_id: str) -> str:
+        return f"calendar-route:{str(event_id).strip()}"
+
+    def _calendar_route_sandbox_workspace(self, event_id: str) -> Path:
+        slug = re.sub(r"[^a-z0-9]+", "-", str(event_id or "").strip().lower()).strip("-") or "route"
+        return self._repo_root() / "data" / "state" / "calendar_route_sandbox" / slug
+
+    def _calendar_route_sandbox_report_root(self) -> Path:
+        root = self._repo_root() / "data" / "system" / "calendar_route_sandbox_reports"
+        root.mkdir(parents=True, exist_ok=True)
+        return root
+
+    def _calendar_route_record(self, event_id: str) -> dict[str, Any] | None:
+        for item in self._load_calendar_route_sandbox_store().get("jobs", []):
+            if str(item.get("event_id", "")).strip() == str(event_id).strip():
+                return dict(item)
+        return None
+
+    def _save_calendar_route_record(self, route_job: dict[str, Any]) -> dict[str, Any]:
+        store = self._load_calendar_route_sandbox_store()
+        event_id = str(route_job.get("event_id", "")).strip()
+        if not event_id:
+            raise ValueError("Calendar route event id is required")
+        records = list(store.get("jobs", []))
+        replaced = False
+        for index, item in enumerate(records):
+            if str(item.get("event_id", "")).strip() == event_id:
+                records[index] = dict(route_job)
+                replaced = True
+                break
+        if not replaced:
+            records.append(dict(route_job))
+        store["jobs"] = records
+        self._save_calendar_route_sandbox_store(store)
+        return dict(route_job)
+
+    def calendar_route_sandbox_jobs(self, limit: int = 8) -> list[dict[str, Any]]:
+        jobs: list[dict[str, Any]] = []
+        eligible_statuses = {
+            "staged-for-review",
+            "sandbox-queued",
+            "sandbox-running",
+            "sandboxed",
+            "sandbox-failed",
+        }
+        for item in self._load_calendar_route_sandbox_store().get("jobs", []):
+            status = str(item.get("status", "")).strip()
+            if status not in eligible_statuses:
+                continue
+            event_id = str(item.get("event_id", "")).strip()
+            if not event_id:
+                continue
+            jobs.append(
+                {
+                    "job_id": self._calendar_route_sandbox_job_id(event_id),
+                    "title": f"Calendar route for {str(item.get('title', '')).strip() or 'event'}",
+                    "status": status,
+                    "job_type": "calendar-route",
+                    "target": str(item.get("location", "")).strip(),
+                    "review_level": "sandbox-live",
+                    "summary": str(item.get("sandbox_message", "")).strip() or str(item.get("location", "")).strip(),
+                    "auto_allowed": True,
+                    "updated_at": str(item.get("updated_at") or item.get("created_at") or ""),
+                    "last_sandbox_run_id": str(item.get("sandbox_run_id") or ""),
+                    "event_id": event_id,
+                }
+            )
+            if len(jobs) >= max(1, int(limit)):
+                break
+        return jobs
+
     def _stewardship_review_queue_path(self) -> Path:
         return self._repo_root() / "data" / "state" / "stewardship_reviews.json"
 
@@ -20937,6 +21478,412 @@ class JarvisRuntime:
                 self._sandbox_futures[job_id] = future
         return {"ok": True, "accepted": True, "job": job, "active_run": active_run, "queue": self._sandbox_queue_state(), "message": "Stewardship review queued for sandbox packaging."}
 
+    def enqueue_calendar_route_sandbox_job(
+        self,
+        actor_name: str,
+        event_id: str,
+        *,
+        triggered_by: str = "calendar-route-sandbox",
+    ) -> dict[str, Any]:
+        calendar_path = self._repo_root() / "data" / "apple" / "calendar_events.json"
+        if not calendar_path.exists():
+            raise KeyError("Calendar event store not found.")
+        try:
+            payload = json.loads(calendar_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            payload = {}
+        events = payload.get("events") if isinstance(payload, dict) else []
+        event = next(
+            (
+                dict(item)
+                for item in (events if isinstance(events, list) else [])
+                if isinstance(item, dict) and str(item.get("id", "")).strip() == str(event_id).strip()
+            ),
+            None,
+        )
+        if event is None:
+            raise KeyError("Calendar event not found.")
+        location = str(event.get("location", "")).strip()
+        if not location:
+            raise ValueError("Calendar event has no location.")
+        job_id = self._calendar_route_sandbox_job_id(event_id)
+        existing_active_run = self.self_improvement_store.get_active_run(job_id) or {}
+        saved_job = self._calendar_route_record(event_id) or {}
+        status = str(saved_job.get("status", "")).strip()
+        if status in {"sandbox-running", "sandbox-queued"} or (
+            existing_active_run and str(existing_active_run.get("status", "")).strip() in {"queued", "running", "stop-requested"}
+        ):
+            return {
+                "ok": True,
+                "accepted": False,
+                "job": {"job_id": job_id, "title": f"Calendar route for {str(event.get('title', '')).strip() or 'event'}", "status": status or "sandbox-running"},
+                "queue": self._sandbox_queue_state(),
+                "message": "Calendar route sandbox lane is already running.",
+            }
+        run_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        maps_url = f"http://maps.apple.com/?daddr={urllib.parse.quote(location, safe='')}&dirflg=d"
+        queued = {
+            **saved_job,
+            "event_id": str(event_id).strip(),
+            "title": str(event.get("title", "")).strip() or "Upcoming event",
+            "location": location,
+            "start": str(event.get("start", "")).strip(),
+            "maps_url": maps_url,
+            "status": "sandbox-queued",
+            "sandbox_status": "queued",
+            "sandbox_run_id": run_id,
+            "sandbox_message": "Calendar route entered the bounded routing lane.",
+            "created_at": str(saved_job.get("created_at") or now),
+            "updated_at": now,
+        }
+        saved = self._save_calendar_route_record(queued)
+        job = {
+            "job_id": job_id,
+            "title": f"Calendar route for {str(saved.get('title', '')).strip() or 'event'}",
+            "job_type": "calendar-route",
+            "status": "sandbox-queued",
+        }
+        active_run = self._upsert_active_sandbox_run(
+            job,
+            run_id=run_id,
+            status="queued",
+            current_step="waiting-for-worker",
+            message="Calendar route sandbox execution was accepted and queued.",
+            actor_name=actor_name,
+            metadata={"triggered_by": triggered_by, "event_id": event_id, "lane_kind": "calendar-route"},
+        )
+        with self._sandbox_lock:
+            future = self._sandbox_futures.get(job_id)
+            if future is None or future.done():
+                future = self._sandbox_executor.submit(self._run_calendar_route_sandbox_job_background, actor_name, event_id, triggered_by)
+                self._sandbox_futures[job_id] = future
+        return {"ok": True, "accepted": True, "job": job, "active_run": active_run, "queue": self._sandbox_queue_state(), "message": "Calendar route queued for sandbox routing."}
+
+    def _run_calendar_route_sandbox_job_background(self, actor_name: str, event_id: str, triggered_by: str) -> dict[str, Any]:
+        try:
+            return self.run_calendar_route_sandbox_job(actor_name, event_id, triggered_by=triggered_by)
+        except Exception as exc:
+            now = datetime.now(timezone.utc).isoformat()
+            job_id = self._calendar_route_sandbox_job_id(event_id)
+            failed = {
+                **(self._calendar_route_record(event_id) or {"event_id": event_id, "title": "event"}),
+                "status": "sandbox-failed",
+                "sandbox_status": "failed",
+                "sandbox_message": str(exc).strip() or "Calendar route sandbox job failed.",
+                "updated_at": now,
+            }
+            saved = self._save_calendar_route_record(failed)
+            self._upsert_active_sandbox_run(
+                {"job_id": job_id, "title": f"Calendar route for {str(saved.get('title', '')).strip() or 'event'}", "job_type": "calendar-route"},
+                run_id=str(saved.get("sandbox_run_id", "")).strip() or str(uuid.uuid4()),
+                status="failed",
+                current_step="failed",
+                message=str(exc).strip() or "Calendar route sandbox job failed.",
+                actor_name=actor_name,
+                worktree_path=str(saved.get("sandbox_workspace_path", "")).strip(),
+                metadata={"error": str(exc).strip(), "event_id": event_id, "lane_kind": "calendar-route"},
+            )
+            self.self_improvement_store.record_run(
+                {
+                    "run_id": str(uuid.uuid4()),
+                    "job_id": job_id,
+                    "job_title": f"Calendar route for {str(saved.get('title', '')).strip() or 'event'}",
+                    "generated_at": now,
+                    "mode": "calendar-route-sandbox",
+                    "status": "failed",
+                    "compile": {"ok": False},
+                    "tests": {"ok": False},
+                    "patch_bundle": {"path": str(saved.get("sandbox_patch_bundle_path", "")).strip()},
+                    "error": str(exc).strip(),
+                }
+            )
+            return {"ok": False, "job": {"job_id": job_id, "status": "sandbox-failed"}, "error": str(exc).strip()}
+
+    def run_calendar_route_sandbox_job(self, actor_name: str, event_id: str, *, triggered_by: str = "calendar-route-sandbox") -> dict[str, Any]:
+        route_job = self._calendar_route_record(event_id)
+        if route_job is None:
+            raise KeyError("Calendar route sandbox job not found.")
+        job_id = self._calendar_route_sandbox_job_id(event_id)
+        active_run = self.self_improvement_store.get_active_run(job_id) or {}
+        run_id = str(active_run.get("run_id", "")).strip() or str(route_job.get("sandbox_run_id", "")).strip() or str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        running = {
+            **route_job,
+            "status": "sandbox-running",
+            "sandbox_status": "running",
+            "sandbox_run_id": run_id,
+            "sandbox_message": "Preparing a bounded calendar routing handoff.",
+            "updated_at": now,
+        }
+        saved = self._save_calendar_route_record(running)
+        workspace = self._calendar_route_sandbox_workspace(event_id)
+        workspace.mkdir(parents=True, exist_ok=True)
+        self._upsert_active_sandbox_run(
+            {"job_id": job_id, "title": f"Calendar route for {str(saved.get('title', '')).strip() or 'event'}", "job_type": "calendar-route"},
+            run_id=run_id,
+            status="running",
+            current_step="assembling-route-packet",
+            message="Preparing a bounded calendar routing handoff.",
+            actor_name=actor_name,
+            worktree_path=str(workspace),
+            metadata={"triggered_by": triggered_by, "event_id": event_id, "lane_kind": "calendar-route"},
+        )
+        cancelled = self._abort_calendar_route_sandbox_if_requested(saved, actor_name=actor_name, run_id=run_id, current_step="assembling-route-packet", workspace_path=str(workspace))
+        if cancelled is not None:
+            return cancelled
+        packet_path = workspace / "calendar_route_packet.md"
+        report_path = self._calendar_route_sandbox_report_root() / f"{run_id}.json"
+        packet_path.write_text(
+            "\n".join(
+                [
+                    f"# Calendar Route Handoff: {str(saved.get('title', '')).strip() or 'Event'}",
+                    "",
+                    f"- Event ID: {str(saved.get('event_id', '')).strip() or 'Unknown'}",
+                    f"- Start: {str(saved.get('start', '')).strip() or 'Unknown'}",
+                    f"- Location: {str(saved.get('location', '')).strip() or 'Unknown'}",
+                    f"- Maps URL: {str(saved.get('maps_url', '')).strip() or 'Unavailable'}",
+                    "",
+                    "## Bounded Lane Outcome",
+                    "JARVIS prepared a route handoff packet without launching navigation or widening beyond the governed routing arena.",
+                ]
+            ) + "\n",
+            encoding="utf-8",
+        )
+        self._upsert_active_sandbox_run(
+            {"job_id": job_id, "title": f"Calendar route for {str(saved.get('title', '')).strip() or 'event'}", "job_type": "calendar-route"},
+            run_id=run_id,
+            status="running",
+            current_step="writing-report",
+            message="Writing the calendar routing sandbox report and handoff packet.",
+            actor_name=actor_name,
+            worktree_path=str(workspace),
+            metadata={"event_id": event_id, "lane_kind": "calendar-route"},
+        )
+        refreshed = self._calendar_route_record(event_id) or saved
+        cancelled = self._abort_calendar_route_sandbox_if_requested(refreshed, actor_name=actor_name, run_id=run_id, current_step="writing-report", workspace_path=str(workspace))
+        if cancelled is not None:
+            return cancelled
+        report = {
+            "run_id": run_id,
+            "job_id": job_id,
+            "job_title": f"Calendar route for {str(saved.get('title', '')).strip() or 'event'}",
+            "generated_at": now,
+            "mode": "calendar-route-sandbox",
+            "status": "review-ready",
+            "compile": {"ok": True, "mode": "route-handoff"},
+            "tests": {"ok": True, "mode": "route-handoff"},
+            "patch_bundle": {"path": str(packet_path)},
+            "report_path": str(report_path),
+            "workspace_path": str(workspace),
+            "event_id": event_id,
+            "location": str(saved.get("location", "")).strip(),
+        }
+        report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        completed = {
+            **saved,
+            "status": "sandboxed",
+            "sandbox_status": "review-ready",
+            "sandbox_run_id": run_id,
+            "sandbox_message": "Calendar route handoff is ready inside the bounded lane.",
+            "sandbox_report_path": str(report_path),
+            "sandbox_patch_bundle_path": str(packet_path),
+            "sandbox_workspace_path": str(workspace),
+            "sandbox_generated_at": now,
+            "updated_at": now,
+        }
+        final = self._save_calendar_route_record(completed)
+        self.self_improvement_store.record_run(report)
+        self._upsert_active_sandbox_run(
+            {"job_id": job_id, "title": f"Calendar route for {str(final.get('title', '')).strip() or 'event'}", "job_type": "calendar-route"},
+            run_id=run_id,
+            status="review-ready",
+            current_step="review-ready",
+            message="Calendar route sandbox run finished. Review the handoff packet before opening live navigation.",
+            actor_name=actor_name,
+            worktree_path=str(workspace),
+            metadata={"report_path": str(report_path), "event_id": event_id, "lane_kind": "calendar-route"},
+        )
+        return {"ok": True, "job": {"job_id": job_id, "status": "sandboxed"}, "sandbox_run": report}
+
+    def cancel_calendar_route_sandbox_job(self, actor_name: str, event_id: str, *, reason: str = "manual stop requested") -> dict[str, Any]:
+        route_job = self._calendar_route_record(event_id)
+        if route_job is None:
+            raise KeyError("Calendar route sandbox job not found.")
+        job_id = self._calendar_route_sandbox_job_id(event_id)
+        status = str(route_job.get("status", "")).strip()
+        existing_active_run = self.self_improvement_store.get_active_run(job_id) or {}
+        run_id = str(existing_active_run.get("run_id", "")).strip() or str(route_job.get("sandbox_run_id", "")).strip() or str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        cancelled_before_start = False
+        with self._sandbox_lock:
+            future = self._sandbox_futures.get(job_id)
+            if future is not None and future.cancel():
+                self._sandbox_futures.pop(job_id, None)
+                cancelled_before_start = True
+        if status == "sandbox-queued" or cancelled_before_start:
+            fallback_status = str(route_job.get("pre_sandbox_status") or "staged-for-review").strip() or "staged-for-review"
+            cancelled = {
+                **route_job,
+                "status": "sandbox-cancelled",
+                "pre_sandbox_status": fallback_status,
+                "sandbox_status": "cancelled",
+                "sandbox_run_id": run_id,
+                "sandbox_message": "Calendar route sandbox execution was cancelled before it began.",
+                "updated_at": now,
+            }
+            saved = self._save_calendar_route_record(cancelled)
+            active_run = self._upsert_active_sandbox_run(
+                {"job_id": job_id, "title": f"Calendar route for {str(saved.get('title', '')).strip() or 'event'}", "job_type": "calendar-route"},
+                run_id=run_id,
+                status="cancelled",
+                current_step="cancelled",
+                message="Calendar route sandbox execution was cancelled before it began.",
+                actor_name=actor_name,
+                metadata={"cancelled_by": actor_name, "cancel_reason": reason, "event_id": event_id, "lane_kind": "calendar-route"},
+            )
+            self.self_improvement_store.record_run(
+                {
+                    "run_id": run_id,
+                    "job_id": job_id,
+                    "job_title": f"Calendar route for {str(saved.get('title', '')).strip() or 'event'}",
+                    "generated_at": now,
+                    "mode": "calendar-route-sandbox",
+                    "status": "cancelled",
+                    "compile": {"ok": True, "mode": "route-handoff"},
+                    "tests": {"ok": True, "mode": "route-handoff"},
+                    "patch_bundle": {"path": str(saved.get("sandbox_patch_bundle_path", "")).strip()},
+                    "reason": reason,
+                }
+            )
+            return {"ok": True, "accepted": True, "mode": "cancelled", "job": {"job_id": job_id, "status": "sandbox-cancelled"}, "active_run": active_run, "queue": self._sandbox_queue_state(), "message": "Calendar route sandbox job cancelled before it started."}
+        stop_requested = {
+            **route_job,
+            "status": "sandbox-stop-requested",
+            "sandbox_status": "stop-requested",
+            "sandbox_run_id": run_id,
+            "sandbox_message": "Stop requested. JARVIS will halt this calendar route lane at the next safe checkpoint.",
+            "updated_at": now,
+        }
+        saved = self._save_calendar_route_record(stop_requested)
+        active_run = self._upsert_active_sandbox_run(
+            {"job_id": job_id, "title": f"Calendar route for {str(saved.get('title', '')).strip() or 'event'}", "job_type": "calendar-route"},
+            run_id=run_id,
+            status="stop-requested",
+            current_step=str(existing_active_run.get("current_step", "")).strip() or "running",
+            message="Stop requested. JARVIS will halt this calendar route lane at the next safe checkpoint.",
+            actor_name=actor_name,
+            worktree_path=str(saved.get("sandbox_workspace_path", "")).strip(),
+            metadata={"stop_requested": True, "stop_requested_by": actor_name, "stop_reason": reason, "event_id": event_id, "lane_kind": "calendar-route"},
+        )
+        return {"ok": True, "accepted": True, "mode": "stop-requested", "job": {"job_id": job_id, "status": "sandbox-stop-requested"}, "active_run": active_run, "queue": self._sandbox_queue_state(), "message": "Stop requested for calendar route sandbox job."}
+
+    def recover_calendar_route_sandbox_job(self, actor_name: str, event_id: str, *, reason: str = "manual recovery reset") -> dict[str, Any]:
+        route_job = self._calendar_route_record(event_id)
+        if route_job is None:
+            raise KeyError("Calendar route sandbox job not found.")
+        status = str(route_job.get("status", "")).strip()
+        if status in {"sandbox-running", "sandbox-stop-requested", "sandbox-queued"}:
+            raise ValueError("Stop or cancel the calendar route sandbox job before resetting the lane.")
+        workspace = self._calendar_route_sandbox_workspace(event_id)
+        removed_workspace = False
+        workspace_error = ""
+        if workspace.exists():
+            try:
+                shutil.rmtree(workspace, ignore_errors=False)
+                removed_workspace = True
+            except Exception as exc:
+                workspace_error = str(exc).strip()
+        now = datetime.now(timezone.utc).isoformat()
+        job_id = self._calendar_route_sandbox_job_id(event_id)
+        run_id = str(uuid.uuid4())
+        fallback_status = str(route_job.get("pre_sandbox_status") or "staged-for-review").strip() or "staged-for-review"
+        reset = {
+            **route_job,
+            "status": fallback_status,
+            "sandbox_status": "reset",
+            "sandbox_run_id": "",
+            "sandbox_message": "",
+            "sandbox_report_path": "",
+            "sandbox_patch_bundle_path": "",
+            "sandbox_workspace_path": "",
+            "sandbox_generated_at": "",
+            "updated_at": now,
+        }
+        saved = self._save_calendar_route_record(reset)
+        self.self_improvement_store.clear_active_run(job_id)
+        self.self_improvement_store.record_run(
+            {
+                "run_id": run_id,
+                "job_id": job_id,
+                "job_title": f"Calendar route for {str(saved.get('title', '')).strip() or 'event'}",
+                "generated_at": now,
+                "mode": "calendar-route-sandbox-recovery",
+                "status": "reset",
+                "compile": {"ok": True},
+                "tests": {"ok": True},
+                "patch_bundle": {"path": ""},
+                "reason": reason,
+                "removed_workspace": removed_workspace,
+                "workspace_error": workspace_error,
+            }
+        )
+        return {"ok": True, "accepted": True, "mode": "reset", "job": {"job_id": job_id, "status": fallback_status}, "queue": self._sandbox_queue_state(), "message": "Calendar route sandbox lane reset to staged baseline."}
+
+    def _abort_calendar_route_sandbox_if_requested(
+        self,
+        route_job: dict[str, Any],
+        *,
+        actor_name: str,
+        run_id: str,
+        current_step: str,
+        workspace_path: str = "",
+    ) -> dict[str, Any] | None:
+        event_id = str(route_job.get("event_id", "")).strip()
+        job_id = self._calendar_route_sandbox_job_id(event_id)
+        active_run = self.self_improvement_store.get_active_run(job_id) or {}
+        metadata = active_run.get("metadata") if isinstance(active_run.get("metadata"), dict) else {}
+        stop_requested = bool(metadata.get("stop_requested")) or str(route_job.get("status", "")).strip() == "sandbox-stop-requested"
+        if not stop_requested:
+            return None
+        now = datetime.now(timezone.utc).isoformat()
+        reason = str(metadata.get("stop_reason") or "manual stop requested").strip() or "manual stop requested"
+        cancelled = {
+            **route_job,
+            "status": "sandbox-cancelled",
+            "sandbox_status": "cancelled",
+            "sandbox_run_id": run_id,
+            "sandbox_message": "Calendar route sandbox run was cancelled at a safe checkpoint.",
+            "sandbox_workspace_path": workspace_path or str(route_job.get("sandbox_workspace_path", "")).strip(),
+            "updated_at": now,
+        }
+        saved = self._save_calendar_route_record(cancelled)
+        self._upsert_active_sandbox_run(
+            {"job_id": job_id, "title": f"Calendar route for {str(saved.get('title', '')).strip() or 'event'}", "job_type": "calendar-route"},
+            run_id=run_id,
+            status="cancelled",
+            current_step="cancelled",
+            message="Calendar route sandbox run was cancelled at a safe checkpoint.",
+            actor_name=actor_name,
+            worktree_path=workspace_path,
+            metadata={**dict(metadata), "cancelled_at": now, "cancelled_reason": reason, "event_id": event_id, "lane_kind": "calendar-route"},
+        )
+        self.self_improvement_store.record_run(
+            {
+                "run_id": run_id,
+                "job_id": job_id,
+                "job_title": f"Calendar route for {str(saved.get('title', '')).strip() or 'event'}",
+                "generated_at": now,
+                "mode": "calendar-route-sandbox",
+                "status": "cancelled",
+                "compile": {"ok": True, "mode": "route-handoff"},
+                "tests": {"ok": True, "mode": "route-handoff"},
+                "patch_bundle": {"path": str(saved.get("sandbox_patch_bundle_path", "")).strip()},
+                "reason": reason,
+            }
+        )
+        return {"ok": True, "cancelled": True, "job": {"job_id": job_id, "status": "sandbox-cancelled"}}
+
     def cancel_stewardship_review_sandbox_job(self, actor_name: str, review_id: str, *, reason: str = "manual stop requested") -> dict[str, Any]:
         review = self._stewardship_review_record(review_id)
         if review is None:
@@ -21309,6 +22256,7 @@ class JarvisRuntime:
             )
         job_rows.extend(self.vendor_prep_sandbox_jobs(limit=6))
         job_rows.extend(self.stewardship_review_sandbox_jobs(limit=6))
+        job_rows.extend(self.calendar_route_sandbox_jobs(limit=6))
         deduped_jobs: list[dict[str, Any]] = []
         seen_job_ids: set[str] = set()
         for item in sorted(job_rows, key=lambda row: str(row.get("updated_at") or ""), reverse=True):
@@ -21495,6 +22443,8 @@ class JarvisRuntime:
         }
 
     def execute_sandbox_job(self, actor_name: str, job_id: str, *, triggered_by: str = "apple-systems") -> dict[str, Any]:
+        if job_id.startswith("calendar-route:"):
+            return self.enqueue_calendar_route_sandbox_job(actor_name, job_id.split(":", 1)[1], triggered_by=triggered_by)
         if job_id.startswith("vendor-prep:"):
             return self.enqueue_vendor_prep_sandbox_job(actor_name, job_id.split(":", 1)[1], triggered_by=triggered_by)
         if job_id.startswith("stewardship-review:"):
@@ -21502,6 +22452,8 @@ class JarvisRuntime:
         return self.enqueue_self_improvement_sandbox_job(actor_name, job_id, triggered_by=triggered_by)
 
     def cancel_sandbox_job(self, actor_name: str, job_id: str, *, reason: str = "manual stop requested") -> dict[str, Any]:
+        if job_id.startswith("calendar-route:"):
+            return self.cancel_calendar_route_sandbox_job(actor_name, job_id.split(":", 1)[1], reason=reason)
         if job_id.startswith("vendor-prep:"):
             return self.cancel_vendor_prep_sandbox_job(actor_name, job_id.split(":", 1)[1], reason=reason)
         if job_id.startswith("stewardship-review:"):
@@ -21509,6 +22461,8 @@ class JarvisRuntime:
         return self.cancel_self_improvement_sandbox_job(actor_name, job_id, reason=reason)
 
     def recover_sandbox_job(self, actor_name: str, job_id: str, *, reason: str = "manual recovery reset") -> dict[str, Any]:
+        if job_id.startswith("calendar-route:"):
+            return self.recover_calendar_route_sandbox_job(actor_name, job_id.split(":", 1)[1], reason=reason)
         if job_id.startswith("vendor-prep:"):
             return self.recover_vendor_prep_sandbox_job(actor_name, job_id.split(":", 1)[1], reason=reason)
         if job_id.startswith("stewardship-review:"):

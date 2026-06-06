@@ -9,6 +9,7 @@ final class NeedsViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var lastApprovedId: String?
     @Published var lastActionId: String?
+    @Published var lastActionMessage: String?
 
     private let client = AppleAPIClient.shared
 
@@ -29,6 +30,7 @@ final class NeedsViewModel: ObservableObject {
             if success {
                 lastApprovedId = item.id
                 lastActionId = item.id
+                lastActionMessage = "Approved \(item.text)"
                 await load()
             }
         } catch {
@@ -41,6 +43,7 @@ final class NeedsViewModel: ObservableObject {
             let success = try await client.reject(requestId: item.id, reason: reason)
             if success {
                 lastActionId = item.id
+                lastActionMessage = "Rejected \(item.text)"
                 await load()
             }
         } catch {
@@ -53,6 +56,7 @@ final class NeedsViewModel: ObservableObject {
             let success = try await client.cancel(requestId: item.id)
             if success {
                 lastActionId = item.id
+                lastActionMessage = "Cancelled \(item.text)"
                 await load()
             }
         } catch {

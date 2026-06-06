@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Path To Level 9</title>
+  <style>
+    :root {
+      --bg: #061019;
+      --bg-2: #091624;
+      --panel: rgba(11, 20, 31, 0.92);
+      --panel-2: rgba(15, 27, 42, 0.94);
+      --line: rgba(130, 186, 222, 0.15);
+      --line-strong: rgba(130, 186, 222, 0.32);
+      --text: #edf6fc;
+      --muted: #90a5b8;
+      --cyan: #68d4df;
+      --blue: #8fb9ff;
+      --green: #66d89f;
+      --amber: #f0b86d;
+      --red: #ef838c;
+      --violet: #8c8cff;
+      --shadow: 0 24px 72px rgba(0, 0, 0, 0.34);
+      --radius-xl: 26px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --font-ui: "SF Pro Display", "Segoe UI", sans-serif;
+      --font-mono: "SF Mono", "JetBrains Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font-ui);
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(104, 212, 223, 0.16), transparent 26%),
+        radial-gradient(circle at top right, rgba(143, 185, 255, 0.14), transparent 22%),
+        linear-gradient(180deg, var(--bg) 0%, #03080f 100%);
+    }
+
+    h1, h2, h3, p { margin: 0; }
+    a { color: inherit; }
+    button, input { font: inherit; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 330px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      padding: 26px 22px 30px;
+      border-right: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(6, 13, 22, 0.98), rgba(6, 13, 22, 0.92));
+      backdrop-filter: blur(18px);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(104, 212, 223, 0.28);
+      background: rgba(104, 212, 223, 0.08);
+      color: var(--cyan);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: currentColor;
+      box-shadow: 0 0 12px currentColor;
+    }
+
+    .sidebar h1 {
+      margin-top: 14px;
+      font-size: 32px;
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+    }
+
+    .sidebar-copy {
+      margin: 12px 0 20px;
+      color: var(--muted);
+      line-height: 1.58;
+    }
+
+    .stats {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .stat {
+      padding: 14px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.035);
+      box-shadow: var(--shadow);
+    }
+
+    .stat strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 24px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .progress {
+      height: 10px;
+      margin-top: 10px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .progress > span {
+      display: block;
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--cyan), var(--green));
+      transition: width 160ms ease;
+    }
+
+    .seam-link {
+      display: block;
+      margin-bottom: 20px;
+      padding: 14px;
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(104, 212, 223, 0.22);
+      text-decoration: none;
+      background: rgba(104, 212, 223, 0.08);
+      box-shadow: var(--shadow);
+    }
+
+    .seam-link strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--cyan);
+      font-size: 14px;
+      letter-spacing: 0.04em;
+    }
+
+    .seam-link span {
+      display: block;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav a {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      text-decoration: none;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .nav a:hover,
+    .nav a:focus-visible {
+      border-color: var(--line);
+      background: rgba(255, 255, 255, 0.05);
+      outline: none;
+    }
+
+    .nav-count {
+      min-width: 28px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    main {
+      padding: 30px;
+    }
+
+    .hero,
+    .overview,
+    .phase,
+    .closing {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: linear-gradient(180deg, rgba(10, 19, 30, 0.95), rgba(7, 14, 23, 0.92));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .hero,
+    .overview,
+    .closing {
+      padding: 26px;
+      margin-bottom: 18px;
+    }
+
+    .hero h2 {
+      font-size: 36px;
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+      margin-bottom: 14px;
+      max-width: 14ch;
+    }
+
+    .hero p,
+    .overview p,
+    .closing p {
+      color: var(--muted);
+      line-height: 1.65;
+      max-width: 78ch;
+    }
+
+    .hero-grid,
+    .overview-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .hero-card,
+    .overview-card {
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .hero-card strong,
+    .overview-card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--blue);
+    }
+
+    .overview-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .phase {
+      margin-bottom: 18px;
+      overflow: hidden;
+    }
+
+    .phase-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 14px;
+      padding: 22px 24px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0));
+    }
+
+    .phase-title {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .phase-kicker {
+      color: var(--cyan);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .phase-head h3 {
+      font-size: 25px;
+      letter-spacing: -0.03em;
+    }
+
+    .phase-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+    }
+
+    .badge.now { color: var(--amber); background: rgba(240, 184, 109, 0.12); border-color: rgba(240, 184, 109, 0.2); }
+    .badge.next { color: var(--blue); background: rgba(143, 185, 255, 0.12); border-color: rgba(143, 185, 255, 0.2); }
+    .badge.later { color: var(--violet); background: rgba(140, 140, 255, 0.12); border-color: rgba(140, 140, 255, 0.2); }
+    .badge.gate { color: var(--green); background: rgba(102, 216, 159, 0.12); border-color: rgba(102, 216, 159, 0.2); }
+
+    .phase-body {
+      padding: 20px 24px 24px;
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 18px;
+    }
+
+    .phase-copy p {
+      margin-bottom: 14px;
+    }
+
+    .phase-copy h4,
+    .phase-side h4 {
+      margin: 0 0 10px;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--blue);
+    }
+
+    .checklist {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .item {
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 11px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .item:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .item input {
+      margin: 2px 0 0;
+      width: 18px;
+      height: 18px;
+      accent-color: var(--green);
+    }
+
+    .item strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 15px;
+    }
+
+    .item span {
+      color: var(--muted);
+      line-height: 1.55;
+      display: block;
+    }
+
+    .phase-side {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .side-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .side-list li {
+      padding: 10px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .side-list li:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .side-list strong {
+      color: var(--text);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .closing {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 18px;
+    }
+
+    .closing ul {
+      margin: 14px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .mono {
+      font-family: var(--font-mono);
+      color: var(--cyan);
+    }
+
+    @media (max-width: 1180px) {
+      .hero-grid,
+      .overview-grid,
+      .phase-body,
+      .closing {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      main {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="eyebrow">JARVIS Roadmap</div>
+      <h1>Path To Level 9</h1>
+      <p class="sidebar-copy">
+        JARVIS reaches Level 9 by moving from a strong command product into a governed
+        always-on orchestrator, then into institutional memory, earned autonomy, and
+        finally intergenerational household intelligence.
+      </p>
+
+      <div class="stats">
+        <div class="stat">
+          <strong id="checked-count">0 / 38</strong>
+          Checklist items marked
+          <div class="progress"><span id="progress-bar"></span></div>
+        </div>
+        <div class="stat">
+          <strong>Now</strong>
+          Level 2 is real, Level 3 is emerging, and Levels 4 through 9 still depend on
+          substrate, governance, and continuity work.
+        </div>
+        <div class="stat">
+          <strong>Decision Rule</strong>
+          Build substrate before breadth. Governance before raw autonomy. Household
+          operability before civilization claims.
+        </div>
+      </div>
+
+      <a class="seam-link" href="./jarvis-seam-tracker.html">
+        <strong>Seam tracker</strong>
+        <span>Seams are internal implementation checkpoints, not 1:1 checklist boxes. Open this when you want the current seam count and remaining delta clusters.</span>
+      </a>
+
+      <nav class="nav">
+        <a href="#phase-a"><span>Phase A</span><span class="nav-count">3</span></a>
+        <a href="#phase-b"><span>Phase B</span><span class="nav-count">5</span></a>
+        <a href="#phase-c"><span>Phase C</span><span class="nav-count">4</span></a>
+        <a href="#phase-d"><span>Phase D</span><span class="nav-count">4</span></a>
+        <a href="#phase-e"><span>Phase E</span><span class="nav-count">4</span></a>
+        <a href="#phase-f"><span>Phase F</span><span class="nav-count">4</span></a>
+        <a href="#phase-g"><span>Phase G</span><span class="nav-count">4</span></a>
+        <a href="#phase-h"><span>Phase H</span><span class="nav-count">4</span></a>
+        <a href="#phase-i"><span>Phase I</span><span class="nav-count">3</span></a>
+        <a href="#phase-j"><span>Phase J</span><span class="nav-count">3</span></a>
+      </nav>
+    </aside>
+
+    <main>
+      <section class="hero">
+        <div class="eyebrow">Canonical Frame</div>
+        <h2>Always-On Orchestrator, Not Assistant</h2>
+        <p>
+          JARVIS is a continuously running society of specialized agents working on behalf
+          of the household. Direct interaction is only one operating mode. The real product
+          is a governed intelligence environment that preserves continuity, reduces entropy
+          against intention, and earns authority through evidence instead of assuming it.
+        </p>
+        <div class="hero-grid">
+          <div class="hero-card">
+            <strong>Primary Constraint</strong>
+            Event truth, safe persistence, and governed authority must become real before
+            broader autonomy can be trusted.
+          </div>
+          <div class="hero-card">
+            <strong>Core Mechanism</strong>
+            The promotion engine is the bridge from sandbox work to earned live authority.
+          </div>
+          <div class="hero-card">
+            <strong>Final Test</strong>
+            Level 9 exists only when JARVIS is household-operable, memory-compounding,
+            inspectable, and formative across years.
+          </div>
+        </div>
+      </section>
+
+      <section class="overview">
+        <div class="eyebrow">Milestone Ladder</div>
+        <div class="overview-grid">
+          <div class="overview-card">
+            <strong>Level 3</strong>
+            Household operating system with proactive daily orchestration.
+          </div>
+          <div class="overview-card">
+            <strong>Level 4</strong>
+            Governed intelligence system with trust zones, stages, and auditability.
+          </div>
+          <div class="overview-card">
+            <strong>Level 5-6</strong>
+            Ambient delivery plus durable institutional memory and continuity.
+          </div>
+          <div class="overview-card">
+            <strong>Level 7-9</strong>
+            Formation, bounded autonomy, and family civilization infrastructure.
+          </div>
+        </div>
+      </section>
+
+      <section class="phase" id="phase-a">
+        <div class="phase-head">
+          <div>
+            <div class="phase-title">
+              <span class="phase-kicker">Phase A</span>
+              <h3>Finish The Level 3 Foundation</h3>
+            </div>
+            <p class="sidebar-copy">Get the live product coherent enough that JARVIS behaves like one system instead of a collection of partly-wired surfaces.</p>
+          </div>
+          <div class="phase-meta">
+            <span class="badge now">Now</span>
+            <span class="badge gate">Gate To Level 4</span>
+          </div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-copy">
+            <h4>Checklist</h4>
+            <ul class="checklist">
+              <li class="item"><input type="checkbox"><div><strong>Shared-state coherence across web, phone, and runtime</strong><span>Remove split-brain behavior so the household sees one truth surface and one orchestration state.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Finish live wiring for house, calendar, perception, and workshop</strong><span>Replace profile-backed seams with real household integrations where the tracker still shows simulation or missing credentials.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Apply the always-on deployment footprint to real hardware</strong><span>Move from documented launchd and infra posture to actual always-on household runtime behavior.</span></div></li>
+            </ul>
+          </div>
+          <div class="phase-side">
+            <h4>Exit Gate</h4>
+            <ul class="side-list">
+              <li><strong>Real daily operating trust</strong>The family can run a real day through JARVIS without hidden simulation boundaries breaking the experience.</li>
+              <li><strong>Live wiring truth</strong>Blockers around Home Assistant, perception hardware, reminders/calendar, and workshop telemetry are reduced to edge cases, not core posture.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="phase" id="phase-b">
+        <div class="phase-head">
+          <div>
+            <div class="phase-title">
+              <span class="phase-kicker">Phase B</span>
+              <h3>Build The Always-On Orchestrator Core</h3>
+            </div>
+            <p class="sidebar-copy">Make the agent society load-bearing instead of metaphorical.</p>
+          </div>
+          <div class="phase-meta">
+            <span class="badge now">Now</span>
+            <span class="badge gate">Load-Bearing</span>
+          </div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-copy">
+            <h4>Checklist</h4>
+            <ul class="checklist">
+              <li class="item"><input type="checkbox"><div><strong>Durable agent lifecycle kernel</strong><span>Wake, run, pause, resume, interrupt, escalate, retire, and survive restart without losing run state.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Agent registry as source of truth</strong><span>Every agent needs identity, mission, cadence, trust zone, stage, stewardship lane, and escalation target.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Event bus and scheduler fabric</strong><span>Agents must wake on cadence, signals, thresholds, state changes, handoffs, and direct human interruption.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Foreground/background attention router</strong><span>Direct conversation becomes one focus mode inside continuous background work instead of replacing it.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Operator observability plane</strong><span>Make active, blocked, stale, overloaded, and attention-seeking agents visible without opening code.</span></div></li>
+            </ul>
+          </div>
+          <div class="phase-side">
+            <h4>Exit Gate</h4>
+            <ul class="side-list">
+              <li><strong>Society becomes real</strong>JARVIS can accurately say which agents are awake, blocked, idle, stale, or escalating and why.</li>
+              <li><strong>No session illusion</strong>Background work persists and foreground interaction no longer resets the system’s identity.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="phase" id="phase-c">
+        <div class="phase-head">
+          <div>
+            <div class="phase-title">
+              <span class="phase-kicker">Phase C</span>
+              <h3>Make Event Truth And Persistence Load-Bearing</h3>
+            </div>
+            <p class="sidebar-copy">Turn event history into the substrate, not a debugging sidecar.</p>
+          </div>
+          <div class="phase-meta">
+            <span class="badge now">Now</span>
+            <span class="badge gate">Substrate</span>
+          </div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-copy">
+            <h4>Checklist</h4>
+            <ul class="checklist">
+              <li class="item"><input type="checkbox"><div><strong>Append-only typed event history</strong><span>State change, overrides, promotions, failures, and agent actions all become versioned event records.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Projected operational state</strong><span>Runtime status, queues, supervision, and later memory views should derive from event truth instead of ad hoc mutable blobs.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Concurrency-safe persistence</strong><span>Background agents must not silently corrupt queues, run records, or promotion evidence under concurrent writes.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Replay, explanation, rollback, and auditability</strong><span>The system must explain why it acted, reconstruct history, and unwind bounded actions with traceable provenance.</span></div></li>
+            </ul>
+          </div>
+          <div class="phase-side">
+            <h4>Exit Gate</h4>
+            <ul class="side-list">
+              <li><strong>Trustworthy recovery</strong>Restart and replay can reconstruct the current picture without inventing missing state.</li>
+              <li><strong>Evidence foundation</strong>Promotion, demotion, suspension, and learning all have a durable substrate.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="phase" id="phase-d">
+        <div class="phase-head">
+          <div>
+            <div class="phase-title">
+              <span class="phase-kicker">Phase D</span>
+              <h3>Make Governance Real In Code</h3>
+            </div>
+            <p class="sidebar-copy">Trust zones and authority stages stop being doctrine-only and become runtime law.</p>
+          </div>
+          <div class="phase-meta">
+            <span class="badge next">Next</span>
+            <span class="badge gate">Level 4</span>
+          </div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-copy">
+            <h4>Checklist</h4>
+            <ul class="checklist">
+              <li class="item"><input type="checkbox"><div><strong>Trust-zone control plane enforcement</strong><span>Every consequential action path must resolve against zone, stage, arena, and boundary rules in code.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Authority stages and escalation boundaries</strong><span>Observe, draft, stage, sandbox live, mature live, and suspended must materially change what the system can do.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Rollback, demotion, and suspension paths</strong><span>Unsafe or drifting behavior must reduce authority instead of merely being noted in logs.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Action paths cite authority and event trail</strong><span>Every meaningful mutation should be explainable in terms of scope, stage, basis, and reviewed evidence.</span></div></li>
+            </ul>
+          </div>
+          <div class="phase-side">
+            <h4>Exit Gate</h4>
+            <ul class="side-list">
+              <li><strong>Governed intelligence system</strong>JARVIS can take initiative, but only inside explicit and inspectable authority boundaries.</li>
+              <li><strong>No hand-wavy autonomy</strong>Autonomous language cannot outrun what the runtime actually enforces.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="phase" id="phase-e">
+        <div class="phase-head">
+          <div>
+            <div class="phase-title">
+              <span class="phase-kicker">Phase E</span>
+              <h3>Build The Real Agent Society</h3>
+            </div>
+            <p class="sidebar-copy">Give the agents durable collaboration primitives instead of letting them behave like isolated helpers.</p>
+          </div>
+          <div class="phase-meta">
+            <span class="badge next">Next</span>
+            <span class="badge gate">Coordination</span>
+          </div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-copy">
+            <h4>Checklist</h4>
+            <ul class="checklist">
+              <li class="item"><input type="checkbox"><div><strong>Durable inbox, outbox, worklog, blocked-state, and hypothesis state</strong><span>Agents need their own operating memory instead of only shared aggregate surfaces.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Cross-agent delegation and review requests</strong><span>Agents should be able to hand work, request evidence, merge duplicate efforts, and escalate cleanly.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Visible stewardship lanes</strong><span>Organize agents into human-readable ownership lanes with health, cadence, and burden-relief framing.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Resource arbitration</strong><span>Always-on work must compete sanely for compute, tokens, trust headroom, and human attention.</span></div></li>
+            </ul>
+          </div>
+          <div class="phase-side">
+            <h4>Exit Gate</h4>
+            <ul class="side-list">
+              <li><strong>Coordinated staff behavior</strong>The system behaves like a staff with lanes, handoffs, and reviews instead of a pile of isolated prompts.</li>
+              <li><strong>Operator trust</strong>The user can tell what the society is doing without reading raw implementation state.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="phase" id="phase-f">
+        <div class="phase-head">
+          <div>
+            <div class="phase-title">
+              <span class="phase-kicker">Phase F</span>
+              <h3>Build The Promotion Engine</h3>
+            </div>
+            <p class="sidebar-copy">Convert track record into authority and make earned autonomy a real mechanism. Current slice landed: evaluation, recommendation, governed apply, and batch apply.</p>
+          </div>
+          <div class="phase-meta">
+            <span class="badge now">Now</span>
+            <span class="badge gate">Earned Authority</span>
+          </div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-copy">
+            <h4>Checklist</h4>
+            <ul class="checklist">
+              <li class="item"><input type="checkbox" checked><div><strong>Run records, promotion claims, and verdicts</strong><span>Create the canonical objects that allow the system to argue for more authority with evidence instead of aspiration.</span></div></li>
+              <li class="item"><input type="checkbox" checked><div><strong>Sandbox evidence before higher authority</strong><span>Broader power should be unlocked only after bounded runs prove repeatable, reviewable success.</span></div></li>
+              <li class="item"><input type="checkbox" checked><div><strong>Human consent only at the mature-live gate</strong><span>Let useful motion happen earlier, but require explicit consent before deeper lasting authority.</span></div></li>
+              <li class="item"><input type="checkbox" checked><div><strong>Promotion scoring feeds from failures and overrides too</strong><span>Rollbacks, reversals, rejected reviews, and suspension signals should matter just as much as wins.</span></div></li>
+            </ul>
+          </div>
+          <div class="phase-side">
+            <h4>Exit Gate</h4>
+            <ul class="side-list">
+              <li><strong>Legitimate autonomy</strong>The system earns the right to do more instead of claiming it because a policy file said so.</li>
+              <li><strong>Promotion queue</strong>Operator surfaces can show what should be promoted, held, demoted, or suspended right now.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="phase" id="phase-g">
+        <div class="phase-head">
+          <div>
+            <div class="phase-title">
+              <span class="phase-kicker">Phase G</span>
+              <h3>Make JARVIS Household-Operable</h3>
+            </div>
+            <p class="sidebar-copy">Break the key-person dependency so the system can become a household civilization layer instead of a one-builder console.</p>
+          </div>
+          <div class="phase-meta">
+            <span class="badge next">Next</span>
+            <span class="badge gate">Legitimacy</span>
+          </div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-copy">
+            <h4>Checklist</h4>
+            <ul class="checklist">
+              <li class="item"><input type="checkbox"><div><strong>Role-aware surfaces for the family</strong><span>Different people should get different levels of complexity, authority, and visibility without needing builder knowledge.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Trusted bounded controls for non-builders</strong><span>Normal review, correction, and steering tasks should be possible without touching raw admin concepts.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Rebekah-usable command, review, and correction flows</strong><span>The household system must work when the builder is absent, overloaded, or not the person handling the situation.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Reduced operator fragility</strong><span>Runtime management, approvals, and trust-stage visibility must survive one person being unavailable.</span></div></li>
+            </ul>
+          </div>
+          <div class="phase-side">
+            <h4>Exit Gate</h4>
+            <ul class="side-list">
+              <li><strong>Household-operable</strong>JARVIS no longer depends on one person to interpret and drive every important surface.</li>
+              <li><strong>Category credibility</strong>Only now can the system claim to be a household intelligence layer instead of a sophisticated personal rig.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="phase" id="phase-h">
+        <div class="phase-head">
+          <div>
+            <div class="phase-title">
+              <span class="phase-kicker">Phase H</span>
+              <h3>Build Level 5 And Level 6 Behaviors</h3>
+            </div>
+            <p class="sidebar-copy">Make JARVIS ambient, disciplined, and truly continuity-bearing.</p>
+          </div>
+          <div class="phase-meta">
+            <span class="badge later">Later</span>
+            <span class="badge gate">Ambient + Memory</span>
+          </div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-copy">
+            <h4>Checklist</h4>
+            <ul class="checklist">
+              <li class="item"><input type="checkbox"><div><strong>Ambient but disciplined delivery</strong><span>Route interventions across phone, watch, home, and room surfaces without becoming another noisy notification system.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Presence-aware interruption logic</strong><span>Urgency, quiet hours, focus mode, and household context must decide when agents can surface themselves.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Institutional memory beyond stored facts</strong><span>Commitments, rituals, patterns, prior resolutions, and family-specific history must become usable continuity.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Long-running agents use memory, not session-local recall</strong><span>The society should get smarter because it remembers, not because the current prompt got longer.</span></div></li>
+            </ul>
+          </div>
+          <div class="phase-side">
+            <h4>Exit Gate</h4>
+            <ul class="side-list">
+              <li><strong>Ambient household intelligence</strong>JARVIS helps before being asked while still preserving peace, trust, and quiet.</li>
+              <li><strong>Continuity engine</strong>Past decisions begin to materially improve present ones in a traceable way.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="phase" id="phase-i">
+        <div class="phase-head">
+          <div>
+            <div class="phase-title">
+              <span class="phase-kicker">Phase I</span>
+              <h3>Build Level 7 And Level 8 Behaviors</h3>
+            </div>
+            <p class="sidebar-copy">Expand from operational support into formation and bounded real work.</p>
+          </div>
+          <div class="phase-meta">
+            <span class="badge later">Later</span>
+            <span class="badge gate">Formation + Bounded Autonomy</span>
+          </div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-copy">
+            <h4>Checklist</h4>
+            <ul class="checklist">
+              <li class="item"><input type="checkbox"><div><strong>Formation loops as first-class systems</strong><span>Tutoring, parenting, health, faith, stewardship, creativity, and growth must become structural, not peripheral.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Bounded autonomous operators</strong><span>Let JARVIS do selected real work inside governed arenas where the risk class and rollback posture are explicit.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Sandboxable, promotable execution paths</strong><span>Publishing, drafting, monitoring, and reversible execution should be measurable, reviewable, and eligible for earned promotion.</span></div></li>
+            </ul>
+          </div>
+          <div class="phase-side">
+            <h4>Exit Gate</h4>
+            <ul class="side-list">
+              <li><strong>Formation platform</strong>JARVIS is helping the family become, not only operate.</li>
+              <li><strong>Bounded autonomous operator</strong>The system can execute real work without dropping governance or reversibility.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="phase" id="phase-j">
+        <div class="phase-head">
+          <div>
+            <div class="phase-title">
+              <span class="phase-kicker">Phase J</span>
+              <h3>Reach Level 9</h3>
+            </div>
+            <p class="sidebar-copy">Treat JARVIS as family civilization infrastructure rather than a feature product.</p>
+          </div>
+          <div class="phase-meta">
+            <span class="badge later">Later</span>
+            <span class="badge gate">Family Civilization Layer</span>
+          </div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-copy">
+            <h4>Checklist</h4>
+            <ul class="checklist">
+              <li class="item"><input type="checkbox"><div><strong>Intergenerational memory and operational values</strong><span>Family identity, wisdom, patterns, and values become durable operating logic instead of hopeful sentiment.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Continuity resilient across years</strong><span>The system compounds memory, legitimacy, and stewardship without depending on one season, one repo shape, or one operator.</span></div></li>
+              <li class="item"><input type="checkbox"><div><strong>Inspectability and override remain intact</strong><span>Even at civilization scale, the household can still inspect, refuse, redirect, and bound what JARVIS is doing.</span></div></li>
+            </ul>
+          </div>
+          <div class="phase-side">
+            <h4>Exit Gate</h4>
+            <ul class="side-list">
+              <li><strong>Family civilization layer</strong>JARVIS strengthens identity, judgment, continuity, and stewardship over long horizons.</li>
+              <li><strong>Deep promise kept</strong><span class="mono">you're not carrying this alone</span> becomes operational truth, not brand language.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="closing">
+        <div>
+          <div class="eyebrow">Decision Complete</div>
+          <h2 style="margin-top:14px;">What Matters Most First</h2>
+          <p>
+            If this checklist has to be compressed into one ruthless order, the sequence is:
+            evented runtime, safe persistence, governance enforcement, promotion engine,
+            household-operable surfaces, then ambient memory and formative autonomy.
+          </p>
+          <ul>
+            <li>Do not broaden autonomy before event truth, persistence safety, and rollback posture are real.</li>
+            <li>Do not claim household intelligence if the household cannot operate it directly.</li>
+            <li>Do not chase Level 9 language while Level 4 authority and Level 6 continuity are still thin.</li>
+          </ul>
+        </div>
+        <div>
+          <div class="eyebrow">Use</div>
+          <h2 style="margin-top:14px;">How To Read This</h2>
+          <p>
+            Treat each phase as a gate, not just a theme. The goal is not to check boxes out
+            of order. The goal is to keep JARVIS from becoming powerful faster than it becomes
+            governed, durable, and legitimate.
+          </p>
+          <ul>
+            <li>Use <span class="mono">Now</span> phases to pick the next implementation arc.</li>
+            <li>Use <span class="mono">Exit Gate</span> notes as acceptance criteria.</li>
+            <li>Use the checkboxes as working state only; they are stored locally in the browser for convenience.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "jarvis-path-to-9-checklist";
+    const checkboxes = Array.from(document.querySelectorAll('.checklist input[type="checkbox"]'));
+    const checkedCount = document.getElementById('checked-count');
+    const progressBar = document.getElementById('progress-bar');
+
+    function loadState() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function saveState() {
+      const state = checkboxes.map((box) => box.checked);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      updateProgress();
+    }
+
+    function updateProgress() {
+      const total = checkboxes.length;
+      const complete = checkboxes.filter((box) => box.checked).length;
+      checkedCount.textContent = `${complete} / ${total}`;
+      progressBar.style.width = `${(complete / total) * 100}%`;
+    }
+
+    const state = loadState();
+    checkboxes.forEach((box, index) => {
+      box.checked = Boolean(state[index]);
+      box.addEventListener('change', saveState);
+    });
+    updateProgress();
+  </script>
+</body>
+</html>

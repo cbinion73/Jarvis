@@ -28,6 +28,8 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
+from .persistence import append_jsonl, atomic_write_jsonl
+
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -53,6 +55,7 @@ except ImportError:
 
 _HEALTH_DIR = _JARVIS_HOME / "health"
 _SLEEP_LOG = _HEALTH_DIR / "sleep_log.jsonl"
+_SLEEP_STATE_LOG = _SLEEP_LOG.with_name("sleep_log_state_log.jsonl")
 _HEALTH_STATE = _HEALTH_DIR / "chris_health_state.json"
 _HEALTH_DB = _HEALTH_DIR / "health.db"
 
@@ -166,25 +169,69 @@ def _query_sleep_from_db(days: int = 7) -> list[dict]:
 
 def _load_sleep_log_entries(days: int = 7) -> list[dict]:
     """Load entries from sleep_log.jsonl within the last N days."""
-    if not _SLEEP_LOG.exists():
-        return []
     cutoff = (date.today() - timedelta(days=days)).isoformat()
     entries: list[dict] = []
+    for entry in _load_sleep_log_records():
+        if entry.get("date", "") >= cutoff:
+            entries.append(entry)
+    return entries
+
+
+def _load_sleep_log_records() -> list[dict]:
+    if _SLEEP_LOG.exists():
+        try:
+            records: list[dict] = []
+            with open(_SLEEP_LOG, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        entry = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if isinstance(entry, dict):
+                        records.append(entry)
+            if records:
+                return records
+        except Exception as exc:
+            log.warning("Could not read sleep_log.jsonl: %s", exc)
+    return _load_sleep_log_records_from_state_log()
+
+
+def _load_sleep_log_records_from_state_log() -> list[dict]:
+    if not _SLEEP_STATE_LOG.exists():
+        return []
     try:
-        with open(_SLEEP_LOG) as f:
-            for line in f:
+        latest: list[dict] = []
+        with open(_SLEEP_STATE_LOG, encoding="utf-8") as handle:
+            for line in handle:
                 line = line.strip()
                 if not line:
                     continue
                 try:
-                    entry = json.loads(line)
-                    if entry.get("date", "") >= cutoff:
-                        entries.append(entry)
+                    payload = json.loads(line)
                 except json.JSONDecodeError:
                     continue
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        return latest
     except Exception as exc:
-        log.warning("Could not read sleep_log.jsonl: %s", exc)
-    return entries
+        log.warning("Could not replay sleep_log.jsonl: %s", exc)
+        return []
+
+
+def _persist_sleep_log_records(records: list[dict]) -> None:
+    _ensure_health_dir()
+    append_jsonl(
+        _SLEEP_STATE_LOG,
+        {
+            "saved_at": datetime.now().isoformat(),
+            "records": records,
+        },
+    )
+    atomic_write_jsonl(_SLEEP_LOG, records)
 
 
 # ---------------------------------------------------------------------------
@@ -496,8 +543,9 @@ def log_sleep(log_entry: SleepLog) -> dict:
     entry_dict["logged_at"] = datetime.now().isoformat()
 
     try:
-        with open(_SLEEP_LOG, "a") as f:
-            f.write(json.dumps(entry_dict) + "\n")
+        records = _load_sleep_log_records()
+        records.append(entry_dict)
+        _persist_sleep_log_records(records)
         log.info("Sleep log entry appended for %s: %.1fh", log_entry.date, log_entry.total_hours)
     except Exception as exc:
         log.error("Failed to write sleep log entry: %s", exc)

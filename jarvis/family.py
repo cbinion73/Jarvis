@@ -5,11 +5,13 @@ import uuid
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from .config import AppConfig
 from .models import MessageDraft, ModeState, VoiceNoteTask
 from .openai_tasks import JarvisOpenAIClient
 from .persona import build_specialist_prompt
+from .persistence import append_jsonl, atomic_write_json
 
 
 def _parse_minutes(time_text: str) -> int:
@@ -23,31 +25,81 @@ class FamilyStore:
         self.root.mkdir(parents=True, exist_ok=True)
         self.mode_state_path = self.root / "mode_state.json"
         self.mode_history_path = self.root / "mode_history.jsonl"
+        self.mode_history_log_path = self.root / "mode_history_state_log.jsonl"
         self.message_drafts_path = self.root / "message_drafts.json"
         self.voice_notes_path = self.root / "voice_note_tasks.json"
         self.departure_runs_path = self.root / "departure_runs.json"
         self.meal_plans_path = self.root / "meal_plans.json"
         self.vehicle_plans_path = self.root / "vehicle_plans.json"
         self.weather_plans_path = self.root / "weather_plans.json"
+        self._log_paths = {
+            self.message_drafts_path: self.root / "message_drafts_log.jsonl",
+            self.voice_notes_path: self.root / "voice_note_tasks_log.jsonl",
+            self.departure_runs_path: self.root / "departure_runs_log.jsonl",
+            self.meal_plans_path: self.root / "meal_plans_log.jsonl",
+            self.vehicle_plans_path: self.root / "vehicle_plans_log.jsonl",
+            self.weather_plans_path: self.root / "weather_plans_log.jsonl",
+        }
 
     def load_mode_state(self) -> dict | None:
         if not self.mode_state_path.exists():
+            return self._load_mode_state_from_history()
+        try:
+            payload = json.loads(self.mode_state_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return self._load_mode_state_from_history()
+        return payload if isinstance(payload, dict) else self._load_mode_state_from_history()
+
+    def _load_mode_state_from_history(self) -> dict | None:
+        if not self.mode_history_path.exists():
+            return self._load_mode_state_from_history_log()
+        latest: dict[str, Any] | None = None
+        try:
+            for line in self.mode_history_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                if isinstance(payload, dict):
+                    latest = dict(payload)
+        except (OSError, json.JSONDecodeError):
+            return self._load_mode_state_from_history_log()
+        return latest or self._load_mode_state_from_history_log()
+
+    def _load_mode_state_from_history_log(self) -> dict | None:
+        if not self.mode_history_log_path.exists():
             return None
-        return json.loads(self.mode_state_path.read_text(encoding="utf-8"))
+        latest: dict[str, Any] | None = None
+        try:
+            for line in self.mode_history_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list) and records:
+                    candidate = records[-1]
+                    if isinstance(candidate, dict):
+                        latest = dict(candidate)
+        except (OSError, json.JSONDecodeError):
+            return None
+        return latest
 
     def save_mode_state(self, mode_state: ModeState) -> None:
         payload = asdict(mode_state)
-        self.mode_state_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-        with self.mode_history_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(payload) + "\n")
+        atomic_write_json(self.mode_state_path, payload)
+        append_jsonl(self.mode_history_path, payload)
+        append_jsonl(
+            self.mode_history_log_path,
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "records": [payload],
+            },
+        )
 
     def _load_drafts(self) -> list[dict]:
-        if not self.message_drafts_path.exists():
-            return []
-        return json.loads(self.message_drafts_path.read_text(encoding="utf-8"))
+        return self._load_records(self.message_drafts_path)
 
     def _save_drafts(self, drafts: list[dict]) -> None:
-        self.message_drafts_path.write_text(json.dumps(drafts, indent=2) + "\n", encoding="utf-8")
+        self._save_records(self.message_drafts_path, drafts)
 
     def add_draft(self, draft: MessageDraft) -> None:
         drafts = self._load_drafts()
@@ -87,12 +139,10 @@ class FamilyStore:
         return updated
 
     def _load_voice_notes(self) -> list[dict]:
-        if not self.voice_notes_path.exists():
-            return []
-        return json.loads(self.voice_notes_path.read_text(encoding="utf-8"))
+        return self._load_records(self.voice_notes_path)
 
     def _save_voice_notes(self, records: list[dict]) -> None:
-        self.voice_notes_path.write_text(json.dumps(records, indent=2) + "\n", encoding="utf-8")
+        self._save_records(self.voice_notes_path, records)
 
     def add_voice_note_task(self, task: VoiceNoteTask) -> None:
         records = self._load_voice_notes()
@@ -117,11 +167,41 @@ class FamilyStore:
 
     def _load_records(self, path: Path) -> list[dict]:
         if not path.exists():
-            return []
-        return json.loads(path.read_text(encoding="utf-8"))
+            return self._load_records_from_log(path)
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return self._load_records_from_log(path)
+        return [dict(item) for item in payload if isinstance(item, dict)] if isinstance(payload, list) else self._load_records_from_log(path)
 
     def _save_records(self, path: Path, records: list[dict]) -> None:
-        path.write_text(json.dumps(records, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(path, records)
+        log_path = self._log_paths.get(path)
+        if log_path is not None:
+            append_jsonl(
+                log_path,
+                {
+                    "saved_at": datetime.now(timezone.utc).isoformat(),
+                    "records": records,
+                },
+            )
+
+    def _load_records_from_log(self, path: Path) -> list[dict]:
+        log_path = self._log_paths.get(path)
+        if log_path is None or not log_path.exists():
+            return []
+        latest: list[dict[str, Any]] = []
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return []
+        return latest
 
     def add_departure_run(self, record: dict) -> None:
         records = self._load_records(self.departure_runs_path)

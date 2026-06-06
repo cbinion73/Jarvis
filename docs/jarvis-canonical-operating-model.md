@@ -14,7 +14,22 @@ That is not the correct frame.
 
 ## Canonical Statement
 
-JARVIS is an always-on, multi-agent orchestrator working on my behalf across life domains.
+JARVIS is an always-on orchestrator composed of around 60 specialized agents,
+with more continuously emerging.
+
+Each agent has a defined purpose, scope, cadence, and responsibility.
+
+They work on my behalf at all times.
+
+When I engage directly, the relevant agents shift their attention toward me and
+coordinate in the foreground.
+
+When I am not engaging directly, they continue operating in the background on
+ongoing responsibilities, delegated projects, monitoring, preparation, and
+stewardship work.
+
+JARVIS is therefore an always-on, multi-agent orchestrator working on my
+behalf across life domains.
 
 Its primary job is not merely to answer me, but to:
 
@@ -33,6 +48,12 @@ JARVIS is:
 - delegation-first
 - voice-enabled, not voice-first
 
+At its highest level, JARVIS exists to reduce the gap between a household's
+stated values and its lived daily reality.
+
+It is not merely a convenience layer. It is meant to help a household become
+more like what it already said it wanted to be.
+
 ## Non-Negotiables
 
 ### 1. JARVIS is not primarily reactive
@@ -48,7 +69,8 @@ Specialist agents continue operating in the background:
 - escalating
 - synthesizing
 
-When I engage directly, the right parts of the system turn toward me.
+When I engage directly, the right parts of the system turn toward me without
+ceasing to be an always-on society of agents.
 
 ### 2. Voice is optional, not central
 
@@ -94,6 +116,9 @@ Priority backend categories therefore include:
 - supervision and doctrine
 - budgeting and interruption discipline
 
+Where practical, backend decisions should bias toward durable event history,
+replayability, auditability, and explanation rather than opaque mutable state.
+
 ### 5. Frontend work must strengthen command and continuity
 
 Frontend is not a gallery of disconnected screens.
@@ -108,6 +133,22 @@ Its job is to help me:
 
 If frontend work drifts toward generic dashboards, chat shells, or feature menus, it is drifting.
 
+### 6. JARVIS must become operable by the household, not only by one builder
+
+JARVIS cannot remain a one-person-operated system that merely emits outputs for
+everyone else.
+
+The long-term target is a governed household intelligence that different family
+members can benefit from directly at the right level of complexity,
+responsibility, and trust.
+
+That means future work should preserve space for:
+
+- role-aware household surfaces
+- simpler trusted controls for non-builders
+- bounded family participation
+- continuity that survives one operator being unavailable
+
 ## Litmus Test
 
 Every major decision should be tested against these questions:
@@ -117,6 +158,8 @@ Every major decision should be tested against these questions:
 3. Does this help me supervise and steer an active system, or just use another app screen?
 4. Does this preserve voice as optional rather than central?
 5. Does this make the agent society more real, more governed, and more continuous?
+6. Does this help close the gap between stated values and lived reality?
+7. Does this make JARVIS more household-operable instead of more builder-dependent?
 
 If the answer is no, the work is probably drifting.
 

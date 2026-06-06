@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_jsonl
+
 logger = logging.getLogger("jarvis.party_mode")
 
 
@@ -71,8 +73,60 @@ class PartyModeController:
         self._stop_flag = False
         self._lock = threading.Lock()
         self._sessions_path = Path.home() / ".jarvis" / "party_sessions.jsonl"
+        self._sessions_state_log_path = self._sessions_path.with_name("party_sessions_state_log.jsonl")
         self._sessions_path.parent.mkdir(parents=True, exist_ok=True)
         self._manual_trigger = False
+
+    def _load_saved_sessions(self) -> list[dict[str, Any]]:
+        if self._sessions_path.exists():
+            try:
+                records: list[dict[str, Any]] = []
+                for line in self._sessions_path.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        payload = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if isinstance(payload, dict):
+                        records.append(payload)
+                if records:
+                    return records
+            except OSError:
+                pass
+        return self._load_saved_sessions_from_state_log()
+
+    def _load_saved_sessions_from_state_log(self) -> list[dict[str, Any]]:
+        if not self._sessions_state_log_path.exists():
+            return []
+        try:
+            latest: list[dict[str, Any]] = []
+            for line in self._sessions_state_log_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+            return latest
+        except OSError:
+            return []
+
+    def _persist_saved_sessions(self, records: list[dict[str, Any]]) -> None:
+        self._sessions_path.parent.mkdir(parents=True, exist_ok=True)
+        append_jsonl(
+            self._sessions_state_log_path,
+            {
+                "saved_at": _now_iso(),
+                "records": records,
+            },
+        )
+        atomic_write_jsonl(self._sessions_path, records)
 
     # ------------------------------------------------------------------
     # Time window
@@ -352,9 +406,9 @@ class PartyModeController:
 
         # Persist session
         try:
-            self._sessions_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self._sessions_path, "a", encoding="utf-8") as f:
-                f.write(json.dumps(asdict(session)) + "\n")
+            records = self._load_saved_sessions()
+            records.append(asdict(session))
+            self._persist_saved_sessions(records)
         except OSError as exc:
             logger.warning("[party_mode] Could not save session: %s", exc)
 

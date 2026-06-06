@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -62,38 +64,90 @@ class ForgeStore:
         self.root = root
         self.root.mkdir(parents=True, exist_ok=True)
         self._index_path = self.root / "projects.json"
+        self._index_log_path = self.root / "projects_log.jsonl"
         self._lock = threading.Lock()
 
     # ── Internal helpers ────────────────────────────────────────────────────
 
     def _load_index(self) -> list[dict]:
         if not self._index_path.exists():
-            return []
+            return self._load_index_from_log()
         try:
             data = json.loads(self._index_path.read_text(encoding="utf-8"))
             return data if isinstance(data, list) else []
         except Exception:
+            return self._load_index_from_log()
+
+    def _load_index_from_log(self) -> list[dict]:
+        if not self._index_log_path.exists():
+            return []
+        try:
+            latest: list[dict] = []
+            for line in self._index_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+            return latest
+        except Exception:
             return []
 
     def _save_index(self, index: list[dict]) -> None:
-        self._index_path.write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(self._index_path, index)
+        append_jsonl(
+            self._index_log_path,
+            {
+                "saved_at": _now(),
+                "records": index,
+            },
+        )
 
     def _project_path(self, project_id: str) -> Path:
         return self.root / "projects" / project_id / "project.json"
 
+    def _project_log_path(self, project_id: str) -> Path:
+        path = self._project_path(project_id)
+        return path.with_name("project_log.jsonl")
+
     def _load_project_file(self, project_id: str) -> dict | None:
         p = self._project_path(project_id)
         if not p.exists():
-            return None
+            return self._load_project_from_log(project_id)
         try:
             return json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            return self._load_project_from_log(project_id)
+
+    def _load_project_from_log(self, project_id: str) -> dict | None:
+        p = self._project_log_path(project_id)
+        if not p.exists():
+            return None
+        try:
+            latest: dict | None = None
+            for line in p.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, dict):
+                    latest = dict(records)
+            return latest
         except Exception:
             return None
 
     def _save_project_file(self, project: dict) -> None:
         p = self._project_path(project["id"])
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(json.dumps(project, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(p, project)
+        append_jsonl(
+            self._project_log_path(project["id"]),
+            {
+                "saved_at": _now(),
+                "records": project,
+            },
+        )
 
     def _project_dir(self, project_id: str) -> Path:
         return self.root / "projects" / project_id

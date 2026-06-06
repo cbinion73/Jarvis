@@ -1,5 +1,4 @@
 import SwiftUI
-import WatchKit
 
 /// Compact weather display for Apple Watch.
 /// Data is pushed from the iPhone via WatchConnectivity.

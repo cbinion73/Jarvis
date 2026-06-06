@@ -5,7 +5,6 @@ import JarvisKit
 // MARK: - WeatherView  "The Observatory"
 
 struct WeatherView: View {
-
     // Singletons — use @ObservedObject so SwiftUI doesn't take duplicate ownership.
     @ObservedObject private var wx  = WeatherManager.shared
     @ObservedObject private var loc = WeatherLocationProvider.shared
@@ -13,6 +12,9 @@ struct WeatherView: View {
     @State private var serverWeather: AppleWeatherOverview?
     @State private var serverWeatherError: String?
     @State private var isLoadingServerWeather = false
+    @State private var routeWeather: NavigationRouteOverview?
+    @State private var routeWeatherError: String?
+    @State private var isLoadingRouteWeather = false
 
     private let sky = Color(red: 0.4, green: 0.75, blue: 1.0)
 
@@ -50,11 +52,7 @@ struct WeatherView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        if let l = loc.location {
-                            Task { await wx.load(location: l) }
-                        } else {
-                            Task { await loadServerWeather(force: true) }
-                        }
+                        Task { await refreshWeatherSurfaces(force: true) }
                     } label: {
                         Image(systemName: "arrow.clockwise")
                     }
@@ -68,9 +66,7 @@ struct WeatherView: View {
         }
         .onAppear {
             loc.requestAndFetch()
-            if wx.current == nil {
-                Task { await loadServerWeather(force: false) }
-            }
+            Task { await refreshWeatherSurfaces(force: false) }
             // If a cached location was restored before this view appeared,
             // onChange won't fire — load weather immediately in that case.
             if let l = loc.location, wx.current == nil {
@@ -255,6 +251,12 @@ struct WeatherView: View {
                     .glassEffect(in: RoundedRectangle(cornerRadius: 16))
                 }
 
+                if let overview = serverWeather {
+                    stormCenterSection(for: overview)
+                }
+
+                routeWeatherMonitorSection
+
                 // ── Apple attribution (legally required by WeatherKit TOS) ──
                 HStack(spacing: 6) {
                     Image(systemName: "apple.logo")
@@ -317,6 +319,9 @@ struct WeatherView: View {
                     .padding(14)
                     .glassEffect(in: RoundedRectangle(cornerRadius: 16))
                 }
+
+                stormCenterSection(for: overview)
+                routeWeatherMonitorSection
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
@@ -397,6 +402,284 @@ struct WeatherView: View {
             }
     }
 
+    @ViewBuilder
+    private func stormCenterSection(for overview: AppleWeatherOverview) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "cloud.bolt.rain.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(sky)
+                Text("STORM CENTER")
+                    .font(.system(size: 10, weight: .bold))
+                    .tracking(1.0)
+                    .foregroundStyle(sky.opacity(0.85))
+                Spacer()
+                if overview.alertsCount > 0 {
+                    Text("\(overview.alertsCount) alert\(overview.alertsCount == 1 ? "" : "s")")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.orange, in: Capsule())
+                }
+            }
+
+            if let nearTerm = overview.nearTerm {
+                nearTermCard(nearTerm)
+            }
+
+            if !overview.alerts.isEmpty {
+                alertsSection(overview.alerts)
+            }
+
+            if let radar = overview.radar, radar.available {
+                radarSection(radar)
+            }
+
+            if !overview.daily.isEmpty {
+                dailyOutlookSection(overview.daily)
+            }
+        }
+        .padding(14)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    @ViewBuilder
+    private var routeWeatherMonitorSection: some View {
+        if isLoadingRouteWeather || routeWeather != nil || routeWeatherError != nil {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 6) {
+                    Image(systemName: "car.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(sky)
+                    Text("TRAVEL WEATHER")
+                        .font(.system(size: 10, weight: .bold))
+                        .tracking(1.0)
+                        .foregroundStyle(sky.opacity(0.85))
+                    Spacer()
+                    if isLoadingRouteWeather {
+                        ProgressView()
+                            .tint(sky)
+                    }
+                }
+
+                if let routeWeather {
+                    routeWeatherSummary(routeWeather)
+                } else if let routeWeatherError {
+                    Text(routeWeatherError)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(14)
+            .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+        }
+    }
+
+    private func nearTermCard(_ nearTerm: AppleWeatherNearTerm) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Next \(nearTerm.windowMinutes) Minutes")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.68))
+            Text(nearTerm.summary)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 10) {
+                ServerWeatherTile(
+                    label: "Rain Risk",
+                    value: "\(nearTerm.rainRiskPct)%",
+                    icon: "cloud.rain.fill",
+                    color: nearTerm.rainRiskPct >= 40 ? .orange : sky
+                )
+                ServerWeatherTile(
+                    label: "Posture",
+                    value: nearTerm.hazardActive ? "Watch Now" : "Steady",
+                    icon: nearTerm.hazardActive ? "exclamationmark.triangle.fill" : "checkmark.circle.fill",
+                    color: nearTerm.hazardActive ? .orange : .green
+                )
+            }
+        }
+    }
+
+    private func alertsSection(_ alerts: [AppleWeatherAlert]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Active Weather Alerts")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.orange.opacity(0.95))
+            ForEach(alerts.prefix(3)) { alert in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(alert.headline.isEmpty ? alert.event : alert.headline)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                    let detail = [alert.severity.capitalized, alert.description]
+                        .filter { !$0.isEmpty }
+                        .joined(separator: " · ")
+                    if !detail.isEmpty {
+                        Text(detail)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.74))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(12)
+                .background(.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+            }
+        }
+    }
+
+    private func radarSection(_ radar: AppleWeatherRadar) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Radar")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.68))
+                    if let posture = radar.posture, !posture.summary.isEmpty {
+                        Text(posture.summary)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                if let viewerURL = URL(string: radar.viewerURL), !radar.viewerURL.isEmpty {
+                    Link(destination: viewerURL) {
+                        Label("Open NOAA", systemImage: "arrow.up.right.square")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.white)
+                }
+            }
+
+            if let loopURL = URL(string: radar.loopImageURL), !radar.loopImageURL.isEmpty {
+                AsyncImage(url: loopURL) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(.white.opacity(0.04))
+                        ProgressView()
+                            .tint(sky)
+                    }
+                }
+                .frame(height: 170)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+        }
+    }
+
+    private func dailyOutlookSection(_ daily: [AppleWeatherDay]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Storm Forecast")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.68))
+            VStack(spacing: 0) {
+                ForEach(Array(daily.prefix(5).enumerated()), id: \.element.id) { index, day in
+                    stormForecastRow(day)
+                    if index < min(daily.count, 5) - 1 {
+                        Divider().opacity(0.18)
+                    }
+                }
+            }
+        }
+    }
+
+    private func stormForecastRow(_ day: AppleWeatherDay) -> some View {
+        HStack(spacing: 10) {
+            Text(day.name)
+                .font(.subheadline)
+                .foregroundStyle(.white)
+                .frame(width: 42, alignment: .leading)
+            Text(day.icon.isEmpty ? "⛅" : day.icon)
+                .font(.title3)
+                .frame(width: 30)
+            Text(day.forecast)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Spacer()
+            if let rainPct = day.rainPct, rainPct > 0 {
+                Text("\(rainPct)%")
+                    .font(.caption2)
+                    .foregroundStyle(sky)
+                    .frame(width: 34, alignment: .trailing)
+            } else {
+                Spacer().frame(width: 34)
+            }
+            HStack(spacing: 4) {
+                Text(day.low.map(String.init) ?? "--")
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28, alignment: .trailing)
+                Text(day.high.map(String.init) ?? "--")
+                    .font(.subheadline.bold().monospacedDigit())
+                    .foregroundStyle(.white)
+                    .frame(width: 28, alignment: .trailing)
+            }
+        }
+        .padding(.vertical, 9)
+    }
+
+    private func routeWeatherSummary(_ route: NavigationRouteOverview) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(route.destination.label)
+                .font(.headline)
+                .foregroundStyle(.white)
+            Text(route.summary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 10) {
+                ServerWeatherTile(
+                    label: "ETA",
+                    value: route.route.durationMinutes.map { "\($0) min" } ?? "--",
+                    icon: "clock.badge.checkmark.fill",
+                    color: sky
+                )
+                ServerWeatherTile(
+                    label: "Distance",
+                    value: route.route.distanceMiles.map { String(format: "%.1f mi", $0) } ?? "--",
+                    icon: "road.lanes",
+                    color: .white
+                )
+            }
+
+            if !route.samples.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Route Weather Windows")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.68))
+                    ForEach(Array(route.samples.prefix(3).enumerated()), id: \.offset) { _, sample in
+                        HStack(spacing: 10) {
+                            Image(systemName: routeSampleIcon(for: sample))
+                                .foregroundStyle(routeSampleAccent(for: sample))
+                                .frame(width: 20)
+                            Text(sample.condition.isEmpty ? "Clear segment" : sample.condition)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                            Spacer()
+                            Text(routeWeatherLine(for: sample))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+
+            let alerts = route.samples.flatMap(\.alerts)
+            if !alerts.isEmpty {
+                Text(alerts.prefix(2).joined(separator: " · "))
+                    .font(.caption)
+                    .foregroundStyle(.orange.opacity(0.9))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
     private func serverHeroImageKey(for current: AppleWeatherCurrent) -> String {
         let visualKey = WeatherManager.canonicalImageKey(current.visualKey)
         if visualKey == "clear_night_no_moon", !current.moonPhase.isEmpty {
@@ -430,6 +713,46 @@ struct WeatherView: View {
         return "\(mode) from \(overview.source)"
     }
 
+    private func routeSampleAccent(for sample: NavigationRouteSample) -> Color {
+        let lower = sample.condition.lowercased()
+        if let rainPct = sample.rainPct, rainPct >= 50 { return .orange }
+        if lower.contains("storm") || lower.contains("thunder") { return .orange }
+        if lower.contains("snow") || lower.contains("freez") { return .cyan }
+        return sky
+    }
+
+    private func routeSampleIcon(for sample: NavigationRouteSample) -> String {
+        let lower = sample.condition.lowercased()
+        if lower.contains("snow") || lower.contains("freez") { return "snowflake" }
+        if lower.contains("storm") || lower.contains("thunder") { return "cloud.bolt.rain.fill" }
+        if lower.contains("rain") || lower.contains("shower") { return "cloud.rain.fill" }
+        if lower.contains("cloud") { return "cloud.fill" }
+        return "sun.max.fill"
+    }
+
+    private func routeWeatherLine(for sample: NavigationRouteSample) -> String {
+        var parts: [String] = []
+        if let temperature = sample.temperatureF {
+            parts.append("\(Int(temperature.rounded()))°")
+        }
+        if let rainPct = sample.rainPct, rainPct > 0 {
+            parts.append("\(rainPct)% rain")
+        }
+        if !sample.wind.isEmpty {
+            parts.append(sample.wind)
+        }
+        return parts.isEmpty ? "No risk flagged" : parts.joined(separator: " • ")
+    }
+
+    private func refreshWeatherSurfaces(force: Bool) async {
+        async let server: Void = loadServerWeather(force: force)
+        async let route: Void = loadRouteWeather(force: force)
+        _ = await (server, route)
+        if let l = loc.location {
+            await wx.load(location: l)
+        }
+    }
+
     private func loadServerWeather(force: Bool) async {
         if serverWeather != nil && !force { return }
         isLoadingServerWeather = true
@@ -440,6 +763,27 @@ struct WeatherView: View {
             serverWeatherError = error.localizedDescription
         }
         isLoadingServerWeather = false
+    }
+
+    private func loadRouteWeather(force: Bool) async {
+        if routeWeather != nil && !force { return }
+        isLoadingRouteWeather = true
+        routeWeatherError = nil
+        defer { isLoadingRouteWeather = false }
+        do {
+            let state = try await AppleAPIClient.shared.fetchNavigationState()
+            let lastRoute = state.lastRoute
+            guard !lastRoute.origin.isEmpty, !lastRoute.destination.isEmpty else {
+                routeWeather = nil
+                return
+            }
+            routeWeather = try await AppleAPIClient.shared.fetchNavigationRoute(
+                origin: lastRoute.origin,
+                destination: lastRoute.destination
+            )
+        } catch {
+            routeWeatherError = error.localizedDescription
+        }
     }
 }
 

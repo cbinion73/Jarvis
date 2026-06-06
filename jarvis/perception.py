@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import AppConfig
+from .persistence import append_jsonl, atomic_write_json
 
 
 def _now_iso() -> str:
@@ -27,14 +28,58 @@ class PerceptionStore:
         self.privacy_state_path = self.root / "privacy_state.json"
         self.vision_calibrations_path = self.root / "vision_calibrations.json"
         self.vision_observations_path = self.root / "vision_observations.json"
+        self._log_paths = {
+            self.microphone_events_path: self.root / "microphone_events_log.jsonl",
+            self.presence_events_path: self.root / "presence_events_log.jsonl",
+            self.phone_events_path: self.root / "phone_presence_events_log.jsonl",
+            self.camera_events_path: self.root / "camera_events_log.jsonl",
+            self.object_events_path: self.root / "object_events_log.jsonl",
+            self.anomalies_path: self.root / "environmental_anomalies_log.jsonl",
+            self.package_rules_path: self.root / "package_rules_log.jsonl",
+            self.privacy_state_path: self.root / "privacy_state_log.jsonl",
+            self.vision_calibrations_path: self.root / "vision_calibrations_log.jsonl",
+            self.vision_observations_path: self.root / "vision_observations_log.jsonl",
+        }
 
     def _load_json(self, path: Path, default: object) -> object:
         if not path.exists():
-            return default
-        return json.loads(path.read_text(encoding="utf-8"))
+            return self._load_json_from_log(path, default)
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return self._load_json_from_log(path, default)
+        return payload
 
     def _save_json(self, path: Path, payload: object) -> None:
-        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(path, payload)
+        append_jsonl(
+            self._log_paths[path],
+            {
+                "saved_at": _now_iso(),
+                "records": payload,
+            },
+        )
+
+    def _load_json_from_log(self, path: Path, default: object) -> object:
+        log_path = self._log_paths[path]
+        if not log_path.exists():
+            return default
+        latest: object = default
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                latest = payload.get("records", default)
+        except (OSError, json.JSONDecodeError):
+            return default
+        if isinstance(default, dict):
+            return dict(latest) if isinstance(latest, dict) else default
+        if isinstance(default, list):
+            if not isinstance(latest, list):
+                return default
+            return [dict(item) if isinstance(item, dict) else item for item in latest]
+        return latest
 
     def append_record(self, path: Path, record: dict) -> dict:
         payload = self._load_json(path, [])

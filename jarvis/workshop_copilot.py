@@ -31,6 +31,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json, atomic_write_jsonl
+
 
 # ---------------------------------------------------------------------------
 # Data models
@@ -120,15 +122,60 @@ class WorkshopCopilotStore:
         self.projects_path = self.root / "projects.json"
         self.jobs_path = self.root / "print_jobs.jsonl"
         self.materials_path = self.root / "materials.json"
+        self.projects_log_path = self.root / "projects_log.jsonl"
+        self.jobs_state_log_path = self.root / "print_jobs_state_log.jsonl"
+        self.materials_log_path = self.root / "materials_log.jsonl"
+
+    def _load_json_snapshot(self, path: Path, log_path: Path) -> list[dict]:
+        if path.exists():
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                return data if isinstance(data, list) else []
+            except (json.JSONDecodeError, OSError):
+                pass
+        if not log_path.exists():
+            return []
+        latest: list[dict] = []
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (json.JSONDecodeError, OSError):
+            return []
+        return latest
+
+    def _persist_json_snapshot(self, path: Path, log_path: Path, records: list[dict]) -> None:
+        append_jsonl(
+            log_path,
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "records": records,
+            },
+            ensure_ascii=False,
+        )
+        atomic_write_json(path, records, ensure_ascii=False)
+
+    def _persist_jsonl_state(self, path: Path, log_path: Path, records: list[dict]) -> None:
+        append_jsonl(
+            log_path,
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "records": records,
+            },
+            ensure_ascii=False,
+        )
+        atomic_write_jsonl(path, records, ensure_ascii=False)
 
     # -- Projects ----------------------------------------------------------
 
     def save_project(self, project: WorkshopProject) -> None:
         projects = {p["project_id"]: p for p in self._load_projects()}
         projects[project.project_id] = asdict(project)
-        self.projects_path.write_text(
-            json.dumps(list(projects.values()), indent=2) + "\n", encoding="utf-8"
-        )
+        self._persist_json_snapshot(self.projects_path, self.projects_log_path, list(projects.values()))
 
     def get_project(self, project_id: str) -> WorkshopProject | None:
         for record in self._load_projects():
@@ -143,19 +190,14 @@ class WorkshopCopilotStore:
         return [WorkshopProject(**r) for r in records]
 
     def _load_projects(self) -> list[dict]:
-        if not self.projects_path.exists():
-            return []
-        try:
-            data = json.loads(self.projects_path.read_text(encoding="utf-8"))
-            return data if isinstance(data, list) else []
-        except (json.JSONDecodeError, OSError):
-            return []
+        return self._load_json_snapshot(self.projects_path, self.projects_log_path)
 
     # -- Print Jobs --------------------------------------------------------
 
     def log_job(self, job: PrintJob) -> None:
-        with self.jobs_path.open("a", encoding="utf-8") as fh:
-            fh.write(json.dumps(asdict(job)) + "\n")
+        records = [asdict(existing) for existing in self._load_all_jobs()]
+        records.append(asdict(job))
+        self._persist_jsonl_state(self.jobs_path, self.jobs_state_log_path, records)
 
     def get_active_jobs(self) -> list[PrintJob]:
         active_statuses = {"queued", "running", "paused"}
@@ -172,8 +214,10 @@ class WorkshopCopilotStore:
                 updated = True
                 break
         if updated:
-            self.jobs_path.write_text(
-                "\n".join(json.dumps(asdict(j)) for j in jobs) + "\n", encoding="utf-8"
+            self._persist_jsonl_state(
+                self.jobs_path,
+                self.jobs_state_log_path,
+                [asdict(job) for job in jobs],
             )
         return updated
 
@@ -181,16 +225,35 @@ class WorkshopCopilotStore:
         return [j for j in self._load_all_jobs() if j.status == status]
 
     def _load_all_jobs(self) -> list[PrintJob]:
-        if not self.jobs_path.exists():
-            return []
+        records: list[dict]
+        if self.jobs_path.exists():
+            records = []
+            for line in self.jobs_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if line:
+                    try:
+                        records.append(json.loads(line))
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+        else:
+            records = []
+        if not records and self.jobs_state_log_path.exists():
+            try:
+                for line in self.jobs_state_log_path.read_text(encoding="utf-8").splitlines():
+                    if not line.strip():
+                        continue
+                    payload = json.loads(line)
+                    maybe_records = payload.get("records")
+                    if isinstance(maybe_records, list):
+                        records = [dict(item) for item in maybe_records if isinstance(item, dict)]
+            except (json.JSONDecodeError, OSError):
+                records = []
         jobs = []
-        for line in self.jobs_path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if line:
-                try:
-                    jobs.append(PrintJob(**json.loads(line)))
-                except (json.JSONDecodeError, TypeError):
-                    pass
+        for record in records:
+            try:
+                jobs.append(PrintJob(**record))
+            except (json.JSONDecodeError, TypeError):
+                pass
         return jobs
 
     # -- Materials ---------------------------------------------------------
@@ -201,18 +264,10 @@ class WorkshopCopilotStore:
     def save_material(self, stock: MaterialStock) -> None:
         materials = {m["material_id"]: m for m in self._load_materials()}
         materials[stock.material_id] = asdict(stock)
-        self.materials_path.write_text(
-            json.dumps(list(materials.values()), indent=2) + "\n", encoding="utf-8"
-        )
+        self._persist_json_snapshot(self.materials_path, self.materials_log_path, list(materials.values()))
 
     def _load_materials(self) -> list[dict]:
-        if not self.materials_path.exists():
-            return []
-        try:
-            data = json.loads(self.materials_path.read_text(encoding="utf-8"))
-            return data if isinstance(data, list) else []
-        except (json.JSONDecodeError, OSError):
-            return []
+        return self._load_json_snapshot(self.materials_path, self.materials_log_path)
 
 
 # ---------------------------------------------------------------------------

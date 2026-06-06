@@ -21,6 +21,8 @@ from datetime import datetime, date
 from pathlib import Path
 from typing import Optional
 
+from .persistence import append_jsonl, atomic_write_json
+
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -29,6 +31,7 @@ log = logging.getLogger(__name__)
 _HEALTH_DIR = Path.home() / ".jarvis" / "health"
 _HEALTH_STATE_PATH = _HEALTH_DIR / "chris_health_state.json"
 _TWIN_STATE_PATH = _HEALTH_DIR / "twin_state.json"
+_TWIN_STATE_LOG_PATH = _HEALTH_DIR / "twin_state_log.jsonl"
 _PREDICTION_LOG_PATH = _HEALTH_DIR / "twin_predictions.jsonl"
 
 # ---------------------------------------------------------------------------
@@ -311,18 +314,42 @@ def _load_twin_state() -> Optional[dict]:
                 return json.load(fh)
     except Exception as exc:
         log.warning("Could not load twin state from %s: %s", _TWIN_STATE_PATH, exc)
-    return None
+    return _load_twin_state_from_log()
 
 
 def _save_twin_state(state: dict) -> None:
     """Persist twin state to disk."""
     _ensure_health_dir()
     try:
-        with open(_TWIN_STATE_PATH, "w") as fh:
-            json.dump(state, fh, indent=2, default=str)
+        append_jsonl(
+            _TWIN_STATE_LOG_PATH,
+            {
+                "saved_at": datetime.now().isoformat(),
+                "state": state,
+            },
+        )
+        atomic_write_json(_TWIN_STATE_PATH, state)
         log.info("Twin state saved to %s", _TWIN_STATE_PATH)
     except Exception as exc:
         log.error("Could not save twin state: %s", exc)
+
+
+def _load_twin_state_from_log() -> Optional[dict]:
+    if not _TWIN_STATE_LOG_PATH.exists():
+        return None
+    latest: dict | None = None
+    try:
+        for line in _TWIN_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            state = payload.get("state")
+            if isinstance(state, dict):
+                latest = state
+    except Exception as exc:
+        log.warning("Could not replay twin state from %s: %s", _TWIN_STATE_LOG_PATH, exc)
+        return None
+    return latest
 
 
 def _history_to_datapoints(raw: list[dict]) -> list[DataPoint]:

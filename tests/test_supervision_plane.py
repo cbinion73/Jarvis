@@ -89,6 +89,33 @@ class SupervisionPlaneTests(unittest.TestCase):
             "calendar_route",
         )
 
+    def test_promotion_evidence_can_be_collected_by_trust_zone(self) -> None:
+        decision = self.support.evaluate_action(
+            agent_id="pepper",
+            action_type="calendar_route",
+            requested_outcome="reroute family logistics",
+            trust_zone_id="household_schedule",
+            arena_id="household.schedule.routing",
+            context={"touches_external_state": True, "reversible": True},
+        )
+        self.support.record_review(
+            decision_id=str(decision["decision_id"]),
+            reviewer="chris",
+            outcome="approved",
+            notes="reviewed success",
+            rollback_executed=False,
+            doctrine_ready=True,
+        )
+
+        evidence = self.support.promotion_evidence(
+            subject_kind="trust_zone",
+            subject_id="household_schedule",
+        )
+
+        self.assertEqual(evidence["summary"]["review_count"], 1)
+        self.assertEqual(evidence["summary"]["approved_count"], 1)
+        self.assertEqual(evidence["reviews"][0]["arena_id"], "household.schedule.routing")
+
 
 if __name__ == "__main__":
     unittest.main()

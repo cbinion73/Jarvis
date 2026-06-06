@@ -23,9 +23,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json
+
 log = logging.getLogger(__name__)
 
 _CACHE_PATH = Path.home() / ".jarvis" / "health" / "helen_analysis.json"
+_CACHE_LOG_PATH = _CACHE_PATH.with_name("helen_analysis_log.jsonl")
+_CACHE_STATE_LOG_PATH = _CACHE_PATH.with_name("helen_analysis_state_log.jsonl")
 _CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
@@ -472,15 +476,13 @@ async def run_analysis(force_refresh: bool = False) -> dict:
     Returns the parsed analysis dict.
     """
     # Return cached if fresh enough
-    if not force_refresh and _CACHE_PATH.exists():
-        try:
-            cached = json.loads(_CACHE_PATH.read_text())
+    if not force_refresh:
+        cached = get_cached_analysis()
+        if cached:
             age_hours = (datetime.utcnow().timestamp() - cached.get("_generated_at", 0)) / 3600
             if age_hours < 6:
                 log.info("Helen analysis: returning cached result (%.1fh old)", age_hours)
                 return cached
-        except Exception:
-            pass
 
     # Pull all data in parallel
     try:
@@ -554,7 +556,7 @@ async def run_analysis(force_refresh: bool = False) -> dict:
     # Stamp and cache
     analysis["_generated_at"]  = datetime.utcnow().timestamp()
     analysis["_generated_utc"] = datetime.utcnow().isoformat()
-    _CACHE_PATH.write_text(json.dumps(analysis, indent=2))
+    _save_cached_analysis(analysis)
     log.info("Helen v2 analysis complete — score=%s risk=%s",
              analysis.get("overall_score"), analysis.get("risk_level"))
     return analysis
@@ -564,7 +566,71 @@ def get_cached_analysis() -> dict | None:
     """Return cached analysis without triggering a new LLM call."""
     if _CACHE_PATH.exists():
         try:
-            return json.loads(_CACHE_PATH.read_text())
+            payload = json.loads(_CACHE_PATH.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                return payload
         except Exception:
-            pass
+            replayed = _load_cached_analysis_from_state_log()
+            if replayed is not None:
+                return replayed
+    else:
+        replayed = _load_cached_analysis_from_state_log()
+        if replayed is not None:
+            return replayed
+    return _load_cached_analysis_from_log()
+
+
+def _save_cached_analysis(analysis: dict[str, Any]) -> None:
+    append_jsonl(
+        _CACHE_LOG_PATH,
+        {
+            "saved_at": datetime.utcnow().isoformat(),
+            "analysis": analysis,
+        },
+    )
+    append_jsonl(
+        _CACHE_STATE_LOG_PATH,
+        {
+            "saved_at": datetime.utcnow().isoformat(),
+            "analysis": analysis,
+        },
+    )
+    atomic_write_json(_CACHE_PATH, analysis)
+
+
+def _load_cached_analysis_from_log() -> dict | None:
+    if not _CACHE_LOG_PATH.exists():
+        return None
+    latest: dict[str, Any] | None = None
+    try:
+        for line in _CACHE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            analysis = payload.get("analysis")
+            if isinstance(analysis, dict):
+                latest = analysis
+    except Exception:
+        return None
+    if isinstance(latest, dict):
+        return latest
+    return None
+
+
+def _load_cached_analysis_from_state_log() -> dict | None:
+    if not _CACHE_STATE_LOG_PATH.exists():
+        return None
+    latest: dict[str, Any] | None = None
+    try:
+        for line in _CACHE_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            analysis = payload.get("analysis")
+            if isinstance(analysis, dict):
+                latest = analysis
+    except Exception:
+        return None
+    if isinstance(latest, dict):
+        return latest
     return None

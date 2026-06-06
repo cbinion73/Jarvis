@@ -16,12 +16,12 @@ from __future__ import annotations
 
 import json
 import math
-import os
-import tempfile
 from dataclasses import dataclass, asdict, field
 from datetime import datetime, date
 from pathlib import Path
 from typing import Optional
+
+from .persistence import append_jsonl, atomic_write_json
 
 # ---------------------------------------------------------------------------
 # Hardcoded authoritative fallbacks for Chris Binion
@@ -133,6 +133,8 @@ _DEFAULT_RISK_ADJUSTMENTS = [
 # Storage paths
 _HEALTH_DIR = Path.home() / ".jarvis" / "health"
 _ESTIMATE_PATH = _HEALTH_DIR / "longevity_estimate.json"
+_ESTIMATE_LOG_PATH = _HEALTH_DIR / "longevity_estimate_log.jsonl"
+_ESTIMATE_STATE_LOG_PATH = _HEALTH_DIR / "longevity_estimate_state_log.jsonl"
 _STATE_PATH = _HEALTH_DIR / "chris_health_state.json"
 
 
@@ -198,18 +200,51 @@ def _save_estimate(estimate: LongevityEstimate) -> None:
     try:
         _HEALTH_DIR.mkdir(parents=True, exist_ok=True)
         data = asdict(estimate)
-        fd, tmp = tempfile.mkstemp(dir=_HEALTH_DIR, suffix=".tmp")
-        try:
-            with os.fdopen(fd, "w") as fh:
-                json.dump(data, fh, indent=2)
-            Path(tmp).replace(_ESTIMATE_PATH)
-        except Exception:
-            try:
-                os.unlink(tmp)
-            except Exception:
-                pass
+        append_jsonl(_ESTIMATE_LOG_PATH, data)
+        append_jsonl(_ESTIMATE_STATE_LOG_PATH, data)
+        atomic_write_json(_ESTIMATE_PATH, data)
     except Exception:
         pass
+
+
+def load_saved_estimate() -> dict:
+    """Load saved longevity estimate, replaying from state log when needed."""
+    try:
+        if _ESTIMATE_PATH.exists():
+            return json.loads(_ESTIMATE_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    if _ESTIMATE_STATE_LOG_PATH.exists():
+        try:
+            last: dict | None = None
+            for line in _ESTIMATE_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                payload = json.loads(line)
+                if isinstance(payload, dict):
+                    last = payload
+            if last is not None:
+                atomic_write_json(_ESTIMATE_PATH, last)
+                return last
+        except Exception:
+            pass
+    if _ESTIMATE_LOG_PATH.exists():
+        try:
+            last: dict | None = None
+            for line in _ESTIMATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                payload = json.loads(line)
+                if isinstance(payload, dict):
+                    last = payload
+            if last is not None:
+                atomic_write_json(_ESTIMATE_PATH, last)
+                return last
+        except Exception:
+            pass
+    return {}
 
 
 def _determine_trajectory_direction() -> str:

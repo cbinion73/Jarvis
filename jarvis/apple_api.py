@@ -43,15 +43,29 @@ from urllib.parse import quote
 from fastapi import FastAPI, HTTPException
 
 from .nav_bridge import NavBridge, haversine, min_distance_to_route, sample_route_points
+from .persistence import append_jsonl as persistence_append_jsonl, atomic_write_json
 from .settings import LOCATION_SETTINGS_PATH, VoiceSettingsStore
 
 logger = logging.getLogger(__name__)
 _NAVIGATION_STATE_PATH = Path("data/settings/navigation_state.json")
+_NAVIGATION_STATE_LOG_PATH = _NAVIGATION_STATE_PATH.with_name("navigation_state_log.jsonl")
 _EVENT_LOG_PATH = Path("data/state/event_log.jsonl")
 _NOTIFICATION_CENTER_PATH = Path("data/state/notification_center.json")
+_NOTIFICATION_CENTER_LOG_PATH = _NOTIFICATION_CENTER_PATH.with_name("notification_center_log.jsonl")
 _STEWARDSHIP_REVIEW_QUEUE_PATH = Path("data/state/stewardship_reviews.json")
+_STEWARDSHIP_REVIEW_QUEUE_LOG_PATH = _STEWARDSHIP_REVIEW_QUEUE_PATH.with_name("stewardship_reviews_log.jsonl")
 _SIGNAL_RESOLUTIONS_PATH = Path("data/state/signal_resolutions.json")
+_SIGNAL_RESOLUTIONS_LOG_PATH = _SIGNAL_RESOLUTIONS_PATH.with_name("signal_resolutions_log.jsonl")
+_FOCUS_STATE_PATH = Path("data/apple/focus_state.json")
+_FOCUS_STATE_LOG_PATH = _FOCUS_STATE_PATH.with_name("focus_state_log.jsonl")
+_APPLE_REMINDERS_PATH = Path("data/apple/reminders.json")
+_APPLE_REMINDERS_LOG_PATH = _APPLE_REMINDERS_PATH.with_name("reminders_log.jsonl")
+_APPLE_CALENDAR_PATH = Path("data/apple/calendar_events.json")
+_APPLE_CALENDAR_LOG_PATH = _APPLE_CALENDAR_PATH.with_name("calendar_events_log.jsonl")
+_APPLE_NOW_PLAYING_PATH = Path("data/apple/now_playing.json")
+_APPLE_NOW_PLAYING_LOG_PATH = _APPLE_NOW_PLAYING_PATH.with_name("now_playing_log.jsonl")
 _CHRONICLE_PRAYER_ACTIVITY_PATH = Path.home() / ".jarvis" / "chronicle" / "prayer_activity.json"
+_CHRONICLE_PRAYER_ACTIVITY_LOG_PATH = _CHRONICLE_PRAYER_ACTIVITY_PATH.with_name("prayer_activity_log.jsonl")
 _CHRONICLE_ANSWERED_PRAYERS_PATH = Path.home() / ".jarvis" / "chronicle" / "answered_prayers.jsonl"
 
 _NAV_STOP_LABELS = {
@@ -88,6 +102,25 @@ def _ok(data: Any) -> dict:
     return {"ok": True, "data": data, "error": None, "ts": _ts()}
 
 
+async def _timeboxed_to_thread(
+    func: Any,
+    *args: Any,
+    timeout: float = 0.75,
+    default: Any = None,
+    label: str = "",
+) -> Any:
+    try:
+        return await asyncio.wait_for(asyncio.to_thread(func, *args), timeout=timeout)
+    except asyncio.TimeoutError:
+        if label:
+            logger.warning("apple_api timeout in %s after %.2fs", label, timeout)
+        return default
+    except Exception as exc:
+        if label:
+            logger.warning("apple_api best-effort failure in %s: %s", label, exc)
+        return default
+
+
 def _boolish(value: Any) -> bool:
     if isinstance(value, bool):
         return value
@@ -96,6 +129,20 @@ def _boolish(value: Any) -> bool:
     if isinstance(value, str):
         return value.strip().lower() in {"1", "true", "yes", "ready", "connected", "available", "ok"}
     return False
+
+
+def _is_recent_timestamp(value: Any, minutes: int = 5) -> bool:
+    raw = str(value or "").strip()
+    if not raw:
+        return False
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    delta = datetime.now(timezone.utc) - parsed.astimezone(timezone.utc)
+    return delta.total_seconds() <= max(0, minutes) * 60
 
 
 def _slugify_label(value: str) -> str:
@@ -686,15 +733,56 @@ def _safe_read_json(path: Path, default: Any) -> Any:
             return json.loads(path.read_text(encoding="utf-8"))
     except Exception as exc:
         logger.warning("apple_api.safe_read_json %s: %s", path, exc)
+    log_path = _json_log_path(path)
+    if log_path is not None and log_path.exists():
+        try:
+            last: Any = None
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                last = json.loads(line)
+            if last is not None:
+                atomic_write_json(path, last)
+                return last
+        except Exception as exc:
+            logger.warning("apple_api.safe_read_json replay %s: %s", log_path, exc)
     return default
 
 
 def _safe_write_json(path: Path, payload: Any) -> None:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        log_path = _json_log_path(path)
+        if log_path is not None:
+            persistence_append_jsonl(log_path, payload)
+            atomic_write_json(path, payload)
+        else:
+            path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     except Exception as exc:
         logger.warning("apple_api.safe_write_json %s: %s", path, exc)
+
+
+def _json_log_path(path: Path) -> Path | None:
+    if path == _NAVIGATION_STATE_PATH:
+        return _NAVIGATION_STATE_LOG_PATH
+    if path == _NOTIFICATION_CENTER_PATH:
+        return _NOTIFICATION_CENTER_LOG_PATH
+    if path == _STEWARDSHIP_REVIEW_QUEUE_PATH:
+        return _STEWARDSHIP_REVIEW_QUEUE_LOG_PATH
+    if path == _SIGNAL_RESOLUTIONS_PATH:
+        return _SIGNAL_RESOLUTIONS_LOG_PATH
+    if path == _CHRONICLE_PRAYER_ACTIVITY_PATH:
+        return _CHRONICLE_PRAYER_ACTIVITY_LOG_PATH
+    if path == _FOCUS_STATE_PATH:
+        return _FOCUS_STATE_LOG_PATH
+    if path == _APPLE_REMINDERS_PATH:
+        return _APPLE_REMINDERS_LOG_PATH
+    if path == _APPLE_CALENDAR_PATH:
+        return _APPLE_CALENDAR_LOG_PATH
+    if path == _APPLE_NOW_PLAYING_PATH:
+        return _APPLE_NOW_PLAYING_LOG_PATH
+    return None
 
 
 def _append_jsonl(path: Path, payload: dict[str, Any]) -> None:
@@ -3638,8 +3726,7 @@ def _save_navigation_state(patch: dict[str, Any]) -> dict[str, Any]:
         "origin": str((last_route or {}).get("origin") or "").strip(),
         "destination": str((last_route or {}).get("destination") or "").strip(),
     }
-    _NAVIGATION_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _NAVIGATION_STATE_PATH.write_text(json.dumps(cleaned, indent=2) + "\n", encoding="utf-8")
+    _safe_write_json(_NAVIGATION_STATE_PATH, cleaned)
     return cleaned
 
 
@@ -3933,16 +4020,31 @@ class _EventLogStore:
 class _StewardshipReviewStore:
     def __init__(self, path: Path) -> None:
         self._path = path
+        self._log_path = path.with_name(f"{path.stem}_log.jsonl")
 
     def _load(self) -> dict[str, Any]:
         payload = _safe_read_json(self._path, {})
+        if not payload and self._log_path.exists():
+            try:
+                last: Any = None
+                for line in self._log_path.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    last = json.loads(line)
+                if isinstance(last, dict):
+                    atomic_write_json(self._path, last)
+                    payload = last
+            except Exception as exc:
+                logger.warning("apple_api.stewardship_review_store replay %s: %s", self._log_path, exc)
         reviews = payload.get("reviews") if isinstance(payload, dict) else []
         if not isinstance(reviews, list):
             reviews = []
         return {"reviews": [item for item in reviews if isinstance(item, dict)]}
 
     def _save(self, payload: dict[str, Any]) -> None:
-        _safe_write_json(self._path, payload)
+        persistence_append_jsonl(self._log_path, payload)
+        atomic_write_json(self._path, payload)
 
     def upsert(
         self,
@@ -3961,6 +4063,8 @@ class _StewardshipReviewStore:
         note: str = "",
         event_id: str = "",
         notification_id: str = "",
+        approval_request_id: str = "",
+        supervision_decision: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         store = self._load()
         now = _ts()
@@ -3986,6 +4090,8 @@ class _StewardshipReviewStore:
                     "note": note,
                     "event_id": event_id or str(item.get("event_id") or ""),
                     "notification_id": notification_id or str(item.get("notification_id") or ""),
+                    "approval_request_id": approval_request_id or str(item.get("approval_request_id") or ""),
+                    "supervision_decision": dict(supervision_decision or item.get("supervision_decision") or {}),
                 }
             )
             self._save(store)
@@ -4010,6 +4116,8 @@ class _StewardshipReviewStore:
             "note": note,
             "event_id": event_id,
             "notification_id": notification_id,
+            "approval_request_id": approval_request_id,
+            "supervision_decision": dict(supervision_decision or {}),
         }
         store["reviews"].append(review)
         self._save(store)
@@ -4048,17 +4156,32 @@ class _StewardshipReviewStore:
 class _NotificationCenterStore:
     def __init__(self, path: Path, event_log: _EventLogStore) -> None:
         self._path = path
+        self._log_path = path.with_name(f"{path.stem}_log.jsonl")
         self._event_log = event_log
 
     def _load(self) -> dict[str, Any]:
         data = _safe_read_json(self._path, {})
+        if not data and self._log_path.exists():
+            try:
+                last: Any = None
+                for line in self._log_path.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    last = json.loads(line)
+                if isinstance(last, dict):
+                    atomic_write_json(self._path, last)
+                    data = last
+            except Exception as exc:
+                logger.warning("apple_api.notification_center_store replay %s: %s", self._log_path, exc)
         items = data.get("items") if isinstance(data, dict) else []
         if not isinstance(items, list):
             items = []
         return {"items": [item for item in items if isinstance(item, dict)]}
 
     def _save(self, payload: dict[str, Any]) -> None:
-        _safe_write_json(self._path, payload)
+        persistence_append_jsonl(self._log_path, payload)
+        atomic_write_json(self._path, payload)
 
     def create(
         self,
@@ -4308,7 +4431,7 @@ def _sync_mirrored_reminder(
     completed: bool | None = None,
     due: str | None = None,
 ) -> None:
-    path = Path("data/apple/reminders.json")
+    path = _APPLE_REMINDERS_PATH
     payload = _safe_read_json(path, {})
     reminders = payload.get("reminders") if isinstance(payload, dict) else []
     if not isinstance(reminders, list):
@@ -4599,10 +4722,9 @@ def _governed_reminder_mutation(reminder_id: str, *, action_label: str, minutes:
 
 
 def _apply_focus_record(payload: dict[str, Any]) -> dict[str, Any]:
-    out_path = Path("data/apple/focus_state.json")
-    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path = _FOCUS_STATE_PATH
     record = {**payload, "updated_at": _ts()}
-    out_path.write_text(json.dumps(record, indent=2))
+    _safe_write_json(out_path, record)
 
     try:
         from .service import broadcast_event
@@ -4763,8 +4885,9 @@ def _create_notification_from_event(
 
 
 def _serialize_stewardship_review(item: dict[str, Any]) -> dict[str, Any]:
+    review_id = str(item.get("id") or "")
     return {
-        "id": str(item.get("id") or ""),
+        "id": review_id,
         "lane_id": str(item.get("lane_id") or ""),
         "lane_title": str(item.get("lane_title") or ""),
         "status": str(item.get("status") or ""),
@@ -4773,8 +4896,138 @@ def _serialize_stewardship_review(item: dict[str, Any]) -> dict[str, Any]:
         "boundary_decision": str(item.get("boundary_decision") or ""),
         "boundary_reason": str(item.get("boundary_reason") or ""),
         "approval_mode": str(item.get("approval_mode") or ""),
+        "approval_request_id": str(item.get("approval_request_id") or ""),
+        "supervision_decision": dict(item.get("supervision_decision") or {}),
+        "sandbox_job_id": f"stewardship-review:{review_id}" if review_id else "",
         "timestamp": str(item.get("updated_at") or item.get("created_at") or ""),
     }
+
+
+def _serialize_calendar_route_job(item: dict[str, Any]) -> dict[str, Any]:
+    event_id = str(item.get("event_id") or "").strip()
+    job_id = str(item.get("job_id") or f"calendar-route:{event_id}" if event_id else "").strip()
+    return {
+        "id": event_id or job_id,
+        "event_id": event_id,
+        "title": str(item.get("title") or ""),
+        "status": str(item.get("status") or ""),
+        "location": str(item.get("target") or item.get("location") or ""),
+        "review_level": str(item.get("review_level") or ""),
+        "summary": str(item.get("summary") or ""),
+        "sandbox_job_id": job_id,
+        "timestamp": str(item.get("updated_at") or item.get("timestamp") or ""),
+    }
+
+
+def _stewardship_primary_agent_id(lane: dict[str, Any]) -> str:
+    agents = lane.get("primary_agents") if isinstance(lane.get("primary_agents"), list) else []
+    for candidate in agents:
+        value = str(candidate or "").strip()
+        if value:
+            return value
+    return "system-steward"
+
+
+def _stage_stewardship_review_governed_approval(
+    *,
+    lane: dict[str, Any],
+    review: dict[str, Any],
+    actor: str,
+    detail: str,
+) -> tuple[str, dict[str, Any]]:
+    try:
+        from .approvals import get_approval_guard, get_approval_queue
+
+        guard = get_approval_guard()
+        if guard is None:
+            return "", {}
+        request_id = guard.request_approval(
+            agent_id=_stewardship_primary_agent_id(lane),
+            agent_label=str(lane.get("name") or lane.get("title") or "Stewardship Lane").strip() or "Stewardship Lane",
+            action_type="stage",
+            title=f"Stage stewardship review: {str(review.get('lane_title') or lane.get('name') or 'Lane').strip()}",
+            description=detail,
+            payload={
+                "review_id": str(review.get("id") or ""),
+                "lane_id": str(review.get("lane_id") or ""),
+                "review_surface": str(review.get("review_surface") or ""),
+                "packet_target": str(review.get("packet_target") or ""),
+                "_sandbox_job_id": f"stewardship-review:{str(review.get('id') or '').strip()}",
+            },
+            actor_id=actor,
+            priority=4,
+            tags=["stewardship", "systems", str(review.get("lane_id") or "").strip() or "lane"],
+            context={
+                "trust_zone_id": str(review.get("trust_zone") or ""),
+                "lane_id": str(review.get("lane_id") or ""),
+                "requested_outcome": (
+                    f"Stage stewardship review for "
+                    f"{str(review.get('lane_title') or lane.get('name') or 'lane').strip()} "
+                    f"inside {str(review.get('review_surface') or 'systems').strip()}."
+                ),
+                "touches_external_state": False,
+                "reversible": True,
+            },
+        )
+        queue = get_approval_queue()
+        item = queue.get_by_id(request_id) if queue is not None else None
+        return request_id, dict(getattr(item, "supervision_decision", {}) or {})
+    except Exception:
+        logger.warning("Failed to create governed stewardship approval", exc_info=True)
+        return "", {}
+
+
+def _stage_calendar_route_governed_approval(
+    *,
+    actor: str,
+    event_id: str,
+    title: str,
+    location: str,
+    maps_url: str,
+    trust_zone: str,
+    boundary_reason: str,
+) -> tuple[str, dict[str, Any]]:
+    try:
+        from .approvals import get_approval_guard, get_approval_queue
+
+        guard = get_approval_guard()
+        if guard is None:
+            return "", {}
+        request_id = guard.request_approval(
+            agent_id="herald",
+            agent_label="Herald",
+            action_type="calendar_route",
+            title=f"Route to {title}",
+            description=(
+                f"Prepare a bounded calendar route handoff for {title}.\n\n"
+                f"Location: {location}\n"
+                f"Boundary: {boundary_reason or 'Schedule routing remains governed.'}"
+            ),
+            payload={
+                "event_id": event_id,
+                "title": title,
+                "location": location,
+                "maps_url": maps_url,
+                "_sandbox_job_id": f"calendar-route:{event_id}",
+            },
+            actor_id=actor,
+            priority=4,
+            tags=["calendar", "route", "systems"],
+            context={
+                "trust_zone_id": trust_zone,
+                "lane_id": "executive-calendar",
+                "arena_id": "household.schedule.routing",
+                "requested_outcome": f"Prepare a governed route handoff for {title} at {location}",
+                "touches_external_state": True,
+                "reversible": True,
+            },
+        )
+        queue = get_approval_queue()
+        item = queue.get_by_id(request_id) if queue is not None else None
+        return request_id, dict(getattr(item, "supervision_decision", {}) or {})
+    except Exception:
+        logger.warning("Failed to create governed calendar route approval", exc_info=True)
+        return "", {}
 
 
 def _governance_proposal_domains(lane_id: str, packet_targets: list[str], review_surfaces: list[str]) -> list[str]:
@@ -5349,11 +5602,30 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             event_id=str(event.get("id") or ""),
             notification_id=str(notification.get("id") or ""),
         )
+        approval_request_id, supervision_decision = _stage_stewardship_review_governed_approval(
+            lane=lane,
+            review=review,
+            actor=actor,
+            detail=detail,
+        )
+        if approval_request_id:
+            refreshed = _stewardship_reviews.update(
+                str(review.get("id") or ""),
+                {
+                    "approval_request_id": approval_request_id,
+                    "supervision_decision": supervision_decision,
+                },
+            )
+            if refreshed is not None:
+                review = refreshed
 
         return _ok(
             {
                 "request_id": request_id,
                 "review_id": str(review.get("id") or ""),
+                "approval_request_id": str(review.get("approval_request_id") or ""),
+                "supervision_decision": dict(review.get("supervision_decision") or {}),
+                "sandbox_job_id": f"stewardship-review:{str(review.get('id') or '').strip()}" if str(review.get("id") or "").strip() else "",
                 "status": "review_staged" if boundary_decision != "deny" else "blocked_by_boundary",
                 "performed_action": "stage_lane_review",
                 "lane_id": lane_id,
@@ -5369,6 +5641,37 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             }
         )
 
+    @app.post("/api/apple/stewardship-reviews/{review_id}/sandbox-execute")
+    async def apple_execute_stewardship_review_sandbox(review_id: str, payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        triggered_by = str(payload.get("triggered_by") or "apple-stewardship-review").strip() or "apple-stewardship-review"
+        review = _stewardship_reviews.get(review_id)
+        if review is None:
+            raise HTTPException(status_code=404, detail="Stewardship review not found")
+        sandbox_job_id = f"stewardship-review:{review_id}"
+        try:
+            result = runtime.execute_sandbox_job(actor, sandbox_job_id, triggered_by=triggered_by)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        job = result.get("job") if isinstance(result.get("job"), dict) else {}
+        active_run = result.get("active_run") if isinstance(result.get("active_run"), dict) else {}
+        queue = result.get("queue") if isinstance(result.get("queue"), dict) else {}
+        return _ok(
+            {
+                "ok": bool(result.get("ok")),
+                "accepted": bool(result.get("accepted")),
+                "review_id": review_id,
+                "sandbox_job_id": sandbox_job_id,
+                "status": str(job.get("status") or ""),
+                "message": str(result.get("message") or ""),
+                "active_run_id": str(active_run.get("run_id") or ""),
+                "queue_active_count": int(queue.get("active_count") or 0),
+            }
+        )
+
     @app.post("/api/apple/stewardship-reviews/{review_id}/approve")
     async def apple_approve_stewardship_review(review_id: str, payload: dict | None = None):
         payload = payload if isinstance(payload, dict) else {}
@@ -5376,12 +5679,32 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         review = _stewardship_reviews.get(review_id)
         if review is None:
             raise HTTPException(status_code=404, detail="Stewardship review not found")
+        approval_request_id = str(review.get("approval_request_id") or "").strip()
+        execution_result: dict[str, Any] = {}
+        if approval_request_id:
+            try:
+                from .approvals import get_approval_guard, get_approval_queue
+
+                queue = get_approval_queue()
+                guard = get_approval_guard()
+                if queue is not None and guard is not None:
+                    approved_item = queue.approve(approval_request_id, approved_by=actor)
+                    if approved_item is None:
+                        raise HTTPException(status_code=409, detail="Stewardship review approval is not pending")
+                    execution_result = dict(guard.execute_approved(approval_request_id) or {})
+                    if str(execution_result.get("status") or "").strip().lower() == "error":
+                        raise HTTPException(status_code=400, detail=str(execution_result.get("detail") or "Governed execution failed"))
+            except HTTPException:
+                raise
+            except Exception as exc:
+                raise HTTPException(status_code=500, detail=f"Governed approval execution failed: {exc}") from exc
 
         updated = _stewardship_reviews.update(
             review_id,
             {
                 "status": "approved",
                 "last_actor": actor,
+                "supervision_decision": dict(execution_result.get("supervision_decision") or review.get("supervision_decision") or {}),
             },
         )
         if updated is None:
@@ -5422,6 +5745,9 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 "review_id": review_id,
                 "status": "approved",
                 "performed_action": "approve_stewardship_review",
+                "approval_request_id": approval_request_id,
+                "supervision_decision": dict(updated.get("supervision_decision") or {}),
+                "execution_status": str(execution_result.get("status") or ""),
                 "lane_id": str(updated.get("lane_id") or ""),
                 "lane_title": str(updated.get("lane_title") or ""),
                 "review_surface": str(updated.get("review_surface") or ""),
@@ -5504,6 +5830,16 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         review = _stewardship_reviews.get(review_id)
         if review is None:
             raise HTTPException(status_code=404, detail="Stewardship review not found")
+        approval_request_id = str(review.get("approval_request_id") or "").strip()
+        if approval_request_id:
+            try:
+                from .approvals import get_approval_queue
+
+                queue = get_approval_queue()
+                if queue is not None:
+                    queue.cancel(approval_request_id)
+            except Exception:
+                logger.warning("Failed to cancel governed stewardship approval %s", approval_request_id, exc_info=True)
 
         updated = _stewardship_reviews.update(
             review_id,
@@ -5544,6 +5880,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 "review_id": review_id,
                 "status": "retired",
                 "performed_action": "retire_stewardship_review",
+                "approval_request_id": approval_request_id,
                 "lane_id": str(updated.get("lane_id") or ""),
                 "lane_title": str(updated.get("lane_title") or ""),
                 "review_surface": str(updated.get("review_surface") or ""),
@@ -5734,21 +6071,9 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         # Attempt to read current mode from status
         mode = status.get("mode") or status.get("current_mode") or "home"
 
-        # Weather — best-effort from runtime
-        weather = ""
-        try:
-            world = runtime.world_state_view("chris")
-            weather = world.get("weather", {}).get("summary") or ""
-        except Exception:
-            pass
-
-        # Drift flag
-        drift = False
-        try:
-            snap = runtime.chamber_home_snapshot("chris")
-            drift = bool(snap.get("drift_items") or snap.get("drift"))
-        except Exception:
-            pass
+        # Keep the quick-status contract fast and lightweight.
+        weather = str(status.get("weather") or status.get("weather_summary") or "")
+        drift = bool(status.get("drift") or status.get("drift_detected"))
 
         data = {
             "needs_count": needs_count,
@@ -6773,10 +7098,19 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             guard = get_approval_guard()
             if guard is not None:
                 request_id = guard.request_approval(
+                    agent_id="apple-home",
+                    agent_label="Apple Home",
                     title=command,
                     description=f"Home command: {service} on {entity_id}",
                     action_type="home_control",
                     payload={"command": command, "entity_id": entity_id, "service": service},
+                    context={
+                        "trust_zone_id": trust_zone,
+                        "requested_outcome": f"Execute home command '{command}' via {service} on {entity_id}",
+                        "touches_external_state": True,
+                        "reversible": False,
+                        "approval_mode": approval_mode,
+                    },
                 )
         except Exception as exc:
             logger.warning("apple_home_command: approval guard failed: %s", exc)
@@ -7078,6 +7412,9 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         promotion_records = runtime.list_promotion_records(limit=8) or []
         if not isinstance(promotion_records, list):
             promotion_records = []
+        promotion_recommendations = runtime.list_promotion_recommendations(limit=6) or []
+        if not isinstance(promotion_recommendations, list):
+            promotion_recommendations = []
 
         governance_zones = []
         active_zone_count = 0
@@ -7176,6 +7513,37 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                     "arena_id": str(item.get("arena_id") or ""),
                     "authority_stage": str(item.get("authority_stage") or ""),
                     "created_at": str(item.get("created_at") or ""),
+                }
+            )
+
+        promotion_recommendation_rows = []
+        pending_consent_count = 0
+        ready_to_promote_count = 0
+        hold_count = 0
+        for item in promotion_recommendations:
+            if not isinstance(item, dict):
+                continue
+            decision = str(item.get("decision") or "")
+            if decision == "pending_consent":
+                pending_consent_count += 1
+            elif decision == "promote":
+                ready_to_promote_count += 1
+            elif decision == "hold":
+                hold_count += 1
+            promotion_recommendation_rows.append(
+                {
+                    "id": str(item.get("id") or ""),
+                    "title": str(item.get("title") or item.get("subject_id") or "Promotion recommendation"),
+                    "subject_kind": str(item.get("subject_kind") or ""),
+                    "subject_id": str(item.get("subject_id") or ""),
+                    "decision": decision,
+                    "current_stage": str(item.get("current_stage") or ""),
+                    "target_stage": str(item.get("target_stage") or ""),
+                    "summary": str(item.get("summary") or ""),
+                    "reason": str(item.get("reason") or ""),
+                    "trust_zone": str(item.get("trust_zone") or ""),
+                    "arena_id": str(item.get("arena_id") or ""),
+                    "human_consent_required": bool(item.get("human_consent_required", False)),
                 }
             )
 
@@ -7315,6 +7683,9 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         sandbox_active_run_rows = sandbox_overview.get("active_runs") if isinstance(sandbox_overview.get("active_runs"), list) else []
         sandbox_recent_run_rows = sandbox_overview.get("recent_runs") if isinstance(sandbox_overview.get("recent_runs"), list) else []
         sandbox_lane_rows = sandbox_overview.get("lane_summaries") if isinstance(sandbox_overview.get("lane_summaries"), list) else []
+        calendar_route_jobs = runtime.calendar_route_sandbox_jobs(limit=0)
+        recent_calendar_routes = [_serialize_calendar_route_job(item) for item in calendar_route_jobs[:4] if isinstance(item, dict)]
+        staged_calendar_route_count = len(calendar_route_jobs)
 
         reflective_snapshot = runtime.learning_review_snapshot("Chris") or {}
         if not isinstance(reflective_snapshot, dict):
@@ -7620,11 +7991,16 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                     "stage_count": len([item for item in authority_stages if isinstance(item, dict)]),
                     "pending_queue_count": pending_queue_count,
                     "promotion_record_count": promotion_record_count,
+                    "promotion_recommendation_count": len(promotion_recommendation_rows),
+                    "pending_consent_count": pending_consent_count,
+                    "ready_to_promote_count": ready_to_promote_count,
+                    "hold_recommendation_count": hold_count,
                     "zones": governance_zones,
                     "arenas": governance_arenas,
                     "stages": governance_stages,
                     "queue": queue_rows[:5],
                     "promotion_records": promotion_rows[:5],
+                    "promotion_recommendations": promotion_recommendation_rows[:5],
                 },
                 "sandbox_operations": {
                     "queue": {
@@ -7672,9 +8048,11 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                     "governance_proposal_count": len(governance_proposal_rows),
                     "active_rule_count": int(doctrine_summary.get("active_rule_count") or 0),
                     "staged_stewardship_review_count": staged_stewardship_review_count,
+                    "staged_calendar_route_count": staged_calendar_route_count,
                     "pending_approvals": pending_approvals,
                     "recent_actions": recent_actions,
                     "recent_stewardship_reviews": recent_stewardship_reviews,
+                    "recent_calendar_routes": recent_calendar_routes,
                     "governance_proposals": governance_proposal_rows,
                     "doctrine_candidates": candidate_rows,
                 },
@@ -7822,6 +8200,38 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 "linked_zone_id": str(updated.get("linked_zone_id") or ""),
             }
         )
+
+    @app.post("/api/apple/systems/promotion/apply")
+    async def apple_apply_promotion(payload: dict = {}):
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        basis = str(payload.get("basis") or "promotion application from Apple Systems").strip()
+        try:
+            result = runtime.apply_promotion_decision(
+                subject_kind=str(payload.get("subject_kind") or ""),
+                subject_id=str(payload.get("subject_id") or ""),
+                target_stage=str(payload.get("target_stage") or ""),
+                actor=actor,
+                basis=basis,
+                human_consent=bool(payload.get("human_consent", False)),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except PermissionError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _ok(result)
+
+    @app.post("/api/apple/systems/promotion/apply-recommendations")
+    async def apple_apply_promotion_recommendations(payload: dict = {}):
+        actor = str(payload.get("actor") or "system-steward").strip() or "system-steward"
+        basis = str(payload.get("basis") or "auto-apply-promotion-recommendations").strip()
+        result = runtime.apply_promotion_recommendations(
+            actor=actor,
+            basis=basis,
+            limit=int(payload.get("limit") or 12),
+        )
+        return _ok(result)
 
     def _build_apple_notification_center_overview(
         *,
@@ -8096,16 +8506,22 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
     @app.post("/api/apple/approvals/{request_id}/approve")
     async def apple_approve(request_id: str, payload: dict = {}):
         """One-tap approval from Watch or Phone."""
-        from .approvals import get_approval_queue
+        from .approvals import get_approval_guard, get_approval_queue
         queue = get_approval_queue()
         if queue is None:
             raise HTTPException(status_code=503, detail="Approval system not initialised")
+        guard = get_approval_guard()
+        if guard is None:
+            raise HTTPException(status_code=503, detail="Approval guard not initialised")
 
         approved_by = str(payload.get("approved_by") or "chris")
         from dataclasses import asdict as _asdict
         item = queue.approve(request_id, approved_by=approved_by)
         if item is None:
             raise HTTPException(status_code=404, detail="Pending approval request not found")
+        execution_result = guard.execute_approved(request_id)
+        if str(execution_result.get("status") or "").strip().lower() == "error":
+            raise HTTPException(status_code=400, detail=str(execution_result.get("detail") or "Governed approval execution failed"))
 
         try:
             item_dict = _asdict(item)
@@ -8153,7 +8569,16 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             source_summary="Approval workflow",
         )
 
-        return _ok({"status": "approved", "request": item_dict})
+        return _ok(
+            {
+                "status": "approved",
+                "request": item_dict,
+                "execution_status": str(execution_result.get("status") or ""),
+                "supervision_decision": dict(execution_result.get("supervision_decision", {}) or {}),
+                "sandbox_job_id": str(execution_result.get("sandbox_job_id") or ""),
+                "sandbox_result": dict(execution_result.get("sandbox_result", {}) or {}),
+            }
+        )
 
     @app.post("/api/apple/approvals/{request_id}/reject")
     async def apple_reject(request_id: str, payload: dict = {}):
@@ -8219,7 +8644,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
 
     @app.get("/api/apple/calendar/state")
     async def apple_calendar_state():
-        payload = _safe_read_json(Path("data/apple/calendar_events.json"), {})
+        payload = _safe_read_json(_APPLE_CALENDAR_PATH, {})
         return _ok(_build_apple_calendar_state(payload if isinstance(payload, dict) else {}))
 
     @app.post("/api/apple/calendar")
@@ -8227,14 +8652,13 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         """Receives Calendar events from EventKit on the iPhone.
         Writes to data/apple/calendar_events.json for the runtime to consume."""
         events = payload.get("events", [])
-        out_path = Path("data/apple/calendar_events.json")
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(json.dumps({
+        out_path = _APPLE_CALENDAR_PATH
+        _safe_write_json(out_path, {
             "events": events,
             "count":  len(events),
             "source": "eventkit",
             "synced_at": _ts(),
-        }, indent=2))
+        })
         logger.info("EventKit calendar: stored %d events", len(events))
         _record_shared_event(
             domain="calendar",
@@ -8264,7 +8688,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
 
     @app.post("/api/apple/calendar/events/{event_id}/prepare")
     async def apple_calendar_event_prepare(event_id: str):
-        payload = _safe_read_json(Path("data/apple/calendar_events.json"), {})
+        payload = _safe_read_json(_APPLE_CALENDAR_PATH, {})
         event = _apple_find_calendar_event(payload if isinstance(payload, dict) else {}, event_id)
         if event is None:
             raise HTTPException(status_code=404, detail="Calendar event not found")
@@ -8278,7 +8702,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
 
     @app.post("/api/apple/calendar/events/{event_id}/route")
     async def apple_calendar_event_route(event_id: str):
-        payload = _safe_read_json(Path("data/apple/calendar_events.json"), {})
+        payload = _safe_read_json(_APPLE_CALENDAR_PATH, {})
         event = _apple_find_calendar_event(payload if isinstance(payload, dict) else {}, event_id)
         if event is None:
             raise HTTPException(status_code=404, detail="Calendar event not found")
@@ -8343,6 +8767,69 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 }
             )
 
+        approval_request_id = ""
+        supervision_decision: dict[str, Any] = {}
+        if boundary_decision != "deny":
+            approval_request_id, supervision_decision = _stage_calendar_route_governed_approval(
+                actor="chris",
+                event_id=event_id,
+                title=title,
+                location=location,
+                maps_url=maps_url,
+                trust_zone=trust_zone,
+                boundary_reason=boundary_reason,
+            )
+
+        if approval_request_id:
+            event_payload = _record_shared_event(
+                domain="calendar",
+                kind="stage_ready",
+                title="Calendar route staged",
+                detail=f"Route for {title} was staged for governed review before a live Maps handoff.",
+                severity="low",
+                actor="chris",
+                source="apple.calendar.route",
+                source_id=approval_request_id,
+                navigation_target="needs",
+                actions=["open", "stage"],
+                trust_zone=trust_zone,
+                authority_stage=authority_stage,
+                why_now="A schedule routing request entered the governed review and sandbox path.",
+                metadata={
+                    "event_id": event_id,
+                    "location": location,
+                    "maps_url": maps_url,
+                    "approval_mode": approval_mode,
+                    "approval_request_id": approval_request_id,
+                },
+            )
+            _create_notification_from_event(
+                event_payload,
+                category="calendar",
+                delivery_mode="badge_only",
+                available_actions=["open", "dismiss"],
+                source_summary="Governed route handoff",
+            )
+            return _ok(
+                {
+                    "request_id": approval_request_id,
+                    "approval_request_id": approval_request_id,
+                    "status": "staged_for_review",
+                    "event_id": event_id,
+                    "title": title,
+                    "location": location,
+                    "maps_url": maps_url,
+                    "sandbox_job_id": f"calendar-route:{event_id}",
+                    "boundary_decision": boundary_decision,
+                    "boundary_reason": boundary_reason,
+                    "trust_zone": trust_zone,
+                    "authority_stage": authority_stage,
+                    "arena_status": arena_status,
+                    "approval_mode": approval_mode,
+                    "supervision_decision": supervision_decision,
+                }
+            )
+
         if boundary_decision != "allow":
             from .models import StagedActionQueueItem
             runtime.trust_support.enqueue_stage_action(
@@ -8392,6 +8879,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                     "authority_stage": authority_stage,
                     "arena_status": arena_status,
                     "approval_mode": approval_mode,
+                    "supervision_decision": supervision_decision,
                 }
             )
 
@@ -8431,7 +8919,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
 
     @app.get("/api/apple/reminders/state")
     async def apple_reminders_state():
-        payload = _safe_read_json(Path("data/apple/reminders.json"), {})
+        payload = _safe_read_json(_APPLE_REMINDERS_PATH, {})
         return _ok(_build_apple_reminders_state(payload if isinstance(payload, dict) else {}))
 
     @app.post("/api/apple/reminders")
@@ -8439,14 +8927,13 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         """Receives Reminders from EventKit on the iPhone.
         Writes to data/apple/reminders.json."""
         reminders = payload.get("reminders", [])
-        out_path = Path("data/apple/reminders.json")
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(json.dumps({
+        out_path = _APPLE_REMINDERS_PATH
+        _safe_write_json(out_path, {
             "reminders": reminders,
             "count":     len(reminders),
             "source":    "eventkit",
             "synced_at": _ts(),
-        }, indent=2))
+        })
         logger.info("EventKit reminders: stored %d items", len(reminders))
         _record_shared_event(
             domain="reminders",
@@ -8875,7 +9362,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
     @app.get("/api/apple/now-playing/state")
     async def apple_now_playing_state():
         data_root = Path("data/apple")
-        payload = _safe_read_json(Path("data/apple/now_playing.json"), {})
+        payload = _safe_read_json(_APPLE_NOW_PLAYING_PATH, {})
         focus_payload = _safe_read_json(data_root / "focus_state.json", {})
         watch_status = (await apple_status()).get("data") or {}
         home_state = (await apple_home_state()).get("data") or {}
@@ -8895,12 +9382,11 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
     @app.post("/api/apple/now-playing")
     async def apple_now_playing(payload: dict):
         """Receives Now Playing info from MediaPlayer on the iPhone."""
-        out_path = Path("data/apple/now_playing.json")
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(json.dumps({
+        out_path = _APPLE_NOW_PLAYING_PATH
+        _safe_write_json(out_path, {
             **{k: v for k, v in payload.items() if k != "artwork_b64"},
             "updated_at": _ts(),
-        }, indent=2))
+        })
         # Persist artwork separately as a JPEG
         if artwork_b64 := payload.get("artwork_b64"):
             import base64

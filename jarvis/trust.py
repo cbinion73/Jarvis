@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
-import tempfile
+from typing import Any
 
 from .models import AuthorityStage, PromotionRecord, ResourceArena, StagedActionQueueItem, TrustZone
+from .persistence import append_jsonl, atomic_write_json
 
 
 def _now_iso() -> str:
@@ -23,32 +23,51 @@ class TrustStore:
         self.authority_stages_path = self.root / "authority_stages.json"
         self.stage_queue_path = self.root / "stage_queue.json"
         self.promotion_records_path = self.root / "promotion_records.json"
+        self._log_paths = {
+            self.trust_zones_path: self.root / "trust_zones_log.jsonl",
+            self.resource_arenas_path: self.root / "resource_arenas_log.jsonl",
+            self.authority_stages_path: self.root / "authority_stages_log.jsonl",
+            self.stage_queue_path: self.root / "stage_queue_log.jsonl",
+            self.promotion_records_path: self.root / "promotion_records_log.jsonl",
+        }
+
+    def _load_records_from_log(self, path: Path) -> list[dict[str, Any]]:
+        log_path = self._log_paths[path]
+        if not log_path.exists():
+            return []
+        latest: list[dict[str, Any]] = []
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return []
+        return latest
 
     def _load_records(self, path: Path) -> list[dict]:
         if not path.exists():
-            return []
+            return self._load_records_from_log(path)
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            return []
-        return payload if isinstance(payload, list) else []
+            return self._load_records_from_log(path)
+        if not isinstance(payload, list):
+            return self._load_records_from_log(path)
+        return [dict(item) for item in payload if isinstance(item, dict)]
 
     def _save_records(self, path: Path, records: list[dict]) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        payload = json.dumps(records, indent=2) + "\n"
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as handle:
-            handle.write(payload)
-            handle.flush()
-            os.fsync(handle.fileno())
-            tmp_path = Path(handle.name)
-        tmp_path.replace(path)
+        atomic_write_json(path, records)
+        append_jsonl(
+            self._log_paths[path],
+            {
+                "saved_at": _now_iso(),
+                "records": records,
+            },
+        )
 
     def list_trust_zones(self) -> list[dict]:
         return self._load_records(self.trust_zones_path)

@@ -19,6 +19,8 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json
+
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -110,6 +112,95 @@ def _ensure_health_dir() -> None:
     _HEALTH_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _log_path_for(path: Path) -> Path:
+    return path.with_name(f"{path.stem}_log.jsonl")
+
+
+def _state_log_path_for(path: Path) -> Path:
+    return path.with_name(f"{path.stem}_state_log.jsonl")
+
+
+def _load_from_log(path: Path) -> Any:
+    log_path = _log_path_for(path)
+    if not log_path.exists():
+        return None
+    latest: Any = None
+    try:
+        for line in log_path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            if isinstance(payload, dict) and "data" in payload:
+                latest = payload["data"]
+    except (OSError, json.JSONDecodeError) as exc:
+        log.error("Failed to replay %s from %s: %s", path.name, log_path.name, exc)
+        return None
+    return latest
+
+
+def _save_json_snapshot(path: Path, payload: Any) -> None:
+    _ensure_health_dir()
+    append_jsonl(
+        _log_path_for(path),
+        {
+            "saved_at": datetime.now().isoformat(),
+            "data": payload,
+        },
+    )
+    atomic_write_json(path, payload)
+
+
+def _load_outcomes_from_state_log() -> list[dict]:
+    log_path = _state_log_path_for(_OUTCOMES_FILE)
+    if not log_path.exists():
+        return []
+    latest: list[dict] = []
+    try:
+        for line in log_path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            records = payload.get("records")
+            if isinstance(records, list):
+                latest = [dict(record) for record in records if isinstance(record, dict)]
+    except OSError as exc:
+        log.error("Failed to replay appointment outcomes from %s: %s", log_path.name, exc)
+        return []
+    return latest
+
+
+def _load_outcome_records() -> list[dict]:
+    if _OUTCOMES_FILE.exists():
+        records: list[dict] = []
+        try:
+            with _OUTCOMES_FILE.open("r", encoding="utf-8") as fh:
+                for lineno, line in enumerate(fh, 1):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        rec = json.loads(line)
+                    except json.JSONDecodeError as exc:
+                        log.warning("JSONL line %d malformed: %s", lineno, exc)
+                        continue
+                    if isinstance(rec, dict):
+                        records.append(rec)
+        except OSError as exc:
+            log.error("Failed to read outcomes JSONL: %s", exc)
+            return _load_outcomes_from_state_log()
+        if records:
+            return records
+        log.warning(
+            "Appointment outcomes snapshot %s was blank or unreadable; replaying from %s",
+            _OUTCOMES_FILE,
+            _state_log_path_for(_OUTCOMES_FILE),
+        )
+    return _load_outcomes_from_state_log()
+
+
 def _load_appointments_raw() -> list[dict]:
     """
     Load raw appointment dicts from disk.
@@ -121,6 +212,9 @@ def _load_appointments_raw() -> list[dict]:
     """
     _ensure_health_dir()
     if not _APPOINTMENTS_FILE.exists() or _APPOINTMENTS_FILE.stat().st_size == 0:
+        replayed = _load_from_log(_APPOINTMENTS_FILE)
+        if isinstance(replayed, list):
+            return replayed
         log.info("appointments.json not found — seeding with Dr. Wenk appointment")
         _save_appointments_raw([_WENK_APPOINTMENT_DEFAULT])
         return [_WENK_APPOINTMENT_DEFAULT]
@@ -145,6 +239,9 @@ def _load_appointments_raw() -> list[dict]:
         return data
     except (json.JSONDecodeError, OSError) as exc:
         log.error("Failed to load appointments.json: %s", exc)
+        replayed = _load_from_log(_APPOINTMENTS_FILE)
+        if isinstance(replayed, list):
+            return replayed
         return [_WENK_APPOINTMENT_DEFAULT]
 
 
@@ -152,8 +249,7 @@ def _save_appointments_raw(appointments: list[dict]) -> None:
     """Persist appointment list to disk."""
     _ensure_health_dir()
     try:
-        with _APPOINTMENTS_FILE.open("w", encoding="utf-8") as fh:
-            json.dump(appointments, fh, indent=2, default=str)
+        _save_json_snapshot(_APPOINTMENTS_FILE, appointments)
     except OSError as exc:
         log.error("Failed to save appointments.json: %s", exc)
 
@@ -190,14 +286,16 @@ def _load_health_state() -> dict:
             return json.load(fh)
     except (json.JSONDecodeError, OSError) as exc:
         log.error("Failed to load chris_health_state.json: %s", exc)
+        replayed = _load_from_log(_HEALTH_STATE_FILE)
+        if isinstance(replayed, dict):
+            return replayed
         return {}
 
 
 def _save_health_state(state: dict) -> None:
     """Persist health state dict to disk."""
     try:
-        with _HEALTH_STATE_FILE.open("w", encoding="utf-8") as fh:
-            json.dump(state, fh, indent=2, default=str)
+        _save_json_snapshot(_HEALTH_STATE_FILE, state)
     except OSError as exc:
         log.error("Failed to save chris_health_state.json: %s", exc)
 
@@ -669,8 +767,16 @@ def record_appointment_outcome(appointment_id: str, outcome: AppointmentOutcome)
     # 1. Append to JSONL outcomes log
     outcome_dict = asdict(outcome)
     try:
-        with _OUTCOMES_FILE.open("a", encoding="utf-8") as fh:
-            fh.write(json.dumps(outcome_dict, default=str) + "\n")
+        append_jsonl(_OUTCOMES_FILE, outcome_dict)
+        records = _load_outcome_records()
+        records.append(outcome_dict)
+        append_jsonl(
+            _state_log_path_for(_OUTCOMES_FILE),
+            {
+                "saved_at": datetime.now().isoformat(),
+                "records": records,
+            },
+        )
         log.info("Outcome for %s appended to outcomes log", appointment_id)
     except OSError as exc:
         log.error("Failed to write outcome to JSONL: %s", exc)
@@ -992,21 +1098,9 @@ def get_appointment_history() -> list[dict]:
 
     # Load outcomes log indexed by appointment_id
     outcomes_by_id: dict[str, list[dict]] = {}
-    if _OUTCOMES_FILE.exists():
-        try:
-            with _OUTCOMES_FILE.open("r", encoding="utf-8") as fh:
-                for lineno, line in enumerate(fh, 1):
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        rec = json.loads(line)
-                        aid = rec.get("appointment_id", "")
-                        outcomes_by_id.setdefault(aid, []).append(rec)
-                    except json.JSONDecodeError as exc:
-                        log.warning("JSONL line %d malformed: %s", lineno, exc)
-        except OSError as exc:
-            log.error("Failed to read outcomes JSONL: %s", exc)
+    for rec in _load_outcome_records():
+        aid = rec.get("appointment_id", "")
+        outcomes_by_id.setdefault(aid, []).append(rec)
 
     history: list[dict] = []
     for apt in appointments:

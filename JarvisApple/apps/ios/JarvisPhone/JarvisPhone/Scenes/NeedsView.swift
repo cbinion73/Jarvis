@@ -80,6 +80,26 @@ struct NeedsView: View {
                 .padding(.vertical, 10)
                 .glassEffect(in: RoundedRectangle(cornerRadius: 12))
 
+                HStack(spacing: 10) {
+                    needsMetric("High Risk", "\(viewModel.items.filter { $0.risk == "high" }.count)")
+                    needsMetric("Confirm", "\(viewModel.items.filter { $0.requiresConfirmation == true }.count)")
+                    needsMetric("Expiring", "\(viewModel.items.filter { ($0.expiresIn ?? "").localizedCaseInsensitiveContains("min") }.count)")
+                }
+
+                if let lastActionMessage = viewModel.lastActionMessage, !lastActionMessage.isEmpty {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text(lastActionMessage)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .glassEffect(in: RoundedRectangle(cornerRadius: 12))
+                }
+
                 ForEach(viewModel.items) { item in
                     AlertItemCard(item: item) {
                         Task { await viewModel.approve(item: item) }
@@ -93,6 +113,20 @@ struct NeedsView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
+    }
+
+    private func needsMetric(_ title: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(value)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white)
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Empty
@@ -182,16 +216,77 @@ private struct AlertItemCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                if let exp = item.expiresIn {
-                    Label(exp, systemImage: "clock")
+                if let targetSummary = item.targetSummary, !targetSummary.isEmpty {
+                    Label(targetSummary, systemImage: "scope")
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.9))
                 }
 
-                if let requestType = item.requestType, !requestType.isEmpty {
-                    Text(requestType.replacingOccurrences(of: "_", with: " ").capitalized)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(riskColor.opacity(0.9))
+                HStack(spacing: 8) {
+                    if let exp = item.expiresIn {
+                        Label(exp, systemImage: "clock")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if let createdAt = item.createdAt, !createdAt.isEmpty {
+                        Label(relativeDate(createdAt), systemImage: "calendar")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    if let requestType = item.requestType, !requestType.isEmpty {
+                        Text(requestType.replacingOccurrences(of: "_", with: " ").capitalized)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(riskColor.opacity(0.9))
+                    }
+                    if let priority = item.priority {
+                        Text("P\(priority)")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    if let status = item.status, !status.isEmpty {
+                        Text(status.capitalized)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let confirmationPhrase = item.confirmationPhrase,
+                   item.requiresConfirmation == true,
+                   !confirmationPhrase.isEmpty {
+                    Text("Requires confirmation phrase: \(confirmationPhrase)")
+                        .font(.caption2)
+                        .foregroundStyle(.orange.opacity(0.9))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if !item.tags.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(item.tags, id: \.self) { tag in
+                                Text(tag)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(.white.opacity(0.07), in: Capsule())
+                            }
+                        }
+                    }
+                }
+
+                if !item.contextLines.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(item.contextLines, id: \.self) { line in
+                            Text(line)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                 }
 
                 HStack(spacing: 8) {
@@ -199,7 +294,7 @@ private struct AlertItemCard: View {
                         Button(action: { confirming = true }) {
                             HStack(spacing: 6) {
                                 Image(systemName: "checkmark.shield.fill")
-                                Text("Approve")
+                                Text("Approve Now")
                                     .fontWeight(.semibold)
                             }
                             .frame(maxWidth: .infinity)
@@ -214,7 +309,7 @@ private struct AlertItemCard: View {
                     }
 
                     if item.allowedActions.contains("reject") {
-                        Button("Reject", role: .destructive) { confirmReject = true }
+                        Button("Send Back", role: .destructive) { confirmReject = true }
                             .buttonStyle(.bordered)
                             .confirmationDialog("Reject this request?", isPresented: $confirmReject, titleVisibility: .visible) {
                                 Button("Reject", role: .destructive, action: onReject)
@@ -231,6 +326,13 @@ private struct AlertItemCard: View {
                             } message: { Text(item.text) }
                     }
                 }
+
+                if item.allowedActions.contains("reject") || item.allowedActions.contains("cancel") {
+                    Text("Alternate actions let you decline the move or clear it from the queue without approving execution.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .padding(14)
         }
@@ -241,6 +343,12 @@ private struct AlertItemCard: View {
                 ? riskColor.opacity(0.04).clipShape(RoundedRectangle(cornerRadius: 16))
                 : nil
         )
+    }
+
+    private func relativeDate(_ isoString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        guard let date = formatter.date(from: isoString) else { return isoString }
+        return date.formatted(date: .abbreviated, time: .shortened)
     }
 }
 

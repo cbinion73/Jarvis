@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Approval Queue</title>
+  <style>
+    :root {
+      --bg: #061019;
+      --panel: #0d1724;
+      --panel-2: #142334;
+      --line: rgba(143, 185, 255, 0.16);
+      --text: #edf6fc;
+      --muted: #95aabb;
+      --cyan: #76d7df;
+      --green: #74d9a5;
+      --amber: #e7b25c;
+      --red: #ef8f8f;
+      --font-ui: "SF Pro Display", "Segoe UI", sans-serif;
+      --font-mono: "SF Mono", "JetBrains Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top, #10243a 0%, var(--bg) 42%, #03070d 100%);
+      color: var(--text);
+      font-family: var(--font-ui);
+    }
+    .shell { width: min(1240px, calc(100% - 32px)); margin: 0 auto; padding: 28px 0 48px; }
+    .hero, .panel {
+      background: rgba(13, 23, 36, 0.92);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+    }
+    .hero { padding: 24px; display: grid; gap: 18px; }
+    .hero h1 { margin: 0; font-size: clamp(2rem, 4vw, 3.2rem); }
+    .hero p { margin: 0; color: var(--muted); max-width: 70ch; }
+    .hero-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    .metric { background: var(--panel-2); border: 1px solid var(--line); border-radius: 18px; padding: 14px; }
+    .metric strong { display: block; color: var(--cyan); font-size: 1.7rem; }
+    .layout { display: grid; gap: 18px; grid-template-columns: 1.5fr 1fr; margin-top: 18px; }
+    .panel { padding: 22px; }
+    .panel h2 { margin: 0 0 12px; font-size: 1.1rem; }
+    .needs-list, .guide-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+    .needs-list li, .guide-list li { border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,0.02); padding: 12px; display: grid; gap: 8px; }
+    .needs-list strong, .guide-list strong { display: block; }
+    .needs-list span, .guide-list span { color: var(--muted); }
+    .needs-list code, .guide-list code, .commands code, pre {
+      font-family: var(--font-mono);
+      background: rgba(3, 10, 18, 0.82);
+      border: 1px solid rgba(143, 185, 255, 0.16);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: block;
+      overflow-x: auto;
+    }
+    .approval-grid { display: grid; gap: 14px; }
+    .approval-card, .empty-card {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 18px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .approval-card header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .approval-card h3 { margin: 0 0 8px; }
+    .approval-card p { margin: 0; color: var(--muted); }
+    .risk {
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border: 1px solid currentColor;
+    }
+    .risk-low { color: var(--green); }
+    .risk-medium { color: var(--amber); }
+    .risk-high, .risk-critical { color: var(--red); }
+    .meta {
+      margin: 14px 0;
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+    .meta dt { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    .meta dd { margin: 6px 0 0; }
+    .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .pill { border: 1px solid var(--line); border-radius: 999px; padding: 6px 10px; font-size: 0.8rem; }
+    .pill.muted { color: var(--muted); }
+    .commands { display: grid; gap: 10px; }
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    button {
+      border: 1px solid var(--line);
+      background: rgba(104, 212, 223, 0.12);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font: inherit;
+      cursor: pointer;
+    }
+    button:hover { background: rgba(104, 212, 223, 0.2); }
+    .status-note {
+      margin-top: 12px;
+      color: var(--muted);
+      min-height: 1.2em;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    .empty { color: var(--muted); }
+    @media (max-width: 960px) {
+      .layout { grid-template-columns: 1fr; }
+      .approval-card header { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <h1>JARVIS Approval Queue</h1>
+        <p>Real local operator surface over the approval substrate. Use it to see what needs consent, inspect supervision context, and run the exact commands that move a request forward.</p>
+      </div>
+      <div class="hero-grid">
+        <div class="metric"><span>Pending</span><strong>0</strong></div>
+        <div class="metric"><span>History</span><strong>1</strong></div>
+        <div class="metric"><span>Generated</span><strong>2026-06-06T02:07:46.877281+00:00</strong></div>
+      </div>
+    </section>
+    <section class="layout">
+      <div class="panel">
+        <h2>Needs Me Now</h2>
+        <ul class="needs-list"><li class='empty'>Nothing needs a decision right now.</li></ul>
+      </div>
+      <div class="panel">
+        <h2>Operator Guide</h2>
+        <ul class="guide-list">
+          <li><strong>List queue</strong><span>Print current pending items as JSON.</span><code>python3 scripts/manage_approval_queue.py list</code></li>
+          <li><strong>Render surface</strong><span>Generate this HTML and its JSON payload from live queue data.</span><code>python3 scripts/manage_approval_queue.py render</code></li>
+          <li><strong>Served mode</strong><span>When this page is opened through the JARVIS app, the action buttons call the live approval APIs directly.</span><code>GET /approval-queue and POST /api/approvals/&lt;request_id&gt;/*</code></li>
+        </ul>
+        <p class="status-note" id="status-note">Open this through the app for live actions, or use the CLI commands below from a local file.</p>
+      </div>
+    </section>
+    <section class="panel" style="margin-top: 18px;">
+      <h2>Pending Queue</h2>
+      <div class="approval-grid"><article class='empty-card'>No pending approvals right now.</article></div>
+    </section>
+    <section class="panel" style="margin-top: 18px;">
+      <h2>Decision History</h2>
+      <table>
+        <thead>
+          <tr><th>Status</th><th>Request</th><th>Agent</th><th>Actor</th><th>When</th></tr>
+        </thead>
+        <tbody>
+                <tr>
+                  <td>executed</td>
+                  <td>Move pediatrician visit</td>
+                  <td>Sam Wilson</td>
+                  <td>chris</td>
+                  <td>2026-06-06T02:07:46.873219+00:00</td>
+                </tr>
+                </tbody>
+      </table>
+    </section>
+    <section class="panel" style="margin-top: 18px;">
+      <h2>Raw Snapshot JSON</h2>
+      <pre>{
+  &quot;generated_at&quot;: &quot;2026-06-06T02:07:46.877281+00:00&quot;,
+  &quot;pending_count&quot;: 0,
+  &quot;history_count&quot;: 1,
+  &quot;pending&quot;: [],
+  &quot;history&quot;: [
+    {
+      &quot;request_id&quot;: &quot;pending-1&quot;,
+      &quot;title&quot;: &quot;Move pediatrician visit&quot;,
+      &quot;description&quot;: &quot;Move pediatrician visit for Chris&quot;,
+      &quot;status&quot;: &quot;executed&quot;,
+      &quot;risk_tier&quot;: &quot;medium&quot;,
+      &quot;agent_id&quot;: &quot;sam&quot;,
+      &quot;agent_label&quot;: &quot;Sam Wilson&quot;,
+      &quot;actor_id&quot;: &quot;chris&quot;,
+      &quot;action_type&quot;: &quot;calendar_change&quot;,
+      &quot;priority&quot;: 2,
+      &quot;requested_at&quot;: &quot;2026-06-06T01:07:46.869831+00:00&quot;,
+      &quot;expires_at&quot;: &quot;2026-06-08T01:07:46.869831+00:00&quot;,
+      &quot;approved_by&quot;: &quot;chris&quot;,
+      &quot;approved_at&quot;: &quot;2026-06-06T02:07:46.873219+00:00&quot;,
+      &quot;executed_at&quot;: &quot;2026-06-06T02:07:46.874846+00:00&quot;,
+      &quot;rejection_reason&quot;: &quot;&quot;,
+      &quot;trust_zone_id&quot;: &quot;household_schedule&quot;,
+      &quot;lane_id&quot;: &quot;daily-life&quot;,
+      &quot;arena_id&quot;: &quot;household.schedule.routing&quot;,
+      &quot;requested_outcome&quot;: &quot;Reschedule the pediatrician visit&quot;,
+      &quot;requires_confirmation&quot;: false,
+      &quot;confirmation_phrase&quot;: &quot;&quot;,
+      &quot;tags&quot;: [
+        &quot;calendar&quot;,
+        &quot;family&quot;
+      ],
+      &quot;supervision_decision&quot;: {
+        &quot;resolution&quot;: &quot;stage&quot;,
+        &quot;approval_required&quot;: true
+      },
+      &quot;commands&quot;: {
+        &quot;show&quot;: &quot;python3 scripts/manage_approval_queue.py show pending-1&quot;,
+        &quot;approve&quot;: &quot;python3 scripts/manage_approval_queue.py approve pending-1&quot;,
+        &quot;reject&quot;: &quot;python3 scripts/manage_approval_queue.py reject pending-1 --reason \&quot;why this is not safe yet\&quot;&quot;,
+        &quot;cancel&quot;: &quot;python3 scripts/manage_approval_queue.py cancel pending-1&quot;,
+        &quot;execute&quot;: &quot;python3 scripts/manage_approval_queue.py execute pending-1&quot;
+      },
+      &quot;actions&quot;: {
+        &quot;approve&quot;: &quot;/api/approvals/pending-1/approve&quot;,
+        &quot;reject&quot;: &quot;/api/approvals/pending-1/reject&quot;,
+        &quot;cancel&quot;: &quot;/api/approvals/pending-1/cancel&quot;,
+        &quot;execute&quot;: &quot;/api/approvals/pending-1/execute&quot;
+      }
+    }
+  ],
+  &quot;what_needs_me&quot;: [],
+  &quot;proof_paths&quot;: {
+    &quot;generated_html&quot;: &quot;/Users/chris/Desktop/JARVIS-clean/artifacts/generated/jarvis-approval-queue.html&quot;,
+    &quot;generated_json&quot;: &quot;/Users/chris/Desktop/JARVIS-clean/artifacts/generated/jarvis-approval-queue.json&quot;,
+    &quot;script&quot;: &quot;/Users/chris/Desktop/JARVIS-clean/scripts/manage_approval_queue.py&quot;
+  }
+}</pre>
+    </section>
+  </main>
+  <script>
+    const statusNote = document.getElementById("status-note");
+    for (const button of document.querySelectorAll("button[data-endpoint]")) {
+      button.addEventListener("click", async () => {
+        const endpoint = button.getAttribute("data-endpoint");
+        const method = button.getAttribute("data-method") || "POST";
+        const rawBody = button.getAttribute("data-body");
+        statusNote.textContent = `Calling ${endpoint}...`;
+        try {
+          const response = await fetch(endpoint, {
+            method,
+            headers: rawBody ? { "Content-Type": "application/json" } : undefined,
+            body: rawBody || undefined,
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(payload.detail || `HTTP ${response.status}`);
+          }
+          statusNote.textContent = `Success: ${endpoint}`;
+          window.setTimeout(() => window.location.reload(), 250);
+        } catch (error) {
+          statusNote.textContent = `Action failed: ${String(error)}`;
+        }
+      });
+    }
+  </script>
+</body>
+</html>

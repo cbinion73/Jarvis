@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_jsonl
+
 logger = logging.getLogger("jarvis.dossier")
 
 
@@ -77,6 +79,8 @@ class DossierStore:
             base_dir = Path.home() / ".jarvis" / "dossiers"
         base_dir.mkdir(parents=True, exist_ok=True)
         self._path = base_dir / "dossiers.jsonl"
+        self._log_path = base_dir / "dossiers_log.jsonl"
+        self._state_log_path = base_dir / "dossiers_state_log.jsonl"
         self._lock = threading.Lock()
         self._items: list[Dossier] = self._load()
 
@@ -86,10 +90,24 @@ class DossierStore:
 
     def _load(self) -> list[Dossier]:
         if not self._path.exists():
+            items = self._load_from_state_log()
+            if items:
+                return items
+            return self._load_from_log()
+        items = self._load_from_projection(self._path)
+        if items:
+            return items
+        items = self._load_from_state_log()
+        if items:
+            return items
+        return self._load_from_log()
+
+    def _load_from_projection(self, path: Path) -> list[Dossier]:
+        if not path.exists():
             return []
         items: list[Dossier] = []
         try:
-            for line in self._path.read_text(encoding="utf-8").splitlines():
+            for line in path.read_text(encoding="utf-8").splitlines():
                 line = line.strip()
                 if not line:
                     continue
@@ -130,13 +148,90 @@ class DossierStore:
             pass
         return items
 
-    def _flush(self) -> None:
+    def _load_from_log(self) -> list[Dossier]:
+        if not self._log_path.exists():
+            return []
+        latest: list[dict[str, Any]] = []
         try:
-            lines = [json.dumps(asdict(d)) for d in self._items]
-            self._path.write_text(
-                "\n".join(lines) + ("\n" if lines else ""),
+            for line in self._log_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                items = payload.get("items")
+                if isinstance(items, list):
+                    latest = items
+        except OSError:
+            return []
+        if not latest:
+            return []
+        temp_path = self._log_path.with_name(f"{self._log_path.stem}_replay.tmp")
+        try:
+            temp_path.write_text(
+                "\n".join(json.dumps(item) for item in latest) + ("\n" if latest else ""),
                 encoding="utf-8",
             )
+            return self._load_from_projection(temp_path)
+        finally:
+            if temp_path.exists():
+                temp_path.unlink()
+
+    def _load_from_state_log(self) -> list[Dossier]:
+        if not self._state_log_path.exists():
+            return []
+        latest: list[dict[str, Any]] = []
+        try:
+            for line in self._state_log_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                items = payload.get("items")
+                if isinstance(items, list):
+                    latest = items
+        except OSError:
+            return []
+        if not latest:
+            return []
+        temp_path = self._state_log_path.with_name(
+            f"{self._state_log_path.stem}_replay.tmp"
+        )
+        try:
+            temp_path.write_text(
+                "\n".join(json.dumps(item) for item in latest) + ("\n" if latest else ""),
+                encoding="utf-8",
+            )
+            return self._load_from_projection(temp_path)
+        finally:
+            if temp_path.exists():
+                temp_path.unlink()
+
+    def _flush(self) -> None:
+        try:
+            items = [asdict(d) for d in self._items]
+            append_jsonl(
+                self._log_path,
+                {
+                    "saved_at": _now_iso(),
+                    "items": items,
+                },
+                ensure_ascii=False,
+            )
+            append_jsonl(
+                self._state_log_path,
+                {
+                    "saved_at": _now_iso(),
+                    "items": items,
+                },
+                ensure_ascii=False,
+            )
+            atomic_write_jsonl(self._path, items, ensure_ascii=False)
         except OSError as exc:
             logger.warning("Failed to flush dossier store: %s", exc)
 

@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 from .config import AppConfig
+from .persistence import append_jsonl, atomic_write_json
 from .speech import voice_stack_status
 
 
@@ -12,6 +14,10 @@ VOICE_SETTINGS_PATH = Path.cwd() / "data" / "settings" / "voice.json"
 LOCATION_SETTINGS_PATH = Path.cwd() / "data" / "settings" / "locations.json"
 PIPER_VOICE_ROOT = Path.cwd() / "assets" / "piper" / "voices"
 VALID_TTS_PROVIDERS = {"auto", "piper", "localai", "elevenlabs", "system"}
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 @dataclass(slots=True)
@@ -29,25 +35,73 @@ class VoiceSettingsStore:
     def __init__(self, config: AppConfig, path: Path = VOICE_SETTINGS_PATH) -> None:
         self.config = config
         self.path = path
+        self.log_path = self.path.with_name(f"{self.path.stem}_log.jsonl")
+        self.state_log_path = self.path.with_name(f"{self.path.stem}_state_log.jsonl")
 
     def load(self) -> VoiceSettings:
         defaults = self.defaults()
         if not self.path.exists():
-            return defaults
+            return self._load_from_state_log(defaults)
         try:
             payload = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            return defaults
+            return self._load_from_state_log(defaults)
+        if not isinstance(payload, dict) or not payload:
+            return self._load_from_state_log(defaults)
         return self._coerce(payload, defaults=defaults)
 
     def save(self, payload: dict) -> VoiceSettings:
         settings = self._coerce(payload, defaults=self.load())
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(
-            json.dumps(settings.to_dict(), indent=2),
-            encoding="utf-8",
+        records = settings.to_dict()
+        atomic_write_json(self.path, records)
+        append_jsonl(
+            self.log_path,
+            {
+                "saved_at": _now_iso(),
+                "records": records,
+            },
+        )
+        append_jsonl(
+            self.state_log_path,
+            {
+                "saved_at": _now_iso(),
+                "records": records,
+            },
         )
         return settings
+
+    def _load_from_log(self, defaults: VoiceSettings) -> VoiceSettings:
+        if not self.log_path.exists():
+            return defaults
+        latest: dict = {}
+        try:
+            for line in self.log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, dict):
+                    latest = dict(records)
+        except (OSError, json.JSONDecodeError):
+            return defaults
+        return self._coerce(latest, defaults=defaults)
+
+    def _load_from_state_log(self, defaults: VoiceSettings) -> VoiceSettings:
+        if not self.state_log_path.exists():
+            return defaults
+        latest: dict = {}
+        try:
+            for line in self.state_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, dict):
+                    latest = dict(records)
+        except (OSError, json.JSONDecodeError):
+            return defaults
+        return self._coerce(latest, defaults=defaults)
 
     def defaults(self) -> VoiceSettings:
         default_piper = ""
@@ -212,6 +266,8 @@ class LocationSettingsStore:
     def __init__(self, config: AppConfig, path: Path = LOCATION_SETTINGS_PATH) -> None:
         self.config = config
         self.path = path
+        self.log_path = self.path.with_name(f"{self.path.stem}_log.jsonl")
+        self.state_log_path = self.path.with_name(f"{self.path.stem}_state_log.jsonl")
 
     def defaults(self) -> dict:
         home_id = "household-home"
@@ -234,11 +290,13 @@ class LocationSettingsStore:
     def load(self) -> dict:
         defaults = self.defaults()
         if not self.path.exists():
-            return defaults
+            return self._load_from_state_log(defaults)
         try:
             payload = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            return defaults
+            return self._load_from_state_log(defaults)
+        if not isinstance(payload, dict) or not payload:
+            return self._load_from_state_log(defaults)
         return self._coerce(payload, defaults)
 
     def save(self, payload: dict) -> dict:
@@ -332,7 +390,53 @@ class LocationSettingsStore:
 
     def _write(self, state: dict) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+        atomic_write_json(self.path, state)
+        append_jsonl(
+            self.log_path,
+            {
+                "saved_at": _now_iso(),
+                "records": state,
+            },
+        )
+        append_jsonl(
+            self.state_log_path,
+            {
+                "saved_at": _now_iso(),
+                "records": state,
+            },
+        )
+
+    def _load_from_log(self, defaults: dict) -> dict:
+        if not self.log_path.exists():
+            return defaults
+        latest: dict = {}
+        try:
+            for line in self.log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, dict):
+                    latest = dict(records)
+        except (OSError, json.JSONDecodeError):
+            return defaults
+        return self._coerce(latest, defaults)
+
+    def _load_from_state_log(self, defaults: dict) -> dict:
+        if not self.state_log_path.exists():
+            return defaults
+        latest: dict = {}
+        try:
+            for line in self.state_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, dict):
+                    latest = dict(records)
+        except (OSError, json.JSONDecodeError):
+            return defaults
+        return self._coerce(latest, defaults)
 
     def _coerce(self, payload: dict, defaults: dict) -> dict:
         saved_raw = payload.get("saved_locations", defaults.get("saved_locations", []))

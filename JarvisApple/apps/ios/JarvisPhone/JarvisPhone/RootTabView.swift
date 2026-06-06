@@ -128,6 +128,10 @@ struct RootTabView: View {
     }
 
     private func handlePendingVoiceLaunchIfNeeded() {
+        if Self.hasExplicitTabOverride(), selectedTab != .voice {
+            _ = voiceLaunchCenter.consumePendingLaunch()
+            return
+        }
         guard let launch = voiceLaunchCenter.consumePendingLaunch() else { return }
         selectedTab = .voice
         Task { @MainActor in
@@ -153,6 +157,21 @@ struct RootTabView: View {
         }
 
         return .brief
+    }
+
+    private static func hasExplicitTabOverride() -> Bool {
+        let args = ProcessInfo.processInfo.arguments
+        if let index = args.firstIndex(of: "--jarvis-tab"), args.indices.contains(index + 1) {
+            return !args[index + 1].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+
+        if let requested = ProcessInfo.processInfo.environment["JARVIS_INITIAL_TAB"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !requested.isEmpty {
+            return true
+        }
+
+        return false
     }
 }
 

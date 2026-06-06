@@ -12,6 +12,8 @@
 		1B26FD5F219640CE315A3C77 /* BriefingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF2265679288F822CF489305 /* BriefingView.swift */; };
 		1C6DC0B679CC9DC6CBB604A0 /* ForgeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F1019401B17E04901CB4559 /* ForgeViewModel.swift */; };
 		1CB1D2CC0D3B3A08BB966FE7 /* VoiceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0AC009F0011D3717B1D27C7 /* VoiceViewModel.swift */; };
+		1E8A4B7C3D9E41A2B5C6D7E8 /* VoiceConversationLaunchCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E8A4B7C3D9E41A2B5C6D7E7 /* VoiceConversationLaunchCenter.swift */; };
+		1E8A4B7C3D9E41A2B5C6D7E9 /* AskJarvisIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E8A4B7C3D9E41A2B5C6D7EA /* AskJarvisIntent.swift */; };
 		233579BD8E5E90AA96F3CB7E /* NaturalLanguage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 43AD7D5E3DF4F099CA580C45 /* NaturalLanguage.framework */; };
 		2658A2C44E9AF925ED901B52 /* partly_cloudy_day.png in Resources */ = {isa = PBXBuildFile; fileRef = 8EB55C1105617283FFC8A98A /* partly_cloudy_day.png */; };
 		2CD6B643BFAE88CEB131192C /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8098D590298DA67F108CA3C3 /* WatchConnectivity.framework */; };
@@ -190,7 +192,9 @@
 		15617866500E317861AA8093 /* JarvisPhone.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JarvisPhone.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A371975D2054594606ACF19 /* HomeKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeKitManager.swift; sourceTree = "<group>"; };
 		1A9A3A35514DA4590BE755BE /* moon_waning_crescent.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = moon_waning_crescent.png; sourceTree = "<group>"; };
+		1E8A4B7C3D9E41A2B5C6D7EA /* AskJarvisIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskJarvisIntent.swift; sourceTree = "<group>"; };
 		1F1019401B17E04901CB4559 /* ForgeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgeViewModel.swift; sourceTree = "<group>"; };
+		1E8A4B7C3D9E41A2B5C6D7E7 /* VoiceConversationLaunchCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceConversationLaunchCenter.swift; sourceTree = "<group>"; };
 		20516ACFB863FF0FC5C5677F /* NavigateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigateView.swift; sourceTree = "<group>"; };
 		20766693877E33B9D516E7FC /* SpeechManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechManager.swift; sourceTree = "<group>"; };
 		2612D3ACFC93A21ECB577C8D /* JarvisApple */ = {isa = PBXFileReference; lastKnownFileType = folder; name = JarvisApple; path = ../../..; sourceTree = SOURCE_ROOT; };
@@ -650,8 +654,10 @@
 		F56A54E145645A2F5C8EAA97 /* Intents */ = {
 			isa = PBXGroup;
 			children = (
+				1E8A4B7C3D9E41A2B5C6D7EA /* AskJarvisIntent.swift */,
 				B43DBEEE34C3E2DB8434C5B3 /* BriefMeIntent.swift */,
 				ABAD93AE6FCA3F84052359A7 /* FocusFilterIntent.swift */,
+				1E8A4B7C3D9E41A2B5C6D7E7 /* VoiceConversationLaunchCenter.swift */,
 			);
 			path = Intents;
 			sourceTree = "<group>";
@@ -903,9 +909,11 @@
 				DE4A9FC006F76E3CC7813784 /* SoundAnalysisManager.swift in Sources */,
 				7E11A6AB5FDA0148C4B93868 /* SpeechManager.swift in Sources */,
 				461F0795E724B042E3AD855E /* SpeechRecognitionManager.swift in Sources */,
+				1E8A4B7C3D9E41A2B5C6D7E9 /* AskJarvisIntent.swift in Sources */,
 				733C81BA09CA628057072C13 /* UncheckedSendable.swift in Sources */,
 				B704558F8BC7BB0763918561 /* VisionManager.swift in Sources */,
 				7281A5FC7BE45CCAC6A24CF3 /* VoiceView.swift in Sources */,
+				1E8A4B7C3D9E41A2B5C6D7E8 /* VoiceConversationLaunchCenter.swift in Sources */,
 				1CB1D2CC0D3B3A08BB966FE7 /* VoiceViewModel.swift in Sources */,
 				06EE5FFDE321A3EC1838B4AD /* WatchSessionManager.swift in Sources */,
 				3ECB78A0387BF98A770BEFB9 /* WeatherLocationProvider.swift in Sources */,

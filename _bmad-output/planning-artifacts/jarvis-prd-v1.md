@@ -14,7 +14,19 @@ sourceDocuments:
 
 ## Executive Summary
 
-JARVIS is a whole-home personal AI associate for the Chris/Rebekah household. It should function as a private household operating system that blends home control, family logistics, executive assistance, creative making support, faith rhythms, child-safe tutoring, and security-aware automation.
+JARVIS is an always-on orchestrator for the Chris/Rebekah household, composed
+of specialized agents working continuously on the household's behalf.
+
+It should function as a private household operating system that blends home
+control, family logistics, executive assistance, creative making support, faith
+rhythms, child-safe tutoring, and security-aware automation.
+
+When a household member engages directly, the relevant agents should focus into
+the foreground.
+
+When no one is engaging directly, those agents should continue bounded work in
+the background on monitoring, preparation, delegated tasks, continuity, and
+stewardship.
 
 The product is not "a smart speaker with a British voice." The product is an orchestration layer that understands the people, rooms, projects, permissions, rhythms, and risks of a real household.
 
@@ -28,12 +40,18 @@ Build a JARVIS-inspired household intelligence system that is:
 - permission-governed for any consequential action
 - family-specific instead of generic
 - formation-oriented for children and faith workflows
+- always-on rather than session-bound
+- orchestrator-first rather than interface-first
 
 ## North Star
 
 JARVIS helps the family live with less friction, better judgment, stronger stewardship, and more creative capacity.
 
 Success is measured by whether the household becomes calmer, safer, more organized, more spiritually grounded, and less reactive.
+
+Operationally, success also means the household experiences JARVIS as a
+continuously running staff of specialized agents rather than a tool that only
+exists when opened.
 
 ## Primary Users
 

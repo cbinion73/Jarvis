@@ -1,5 +1,4 @@
 import SwiftUI
-import WatchKit
 
 /// Glanceable home screen — the first thing you see on the Watch.
 struct JarvisWatchHomeView: View {

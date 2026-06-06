@@ -176,10 +176,20 @@ public final class AppleAPIClient: Sendable {
     }
 
     public func fetchSystemsAdminSummary() async throws -> SystemsAdminSummary {
+        let startedAt = Date()
+        print("[JARVIS Systems] admin-summary request started base=\(baseURL.absoluteString)")
         do {
-            return try await get("/api/apple/systems/admin-summary")
+            let result: SystemsAdminSummary = try await get("/api/apple/systems/admin-summary")
+            print("[JARVIS Systems] admin-summary request finished in \(String(format: "%.3f", Date().timeIntervalSince(startedAt)))s via GET")
+            return result
         } catch JarvisClientError.httpError(let code, _) where code == 404 || code == 405 {
-            return try await post("/api/apple/systems/admin-summary", body: EmptyBody())
+            print("[JARVIS Systems] admin-summary GET returned \(code); retrying with POST")
+            let result: SystemsAdminSummary = try await post("/api/apple/systems/admin-summary", body: EmptyBody())
+            print("[JARVIS Systems] admin-summary request finished in \(String(format: "%.3f", Date().timeIntervalSince(startedAt)))s via POST fallback")
+            return result
+        } catch {
+            print("[JARVIS Systems] admin-summary request failed in \(String(format: "%.3f", Date().timeIntervalSince(startedAt)))s error=\(error.localizedDescription)")
+            throw error
         }
     }
 

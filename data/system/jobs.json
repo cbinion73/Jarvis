@@ -1,122 +1,5 @@
 [
   {
-    "job_id": "a3858c58-5f8f-44d8-8a30-634efe8452ff",
-    "job_key": "sync-model::gpt-oss:20b",
-    "title": "Sync local model gpt-oss:20b",
-    "summary": "A stronger local reasoner is useful for second-brain work, but it is heavier and should remain reviewable.",
-    "job_type": "sync-ollama-model",
-    "target": "gpt-oss:20b",
-    "status": "queued",
-    "domain": "system",
-    "lane": "self-improvement-and-maintenance",
-    "owner_agent": "Autoforge",
-    "risk_level": "moderate",
-    "review_level": "review-before-download",
-    "auto_allowed": false,
-    "source": "recommended-upgrade",
-    "evidence": {
-      "installed_models": [
-        "qwen2.5:7b",
-        "qwen2.5:1.5b"
-      ],
-      "heavy": true
-    },
-    "created_at": "2026-05-15T15:45:08.940160+00:00",
-    "updated_at": "2026-05-15T18:50:44.093497+00:00",
-    "last_result": {},
-    "last_run_at": ""
-  },
-  {
-    "job_id": "d2d39c35-4d6c-402e-a4c7-bf75cf1042d8",
-    "job_key": "repair-runtime-compile",
-    "title": "Repair runtime compile regressions",
-    "summary": "Runtime compilation failed during the self-improvement sweep, so JARVIS should stage a repair brief instead of pretending the build is healthy.",
-    "job_type": "stage-runtime-repair",
-    "target": "runtime-py-compile",
-    "status": "resolved",
-    "domain": "system",
-    "lane": "self-improvement-and-maintenance",
-    "owner_agent": "Autoforge",
-    "risk_level": "high",
-    "review_level": "review-before-code-change",
-    "auto_allowed": false,
-    "source": "repo-health",
-    "evidence": {
-      "compile_stderr": "File \"/Users/chris/Desktop/CODE/JARVIS/ops/install_launchd_services.sh\", line 2\n    set -euo pipefail\n             ^^^^^^^^\nSyntaxError: invalid syntax"
-    },
-    "created_at": "2026-05-15T15:45:08.940160+00:00",
-    "updated_at": "2026-05-15T18:50:43.786107+00:00",
-    "last_result": {
-      "run_id": "c6395017-827a-472f-bdc8-9422b62977a3",
-      "job_id": "d2d39c35-4d6c-402e-a4c7-bf75cf1042d8",
-      "job_title": "Repair runtime compile regressions",
-      "generated_at": "2026-05-15T18:41:36.188199+00:00",
-      "mode": "sandbox-worktree",
-      "mutation_route": {
-        "route": "sandbox/worktree-only",
-        "summary": "JARVIS may build and validate the change aggressively, but only inside isolated staging lanes before any live promotion.",
-        "reason": "This mutation can be explored boldly, but only in an isolated worktree or sandbox before live promotion.",
-        "execution_allowed": false,
-        "requires_sandbox": true,
-        "requires_approval": false,
-        "blocked": false
-      },
-      "worktree_path": "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions",
-      "head_sha": "1fdf0553895cda6503f3fd97fc3cdb3e878fc30d",
-      "compile": {
-        "ok": true,
-        "command": [
-          "/Users/chris/Desktop/CODE/JARVIS/.venv/bin/python",
-          "-m",
-          "py_compile",
-          "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/runtime.py",
-          "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/service.py",
-          "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/voice_ui.py",
-          "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/main.py",
-          "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions/jarvis/assistant_core.py"
-        ],
-        "returncode": 0,
-        "stdout": "",
-        "stderr": ""
-      },
-      "compile_targets": [
-        "jarvis/runtime.py",
-        "jarvis/service.py",
-        "jarvis/voice_ui.py",
-        "jarvis/main.py",
-        "jarvis/assistant_core.py"
-      ],
-      "tests": {
-        "ok": true,
-        "returncode": null,
-        "stdout": "",
-        "stderr": "",
-        "mode": "skipped",
-        "reason": "pytest is not available on this machine."
-      },
-      "git_status_excerpt": [],
-      "recommendations": [
-        "Sandbox lane is healthy enough for patch generation or a reviewed promotion step."
-      ],
-      "report_path": "/Users/chris/Desktop/CODE/JARVIS/data/system/sandbox_reports/c6395017-827a-472f-bdc8-9422b62977a3.json",
-      "ok": true,
-      "summary": "The triggering maintenance condition is no longer active.",
-      "resolved_at": "2026-05-15T18:50:43.786107+00:00"
-    },
-    "last_run_at": "2026-05-15T18:41:36.189243+00:00",
-    "mutation_route": {
-      "route": "sandbox/worktree-only",
-      "summary": "JARVIS may build and validate the change aggressively, but only inside isolated staging lanes before any live promotion.",
-      "reason": "This mutation can be explored boldly, but only in an isolated worktree or sandbox before live promotion.",
-      "execution_allowed": false,
-      "requires_sandbox": true,
-      "requires_approval": false,
-      "blocked": false
-    },
-    "sandbox_worktree_path": "/Users/chris/Desktop/CODE/JARVIS/data/system/worktrees/d2d39c35-repair-runtime-compile-regressions",
-    "last_sandbox_run_id": "c6395017-827a-472f-bdc8-9422b62977a3"
-  },
-  {
     "job_id": "49d47581-358b-43a9-be9d-8c5a9cac52ea",
     "job_key": "review-runtime-drift",
     "title": "Review runtime drift",
@@ -129,26 +12,35 @@
     "owner_agent": "Autoforge",
     "risk_level": "moderate",
     "review_level": "review-before-code-change",
-    "auto_allowed": false,
+    "auto_allowed": true,
+    "mutation_route": {
+      "route": "auto-execute",
+      "summary": "JARVIS may apply the change directly in the live system when it remains bounded, logged, recoverable, and does not widen authority.",
+      "reason": "Refreshing repo drift is inspect-only maintenance and does not widen authority or mutate live behavior on its own.",
+      "execution_allowed": true,
+      "requires_sandbox": false,
+      "requires_approval": false,
+      "blocked": false
+    },
     "source": "repo-health",
     "evidence": {
       "git_status_excerpt": [
-        "M .env.example",
-        " M artifacts/qa/jarvis-approval-queue-report.json",
-        " M artifacts/qa/jarvis-e2e-suite-report.json",
-        " M artifacts/qa/jarvis-e2e-suite-summary.md",
-        " M artifacts/qa/jarvis-full-system-report.json",
-        " M artifacts/qa/jarvis-identity-admin-report.json",
-        " M artifacts/qa/jarvis-memory-governance-report.json",
-        " M artifacts/qa/jarvis-platform-report.json",
-        " M artifacts/qa/jarvis-provider-layer-report.json",
-        " M artifacts/qa/jarvis-workbench-report.json",
-        " M artifacts/qa/screenshots/provider-settings-modal.png",
-        " M artifacts/qa/screenshots/workbench-model-forge-generated.png"
+        "M .agents/skills/bmad-advanced-elicitation/methods.csv",
+        " M .agents/skills/bmad-agent-analyst/SKILL.md",
+        " M .agents/skills/bmad-agent-architect/SKILL.md",
+        " M .agents/skills/bmad-agent-dev/SKILL.md",
+        " M .agents/skills/bmad-agent-dev/customize.toml",
+        " M .agents/skills/bmad-agent-pm/SKILL.md",
+        " M .agents/skills/bmad-agent-pm/customize.toml",
+        " M .agents/skills/bmad-agent-tech-writer/SKILL.md",
+        " M .agents/skills/bmad-agent-ux-designer/SKILL.md",
+        " M .agents/skills/bmad-agent-ux-designer/customize.toml",
+        " M .agents/skills/bmad-brainstorming/steps/step-03-technique-execution.md",
+        " M .agents/skills/bmad-brainstorming/workflow.md"
       ]
     },
     "created_at": "2026-05-15T15:45:08.940160+00:00",
-    "updated_at": "2026-05-15T18:50:44.093497+00:00",
+    "updated_at": "2026-06-02T11:21:09.443080+00:00",
     "last_result": {
       "ok": true,
       "record": {
@@ -208,35 +100,86 @@
     "last_run_at": "2026-05-15T16:14:36.841299+00:00"
   },
   {
-    "job_id": "95a6c34d-08a9-4bfa-8d3b-78ee1425c5ca",
-    "job_key": "tool-gap::rg",
-    "title": "Resolve missing tool: rg",
-    "summary": "JARVIS depends on rg for its local maintenance posture, but that tool is not available on this machine.",
-    "job_type": "resolve-tool-gap",
-    "target": "rg",
+    "job_id": "b2a408e6-bcec-4fe7-b058-ca1776142c47",
+    "job_key": "review-runtime-drift",
+    "title": "Review runtime drift",
+    "summary": "The JARVIS repo has uncommitted changes, so background maintenance should acknowledge the drift and avoid blind upgrades.",
+    "job_type": "review-repo-drift",
+    "target": "git-status",
     "status": "queued",
     "domain": "system",
     "lane": "self-improvement-and-maintenance",
     "owner_agent": "Autoforge",
     "risk_level": "moderate",
-    "review_level": "review-before-tool-install",
-    "auto_allowed": false,
-    "source": "tool-inventory",
+    "review_level": "review-before-code-change",
+    "auto_allowed": true,
+    "mutation_route": {
+      "route": "auto-execute",
+      "summary": "JARVIS may apply the change directly in the live system when it remains bounded, logged, recoverable, and does not widen authority.",
+      "reason": "Refreshing repo drift is inspect-only maintenance and does not widen authority or mutate live behavior on its own.",
+      "execution_allowed": true,
+      "requires_sandbox": false,
+      "requires_approval": false,
+      "blocked": false
+    },
+    "source": "repo-health",
     "evidence": {
-      "tool": {
-        "name": "rg",
-        "available": false,
-        "required": true,
-        "installable": false
-      }
+      "git_status_excerpt": [
+        "M .agents/skills/bmad-advanced-elicitation/methods.csv",
+        " M .agents/skills/bmad-agent-analyst/SKILL.md",
+        " M .agents/skills/bmad-agent-architect/SKILL.md",
+        " M .agents/skills/bmad-agent-dev/SKILL.md",
+        " M .agents/skills/bmad-agent-dev/customize.toml",
+        " M .agents/skills/bmad-agent-pm/SKILL.md",
+        " M .agents/skills/bmad-agent-pm/customize.toml",
+        " M .agents/skills/bmad-agent-tech-writer/SKILL.md",
+        " M .agents/skills/bmad-agent-ux-designer/SKILL.md",
+        " M .agents/skills/bmad-agent-ux-designer/customize.toml",
+        " M .agents/skills/bmad-brainstorming/steps/step-03-technique-execution.md",
+        " M .agents/skills/bmad-brainstorming/workflow.md"
+      ]
     },
-    "created_at": "2026-05-15T15:45:57.000505+00:00",
-    "updated_at": "2026-05-15T18:50:44.093497+00:00",
-    "last_result": {
-      "ok": true,
-      "summary": "The triggering maintenance condition is no longer active.",
-      "resolved_at": "2026-05-15T18:42:35.041038+00:00"
+    "created_at": "2026-06-02T11:21:09.443642+00:00",
+    "updated_at": "2026-06-02T11:57:41.654720+00:00",
+    "last_result": {},
+    "last_run_at": ""
+  },
+  {
+    "job_id": "747ac40c-38a3-43aa-880c-bd6bcf5ad095",
+    "job_key": "sync-model::gpt-oss:20b",
+    "title": "Sync local model gpt-oss:20b",
+    "summary": "A stronger local reasoner is useful for second-brain work, but it is heavier and should remain reviewable.",
+    "job_type": "sync-ollama-model",
+    "target": "gpt-oss:20b",
+    "status": "queued",
+    "domain": "system",
+    "lane": "self-improvement-and-maintenance",
+    "owner_agent": "Autoforge",
+    "risk_level": "moderate",
+    "review_level": "review-before-download",
+    "auto_allowed": false,
+    "mutation_route": {
+      "route": "approval-required",
+      "summary": "JARVIS may prepare the mutation, rationale, and validation path, but a principal must approve live execution.",
+      "reason": "Heavy or non-configured model downloads may be prepared automatically, but live installation requires explicit approval.",
+      "execution_allowed": false,
+      "requires_sandbox": false,
+      "requires_approval": true,
+      "blocked": false
     },
+    "source": "recommended-upgrade",
+    "evidence": {
+      "installed_models": [
+        "qwen2.5:14b",
+        "phi3.5:latest",
+        "qwen2.5:7b",
+        "qwen2.5:1.5b"
+      ],
+      "heavy": true
+    },
+    "created_at": "2026-06-02T11:21:13.272891+00:00",
+    "updated_at": "2026-06-02T11:57:41.654720+00:00",
+    "last_result": {},
     "last_run_at": ""
   }
 ]

@@ -7,13 +7,16 @@ struct BriefingView: View {
 
     @ObservedObject var viewModel: BriefingViewModel
     @StateObject private var nowPlaying = NowPlayingManager.shared
-    @StateObject private var speech     = SpeechRecognitionManager.shared
+    @ObservedObject private var speech = SpeechRecognitionManager.shared
     @State private var status: WatchStatus?
     @State private var showingInbox = false
     @State private var calendarActionMessage = ""
     @State private var calendarActionError = ""
     @State private var reminderActionMessage = ""
     @State private var reminderActionError = ""
+    @State private var laneActionMessage = ""
+    @State private var laneActionError = ""
+    @State private var laneActionID: String?
 
     private let gold = Color(red: 1.0, green: 0.82, blue: 0.28)
 
@@ -47,11 +50,15 @@ struct BriefingView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 8) {
                         Button {
-                            speech.startListening { text in
-                                Task { await viewModel.sendVoiceCommand(text) }
+                            if speech.isListening {
+                                speech.stopListening()
+                            } else {
+                                speech.startListening { text in
+                                    Task { await viewModel.sendVoiceCommand(text) }
+                                }
                             }
                         } label: {
-                            Image(systemName: speech.isListening ? "waveform.circle.fill" : "mic.circle")
+                            Image(systemName: speech.isListening ? "stop.circle.fill" : "mic.circle")
                                 .foregroundStyle(speech.isListening ? .red : gold)
                                 .symbolEffect(.variableColor.iterative, isActive: speech.isListening)
                         }
@@ -110,8 +117,30 @@ struct BriefingView: View {
                     statusCard(status)
                 }
 
+                if speech.isListening {
+                    liveSpeechCard
+                }
+
+                if let speechError = speech.errorMessage {
+                    speechErrorCard(speechError)
+                }
+
                 if !packet.commandItems.isEmpty {
                     commandStack(packet.commandItems)
+                }
+
+                if !laneActionError.isEmpty {
+                    Text(laneActionError)
+                        .font(.caption)
+                        .foregroundStyle(.red.opacity(0.9))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 4)
+                } else if !laneActionMessage.isEmpty {
+                    Text(laneActionMessage)
+                        .font(.caption)
+                        .foregroundStyle(gold.opacity(0.88))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 4)
                 }
 
                 if let appState = viewModel.appState {
@@ -126,6 +155,20 @@ struct BriefingView: View {
                         controlPlane: viewModel.controlPlaneState
                     )
                     appStateCards(appState)
+                }
+
+                strategicOverviewCards(
+                    catalyst: viewModel.catalystOverview,
+                    chronicle: viewModel.chronicleOverview,
+                    publishing: viewModel.publishingOverview
+                )
+
+                if let whileAway = packet.whileYouWereAway {
+                    whileYouWereAwayCard(whileAway)
+                }
+
+                if let continuity = packet.continuity {
+                    briefingContinuityCard(continuity)
                 }
 
                 // ── Greeting + mode chip ─────────────────────────
@@ -225,6 +268,293 @@ struct BriefingView: View {
         .glassEffect(in: RoundedRectangle(cornerRadius: 16))
     }
 
+    @ViewBuilder
+    private func briefingContinuityCard(_ continuity: BriefingContinuity) -> some View {
+        if continuity.profileFactCount > 0
+            || continuity.pendingProposalCount > 0
+            || continuity.firstLightHistoryCount > 0
+            || !continuity.guidanceLines.isEmpty
+            || !continuity.longHorizonLines.isEmpty
+            || !continuity.activeThreads.isEmpty
+        {
+            OracleSection(title: "Continuity Horizon", icon: "timeline.selection", accent: Color(red: 0.58, green: 0.86, blue: 1.0)) {
+                HStack(spacing: 10) {
+                    miniMetric("Facts", "\(continuity.profileFactCount)")
+                    miniMetric("Proposals", "\(continuity.pendingProposalCount)")
+                    miniMetric("First Light", "\(continuity.firstLightHistoryCount)")
+                }
+
+                if !continuity.subjectDisplayName.isEmpty || !continuity.preferredTone.isEmpty || !continuity.briefingStyle.isEmpty {
+                    Text(
+                        "\(continuity.subjectDisplayName.isEmpty ? "Profile" : continuity.subjectDisplayName) · tone \(continuity.preferredTone.isEmpty ? "default" : continuity.preferredTone) · brief \(continuity.briefingStyle.isEmpty ? "default" : continuity.briefingStyle)"
+                    )
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                }
+
+                if !continuity.guidanceLines.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(Array(continuity.guidanceLines.prefix(3).enumerated()), id: \.offset) { _, line in
+                            Text(line)
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.82))
+                                .lineLimit(2)
+                        }
+                    }
+                }
+
+                if !continuity.longHorizonLines.isEmpty || !continuity.activeThreads.isEmpty {
+                    Divider().opacity(0.2)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Long Horizon")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(gold.opacity(0.85))
+                        ForEach(Array(continuity.longHorizonLines.prefix(2).enumerated()), id: \.offset) { _, line in
+                            Text(line)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(3)
+                        }
+                        if !continuity.activeThreads.isEmpty {
+                            Text(continuity.activeThreads.joined(separator: " • "))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+                    }
+                }
+
+                if let fact = continuity.recentProfileFacts.first {
+                    Divider().opacity(0.2)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Durable Pattern")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(gold.opacity(0.85))
+                        Text(fact.title)
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                        Text(fact.summary)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                }
+
+                if let moment = continuity.recentFirstLight.first {
+                    Divider().opacity(0.2)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Recent First Light")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(gold.opacity(0.85))
+                        Text(moment.label)
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                        Text(moment.summary)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func whileYouWereAwayCard(_ report: WhileYouWereAwayReport) -> some View {
+        if !report.headline.isEmpty
+            || !report.laneReports.isEmpty
+            || !report.quietCompletions.isEmpty
+            || !report.blockedWork.isEmpty
+            || !report.preparedWork.isEmpty
+        {
+            OracleSection(title: "While You Were Away", icon: "sparkles.rectangle.stack", accent: Color(red: 0.56, green: 0.82, blue: 1.0)) {
+                Text(report.headline)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+
+                if !report.summary.isEmpty {
+                    Text(report.summary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                if !report.laneReports.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(report.laneReports.prefix(3)) { lane in
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(lane.title)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(gold.opacity(0.86))
+                                Text(lane.summary)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
+                        }
+                    }
+                }
+
+                if !report.stewardshipLanes.isEmpty {
+                    Divider().opacity(0.2)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Stewardship Lanes")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(gold.opacity(0.86))
+                        ForEach(report.stewardshipLanes.prefix(2)) { lane in
+                            stewardshipLaneCard(lane)
+                        }
+                    }
+                }
+
+                if let item = report.quietCompletions.first {
+                    Divider().opacity(0.2)
+                    whileAwayRowCard(label: "Quiet Completion", item: item, accent: .green)
+                }
+
+                if let item = report.blockedWork.first {
+                    Divider().opacity(0.2)
+                    whileAwayRowCard(label: "Blocked Work", item: item, accent: .orange)
+                }
+
+                if let item = report.preparedWork.first {
+                    Divider().opacity(0.2)
+                    whileAwayRowCard(label: "Prepared For You", item: item, accent: .cyan)
+                }
+
+                if let recommendation = report.recommendation {
+                    Divider().opacity(0.2)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Recommendation")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(gold.opacity(0.86))
+                        Text(recommendation.title)
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                        Text(recommendation.summary)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(3)
+                        if !recommendation.action.isEmpty {
+                            Text(recommendation.action)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(Color(red: 0.72, green: 0.9, blue: 1.0))
+                                .lineLimit(2)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func stewardshipLaneCard(_ lane: WhileYouWereAwayStewardshipLane) -> some View {
+        let reportLine = lane.reportSummaries.first?.summary ?? lane.summary
+        let preparedCount = lane.preparedWork.count
+        let decisionCount = lane.decisionCards.count
+        let blockedCount = lane.blockedWork.count
+        let primitive = lane.executionPrimitive
+        return VStack(alignment: .leading, spacing: 8) {
+            Text(lane.title)
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+            Text(reportLine)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+            Text("Prepared \(preparedCount) · Decisions \(decisionCount) · Blocked \(blockedCount)")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Color(red: 0.72, green: 0.9, blue: 1.0))
+            if let primitive, !primitive.routeSummary.isEmpty {
+                Text(primitive.routeSummary)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary.opacity(0.92))
+                    .lineLimit(2)
+            }
+            if let primitive {
+                HStack(spacing: 8) {
+                    Text(primitive.laneStatus.replacingOccurrences(of: "-", with: " ").capitalized)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(gold.opacity(0.9))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(Color.white.opacity(0.06), in: Capsule())
+                    Spacer()
+                    Button {
+                        Task { await stageLaneReview(lane.id) }
+                    } label: {
+                        if laneActionID == lane.id {
+                            ProgressView()
+                                .tint(gold)
+                        } else {
+                            Text("Stage Review")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.black)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 7)
+                                .background(gold, in: Capsule())
+                        }
+                    }
+                    .disabled(laneActionID == lane.id)
+                }
+                Text(primitive.actionDetail)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary.opacity(0.82))
+                    .lineLimit(2)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func whileAwayRowCard(label: String, item: WhileYouWereAwayRow, accent: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(accent.opacity(0.95))
+            Text(item.title)
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+            Text("\(item.agent) · \(item.lane)")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(item.summary)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(3)
+        }
+    }
+
+    private func miniMetric(_ title: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func stageLaneReview(_ laneId: String) async {
+        laneActionID = laneId
+        laneActionMessage = ""
+        laneActionError = ""
+        defer { laneActionID = nil }
+        guard let result = await viewModel.stageStewardshipLaneReview(laneId) else {
+            laneActionError = viewModel.errorMessage ?? "Stewardship lane review did not stage cleanly."
+            return
+        }
+        if result.status == "review_staged" {
+            laneActionMessage = "\(result.laneTitle) is queued in \(result.reviewSurface.capitalized) for review."
+        } else {
+            laneActionError = result.boundaryReason
+        }
+    }
+
     private func errorView(_ message: String) -> some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle.fill")
@@ -270,6 +600,48 @@ struct BriefingView: View {
         .padding(.top, 8)
         .padding(.horizontal, 14)
         .padding(.bottom, 28)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func speechErrorCard(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+                .padding(.top, 2)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.9))
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var liveSpeechCard: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "waveform")
+                .foregroundStyle(.red)
+                .symbolEffect(.variableColor.iterative, isActive: true)
+                .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Listening... JARVIS will send after you pause")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                if speech.transcript.isEmpty {
+                    Text("Waiting for speech")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(speech.transcript)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.88))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(14)
         .glassEffect(in: RoundedRectangle(cornerRadius: 16))
     }
 
@@ -529,6 +901,51 @@ struct BriefingView: View {
         }
     }
 
+    @ViewBuilder
+    private func strategicOverviewCards(
+        catalyst: CatalystOverview?,
+        chronicle: ChronicleOverview?,
+        publishing: PublishOverview?
+    ) -> some View {
+        if catalyst != nil || chronicle != nil || publishing != nil {
+            OracleSection(title: "Strategic Overview", icon: "square.grid.3x2.fill", accent: .purple) {
+                VStack(spacing: 10) {
+                    if let catalyst {
+                        overviewCard(
+                            title: "Catalyst",
+                            icon: "bolt.fill",
+                            accent: .purple,
+                            metric: "\(catalyst.portfolio.lanes.count) lanes",
+                            headline: catalyst.portfolio.mission.isEmpty ? "Portfolio lanes active" : catalyst.portfolio.mission,
+                            detail: catalystLaneSummary(catalyst)
+                        )
+                    }
+
+                    if let chronicle {
+                        overviewCard(
+                            title: "Chronicle",
+                            icon: "book.closed.fill",
+                            accent: .mint,
+                            metric: chronicleMetric(chronicle),
+                            headline: chronicleHeadline(chronicle),
+                            detail: chronicleDetail(chronicle)
+                        )
+                    }
+
+                    if let publishing {
+                        overviewCard(
+                            title: "Publishing",
+                            icon: "paperplane.fill",
+                            accent: gold,
+                            metric: publishingMetric(publishing),
+                            headline: publishingHeadline(publishing),
+                            detail: publishingDetail(publishing)
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     @ViewBuilder
     private func alertBanner(
@@ -660,11 +1077,141 @@ struct BriefingView: View {
         }
     }
 
+    private func overviewCard(
+        title: String,
+        icon: String,
+        accent: Color,
+        metric: String,
+        headline: String,
+        detail: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                HStack(spacing: 8) {
+                    Image(systemName: icon)
+                        .foregroundStyle(accent)
+                    Text(title)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                }
+                Spacer()
+                Text(metric.uppercased())
+                    .font(.system(size: 9, weight: .black))
+                    .tracking(1)
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(accent.opacity(0.92), in: Capsule())
+            }
+            Text(headline)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.95))
+            if !detail.isEmpty {
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func catalystLaneSummary(_ overview: CatalystOverview) -> String {
+        let laneTitles = overview.portfolio.lanes.prefix(3).map(\.title).filter { !$0.isEmpty }
+        if !laneTitles.isEmpty {
+            return laneTitles.joined(separator: " · ")
+        }
+        let workTitles = overview.activeWork.prefix(2).map(\.title).filter { !$0.isEmpty }
+        return workTitles.joined(separator: " · ")
+    }
+
+    private func chronicleMetric(_ overview: ChronicleOverview) -> String {
+        if let context = overview.context, context.totalEntries > 0 {
+            return "\(context.totalEntries) entries"
+        }
+        return "\(overview.entries.count) recent"
+    }
+
+    private func chronicleHeadline(_ overview: ChronicleOverview) -> String {
+        if let rhythm = overview.context?.todaysRhythm, !rhythm.name.isEmpty {
+            return rhythm.name
+        }
+        if let study = overview.context?.study, !study.title.isEmpty {
+            return study.title
+        }
+        if let entry = overview.entries.first, !entry.title.isEmpty {
+            return entry.title
+        }
+        return "Memory and formation context is live"
+    }
+
+    private func chronicleDetail(_ overview: ChronicleOverview) -> String {
+        let themes = overview.context?.topThemes ?? overview.patterns?.recurringThemes.prefix(3).map(\.theme) ?? []
+        let filtered = themes.filter { !$0.isEmpty }
+        if !filtered.isEmpty {
+            return filtered.joined(separator: " · ")
+        }
+        if let entry = overview.entries.first, !entry.body.isEmpty {
+            return String(entry.body.prefix(96))
+        }
+        return ""
+    }
+
+    private func publishingMetric(_ overview: PublishOverview) -> String {
+        if overview.pendingReviewsCount > 0 {
+            return "\(overview.pendingReviewsCount) reviews"
+        }
+        if let launchControl = overview.launchControl, let days = launchControl.daysToLaunch {
+            return "\(days)d to launch"
+        }
+        return "\(overview.projects.count) projects"
+    }
+
+    private func publishingHeadline(_ overview: PublishOverview) -> String {
+        if let launchControl = overview.launchControl {
+            return launchControl.title.isEmpty ? "Launch control is live" : launchControl.title
+        }
+        if let review = overview.pendingReviews.first, !review.title.isEmpty {
+            return review.title
+        }
+        if let project = overview.projects.first, !project.title.isEmpty {
+            return project.title
+        }
+        return "Publishing workspace is active"
+    }
+
+    private func publishingDetail(_ overview: PublishOverview) -> String {
+        if let launchControl = overview.launchControl {
+            let parts = [
+                launchControl.phase,
+                launchControl.nextAction,
+                launchControl.platform
+            ].filter { !$0.isEmpty }
+            return parts.joined(separator: " · ")
+        }
+        if let review = overview.pendingReviews.first {
+            return [review.stageDisplay, review.contentPreview]
+                .filter { !$0.isEmpty }
+                .joined(separator: " · ")
+        }
+        let parts = overview.projects.prefix(3).map(\.title).filter { !$0.isEmpty }
+        return parts.joined(separator: " · ")
+    }
+
     private func completeReminder(_ reminder: AppStateReminderItem) async {
         reminderActionError = ""
         do {
-            if try await AppleAPIClient.shared.completeReminder(reminder.id) {
+            let result = try await AppleAPIClient.shared.completeReminder(reminder.id)
+            if result.status == "completed" {
                 reminderActionMessage = "Completed \(reminder.title)"
+                await refreshMorningState()
+            } else if result.status == "staged_for_review" {
+                reminderActionError = result.boundaryReason ?? "Reminder completion was staged for review."
+                await refreshMorningState()
+            } else if result.status == "blocked_by_boundary" {
+                reminderActionError = result.boundaryReason ?? "Reminder completion was blocked by boundary policy."
                 await refreshMorningState()
             }
         } catch {
@@ -698,8 +1245,15 @@ struct BriefingView: View {
     private func snoozeReminder(_ reminder: AppStateReminderItem) async {
         reminderActionError = ""
         do {
-            if try await AppleAPIClient.shared.snoozeReminder(reminder.id, minutes: 60) {
+            let result = try await AppleAPIClient.shared.snoozeReminder(reminder.id, minutes: 60)
+            if result.status == "snoozed" {
                 reminderActionMessage = "Snoozed \(reminder.title) for 1 hour"
+                await refreshMorningState()
+            } else if result.status == "staged_for_review" {
+                reminderActionError = result.boundaryReason ?? "Reminder snooze was staged for review."
+                await refreshMorningState()
+            } else if result.status == "blocked_by_boundary" {
+                reminderActionError = result.boundaryReason ?? "Reminder snooze was blocked by boundary policy."
                 await refreshMorningState()
             }
         } catch {

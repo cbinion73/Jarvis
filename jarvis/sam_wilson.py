@@ -8,10 +8,14 @@ from datetime import date, datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json, atomic_write_jsonl
+
 log = logging.getLogger(__name__)
 
 ADHERENCE_LOG  = Path("data/logs/sam_adherence.jsonl")
+ADHERENCE_STATE_LOG = ADHERENCE_LOG.with_name("sam_adherence_state_log.jsonl")
 PROTOCOL_CACHE = Path("data/settings/sam_protocol_today.json")
+PROTOCOL_CACHE_LOG = PROTOCOL_CACHE.with_name("sam_protocol_today_log.jsonl")
 
 # ── Longevity Council context cache (TTL = 10 min) ───────────────────────────
 _council_ctx_cache: str = ""
@@ -36,6 +40,35 @@ def _get_council_context() -> str:
         log.warning("_get_council_context: %s", exc)
         _council_ctx_cache = ""
     return _council_ctx_cache
+
+
+def _load_latest_snapshot(path: Path, log_path: Path, *, default: dict) -> dict:
+    try:
+        if path.exists():
+            return json.loads(path.read_text())
+    except Exception:
+        log.warning("Sam Wilson snapshot unreadable for %s; replaying append log", path)
+    if log_path.exists():
+        try:
+            last: dict[str, Any] | None = None
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                payload = json.loads(line)
+                if isinstance(payload, dict):
+                    last = payload
+            if last is not None:
+                atomic_write_json(path, last)
+                return last
+        except Exception:
+            log.warning("Sam Wilson append log unreadable for %s", log_path, exc_info=True)
+    return dict(default)
+
+
+def _save_snapshot(path: Path, log_path: Path, payload: dict) -> None:
+    append_jsonl(log_path, payload)
+    atomic_write_json(path, payload)
 
 CHRIS_PROFILE = {
     "age": 52, "weight_lbs": 247, "weight_kg": 112,
@@ -218,7 +251,7 @@ Generate Chris's daily protocol as Sam Wilson. Return ONLY valid JSON, no markdo
         data["date"] = today_str
         data["generated_at"] = datetime.now(timezone.utc).isoformat()
         PROTOCOL_CACHE.parent.mkdir(parents=True, exist_ok=True)
-        PROTOCOL_CACHE.write_text(json.dumps(data, indent=2))
+        _save_snapshot(PROTOCOL_CACHE, PROTOCOL_CACHE_LOG, data)
         return data
     except Exception as exc:
         log.error("sam_wilson.generate_daily_protocol: %s", exc)
@@ -227,10 +260,12 @@ Generate Chris's daily protocol as Sam Wilson. Return ONLY valid JSON, no markdo
 
 def get_cached_protocol() -> dict | None:
     try:
-        if not PROTOCOL_CACHE.exists():
+        data = _load_latest_snapshot(PROTOCOL_CACHE, PROTOCOL_CACHE_LOG, default={})
+        if not data:
             return None
-        data = json.loads(PROTOCOL_CACHE.read_text())
         gen = datetime.fromisoformat(data.get("generated_at", "1970-01-01"))
+        if gen.tzinfo is not None:
+            gen = gen.astimezone()
         if gen.date() == date.today():
             return data
         return None
@@ -483,6 +518,7 @@ async def evaluate_day_narrative(
 
 # ─── Food preferences store ───────────────────────────────────────────────────
 FOOD_PREFS_PATH = Path("data/settings/sam_food_prefs.json")
+FOOD_PREFS_LOG_PATH = FOOD_PREFS_PATH.with_name("sam_food_prefs_log.jsonl")
 
 # High-K+ foods Sam always flags (CKD + ARB + spiro risk)
 _HIGH_K_FOODS = [
@@ -510,12 +546,7 @@ _INTERVIEW_QUESTIONS = [
 
 def get_food_preferences() -> dict:
     """Load food preferences from disk. Returns empty skeleton if missing."""
-    try:
-        if FOOD_PREFS_PATH.exists():
-            return json.loads(FOOD_PREFS_PATH.read_text())
-    except Exception:
-        pass
-    return {
+    default = {
         "interview_step": 0,
         "interview_complete": False,
         "interview_notes": {},
@@ -530,13 +561,14 @@ def get_food_preferences() -> dict:
         "wins": [],
         "updated_at": "",
     }
+    return _load_latest_snapshot(FOOD_PREFS_PATH, FOOD_PREFS_LOG_PATH, default=default)
 
 
 def save_food_preferences(prefs: dict) -> None:
     try:
         FOOD_PREFS_PATH.parent.mkdir(parents=True, exist_ok=True)
         prefs["updated_at"] = datetime.now(timezone.utc).isoformat()
-        FOOD_PREFS_PATH.write_text(json.dumps(prefs, indent=2))
+        _save_snapshot(FOOD_PREFS_PATH, FOOD_PREFS_LOG_PATH, prefs)
     except Exception as exc:
         log.error("save_food_preferences: %s", exc)
 
@@ -949,6 +981,7 @@ async def chat_with_sam(
 # ── Daily Journal ─────────────────────────────────────────────────────────────
 
 JOURNAL_PATH = Path("data/logs/sam_daily_journal.jsonl")
+JOURNAL_STATE_LOG = JOURNAL_PATH.with_name("sam_daily_journal_state_log.jsonl")
 
 _JOURNAL_SCHEMA = """\
 {
@@ -1111,7 +1144,7 @@ def _upsert_journal(date_str: str, raw_entry: str, extracted: dict,
     JOURNAL_PATH.parent.mkdir(parents=True, exist_ok=True)
     existing: list[dict] = []
     if JOURNAL_PATH.exists():
-        for line in JOURNAL_PATH.read_text().splitlines():
+        for line in JOURNAL_PATH.read_text(encoding="utf-8").splitlines():
             line = line.strip()
             if not line:
                 continue
@@ -1119,6 +1152,17 @@ def _upsert_journal(date_str: str, raw_entry: str, extracted: dict,
                 existing.append(json.loads(line))
             except Exception:
                 pass
+    if not existing and JOURNAL_STATE_LOG.exists():
+        try:
+            for line in JOURNAL_STATE_LOG.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    existing = [dict(item) for item in records if isinstance(item, dict)]
+        except Exception:
+            pass
 
     record: dict | None = None
     kept: list[dict] = []
@@ -1147,7 +1191,14 @@ def _upsert_journal(date_str: str, raw_entry: str, extracted: dict,
     record["timestamp"] = datetime.now(timezone.utc).isoformat()
 
     kept.append(record)
-    JOURNAL_PATH.write_text("\n".join(json.dumps(r) for r in kept) + "\n")
+    append_jsonl(
+        JOURNAL_STATE_LOG,
+        {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "records": kept,
+        },
+    )
+    atomic_write_jsonl(JOURNAL_PATH, kept)
 
 
 def _upsert_adherence(date_str: str, items: list[str]) -> None:
@@ -1155,7 +1206,18 @@ def _upsert_adherence(date_str: str, items: list[str]) -> None:
     ADHERENCE_LOG.parent.mkdir(parents=True, exist_ok=True)
     existing: list[str] = []
     if ADHERENCE_LOG.exists():
-        existing = [l for l in ADHERENCE_LOG.read_text().splitlines() if l.strip()]
+        existing = [l for l in ADHERENCE_LOG.read_text(encoding="utf-8").splitlines() if l.strip()]
+    if not existing and ADHERENCE_STATE_LOG.exists():
+        try:
+            for line in ADHERENCE_STATE_LOG.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    existing = [json.dumps(record) for record in records if isinstance(record, dict)]
+        except Exception:
+            pass
     kept: list[str] = []
     current_rec: dict | None = None
     for line in existing:
@@ -1173,8 +1235,21 @@ def _upsert_adherence(date_str: str, items: list[str]) -> None:
     merged = list(dict.fromkeys((current_rec.get("completed") or []) + items))
     current_rec["completed"] = merged
     current_rec["timestamp"] = datetime.now(timezone.utc).isoformat()
-    kept.append(json.dumps(current_rec))
-    ADHERENCE_LOG.write_text("\n".join(kept) + "\n")
+    kept_records: list[dict] = []
+    for line in kept:
+        try:
+            kept_records.append(json.loads(line))
+        except Exception:
+            pass
+    kept_records.append(current_rec)
+    append_jsonl(
+        ADHERENCE_STATE_LOG,
+        {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "records": kept_records,
+        },
+    )
+    atomic_write_jsonl(ADHERENCE_LOG, kept_records)
 
 
 async def process_journal_entry(

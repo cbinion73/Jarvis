@@ -54,6 +54,7 @@ struct BriefMeIntent: AppIntent {
 
 @available(iOS 16.0, *)
 struct JarvisShortcuts: AppShortcutsProvider {
+    @AppShortcutsBuilder
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
             intent: BriefMeIntent(),
@@ -66,6 +67,30 @@ struct JarvisShortcuts: AppShortcutsProvider {
             shortTitle: "Morning Brief",
             systemImageName: "sun.horizon.fill"
         )
+
+        if #available(iOS 18.0, *) {
+            AppShortcut(
+                intent: StartJarvisConversationIntent(),
+                phrases: [
+                    "Talk to \(.applicationName)",
+                    "Open \(.applicationName) conversation",
+                    "Start \(.applicationName) voice mode",
+                ],
+                shortTitle: "Talk to JARVIS",
+                systemImageName: "waveform.circle.fill"
+            )
+
+            AppShortcut(
+                intent: AskJarvisIntent(),
+                phrases: [
+                    "Ask \(.applicationName)",
+                    "Talk to \(.applicationName) with a question",
+                    "Open \(.applicationName) and ask something",
+                ],
+                shortTitle: "Ask JARVIS",
+                systemImageName: "sparkles"
+            )
+        }
     }
 }
 

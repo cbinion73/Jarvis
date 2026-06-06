@@ -12,6 +12,7 @@ from .runtime_kernel import AgentRuntimeKernel
 from .agent_registry_contract import load_contract_bundle
 from .event_fabric import DurableEventStore, EventEnvelope, PresenceSnapshot, WakeDecision
 from .models import AttentionDisposition, InterruptionLevel, TriggerType, UserAttentionState
+from .persistence import append_jsonl, atomic_write_json
 
 
 def _now() -> datetime:
@@ -115,27 +116,60 @@ class BackgroundStateStore:
         self.root.mkdir(parents=True, exist_ok=True)
         self.state_path = self.root / "background_state.json"
         self.tick_log_path = self.root / "tick_log.jsonl"
+        self.state_log_path = self.root / "background_state_log.jsonl"
 
     def load(self) -> dict:
         if not self.state_path.exists():
-            return {"agents": {}, "last_tick_at": ""}
+            return self._load_from_log()
         try:
             return json.loads(self.state_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
-            return {"agents": {}, "last_tick_at": ""}
+            return self._load_from_log()
 
     def save(self, payload: dict) -> None:
-        self.state_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        append_jsonl(
+            self.state_log_path,
+            {
+                "saved_at": _now_iso(),
+                "state": payload,
+            },
+        )
+        atomic_write_json(self.state_path, payload)
+
+    def _load_from_log(self) -> dict:
+        if not self.state_log_path.exists():
+            return {"agents": {}, "last_tick_at": ""}
+        latest: dict[str, Any] | None = None
+        for line in self.state_log_path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            state = payload.get("state")
+            if isinstance(state, dict):
+                latest = state
+        if isinstance(latest, dict):
+            return latest
+        return {"agents": {}, "last_tick_at": ""}
 
     def log_tick(self, snapshot: dict) -> None:
-        with self.tick_log_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(snapshot) + "\n")
+        append_jsonl(self.tick_log_path, snapshot)
 
     def list_ticks(self, limit: int = 40) -> list[dict]:
         if not self.tick_log_path.exists():
             return []
-        lines = self.tick_log_path.read_text(encoding="utf-8").splitlines()
-        records = [json.loads(line) for line in lines if line.strip()]
+        records: list[dict] = []
+        for line in self.tick_log_path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(payload, dict):
+                records.append(payload)
         return list(reversed(records[-max(1, int(limit)):]))
 
 
@@ -338,15 +372,22 @@ class LifeAgentStudioStore:
         self.root = root
         self.root.mkdir(parents=True, exist_ok=True)
         self.path = self.root / "life_agents.json"
+        self.log_path = self.root / "life_agents_log.jsonl"
 
     def load(self) -> list[LifeAgentProfile]:
         if not self.path.exists():
+            replayed = self._load_from_log()
+            if replayed:
+                return replayed
             agents = self.default_agents()
             self.save(agents)
             return agents
         try:
             payload = json.loads(self.path.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
+            replayed = self._load_from_log()
+            if replayed:
+                return replayed
             agents = self.default_agents()
             self.save(agents)
             return agents
@@ -379,10 +420,16 @@ class LifeAgentStudioStore:
         return agents
 
     def save(self, agents: list[LifeAgentProfile]) -> None:
-        self.path.write_text(
-            json.dumps({"agents": [agent.to_dict() for agent in agents]}, indent=2) + "\n",
-            encoding="utf-8",
+        payload = {"agents": [agent.to_dict() for agent in agents]}
+        append_jsonl(
+            self.log_path,
+            {
+                "saved_at": _now_iso(),
+                "data": payload,
+            },
+            ensure_ascii=False,
         )
+        atomic_write_json(self.path, payload, ensure_ascii=False)
 
     def upsert(self, payload: dict) -> LifeAgentProfile:
         agents = self.load()
@@ -416,6 +463,42 @@ class LifeAgentStudioStore:
             agent.connections = [entry for entry in agent.connections if entry != agent_id]
         self.save(kept)
         return True
+
+    def _load_from_log(self) -> list[LifeAgentProfile]:
+        if not self.log_path.exists():
+            return []
+        latest_payload: dict[str, Any] | None = None
+        try:
+            for line in self.log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                entry = json.loads(line)
+                data = entry.get("data")
+                if isinstance(data, dict):
+                    latest_payload = data
+        except (OSError, json.JSONDecodeError):
+            return []
+        if not latest_payload:
+            return []
+        items = latest_payload.get("agents", [])
+        if not isinstance(items, list):
+            return []
+        agents: list[LifeAgentProfile] = []
+        default_profiles = {profile.agent_id: profile for profile in self.default_agents()}
+        defaults_by_id = {profile.agent_id: profile.to_dict() for profile in default_profiles.values()}
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            item, _changed = self._migrate_profile_payload(item)
+            raw_agent_id = str(item.get("agent_id", "")).strip()
+            merged_item = dict(defaults_by_id.get(raw_agent_id, {}))
+            merged_item.update(item)
+            profile = self._profile_from_payload(merged_item)
+            default_profile = default_profiles.get(profile.agent_id)
+            if default_profile:
+                profile = self._enrich_profile_from_default(profile, default_profile)
+            agents.append(profile)
+        return agents
 
     def schema_snapshot(self) -> dict:
         return {

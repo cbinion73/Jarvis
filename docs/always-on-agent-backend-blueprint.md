@@ -10,7 +10,19 @@ JARVIS is not just an app server with agent features. It is becoming an always-o
 - when the human engages directly, the right agents shift into foreground focus
 - when the human disengages, those agents return to supervised background work
 
+This is the core product shape, not a future embellishment.
+
+Direct interaction is one operating mode inside a continuously running
+orchestrator.
+
 This changes the backend from a request router into a persistent orchestration core.
+
+Two architectural consequences follow from this:
+
+- the system should preserve a durable event history of what happened, why,
+  and under whose authority
+- the backend should gradually move toward event-grounded state derivation,
+  replay, and explanation rather than trusting only mutable point-in-time state
 
 ## Target Backend Layers
 
@@ -56,6 +68,12 @@ Agents should wake from:
 - direct human interruption
 
 The backend needs durable event routing plus scheduled background loops.
+
+In the stronger form of this architecture, the event log becomes a first-class
+system primitive rather than a debug afterthought.
+
+The event log should be treated as the system ground truth, with current state
+derived as a projection over append-only, typed, versioned records.
 
 ### 4. Foreground and Background Attention Router
 
@@ -108,6 +126,9 @@ The operator needs to see:
 
 This becomes product-visible operational telemetry.
 
+Without this, an always-on society of 60-plus agents becomes opaque and
+therefore untrustworthy.
+
 ### 8. Governance, Doctrine, and Supervision Loop
 
 The backend must supervise:
@@ -126,6 +147,17 @@ Implementation anchor:
 - `docs/always-on-governance-supervision-plane.md`
 - `jarvis/supervision.py`
 
+This layer should eventually support earned authority progression:
+
+- sandbox evidence
+- promotion records
+- explicit consent boundaries for higher authority stages
+- rollback and review when behavior drifts
+
+The promotion engine is the key mechanism that converts track record into
+authority. Sandbox execution, review, and supervision should all feed this
+earned-authority path rather than bypass it.
+
 ### 9. Budgeting and Resource Arbitration
 
 Always-on agents compete for:
@@ -138,6 +170,10 @@ Always-on agents compete for:
 
 The backend needs budget policy and arbitration so the agent society does not become noisy or wasteful.
 
+This matters more, not less, in an always-on orchestrator because background
+initiative competes continuously for compute, tokens, trust headroom, and human
+attention.
+
 ### 10. Presence and Interruption Engine
 
 Presence, mode, room, device, urgency, and quiet hours need to inform:
@@ -149,6 +185,15 @@ Presence, mode, room, device, urgency, and quiet hours need to inform:
 - which work may continue silently
 
 This is the human-facing timing discipline for the whole system.
+
+## Additional Pressure From The Vision
+
+The long-term vision adds three important backend pressures that should shape
+implementation choices now, even if they are not all immediate build targets:
+
+1. household institutional memory should compound over years, not sessions
+2. household operation should become less builder-dependent over time
+3. authority should be earned through evidence and governance, not assumed by default
 
 ## What We Already Have
 

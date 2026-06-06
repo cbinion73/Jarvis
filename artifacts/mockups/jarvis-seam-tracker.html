@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Seam Tracker</title>
+  <style>
+    :root {
+      --bg: #061019;
+      --panel: rgba(10, 18, 30, 0.94);
+      --panel-2: rgba(14, 25, 39, 0.96);
+      --line: rgba(130, 186, 222, 0.16);
+      --text: #edf6fc;
+      --muted: #8fa7bb;
+      --cyan: #68d4df;
+      --blue: #8fb9ff;
+      --green: #66d89f;
+      --amber: #f0b86d;
+      --radius-xl: 24px;
+      --radius-lg: 18px;
+      --shadow: 0 24px 72px rgba(0, 0, 0, 0.34);
+      --font-ui: "SF Pro Display", "Segoe UI", sans-serif;
+      --font-mono: "SF Mono", "JetBrains Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font-ui);
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(104, 212, 223, 0.16), transparent 26%),
+        radial-gradient(circle at top right, rgba(143, 185, 255, 0.14), transparent 22%),
+        linear-gradient(180deg, var(--bg) 0%, #03080f 100%);
+    }
+
+    a { color: inherit; }
+    h1, h2, p { margin: 0; }
+
+    .shell {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 42px;
+    }
+
+    .hero,
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 26px;
+      margin-bottom: 18px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(104, 212, 223, 0.28);
+      background: rgba(104, 212, 223, 0.08);
+      color: var(--cyan);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .hero h1 {
+      margin-top: 14px;
+      font-size: clamp(34px, 5vw, 56px);
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+      max-width: 12ch;
+    }
+
+    .hero p {
+      margin-top: 14px;
+      max-width: 78ch;
+      line-height: 1.65;
+      color: var(--muted);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .stat {
+      padding: 18px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .stat strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 28px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 18px;
+    }
+
+    .stack {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .panel {
+      padding: 24px;
+    }
+
+    .panel h2 {
+      margin-bottom: 12px;
+      font-size: 22px;
+      letter-spacing: -0.03em;
+    }
+
+    .panel p,
+    .panel li {
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .panel ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .panel + .panel {
+      margin-top: 0;
+    }
+
+    .links {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .links a {
+      display: block;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      text-decoration: none;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .links a strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .mono {
+      font-family: var(--font-mono);
+      color: var(--cyan);
+    }
+
+    .tip-meta {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .tip-card {
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .tip-card strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .cluster-grid {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .cluster {
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .cluster strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .phase-map {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+      overflow: hidden;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+    }
+
+    .phase-map th,
+    .phase-map td {
+      padding: 13px 14px;
+      text-align: left;
+      vertical-align: top;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .phase-map tr:first-child th,
+    .phase-map tr:first-child td {
+      border-top: 0;
+    }
+
+    .phase-map th {
+      width: 18%;
+      color: var(--blue);
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .phase-map td {
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    @media (max-width: 900px) {
+      .stats,
+      .grid,
+      .stack {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="eyebrow">Level 9 Lane</div>
+      <h1>JARVIS Seam Tracker</h1>
+      <p>
+        Seams are internal implementation checkpoints that package real substrate progress
+        into clean stacked commits. They are not 1:1 checklist boxes, because one roadmap
+        box can take several substrate seams and one seam can support several boxes.
+      </p>
+      <div class="stats">
+        <div class="stat">
+          <strong>187</strong>
+          Committed seams
+        </div>
+        <div class="stat">
+          <strong>38</strong>
+          Checklist boxes
+        </div>
+        <div class="stat">
+          <strong>4</strong>
+          Boxes checked
+        </div>
+        <div class="stat">
+          <strong>34</strong>
+          Boxes remaining
+        </div>
+      </div>
+    </section>
+
+    <div class="stack">
+      <section class="panel">
+        <h2>Current Stacked Tip</h2>
+        <p>
+          This is the current visible top of the clean Level 9 lane, separate from the
+          dirty integration worktree.
+        </p>
+        <div class="tip-meta">
+          <div class="tip-card">
+            <strong>Branch</strong>
+            <span class="mono">codex/level9-knowledge-maker-durability-slice</span>
+          </div>
+          <div class="tip-card">
+            <strong>Commit</strong>
+            <span class="mono">114078c</span>
+          </div>
+          <div class="tip-card">
+            <strong>Parent</strong>
+            <span class="mono">codex/level9-household-durability-wave-slice</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Remaining Delta Clusters</h2>
+        <p>
+          These are the major residue zones still outside the stacked tip. They are the
+          real source of remaining seams, not the number of roadmap boxes alone.
+        </p>
+        <div class="cluster-grid">
+          <div class="cluster">
+            <strong>Apple command surface</strong>
+            Larger <span class="mono">JarvisApple</span> UI, payload, speech, watch, and route/navigation continuity work.
+          </div>
+          <div class="cluster">
+            <strong>Live wiring and service surfaces</strong>
+            Remaining real integrations across household, publishing, finance, and other non-mock service domains.
+          </div>
+          <div class="cluster">
+            <strong>Docs and planning truth</strong>
+            Canon, tracker, planning, and branch-control artifacts that still need clean truth-telling packaging.
+          </div>
+          <div class="cluster">
+            <strong>Runtime residue and state noise</strong>
+            Mixed runtime/data leftovers and projection files that must either be packaged deliberately or excluded.
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>What Is Left</h2>
+        <p>
+          The seam count ends when the remaining real delta clusters have either been
+          absorbed into the stacked lane or intentionally excluded as state noise. The
+          current residue is concentrated in a few larger surfaces rather than dozens of
+          neatly isolated checklist boxes.
+        </p>
+        <ul>
+          <li><strong>Apple surface:</strong> larger <span class="mono">JarvisApple</span> app, speech, payload, and navigation continuity work.</li>
+          <li><strong>Live service surface:</strong> remaining real household, publishing, finance, and connector wiring that is still broader than the landed durability seams.</li>
+          <li><strong>Docs and planning surface:</strong> remaining governance, rollout, roadmap, and branch-control truth artifacts.</li>
+          <li><strong>State noise:</strong> runtime-generated data and other files that should usually stay out of product commits.</li>
+        </ul>
+      </section>
+
+      <section class="panel">
+        <h2>Linked Checklists</h2>
+        <p>
+          Use the roadmap checklists for Level 9 intent. Use this tracker when you want to
+          know how many clean implementation seams have actually been landed.
+        </p>
+        <div class="links">
+          <a href="./jarvis-progress-dashboard.html">
+            <strong>Progress Dashboard</strong>
+            Truth-telling dashboard that separates roadmap, seams, substrate, experience, and theater.
+          </a>
+          <a href="./jarvis-path-to-level-9-checklist.html">
+            <strong>Path To Level 9</strong>
+            Main roadmap checklist with the visible checked and unchecked boxes.
+          </a>
+          <a href="./jarvis-next-arc-checklist.html">
+            <strong>Next Arc Checklist</strong>
+            Nearby strategic checkpoint view for the next operating arc.
+          </a>
+          <a href="./jarvis-implementation-sidebar.html">
+            <strong>Implementation Sidebar</strong>
+            Human-edited implementation companion notes and working sidebar context.
+          </a>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel" style="margin-top: 18px;">
+      <h2>Seams To Checklist Phase Map</h2>
+      <p>
+        This is not an exact one-box-per-seam ledger. It is a working map showing which
+        broad seam families are mainly advancing which roadmap phases.
+      </p>
+      <table class="phase-map">
+        <tr>
+          <th>Phase A</th>
+          <td>Live wiring, deployment truth, and household-operable footing.</td>
+        </tr>
+        <tr>
+          <th>Phase B</th>
+          <td>Runtime kernel, registry, event bus, scheduler, and operator observability seams.</td>
+        </tr>
+        <tr>
+          <th>Phase C</th>
+          <td>Persistence hardening, append-only logs, replay paths, projections, and auditability seams.</td>
+        </tr>
+        <tr>
+          <th>Phase D</th>
+          <td>Trust-zone enforcement, authority staging, promotion engine, rollback, and supervision seams.</td>
+        </tr>
+        <tr>
+          <th>Phase E</th>
+          <td>Agent society health, stewardship lanes, delegation, work-state, and arbitration seams.</td>
+        </tr>
+        <tr>
+          <th>Phase F</th>
+          <td>Promotion evidence, approval routing, service surfaces, and governed API seams.</td>
+        </tr>
+        <tr>
+          <th>Phase G</th>
+          <td>Household-safe controls, family-visible posture, and non-builder usability seams.</td>
+        </tr>
+        <tr>
+          <th>Phase H</th>
+          <td>Ambient delivery, health desktop surfaces, Glass shell layout, and memory continuity seams.</td>
+        </tr>
+        <tr>
+          <th>Phase I</th>
+          <td>Formation systems, bounded operators, and promotable execution seams.</td>
+        </tr>
+        <tr>
+          <th>Phase J</th>
+          <td>Intergenerational memory, long-horizon governance, and civilization-scale continuity seams.</td>
+        </tr>
+      </table>
+    </section>
+  </div>
+</body>
+</html>

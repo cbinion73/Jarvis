@@ -36,5 +36,321 @@
     },
     "created_at": "2026-05-15T13:54:15.243537+00:00",
     "updated_at": "2026-05-15T13:54:15.243537+00:00"
+  },
+  {
+    "arena_id": "household.home.manual",
+    "name": "Household Home Command Arena",
+    "resource_type": "home_control",
+    "linked_zone_id": "household_home",
+    "owner_principal": "chris",
+    "risk_class": "medium",
+    "limits": {
+      "action_budget": {
+        "max_actions_per_day": 20,
+        "max_high_risk_per_day": 4
+      },
+      "command_limits": {
+        "allowed_domains": [
+          "light",
+          "switch",
+          "scene",
+          "cover",
+          "lock",
+          "climate"
+        ]
+      }
+    },
+    "pause_conditions": [
+      "principal_override",
+      "service_failure",
+      "unexpected_device_response"
+    ],
+    "status": "active",
+    "description": "Bounded arena for staged or live home-control commands.",
+    "resource_refs": {
+      "controller": "home_assistant"
+    },
+    "promotion_eligibility": {
+      "enabled": true,
+      "target_stage": "sandbox_live"
+    },
+    "created_at": "2026-06-01T23:42:19.783046+00:00",
+    "updated_at": "2026-06-01T23:42:19.783046+00:00"
+  },
+  {
+    "arena_id": "household.schedule.routing",
+    "name": "Household Schedule Routing Arena",
+    "resource_type": "calendar_route",
+    "linked_zone_id": "household_schedule",
+    "owner_principal": "chris",
+    "risk_class": "low",
+    "limits": {
+      "action_budget": {
+        "max_actions_per_day": 30,
+        "max_live_route_handoffs_per_day": 20
+      },
+      "route_limits": {
+        "allow_external_send": false,
+        "allowed_destinations": [
+          "maps_preview",
+          "device_handoff"
+        ]
+      }
+    },
+    "pause_conditions": [
+      "principal_override",
+      "calendar_sync_failure",
+      "route_resolution_failure"
+    ],
+    "status": "active",
+    "description": "Bounded arena for calendar route handoffs and travel prep actions.",
+    "resource_refs": {
+      "calendar_source": "eventkit",
+      "maps_provider": "apple_maps"
+    },
+    "promotion_eligibility": {
+      "enabled": true,
+      "target_stage": "mature_live"
+    },
+    "created_at": "2026-06-01T23:42:19.783587+00:00",
+    "updated_at": "2026-06-01T23:42:19.783587+00:00"
+  },
+  {
+    "arena_id": "household.safety.signal-resolution",
+    "name": "Household Safety Signal Resolution Arena",
+    "resource_type": "signal_resolution",
+    "linked_zone_id": "household_safety",
+    "owner_principal": "chris",
+    "risk_class": "medium",
+    "limits": {
+      "action_budget": {
+        "max_actions_per_day": 25,
+        "max_live_resolutions_per_day": 8
+      },
+      "resolution_limits": {
+        "allow_auto_resolution": false,
+        "requires_reason_capture": true
+      }
+    },
+    "pause_conditions": [
+      "principal_override",
+      "signal_resolution_failure",
+      "unexpected_repeat_alert"
+    ],
+    "status": "active",
+    "description": "Bounded arena for resolving household safety sound alerts.",
+    "resource_refs": {
+      "signal_domain": "sound"
+    },
+    "promotion_eligibility": {
+      "enabled": true,
+      "target_stage": "sandbox_live"
+    },
+    "created_at": "2026-06-01T23:42:19.783719+00:00",
+    "updated_at": "2026-06-01T23:42:19.783719+00:00"
+  },
+  {
+    "arena_id": "household.perception.signal-resolution",
+    "name": "Household Perception Signal Resolution Arena",
+    "resource_type": "signal_resolution",
+    "linked_zone_id": "household_perception",
+    "owner_principal": "chris",
+    "risk_class": "low",
+    "limits": {
+      "action_budget": {
+        "max_actions_per_day": 25,
+        "max_live_resolutions_per_day": 15
+      },
+      "resolution_limits": {
+        "allow_auto_resolution": true,
+        "requires_reason_capture": true
+      }
+    },
+    "pause_conditions": [
+      "principal_override",
+      "signal_resolution_failure",
+      "unexpected_repeat_alert"
+    ],
+    "status": "active",
+    "description": "Bounded arena for resolving household vision scans.",
+    "resource_refs": {
+      "signal_domain": "vision"
+    },
+    "promotion_eligibility": {
+      "enabled": true,
+      "target_stage": "mature_live"
+    },
+    "created_at": "2026-06-01T23:42:19.783853+00:00",
+    "updated_at": "2026-06-01T23:42:19.783853+00:00"
+  },
+  {
+    "arena_id": "household.attention.workflow",
+    "name": "Household Attention Workflow Arena",
+    "resource_type": "notification_workflow",
+    "linked_zone_id": "household_attention",
+    "owner_principal": "chris",
+    "risk_class": "low",
+    "limits": {
+      "action_budget": {
+        "max_actions_per_day": 40,
+        "max_live_mutations_per_day": 15
+      },
+      "workflow_limits": {
+        "allow_delete": false,
+        "allow_state_mutation": true
+      }
+    },
+    "pause_conditions": [
+      "principal_override",
+      "notification_store_failure",
+      "unexpected_reopen_rate"
+    ],
+    "status": "active",
+    "description": "Bounded arena for resolve and snooze mutations on household notifications.",
+    "resource_refs": {
+      "notification_store": "shared_notification_center"
+    },
+    "promotion_eligibility": {
+      "enabled": true,
+      "target_stage": "sandbox_live"
+    },
+    "created_at": "2026-06-01T23:42:19.783981+00:00",
+    "updated_at": "2026-06-01T23:42:19.783981+00:00"
+  },
+  {
+    "arena_id": "household.tasks.workflow",
+    "name": "Household Task Workflow Arena",
+    "resource_type": "reminder_workflow",
+    "linked_zone_id": "household_tasks",
+    "owner_principal": "chris",
+    "risk_class": "low",
+    "limits": {
+      "action_budget": {
+        "max_actions_per_day": 50,
+        "max_live_mutations_per_day": 20
+      },
+      "workflow_limits": {
+        "allow_delete": false,
+        "allow_state_mutation": true
+      }
+    },
+    "pause_conditions": [
+      "principal_override",
+      "task_store_failure",
+      "unexpected_reopen_rate"
+    ],
+    "status": "active",
+    "description": "Bounded arena for complete and snooze mutations on household reminders.",
+    "resource_refs": {
+      "task_store": "shared_reminder_center"
+    },
+    "promotion_eligibility": {
+      "enabled": true,
+      "target_stage": "sandbox_live"
+    },
+    "created_at": "2026-06-01T23:42:19.784176+00:00",
+    "updated_at": "2026-06-01T23:42:19.784176+00:00"
+  },
+  {
+    "arena_id": "household.focus.workflow",
+    "name": "Household Focus Workflow Arena",
+    "resource_type": "focus_workflow",
+    "linked_zone_id": "household_focus",
+    "owner_principal": "chris",
+    "risk_class": "low",
+    "limits": {
+      "action_budget": {
+        "max_actions_per_day": 20,
+        "max_live_mutations_per_day": 8
+      },
+      "workflow_limits": {
+        "allow_state_mutation": true,
+        "allow_silent_override": false
+      }
+    },
+    "pause_conditions": [
+      "principal_override",
+      "focus_store_failure",
+      "unexpected_interrupt_spike"
+    ],
+    "status": "active",
+    "description": "Bounded arena for applying household focus presets and interruption-policy mutations.",
+    "resource_refs": {
+      "focus_store": "apple_focus_state"
+    },
+    "promotion_eligibility": {
+      "enabled": true,
+      "target_stage": "sandbox_live"
+    },
+    "created_at": "2026-06-01T23:42:19.784320+00:00",
+    "updated_at": "2026-06-01T23:42:19.784320+00:00"
+  },
+  {
+    "arena_id": "household.huddle.workflow",
+    "name": "Household Huddle Workflow Arena",
+    "resource_type": "huddle_workflow",
+    "linked_zone_id": "household_huddle",
+    "owner_principal": "chris",
+    "risk_class": "medium",
+    "limits": {
+      "action_budget": {
+        "max_actions_per_day": 6,
+        "max_live_starts_per_day": 2
+      },
+      "workflow_limits": {
+        "allow_background_start": true,
+        "allow_silent_restart": false
+      }
+    },
+    "pause_conditions": [
+      "principal_override",
+      "party_mode_failure",
+      "unexpected_runtime_block"
+    ],
+    "status": "active",
+    "description": "Bounded arena for starting overnight party-mode orchestration and other live huddle wake actions.",
+    "resource_refs": {
+      "controller": "party_mode"
+    },
+    "promotion_eligibility": {
+      "enabled": true,
+      "target_stage": "sandbox_live"
+    },
+    "created_at": "2026-06-01T23:42:19.784503+00:00",
+    "updated_at": "2026-06-01T23:42:19.784503+00:00"
+  },
+  {
+    "arena_id": "publication.review.workflow",
+    "name": "Publication Review Workflow Arena",
+    "resource_type": "publishing_review",
+    "linked_zone_id": "publication_review",
+    "owner_principal": "chris",
+    "risk_class": "low",
+    "limits": {
+      "action_budget": {
+        "max_actions_per_day": 25,
+        "max_live_mutations_per_day": 12
+      },
+      "workflow_limits": {
+        "allow_state_mutation": true,
+        "allow_publish": false
+      }
+    },
+    "pause_conditions": [
+      "principal_override",
+      "publishing_store_failure",
+      "unexpected_review_reopen_rate"
+    ],
+    "status": "active",
+    "description": "Bounded arena for approve and revise mutations on publishing review items.",
+    "resource_refs": {
+      "review_store": "ghostwritr_reviews"
+    },
+    "promotion_eligibility": {
+      "enabled": true,
+      "target_stage": "sandbox_live"
+    },
+    "created_at": "2026-06-01T23:42:19.784686+00:00",
+    "updated_at": "2026-06-01T23:42:19.784686+00:00"
   }
 ]

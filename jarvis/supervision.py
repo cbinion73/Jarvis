@@ -9,6 +9,7 @@ from typing import Any
 
 from .audit import AuditLog
 from .doctrine import SharedDoctrineStore
+from .persistence import append_jsonl, atomic_write_json
 from .trust import TrustSupport
 
 
@@ -101,7 +102,7 @@ class SupervisionStore:
         return payload
 
     def _save_json(self, path: Path, payload: Any) -> None:
-        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(path, payload)
 
     def list_lanes(self) -> list[dict[str, Any]]:
         payload = self._load_json(self.lanes_path, default=[])
@@ -125,8 +126,7 @@ class SupervisionStore:
         self._save_json(self.reviews_path, records[-800:])
 
     def append_trace(self, record: dict[str, Any]) -> None:
-        with self.traces_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(record) + "\n")
+        append_jsonl(self.traces_path, record)
 
     def list_traces(self, limit: int = 100) -> list[dict[str, Any]]:
         if not self.traces_path.exists():
@@ -378,6 +378,20 @@ class SupervisionSupport:
                 return dict(item)
         return None
 
+    def update_contract(self, agent_id: str, updates: dict[str, Any]) -> dict[str, Any] | None:
+        agent_key = str(agent_id).strip().lower()
+        records = self.store.list_contracts()
+        for index, item in enumerate(records):
+            if str(item.get("agent_id", "")).strip().lower() != agent_key:
+                continue
+            merged = dict(item)
+            merged.update(dict(updates))
+            merged["updated_at"] = str(updates.get("updated_at") or _now_iso())
+            records[index] = merged
+            self.store.save_contracts(records)
+            return merged
+        return None
+
     def evaluate_action(
         self,
         *,
@@ -587,6 +601,7 @@ class SupervisionSupport:
             "agent_id": str(trace.get("agent_id", "")).strip(),
             "lane_id": str(trace.get("lane_id", "")).strip(),
             "trust_zone_id": str(trace.get("trust_zone_id", "")).strip(),
+            "arena_id": str((trace.get("trace") or {}).get("arena_id", "")).strip(),
             "action_type": str(trace.get("action_type", "")).strip(),
             "resolution": str(trace.get("resolution", "")).strip(),
             "created_at": _now_iso(),
@@ -596,6 +611,55 @@ class SupervisionSupport:
         self.store.save_reviews(reviews)
         self.audit_log.log_event("supervision-review", review)
         return review
+
+    def promotion_evidence(
+        self,
+        *,
+        subject_kind: str,
+        subject_id: str,
+    ) -> dict[str, Any]:
+        kind = str(subject_kind or "").strip().lower()
+        subject_key = str(subject_id or "").strip().lower()
+        records = self.store.list_reviews()
+        filtered: list[dict[str, Any]] = []
+        if kind == "agent":
+            filtered = [
+                dict(item) for item in records
+                if str(item.get("agent_id", "")).strip().lower() == subject_key
+            ]
+        elif kind == "trust_zone":
+            filtered = [
+                dict(item) for item in records
+                if str(item.get("trust_zone_id", "")).strip().lower() == subject_key
+            ]
+        elif kind == "resource_arena":
+            filtered = [
+                dict(item) for item in records
+                if str(item.get("arena_id", "")).strip().lower() == subject_key
+            ]
+
+        approved = [item for item in filtered if str(item.get("outcome", "")).strip().lower() == "approved"]
+        rollbacks = [item for item in filtered if bool(item.get("rollback_executed"))]
+        rejected = [
+            item for item in filtered
+            if str(item.get("outcome", "")).strip().lower() in {"rejected", "denied", "forbidden"}
+        ]
+        success_rate = (
+            (len([item for item in approved if not bool(item.get("rollback_executed"))]) / len(filtered))
+            if filtered else 0.0
+        )
+        return {
+            "subject_kind": kind,
+            "subject_id": subject_id,
+            "reviews": filtered,
+            "summary": {
+                "review_count": len(filtered),
+                "approved_count": len(approved),
+                "rollback_count": len(rollbacks),
+                "rejected_count": len(rejected),
+                "success_rate": round(success_rate, 4),
+            },
+        }
 
     def refresh_doctrine_candidates(self, *, synthesized_by: str = "system-steward") -> dict[str, Any]:
         contracts = {

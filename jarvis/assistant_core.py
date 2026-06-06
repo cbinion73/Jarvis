@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+
+from .persistence import append_jsonl, atomic_write_json
 
 
 ASSISTANT_CORE_PATH = Path.cwd() / "data" / "settings" / "assistant_core.json"
@@ -248,6 +250,12 @@ def _normalize_notification_status(value: str) -> str:
 @dataclass(slots=True)
 class AssistantCoreStore:
     path: Path = ASSISTANT_CORE_PATH
+    log_path: Path = field(init=False)
+    state_log_path: Path = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.log_path = self.path.with_name(f"{self.path.stem}_log.jsonl")
+        self.state_log_path = self.path.with_name(f"{self.path.stem}_state_log.jsonl")
 
     def load(self) -> dict[str, Any]:
         default = {
@@ -265,13 +273,48 @@ class AssistantCoreStore:
             "cadence_history": [],
         }
         if not self.path.exists():
-            return default
+            return self._load_from_state_log(default)
         try:
             payload = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
+            return self._load_from_state_log(default)
+        if not isinstance(payload, dict) or not payload:
+            return self._load_from_state_log(default)
+        return self._coerce(payload)
+
+    def _load_from_state_log(self, default: dict[str, Any]) -> dict[str, Any]:
+        if not self.state_log_path.exists():
+            return self._load_from_log(default)
+        latest: dict[str, Any] = default
+        try:
+            for line in self.state_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, dict):
+                    latest = dict(records)
+        except (OSError, json.JSONDecodeError):
             return default
-        if not isinstance(payload, dict):
+        return self._coerce(latest)
+
+    def _load_from_log(self, default: dict[str, Any]) -> dict[str, Any]:
+        if not self.log_path.exists():
             return default
+        latest: dict[str, Any] = default
+        try:
+            for line in self.log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, dict):
+                    latest = dict(records)
+        except (OSError, json.JSONDecodeError):
+            return default
+        return self._coerce(latest)
+
+    def _coerce(self, payload: dict[str, Any]) -> dict[str, Any]:
         payload.setdefault("deferred", {})
         payload.setdefault("history", [])
         payload.setdefault("sweeps", {})
@@ -288,7 +331,22 @@ class AssistantCoreStore:
 
     def save(self, payload: dict[str, Any]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        saved_at = _now_utc().isoformat()
+        atomic_write_json(self.path, payload)
+        append_jsonl(
+            self.log_path,
+            {
+                "saved_at": saved_at,
+                "records": payload,
+            },
+        )
+        append_jsonl(
+            self.state_log_path,
+            {
+                "saved_at": saved_at,
+                "records": payload,
+            },
+        )
 
     def deferred_record(self, item_key: str) -> dict[str, Any] | None:
         state = self.load()

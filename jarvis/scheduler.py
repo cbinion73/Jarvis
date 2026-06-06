@@ -17,6 +17,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
+from .persistence import append_jsonl, atomic_write_jsonl
+
 logger = logging.getLogger("jarvis.scheduler")
 
 # ---------------------------------------------------------------------------
@@ -81,6 +83,7 @@ class AgentWorkQueue:
 
     def __init__(self, store_path: Path) -> None:
         self._store_path = store_path
+        self._state_log_path = self._store_path.with_name(f"{self._store_path.stem}_state_log.jsonl")
         self._store_path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
         self._items: list[AgentWorkItem] = self._load()
@@ -90,6 +93,18 @@ class AgentWorkQueue:
     # ------------------------------------------------------------------
 
     def _load(self) -> list[AgentWorkItem]:
+        items = self._load_projection_items()
+        if items:
+            return items
+        if self._store_path.exists():
+            logger.warning(
+                "Scheduler queue snapshot %s was blank or unreadable; replaying from %s",
+                self._store_path,
+                self._state_log_path,
+            )
+        return self._load_state_log_items()
+
+    def _load_projection_items(self) -> list[AgentWorkItem]:
         if not self._store_path.exists():
             return []
         items: list[AgentWorkItem] = []
@@ -107,10 +122,46 @@ class AgentWorkQueue:
             pass
         return items
 
-    def _save(self) -> None:
+    def _load_state_log_items(self) -> list[AgentWorkItem]:
+        if not self._state_log_path.exists():
+            return []
+        latest: list[AgentWorkItem] = []
         try:
-            lines = [json.dumps(asdict(item)) for item in self._items]
-            self._store_path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+            for line in self._state_log_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                saved_items = payload.get("items")
+                if not isinstance(saved_items, list):
+                    continue
+                recovered: list[AgentWorkItem] = []
+                for raw in saved_items:
+                    if not isinstance(raw, dict):
+                        continue
+                    try:
+                        recovered.append(AgentWorkItem(**raw))
+                    except Exception:
+                        continue
+                latest = recovered
+        except OSError:
+            return []
+        return latest
+
+    def _save(self) -> None:
+        payload = [asdict(item) for item in self._items]
+        try:
+            atomic_write_jsonl(self._store_path, payload)
+            append_jsonl(
+                self._state_log_path,
+                {
+                    "saved_at": _now_iso(),
+                    "items": payload,
+                },
+            )
         except OSError as exc:
             logger.warning("Failed to persist queue: %s", exc)
 

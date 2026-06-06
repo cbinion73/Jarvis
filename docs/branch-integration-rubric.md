@@ -22,8 +22,9 @@ This rubric defines what gets accepted, what gets rejected, and what must be rev
 All branch work is subordinate to:
 
 1. `docs/jarvis-canonical-operating-model.md`
-2. `docs/always-on-agent-backend-blueprint.md`
-3. `artifacts/mockups/jarvis-numbered-outline-checklist.html`
+2. `docs/JARVIS-CIVILIZATION-SCALE-MASTER-ROADMAP.md`
+3. `docs/always-on-agent-backend-blueprint.md`
+4. `artifacts/mockups/jarvis-numbered-outline-checklist.html`
 
 If a branch conflicts with those documents, the branch does not quietly win.
 
@@ -45,6 +46,7 @@ If those answers are vague, the branch is not ready.
 Branch work should be accepted only if it:
 
 - strengthens the always-on multi-agent operating model
+- advances the civilization-scale phase order instead of bypassing it
 - preserves oversight, continuity, and delegation as the core user experience
 - does not centralize voice as the primary path
 - makes ownership, routing, supervision, or command clearer
@@ -71,6 +73,7 @@ For backend-heavy branches, verify:
 - lifecycle is durable
 - ownership is explicit
 - supervision is preserved
+- event truth is becoming stronger, not weaker
 - escalation boundaries are clear
 - work state is inspectable
 - event routing is auditable
@@ -109,6 +112,7 @@ If a branch does not return in this structure, ask for the missing pieces before
 When two branches disagree:
 
 - prefer the interpretation that better supports always-on orchestration
+- prefer the interpretation that better preserves roadmap sequencing
 - prefer silent-first over voice-first
 - prefer explicit ownership over ambiguity
 - prefer command/continuity over decorative UI

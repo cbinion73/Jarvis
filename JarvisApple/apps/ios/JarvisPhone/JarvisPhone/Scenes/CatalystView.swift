@@ -73,8 +73,24 @@ struct CatalystView: View {
     private func contentView(_ ov: CatalystOverview) -> some View {
         ScrollView {
             VStack(spacing: 14) {
+                CatSection(title: "Workspace Pulse", icon: "bolt.horizontal.circle.fill", accent: blue) {
+                    HStack(spacing: 10) {
+                        PortfolioTile(label: "lanes", count: ov.lanes.count, accent: blue)
+                        PortfolioTile(label: "connectors", count: ov.connectors.count, accent: blue)
+                    }
+                    HStack(spacing: 10) {
+                        PortfolioTile(label: "projects", count: ov.liveWorkspace.projectsCount, accent: blue)
+                        PortfolioTile(label: "tasks", count: ov.liveWorkspace.tasksCount, accent: blue)
+                    }
+                    HStack(spacing: 10) {
+                        PortfolioTile(label: "calendar", count: ov.liveWorkspace.calendarCount, accent: blue)
+                        PortfolioTile(label: "email", count: ov.liveWorkspace.emailCount, accent: blue)
+                    }
+                    Text(ov.liveWorkspace.live ? "Live workspace is connected" : "Workspace snapshot is local / inferred")
+                        .font(.caption2)
+                        .foregroundStyle(ov.liveWorkspace.live ? .green.opacity(0.9) : .secondary)
+                }
 
-                // ── Active work ───────────────────────────────────
                 if !ov.activeWork.isEmpty {
                     CatSection(title: "Active Work", icon: "hammer.fill", accent: blue) {
                         ForEach(ov.activeWork) { item in
@@ -88,7 +104,17 @@ struct CatalystView: View {
                     emptyWork
                 }
 
-                // ── Signals ───────────────────────────────────────
+                if !ov.lanes.isEmpty {
+                    CatSection(title: "Portfolio Lanes", icon: "square.grid.2x2.fill", accent: blue.opacity(0.88)) {
+                        ForEach(ov.lanes) { lane in
+                            LaneRow(lane: lane)
+                            if lane.id != ov.lanes.last?.id {
+                                Divider().opacity(0.2)
+                            }
+                        }
+                    }
+                }
+
                 if !ov.signals.isEmpty {
                     CatSection(title: "Signals", icon: "antenna.radiowaves.left.and.right", accent: blue.opacity(0.8)) {
                         ForEach(ov.signals) { sig in
@@ -100,7 +126,137 @@ struct CatalystView: View {
                     }
                 }
 
-                // ── Portfolio summary ─────────────────────────────
+                if !ov.connectors.isEmpty {
+                    CatSection(title: "Connectors", icon: "point.3.connected.trianglepath.dotted", accent: blue.opacity(0.8)) {
+                        ForEach(ov.connectors) { connector in
+                            ConnectorRow(connector: connector)
+                            if connector.id != ov.connectors.last?.id {
+                                Divider().opacity(0.2)
+                            }
+                        }
+                    }
+                }
+
+                if !ov.workflowCounts.isEmpty {
+                    CatSection(title: "Workflow Throughput", icon: "speedometer", accent: blue) {
+                        LazyVGrid(
+                            columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2),
+                            spacing: 10
+                        ) {
+                            ForEach(ov.workflowCounts.sorted(by: { $0.key < $1.key }), id: \.key) { key, val in
+                                PortfolioTile(label: key.replacingOccurrences(of: "_", with: " "), count: val, accent: blue)
+                            }
+                        }
+                    }
+                }
+
+                if !ov.continuity.guidanceLines.isEmpty || !ov.continuity.recentProfileFacts.isEmpty || !ov.continuity.recentFirstLight.isEmpty || !ov.continuity.activeDomains.isEmpty {
+                    CatSection(title: "Carry Forward", icon: "point.3.connected.trianglepath.dotted", accent: blue.opacity(0.88)) {
+                        HStack(spacing: 10) {
+                            PortfolioTile(label: "facts", count: ov.continuity.profileFactCount, accent: blue)
+                            PortfolioTile(label: "domains", count: ov.continuity.activeDomains.count, accent: blue)
+                        }
+
+                        if !ov.continuity.hottestWorkflow.isEmpty || !ov.continuity.briefingStyle.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                if !ov.continuity.hottestWorkflow.isEmpty {
+                                    Text("Hottest workflow: \(ov.continuity.hottestWorkflow.replacingOccurrences(of: "_", with: " ").capitalized)")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary.opacity(0.95))
+                                }
+                                if !ov.continuity.briefingStyle.isEmpty {
+                                    Text("Briefing style: \(ov.continuity.briefingStyle.replacingOccurrences(of: "_", with: " ").capitalized)")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary.opacity(0.95))
+                                }
+                            }
+                        }
+
+                        if !ov.continuity.activeDomains.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Active Domains")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white.opacity(0.92))
+                                Text(ov.continuity.activeDomains.joined(separator: " • "))
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary.opacity(0.95))
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        }
+
+                        if !ov.continuity.guidanceLines.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Workspace Rhythm")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white.opacity(0.92))
+                                ForEach(ov.continuity.guidanceLines, id: \.self) { line in
+                                    Text(line)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary.opacity(0.95))
+                                }
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        }
+
+                        if !ov.continuity.recentProfileFacts.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Durable Patterns")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white.opacity(0.92))
+                                ForEach(ov.continuity.recentProfileFacts) { fact in
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(fact.title)
+                                            .font(.caption.weight(.medium))
+                                            .foregroundStyle(.white.opacity(0.92))
+                                        Text(fact.summary)
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary.opacity(0.95))
+                                    }
+                                }
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        }
+
+                        if !ov.continuity.recentFirstLight.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Recent First Light")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white.opacity(0.92))
+                                ForEach(ov.continuity.recentFirstLight) { moment in
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(moment.label)
+                                            .font(.caption.weight(.medium))
+                                            .foregroundStyle(.white.opacity(0.92))
+                                        Text(moment.summary)
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary.opacity(0.95))
+                                    }
+                                }
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        }
+                    }
+                }
+
+                if !ov.latestRuns.isEmpty {
+                    CatSection(title: "Latest Runs", icon: "clock.arrow.circlepath", accent: blue.opacity(0.88)) {
+                        ForEach(ov.latestRuns) { run in
+                            RunRow(run: run)
+                            if run.id != ov.latestRuns.last?.id {
+                                Divider().opacity(0.2)
+                            }
+                        }
+                    }
+                }
+
                 if !ov.portfolio.summaryCounts.isEmpty || !ov.portfolio.mission.isEmpty {
                     CatSection(title: "Portfolio", icon: "chart.bar.xaxis", accent: blue) {
                         if !ov.portfolio.mission.isEmpty {
@@ -225,6 +381,11 @@ private struct WorkItemRow: View {
                         Text(item.domain)
                             .font(.caption2).foregroundStyle(.secondary)
                     }
+                    if !item.lane.isEmpty {
+                        Text("·").font(.caption2).foregroundStyle(.secondary)
+                        Text(item.lane.replacingOccurrences(of: "-", with: " "))
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
                     if !item.updated.isEmpty {
                         Text("·").font(.caption2).foregroundStyle(.secondary)
                         Text(relativeDate(item.updated))
@@ -240,6 +401,32 @@ private struct WorkItemRow: View {
         let f = ISO8601DateFormatter()
         guard let d = f.date(from: iso) else { return iso.prefix(10).description }
         return d.formatted(.relative(presentation: .named))
+    }
+}
+
+private struct LaneRow: View {
+    let lane: CatalystLane
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(lane.label)
+                    .font(.subheadline)
+                    .foregroundStyle(.white)
+                Spacer()
+                if !lane.status.isEmpty {
+                    Text(lane.status)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            if !lane.description.isEmpty {
+                Text(lane.description)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 2)
     }
 }
 
@@ -268,6 +455,77 @@ private struct SignalRow: View {
             }
         }
         .padding(.vertical, 2)
+    }
+}
+
+private struct ConnectorRow: View {
+    let connector: CatalystConnector
+
+    private var statusColor: Color {
+        switch connector.status.lowercased() {
+        case "connected", "local", "active", "ready":
+            return .green
+        case "planned":
+            return .orange
+        default:
+            return .secondary
+        }
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Circle()
+                .fill(statusColor.opacity(0.85))
+                .frame(width: 8, height: 8)
+                .padding(.top, 6)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack {
+                    Text(connector.label)
+                        .font(.subheadline)
+                        .foregroundStyle(.white)
+                    Spacer()
+                    Text(connector.status)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(statusColor)
+                }
+                if !connector.notes.isEmpty {
+                    Text(connector.notes)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+private struct RunRow: View {
+    let run: CatalystRunSummary
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Text(run.label)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color(red: 0.25, green: 0.55, blue: 1.0).opacity(0.85))
+                Spacer()
+                if !run.timestamp.isEmpty {
+                    Text(relativeDate(run.timestamp))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Text(run.title)
+                .font(.subheadline)
+                .foregroundStyle(.white)
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func relativeDate(_ iso: String) -> String {
+        let f = ISO8601DateFormatter()
+        guard let d = f.date(from: iso) else { return iso.prefix(10).description }
+        return d.formatted(.relative(presentation: .named))
     }
 }
 

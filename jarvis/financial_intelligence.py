@@ -23,6 +23,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json
+
 logger = logging.getLogger("jarvis.financial_intelligence")
 
 
@@ -58,19 +60,45 @@ def _days_until(date_str: str) -> int:
 
 def _load_json(path: Path, default: Any) -> Any:
     if not path.exists():
-        import copy
-        return copy.deepcopy(default)
+        return _load_json_from_log(path, default)
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        import copy
-        return copy.deepcopy(default)
+        return _load_json_from_log(path, default)
     return data
 
 
 def _save_json(path: Path, payload: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    atomic_write_json(path, payload)
+    append_jsonl(
+        path.with_name(f"{path.stem}_log.jsonl"),
+        {
+            "saved_at": _now_iso(),
+            "records": payload,
+        },
+    )
+
+
+def _load_json_from_log(path: Path, default: Any) -> Any:
+    log_path = path.with_name(f"{path.stem}_log.jsonl")
+    if not log_path.exists():
+        import copy
+        return copy.deepcopy(default)
+    try:
+        latest: Any = None
+        for line in log_path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            records = payload.get("records")
+            if records is not None:
+                latest = records
+        if latest is not None:
+            return latest
+    except (OSError, json.JSONDecodeError):
+        pass
+    import copy
+    return copy.deepcopy(default)
 
 
 # ---------------------------------------------------------------------------

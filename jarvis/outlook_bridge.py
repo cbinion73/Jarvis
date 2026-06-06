@@ -15,6 +15,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json
+
 log = logging.getLogger(__name__)
 
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
@@ -70,6 +72,66 @@ class OutlookBridge:
         # In-memory cache so we don't hit disk on every request.
         self._token_cache: dict[str, Any] = {}
 
+    def _token_log_path(self) -> Path:
+        return self._token_path.with_name(f"{self._token_path.stem}_log.jsonl")
+
+    def _token_state_log_path(self) -> Path:
+        return self._token_path.with_name(f"{self._token_path.stem}_state_log.jsonl")
+
+    def _persist_token(self, payload: dict[str, Any]) -> None:
+        self._token_path.parent.mkdir(parents=True, exist_ok=True)
+        append_jsonl(
+            self._token_log_path(),
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "token": payload,
+            },
+        )
+        append_jsonl(
+            self._token_state_log_path(),
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "token": payload,
+            },
+        )
+        atomic_write_json(self._token_path, payload, ensure_ascii=False)
+
+    def _load_token_from_log(self) -> dict[str, Any] | None:
+        log_path = self._token_log_path()
+        if not log_path.exists():
+            return None
+        latest: dict[str, Any] | None = None
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                token = payload.get("token")
+                if isinstance(token, dict) and token.get("access_token"):
+                    latest = token
+        except (OSError, json.JSONDecodeError) as exc:
+            log.warning("Could not replay Outlook token log %s: %s", log_path, exc)
+            return None
+        return latest
+
+    def _load_token_from_state_log(self) -> dict[str, Any] | None:
+        log_path = self._token_state_log_path()
+        if not log_path.exists():
+            return None
+        latest: dict[str, Any] | None = None
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                token = payload.get("token")
+                if isinstance(token, dict) and token.get("access_token"):
+                    latest = token
+        except (OSError, json.JSONDecodeError) as exc:
+            log.warning("Could not replay Outlook token state log %s: %s", log_path, exc)
+            return None
+        return latest
+
     # ------------------------------------------------------------------
     # Token management
     # ------------------------------------------------------------------
@@ -79,19 +141,51 @@ class OutlookBridge:
         # Re-read from disk only when our in-memory cache is empty.
         if not self._token_cache:
             if not self._token_path.exists():
+                replayed = self._load_token_from_state_log()
+                if replayed is not None:
+                    self._token_cache = replayed
+                else:
+                    replayed = self._load_token_from_log()
+                if replayed is not None:
+                    self._token_cache = replayed
+                else:
+                    raise RuntimeError(
+                        f"Outlook delegated token not found at {self._token_path}. "
+                        "Please connect your Microsoft account through the JARVIS UI."
+                    )
+            if not self._token_cache:
+                try:
+                    disk_token = json.loads(self._token_path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError) as exc:
+                    replayed = self._load_token_from_state_log()
+                    if replayed is not None:
+                        self._token_cache = replayed
+                    else:
+                        replayed = self._load_token_from_log()
+                    if replayed is not None:
+                        self._token_cache = replayed
+                    else:
+                        raise RuntimeError(
+                            f"Cannot read Outlook token from {self._token_path}: {exc}"
+                        ) from exc
+                else:
+                    if isinstance(disk_token, dict) and disk_token.get("access_token"):
+                        self._token_cache = disk_token
+                    else:
+                        replayed = self._load_token_from_state_log()
+                        if replayed is not None:
+                            self._token_cache = replayed
+                        else:
+                            replayed = self._load_token_from_log()
+                        if replayed is not None:
+                            self._token_cache = replayed
+                        else:
+                            raise RuntimeError("Outlook token file is empty or malformed.")
+            if not self._token_cache:
                 raise RuntimeError(
-                    f"Outlook delegated token not found at {self._token_path}. "
+                    f"Outlook delegated token not available at {self._token_path}. "
                     "Please connect your Microsoft account through the JARVIS UI."
                 )
-            try:
-                disk_token = json.loads(self._token_path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError) as exc:
-                raise RuntimeError(
-                    f"Cannot read Outlook token from {self._token_path}: {exc}"
-                ) from exc
-            if not isinstance(disk_token, dict) or not disk_token.get("access_token"):
-                raise RuntimeError("Outlook token file is empty or malformed.")
-            self._token_cache = disk_token
 
         token = self._token_cache
 
@@ -159,10 +253,7 @@ class OutlookBridge:
 
         # Persist to disk.
         try:
-            self._token_path.parent.mkdir(parents=True, exist_ok=True)
-            self._token_path.write_text(
-                json.dumps(new_token, indent=2) + "\n", encoding="utf-8"
-            )
+            self._persist_token(new_token)
         except OSError as exc:
             log.warning("Could not persist refreshed Outlook token: %s", exc)
 

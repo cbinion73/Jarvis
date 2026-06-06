@@ -19,6 +19,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .persistence import append_jsonl, atomic_write_json
+
 logger = logging.getLogger("jarvis.family_profiles")
 
 
@@ -661,6 +663,15 @@ class FamilyModeManager:
     # Persistence
     # ------------------------------------------------------------------
 
+    def _mode_path(self) -> Path:
+        return self.ROOT / "mode.json"
+
+    def _mode_log_path(self) -> Path:
+        return self.ROOT / "mode_log.jsonl"
+
+    def _mode_state_log_path(self) -> Path:
+        return self.ROOT / "mode_state_log.jsonl"
+
     def _save_state(self) -> None:
         try:
             self.ROOT.mkdir(parents=True, exist_ok=True)
@@ -670,26 +681,83 @@ class FamilyModeManager:
                 "active_actor": self._active_actor,
                 "saved_at": _now_iso(),
             }
-            mode_path = self.ROOT / "mode.json"
-            mode_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+            append_jsonl(self._mode_log_path(), state, ensure_ascii=False)
+            append_jsonl(self._mode_state_log_path(), state, ensure_ascii=False)
+            atomic_write_json(self._mode_path(), state, ensure_ascii=False)
         except OSError as exc:
             logger.warning("FamilyModeManager: could not save state: %s", exc)
 
     def _load_state(self) -> None:
-        mode_path = self.ROOT / "mode.json"
+        mode_path = self._mode_path()
         if not mode_path.exists():
+            state = self._load_state_from_state_log()
+            if state is not None:
+                self._apply_state(state)
+                return
+            state = self._load_state_from_log()
+            if state is None:
+                return
+            self._apply_state(state)
             return
         try:
             state = json.loads(mode_path.read_text(encoding="utf-8"))
-            loaded_mode = str(state.get("current_mode", "morning")).strip()
-            if loaded_mode in self._modes:
-                self._current_mode = loaded_mode
-            self._mode_since = str(state.get("mode_since", "")).strip()
-            loaded_actor = str(state.get("active_actor", "chris")).strip().lower()
-            if loaded_actor in self._profiles:
-                self._active_actor = loaded_actor
+            if not isinstance(state, dict):
+                state = self._load_state_from_state_log()
+                if state is None:
+                    state = self._load_state_from_log()
+                    if state is None:
+                        return
+            self._apply_state(state)
         except (OSError, json.JSONDecodeError, KeyError) as exc:
             logger.warning("FamilyModeManager: could not load state: %s", exc)
+            state = self._load_state_from_state_log()
+            if state is None:
+                state = self._load_state_from_log()
+            if state is not None:
+                self._apply_state(state)
+
+    def _load_state_from_state_log(self) -> dict | None:
+        log_path = self._mode_state_log_path()
+        if not log_path.exists():
+            return None
+        latest: dict | None = None
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                if isinstance(payload, dict):
+                    latest = payload
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("FamilyModeManager: could not replay state log: %s", exc)
+            return None
+        return latest
+
+    def _load_state_from_log(self) -> dict | None:
+        log_path = self._mode_log_path()
+        if not log_path.exists():
+            return None
+        latest: dict | None = None
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                if isinstance(payload, dict):
+                    latest = payload
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("FamilyModeManager: could not replay state log: %s", exc)
+            return None
+        return latest
+
+    def _apply_state(self, state: dict) -> None:
+        loaded_mode = str(state.get("current_mode", "morning")).strip()
+        if loaded_mode in self._modes:
+            self._current_mode = loaded_mode
+        self._mode_since = str(state.get("mode_since", "")).strip()
+        loaded_actor = str(state.get("active_actor", "chris")).strip().lower()
+        if loaded_actor in self._profiles:
+            self._active_actor = loaded_actor
 
 
 # ---------------------------------------------------------------------------

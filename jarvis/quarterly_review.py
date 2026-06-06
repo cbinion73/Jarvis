@@ -21,9 +21,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json
+
 log = logging.getLogger(__name__)
 
 _OBJECTIVES_PATH = Path.home() / ".jarvis" / "health" / "quarterly_objectives.json"
+_OBJECTIVES_LOG_PATH = _OBJECTIVES_PATH.with_name("quarterly_objectives_log.jsonl")
+_OBJECTIVES_STATE_LOG_PATH = _OBJECTIVES_PATH.with_name("quarterly_objectives_state_log.jsonl")
 _OBJECTIVES_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 # ---------------------------------------------------------------------------
@@ -364,13 +368,20 @@ async def get_current_objectives() -> list[dict]:
     # Check saved objectives file first
     if _OBJECTIVES_PATH.exists():
         try:
-            data = json.loads(_OBJECTIVES_PATH.read_text())
+            data = json.loads(_OBJECTIVES_PATH.read_text(encoding="utf-8"))
             if isinstance(data, list):
                 return data
             if isinstance(data, dict) and "objectives" in data:
                 return data["objectives"]
         except Exception as exc:
             log.warning("Could not load objectives file: %s", exc)
+            replayed = _load_objectives_from_state_log() or _load_objectives_from_log()
+            if replayed:
+                return replayed
+    else:
+        replayed = _load_objectives_from_state_log() or _load_objectives_from_log()
+        if replayed:
+            return replayed
 
     # Fall back to health_state active_goals
     try:
@@ -410,7 +421,9 @@ async def set_objectives(objectives: list[dict]) -> dict:
     }
 
     try:
-        _OBJECTIVES_PATH.write_text(json.dumps(payload, indent=2))
+        atomic_write_json(_OBJECTIVES_PATH, payload)
+        append_jsonl(_OBJECTIVES_LOG_PATH, {"saved_at": payload["saved_at"], "payload": payload})
+        append_jsonl(_OBJECTIVES_STATE_LOG_PATH, {"saved_at": payload["saved_at"], "payload": payload})
     except Exception as exc:
         return {"ok": False, "errors": [str(exc)]}
 
@@ -420,6 +433,46 @@ async def set_objectives(objectives: list[dict]) -> dict:
         "saved_to": str(_OBJECTIVES_PATH),
         "objectives": objectives,
     }
+
+
+def _load_objectives_from_log() -> list[dict]:
+    try:
+        if not _OBJECTIVES_LOG_PATH.exists():
+            return []
+        latest: list[dict] = []
+        for line in _OBJECTIVES_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            entry = json.loads(line)
+            payload = entry.get("payload")
+            if isinstance(payload, dict):
+                objectives = payload.get("objectives")
+                if isinstance(objectives, list):
+                    latest = [dict(item) for item in objectives if isinstance(item, dict)]
+        return latest
+    except Exception as exc:
+        log.warning("Could not replay objectives log: %s", exc)
+        return []
+
+
+def _load_objectives_from_state_log() -> list[dict]:
+    try:
+        if not _OBJECTIVES_STATE_LOG_PATH.exists():
+            return []
+        latest: list[dict] = []
+        for line in _OBJECTIVES_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            entry = json.loads(line)
+            payload = entry.get("payload")
+            if isinstance(payload, dict):
+                objectives = payload.get("objectives")
+                if isinstance(objectives, list):
+                    latest = [dict(item) for item in objectives if isinstance(item, dict)]
+        return latest
+    except Exception as exc:
+        log.warning("Could not replay objectives state log: %s", exc)
+        return []
 
 
 # ---------------------------------------------------------------------------

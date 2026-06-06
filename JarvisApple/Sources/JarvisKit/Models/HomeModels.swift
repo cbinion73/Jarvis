@@ -10,6 +10,9 @@ public struct HomeState: Codable, Sendable {
     public let lightsOn: [String]
     public let alerts: [HomeAlert]
     public let homeContext: HomeContext?
+    public let homeOps: HomeOpsSummary?
+    public let continuity: HomeContinuity?
+    public let whileYouWereAway: WhileYouWereAwayReport?
     public let actionItems: [HomeActionItem]
 
     public init(
@@ -19,6 +22,9 @@ public struct HomeState: Codable, Sendable {
         lightsOn: [String],
         alerts: [HomeAlert],
         homeContext: HomeContext? = nil,
+        homeOps: HomeOpsSummary? = nil,
+        continuity: HomeContinuity? = nil,
+        whileYouWereAway: WhileYouWereAwayReport? = nil,
         actionItems: [HomeActionItem] = []
     ) {
         self.presentMembers = presentMembers
@@ -27,6 +33,9 @@ public struct HomeState: Codable, Sendable {
         self.lightsOn = lightsOn
         self.alerts = alerts
         self.homeContext = homeContext
+        self.homeOps = homeOps
+        self.continuity = continuity
+        self.whileYouWereAway = whileYouWereAway
         self.actionItems = actionItems
     }
 
@@ -37,6 +46,9 @@ public struct HomeState: Codable, Sendable {
         case lightsOn = "lights_on"
         case alerts
         case homeContext = "home_context"
+        case homeOps = "home_ops"
+        case continuity
+        case whileYouWereAway = "while_you_were_away"
         case actionItems = "action_items"
     }
 
@@ -48,8 +60,49 @@ public struct HomeState: Codable, Sendable {
         lightsOn = try container.decode([String].self, forKey: .lightsOn)
         alerts = try container.decode([HomeAlert].self, forKey: .alerts)
         homeContext = try container.decodeIfPresent(HomeContext.self, forKey: .homeContext)
+        homeOps = try container.decodeIfPresent(HomeOpsSummary.self, forKey: .homeOps)
+        continuity = try container.decodeIfPresent(HomeContinuity.self, forKey: .continuity)
+        whileYouWereAway = try container.decodeIfPresent(WhileYouWereAwayReport.self, forKey: .whileYouWereAway)
         actionItems = try container.decodeIfPresent([HomeActionItem].self, forKey: .actionItems) ?? []
     }
+}
+
+public struct HomeContinuity: Codable, Sendable {
+    public let subjectDisplayName: String
+    public let morningRoom: String
+    public let activeMode: String
+    public let primaryRooms: [String]
+    public let guidanceLines: [String]
+    public let profileFactCount: Int
+    public let recentProfileFacts: [HomeContinuityFact]
+    public let recentFirstLight: [HomeContinuityMoment]
+    public let longHorizonLines: [String]
+    public let activeThreads: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case subjectDisplayName = "subject_display_name"
+        case morningRoom = "morning_room"
+        case activeMode = "active_mode"
+        case primaryRooms = "primary_rooms"
+        case guidanceLines = "guidance_lines"
+        case profileFactCount = "profile_fact_count"
+        case recentProfileFacts = "recent_profile_facts"
+        case recentFirstLight = "recent_first_light"
+        case longHorizonLines = "long_horizon_lines"
+        case activeThreads = "active_threads"
+    }
+}
+
+public struct HomeContinuityFact: Codable, Identifiable, Sendable {
+    public let id: String
+    public let title: String
+    public let summary: String
+}
+
+public struct HomeContinuityMoment: Codable, Identifiable, Sendable {
+    public let id: String
+    public let label: String
+    public let summary: String
 }
 
 public struct HomeActionItem: Codable, Identifiable, Sendable {
@@ -112,6 +165,86 @@ public struct HomeProjectsContext: Codable, Sendable {
         case publishingProjectCount = "publishing_project_count"
         case activeWorkItemsCount = "active_work_items_count"
         case topTitles = "top_titles"
+    }
+}
+
+public struct HomeOpsSummary: Codable, Sendable {
+    public let email: HomeEmailOps
+    public let tasks: HomeTaskOps
+    public let calendar: HomeCalendarOps
+    public let projects: HomeProjectOps
+    public let sync: HomeSyncOps
+}
+
+public struct HomeEmailOps: Codable, Sendable {
+    public let gmailUnread: Int
+    public let outlookUnread: Int
+    public let totalUnread: Int
+    public let flaggedTotal: Int
+
+    enum CodingKeys: String, CodingKey {
+        case gmailUnread = "gmail_unread"
+        case outlookUnread = "outlook_unread"
+        case totalUnread = "total_unread"
+        case flaggedTotal = "flagged_total"
+    }
+}
+
+public struct HomeTaskOps: Codable, Sendable {
+    public let openCount: Int
+    public let overdueCount: Int
+    public let dueTodayCount: Int
+    public let dueThisWeekCount: Int
+    public let topTitles: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case openCount = "open_count"
+        case overdueCount = "overdue_count"
+        case dueTodayCount = "due_today_count"
+        case dueThisWeekCount = "due_this_week_count"
+        case topTitles = "top_titles"
+    }
+}
+
+public struct HomeCalendarOps: Codable, Sendable {
+    public let todayCount: Int
+    public let upcomingCount: Int
+    public let nextTitle: String
+    public let nextStart: String
+    public let nextLocation: String
+
+    enum CodingKeys: String, CodingKey {
+        case todayCount = "today_count"
+        case upcomingCount = "upcoming_count"
+        case nextTitle = "next_title"
+        case nextStart = "next_start"
+        case nextLocation = "next_location"
+    }
+}
+
+public struct HomeProjectOps: Codable, Sendable {
+    public let activeCount: Int
+    public let stalledCount: Int
+    public let totalCount: Int
+    public let topTitles: [String]
+    public let unclassifiedSignalCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case activeCount = "active_count"
+        case stalledCount = "stalled_count"
+        case totalCount = "total_count"
+        case topTitles = "top_titles"
+        case unclassifiedSignalCount = "unclassified_signal_count"
+    }
+}
+
+public struct HomeSyncOps: Codable, Sendable {
+    public let connectedSources: [String]
+    public let attentionSources: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case connectedSources = "connected_sources"
+        case attentionSources = "attention_sources"
     }
 }
 

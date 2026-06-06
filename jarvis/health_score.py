@@ -21,12 +21,19 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_jsonl
+
 # ── Data paths ────────────────────────────────────────────────────────────────
 JOURNAL_LOG   = Path("data/logs/sam_daily_journal.jsonl")
 ADHERENCE_LOG = Path("data/logs/sam_adherence.jsonl")
+ADHERENCE_STATE_LOG = ADHERENCE_LOG.with_name("sam_adherence_state_log.jsonl")
+JOURNAL_STATE_LOG   = JOURNAL_LOG.with_name("sam_daily_journal_state_log.jsonl")
 NUTRITION_LOG = Path.home() / ".jarvis/health/nutrition_log.jsonl"
+NUTRITION_STATE_LOG = NUTRITION_LOG.with_name("nutrition_log_state_log.jsonl")
 SLEEP_LOG     = Path.home() / ".jarvis/health/sleep_log.jsonl"
+SLEEP_STATE_LOG = SLEEP_LOG.with_name("sleep_log_state_log.jsonl")
 SCORE_LOG     = Path("data/logs/health_scores.jsonl")
+SCORE_STATE_LOG = SCORE_LOG.with_name("health_scores_state_log.jsonl")
 
 # High-glycemic food keywords
 HIGH_GLYCEMIC = {"pizza", "cake", "candy", "ice cream", "donut", "chips", "soda", "fries"}
@@ -37,7 +44,7 @@ def _read_jsonl_by_date(path: Path, date_str: str) -> dict:
     """Read a JSONL file and return the record matching date_str, or {}."""
     try:
         if not path.exists():
-            return {}
+            return _read_state_log_by_date(path, date_str)
         for line in path.read_text(encoding="utf-8").splitlines():
             line = line.strip()
             if not line:
@@ -50,7 +57,88 @@ def _read_jsonl_by_date(path: Path, date_str: str) -> dict:
                 continue
     except Exception:
         pass
+    return _read_state_log_by_date(path, date_str)
+
+
+def _read_state_log_by_date(path: Path, date_str: str) -> dict:
+    if path == JOURNAL_LOG:
+        log_path = JOURNAL_STATE_LOG
+    elif path == ADHERENCE_LOG:
+        log_path = ADHERENCE_STATE_LOG
+    elif path == NUTRITION_LOG:
+        log_path = NUTRITION_STATE_LOG
+    elif path == SLEEP_LOG:
+        log_path = SLEEP_STATE_LOG
+    elif path == SCORE_LOG:
+        log_path = SCORE_STATE_LOG
+    else:
+        return {}
+    if not log_path.exists():
+        return {}
+    try:
+        latest: list[dict] = []
+        for line in log_path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            records = payload.get("records")
+            if isinstance(records, list):
+                latest = [dict(item) for item in records if isinstance(item, dict)]
+        for obj in latest:
+            if obj.get("date") == date_str:
+                return obj
+    except Exception:
+        return {}
     return {}
+
+
+def _load_score_records() -> list[dict]:
+    try:
+        if SCORE_LOG.exists():
+            records: list[dict] = []
+            for line in SCORE_LOG.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except Exception:
+                    continue
+                if isinstance(obj, dict):
+                    records.append(obj)
+            if records:
+                return records
+    except Exception:
+        pass
+    return _load_score_records_from_state_log()
+
+
+def _load_score_records_from_state_log() -> list[dict]:
+    if not SCORE_STATE_LOG.exists():
+        return []
+    try:
+        latest: list[dict] = []
+        for line in SCORE_STATE_LOG.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            records = payload.get("records")
+            if isinstance(records, list):
+                latest = [dict(item) for item in records if isinstance(item, dict)]
+        return latest
+    except Exception:
+        return []
+
+
+def _persist_score_records(records: list[dict]) -> None:
+    SCORE_LOG.parent.mkdir(parents=True, exist_ok=True)
+    append_jsonl(
+        SCORE_STATE_LOG,
+        {
+            "records": records,
+        },
+    )
+    atomic_write_jsonl(SCORE_LOG, records)
 
 
 def _load_journal(date_str: str) -> dict:
@@ -467,27 +555,19 @@ def compute_daily_score(date_str: str) -> dict:
 def upsert_score(entry: dict) -> None:
     """Append or update a score entry in SCORE_LOG (JSONL, upserted by date)."""
     try:
-        SCORE_LOG.parent.mkdir(parents=True, exist_ok=True)
         date_str = entry.get("date", "")
-        lines: list[str] = []
+        records = _load_score_records()
+        updated_records: list[dict] = []
         updated = False
-        if SCORE_LOG.exists():
-            for line in SCORE_LOG.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    obj = json.loads(line)
-                    if obj.get("date") == date_str:
-                        lines.append(json.dumps(entry))
-                        updated = True
-                    else:
-                        lines.append(line)
-                except Exception:
-                    lines.append(line)
+        for obj in records:
+            if obj.get("date") == date_str:
+                updated_records.append(entry)
+                updated = True
+            else:
+                updated_records.append(obj)
         if not updated:
-            lines.append(json.dumps(entry))
-        SCORE_LOG.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            updated_records.append(entry)
+        _persist_score_records(updated_records)
     except Exception:
         pass
 
@@ -505,18 +585,10 @@ def get_score_history(days: int = 30) -> list[dict]:
 
         # Load cache index
         cache: dict[str, dict] = {}
-        if SCORE_LOG.exists():
-            for line in SCORE_LOG.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    obj = json.loads(line)
-                    d = obj.get("date")
-                    if d:
-                        cache[d] = obj
-                except Exception:
-                    continue
+        for obj in _load_score_records():
+            d = obj.get("date")
+            if d:
+                cache[d] = obj
 
         for i in range(days - 1, -1, -1):
             d = (today - timedelta(days=i)).isoformat()

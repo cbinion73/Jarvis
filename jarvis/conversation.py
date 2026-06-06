@@ -5,6 +5,9 @@ import uuid
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
+
+from .persistence import append_jsonl, atomic_write_json
 
 
 def _now_iso() -> str:
@@ -21,11 +24,92 @@ class ConversationStore:
 
     def _load_json(self, path: Path, default: object) -> object:
         if not path.exists():
-            return default
-        return json.loads(path.read_text(encoding="utf-8"))
+            payload = self._load_json_from_state_log(path, default)
+            if payload != default:
+                return payload
+            return self._load_json_from_log(path, default)
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            payload = self._load_json_from_state_log(path, default)
+            if payload != default:
+                return payload
+            return self._load_json_from_log(path, default)
+        if payload == default:
+            replayed = self._load_json_from_state_log(path, default)
+            if replayed != default:
+                return replayed
+            return self._load_json_from_log(path, default)
+        return payload
 
     def _save_json(self, path: Path, payload: object) -> None:
-        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(path, payload)
+        append_jsonl(
+            self._log_path(path),
+            {
+                "saved_at": _now_iso(),
+                "records": payload,
+            },
+        )
+        append_jsonl(
+            self._state_log_path(path),
+            {
+                "saved_at": _now_iso(),
+                "records": payload,
+            },
+        )
+
+    def _log_path(self, path: Path) -> Path:
+        if path == self.index_path:
+            return self.root / "index_log.jsonl"
+        return path.with_suffix(".log.jsonl")
+
+    def _state_log_path(self, path: Path) -> Path:
+        if path == self.index_path:
+            return self.root / "index_state_log.jsonl"
+        return path.with_suffix(".state_log.jsonl")
+
+    def _load_json_from_log(self, path: Path, default: object) -> object:
+        log_path = self._log_path(path)
+        if not log_path.exists():
+            return default
+        latest: object = default
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                latest = payload.get("records", default)
+        except (OSError, json.JSONDecodeError):
+            return default
+        if isinstance(default, dict):
+            return dict(latest) if isinstance(latest, dict) else default
+        if isinstance(default, list):
+            if not isinstance(latest, list):
+                return default
+            return [dict(item) if isinstance(item, dict) else item for item in latest]
+        return latest
+
+    def _load_json_from_state_log(self, path: Path, default: object) -> object:
+        log_path = self._state_log_path(path)
+        if not log_path.exists():
+            return default
+        latest: object = default
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                latest = payload.get("records", default)
+        except (OSError, json.JSONDecodeError):
+            return default
+        if isinstance(default, dict):
+            return dict(latest) if isinstance(latest, dict) else default
+        if isinstance(default, list):
+            if not isinstance(latest, list):
+                return default
+            return [dict(item) if isinstance(item, dict) else item for item in latest]
+        return latest
 
     def _index(self) -> list[dict]:
         if self._index_cache is None:

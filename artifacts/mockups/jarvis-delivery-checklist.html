@@ -1,0 +1,1160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Delivery Checklist</title>
+  <style>
+    :root {
+      --bg: #051018;
+      --bg-2: #081522;
+      --panel: rgba(10, 20, 31, 0.9);
+      --panel-2: rgba(14, 27, 41, 0.88);
+      --line: rgba(132, 189, 224, 0.14);
+      --line-strong: rgba(132, 189, 224, 0.3);
+      --text: #eef7fd;
+      --muted: #90a7bb;
+      --cyan: #68d1dc;
+      --blue: #8cb8ff;
+      --green: #69d59d;
+      --amber: #efb86b;
+      --red: #ff8f8f;
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+      --radius-xl: 26px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --font-ui: "SF Pro Display", "Segoe UI", sans-serif;
+      --font-mono: "SF Mono", "JetBrains Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font-ui);
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(104, 209, 220, 0.14), transparent 28%),
+        radial-gradient(circle at top right, rgba(140, 184, 255, 0.12), transparent 24%),
+        linear-gradient(180deg, var(--bg) 0%, #03080e 100%);
+    }
+
+    button, input { font: inherit; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      padding: 26px 22px;
+      border-right: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(6, 13, 22, 0.98), rgba(6, 13, 22, 0.9));
+      backdrop-filter: blur(18px);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(104, 209, 220, 0.26);
+      color: var(--cyan);
+      background: rgba(104, 209, 220, 0.08);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: currentColor;
+      box-shadow: 0 0 14px currentColor;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+
+    h1 {
+      margin-top: 14px;
+      font-size: 32px;
+      line-height: 0.96;
+      letter-spacing: -0.04em;
+    }
+
+    .muted, .note, .meta { color: var(--muted); }
+
+    .sidebar-copy {
+      margin: 12px 0 20px;
+      line-height: 1.55;
+    }
+
+    .stats {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .stat {
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.035);
+      box-shadow: var(--shadow);
+    }
+
+    .stat strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 25px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav a {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 12px;
+      border-radius: 12px;
+      color: var(--text);
+      text-decoration: none;
+      border: 1px solid transparent;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .nav a:hover,
+    .nav a:focus-visible {
+      border-color: var(--line);
+      background: rgba(255, 255, 255, 0.05);
+      outline: none;
+    }
+
+    .nav-count {
+      min-width: 26px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    main {
+      padding: 30px;
+    }
+
+    .hero,
+    .impact,
+    .toolbar,
+    .section {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: linear-gradient(180deg, rgba(10, 19, 30, 0.94), rgba(8, 15, 24, 0.92));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .hero {
+      padding: 28px;
+      margin-bottom: 18px;
+    }
+
+    .impact {
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+
+    .impact-head {
+      margin-bottom: 16px;
+    }
+
+    .impact-head h2 {
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 10px;
+    }
+
+    .impact-head p {
+      color: var(--muted);
+      line-height: 1.6;
+      max-width: 72ch;
+    }
+
+    .impact-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .impact-card {
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(104, 209, 220, 0.16);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .impact-card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--blue);
+    }
+
+    .impact-card p + p {
+      margin-top: 10px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.9fr);
+      gap: 18px;
+    }
+
+    .hero h2 {
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 10px;
+    }
+
+    .hero .headline {
+      font-size: 36px;
+      line-height: 1;
+      letter-spacing: -0.05em;
+      margin-bottom: 12px;
+    }
+
+    .hero .summary {
+      color: var(--muted);
+      line-height: 1.6;
+      max-width: 64ch;
+    }
+
+    .hero-card {
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(104, 209, 220, 0.16);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .hero-card + .hero-card {
+      margin-top: 12px;
+    }
+
+    .hero-card strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--blue);
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 18px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .search {
+      flex: 1 1 320px;
+      max-width: 480px;
+      position: relative;
+    }
+
+    .search input {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 12px;
+      outline: none;
+    }
+
+    .filters {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--muted);
+      padding: 9px 12px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
+    .chip.active {
+      color: var(--text);
+      border-color: rgba(104, 209, 220, 0.3);
+      background: rgba(104, 209, 220, 0.12);
+    }
+
+    .sections {
+      display: grid;
+      gap: 18px;
+    }
+
+    .section {
+      padding: 22px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .section-head h3 {
+      font-size: 24px;
+      letter-spacing: -0.03em;
+    }
+
+    .section-head p {
+      margin-top: 6px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .section-count {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .items {
+      display: grid;
+      gap: 12px;
+    }
+
+    .item {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 14px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.02));
+      align-items: start;
+      scroll-margin-top: 24px;
+    }
+
+    .item.hidden {
+      display: none;
+    }
+
+    .item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin-top: 2px;
+      accent-color: #6ad89f;
+      cursor: pointer;
+    }
+
+    .item.done {
+      border-color: rgba(105, 213, 157, 0.24);
+      background: linear-gradient(180deg, rgba(105, 213, 157, 0.09), rgba(105, 213, 157, 0.03));
+    }
+
+    .item.done .title {
+      text-decoration: line-through;
+      color: rgba(238, 247, 253, 0.72);
+    }
+
+    .item-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+
+    .item-id {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--blue);
+      background: rgba(140, 184, 255, 0.08);
+      padding: 4px 8px;
+      border-radius: 999px;
+    }
+
+    .status {
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+    }
+
+    .status.open { color: var(--amber); background: rgba(239, 184, 107, 0.12); border-color: rgba(239, 184, 107, 0.2); }
+    .status.active { color: var(--cyan); background: rgba(104, 209, 220, 0.12); border-color: rgba(104, 209, 220, 0.22); }
+    .status.next { color: var(--blue); background: rgba(140, 184, 255, 0.12); border-color: rgba(140, 184, 255, 0.22); }
+    .status.blocked { color: var(--red); background: rgba(255, 143, 143, 0.12); border-color: rgba(255, 143, 143, 0.22); }
+    .status.done { color: var(--green); background: rgba(105, 213, 157, 0.12); border-color: rgba(105, 213, 157, 0.22); }
+
+    .title {
+      font-size: 17px;
+      line-height: 1.35;
+      letter-spacing: -0.02em;
+    }
+
+    .detail {
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: end;
+    }
+
+    .action {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--muted);
+      padding: 8px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .action:hover,
+    .action:focus-visible {
+      color: var(--text);
+      border-color: var(--line-strong);
+      outline: none;
+    }
+
+    .footnote {
+      margin-top: 20px;
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(104, 209, 220, 0.16);
+      background: rgba(104, 209, 220, 0.05);
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    @media (max-width: 980px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .hero-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .impact-grid {
+        grid-template-columns: 1fr;
+      }
+
+      main {
+        padding: 18px;
+      }
+
+      .item {
+        grid-template-columns: auto minmax(0, 1fr);
+      }
+
+      .item-actions {
+        grid-column: 2;
+        justify-content: start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="eyebrow">Backend Builder + Agent Society Mode</div>
+      <h1>JARVIS Delivery Checklist</h1>
+      <p class="sidebar-copy">
+        This board operationalizes the civilization-scale roadmap into the next
+        concrete backend, runtime, and agent-society build sequence. It is
+        narrower than the master roadmap, but it now follows the same
+        governing order and explicitly includes how BMAD and OpenClaw fit into
+        JARVIS.
+      </p>
+
+      <div class="stats">
+        <div class="stat">
+          <strong id="stat-total">0</strong>
+          <span class="muted">Total items</span>
+        </div>
+        <div class="stat">
+          <strong id="stat-done">0</strong>
+          <span class="muted">Completed</span>
+        </div>
+        <div class="stat">
+          <strong id="stat-open">0</strong>
+          <span class="muted">Still open</span>
+        </div>
+      </div>
+
+      <nav class="nav" id="nav"></nav>
+
+      <div class="footnote">
+        Canonical order:
+        <br>`jarvis-canonical-operating-model.md`
+        <br>`JARVIS-CIVILIZATION-SCALE-MASTER-ROADMAP.md`
+        <br>`always-on-agent-backend-blueprint.md`
+        <br><br>
+        Current truth:
+        <br>foundation and native PR work are merged, production is live, and
+        the next real leverage is shared-state truth, governed execution, and
+        a real planning/execution society under JARVIS.
+      </div>
+    </aside>
+
+    <main>
+      <section class="hero">
+        <div class="hero-grid">
+          <div>
+            <h2>Current Objective</h2>
+            <div class="headline">Build the load-bearing backend and agent society that make the JARVIS civilization real.</div>
+            <p class="summary">
+              The foundation is no longer theoretical: production is live, the
+              iPhone app is pointed at the hosted system, and the canonical docs
+              now agree on the destination. The next job is to finish the
+              shared-state spine, trust-zone execution truth, safe persistence,
+              the event-grounded runtime, and the governed handoff between
+              structured cognition and operational execution that make the
+              civilization model real.
+            </p>
+          </div>
+
+          <div>
+            <div class="hero-card">
+              <strong>Already True</strong>
+              Orchestrator and native foundation work are merged. Production is
+              live behind Cloudflare. Zero-state launch and explicit permission
+              ownership are already proven.
+            </div>
+            <div class="hero-card">
+              <strong>Highest Leverage</strong>
+              Finish shared-state truth in the native client, then build the
+              load-bearing backend systems in the roadmap order, then bind BMAD
+              reasoning and OpenClaw execution into one governed runtime instead
+              of widening surface area first.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="toolbar">
+        <div class="search">
+          <input id="search" type="search" placeholder="Search by ID, title, or detail">
+        </div>
+        <div class="filters">
+          <button class="chip active" data-filter="all">All</button>
+          <button class="chip" data-filter="open">Open</button>
+          <button class="chip" data-filter="active">Active</button>
+          <button class="chip" data-filter="next">Next</button>
+          <button class="chip" data-filter="blocked">Blocked</button>
+          <button class="chip" data-filter="done">Done</button>
+        </div>
+      </section>
+
+      <section class="impact">
+        <div class="impact-head">
+          <h2>Plain-English Impact</h2>
+          <p>
+            This is the bridge between backend work and the actual product.
+            It explains what changed in the system, what that affects in JARVIS,
+            and why the work matters before you read the detailed build lanes.
+          </p>
+        </div>
+        <div class="impact-grid">
+          <article class="impact-card">
+            <strong>Backend Change</strong>
+            <p>Core runtime state, mission state, approvals, trust records, agent work logs, and the scheduler queue are being hardened onto shared safe persistence and governed execution paths.</p>
+            <p>The approval layer now carries trust metadata and can block approved actions when supervision says they are forbidden or sandbox-only.</p>
+          </article>
+          <article class="impact-card">
+            <strong>Agent Society Change</strong>
+            <p>BMAD is being treated as the structured cognition layer for planning, critique, architecture, and review. OpenClaw is being treated as the operational execution layer for action, tools, and environment work.</p>
+            <p>JARVIS remains the governed orchestrator over both, so planning and execution can collaborate without bypassing trust zones, approvals, or promotion rules.</p>
+          </article>
+          <article class="impact-card">
+            <strong>Affects In JARVIS</strong>
+            <p>JARVIS is less likely to lose queued work, corrupt agent state, or show a UI that disagrees with what the backend believes is happening.</p>
+            <p>Phone and web surfaces get more truthful answers about what agents are doing, what needs approval, what is actually safe to run, and which agents are thinking versus acting.</p>
+          </article>
+          <article class="impact-card">
+            <strong>Why It Matters</strong>
+            <p>This is what turns JARVIS from a powerful prototype into an always-on orchestrator the household can trust.</p>
+            <p>Without durable state, real trust enforcement, and a governed planning/execution society, the civilization model stays theatrical. With them, autonomy can become earned, governed, and eventually household-safe.</p>
+          </article>
+        </div>
+      </section>
+
+      <div class="sections" id="sections">
+        <section class="section" id="section-1" data-title="1. Runtime Truth">
+          <div class="section-head">
+            <div>
+              <h3>1. Runtime Truth</h3>
+              <p>Lock in what is already real so the roadmap builds on verified product and deployment truth instead of planning drift.</p>
+            </div>
+            <div class="section-count" data-count></div>
+          </div>
+          <div class="items">
+            <article class="item" id="item-1-1" data-status="done">
+              <input type="checkbox" checked>
+              <div>
+                <div class="item-top">
+                  <span class="item-id">1.1</span>
+                  <span class="status done">Done</span>
+                </div>
+                <div class="title">Foundation and native integration are merged</div>
+                <div class="detail">The orchestrator foundation and Apple/native launch-flow work are no longer branch theory. They are merged and should now be treated as the base layer.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Foundation plus native launch flow are merged">Copy</button>
+              </div>
+            </article>
+
+            <article class="item" id="item-1-2" data-status="done">
+              <input type="checkbox" checked>
+              <div>
+                <div class="item-top">
+                  <span class="item-id">1.2</span>
+                  <span class="status done">Done</span>
+                </div>
+                <div class="title">Production backend is live and Cloudflare-protected</div>
+                <div class="detail">Hosted `status`, `app-state`, `focus-state`, and `systems/admin-summary` are now part of live product truth, not just local verification.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Production backend and Cloudflare path are verified">Copy</button>
+              </div>
+            </article>
+
+            <article class="item" id="item-1-3" data-status="active">
+              <input type="checkbox">
+              <div>
+                <div class="item-top">
+                  <span class="item-id">1.3</span>
+                  <span class="status active">Active</span>
+                </div>
+                <div class="title">Finish the real Systems client truth path</div>
+                <div class="detail">The hosted backend is healthy, but the iPhone Systems banner is still red. Close that final client-side gap so shared-state truth is visible, not merely present.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Finish the Systems client truth path">Copy</button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="section-2" data-title="2. Shared-State Spine">
+          <div class="section-head">
+            <div>
+              <h3>2. Shared-State Intelligence Surfaces</h3>
+              <p>Complete the phase where JARVIS feels like one running system across phone, backend, and household state instead of separate screens with separate truths.</p>
+            </div>
+            <div class="section-count" data-count></div>
+          </div>
+          <div class="items">
+            <article class="item" id="item-2-1" data-status="done">
+              <input type="checkbox" checked>
+              <div>
+                <div class="item-top">
+                  <span class="item-id">2.1</span>
+                  <span class="status done">Done</span>
+                </div>
+                <div class="title">Prove calm first-run behavior</div>
+                <div class="detail">Fresh simulator launch has already been proven to open directly into the real command surface with no startup permission wall.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Zero-state simulator: no startup permission wall">Copy</button>
+              </div>
+            </article>
+
+            <article class="item" id="item-2-2" data-status="done">
+              <input type="checkbox" checked>
+              <div>
+                <div class="item-top">
+                  <span class="item-id">2.2</span>
+                  <span class="status done">Done</span>
+                </div>
+                <div class="title">Own calendar and reminders through explicit sync</div>
+                <div class="detail">The Systems sync action owns the EventKit ask instead of hidden startup paths, which keeps shared-state ingestion governed.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Calendar/reminders prompt only from explicit sync action">Copy</button>
+              </div>
+            </article>
+
+            <article class="item" id="item-2-3" data-status="done">
+              <input type="checkbox" checked>
+              <div>
+                <div class="item-top">
+                  <span class="item-id">2.3</span>
+                  <span class="status done">Done</span>
+                </div>
+                <div class="title">Own health sync through explicit action</div>
+                <div class="detail">Health sync is no longer launch-driven and remains governed by intentional user entry into the sync flow.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Health prompt only from explicit sync action">Copy</button>
+              </div>
+            </article>
+
+            <article class="item" id="item-2-4" data-status="done">
+              <input type="checkbox" checked>
+              <div>
+                <div class="item-top">
+                  <span class="item-id">2.4</span>
+                  <span class="status done">Done</span>
+                </div>
+                <div class="title">Own notifications through explicit opt-in</div>
+                <div class="detail">The Systems screen now shows notification status and a deliberate action to enable, register, or open Settings instead of prompting on launch.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Notifications now have explicit opt-in in Systems">Copy</button>
+              </div>
+            </article>
+
+            <article class="item" id="item-2-5" data-status="active">
+              <input type="checkbox">
+              <div>
+                <div class="item-top">
+                  <span class="item-id">2.5</span>
+                  <span class="status active">Active</span>
+                </div>
+                <div class="title">Make the Systems surface reflect live backend truth immediately</div>
+                <div class="detail">The backend is already healthy. The next shared-state milestone is that the Systems surface promotes itself to healthy as soon as the essential hosted reads succeed.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Systems should flip healthy as soon as essential hosted reads succeed">Copy</button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="section-3" data-title="3. Trust-Zone Control Plane">
+          <div class="section-head">
+            <div>
+              <h3>3. Trust-Zone Control Plane</h3>
+              <p>Turn doctrine into live execution truth so the civilization is governed in code, not merely described in documents.</p>
+            </div>
+            <div class="section-count" data-count></div>
+          </div>
+          <div class="items">
+            <article class="item" id="item-3-1" data-status="open">
+            <article class="item" id="item-3-1" data-status="active">
+              <input type="checkbox">
+              <div>
+                <div class="item-top">
+                  <span class="item-id">3.1</span>
+                  <span class="status active">Active</span>
+                </div>
+                <div class="title">Implement live trust-zone registry and authority-stage controls</div>
+                <div class="detail">The UI and doctrine already point here; now consequential actions need live bounded authority, scope, escalation, and execution blocking in code. The approval gate is now partially wired into this path and needs broader trust metadata coverage.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Implement trust-zone registry and authority-stage controls">Copy</button>
+              </div>
+            </article>
+
+            <article class="item" id="item-3-2" data-status="open">
+              <input type="checkbox">
+              <div>
+                <div class="item-top">
+                  <span class="item-id">3.2</span>
+                  <span class="status open">Open</span>
+                </div>
+                <div class="title">Add live explainability, audit, and escalation records</div>
+                <div class="detail">Every meaningful action should show why it was allowed, what scope it operated in, and what happens when it cannot proceed autonomously.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Add live explainability, audit, and escalation records">Copy</button>
+              </div>
+            </article>
+
+            <article class="item" id="item-3-3" data-status="open">
+              <input type="checkbox">
+              <div>
+                <div class="item-top">
+                  <span class="item-id">3.3</span>
+                  <span class="status open">Open</span>
+                </div>
+                <div class="title">Add rollback and pause posture for governed action</div>
+                <div class="detail">Governance stops being theater only when JARVIS can safely pause, stage, reverse, or escalate instead of always pretending to succeed.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Add rollback and pause posture for governed action">Copy</button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="section-4" data-title="4. Event Spine and Runtime">
+          <div class="section-head">
+            <div>
+              <h3>4. Event Spine and Agent Runtime</h3>
+              <p>Build the load-bearing backend systems that make an always-on agent society trustworthy, replayable, and safe under concurrency.</p>
+            </div>
+            <div class="section-count" data-count></div>
+          </div>
+          <div class="items">
+            <article class="item" id="item-4-1" data-status="next">
+              <input type="checkbox" checked>
+              <div>
+                <div class="item-top">
+                  <span class="item-id">4.1</span>
+                  <span class="status done">Done</span>
+                </div>
+                <div class="title">Make concurrency-safe persistence non-optional</div>
+                <div class="detail">The orchestrator core now uses shared locked persistence across runtime state, mission state, approvals, trust records, agent work logs, and the scheduler queue. This closes the first major silent-corruption seam under multi-agent load.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Make concurrency-safe persistence non-optional">Copy</button>
+              </div>
+            </article>
+
+            <article class="item" id="item-4-2" data-status="open">
+              <input type="checkbox">
+              <div>
+                <div class="item-top">
+                  <span class="item-id">4.2</span>
+                  <span class="status open">Open</span>
+                </div>
+                <div class="title">Make the event log a first-class system primitive</div>
+                <div class="detail">State should increasingly be derived from typed, versioned history so JARVIS can explain, replay, supervise, and eventually learn from what it has done.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Make the event log a first-class system primitive">Copy</button>
+              </div>
+            </article>
+
+            <article class="item" id="item-4-3" data-status="open">
+              <input type="checkbox">
+              <div>
+                <div class="item-top">
+                  <span class="item-id">4.3</span>
+                  <span class="status open">Open</span>
+                </div>
+                <div class="title">Complete agent inbox, outbox, handoff, and worklog truth</div>
+                <div class="detail">The civilization becomes real when delegated work survives interruption, review, duplication pressure, and resumption across multiple specialized agents.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Complete agent inbox, outbox, handoff, and worklog truth">Copy</button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="section-5" data-title="5. Promotion and Household Civilization">
+          <div class="section-head">
+            <div>
+              <h3>5. Promotion and Household Civilization</h3>
+              <p>After runtime, shared-state, and governance truth are real, JARVIS can begin earning authority and becoming household-operable at a deeper level.</p>
+            </div>
+            <div class="section-count" data-count></div>
+          </div>
+          <div class="items">
+            <article class="item" id="item-5-1" data-status="next">
+              <input type="checkbox">
+              <div>
+                <div class="item-top">
+                  <span class="item-id">5.1</span>
+                  <span class="status next">Next</span>
+                </div>
+                <div class="title">Make the promotion engine real enough to govern sandbox-to-live progression</div>
+                <div class="detail">Track record, evidence thresholds, human consent boundaries, and promotion records need to become operational instead of remaining roadmap-only concepts.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Make the promotion engine govern sandbox-to-live progression">Copy</button>
+              </div>
+            </article>
+
+            <article class="item" id="item-5-2" data-status="open">
+              <input type="checkbox">
+              <div>
+                <div class="item-top">
+                  <span class="item-id">5.2</span>
+                  <span class="status open">Open</span>
+                </div>
+                <div class="title">Expand household-operable participation without collapsing into builder dependence</div>
+                <div class="detail">The next civilization test is not just what Chris can operate. It is whether the household can benefit directly through bounded, role-aware, trusted participation.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Expand household-operable participation without builder dependence">Copy</button>
+              </div>
+            </article>
+
+            <article class="item" id="item-5-3" data-status="open">
+              <input type="checkbox">
+              <div>
+                <div class="item-top">
+                  <span class="item-id">5.3</span>
+                  <span class="status open">Open</span>
+                </div>
+                <div class="title">Turn institutional memory into active household continuity</div>
+                <div class="detail">Memory must graduate from storage to lived continuity: prior resolutions, patterns, rituals, and lessons should actually improve how the household operates.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Turn institutional memory into active household continuity">Copy</button>
+              </div>
+            </article>
+
+            <article class="item" id="item-5-4" data-status="open">
+              <input type="checkbox">
+              <div>
+                <div class="item-top">
+                  <span class="item-id">5.4</span>
+                  <span class="status open">Open</span>
+                </div>
+                <div class="title">Make the household civilization inspectable across planning, execution, and review</div>
+                <div class="detail">The household should eventually be able to see which agents planned, which agents executed, what was reviewed, and how authority was earned over time without needing builder fluency.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Make the household civilization inspectable across planning, execution, and review">Copy</button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="section-6" data-title="6. BMAD + OpenClaw Society">
+          <div class="section-head">
+            <div>
+              <h3>6. BMAD + OpenClaw Society</h3>
+              <p>Bind structured cognition and operational execution into one governed JARVIS runtime so the system gets closer to real agent collaboration instead of isolated tools or personalities.</p>
+            </div>
+            <div class="section-count" data-count></div>
+          </div>
+          <div class="items">
+            <article class="item" id="item-6-1" data-status="next">
+              <input type="checkbox">
+              <div>
+                <div class="item-top">
+                  <span class="item-id">6.1</span>
+                  <span class="status next">Next</span>
+                </div>
+                <div class="title">Register BMAD as the structured cognition layer inside JARVIS</div>
+                <div class="detail">Planning, architecture, critique, product reasoning, and review should become first-class governed agent roles in the registry instead of feeling like external helpers.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Register BMAD as the structured cognition layer inside JARVIS">Copy</button>
+              </div>
+            </article>
+
+            <article class="item" id="item-6-2" data-status="open">
+              <input type="checkbox">
+              <div>
+                <div class="item-top">
+                  <span class="item-id">6.2</span>
+                  <span class="status open">Open</span>
+                </div>
+                <div class="title">Register OpenClaw as the governed execution layer inside JARVIS</div>
+                <div class="detail">Operational tool use, environment work, and task loops should become first-class execution lanes that JARVIS can route into under trust-zone and sandbox policy.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Register OpenClaw as the governed execution layer inside JARVIS">Copy</button>
+              </div>
+            </article>
+
+            <article class="item" id="item-6-3" data-status="open">
+              <input type="checkbox">
+              <div>
+                <div class="item-top">
+                  <span class="item-id">6.3</span>
+                  <span class="status open">Open</span>
+                </div>
+                <div class="title">Build planner-executor-reviewer-supervisor handoff truth</div>
+                <div class="detail">JARVIS should know when a BMAD-style planner hands work to an OpenClaw-style executor, when it returns for review, and when a supervisor must intervene or promote doctrine.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Build planner-executor-reviewer-supervisor handoff truth">Copy</button>
+              </div>
+            </article>
+
+            <article class="item" id="item-6-4" data-status="open">
+              <input type="checkbox">
+              <div>
+                <div class="item-top">
+                  <span class="item-id">6.4</span>
+                  <span class="status open">Open</span>
+                </div>
+                <div class="title">Measure and promote agent combinations instead of isolated agents</div>
+                <div class="detail">The road toward AGI-adjacent behavior here is not one bigger agent. It is a governed society whose planner/executor/reviewer combinations can be measured, improved, and eventually promoted through evidence.</div>
+              </div>
+              <div class="item-actions">
+                <button class="action" data-copy="Measure and promote planner-executor-reviewer combinations">Copy</button>
+              </div>
+            </article>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "jarvis-delivery-checklist-v2";
+    const items = Array.from(document.querySelectorAll(".item"));
+    const chips = Array.from(document.querySelectorAll(".chip"));
+    const searchInput = document.getElementById("search");
+    const nav = document.getElementById("nav");
+    let activeFilter = "all";
+
+    function loadState() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      } catch {
+        return {};
+      }
+    }
+
+    function saveState(state) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function applySavedChecks() {
+      const state = loadState();
+      items.forEach((item) => {
+        const box = item.querySelector('input[type="checkbox"]');
+        if (typeof state[item.id] === "boolean") {
+          box.checked = state[item.id];
+        }
+        item.classList.toggle("done", box.checked);
+      });
+    }
+
+    function updateStats() {
+      const total = items.length;
+      const done = items.filter((item) => item.querySelector('input[type="checkbox"]').checked).length;
+      const open = total - done;
+      document.getElementById("stat-total").textContent = total;
+      document.getElementById("stat-done").textContent = done;
+      document.getElementById("stat-open").textContent = open;
+    }
+
+    function updateSectionCounts() {
+      document.querySelectorAll(".section").forEach((section) => {
+        const sectionItems = Array.from(section.querySelectorAll(".item")).filter((item) => !item.classList.contains("hidden"));
+        const done = sectionItems.filter((item) => item.querySelector('input[type="checkbox"]').checked).length;
+        const countNode = section.querySelector("[data-count]");
+        countNode.textContent = `${done}/${sectionItems.length} visible done`;
+      });
+    }
+
+    function buildNav() {
+      nav.innerHTML = "";
+      document.querySelectorAll(".section").forEach((section) => {
+        const label = section.dataset.title;
+        const visibleItems = Array.from(section.querySelectorAll(".item")).filter((item) => !item.classList.contains("hidden")).length;
+        const a = document.createElement("a");
+        a.href = `#${section.id}`;
+        a.innerHTML = `<span>${label}</span><span class="nav-count">${visibleItems}</span>`;
+        nav.appendChild(a);
+      });
+    }
+
+    function matchesFilter(item) {
+      const checked = item.querySelector('input[type="checkbox"]').checked;
+      const status = item.dataset.status;
+      if (activeFilter === "all") return true;
+      if (activeFilter === "done") return checked;
+      if (activeFilter === "open") return !checked;
+      return status === activeFilter;
+    }
+
+    function matchesSearch(item) {
+      const q = searchInput.value.trim().toLowerCase();
+      if (!q) return true;
+      return item.textContent.toLowerCase().includes(q);
+    }
+
+    function applyFilters() {
+      items.forEach((item) => {
+        const show = matchesFilter(item) && matchesSearch(item);
+        item.classList.toggle("hidden", !show);
+      });
+      updateSectionCounts();
+      buildNav();
+    }
+
+    chips.forEach((chip) => {
+      chip.addEventListener("click", () => {
+        activeFilter = chip.dataset.filter;
+        chips.forEach((c) => c.classList.toggle("active", c === chip));
+        applyFilters();
+      });
+    });
+
+    searchInput.addEventListener("input", applyFilters);
+
+    items.forEach((item) => {
+      const box = item.querySelector('input[type="checkbox"]');
+      box.addEventListener("change", () => {
+        const state = loadState();
+        state[item.id] = box.checked;
+        saveState(state);
+        item.classList.toggle("done", box.checked);
+        updateStats();
+        updateSectionCounts();
+      });
+    });
+
+    document.querySelectorAll("[data-copy]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(button.dataset.copy);
+          const original = button.textContent;
+          button.textContent = "Copied";
+          setTimeout(() => { button.textContent = original; }, 900);
+        } catch {
+          button.textContent = "Copy failed";
+        }
+      });
+    });
+
+    applySavedChecks();
+    updateStats();
+    applyFilters();
+  </script>
+</body>
+</html>

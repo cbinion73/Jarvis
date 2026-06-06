@@ -1,5 +1,4 @@
 import SwiftUI
-import WatchKit
 
 struct BriefingWatchView: View {
 
@@ -71,7 +70,7 @@ struct BriefingWatchView: View {
 
                 // ── Refresh ───────────────────────────────────────
                 Button {
-                    WKInterfaceDevice.current().play(.click)
+                    playWatchHaptic(.click)
                     vm.requestRefresh()
                 } label: {
                     if vm.isRefreshing {
@@ -93,12 +92,12 @@ struct BriefingWatchView: View {
         .onChange(of: vm.needsCount) { old, new in
             if new > old {
                 // New approval needed — buzz the wrist
-                WKInterfaceDevice.current().play(.notification)
+                playWatchHaptic(.notification)
             }
         }
         .onChange(of: vm.isRefreshing) { _, refreshing in
             if !refreshing {
-                WKInterfaceDevice.current().play(.success)
+                playWatchHaptic(.success)
             }
         }
     }

@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import json
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json
+
 
 SHARED_DOCTRINE_PATH = Path.cwd() / "data" / "settings" / "shared_doctrine.json"
+SHARED_DOCTRINE_LOG_PATH = SHARED_DOCTRINE_PATH.with_name("shared_doctrine_log.jsonl")
+SHARED_DOCTRINE_STATE_LOG_PATH = SHARED_DOCTRINE_PATH.with_name("shared_doctrine_state_log.jsonl")
 
 
 def _now_iso() -> str:
@@ -17,21 +22,83 @@ class SharedDoctrineStore:
     def __init__(self, path: Path = SHARED_DOCTRINE_PATH) -> None:
         self.path = path
 
-    def load(self) -> dict[str, Any]:
-        default = {
+    def _default_payload(self) -> dict[str, Any]:
+        return {
             "generated_at": "",
             "candidates": [],
             "rules": [],
             "history": [],
             "last_synthesis": {},
         }
-        if not self.path.exists():
-            return default
+
+    def _log_path(self) -> Path:
+        if self.path == SHARED_DOCTRINE_PATH:
+            return SHARED_DOCTRINE_LOG_PATH
+        return self.path.with_name(f"{self.path.stem}_log.jsonl")
+
+    def _state_log_path(self) -> Path:
+        if self.path == SHARED_DOCTRINE_PATH:
+            return SHARED_DOCTRINE_STATE_LOG_PATH
+        return self.path.with_name(f"{self.path.stem}_state_log.jsonl")
+
+    def _load_from_log(self) -> dict[str, Any]:
         try:
-            payload = json.loads(self.path.read_text(encoding="utf-8"))
+            log_path = self._log_path()
+            if log_path.exists():
+                latest: dict[str, Any] | None = None
+                for line in log_path.read_text(encoding="utf-8").splitlines():
+                    if not line.strip():
+                        continue
+                    payload = json.loads(line)
+                    state = payload.get("state")
+                    if isinstance(state, dict):
+                        latest = dict(state)
+                if latest is not None:
+                    return latest
         except (OSError, json.JSONDecodeError):
-            return default
-        if not isinstance(payload, dict):
+            pass
+        return self._default_payload()
+
+    def _load_from_state_log(self) -> dict[str, Any]:
+        try:
+            log_path = self._state_log_path()
+            if log_path.exists():
+                latest: dict[str, Any] | None = None
+                for line in log_path.read_text(encoding="utf-8").splitlines():
+                    if not line.strip():
+                        continue
+                    payload = json.loads(line)
+                    state = payload.get("state")
+                    if isinstance(state, dict):
+                        latest = dict(state)
+                if latest is not None:
+                    return latest
+        except (OSError, json.JSONDecodeError):
+            pass
+        return self._default_payload()
+
+    def load(self) -> dict[str, Any]:
+        default = self._default_payload()
+        if not self.path.exists():
+            payload = self._load_from_state_log()
+            if payload == default:
+                payload = self._load_from_log()
+        else:
+            try:
+                payload = json.loads(self.path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                payload = self._load_from_state_log()
+                if payload == default:
+                    payload = self._load_from_log()
+            else:
+                if not isinstance(payload, dict) or not payload:
+                    payload = self._load_from_state_log()
+                    if payload == default:
+                        payload = self._load_from_log()
+        try:
+            if not isinstance(payload, dict):
+                return default
+        except Exception:
             return default
         payload.setdefault("generated_at", "")
         payload.setdefault("candidates", [])
@@ -47,7 +114,21 @@ class SharedDoctrineStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         payload = dict(payload)
         payload["generated_at"] = str(payload.get("generated_at", "")).strip() or _now_iso()
-        self.path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(self.path, payload)
+        append_jsonl(
+            self._log_path(),
+            {
+                "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "state": payload,
+            },
+        )
+        append_jsonl(
+            self._state_log_path(),
+            {
+                "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "state": payload,
+            },
+        )
 
     def replace_candidates(self, candidates: list[dict[str, Any]], *, synthesis_meta: dict[str, Any]) -> dict[str, Any]:
         state = self.load()

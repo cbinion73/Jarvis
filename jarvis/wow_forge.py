@@ -31,12 +31,17 @@ import json
 import shutil
 import subprocess
 import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json
+
 _CONFIG_PATH = Path.home() / ".jarvis" / "wow_forge.json"
+_CONFIG_LOG_PATH = _CONFIG_PATH.with_name("wow_forge_log.jsonl")
+_CONFIG_STATE_LOG_PATH = _CONFIG_PATH.with_name("wow_forge_state_log.jsonl")
 _lock = threading.Lock()
 
 _MODEL_EXTS  = {".glb", ".gltf", ".obj", ".stl"}
@@ -64,7 +69,9 @@ def load_config() -> dict:
                 cfg = json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
                 return {**_DEFAULT_CONFIG, **cfg}
             except Exception:
-                pass
+                return {**_DEFAULT_CONFIG, **(_load_config_from_state_log() or _load_config_from_log())}
+        if not _CONFIG_PATH.exists():
+            return {**_DEFAULT_CONFIG, **(_load_config_from_state_log() or _load_config_from_log())}
         return dict(_DEFAULT_CONFIG)
 
 
@@ -80,8 +87,56 @@ def save_config(updates: dict) -> dict:
             if k in _DEFAULT_CONFIG:
                 existing[k] = v
         _CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        _CONFIG_PATH.write_text(json.dumps(existing, indent=2), encoding="utf-8")
+        atomic_write_json(_CONFIG_PATH, existing)
+        append_jsonl(
+            _CONFIG_LOG_PATH,
+            {
+                "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "config": existing,
+            },
+        )
+        append_jsonl(
+            _CONFIG_STATE_LOG_PATH,
+            {
+                "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "config": existing,
+            },
+        )
         return existing
+
+
+def _load_config_from_log() -> dict:
+    try:
+        if _CONFIG_LOG_PATH.exists():
+            latest: dict[str, Any] | None = None
+            for line in _CONFIG_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                config = payload.get("config")
+                if isinstance(config, dict):
+                    latest = dict(config)
+            return latest or {}
+    except Exception:
+        pass
+    return {}
+
+
+def _load_config_from_state_log() -> dict:
+    try:
+        if _CONFIG_STATE_LOG_PATH.exists():
+            latest: dict[str, Any] | None = None
+            for line in _CONFIG_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                config = payload.get("config")
+                if isinstance(config, dict):
+                    latest = dict(config)
+            return latest or {}
+    except Exception:
+        pass
+    return {}
 
 
 # ---------------------------------------------------------------------------

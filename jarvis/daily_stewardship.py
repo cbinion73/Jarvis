@@ -20,6 +20,8 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json
+
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -28,6 +30,8 @@ log = logging.getLogger(__name__)
 
 _DAY_CARD_PATH = Path.home() / ".jarvis" / "health" / "day_card.json"
 _DAY_CARD_PATH.parent.mkdir(parents=True, exist_ok=True)
+_DAY_CARD_LOG_PATH = _DAY_CARD_PATH.with_name("day_card_log.jsonl")
+_DAY_CARD_STATE_LOG_PATH = _DAY_CARD_PATH.with_name("day_card_state_log.jsonl")
 
 _COUNCIL_CACHE_PATH = Path.home() / ".jarvis" / "health" / "council_cache.json"
 _COUNCIL_CACHE_TTL_HOURS = 6
@@ -491,10 +495,7 @@ async def run_morning_checkin(context: str = "") -> dict:
         log.warning("Could not append to decision log: %s", exc)
 
     # 8. Save to cache
-    try:
-        _DAY_CARD_PATH.write_text(json.dumps(day_card, indent=2))
-    except Exception as exc:
-        log.warning("Could not save day card cache: %s", exc)
+    _save_day_card(day_card)
 
     return day_card
 
@@ -620,16 +621,85 @@ def _fallback_tomorrow_note(struggles: str) -> str:
 # Cache access
 # ---------------------------------------------------------------------------
 
-def get_cached_day_card() -> dict | None:
-    """Return today's cached day card if it exists and is from today."""
-    if not _DAY_CARD_PATH.exists():
+def _load_day_card_from_log() -> dict | None:
+    if not _DAY_CARD_LOG_PATH.exists():
         return None
     try:
-        card = json.loads(_DAY_CARD_PATH.read_text())
-        if card.get("date") == date.today().isoformat():
-            return card
+        latest: dict[str, Any] | None = None
+        with _DAY_CARD_LOG_PATH.open(encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(entry, dict) and isinstance(entry.get("day_card"), dict):
+                    latest = entry["day_card"]
+        return latest
     except Exception as exc:
-        log.warning("Could not read day card cache: %s", exc)
+        log.warning("Could not replay day card cache log: %s", exc)
+    return None
+
+
+def _load_day_card_from_state_log() -> dict | None:
+    if not _DAY_CARD_STATE_LOG_PATH.exists():
+        return None
+    try:
+        latest: dict[str, Any] | None = None
+        with _DAY_CARD_STATE_LOG_PATH.open(encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(entry, dict) and isinstance(entry.get("day_card"), dict):
+                    latest = entry["day_card"]
+        return latest
+    except Exception as exc:
+        log.warning("Could not replay day card state log: %s", exc)
+    return None
+
+
+def _save_day_card(day_card: dict[str, Any]) -> None:
+    try:
+        append_jsonl(
+            _DAY_CARD_LOG_PATH,
+            {
+                "saved_at": datetime.utcnow().isoformat(),
+                "day_card": day_card,
+            },
+        )
+        append_jsonl(
+            _DAY_CARD_STATE_LOG_PATH,
+            {
+                "saved_at": datetime.utcnow().isoformat(),
+                "day_card": day_card,
+            },
+        )
+        atomic_write_json(_DAY_CARD_PATH, day_card)
+    except Exception as exc:
+        log.warning("Could not save day card cache: %s", exc)
+
+
+def get_cached_day_card() -> dict | None:
+    """Return today's cached day card if it exists and is from today."""
+    card: dict[str, Any] | None = None
+    if _DAY_CARD_PATH.exists():
+        try:
+            loaded = json.loads(_DAY_CARD_PATH.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                card = loaded
+        except Exception as exc:
+            log.warning("Could not read day card cache: %s", exc)
+    if card is None:
+        card = _load_day_card_from_state_log() or _load_day_card_from_log()
+    if isinstance(card, dict) and card.get("date") == date.today().isoformat():
+        return card
     return None
 
 

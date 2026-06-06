@@ -1,0 +1,158 @@
+{
+  "generated_at": "2026-06-03T12:30:06.542442+00:00",
+  "lane": {
+    "branch": "codex/apple-native-command-surface",
+    "head": "8435cb0",
+    "dirty_count": 424,
+    "recent_commits": [
+      "8435cb0 feat: serve approval queue surface",
+      "e863e8a feat: add approval queue operator surface",
+      "b39726b feat: add supervision snapshot proof surface",
+      "a5df9cd Add append-only replay to trust store",
+      "4df62a1 test: isolate legacy notification center regression"
+    ],
+    "dirty_sample": [
+      " M .agents/skills/bmad-advanced-elicitation/methods.csv",
+      " M .agents/skills/bmad-agent-analyst/SKILL.md",
+      " M .agents/skills/bmad-agent-architect/SKILL.md",
+      " M .agents/skills/bmad-agent-dev/SKILL.md",
+      " M .agents/skills/bmad-agent-dev/customize.toml",
+      " M .agents/skills/bmad-agent-pm/SKILL.md",
+      " M .agents/skills/bmad-agent-pm/customize.toml",
+      " M .agents/skills/bmad-agent-tech-writer/SKILL.md"
+    ]
+  },
+  "return_brief": {
+    "summary": "0 approvals pending, 3 integration issues, 2 memory proposals, 11 registered agents",
+    "what_needs_me_count": 5
+  },
+  "attention_queue": [],
+  "memory": {
+    "entry_count": 44,
+    "proposal_count": 2,
+    "fact_count": 31,
+    "latest_entry_titles": [
+      "The JARVIS behavioral charter for Chris is to help him think clearly, create bol",
+      "Chris wants personal growth coaching to focus on repeatable rhythms, identity, s",
+      "Chris wants creative work to bring imagination with structure, with curated opti"
+    ],
+    "pending_proposals": [
+      "Emergency allergy note for household",
+      "Chris provided a detailed whitepaper describing how JARVIS should understand and"
+    ]
+  },
+  "registry": {
+    "registry_id": "jarvis-core-agent-registry",
+    "mission_model_id": "jarvis-core-mission-model",
+    "schema_version": "1.0",
+    "agent_count": 11,
+    "domains": [
+      "communications",
+      "core",
+      "executive",
+      "family",
+      "formation",
+      "memory",
+      "system",
+      "weather",
+      "workshop"
+    ],
+    "authority_stages": [
+      "observe",
+      "draft",
+      "stage_alert",
+      "sandbox_live",
+      "mature_live",
+      "suspended"
+    ],
+    "posture": {
+      "system_mode": "always-on-orchestrator",
+      "interaction_mode": "oversight-and-steering",
+      "voice_mode": "voice-enabled-not-primary",
+      "registry_mode": "operational-contract"
+    }
+  },
+  "integrations": [
+    {
+      "name": "openai-api",
+      "ok": true,
+      "detail": "OpenAI API key is configured"
+    },
+    {
+      "name": "openclaw",
+      "ok": true,
+      "detail": "configured gateway ws://127.0.0.1:18789"
+    },
+    {
+      "name": "google-workspace",
+      "ok": false,
+      "detail": "Google account is not connected yet"
+    },
+    {
+      "name": "home-assistant",
+      "ok": false,
+      "detail": "HOME_ASSISTANT_URL or HOME_ASSISTANT_TOKEN is missing"
+    },
+    {
+      "name": "home-profile",
+      "ok": true,
+      "detail": "loaded profile household/jarvis_home_assistant.example.json"
+    },
+    {
+      "name": "memory-profile",
+      "ok": true,
+      "detail": "loaded profile household/jarvis_memory_profile.example.json"
+    },
+    {
+      "name": "openviking",
+      "ok": false,
+      "detail": "<urlopen error [Errno 1] Operation not permitted>"
+    },
+    {
+      "name": "perception-profile",
+      "ok": true,
+      "detail": "loaded profile household/jarvis_perception_profile.example.json"
+    },
+    {
+      "name": "workshop-adapter",
+      "ok": true,
+      "detail": "loaded profile household/jarvis_workshop_profile.example.json"
+    }
+  ],
+  "what_needs_me": [
+    {
+      "kind": "integration",
+      "title": "google-workspace",
+      "detail": "Google account is not connected yet"
+    },
+    {
+      "kind": "integration",
+      "title": "home-assistant",
+      "detail": "HOME_ASSISTANT_URL or HOME_ASSISTANT_TOKEN is missing"
+    },
+    {
+      "kind": "integration",
+      "title": "openviking",
+      "detail": "<urlopen error [Errno 1] Operation not permitted>"
+    },
+    {
+      "kind": "memory",
+      "title": "Emergency allergy note for household",
+      "detail": "Pending memory proposal needs review"
+    },
+    {
+      "kind": "memory",
+      "title": "Chris provided a detailed whitepaper describing how JARVIS should understand and",
+      "detail": "Pending memory proposal needs review"
+    }
+  ],
+  "proof_paths": {
+    "doctrine": "/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/JARVIS_LEVEL9_DOCTRINE.md",
+    "command_center_model": "/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/docs/jarvis-desktop-command-center-model.md",
+    "generated_html": "/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/artifacts/generated/jarvis-supervision-snapshot.html",
+    "generated_json": "/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/artifacts/generated/jarvis-supervision-snapshot.json",
+    "served_page": "/supervision-snapshot",
+    "approval_queue": "/approval-queue",
+    "approval_queue_snapshot": "/api/approval-queue/snapshot"
+  }
+}

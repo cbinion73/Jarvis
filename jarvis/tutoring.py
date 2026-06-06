@@ -10,6 +10,7 @@ from .config import AppConfig
 from .models import DeviceBoundaryRoutine, RequestPlan, TutoringSession, UserProfile
 from .openai_tasks import JarvisOpenAIClient
 from .persona import build_specialist_prompt
+from .persistence import append_jsonl, atomic_write_json, atomic_write_jsonl
 
 
 def _extract_section(text: str, heading: str) -> str:
@@ -33,29 +34,91 @@ class TutoringStore:
         self.root = root
         self.root.mkdir(parents=True, exist_ok=True)
         self.sessions_path = self.root / "sessions.jsonl"
+        self.sessions_log_path = self.root / "sessions_state_log.jsonl"
         self.boundaries_path = self.root / "device_boundaries.json"
+        self.boundaries_log_path = self.root / "device_boundaries_log.jsonl"
 
     def add_session(self, session: TutoringSession) -> None:
-        with self.sessions_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(asdict(session)) + "\n")
+        records = self._load_sessions()
+        records.append(asdict(session))
+        self._save_sessions(records)
 
     def list_sessions(self, child_name: str = "", limit: int = 20) -> list[dict]:
-        if not self.sessions_path.exists():
-            return []
-        lines = self.sessions_path.read_text(encoding="utf-8").splitlines()
-        records = [json.loads(line) for line in lines if line.strip()]
+        records = self._load_sessions()
         if child_name:
             lowered = child_name.strip().lower()
             records = [item for item in records if item["actor"].strip().lower() == lowered]
         return list(reversed(records[-limit:]))
 
+    def _load_sessions(self) -> list[dict]:
+        if self.sessions_path.exists():
+            try:
+                records = [json.loads(line) for line in self.sessions_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+                if records:
+                    return records
+            except Exception:
+                pass
+        return self._load_sessions_from_log()
+
+    def _load_sessions_from_log(self) -> list[dict]:
+        if not self.sessions_log_path.exists():
+            return []
+        try:
+            latest: list[dict] = []
+            for line in self.sessions_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+            return latest
+        except Exception:
+            return []
+
+    def _save_sessions(self, records: list[dict]) -> None:
+        atomic_write_jsonl(self.sessions_path, records)
+        append_jsonl(
+            self.sessions_log_path,
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "records": records,
+            },
+        )
+
     def _load_boundaries(self) -> list[dict]:
         if not self.boundaries_path.exists():
+            return self._load_boundaries_from_log()
+        try:
+            return json.loads(self.boundaries_path.read_text(encoding="utf-8"))
+        except Exception:
+            return self._load_boundaries_from_log()
+
+    def _load_boundaries_from_log(self) -> list[dict]:
+        if not self.boundaries_log_path.exists():
             return []
-        return json.loads(self.boundaries_path.read_text(encoding="utf-8"))
+        try:
+            latest: list[dict] = []
+            for line in self.boundaries_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+            return latest
+        except Exception:
+            return []
 
     def _save_boundaries(self, records: list[dict]) -> None:
-        self.boundaries_path.write_text(json.dumps(records, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(self.boundaries_path, records)
+        append_jsonl(
+            self.boundaries_log_path,
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "records": records,
+            },
+        )
 
     def add_boundary(self, routine: DeviceBoundaryRoutine) -> None:
         records = self._load_boundaries()

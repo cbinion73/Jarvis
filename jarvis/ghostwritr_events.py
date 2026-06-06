@@ -22,24 +22,60 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json
+
 logger = logging.getLogger("jarvis.ghostwritr_events")
 
 _STATE_PATH = Path.home() / ".jarvis" / "ghostwritr_events_state.json"
+_STATE_LOG_PATH = _STATE_PATH.with_name("ghostwritr_events_state_log.jsonl")
+_STATE_STATE_LOG_PATH = _STATE_PATH.with_name("ghostwritr_events_state_state_log.jsonl")
 _POLL_INTERVAL = 60  # seconds
 
 
 def _load_state() -> dict:
     try:
         if _STATE_PATH.exists():
-            return json.loads(_STATE_PATH.read_text())
+            return json.loads(_STATE_PATH.read_text(encoding="utf-8"))
     except Exception:
-        pass
+        logger.warning("Ghostwritr events snapshot unreadable; replaying state log")
+    if _STATE_STATE_LOG_PATH.exists():
+        try:
+            last: dict[str, Any] | None = None
+            for line in _STATE_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                payload = json.loads(line)
+                if isinstance(payload, dict):
+                    last = payload
+            if last is not None:
+                atomic_write_json(_STATE_PATH, last)
+                return last
+        except Exception:
+            logger.warning("Ghostwritr events state log unreadable", exc_info=True)
+    if _STATE_LOG_PATH.exists():
+        try:
+            last: dict[str, Any] | None = None
+            for line in _STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                payload = json.loads(line)
+                if isinstance(payload, dict):
+                    last = payload
+            if last is not None:
+                atomic_write_json(_STATE_PATH, last)
+                return last
+        except Exception:
+            logger.warning("Ghostwritr events append log unreadable", exc_info=True)
     return {"seen_stages": {}, "seen_books": [], "last_poll": ""}
 
 
 def _save_state(state: dict) -> None:
     _STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _STATE_PATH.write_text(json.dumps(state, indent=2))
+    append_jsonl(_STATE_LOG_PATH, state)
+    append_jsonl(_STATE_STATE_LOG_PATH, state)
+    atomic_write_json(_STATE_PATH, state)
 
 
 def _now() -> str:

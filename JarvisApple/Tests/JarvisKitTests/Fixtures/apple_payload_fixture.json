@@ -1,0 +1,4372 @@
+{
+  "/api/apple/status": {
+    "ok": true,
+    "data": {
+      "needs_count": 2,
+      "mode": "morning",
+      "weather": "72F clear",
+      "drift": false,
+      "ts": "2026-06-01T08:00:00Z"
+    }
+  },
+  "/api/apple/app-state": {
+    "ok": true,
+    "data": {
+      "server": {
+        "mode": "command",
+        "needs_count": 2,
+        "drift": false,
+        "weather": "72F clear",
+        "ts": "2026-06-01T08:00:00Z"
+      },
+      "calendar": {
+        "synced": true,
+        "count": 1,
+        "synced_at": "2026-06-01T08:00:00Z",
+        "next_items": [
+          {
+            "title": "Planning",
+            "start": "2026-06-01T09:00:00Z",
+            "end": "2026-06-01T09:30:00Z",
+            "location": "Office",
+            "calendar": "Family"
+          }
+        ]
+      },
+      "reminders": {
+        "synced": true,
+        "count": 1,
+        "synced_at": "2026-06-01T08:00:00Z",
+        "top_items": [
+          {
+            "id": "r1",
+            "title": "Pack bag",
+            "due": "2026-06-01T09:00:00Z",
+            "list": "Home",
+            "priority": 2
+          }
+        ]
+      },
+      "focus": {
+        "focus_active": false,
+        "updated_at": "2026-06-01T08:00:00Z",
+        "source": "device",
+        "posture_mode": "open",
+        "posture_label": "Open",
+        "posture_reason": "No active focus",
+        "recommended_delivery": "normal",
+        "quiet_hours": false,
+        "hour_local": 8
+      },
+      "notifications": {
+        "pending_count": 1,
+        "recent": [
+          {
+            "id": "n1",
+            "event_id": "e1",
+            "category": "calendar",
+            "title": "Leave soon",
+            "detail": "Traffic is rising.",
+            "body": "Traffic is rising.",
+            "severity": "medium",
+            "status": "pending",
+            "created_at": "2026-06-01T08:00:00Z",
+            "updated_at": "2026-06-01T08:01:00Z",
+            "expires_at": "2026-06-01T09:00:00Z",
+            "audience": "chris",
+            "delivery_mode": "banner",
+            "navigation_target": "calendar",
+            "available_actions": ["seen", "resolve"],
+            "why_now": "Upcoming departure",
+            "decision_reason": "pre_drive",
+            "source_summary": "Calendar and maps",
+            "posture_snapshot": {
+              "mode": "open",
+              "label": "Open",
+              "reason": "No focus",
+              "recommended_delivery": "normal",
+              "quiet_hours": false,
+              "hour_local": 8,
+              "needs_count": 2,
+              "alert_count": 1
+            },
+            "badge": 1
+          }
+        ]
+      },
+      "now_playing": {
+        "title": "Ambient Focus",
+        "artist": "JARVIS",
+        "album": "Morning Loop",
+        "is_playing": true,
+        "updated_at": "2026-06-01T08:00:00Z"
+      },
+      "sound_alert": {
+        "label": "Doorbell",
+        "confidence": 0.98,
+        "source": "hallway",
+        "received_at": "2026-06-01T08:00:00Z"
+      },
+      "vision_scan": {
+        "context": "porch",
+        "source": "front_cam",
+        "text_preview": "Package at door",
+        "received_at": "2026-06-01T08:00:00Z"
+      },
+      "presence": {
+        "present_members": ["Chris"],
+        "lights_on_count": 3,
+        "alert_count": 1
+      },
+      "sync_health": {
+        "calendar": { "synced": true, "synced_at": "2026-06-01T08:00:00Z" },
+        "reminders": { "synced": true, "synced_at": "2026-06-01T08:00:00Z" },
+        "focus": { "synced": true, "synced_at": "2026-06-01T08:00:00Z" },
+        "now_playing": { "synced": true, "synced_at": "2026-06-01T08:00:00Z" },
+        "sound_alert": { "synced": true, "synced_at": "2026-06-01T08:00:00Z" },
+        "vision_scan": { "synced": true, "synced_at": "2026-06-01T08:00:00Z" }
+      }
+    }
+  },
+  "/api/apple/calendar/state": {
+    "ok": true,
+    "data": {
+      "synced": true,
+      "synced_at": "2026-06-01T08:00:00Z",
+      "count": 1,
+      "next_events": [
+        {
+          "id": "cal-1",
+          "title": "Planning",
+          "start": "2026-06-01T09:00:00Z",
+          "end": "2026-06-01T09:30:00Z",
+          "location": "Office",
+          "calendar": "Family",
+          "notes": "Bring project outline and review launch blockers before the call.",
+          "url": "https://meet.example.com/planning",
+          "all_day": false,
+          "minutes_away": 60,
+          "prep_window_open": true,
+          "route_ready": true
+        }
+      ],
+      "today_events": [
+        {
+          "id": "cal-1",
+          "title": "Planning",
+          "start": "2026-06-01T09:00:00Z",
+          "end": "2026-06-01T09:30:00Z",
+          "location": "Office",
+          "calendar": "Family",
+          "notes": "Bring project outline and review launch blockers before the call.",
+          "url": "https://meet.example.com/planning",
+          "all_day": false,
+          "minutes_away": 60,
+          "prep_window_open": true,
+          "route_ready": true
+        }
+      ],
+      "route_sensitive_events": [
+        {
+          "id": "cal-1",
+          "title": "Planning",
+          "start": "2026-06-01T09:00:00Z",
+          "end": "2026-06-01T09:30:00Z",
+          "location": "Office",
+          "calendar": "Family",
+          "notes": "Bring project outline and review launch blockers before the call.",
+          "url": "https://meet.example.com/planning",
+          "all_day": false,
+          "minutes_away": 60,
+          "prep_window_open": true,
+          "route_ready": true
+        }
+      ],
+      "preparation_cues": [
+        {
+          "event_id": "cal-1",
+          "title": "Leave on time",
+          "detail": "Route is heavier than usual.",
+          "action": "prepare",
+          "start": "2026-06-01T09:00:00Z",
+          "location": "Office"
+        }
+      ],
+      "attention_flags": [
+        {
+          "id": "caf-1",
+          "event_id": "cal-1",
+          "kind": "route",
+          "severity": "medium",
+          "title": "Traffic climbing",
+          "detail": "Consider leaving five minutes early."
+        }
+      ]
+    }
+  },
+  "/api/apple/reminders/state": {
+    "ok": true,
+    "data": {
+      "synced": true,
+      "synced_at": "2026-06-01T08:00:00Z",
+      "count": 1,
+      "summary": {
+        "open_count": 1,
+        "overdue_count": 0,
+        "due_soon_count": 1,
+        "priority_count": 0,
+        "no_due_date_count": 0
+      },
+      "list_summaries": [
+        {
+          "id": "home",
+          "title": "Home",
+          "count": 1,
+          "overdue_count": 0,
+          "due_soon_count": 1,
+          "priority_count": 0
+        }
+      ],
+      "open_items": [
+        {
+          "id": "r1",
+          "title": "Pack bag",
+          "due": "2026-06-01T09:00:00Z",
+          "list": "Home",
+          "priority": 2,
+          "priority_label": "High",
+          "notes": "Laptop and charger",
+          "minutes_away": 60,
+          "overdue": false,
+          "due_soon": true,
+          "available_actions": ["complete", "snooze"]
+        }
+      ],
+      "overdue_items": [],
+      "due_soon_items": [],
+      "priority_items": [],
+      "attention_flags": [
+        {
+          "id": "raf-1",
+          "reminder_id": "r1",
+          "kind": "due_soon",
+          "severity": "medium",
+          "title": "Reminder due soon",
+          "detail": "Pack bag before departure."
+        }
+      ]
+    }
+  },
+  "/api/apple/focus-state": {
+    "ok": true,
+    "data": {
+      "focus_active": true,
+      "updated_at": "2026-06-01T08:00:00Z",
+      "source": "focus_filter",
+      "source_fresh": true,
+      "interruption_posture": {
+        "mode": "focus_active",
+        "label": "Focus active",
+        "reason": "Focus is active on the phone, so JARVIS should keep interruptions quieter.",
+        "recommended_delivery": "quiet_store",
+        "focus_active": true,
+        "quiet_hours": false,
+        "hour_local": 8,
+        "needs_count": 2,
+        "alert_count": 0,
+        "present_members": ["Chris"],
+        "updated_at": "2026-06-01T08:00:00Z"
+      },
+      "suppression_rules": [
+        {
+          "id": "focus_active_quiet_store",
+          "title": "Focus reduces proactive interruptions",
+          "detail": "Non-urgent notifications should stay quiet while Focus is active.",
+          "active": true
+        },
+        {
+          "id": "approvals_badge_only",
+          "title": "Approvals stay visible without becoming noisy",
+          "detail": "Approvals remain visible even when JARVIS is being quieter.",
+          "active": true
+        }
+      ],
+      "filter": {
+        "jarvis_mode": "work",
+        "hold_approvals": true,
+        "silence_briefings": false,
+        "source": "focus_filter"
+      },
+      "routing_lanes": [
+        {
+          "id": "approvals_lane",
+          "title": "Approvals",
+          "detail": "Approvals stay visible without buzzing during focus.",
+          "delivery_mode": "badge_only",
+          "active": true
+        },
+        {
+          "id": "briefings_lane",
+          "title": "Briefings",
+          "detail": "Briefings can surface normally.",
+          "delivery_mode": "quiet_store",
+          "active": false
+        },
+        {
+          "id": "routine_lane",
+          "title": "Routine Notifications",
+          "detail": "Routine household items stay quiet while focus is active.",
+          "delivery_mode": "quiet_store",
+          "active": true
+        },
+        {
+          "id": "household_alert_lane",
+          "title": "Household Alerts",
+          "detail": "Urgent household alerts can break through quieter modes when needed.",
+          "delivery_mode": "badge_only",
+          "active": true
+        }
+      ],
+      "presets": [
+        {
+          "id": "open_household",
+          "title": "Open Household",
+          "detail": "Normal delivery with no quieting overrides.",
+          "focus_active": false,
+          "jarvis_mode": "morning_brief",
+          "hold_approvals": false,
+          "silence_briefings": false,
+          "active": false
+        },
+        {
+          "id": "work_focus",
+          "title": "Work Focus",
+          "detail": "Keep routine traffic quiet, but leave approvals visible.",
+          "focus_active": true,
+          "jarvis_mode": "work",
+          "hold_approvals": true,
+          "silence_briefings": false,
+          "active": true
+        },
+        {
+          "id": "meeting_quiet",
+          "title": "Meeting Quiet",
+          "detail": "Hold approvals and proactive briefings during heads-down time.",
+          "focus_active": true,
+          "jarvis_mode": "personal",
+          "hold_approvals": true,
+          "silence_briefings": true,
+          "active": false
+        },
+        {
+          "id": "sleep_guard",
+          "title": "Sleep Guard",
+          "detail": "Reserve interruptions for the household path only.",
+          "focus_active": true,
+          "jarvis_mode": "sleep",
+          "hold_approvals": true,
+          "silence_briefings": true,
+          "active": false
+        }
+      ],
+      "summary": {
+        "label": "Focus active",
+        "detail": "Focus is active on the phone, so JARVIS should keep interruptions quieter.",
+        "recommended_delivery": "quiet_store"
+      }
+    }
+  },
+  "/api/apple/sound-alerts": {
+    "ok": true,
+    "data": {
+      "count": 1,
+      "recent_items": [
+        {
+          "id": "sa-1",
+          "label": "Doorbell",
+          "detail": "Front door chime detected",
+          "source": "hallway",
+          "confidence": 0.98,
+          "received_at": "2026-06-01T08:00:00Z",
+          "resolved": false,
+          "resolved_at": ""
+        }
+      ],
+      "high_confidence_items": [
+        {
+          "id": "sa-1",
+          "label": "Doorbell",
+          "detail": "Front door chime detected",
+          "source": "hallway",
+          "confidence": 0.98,
+          "received_at": "2026-06-01T08:00:00Z",
+          "resolved": false,
+          "resolved_at": ""
+        }
+      ],
+      "attention_flags": [
+        {
+          "id": "saf-1",
+          "kind": "security",
+          "severity": "medium",
+          "title": "Door activity",
+          "detail": "Doorbell detected on porch."
+        }
+      ],
+      "policy_rules": [
+        {
+          "id": "high_confidence_security_triage",
+          "title": "High-confidence security sounds stay visible",
+          "detail": "Door, glass, alarm, and siren detections should route into the security lane even during quieter command posture.",
+          "delivery_mode": "deliver_now",
+          "active": true
+        },
+        {
+          "id": "routine_sound_review_queue",
+          "title": "Routine sounds queue for review",
+          "detail": "Lower-risk sounds should be captured, tagged, and reviewed without creating unnecessary interruption noise.",
+          "delivery_mode": "badge_only",
+          "active": true
+        },
+        {
+          "id": "resolved_sounds_drop_out",
+          "title": "Resolved sounds drop out of the active queue",
+          "detail": "Once acknowledged, sound alerts stay visible in history but stop contributing to the active attention stack.",
+          "delivery_mode": "quiet_store",
+          "active": false
+        }
+      ],
+      "response_plans": [
+        {
+          "id": "sound-plan-security",
+          "title": "Security Follow-up",
+          "detail": "Route this sound through security review and camera context for hallway.",
+          "target": "security",
+          "priority": "high",
+          "active": true
+        },
+        {
+          "id": "sound-plan-household",
+          "title": "Household Follow-up",
+          "detail": "Use the household lane for comfort, child, or pet-related sounds when they appear.",
+          "target": "household",
+          "priority": "medium",
+          "active": false
+        },
+        {
+          "id": "sound-plan-review-brief",
+          "title": "Brief Queue Review",
+          "detail": "Any unresolved sound should stay in the next command review until it is either resolved or escalated.",
+          "target": "brief",
+          "priority": "medium",
+          "active": true
+        }
+      ]
+    }
+  },
+  "/api/apple/vision/scans": {
+    "ok": true,
+    "data": {
+      "count": 1,
+      "recent_items": [
+        {
+          "id": "vs-1",
+          "context": "porch",
+          "source": "front_cam",
+          "text_preview": "Package at door",
+          "received_at": "2026-06-01T08:00:00Z",
+          "resolved": false,
+          "resolved_at": ""
+        }
+      ],
+      "recent_contexts": ["porch"],
+      "attention_flags": [
+        {
+          "id": "vaf-1",
+          "kind": "delivery",
+          "severity": "low",
+          "title": "Package seen",
+          "detail": "Package detected on porch."
+        }
+      ],
+      "policy_rules": [
+        {
+          "id": "entryway_captures_escalate",
+          "title": "Entryway captures stay reviewable",
+          "detail": "Porch, door, garage, and driveway captures should stay visible until someone reviews or resolves them.",
+          "delivery_mode": "badge_only",
+          "active": true
+        },
+        {
+          "id": "package_context_routes_household",
+          "title": "Package context routes into household follow-up",
+          "detail": "Package-like captures should route into the household lane so delivery context is easy to review.",
+          "delivery_mode": "hold_for_brief",
+          "active": true
+        },
+        {
+          "id": "document_text_routes_review",
+          "title": "Readable document captures queue for review",
+          "detail": "OCR-like captures with labels, receipts, or bills should stay queued for a later command review.",
+          "delivery_mode": "hold_for_brief",
+          "active": false
+        }
+      ],
+      "response_plans": [
+        {
+          "id": "vision-plan-security",
+          "title": "Security Follow-up",
+          "detail": "Keep front_cam visible in the security lane until the entryway capture is reviewed.",
+          "target": "security",
+          "priority": "high",
+          "active": true
+        },
+        {
+          "id": "vision-plan-household",
+          "title": "Household Follow-up",
+          "detail": "Treat this as a household delivery capture and keep it visible in the next brief until someone acknowledges it.",
+          "target": "household",
+          "priority": "medium",
+          "active": true
+        },
+        {
+          "id": "vision-plan-review-brief",
+          "title": "Review Queue",
+          "detail": "Any unresolved vision capture should stay available in the next command review until it is resolved or promoted.",
+          "target": "brief",
+          "priority": "medium",
+          "active": true
+        }
+      ]
+    }
+  },
+  "/api/apple/now-playing/state": {
+    "ok": true,
+    "data": {
+      "title": "Ambient Focus",
+      "artist": "JARVIS",
+      "album": "Morning Loop",
+      "is_playing": true,
+      "updated_at": "2026-06-01T08:00:00Z",
+      "artwork_available": false,
+      "summary": {
+        "label": "Focus session active",
+        "detail": "JARVIS is treating current playback as part of the active focus environment."
+      },
+      "routing_rules": [
+        {
+          "id": "focus_media_quiet_lane",
+          "title": "Focus media stays non-disruptive",
+          "detail": "When focus is active, ambient or instrumental playback should stay steady while spoken interruptions route elsewhere.",
+          "delivery_mode": "quiet_store",
+          "active": true
+        },
+        {
+          "id": "quiet_hours_media_hold",
+          "title": "Quiet-hours playback should stay gentle",
+          "detail": "Quiet-hours playback should favor calm, low-interruption media and keep louder follow-ups for the next Brief.",
+          "delivery_mode": "hold_for_brief",
+          "active": true
+        },
+        {
+          "id": "household_alert_media_duck",
+          "title": "Household alerts can override media",
+          "detail": "If the home enters an alert posture, media should duck behind the household alert lane until the alert clears.",
+          "delivery_mode": "badge_only",
+          "active": false
+        }
+      ],
+      "response_plans": [
+        {
+          "id": "media-plan-preserve-focus",
+          "title": "Preserve Focus Session",
+          "detail": "Keep the current ambient session running as the backdrop for focus work.",
+          "target": "focus",
+          "priority": "high",
+          "active": true
+        },
+        {
+          "id": "media-plan-brief-handoff",
+          "title": "Brief Handoff",
+          "detail": "Queue media changes and spoken updates for the next Brief so they do not fragment the current household posture.",
+          "target": "brief",
+          "priority": "medium",
+          "active": true
+        },
+        {
+          "id": "media-plan-household-scene",
+          "title": "Household Scene",
+          "detail": "Route this playback into the broader household scene so active rooms and routines stay coordinated.",
+          "target": "household",
+          "priority": "medium",
+          "active": true
+        }
+      ],
+      "suggested_controls": [
+        {
+          "id": "control-keep-session",
+          "title": "Keep Session Running",
+          "detail": "Maintain the current playback as the active focus bed.",
+          "style": "primary",
+          "active": true
+        },
+        {
+          "id": "control-shift-to-quiet",
+          "title": "Shift to Quiet Mix",
+          "detail": "Favor a calmer, lower-interruption mix during quiet hours or meeting posture.",
+          "style": "secondary",
+          "active": true
+        },
+        {
+          "id": "control-open-brief",
+          "title": "Open Media Brief",
+          "detail": "Use Brief to review media changes, spoken context, and what JARVIS should restore next.",
+          "style": "supporting",
+          "active": false
+        }
+      ],
+      "recent_items": [
+        {
+          "id": "np-1",
+          "title": "Ambient Focus",
+          "detail": "Morning Loop",
+          "ts": "2026-06-01T08:00:00Z",
+          "is_playing": true,
+          "artist": "JARVIS",
+          "album": "Morning Loop"
+        }
+      ]
+    }
+  },
+  "/api/apple/control-plane/state": {
+    "ok": true,
+    "data": {
+      "notifications": {
+        "total": 3,
+        "pending": 1,
+        "seen": 1,
+        "snoozed": 0,
+        "resolved": 1,
+        "dismissed": 0,
+        "categories": { "calendar": 2, "security": 1 },
+        "last_updated_at": "2026-06-01T08:00:00Z"
+      },
+      "events": {
+        "recent_count": 1,
+        "domains": { "calendar": 1 },
+        "severities": { "medium": 1 },
+        "last_event_at": "2026-06-01T08:00:00Z",
+        "recent_items": [
+          {
+            "id": "cpe-1",
+            "title": "Traffic rising",
+            "detail": "Leave earlier",
+            "domain": "calendar",
+            "severity": "medium",
+            "ts": "2026-06-01T08:00:00Z"
+          }
+        ]
+      },
+      "media": {
+        "synced": true,
+        "updated_at": "2026-06-01T08:00:00Z",
+        "title": "Ambient Focus",
+        "is_playing": true
+      },
+      "freshness": [
+        {
+          "id": "cal",
+          "label": "Calendar",
+          "synced": true,
+          "updated_at": "2026-06-01T08:00:00Z",
+          "status": "fresh",
+          "detail": "Recently synced"
+        }
+      ]
+    }
+  },
+  "/api/apple/systems/admin-summary": {
+    "ok": true,
+    "data": {
+      "accounts": {
+        "total": 3,
+        "connected": 2,
+        "planned": 1,
+        "items": [
+          {
+            "id": "google-primary",
+            "label": "Chris Google",
+            "provider": "google",
+            "status": "connected",
+            "login_hint": "chris@example.com",
+            "detail": "mail_calendar"
+          },
+          {
+            "id": "outlook-primary",
+            "label": "Chris Outlook",
+            "provider": "outlook",
+            "status": "planned",
+            "login_hint": "chris@outlook.com",
+            "detail": "mail"
+          },
+          {
+            "id": "kdp",
+            "label": "Amazon KDP",
+            "provider": "amazon",
+            "status": "connected",
+            "login_hint": "",
+            "detail": "publishing"
+          }
+        ]
+      },
+      "family": {
+        "member_count": 3,
+        "online_count": 2,
+        "members": [
+          {
+            "id": "chris",
+            "display_name": "Chris",
+            "role": "parent",
+            "permissions": "admin",
+            "device_count": 2,
+            "online_device_count": 1,
+            "status": "Online"
+          },
+          {
+            "id": "rebekah",
+            "display_name": "Rebekah",
+            "role": "parent",
+            "permissions": "adult",
+            "device_count": 1,
+            "online_device_count": 1,
+            "status": "Online"
+          },
+          {
+            "id": "caleb",
+            "display_name": "Caleb",
+            "role": "child",
+            "permissions": "child",
+            "device_count": 0,
+            "online_device_count": 0,
+            "status": "No Device"
+          }
+        ]
+      },
+      "devices": {
+        "total": 3,
+        "mapped_count": 2,
+        "shared_count": 1,
+        "items": [
+          {
+            "id": "iphone-chris",
+            "label": "Chris iPhone",
+            "owner_name": "Chris",
+            "last_seen_at": "2026-06-01T08:02:00Z",
+            "mapped": true,
+            "shared": false,
+            "status": "Online"
+          },
+          {
+            "id": "ipad-family",
+            "label": "Family iPad",
+            "owner_name": "Shared",
+            "last_seen_at": "2026-06-01T07:45:00Z",
+            "mapped": true,
+            "shared": true,
+            "status": "Mapped"
+          }
+        ]
+      },
+      "voice": {
+        "provider": "auto",
+        "provider_label": "Auto",
+        "voice_label": "Alloy",
+        "local_ready": true,
+        "cloud_ready": true,
+        "detail": "Alloy · local ready · cloud ready"
+      },
+      "service": {
+        "hostname": "jarvis.local",
+        "lan_url": "http://jarvis.local:8787",
+        "deployment_mode": "hybrid",
+        "mode_label": "Hybrid household plus hosted edge",
+        "hosted_base_url": "https://jarvis.teambinion.org",
+        "hosted_provider": "Hetzner",
+        "edge_provider": "Cloudflare Tunnel",
+        "remote_admin_host": "5.78.212.15",
+        "cloudflare_access_enabled": true,
+        "tunnel_enabled": true,
+        "public_route_count": 3,
+        "compose_service_count": 6,
+        "runtime_loaded": true,
+        "openviking_loaded": false,
+        "assistant_loaded": true
+      },
+      "integrations": {
+        "google_ready": true,
+        "google_connected_count": 1,
+        "google_client_secret_present": true,
+        "microsoft_ready": true,
+        "microsoft_connected_count": 0
+      },
+      "costs": {
+        "window_hours": 24,
+        "month_total_usd": 2.34,
+        "total_calls": 84,
+        "paid_calls": 12,
+        "prompt_tokens": 120340,
+        "completion_tokens": 24560,
+        "models": [
+          {
+            "id": "gpt-5.4-mini",
+            "name": "gpt-5.4-mini",
+            "backend": "openai",
+            "calls": 12,
+            "cost_usd": 1.84
+          },
+          {
+            "id": "qwen2.5:14b",
+            "name": "qwen2.5:14b",
+            "backend": "ollama",
+            "calls": 44,
+            "cost_usd": 0.0
+          }
+        ]
+      },
+  "governance": {
+    "zone_count": 3,
+    "active_zone_count": 3,
+    "arena_count": 2,
+    "active_arena_count": 1,
+    "stage_count": 6,
+    "pending_queue_count": 1,
+    "promotion_record_count": 5,
+    "zones": [
+      {
+        "id": "shared-email.stage",
+        "name": "Shared Email Draft Stage",
+        "zone_type": "draft_stage",
+        "authority_stage": "draft",
+        "approval_mode": "stage_and_alert",
+        "status": "active",
+        "action_count": 6
+      },
+      {
+        "id": "family-bmad.personal-local",
+        "name": "Personal Local",
+        "zone_type": "local",
+        "authority_stage": "observe",
+        "approval_mode": "bounded-autonomy",
+        "status": "active",
+        "action_count": 5
+      }
+    ],
+    "arenas": [
+      {
+        "id": "gmail.shared.drafts",
+        "name": "Shared Gmail Draft Arena",
+        "resource_type": "email_draft_pipeline",
+        "linked_zone_id": "shared-email.stage",
+        "risk_class": "low",
+        "status": "active"
+      },
+      {
+        "id": "sandbox.ops",
+        "name": "Sandbox Ops Arena",
+        "resource_type": "sandbox_pipeline",
+        "linked_zone_id": "family-bmad.personal-local",
+        "risk_class": "medium",
+        "status": "paused"
+      }
+    ],
+    "stages": [
+      {
+        "id": "observe",
+        "name": "Observe",
+        "sequence": 0,
+        "status": "active",
+        "action_type_count": 4,
+        "boundary_mode": "escalate"
+      },
+      {
+        "id": "draft",
+        "name": "Draft Only",
+        "sequence": 1,
+        "status": "active",
+        "action_type_count": 3,
+        "boundary_mode": "escalate"
+      },
+      {
+        "id": "stage_alert",
+        "name": "Stage and Alert",
+        "sequence": 2,
+        "status": "active",
+        "action_type_count": 5,
+        "boundary_mode": "escalate"
+      }
+    ],
+    "queue": [
+      {
+        "id": "req-1",
+        "arena_id": "gmail.shared.drafts",
+        "action_type": "stage_email_draft",
+        "status": "queued",
+        "created_at": "2026-06-01T08:12:00Z",
+        "principal_id": "chris",
+        "draft_id": "draft-14"
+      }
+    ],
+    "promotion_records": [
+      {
+        "id": "promo-1",
+        "event_type": "registry_change",
+        "subject_kind": "trust_zone",
+        "subject_id": "shared-email.stage",
+        "status": "active",
+        "actor": "system",
+        "basis": "trust-zone-upsert",
+        "trust_zone": "shared-email.stage",
+        "arena_id": "",
+        "authority_stage": "registry",
+        "created_at": "2026-06-01T08:05:00Z"
+      },
+      {
+        "id": "promo-2",
+        "event_type": "promotion",
+        "subject_kind": "doctrine_rule",
+        "subject_id": "rule-queue-posture",
+        "status": "active",
+        "actor": "Chris",
+        "basis": "approved-by-user",
+        "trust_zone": "family",
+        "arena_id": "",
+        "authority_stage": "policy",
+        "created_at": "2026-06-01T08:14:00Z"
+      },
+      {
+        "id": "promo-3",
+        "event_type": "dismissal",
+        "subject_kind": "doctrine_candidate",
+        "subject_id": "candidate-low-value-pings",
+        "status": "dismissed",
+        "actor": "Chris",
+        "basis": "duplicate of trusted rule",
+        "trust_zone": "shared-doctrine",
+        "arena_id": "",
+        "authority_stage": "policy",
+        "created_at": "2026-06-01T08:19:00Z"
+      },
+      {
+        "id": "stewardship-review-7",
+        "event_type": "stewardship_review_approved",
+        "subject_kind": "stewardship_review",
+        "subject_id": "family-stewardship",
+        "status": "approved",
+        "actor": "Chris",
+        "basis": "Family lane review was approved for the morning handoff packet.",
+        "trust_zone": "household_home",
+        "arena_id": "family",
+        "authority_stage": "stage_alert",
+        "created_at": "2026-06-01T08:33:00Z"
+      },
+      {
+        "id": "stewardship-review-8",
+        "event_type": "stewardship_review_rerouted",
+        "subject_kind": "stewardship_review",
+        "subject_id": "executive-stewardship",
+        "status": "rerouted",
+        "actor": "Chris",
+        "basis": "Executive lane work was rerouted to systems admin for a narrower review surface.",
+        "trust_zone": "household_home",
+        "arena_id": "systems",
+        "authority_stage": "review",
+        "created_at": "2026-06-01T08:37:00Z"
+      }
+    ]
+  },
+  "sandbox_operations": {
+    "queue": {
+      "active_count": 1,
+      "queued_job_count": 2,
+      "review_ready_count": 1,
+      "failed_run_count": 0,
+      "lane_count": 3,
+      "active_jobs": [
+        "sj-1"
+      ]
+    },
+    "jobs": [
+      {
+        "id": "sj-1",
+        "title": "Repair runtime validation drift",
+        "status": "sandbox-queued",
+        "job_type": "stage-runtime-repair",
+        "target": "jarvis/runtime.py",
+        "review_level": "review-before-code-change",
+        "summary": "JARVIS detected runtime validation drift and staged a bounded repair lane.",
+        "auto_allowed": false,
+        "updated_at": "2026-06-01T08:24:00Z",
+        "last_sandbox_run_id": "run-1"
+      },
+      {
+        "id": "sj-2",
+        "title": "Tighten approval contract checks",
+        "status": "sandboxed",
+        "job_type": "contract-hardening",
+        "target": "scripts/verify_apple_contracts.py",
+        "review_level": "review-before-code-change",
+        "summary": "The Apple contract guardrail lane is ready for another isolated run if needed.",
+        "auto_allowed": true,
+        "updated_at": "2026-06-01T08:10:00Z",
+        "last_sandbox_run_id": "run-0"
+      },
+      {
+        "id": "vendor-prep:vp-1",
+        "title": "Vendor package for Desk Bracket",
+        "status": "sandboxed",
+        "job_type": "vendor-prep",
+        "target": "ProtoLabs",
+        "review_level": "review-before-external",
+        "summary": "JARVIS prepared the vendor package in a bounded lane without sending anything externally.",
+        "auto_allowed": false,
+        "updated_at": "2026-06-01T08:32:00Z",
+        "last_sandbox_run_id": "vp-run-1"
+      },
+      {
+        "id": "stewardship-review:stewardship-review-1",
+        "title": "Family Stewardship review packet",
+        "status": "staged",
+        "job_type": "stewardship-review",
+        "target": "family-stewardship",
+        "review_level": "review-before-rollout",
+        "summary": "The family stewardship review can be packaged in a bounded sandbox lane before widening its rollout posture.",
+        "auto_allowed": false,
+        "updated_at": "2026-06-01T08:35:00Z",
+        "last_sandbox_run_id": "stewardship-run-1"
+      }
+    ],
+    "active_runs": [
+      {
+        "id": "run-1",
+        "job_id": "sj-1",
+        "title": "Repair runtime validation drift",
+        "status": "running",
+        "current_step": "compile-and-test",
+        "message": "Running compile and validation checks inside the sandbox.",
+        "updated_at": "2026-06-01T08:25:00Z",
+        "worktree_path": "/tmp/jarvis-worktrees/sj-1"
+      },
+      {
+        "id": "run-0",
+        "job_id": "sj-2",
+        "title": "Tighten approval contract checks",
+        "status": "review-ready",
+        "current_step": "review-ready",
+        "message": "Sandbox run finished. Review the report and patch bundle before promotion.",
+        "updated_at": "2026-06-01T08:12:00Z",
+        "worktree_path": "/tmp/jarvis-worktrees/sj-2"
+      }
+    ],
+    "recent_runs": [
+      {
+        "id": "run-0",
+        "job_id": "sj-2",
+        "title": "Tighten approval contract checks",
+        "generated_at": "2026-06-01T08:11:30Z",
+        "mode": "sandbox-worktree",
+        "compile_ok": true,
+        "tests_ok": true,
+        "report_path": "/tmp/jarvis-sandbox-reports/run-0.json",
+        "patch_bundle_path": "/tmp/jarvis-sandbox-patches/run-0.patch"
+      },
+      {
+        "id": "vp-run-1",
+        "job_id": "vendor-prep:vp-1",
+        "title": "Vendor package for Desk Bracket",
+        "generated_at": "2026-06-01T08:31:30Z",
+        "mode": "vendor-prep-sandbox",
+        "compile_ok": true,
+        "tests_ok": true,
+        "report_path": "/tmp/jarvis-vendor-sandbox-reports/vp-run-1.json",
+        "patch_bundle_path": "/tmp/jarvis-vendor-sandbox/vp-1/vendor_package_review.md"
+      }
+    ],
+    "lane_summaries": [
+      {
+        "id": "self-improvement",
+        "title": "Self Improvement",
+        "queued_count": 2,
+        "active_run_count": 2,
+        "review_ready_count": 1,
+        "failed_run_count": 0,
+        "last_job_id": "sj-1",
+        "status": "active",
+        "detail": "Runtime and contract hardening lanes are running inside bounded worktrees."
+      },
+      {
+        "id": "vendor-prep",
+        "title": "Vendor Prep",
+        "queued_count": 1,
+        "active_run_count": 0,
+        "review_ready_count": 1,
+        "failed_run_count": 0,
+        "last_job_id": "vendor-prep:vp-1",
+        "status": "review-ready",
+        "detail": "Vendor package preparation is available as a low-risk external-facing sandbox lane."
+      },
+      {
+        "id": "stewardship-review",
+        "title": "Stewardship Review",
+        "queued_count": 1,
+        "active_run_count": 0,
+        "review_ready_count": 0,
+        "failed_run_count": 0,
+        "last_job_id": "stewardship-review:stewardship-review-1",
+        "status": "staged",
+        "detail": "Stewardship rollout packets can now be packaged in a bounded lane before promotion."
+      }
+    ]
+  },
+  "reflective_memory": {
+    "subject_display_name": "Chris",
+    "profile_fact_count": 3,
+    "pending_proposal_count": 2,
+    "first_light_history_count": 4,
+    "insight_count": 3,
+    "active_insight_count": 2,
+    "stewardship_decision_count": 2,
+    "governance_learning_count": 2,
+    "preferred_tone": "calm and direct",
+    "briefing_style": "first-light",
+    "preferred_voice": "Alloy",
+    "guidance_lines": [
+      "Morning briefings usually land around 07:10.",
+      "Lean quieter unless the signal is strong enough to justify interruption.",
+      "Stable pattern memory is available for this profile and should bias recommendations."
+    ],
+    "profile_facts": [
+      {
+        "id": "fact-1",
+        "title": "Chris steadies before executive pressure",
+        "summary": "Chris handles pressure better after scripture and a slower first brief.",
+        "tags": ["wisdom", "morning", "executive"],
+        "updated_at": "2026-05-30T07:15:00Z"
+      },
+      {
+        "id": "fact-2",
+        "title": "First useful handoff belongs in the office",
+        "summary": "The office is usually the best place for the first focused handoff of the day.",
+        "tags": ["morning", "office"],
+        "updated_at": "2026-05-28T06:55:00Z"
+      }
+    ],
+    "pending_proposals": [
+      {
+        "id": "proposal-1",
+        "title": "Quiet mornings reduce friction",
+        "summary": "Recent outcomes suggest quieter first-light pacing may reduce household friction.",
+        "status": "pending",
+        "memory_type": "personal",
+        "confidence": "provisional"
+      }
+    ],
+    "recent_first_light": [
+      {
+        "id": "fl-2026-06-01",
+        "label": "2026-06-01",
+        "summary": "Protect the first work block before inbox drift."
+      },
+      {
+        "id": "fl-2026-05-31",
+        "label": "2026-05-31",
+        "summary": "Review departure checklist and stage the family handoff."
+      }
+    ],
+    "recent_stewardship_decisions": [
+      {
+        "id": "stewardship-review-7",
+        "label": "Family Stewardship",
+        "summary": "Family lane review was approved for the morning handoff packet."
+      },
+      {
+        "id": "stewardship-review-8",
+        "label": "Executive Stewardship",
+        "summary": "Executive lane work was rerouted to systems admin for a narrower review surface."
+      }
+    ],
+    "governance_learning": [
+      {
+        "id": "family-stewardship",
+        "title": "Family Stewardship is still teaching the control plane",
+        "summary": "Family Stewardship shows a mixed review pattern across 1 decisions, so JARVIS should keep learning from how you route and retire this lane.",
+        "recommendation": "Keep Family Stewardship under review and watch whether family becomes consistently approvable.",
+        "confidence": "emerging"
+      },
+      {
+        "id": "executive-stewardship",
+        "title": "Executive Stewardship still prefers bounded review",
+        "summary": "Executive Stewardship has been rerouted or retired 1 of 1 reviewed times, which suggests its rollout posture is still narrower than a live lane.",
+        "recommendation": "Keep Executive Stewardship staged through Systems Admin until a cleaner approval pattern emerges.",
+        "confidence": "emerging"
+      }
+    ],
+    "memory_graph": {
+      "subject_display_name": "Chris",
+      "preferred_tone": "calm and direct",
+      "briefing_style": "first-light",
+      "preferred_voice": "Alloy",
+      "anchor_count": 4,
+      "thread_count": 3,
+      "coverage_count": 12,
+      "horizon_count": 3,
+      "anchors": [
+        {
+          "id": "first-light",
+          "title": "First Light Rhythm",
+          "summary": "First Light packets still provide the most durable day-start rhythm signal in the memory graph.",
+          "signal_count": 4,
+          "last_signal": "2026-06-01T07:10:00Z"
+        },
+        {
+          "id": "stewardship:family-stewardship",
+          "title": "Family Stewardship",
+          "summary": "Family Stewardship has governance and rollout history that now belongs in the durable memory graph.",
+          "signal_count": 3,
+          "last_signal": "2026-06-01T08:28:00Z"
+        }
+      ],
+      "active_threads": [
+        {
+          "id": "first-light",
+          "title": "First Light Rhythm",
+          "summary": "First Light packets still provide the most durable day-start rhythm signal in the memory graph.",
+          "horizon": "24h",
+          "signal_count": 4
+        },
+        {
+          "id": "stewardship:family-stewardship",
+          "title": "Family Stewardship",
+          "summary": "Family Stewardship has governance and rollout history that now belongs in the durable memory graph.",
+          "horizon": "24h",
+          "signal_count": 3
+        }
+      ],
+      "surface_coverage": [
+        {
+          "id": "brief",
+          "title": "Brief",
+          "status": "live",
+          "detail": "Brief uses continuity horizon and While You Were Away synthesis."
+        },
+        {
+          "id": "home",
+          "title": "Home",
+          "status": "live",
+          "detail": "Home carries carry-forward rhythm plus absence synthesis."
+        }
+      ],
+      "horizons": [
+        {
+          "id": "24h",
+          "label": "24h",
+          "window_days": 1,
+          "profile_fact_count": 1,
+          "chronicle_entry_count": 2,
+          "first_light_count": 1,
+          "stewardship_decision_count": 2,
+          "summary": "24h continuity holds 1 durable facts, 2 Chronicle thread(s), 1 First Light packet(s), and 2 stewardship decision(s)."
+        },
+        {
+          "id": "7d",
+          "label": "7d",
+          "window_days": 7,
+          "profile_fact_count": 3,
+          "chronicle_entry_count": 5,
+          "first_light_count": 4,
+          "stewardship_decision_count": 3,
+          "summary": "7d continuity holds 3 durable facts, 5 Chronicle thread(s), 4 First Light packet(s), and 3 stewardship decision(s)."
+        }
+      ],
+      "guidance_lines": [
+        "30d continuity holds 3 durable facts, 8 Chronicle thread(s), 4 First Light packet(s), and 3 stewardship decision(s).",
+        "Strongest durable thread: First Light Rhythm (4 signals).",
+        "Continuity coverage is live across 12 shared surfaces, not just one briefing path."
+      ]
+    }
+  },
+  "governed_workflows": {
+    "pending_approval_count": 2,
+    "rejected_approval_count": 1,
+    "automatic_action_count": 6,
+    "friction_action_count": 1,
+    "doctrine_candidate_count": 3,
+    "governance_proposal_count": 2,
+    "active_rule_count": 2,
+    "staged_stewardship_review_count": 2,
+    "pending_approvals": [
+      {
+        "id": "approval-1",
+        "actor": "Chris",
+        "request": "Approve the shared email draft before it reaches the family lane.",
+        "status": "pending",
+        "rationale": "Shared-email zone remains stage-and-alert.",
+        "timestamp": "2026-06-01T08:20:00Z"
+      },
+      {
+        "id": "approval-2",
+        "actor": "Rebekah",
+        "request": "Review the household promotion message before it is staged.",
+        "status": "pending",
+        "rationale": "Promotion language needs a human tone check.",
+        "timestamp": "2026-06-01T08:16:00Z"
+      }
+    ],
+    "recent_actions": [
+      {
+        "id": "act-1",
+        "domain": "family",
+        "action": "stage_email_draft",
+        "decision": "stage_and_alert",
+        "mode": "automatic",
+        "succeeded": true,
+        "caused_friction": false,
+        "why_now": "A shared-email draft was ready for review.",
+        "timestamp": "2026-06-01T08:22:00Z"
+      },
+      {
+        "id": "act-2",
+        "domain": "approvals",
+        "action": "surface_review",
+        "decision": "queue_for_brief",
+        "mode": "automatic",
+        "succeeded": false,
+        "caused_friction": true,
+        "why_now": "Approval pressure was rising during focus time.",
+        "timestamp": "2026-06-01T08:18:00Z"
+      }
+    ],
+    "recent_stewardship_reviews": [
+      {
+        "id": "stewardship-review-1",
+        "lane_id": "family-stewardship",
+        "lane_title": "Family Stewardship",
+        "status": "review_staged",
+        "review_surface": "home",
+        "packet_target": "family",
+        "boundary_decision": "stage",
+        "boundary_reason": "The family lane is still gated for reviewed household changes.",
+        "approval_mode": "stage_and_alert",
+        "timestamp": "2026-06-01T08:28:00Z"
+      },
+      {
+        "id": "stewardship-review-2",
+        "lane_id": "executive-calendar",
+        "lane_title": "Executive & Calendar",
+        "status": "review_staged",
+        "review_surface": "brief",
+        "packet_target": "executive",
+        "boundary_decision": "stage",
+        "boundary_reason": "Calendar routing stays staged before it crosses the family boundary.",
+        "approval_mode": "stage_and_alert",
+        "timestamp": "2026-06-01T08:26:00Z"
+      }
+    ],
+    "governance_proposals": [
+      {
+        "id": "governance-family-stewardship",
+        "title": "Family Stewardship rollout posture should be codified",
+        "kind": "rollout-posture",
+        "status": "candidate",
+        "summary": "Family Stewardship shows a mixed review pattern across 1 decisions, so JARVIS should keep learning from how you route and retire this lane.",
+        "promotion_reason": "Keep Family Stewardship under review and watch whether family becomes consistently approvable."
+      },
+      {
+        "id": "governance-executive-stewardship",
+        "title": "Executive Stewardship rollout posture should be codified",
+        "kind": "rollout-posture",
+        "status": "candidate",
+        "summary": "Executive Stewardship has been rerouted or retired 1 of 1 reviewed times, which suggests its rollout posture is still narrower than a live lane.",
+        "promotion_reason": "Keep Executive Stewardship staged through Systems Admin until a cleaner approval pattern emerges."
+      }
+    ],
+    "doctrine_candidates": [
+      {
+        "id": "candidate-1",
+        "title": "Approvals should stay staged and explicit",
+        "kind": "approval-backlog",
+        "status": "candidate",
+        "summary": "A growing approval queue signals that staging discipline still matters.",
+        "promotion_reason": "A sustained approval queue is a direct signal that staging and explicit gates matter more than ad hoc interruption."
+      },
+      {
+        "id": "candidate-2",
+        "title": "Family work should bias toward queueing before interruption",
+        "kind": "queue-posture",
+        "status": "trusted",
+        "summary": "Family-domain outcomes show that quieter packaging reduces friction.",
+        "promotion_reason": "Repeated low-value interruptions suggest this lane should queue more aggressively."
+      }
+    ]
+  }
+}
+  },
+  "/api/apple/notifications": {
+    "ok": true,
+    "data": {
+      "summary": {
+        "total": 4,
+        "pending": 2,
+        "seen": 1,
+        "snoozed": 0,
+        "resolved": 1,
+        "dismissed": 0,
+        "categories": {
+          "calendar": 2,
+          "approval": 1,
+          "household": 1
+        },
+        "last_updated_at": "2026-06-01T08:01:00Z"
+      },
+      "routing": {
+        "mode": "focus_active",
+        "label": "Focus active",
+        "reason": "Focus is active on the phone, so JARVIS should keep interruptions quieter.",
+        "recommended_delivery": "quiet_store",
+        "focus_active": true,
+        "quiet_hours": false,
+        "hour_local": 8,
+        "needs_count": 2,
+        "alert_count": 1,
+        "present_members": ["Chris", "Household"],
+        "updated_at": "2026-06-01T08:01:00Z",
+        "lanes": [
+          {
+            "id": "household_alert_override",
+            "title": "Household alert override",
+            "detail": "Live household alerts can break through quieter delivery modes.",
+            "active": false
+          },
+          {
+            "id": "focus_quiet_store",
+            "title": "Focus routes non-urgent items quietly",
+            "detail": "When Focus is active, lower-priority notifications stay quiet instead of interrupting.",
+            "active": true
+          },
+          {
+            "id": "quiet_hours_hold_for_brief",
+            "title": "Quiet hours hold lower-priority items for Brief",
+            "detail": "Overnight and quiet-hour delivery should wait for the next command surface unless urgency rises.",
+            "active": false
+          },
+          {
+            "id": "approvals_stay_visible",
+            "title": "Approvals remain visible in quieter modes",
+            "detail": "Needs and approvals stay visible even when JARVIS is suppressing noisier interruptions.",
+            "active": true
+          }
+        ]
+      },
+      "event_summary": {
+        "recent_count": 3,
+        "domains": {
+          "calendar": 2,
+          "home": 1
+        },
+        "severities": {
+          "medium": 2,
+          "high": 1
+        },
+        "last_event_at": "2026-06-01T08:00:00Z"
+      },
+      "notifications": [
+        {
+          "id": "n1",
+          "event_id": "e1",
+          "category": "calendar",
+          "title": "Leave soon",
+          "detail": "Traffic is rising.",
+          "body": "Traffic is rising.",
+          "severity": "medium",
+          "status": "pending",
+          "created_at": "2026-06-01T08:00:00Z",
+          "updated_at": "2026-06-01T08:01:00Z",
+          "expires_at": "2026-06-01T09:00:00Z",
+          "audience": "chris",
+          "delivery_mode": "banner",
+          "navigation_target": "calendar",
+          "available_actions": ["seen", "resolve"],
+          "why_now": "Upcoming departure",
+          "decision_reason": "pre_drive",
+          "source_summary": "Calendar and maps",
+          "posture_snapshot": {
+            "mode": "open",
+            "label": "Open",
+            "reason": "No focus",
+            "recommended_delivery": "normal",
+            "quiet_hours": false,
+            "hour_local": 8,
+            "needs_count": 2,
+            "alert_count": 1
+          },
+          "badge": 1
+        }
+      ]
+    }
+  },
+  "/api/apple/notifications/pending": {
+    "ok": true,
+    "data": {
+      "notifications": [
+        {
+          "id": "pn-1",
+          "title": "Leave soon",
+          "body": "Traffic is rising.",
+          "category": "calendar",
+          "badge": 1,
+          "created_at": "2026-06-01T08:00:00Z"
+        }
+      ]
+    }
+  },
+  "/api/apple/events/recent": {
+    "ok": true,
+    "data": {
+      "events": [
+        {
+          "id": "evt-1",
+          "ts": "2026-06-01T08:00:00Z",
+          "actor": "jarvis",
+          "surface": "briefing",
+          "domain": "calendar",
+          "kind": "route_warning",
+          "severity": "medium",
+          "title": "Traffic rising",
+          "detail": "Leave earlier",
+          "status": "open",
+          "source": "maps",
+          "source_id": "maps-1",
+          "thread_id": "thr-1",
+          "navigation_target": "calendar",
+          "actions": ["open"],
+          "trust_zone": "awareness",
+          "authority_stage": "observe",
+          "why_now": "Departure soon"
+        }
+      ]
+    }
+  },
+  "/api/apple/weather": {
+    "ok": true,
+    "data": {
+      "available": true,
+      "live": true,
+      "stale": false,
+      "location": "Alexandria, KY",
+      "summary": "Clear and calm",
+      "source": "apple_weather",
+      "fetched_at": "2026-06-01T08:00:00Z",
+      "current": {
+        "temperature_f": 72.0,
+        "feels_like_f": 72.0,
+        "condition": "Clear",
+        "icon": "sun.max",
+        "wind": "3 mph",
+        "humidity_pct": 55,
+        "visibility_miles": 10.0,
+        "pressure_hpa": 1012.0,
+        "visual_key": "clear_day",
+        "moon_phase": "waxing_crescent",
+        "moon_phase_label": "Waxing Crescent",
+        "using_forecast_fallback": false
+      },
+      "hourly": [
+        {
+          "time": "09:00",
+          "temperature_f": 74.0,
+          "rain_pct": 0,
+          "forecast": "Clear",
+          "icon": "sun.max"
+        },
+        {
+          "time": "10:00",
+          "temperature_f": 76.0,
+          "rain_pct": 15,
+          "forecast": "Partly Cloudy",
+          "icon": "cloud.sun"
+        }
+      ],
+      "daily": [
+        {
+          "name": "Mon",
+          "icon": "sun.max",
+          "high": 82,
+          "low": 63,
+          "rain_pct": 10,
+          "forecast": "Warm and clear"
+        },
+        {
+          "name": "Tue",
+          "icon": "cloud.sun",
+          "high": 79,
+          "low": 61,
+          "rain_pct": 35,
+          "forecast": "Clouds building late"
+        },
+        {
+          "name": "Wed",
+          "icon": "cloud.rain",
+          "high": 75,
+          "low": 60,
+          "rain_pct": 70,
+          "forecast": "Showers likely"
+        }
+      ],
+      "near_term": {
+        "window_minutes": 15,
+        "summary": "Near-term weather is steady: Clear.",
+        "hazard_active": false,
+        "rain_risk_pct": 10
+      },
+      "radar": {
+        "available": true,
+        "source": "NOAA NWS Radar",
+        "station": "KILN",
+        "viewer_url": "https://radar.weather.gov/station/KILN/standard",
+        "loop_image_url": "https://radar.weather.gov/ridge/standard/KILN_loop.gif",
+        "base_velocity_loop_url": "https://radar.weather.gov/ridge/base_velocity/KILN_loop.gif",
+        "posture": {
+          "mode": "watch",
+          "summary": "Radar is available for situational awareness.",
+          "should_open": false
+        }
+      },
+      "alerts": [
+        {
+          "event": "Special Weather Statement",
+          "severity": "minor",
+          "headline": "Special Weather Statement",
+          "description": "Patchy fog could briefly reduce visibility near low-lying roads."
+        }
+      ],
+      "alerts_count": 1
+    }
+  },
+  "/api/apple/navigation/locations": {
+    "ok": true,
+    "data": {
+      "preferred_location_id": "home",
+      "saved_locations": [
+        {
+          "id": "home",
+          "label": "Home",
+          "address": "8384 Riley Rd",
+          "geography": "Alexandria, KY",
+          "latitude": 38.96,
+          "longitude": -84.39,
+          "source": "server",
+          "notes": "Primary home"
+        }
+      ],
+      "navigation_state": {
+        "favorite_destinations": ["Office"],
+        "recent_destinations": ["School"],
+        "active_stop_category_ids": ["coffee"],
+        "parks_historic_radius_miles": 25,
+        "selected_origin_mode": "saved_location",
+        "selected_saved_location_id": "home",
+        "last_route": {
+          "origin": "Home",
+          "destination": "Office"
+        }
+      }
+    }
+  },
+  "/api/apple/navigation/state": {
+    "ok": true,
+    "data": {
+      "favorite_destinations": ["Office"],
+      "recent_destinations": ["School"],
+      "active_stop_category_ids": ["coffee"],
+      "parks_historic_radius_miles": 25,
+      "selected_origin_mode": "saved_location",
+      "selected_saved_location_id": "home",
+      "last_route": {
+        "origin": "Home",
+        "destination": "Office"
+      }
+    }
+  },
+  "/api/apple/navigation/route?origin=8384%20Riley%20Rd%2C%20Alexandria%2C%20KY%2041001&destination=Cincinnati%2C%20OH": {
+    "ok": true,
+    "data": {
+      "origin": { "label": "Home", "lat": 38.96, "lon": -84.39 },
+      "destination": { "label": "Cincinnati", "lat": 39.10, "lon": -84.51 },
+      "summary": "Fastest route",
+      "hazard_active": false,
+      "route": {
+        "distance_miles": 17.5,
+        "duration_minutes": 28,
+        "coordinates": [[38.96, -84.39], [39.10, -84.51]],
+        "steps": [
+          {
+            "sequence": 1,
+            "instruction": "Head north",
+            "distance_miles": 1.2,
+            "duration_minutes": 3,
+            "maneuver": "depart",
+            "modifier": "straight",
+            "name": "Riley Rd"
+          }
+        ]
+      },
+      "samples": [
+        {
+          "lat": 38.97,
+          "lon": -84.40,
+          "condition": "Clear",
+          "temperature_f": 72.0,
+          "rain_pct": 0,
+          "wind": "3 mph",
+          "alerts": []
+        }
+      ]
+    }
+  },
+  "/api/apple/navigation/stops?origin=8384%20Riley%20Rd%2C%20Alexandria%2C%20KY%2041001&destination=Cincinnati%2C%20OH&parks_radius_miles=25": {
+    "ok": true,
+    "data": {
+      "sections": [
+        {
+          "id": "coffee",
+          "label": "Coffee",
+          "items": [
+            {
+              "name": "Morning Cup",
+              "address": "123 Main St",
+              "description": "Quick stop",
+              "url": "https://example.com",
+              "lat": 39.0,
+              "lng": -84.4,
+              "rating": 4.5,
+              "route_mile_marker": 5.0,
+              "distance_from_route": 0.2
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "/api/apple/briefing?actor=chris": {
+    "ok": true,
+    "data": {
+      "continuity": {
+        "subject_display_name": "Chris",
+        "preferred_tone": "calm and direct",
+        "briefing_style": "first-light",
+        "profile_fact_count": 3,
+        "pending_proposal_count": 1,
+        "first_light_history_count": 4,
+        "guidance_lines": [
+          "Morning briefings usually land around 07:10.",
+          "Lean quieter unless the signal is strong enough to justify interruption.",
+          "Stable pattern memory is available for this profile and should bias recommendations."
+        ],
+        "recent_profile_facts": [
+          {
+            "id": "bf-1",
+            "title": "Chris steadies before executive pressure",
+            "summary": "Chris handles pressure better after scripture and a slower first brief."
+          }
+        ],
+        "recent_first_light": [
+          {
+            "id": "fl-2026-06-01",
+            "label": "2026-06-01",
+            "summary": "Protect the first work block before inbox drift."
+          }
+        ],
+        "long_horizon_lines": [
+          "24h continuity holds 1 durable facts, 2 Chronicle thread(s), 1 First Light packet(s), and 2 stewardship decision(s).",
+          "Strongest durable thread: First Light Rhythm (4 signals)."
+        ],
+        "active_threads": [
+          "First Light Rhythm",
+          "Family Stewardship"
+        ]
+      },
+      "while_you_were_away": {
+        "headline": "While you were away, JARVIS kept 4 lanes moving.",
+        "summary": "2 quiet completions, 2 blocked items, and 3 prepared next steps are ready for review.",
+        "window_hours": 18,
+        "generated_at": "2026-06-01T08:00:00Z",
+        "stewardship_lanes": [
+          {
+            "id": "family-stewardship",
+            "title": "Family Stewardship",
+            "summary": "2 family or home items stayed in view, with 1 home alert watched.",
+            "report_summaries": [
+              {
+                "id": "family-summary",
+                "lane": "Family Stewardship",
+                "agent": "Pepper",
+                "title": "Family stewardship stayed active",
+                "summary": "2 family or home items stayed in view, with 1 home alert watched.",
+                "timestamp": "2026-06-01T08:00:00Z",
+                "status": "summary"
+              }
+            ],
+            "prepared_work": [],
+            "decision_cards": [
+              {
+                "id": "wywa-decision-1",
+                "lane": "Approvals",
+                "agent": "JARVIS",
+                "title": "Approve route adjustment",
+                "summary": "JARVIS is paused on this until you decide.",
+                "timestamp": "2026-06-01T08:00:00Z",
+                "status": "pending"
+              }
+            ],
+            "drift_cards": [
+              {
+                "id": "wywa-drift-1",
+                "lane": "Watcher And Continuity",
+                "agent": "Watcher",
+                "title": "Carry-forward pressure",
+                "summary": "Growth pressure is active, with 3 signals worth keeping in view.",
+                "timestamp": "2026-06-01T08:00:00Z",
+                "status": "observed"
+              }
+            ],
+            "quiet_completions": [],
+            "blocked_work": [
+              {
+                "id": "wywa-blocked-2",
+                "lane": "Family Stewardship",
+                "agent": "Pepper",
+                "title": "Review parent message draft",
+                "summary": "The family note is ready, but JARVIS held it until you approve the wording.",
+                "timestamp": "2026-06-01T07:40:00Z",
+                "status": "staged"
+              }
+            ],
+            "execution_primitive": {
+              "packet_target": "family",
+              "review_surface": "home",
+              "navigation_target": "home",
+              "action_label": "Stage household review",
+              "action_detail": "Queue the family and household lane for explicit review before anything escalates.",
+              "route_summary": "1 decision · 1 blocked · 1 drift",
+              "lane_status": "blocked",
+              "trust_zone": "household_home",
+              "authority_stage": "stage_alert",
+              "arena_status": "active",
+              "approval_mode": "stage_and_alert",
+              "boundary_decision": "stage",
+              "boundary_reason": "household_home is at stage_alert and should surface this family lane before live widening."
+            }
+          },
+          {
+            "id": "executive-calendar",
+            "title": "Executive And Calendar",
+            "summary": "3 upcoming calendar events and 4 active work records informed the prepared posture.",
+            "report_summaries": [
+              {
+                "id": "executive-summary",
+                "lane": "Executive And Calendar",
+                "agent": "Herald",
+                "title": "Executive and calendar posture is staged",
+                "summary": "3 upcoming calendar events and 4 active work records informed the prepared posture.",
+                "timestamp": "2026-06-01T08:00:00Z",
+                "status": "summary"
+              }
+            ],
+            "prepared_work": [
+              {
+                "id": "wywa-prepared-1",
+                "lane": "Executive And Calendar",
+                "agent": "Herald",
+                "title": "Planning Meeting",
+                "summary": "2026-06-01T09:00:00Z · Office",
+                "timestamp": "2026-06-01T09:00:00Z",
+                "status": "prepared"
+              }
+            ],
+            "decision_cards": [],
+            "drift_cards": [],
+            "quiet_completions": [
+              {
+                "id": "wywa-quiet-1",
+                "lane": "Executive And Calendar",
+                "agent": "Herald",
+                "title": "Prepared tomorrow's meeting posture",
+                "summary": "Calendar context, route posture, and the first meeting brief were staged quietly.",
+                "timestamp": "2026-06-01T07:45:00Z",
+                "status": "completed"
+              }
+            ],
+            "blocked_work": [],
+            "execution_primitive": {
+              "packet_target": "today",
+              "review_surface": "briefing",
+              "navigation_target": "calendar",
+              "action_label": "Stage executive review",
+              "action_detail": "Queue the calendar and executive lane for the next deliberate review pass.",
+              "route_summary": "1 prepared",
+              "lane_status": "prepared",
+              "trust_zone": "household_schedule",
+              "authority_stage": "stage_alert",
+              "arena_status": "active",
+              "approval_mode": "stage_and_alert",
+              "boundary_decision": "stage",
+              "boundary_reason": "household_schedule is at stage_alert and should surface this lane before live routing widens."
+            }
+          }
+        ],
+        "lane_reports": [
+          {
+            "id": "family-stewardship",
+            "title": "Family Stewardship",
+            "summary": "2 family or home items stayed in view, with 1 home alert watched."
+          },
+          {
+            "id": "executive-calendar",
+            "title": "Executive And Calendar",
+            "summary": "3 upcoming calendar events and 4 active work records informed the prepared posture."
+          },
+          {
+            "id": "watcher-continuity",
+            "title": "Watcher And Continuity",
+            "summary": "3 surfaced attention items and 3 durable continuity facts shaped the report."
+          },
+          {
+            "id": "chamber-operations",
+            "title": "Chamber Operations",
+            "summary": "1 system maintenance or sandbox job stayed staged while you were away."
+          }
+        ],
+        "quiet_completions": [
+          {
+            "id": "wywa-quiet-1",
+            "lane": "Executive And Calendar",
+            "agent": "Herald",
+            "title": "Prepared tomorrow's meeting posture",
+            "summary": "Calendar context, route posture, and the first meeting brief were staged quietly.",
+            "timestamp": "2026-06-01T07:45:00Z",
+            "status": "completed"
+          },
+          {
+            "id": "wywa-quiet-2",
+            "lane": "Watcher And Continuity",
+            "agent": "Watcher",
+            "title": "Updated continuity on the JARVIS doctrine",
+            "summary": "Recent profile facts and the latest First Light packet were folded into the memory view.",
+            "timestamp": "2026-06-01T07:20:00Z",
+            "status": "recorded"
+          }
+        ],
+        "blocked_work": [
+          {
+            "id": "wywa-blocked-1",
+            "lane": "Needs You",
+            "agent": "JARVIS",
+            "title": "Approve route adjustment",
+            "summary": "Traffic is heavier than usual and JARVIS held the route change for your review.",
+            "timestamp": "2026-06-01T08:00:00Z",
+            "status": "pending"
+          },
+          {
+            "id": "wywa-blocked-2",
+            "lane": "Family Stewardship",
+            "agent": "Pepper",
+            "title": "Review parent message draft",
+            "summary": "The family note is ready, but JARVIS held it until you approve the wording.",
+            "timestamp": "2026-06-01T07:40:00Z",
+            "status": "staged"
+          }
+        ],
+        "prepared_work": [
+          {
+            "id": "wywa-prepared-1",
+            "lane": "Executive And Calendar",
+            "agent": "Herald",
+            "title": "Planning Meeting",
+            "summary": "2026-06-01T09:00:00Z · Office",
+            "timestamp": "2026-06-01T09:00:00Z",
+            "status": "prepared"
+          },
+          {
+            "id": "wywa-prepared-2",
+            "lane": "General Operations",
+            "agent": "Mercury",
+            "title": "Keep active projects moving",
+            "summary": "JARVIS prepared the next useful pass so you do not have to start cold.",
+            "timestamp": "2026-06-01T07:50:00Z",
+            "status": "implementation-plan"
+          }
+        ],
+        "decision_cards": [
+          {
+            "id": "wywa-decision-1",
+            "lane": "Approvals",
+            "agent": "JARVIS",
+            "title": "Approve route adjustment",
+            "summary": "JARVIS is paused on this until you decide.",
+            "timestamp": "2026-06-01T08:00:00Z",
+            "status": "pending"
+          }
+        ],
+        "drift_signals": [
+          {
+            "id": "wywa-drift-1",
+            "lane": "Watcher And Continuity",
+            "agent": "Watcher",
+            "title": "Carry-forward pressure",
+            "summary": "Growth pressure is active, with 3 signals worth keeping in view.",
+            "timestamp": "2026-06-01T08:00:00Z",
+            "status": "observed"
+          }
+        ],
+        "recommendation": {
+          "title": "Clear the first decision gate",
+          "summary": "Approve route adjustment is holding up downstream work.",
+          "action": "Resolve Approve route adjustment first."
+        }
+      },
+      "command_items": [
+        {
+          "id": "cmd-1",
+          "title": "Approve route shift",
+          "detail": "Traffic is rising.",
+          "priority": "high",
+          "kind": "approval"
+        }
+      ],
+      "briefing_items": [
+        {
+          "id": "b1",
+          "text": "The day starts with one meeting and one route-sensitive departure.",
+          "sub": "Leave five minutes early.",
+          "priority": "high",
+          "agent": "JARVIS",
+          "timestamp": "2026-06-01T08:00:00Z"
+        }
+      ],
+      "working_items": [
+        {
+          "id": "w1",
+          "agent": "Mercury",
+          "action": "Preparing your calendar route packet",
+          "timestamp": "2026-06-01T08:00:00Z"
+        }
+      ],
+      "needs_items": [
+        {
+          "id": "need-1",
+          "text": "Approve route adjustment",
+          "detail": "Traffic is heavier than usual.",
+          "agent": "Mercury",
+          "risk": "low",
+          "expires_in": "25m",
+          "created_at": "2026-06-01T08:00:00Z",
+          "status": "pending",
+          "allowed_actions": ["approve", "reject"],
+          "request_type": "route"
+        }
+      ],
+      "drift_items": [
+        {
+          "id": "d1",
+          "text": "You are carrying too many open loops into the morning.",
+          "severity": "moderate",
+          "agent": "Watcher"
+        }
+      ],
+      "greeting": "Good morning, Chris.",
+      "mode": "morning",
+      "generated_at": "2026-06-01T08:00:00Z"
+    }
+  },
+  "/api/apple/while-you-were-away?actor=chris": {
+    "ok": true,
+    "data": {
+      "headline": "While you were away, JARVIS kept 4 lanes moving.",
+      "summary": "2 quiet completions, 2 blocked items, and 3 prepared next steps are ready for review.",
+      "window_hours": 18,
+      "generated_at": "2026-06-01T08:00:00Z",
+      "stewardship_lanes": [
+        {
+          "id": "family-stewardship",
+          "title": "Family Stewardship",
+          "summary": "2 family or home items stayed in view, with 1 home alert watched.",
+          "report_summaries": [
+            {
+              "id": "family-endpoint-summary",
+              "lane": "Family Stewardship",
+              "agent": "Pepper",
+              "title": "Family stewardship stayed active",
+              "summary": "2 family or home items stayed in view, with 1 home alert watched.",
+              "timestamp": "2026-06-01T08:00:00Z",
+              "status": "summary"
+            }
+          ],
+          "prepared_work": [],
+          "decision_cards": [
+            {
+              "id": "wywa-decision-1",
+              "lane": "Approvals",
+              "agent": "JARVIS",
+              "title": "Approve route adjustment",
+              "summary": "JARVIS is paused on this until you decide.",
+              "timestamp": "2026-06-01T08:00:00Z",
+              "status": "pending"
+            }
+          ],
+          "drift_cards": [
+            {
+              "id": "wywa-drift-1",
+              "lane": "Watcher And Continuity",
+              "agent": "Watcher",
+              "title": "Carry-forward pressure",
+              "summary": "Growth pressure is active, with 3 signals worth keeping in view.",
+              "timestamp": "2026-06-01T08:00:00Z",
+              "status": "observed"
+            }
+          ],
+          "quiet_completions": [],
+          "blocked_work": [],
+          "execution_primitive": {
+            "packet_target": "family",
+            "review_surface": "home",
+            "navigation_target": "home",
+            "action_label": "Stage household review",
+            "action_detail": "Queue the family and household lane for explicit review before anything escalates.",
+            "route_summary": "1 decision · 1 drift",
+            "lane_status": "decision-heavy",
+            "trust_zone": "household_home",
+            "authority_stage": "stage_alert",
+            "arena_status": "active",
+            "approval_mode": "stage_and_alert",
+            "boundary_decision": "stage",
+            "boundary_reason": "household_home is at stage_alert and should surface this family lane before live widening."
+          }
+        },
+        {
+          "id": "executive-calendar",
+          "title": "Executive And Calendar",
+          "summary": "3 upcoming calendar events and 4 active work records informed the prepared posture.",
+          "report_summaries": [
+            {
+              "id": "executive-endpoint-summary",
+              "lane": "Executive And Calendar",
+              "agent": "Herald",
+              "title": "Executive and calendar posture is staged",
+              "summary": "3 upcoming calendar events and 4 active work records informed the prepared posture.",
+              "timestamp": "2026-06-01T08:00:00Z",
+              "status": "summary"
+            }
+          ],
+          "prepared_work": [
+            {
+              "id": "wywa-prepared-1",
+              "lane": "Executive And Calendar",
+              "agent": "Herald",
+              "title": "Planning Meeting",
+              "summary": "2026-06-01T09:00:00Z · Office",
+              "timestamp": "2026-06-01T09:00:00Z",
+              "status": "prepared"
+            }
+          ],
+          "decision_cards": [],
+          "drift_cards": [],
+          "quiet_completions": [
+            {
+              "id": "wywa-quiet-1",
+              "lane": "Executive And Calendar",
+              "agent": "Herald",
+              "title": "Prepared tomorrow's meeting posture",
+              "summary": "Calendar context, route posture, and the first meeting brief were staged quietly.",
+              "timestamp": "2026-06-01T07:45:00Z",
+              "status": "completed"
+            }
+          ],
+          "blocked_work": [],
+          "execution_primitive": {
+            "packet_target": "today",
+            "review_surface": "briefing",
+            "navigation_target": "calendar",
+            "action_label": "Stage executive review",
+            "action_detail": "Queue the calendar and executive lane for the next deliberate review pass.",
+            "route_summary": "1 prepared",
+            "lane_status": "prepared",
+            "trust_zone": "household_schedule",
+            "authority_stage": "stage_alert",
+            "arena_status": "active",
+            "approval_mode": "stage_and_alert",
+            "boundary_decision": "stage",
+            "boundary_reason": "household_schedule is at stage_alert and should surface this lane before live routing widens."
+          }
+        }
+      ],
+      "lane_reports": [
+        {
+          "id": "family-stewardship",
+          "title": "Family Stewardship",
+          "summary": "2 family or home items stayed in view, with 1 home alert watched."
+        },
+        {
+          "id": "executive-calendar",
+          "title": "Executive And Calendar",
+          "summary": "3 upcoming calendar events and 4 active work records informed the prepared posture."
+        },
+        {
+          "id": "watcher-continuity",
+          "title": "Watcher And Continuity",
+          "summary": "3 surfaced attention items and 3 durable continuity facts shaped the report."
+        },
+        {
+          "id": "chamber-operations",
+          "title": "Chamber Operations",
+          "summary": "1 system maintenance or sandbox job stayed staged while you were away."
+        }
+      ],
+      "quiet_completions": [
+        {
+          "id": "wywa-quiet-1",
+          "lane": "Executive And Calendar",
+          "agent": "Herald",
+          "title": "Prepared tomorrow's meeting posture",
+          "summary": "Calendar context, route posture, and the first meeting brief were staged quietly.",
+          "timestamp": "2026-06-01T07:45:00Z",
+          "status": "completed"
+        },
+        {
+          "id": "wywa-quiet-2",
+          "lane": "Watcher And Continuity",
+          "agent": "Watcher",
+          "title": "Updated continuity on the JARVIS doctrine",
+          "summary": "Recent profile facts and the latest First Light packet were folded into the memory view.",
+          "timestamp": "2026-06-01T07:20:00Z",
+          "status": "recorded"
+        }
+      ],
+      "blocked_work": [
+        {
+          "id": "wywa-blocked-1",
+          "lane": "Needs You",
+          "agent": "JARVIS",
+          "title": "Approve route adjustment",
+          "summary": "Traffic is heavier than usual and JARVIS held the route change for your review.",
+          "timestamp": "2026-06-01T08:00:00Z",
+          "status": "pending"
+        }
+      ],
+      "prepared_work": [
+        {
+          "id": "wywa-prepared-1",
+          "lane": "Executive And Calendar",
+          "agent": "Herald",
+          "title": "Planning Meeting",
+          "summary": "2026-06-01T09:00:00Z · Office",
+          "timestamp": "2026-06-01T09:00:00Z",
+          "status": "prepared"
+        }
+      ],
+      "decision_cards": [
+        {
+          "id": "wywa-decision-1",
+          "lane": "Approvals",
+          "agent": "JARVIS",
+          "title": "Approve route adjustment",
+          "summary": "JARVIS is paused on this until you decide.",
+          "timestamp": "2026-06-01T08:00:00Z",
+          "status": "pending"
+        }
+      ],
+      "drift_signals": [
+        {
+          "id": "wywa-drift-1",
+          "lane": "Watcher And Continuity",
+          "agent": "Watcher",
+          "title": "Carry-forward pressure",
+          "summary": "Growth pressure is active, with 3 signals worth keeping in view.",
+          "timestamp": "2026-06-01T08:00:00Z",
+          "status": "observed"
+        }
+      ],
+      "recommendation": {
+        "title": "Clear the first decision gate",
+        "summary": "Approve route adjustment is holding up downstream work.",
+        "action": "Resolve Approve route adjustment first."
+      }
+    }
+  },
+  "/api/apple/needs": {
+    "ok": true,
+    "data": [
+      {
+        "id": "need-1",
+        "text": "Approve route adjustment",
+        "detail": "Traffic is heavier than usual.",
+        "agent": "Mercury",
+        "risk": "low",
+        "expires_in": "25m",
+        "created_at": "2026-06-01T08:00:00Z",
+        "status": "pending",
+        "allowed_actions": ["approve", "reject", "cancel"],
+        "request_type": "route",
+        "priority": 4,
+        "tags": ["travel", "routing"],
+        "requires_confirmation": false,
+        "confirmation_phrase": "",
+        "target_summary": "Cincinnati, OH · Route change",
+        "context_lines": [
+          "Channel: navigation",
+          "Description: Use the alternate route to avoid the traffic build-up."
+        ]
+      }
+    ]
+  },
+  "/api/apple/health/summary?actor=chris": {
+    "ok": true,
+    "data": {
+      "steps_today": 4200,
+      "heart_rate_avg": 68,
+      "sleep_hours": 7.3,
+      "active_calories": 320,
+      "stand_hours": 5,
+      "hrv": 42,
+      "readiness": "good",
+      "thor_note": "Recovery looks solid.",
+      "last_sync": "2026-06-01T08:00:00Z",
+      "daily_score": {
+        "value": 84,
+        "grade": "B",
+        "message": "Strong enough to push today.",
+        "estimated": false
+      },
+      "readiness_factors": [
+        {
+          "metric": "sleep_hours",
+          "label": "Sleep",
+          "value": 7.3,
+          "score": 88,
+          "missing": false
+        },
+        {
+          "metric": "hrv",
+          "label": "HRV",
+          "value": 42,
+          "score": 74,
+          "missing": false
+        },
+        {
+          "metric": "resting_hr",
+          "label": "Resting HR",
+          "value": 68,
+          "score": 79,
+          "missing": false
+        }
+      ],
+      "thor_snapshot": {
+        "activity_streak_days": 2,
+        "total_active_minutes_week": 165,
+        "avg_daily_steps": 7120,
+        "readiness": "good",
+        "thor_note": "Good momentum — keep the streak alive today.",
+        "needs_rest": false,
+        "last_activity": "2026-05-31"
+      },
+      "completeness": {
+        "total_score": 55,
+        "grade": "D",
+        "critical_gaps": [
+          "Live CGM not connected (Dexcom OAuth pending)",
+          "Home BP log empty — no Omron readings in database"
+        ],
+        "quick_wins": [
+          "weight flagged as estimated — confirm measured value",
+          "Medication review date not documented in health state"
+        ]
+      },
+      "watchlist": [
+        {
+          "kind": "condition",
+          "title": "Type 2 diabetes mellitus with hyperglycemia",
+          "detail": "A1c improved from 10.2% (2021) to 5.9% (Apr 2024), then relapsed to 7.3% (May 2026). Not controlled.",
+          "severity": "medium"
+        },
+        {
+          "kind": "medication",
+          "title": "Metformin ER",
+          "detail": "Low dose for patient with A1c 7.3%. Possible GI intolerance limiting dose. Discuss with prescriber.",
+          "severity": "low"
+        }
+      ],
+      "protocol_items": [
+        {
+          "title": "Hydrate early",
+          "detail": "Start with 20 oz water.",
+          "emphasis": "high"
+        }
+      ],
+      "alerts": [
+        {
+          "title": "Late bedtime",
+          "detail": "Sleep start slipped by 45 minutes.",
+          "severity": "low"
+        }
+      ],
+      "next_actions": ["Hydrate", "Take a short walk"],
+      "continuity": {
+        "subject_display_name": "Chris",
+        "readiness_lane": "good",
+        "recovery_focus": "HRV",
+        "active_conditions": [
+          "Type 2 diabetes mellitus with hyperglycemia",
+          "Metformin ER"
+        ],
+        "guidance_lines": [
+          "Hydrate before caffeine.",
+          "Take a short walk after the first block.",
+          "Keep the morning load steady before heavier work."
+        ],
+        "profile_fact_count": 3,
+        "recent_profile_facts": [
+          {
+            "id": "health-fact-1",
+            "title": "Hydration steadies your mornings",
+            "summary": "You tend to feel sharper when you hydrate before coffee and keep the first hour calm."
+          },
+          {
+            "id": "health-fact-2",
+            "title": "Short walks improve recovery posture",
+            "summary": "A quick walk after the first work block usually lifts energy and keeps readiness from slipping."
+          }
+        ],
+        "recent_first_light": [
+          {
+            "id": "health-fl-1",
+            "label": "2026-05-31",
+            "summary": "Hydration before your first call reduced the morning crash."
+          }
+        ]
+      }
+    }
+  },
+  "/api/apple/home/state": {
+    "ok": true,
+    "data": {
+      "present_members": ["Chris"],
+      "doors": { "Front Door": "locked" },
+      "temperature": { "inside": 71.0, "target": 72.0, "mode": "cool" },
+      "lights_on": ["Office Lamp"],
+      "alerts": [
+        { "entity": "Garage", "state": "closed", "message": "Garage is secure." }
+      ],
+      "home_context": {
+        "agenda": {
+          "today_event_count": 1,
+          "next_event_title": "Planning",
+          "next_event_start": "2026-06-01T09:00:00Z",
+          "next_event_location": "Office"
+        },
+        "attention": {
+          "reminder_count": 1,
+          "notification_count": 1,
+          "unread_email_count": 2,
+          "needs_count": 1,
+          "focus_active": false
+        },
+        "projects": {
+          "publishing_project_count": 1,
+          "active_work_items_count": 2,
+          "top_titles": ["Jarvis Civilization"]
+        }
+      },
+      "home_ops": {
+        "email": {
+          "gmail_unread": 3,
+          "outlook_unread": 1,
+          "total_unread": 4,
+          "flagged_total": 2
+        },
+        "tasks": {
+          "open_count": 6,
+          "overdue_count": 1,
+          "due_today_count": 2,
+          "due_this_week_count": 4,
+          "top_titles": ["Approve launch assets", "Repair watch sync", "Review Home ops queue"]
+        },
+        "calendar": {
+          "today_count": 2,
+          "upcoming_count": 4,
+          "next_title": "Family Planning",
+          "next_start": "2026-06-01T13:00:00Z",
+          "next_location": "Office"
+        },
+        "projects": {
+          "active_count": 3,
+          "stalled_count": 1,
+          "total_count": 5,
+          "top_titles": ["Jarvis Civilization", "Home Intelligence", "Ambient Routing"],
+          "unclassified_signal_count": 2
+        },
+        "sync": {
+          "connected_sources": ["gmail", "outlook", "calendar"],
+          "attention_sources": ["slack"]
+        }
+      },
+      "continuity": {
+        "subject_display_name": "Chris",
+        "morning_room": "Office",
+        "active_mode": "focus",
+        "primary_rooms": ["Office", "Kitchen"],
+        "guidance_lines": [
+          "Protect the first work block before inbox drift.",
+          "Kitchen resets usually lower afternoon friction."
+        ],
+        "profile_fact_count": 3,
+        "recent_profile_facts": [
+          {
+            "id": "home-fact-1",
+            "title": "Quiet mornings reduce friction",
+            "summary": "Chris tends to hold household calm better when the first block stays protected."
+          },
+          {
+            "id": "home-fact-2",
+            "title": "Kitchen reset improves the evening handoff",
+            "summary": "A quick kitchen reset after lunch usually reduces evening household drag."
+          }
+        ],
+        "recent_first_light": [
+          {
+            "id": "home-fl-1",
+            "label": "2026-06-01",
+            "summary": "Protect the first work block before inbox drift."
+          },
+          {
+            "id": "home-fl-2",
+            "label": "2026-05-31",
+            "summary": "Reset the kitchen before the afternoon block."
+          }
+        ],
+        "long_horizon_lines": [
+          "7d continuity holds 3 durable facts, 5 Chronicle thread(s), 4 First Light packet(s), and 3 stewardship decision(s).",
+          "Strongest durable thread: First Light Rhythm (4 signals)."
+        ],
+        "active_threads": [
+          "First Light Rhythm",
+          "Family Stewardship"
+        ]
+      },
+      "while_you_were_away": {
+        "headline": "While you were away, JARVIS kept 4 lanes moving.",
+        "summary": "2 quiet completions, 2 blocked items, and 3 prepared next steps are ready for review.",
+        "window_hours": 18,
+        "generated_at": "2026-06-01T08:00:00Z",
+        "stewardship_lanes": [
+          {
+            "id": "family-stewardship",
+            "title": "Family Stewardship",
+            "summary": "2 family or home items stayed in view, with 1 home alert watched.",
+            "report_summaries": [
+              {
+                "id": "family-home-summary",
+                "lane": "Family Stewardship",
+                "agent": "Pepper",
+                "title": "Family stewardship stayed active",
+                "summary": "2 family or home items stayed in view, with 1 home alert watched.",
+                "timestamp": "2026-06-01T08:00:00Z",
+                "status": "summary"
+              }
+            ],
+            "prepared_work": [],
+            "decision_cards": [
+              {
+                "id": "wywa-home-decision-1",
+                "lane": "Approvals",
+                "agent": "JARVIS",
+                "title": "Approve route adjustment",
+                "summary": "JARVIS is paused on this until you decide.",
+                "timestamp": "2026-06-01T08:00:00Z",
+                "status": "pending"
+              }
+            ],
+            "drift_cards": [
+              {
+                "id": "wywa-home-drift-1",
+                "lane": "Watcher And Continuity",
+                "agent": "Watcher",
+                "title": "Carry-forward pressure",
+                "summary": "Growth pressure is active, with 3 signals worth keeping in view.",
+                "timestamp": "2026-06-01T08:00:00Z",
+                "status": "observed"
+              }
+            ],
+            "quiet_completions": [],
+            "blocked_work": [],
+            "execution_primitive": {
+              "packet_target": "family",
+              "review_surface": "home",
+              "navigation_target": "home",
+              "action_label": "Stage household review",
+              "action_detail": "Queue the family and household lane for explicit review before anything escalates.",
+              "route_summary": "1 decision · 1 drift",
+              "lane_status": "decision-heavy",
+              "trust_zone": "household_home",
+              "authority_stage": "stage_alert",
+              "arena_status": "active",
+              "approval_mode": "stage_and_alert",
+              "boundary_decision": "stage",
+              "boundary_reason": "household_home is at stage_alert and should surface this family lane before live widening."
+            }
+          },
+          {
+            "id": "executive-calendar",
+            "title": "Executive And Calendar",
+            "summary": "3 upcoming calendar events and 4 active work records informed the prepared posture.",
+            "report_summaries": [
+              {
+                "id": "executive-home-summary",
+                "lane": "Executive And Calendar",
+                "agent": "Herald",
+                "title": "Executive and calendar posture is staged",
+                "summary": "3 upcoming calendar events and 4 active work records informed the prepared posture.",
+                "timestamp": "2026-06-01T08:00:00Z",
+                "status": "summary"
+              }
+            ],
+            "prepared_work": [
+              {
+                "id": "wywa-home-prepared-1",
+                "lane": "Executive And Calendar",
+                "agent": "Herald",
+                "title": "Planning Meeting",
+                "summary": "2026-06-01T09:00:00Z · Office",
+                "timestamp": "2026-06-01T09:00:00Z",
+                "status": "prepared"
+              }
+            ],
+            "decision_cards": [],
+            "drift_cards": [],
+            "quiet_completions": [
+              {
+                "id": "wywa-home-quiet-1",
+                "lane": "Executive And Calendar",
+                "agent": "Herald",
+                "title": "Prepared tomorrow's meeting posture",
+                "summary": "Calendar context, route posture, and the first meeting brief were staged quietly.",
+                "timestamp": "2026-06-01T07:45:00Z",
+                "status": "completed"
+              }
+            ],
+            "blocked_work": [],
+            "execution_primitive": {
+              "packet_target": "today",
+              "review_surface": "briefing",
+              "navigation_target": "calendar",
+              "action_label": "Stage executive review",
+              "action_detail": "Queue the calendar and executive lane for the next deliberate review pass.",
+              "route_summary": "1 prepared",
+              "lane_status": "prepared",
+              "trust_zone": "household_schedule",
+              "authority_stage": "stage_alert",
+              "arena_status": "active",
+              "approval_mode": "stage_and_alert",
+              "boundary_decision": "stage",
+              "boundary_reason": "household_schedule is at stage_alert and should surface this lane before live routing widens."
+            }
+          }
+        ],
+        "lane_reports": [
+          {
+            "id": "family-stewardship",
+            "title": "Family Stewardship",
+            "summary": "2 family or home items stayed in view, with 1 home alert watched."
+          },
+          {
+            "id": "executive-calendar",
+            "title": "Executive And Calendar",
+            "summary": "3 upcoming calendar events and 4 active work records informed the prepared posture."
+          }
+        ],
+        "quiet_completions": [
+          {
+            "id": "wywa-home-quiet-1",
+            "lane": "Executive And Calendar",
+            "agent": "Herald",
+            "title": "Prepared tomorrow's meeting posture",
+            "summary": "Calendar context, route posture, and the first meeting brief were staged quietly.",
+            "timestamp": "2026-06-01T07:45:00Z",
+            "status": "completed"
+          }
+        ],
+        "blocked_work": [
+          {
+            "id": "wywa-home-blocked-1",
+            "lane": "Needs You",
+            "agent": "JARVIS",
+            "title": "Approve route adjustment",
+            "summary": "Traffic is heavier than usual and JARVIS held the route change for your review.",
+            "timestamp": "2026-06-01T08:00:00Z",
+            "status": "pending"
+          }
+        ],
+        "prepared_work": [
+          {
+            "id": "wywa-home-prepared-1",
+            "lane": "Executive And Calendar",
+            "agent": "Herald",
+            "title": "Planning Meeting",
+            "summary": "2026-06-01T09:00:00Z · Office",
+            "timestamp": "2026-06-01T09:00:00Z",
+            "status": "prepared"
+          }
+        ],
+        "decision_cards": [
+          {
+            "id": "wywa-home-decision-1",
+            "lane": "Approvals",
+            "agent": "JARVIS",
+            "title": "Approve route adjustment",
+            "summary": "JARVIS is paused on this until you decide.",
+            "timestamp": "2026-06-01T08:00:00Z",
+            "status": "pending"
+          }
+        ],
+        "drift_signals": [
+          {
+            "id": "wywa-home-drift-1",
+            "lane": "Watcher And Continuity",
+            "agent": "Watcher",
+            "title": "Carry-forward pressure",
+            "summary": "Growth pressure is active, with 3 signals worth keeping in view.",
+            "timestamp": "2026-06-01T08:00:00Z",
+            "status": "observed"
+          }
+        ],
+        "recommendation": {
+          "title": "Clear the first decision gate",
+          "summary": "Approve route adjustment is holding up downstream work.",
+          "action": "Resolve Approve route adjustment first."
+        }
+      },
+      "action_items": [
+        {
+          "id": "ha-1",
+          "title": "Stage office lights",
+          "detail": "Prepare the office for the morning block.",
+          "command": "turn_on",
+          "entity_id": "light.office",
+          "service": "light",
+          "emphasis": "normal"
+        }
+      ]
+    }
+  },
+  "/api/apple/catalyst": {
+    "ok": true,
+    "data": {
+      "active_work": [
+        {
+          "work_id": "work-1",
+          "title": "Trust-zone schemas",
+          "domain": "governance",
+          "lane": "family-operations",
+          "stage": "active",
+          "updated": "2026-06-01T08:00:00Z"
+        }
+      ],
+      "signals": [
+        {
+          "signal_id": "sig-1",
+          "title": "Roadmap drift risk",
+          "source": "Watcher",
+          "tags": ["governance"],
+          "timestamp": "2026-06-01T08:00:00Z"
+        }
+      ],
+      "portfolio": {
+        "mission": "Build the governed household intelligence layer.",
+        "active_project_target": 3,
+        "hypothesis_review_target": 2,
+        "lanes": [
+          {
+            "id": "lane-1",
+            "title": "Governance",
+            "status": "active",
+            "project_count": 1
+          }
+        ]
+      },
+      "lanes": [
+        {
+          "id": "family-operations",
+          "label": "Family Operations",
+          "description": "Projects that reduce friction and improve daily life.",
+          "status": "active"
+        }
+      ],
+      "connectors": [
+        {
+          "id": "manual",
+          "label": "Manual Capture",
+          "status": "local",
+          "notes": "Text-first workflow capture is live."
+        },
+        {
+          "id": "gmail",
+          "label": "Gmail",
+          "status": "disconnected",
+          "notes": "No Gmail account is currently connected."
+        }
+      ],
+      "workflow_counts": {
+        "signals": 4,
+        "email_triage": 1,
+        "meeting_extractions": 2,
+        "briefings": 3,
+        "drafts": 1,
+        "project_briefs": 2,
+        "implementation_plans": 1,
+        "hypotheses": 2
+      },
+      "live_workspace": {
+        "available": true,
+        "live": true,
+        "projects_count": 2,
+        "tasks_count": 3,
+        "calendar_count": 1,
+        "email_count": 2,
+        "retrieved_at": "2026-06-01T08:00:00Z"
+      },
+      "latest_runs": [
+        {
+          "id": "run-1",
+          "label": "Briefing",
+          "title": "Morning package for stewardship queue",
+          "timestamp": "2026-06-01T08:00:00Z"
+        }
+      ],
+      "continuity": {
+        "subject_display_name": "Chris",
+        "briefing_style": "first-light",
+        "active_domains": ["governance", "family-operations"],
+        "guidance_lines": [
+          "Protect the first work block before inbox drift.",
+          "Move the highest-leverage domain first."
+        ],
+        "profile_fact_count": 3,
+        "hottest_workflow": "briefings",
+        "recent_profile_facts": [
+          {
+            "id": "cat-fact-1",
+            "title": "Morning build work lands best before inbox drift",
+            "summary": "Chris tends to move implementation work faster when the first block stays protected."
+          },
+          {
+            "id": "cat-fact-2",
+            "title": "Governance work benefits from shorter review loops",
+            "summary": "Smaller governed slices tend to land more reliably than large doctrinal jumps."
+          }
+        ],
+        "recent_first_light": [
+          {
+            "id": "cat-fl-1",
+            "label": "2026-06-01",
+            "summary": "Protect the first work block before inbox drift."
+          },
+          {
+            "id": "cat-fl-2",
+            "label": "2026-05-31",
+            "summary": "Move the highest-leverage domain first."
+          }
+        ]
+      },
+      "updated_at": "2026-06-01T08:00:00Z"
+    }
+  },
+  "/api/apple/chronicle": {
+    "ok": true,
+    "data": {
+      "entries": [
+        {
+          "id": "ce-1",
+          "type": "reflection",
+          "title": "Morning note",
+          "body": "Today feels focused.",
+          "scripture": "Psalm 23",
+          "timestamp": "2026-06-01T08:00:00Z"
+        }
+      ],
+      "context": {
+        "study": { "title": "Proverbs", "passage": "Proverbs 3", "date": "2026-06-01" },
+        "active_prayers": [
+          { "id": "cp-1", "text": "Lead the day well.", "category": "wisdom", "times_prayed": 2, "last_prayed_at": "2026-06-01", "answered": false, "answer_summary": "" }
+        ],
+        "todays_rhythm": { "name": "Morning Prayer", "description": "Begin with scripture and intercession." },
+        "top_themes": ["wisdom"],
+        "total_entries": 10,
+        "active_prayer_count": 1,
+        "answered_prayer_count": 2
+      },
+      "patterns": {
+        "window_days": 30,
+        "total_recent_entries": 4,
+        "entry_type_breakdown": { "reflection": 2 },
+        "recurring_themes": [
+          { "theme": "wisdom", "count": 2 }
+        ],
+        "prayer_arc": {
+          "total_active": 1,
+          "answered_total": 2,
+          "answered_recent": 1
+        },
+        "writing_streak_days": 3
+      },
+      "continuity": {
+        "situations": [
+          {
+            "id": "decision",
+            "label": "Discernment And Decisions",
+            "summary": "JARVIS sees this as a discernment and decisions moment based on signals like wisdom, clarity.",
+            "signals": ["wisdom", "clarity"],
+            "matched_fact_count": 1
+          }
+        ],
+        "relevant_facts": [
+          {
+            "fact_id": "fact-1",
+            "title": "Chris steadies before executive pressure",
+            "summary": "Chris handles pressure better after scripture and a slower first brief.",
+            "lane": "personal",
+            "updated_at": "2026-05-30T07:15:00Z",
+            "tags": ["wisdom", "morning", "executive"]
+          }
+        ],
+        "similar_entries": [
+          {
+            "id": "ce-older-1",
+            "type": "reflection",
+            "title": "Stayed calm before a hard meeting",
+            "body": "Prayer and a slower start kept the meeting from setting the emotional tone for the day.",
+            "scripture": "Philippians 4:6-7",
+            "timestamp": "2026-05-29T08:10:00Z"
+          }
+        ],
+        "recall_prompt": "Recall how Chris has been walking through wisdom. Carry forward: Chris handles pressure better after scripture and a slower first brief."
+      },
+      "study_workspace": {
+        "passage": "Proverbs 3",
+        "title": "Proverbs",
+        "date": "2026-06-01",
+        "focus_summary": "Begin with scripture and intercession.",
+        "prompts": [
+          "What word or phrase stands out in Proverbs 3?",
+          "How does this speak into wisdom?",
+          "What is one faithful response you can carry into today?"
+        ]
+      },
+      "updated_at": "2026-06-01T08:00:00Z"
+    }
+  },
+  "/api/apple/faith?actor=chris": {
+    "ok": true,
+    "data": {
+      "daily_word": {
+        "agent": "Jerome",
+        "agent_title": "Spiritual Director",
+        "word": "Lead with peace today.",
+        "passage": "Philippians 4:6-7",
+        "domain": "faith",
+        "generated_at": "2026-06-01T08:00:00Z"
+      },
+      "morning_context": {
+        "theme": "peace",
+        "focus": "calm action"
+      },
+      "agents": [
+        {
+          "id": "ezra",
+          "name": "Ezra",
+          "title": "The Scribe",
+          "domain": "Exegesis & the Text",
+          "color": "#C9A84C",
+          "initials": "EZ",
+          "description": "Meticulous scribe and priest who leads you through the text with precision."
+        },
+        {
+          "id": "david",
+          "name": "David",
+          "title": "The Psalmist",
+          "domain": "Worship & the Heart",
+          "color": "#8B5CF6",
+          "initials": "DV",
+          "description": "Shepherd-king who helps you bring your whole emotional life before God."
+        }
+      ],
+      "formation_prompts": [
+        "Ask about Philippians 4:6-7 with the faith council.",
+        "Pray into peace.",
+        "Seek counsel on calm action."
+      ],
+      "continuity": {
+        "subject_display_name": "Chris",
+        "theme": "peace",
+        "focus": "calm action",
+        "passage": "Philippians 4:6-7",
+        "council_domains": [
+          "Exegesis & the Text",
+          "Worship & the Heart"
+        ],
+        "guidance_lines": [
+          "Begin with prayer before reacting.",
+          "Pray into peace."
+        ],
+        "profile_fact_count": 3,
+        "recent_profile_facts": [
+          {
+            "id": "faith-fact-1",
+            "title": "Peace grows when you slow the first response",
+            "summary": "Starting with prayer before reacting tends to steady your whole morning."
+          },
+          {
+            "id": "faith-fact-2",
+            "title": "Scripture first sharpens discernment",
+            "summary": "Returning to the passage before decision-making usually clarifies your next faithful step."
+          }
+        ],
+        "recent_first_light": [
+          {
+            "id": "faith-fl-1",
+            "label": "2026-05-31",
+            "summary": "A slower first prayer held your posture steady through the day."
+          }
+        ]
+      },
+      "updated_at": "2026-06-01T08:00:00Z"
+    }
+  },
+  "/api/apple/publishing": {
+    "ok": true,
+    "data": {
+      "projects": [
+        {
+          "project_id": "pub-1",
+          "title": "Jarvis Civilization",
+          "type": "book",
+          "status": "editing",
+          "platform": "KDP",
+          "url": "",
+          "description": "A doctrine draft",
+          "notes": "Needs review",
+          "checklist_progress": "7/11",
+          "checklist_percent": 64,
+          "platform_focus": "KDP metadata, proof review, and marketplace copy readiness.",
+          "updated_at": "2026-06-01T08:00:00Z"
+        }
+      ],
+      "revenue_summary": {
+        "monthly_estimate": 1200.0,
+        "stream_count": 1,
+        "streams": [
+          {
+            "stream_id": "rs-1",
+            "type": "books",
+            "source": "KDP",
+            "monthly_est": 1200.0
+          }
+        ]
+      },
+      "upcoming": [
+        {
+          "item_id": "calitem-1",
+          "title": "Launch email",
+          "content_type": "email",
+          "platform": "Mail",
+          "planned_date": "2026-06-02",
+          "status": "planned"
+        }
+      ],
+      "pending_reviews": [
+        {
+          "review_id": "rev-1",
+          "title": "Chapter 3",
+          "slug": "chapter-3",
+          "stage_key": "edit",
+          "stage_display": "Editing",
+          "content_preview": "Governance section",
+          "word_count": 1800,
+          "ready_since": "2026-06-01T07:00:00Z",
+          "approval_id": "apr-1"
+        }
+      ],
+      "pending_reviews_count": 1,
+      "launch_control": {
+        "project_id": "pub-1",
+        "title": "Jarvis Civilization",
+        "platform": "KDP",
+        "status": "launching",
+        "phase": "pre_launch",
+        "days_to_launch": 7,
+        "posts_scheduled": 3,
+        "posts_pending_approval": 1,
+        "launch_date": "2026-06-08",
+        "next_action": "Approve teaser thread"
+      },
+      "launch_workspace": {
+        "project_id": "pub-1",
+        "title": "Jarvis Civilization",
+        "platform": "KDP",
+        "platform_focus": "KDP metadata, proof review, and marketplace copy readiness.",
+        "checklist_progress": "7/11",
+        "checklist_percent": 64,
+        "next_checklist_step": "Pricing set",
+        "launch_slug": "jarvis-civilization",
+        "asset_status": "partial",
+        "generated_at": "2026-06-01T06:30:00Z",
+        "checklist": [
+          {
+            "step": "manuscript_final",
+            "label": "Final manuscript complete",
+            "order": 1,
+            "completed": true,
+            "completed_at": "2026-05-20T09:00:00Z"
+          },
+          {
+            "step": "isbn",
+            "label": "ISBN obtained",
+            "order": 2,
+            "completed": true,
+            "completed_at": "2026-05-21T09:00:00Z"
+          },
+          {
+            "step": "cover_design",
+            "label": "Cover designed",
+            "order": 3,
+            "completed": true,
+            "completed_at": "2026-05-22T09:00:00Z"
+          },
+          {
+            "step": "interior_format",
+            "label": "Interior formatted (KDP-ready PDF)",
+            "order": 4,
+            "completed": true,
+            "completed_at": "2026-05-23T09:00:00Z"
+          },
+          {
+            "step": "kdp_account",
+            "label": "KDP account setup",
+            "order": 5,
+            "completed": true,
+            "completed_at": "2026-05-24T09:00:00Z"
+          },
+          {
+            "step": "title_metadata",
+            "label": "Title, subtitle, description written",
+            "order": 6,
+            "completed": true,
+            "completed_at": "2026-05-25T09:00:00Z"
+          },
+          {
+            "step": "categories_keywords",
+            "label": "7 categories + 7 keywords selected",
+            "order": 7,
+            "completed": true,
+            "completed_at": "2026-05-26T09:00:00Z"
+          },
+          {
+            "step": "pricing_set",
+            "label": "Pricing set",
+            "order": 8,
+            "completed": false,
+            "completed_at": ""
+          },
+          {
+            "step": "publish_draft",
+            "label": "Published as draft on KDP",
+            "order": 9,
+            "completed": false,
+            "completed_at": ""
+          }
+        ],
+        "assets": [
+          {
+            "key": "social",
+            "title": "Social Launch Series",
+            "status": "ready",
+            "item_count": 16,
+            "detail": "10 X posts and 6 LinkedIn posts generated."
+          },
+          {
+            "key": "email",
+            "title": "Email Sequence",
+            "status": "ready",
+            "item_count": 3,
+            "detail": "3 launch emails staged for pre-launch, launch day, and follow-up."
+          },
+          {
+            "key": "marketplace",
+            "title": "KDP / Marketplace Copy",
+            "status": "ready",
+            "item_count": 11,
+            "detail": "3 subtitle options and 7 keyword phrases prepared."
+          },
+          {
+            "key": "outreach",
+            "title": "Press And Outreach",
+            "status": "partial",
+            "item_count": 5,
+            "detail": "Press release, newsletter, podcast, and review-request assets are packaged together."
+          }
+        ]
+      },
+    "action_items": [
+      {
+        "title": "Approve teaser thread",
+        "detail": "Marketing copy is ready for review.",
+        "kind": "approval",
+        "priority": "high"
+      }
+    ],
+    "continuity": {
+      "subject_display_name": "Chris",
+      "briefing_style": "strategic",
+      "launch_focus": "KDP metadata, proof review, and marketplace copy readiness.",
+      "active_platforms": [
+        "KDP",
+        "Mail"
+      ],
+      "pending_review_pressure": 1,
+      "profile_fact_count": 3,
+      "guidance_lines": [
+        "Keep the publishing pipeline moving.",
+        "Marketing copy is ready for review."
+      ],
+      "recent_profile_facts": [
+        {
+          "id": "publish-fact-1",
+          "title": "Short review loops keep launch momentum",
+          "summary": "You ship faster when review decisions happen in the same working block."
+        },
+        {
+          "id": "publish-fact-2",
+          "title": "Platform batching reduces drag",
+          "summary": "Grouping marketplace, email, and social decisions into one pass keeps launch overhead lower."
+        }
+      ],
+      "recent_first_light": [
+        {
+          "id": "publish-fl-1",
+          "label": "2026-05-31",
+          "summary": "A tighter morning review block kept the launch queue moving."
+        }
+      ]
+    },
+    "updated_at": "2026-06-01T08:00:00Z"
+  }
+  },
+  "/api/apple/huddle": {
+    "ok": true,
+    "data": {
+      "reports": [
+        {
+          "agent_id": "mercury",
+          "agent_name": "Mercury",
+          "domain": "calendar",
+          "status": "ok",
+          "summary": "Morning route prep is staged.",
+          "blockers": [],
+          "yesterday": "Prepared route cues",
+          "today": "Monitor departures",
+          "needs": "",
+          "highlights": ["Traffic cue ready"],
+          "source": "generated",
+          "active_work_count": 1
+        }
+      ],
+      "blockers": [],
+      "highlights": ["Morning packet ready"],
+      "approvals": [
+        {
+          "work_id": "apr-1",
+          "title": "Approve route shift",
+          "agent": "Mercury",
+          "proposal": "Leave five minutes early.",
+          "domain": "calendar"
+        }
+      ],
+      "approvals_count": 1,
+      "total_active_work": 1,
+      "runtime": {
+        "active_mode": "work",
+        "quiet_hours_active": false,
+        "awake_count": 3,
+        "idle_count": 8,
+        "blocked_count": 1,
+        "last_tick_at": "2026-06-01T08:00:00Z",
+        "statuses": [
+          {
+            "agent_id": "mercury",
+            "label": "Mercury",
+            "state": "awake",
+            "reason": "Morning route prep cycle is active.",
+            "last_run_at": "2026-06-01T07:58:00Z",
+            "next_run_at": "2026-06-01T08:15:00Z",
+            "due_now": true,
+            "priority": 9
+          },
+          {
+            "agent_id": "jarvis-prime",
+            "label": "Jarvis Prime",
+            "state": "awake",
+            "reason": "Synthesizing standup packet for the household.",
+            "last_run_at": "2026-06-01T07:57:00Z",
+            "next_run_at": "2026-06-01T08:20:00Z",
+            "due_now": false,
+            "priority": 10
+          }
+        ]
+      },
+      "party_mode": {
+        "status": "completed",
+        "triggered_by": "schedule",
+        "dossiers_built_count": 2,
+        "dossiers_attempted": 2,
+        "items_dreamed": 3,
+        "items_researched": 2,
+        "last_log": "04:42 - Party mode complete. 2 dossiers built, 3 ideas dreamed.",
+        "started_at": "2026-06-01T02:00:00Z",
+        "ended_at": "2026-06-01T04:42:00Z"
+      },
+      "dossiers": [
+        {
+          "dossier_id": "dos-1",
+          "title": "Neighborhood Pickleball Newsletter",
+          "status": "ready",
+          "executive_summary": "A local media and sponsorship play built around recurring pickleball coverage.",
+          "first_action": "Interview 10 local players and validate sponsor demand.",
+          "confidence_score": 7.8,
+          "revenue_estimate_low": 500,
+          "revenue_estimate_high": 1800,
+          "effort_hours": 18,
+          "updated_at": "2026-06-01T04:42:00Z"
+        },
+        {
+          "dossier_id": "dos-2",
+          "title": "AI Family Operations Mini Course",
+          "status": "ready",
+          "executive_summary": "A lightweight course offer teaching families how to use JARVIS-style coordination patterns.",
+          "first_action": "Draft the landing-page promise and a 3-module outline.",
+          "confidence_score": 8.1,
+          "revenue_estimate_low": 1200,
+          "revenue_estimate_high": 4200,
+          "effort_hours": 26,
+          "updated_at": "2026-06-01T04:39:00Z"
+        }
+      ],
+      "continuity": {
+        "subject_display_name": "Chris",
+        "council_focus": "Two ready dossiers and one approval request need a clear decision lane before the next overnight cycle.",
+        "active_domains": [
+          "calendar",
+          "research",
+          "operations"
+        ],
+        "ready_dossier_count": 2,
+        "profile_fact_count": 3,
+        "guidance_lines": [
+          "Your best huddles happen when blockers are surfaced early and the next lane is named clearly.",
+          "2 ready dossiers are waiting for the next council pass.",
+          "Party mode is currently completed."
+        ],
+        "recent_profile_facts": [
+          {
+            "id": "huddle-fact-1",
+            "title": "You move faster when the council names the constraint first",
+            "summary": "Agent work clears more quickly when the blocker is explicit before discussion broadens."
+          },
+          {
+            "id": "huddle-fact-2",
+            "title": "Morning reviews work best with one decision lane at a time",
+            "summary": "The huddle stays calmest when approvals and dossiers are processed in a clear order."
+          }
+        ],
+        "recent_first_light": [
+          {
+            "id": "huddle-fl-1",
+            "label": "2026-05-31",
+            "summary": "An early First Light review made the morning huddle calmer and more decisive."
+          }
+        ]
+      },
+      "updated_at": "2026-06-01T08:00:00Z"
+    }
+  },
+  "/api/apple/forge": {
+    "ok": true,
+    "data": {
+      "summary": {
+        "total_projects": 3,
+        "active_projects": 3,
+        "capture_projects": 1,
+        "ready_models": 2,
+        "approval_queue": 1,
+        "queued_jobs": 1
+      },
+      "active_project": {
+        "id": "fp-2",
+        "title": "Pickleball Paddle",
+        "description": "Working through a printable paddle concept with capture and generated models.",
+        "status": "model_ready",
+        "intake_type": "file_upload",
+        "updated_at": "2026-06-01T10:05:00Z",
+        "notes": "Need to confirm grip scale before print approval.",
+        "source_file_count": 6,
+        "capture_frame_count": 8,
+        "measurement_count": 2,
+        "generated_model_count": 2,
+        "approval_count": 1,
+        "latest_capture_status": "needs_more_views",
+        "capture_confidence": {
+          "geometry": "medium",
+          "scale": "low",
+          "print_readiness": "low"
+        },
+        "missing_views": [
+          "top"
+        ],
+        "generated_models": [
+          {
+            "model_id": "gm-1",
+            "title": "TRELLIS paddle concept",
+            "format": "glb",
+            "created_at": "2026-06-01T09:45:00Z",
+            "source_image": "paddle-front.png",
+            "notes": "Confirm grip circumference before slicing."
+          },
+          {
+            "model_id": "gm-2",
+            "title": "TRELLIS paddle export",
+            "format": "obj",
+            "created_at": "2026-06-01T09:45:00Z",
+            "source_image": "paddle-front.png",
+            "notes": "High-resolution mesh for workshop inspection."
+          }
+        ]
+      },
+      "projects": [
+        {
+          "id": "fp-2",
+          "title": "Pickleball Paddle",
+          "status": "model_ready",
+          "intake_type": "file_upload",
+          "updated_at": "2026-06-01T10:05:00Z",
+          "source_file_count": 6,
+          "capture_frame_count": 8,
+          "measurement_count": 2,
+          "generated_model_count": 2,
+          "approval_count": 1,
+          "latest_capture_status": "needs_more_views",
+          "print_readiness": "low",
+          "latest_model_name": "TRELLIS paddle export"
+        },
+        {
+          "id": "fp-1",
+          "title": "Desk Bracket",
+          "status": "capture_in_progress",
+          "intake_type": "phone_capture",
+          "updated_at": "2026-06-01T09:22:00Z",
+          "source_file_count": 14,
+          "capture_frame_count": 14,
+          "measurement_count": 0,
+          "generated_model_count": 0,
+          "approval_count": 0,
+          "latest_capture_status": "needs_more_views",
+          "print_readiness": "not_ready",
+          "latest_model_name": null
+        },
+        {
+          "id": "fp-3",
+          "title": "Camera Mount",
+          "status": "approval_required",
+          "intake_type": "file_upload",
+          "updated_at": "2026-06-01T08:15:00Z",
+          "source_file_count": 4,
+          "capture_frame_count": 0,
+          "measurement_count": 3,
+          "generated_model_count": 1,
+          "approval_count": 0,
+          "latest_capture_status": null,
+          "print_readiness": "ready",
+          "latest_model_name": "Camera Mount v2"
+        }
+      ],
+      "models": [
+        {
+          "id": "fm-1",
+          "name": "Desk Scan",
+          "photo_count": 12,
+          "created_at": "2026-06-01T08:00:00Z",
+          "usdz_path": "/models/desk.usdz"
+        },
+        {
+          "id": "fm-2",
+          "name": "Paddle Grip Prototype",
+          "photo_count": 24,
+          "created_at": "2026-06-01T09:45:00Z",
+          "usdz_path": null
+        }
+      ],
+      "continuity": {
+        "subject_display_name": "Chris",
+        "workshop_focus": "Need to confirm grip scale before print approval.",
+        "active_workshop_lanes": [
+          "file_upload",
+          "phone_capture",
+          "approval_review"
+        ],
+        "queued_job_count": 1,
+        "profile_fact_count": 3,
+        "guidance_lines": [
+          "Workshop momentum improves when capture review and print-readiness decisions stay in the same making block.",
+          "The active project still needs grip-scale confirmation before the export lock can stay trusted."
+        ],
+        "recent_profile_facts": [
+          {
+            "id": "forge-fact-1",
+            "title": "You close workshop loops faster with same-session review",
+            "summary": "Capture confidence and approval decisions move faster when you inspect them during the same making session."
+          },
+          {
+            "id": "forge-fact-2",
+            "title": "Queued jobs pile up when the active project is left unresolved",
+            "summary": "Open workshop questions tend to block the next making lane until the leading project is clarified."
+          }
+        ],
+        "recent_first_light": [
+          {
+            "id": "forge-fl-1",
+            "label": "2026-05-31",
+            "summary": "Early workshop review surfaced the grip-scale issue before export lock-in."
+          }
+        ]
+      },
+      "recent_jobs": [
+        {
+          "job_id": "forge-1",
+          "name": "Desk Scan",
+          "status": "queued",
+          "photo_count": 24,
+          "created_at": "2026-06-01T10:00:00Z"
+        }
+      ]
+    }
+  },
+  "/api/apple/forge/projects": {
+    "ok": true,
+    "data": {
+      "id": "fp-new",
+      "title": "Desk Scan",
+      "description": "Bracket concept from phone capture",
+      "status": "idea",
+      "intake_type": "phone_capture",
+      "updated_at": "2026-06-01T10:10:00Z",
+      "notes": "",
+      "source_file_count": 0,
+      "capture_frame_count": 0,
+      "measurement_count": 0,
+      "generated_model_count": 0,
+      "approval_count": 0,
+      "latest_capture_status": null,
+      "capture_confidence": null,
+      "missing_views": [],
+      "generated_models": []
+    }
+  },
+  "/api/apple/voice/greeting?actor=chris": {
+    "ok": true,
+    "data": {
+      "greeting": "Good morning, Chris.",
+      "mode": "morning"
+    }
+  },
+  "/api/apple/voice/state?actor=chris&conversation_id=": {
+    "ok": true,
+    "data": {
+      "conversation": {
+        "conversation_id": "conv-1",
+        "title": "Morning command flow",
+        "updated_at": "2026-06-01T08:00:00Z",
+        "turn_count": 4,
+        "latest_user_text": "What needs my approval right now?",
+        "latest_assistant_text": "You have one publishing review and one route shift waiting.",
+        "recent_turns": [
+          {
+            "role": "user",
+            "text": "What needs my approval right now?",
+            "created_at": "2026-06-01T08:00:00Z",
+            "agent": "chris"
+          },
+          {
+            "role": "assistant",
+            "text": "You have one publishing review and one route shift waiting.",
+            "created_at": "2026-06-01T08:00:03Z",
+            "agent": "JARVIS"
+          }
+        ]
+      },
+      "recent_conversations": [
+        {
+          "conversation_id": "conv-1",
+          "title": "Morning command flow",
+          "updated_at": "2026-06-01T08:00:00Z",
+          "turn_count": 4
+        }
+      ],
+      "memory_overview": {
+        "profile_fact_count": 12,
+        "pending_proposals": 1,
+        "preferred_voice": "Alloy",
+        "briefing_style": "first-light",
+        "guidance_lines": [
+          "Protect the first work block before inbox drift.",
+          "Lead with the short version before detail."
+        ],
+        "recent_profile_facts": [
+          {
+            "id": "voice-fact-1",
+            "title": "Short spoken summaries land best first",
+            "summary": "Chris responds best when voice opens with the shortest useful version."
+          },
+          {
+            "id": "voice-fact-2",
+            "title": "Morning voice should stay calm and direct",
+            "summary": "A calmer spoken tone tends to lower friction in the first block."
+          }
+        ],
+        "recent_first_light": [
+          {
+            "id": "voice-fl-1",
+            "label": "2026-06-01",
+            "summary": "Protect the first work block before inbox drift."
+          },
+          {
+            "id": "voice-fl-2",
+            "label": "2026-05-31",
+            "summary": "Lead with the short version before detail."
+          }
+        ],
+        "long_horizon_lines": [
+          "24h continuity holds 1 durable facts, 2 Chronicle thread(s), 1 First Light packet(s), and 2 stewardship decision(s).",
+          "Strongest durable thread: First Light Rhythm (4 signals)."
+        ],
+        "active_threads": [
+          "First Light Rhythm",
+          "Family Stewardship"
+        ]
+      },
+      "voice_stack": {
+        "provider": "auto",
+        "provider_label": "Auto",
+        "voice_label": "System Voice",
+        "local_ready": true,
+        "cloud_ready": false,
+        "detail": "System Voice · local ready · cloud idle"
+      },
+      "quick_commands": [
+        "Show the highest-priority request",
+        "What happens if I wait?",
+        "Summarize the queue in one sentence"
+      ]
+    }
+  },
+  "/api/apple/speak": {
+    "ok": true,
+    "data": {
+      "response": "All systems nominal.",
+      "agent": "JARVIS",
+      "speak": true,
+      "display_text": "All systems nominal.",
+      "spoken_text": "All systems nominal.",
+      "presentation_mode": "spoken_reply",
+      "conversation_id": "conv-1",
+      "follow_up_suggestions": [
+        "What should I handle next?",
+        "Give me the short version",
+        "Turn this into an action plan"
+      ]
+    }
+  },
+  "/api/apple/device/register": {
+    "ok": true,
+    "data": {
+      "registered": true
+    }
+  },
+  "/api/apple/home/command": {
+    "ok": true,
+    "data": {
+      "request_id": "req-1",
+      "status": "pending_approval",
+      "boundary_decision": "stage",
+      "boundary_reason": "household_home is at draft and must promote before live home_control actions.",
+      "trust_zone": "household_home",
+      "authority_stage": "draft",
+      "arena_status": "active",
+      "approval_mode": "stage_and_alert"
+    }
+  },
+  "/api/apple/presence": {
+    "ok": true,
+    "data": {
+      "event": "arrived_home",
+      "actor_id": "chris",
+      "ts": "2026-06-01T08:00:00Z"
+    }
+  },
+  "/api/apple/approvals/req-1/approve": {
+    "ok": true,
+    "data": {
+      "status": "approved",
+      "request": {
+        "id": "req-1",
+        "title": "Route shift"
+      }
+    }
+  },
+  "/api/apple/approvals/req-1/reject": {
+    "ok": true,
+    "data": {
+      "status": "rejected",
+      "request_id": "req-1",
+      "reason": "Not now"
+    }
+  },
+  "/api/apple/approvals/req-1/cancel": {
+    "ok": true,
+    "data": {
+      "status": "cancelled",
+      "request_id": "req-1"
+    }
+  },
+  "/api/apple/calendar": {
+    "ok": true,
+    "data": {
+      "stored": 0
+    }
+  },
+  "/api/apple/calendar/stage-prep": {
+    "ok": true,
+    "data": {
+      "status": "staged",
+      "title": "Planning",
+      "start": "2026-06-01T09:00:00Z",
+      "location": "Office"
+    }
+  },
+  "/api/apple/calendar/events/cal-1/prepare": {
+    "ok": true,
+    "data": {
+      "status": "staged",
+      "title": "Planning",
+      "start": "2026-06-01T09:00:00Z",
+      "location": "Office"
+    }
+  },
+  "/api/apple/calendar/events/cal-1/route": {
+    "ok": true,
+    "data": {
+      "request_id": "route-1",
+      "status": "ready",
+      "event_id": "cal-1",
+      "title": "Planning",
+      "location": "Office",
+      "maps_url": "https://maps.apple.com/?q=Office",
+      "boundary_decision": "allow",
+      "boundary_reason": "household_schedule is cleared for calendar_route.",
+      "trust_zone": "household_schedule",
+      "authority_stage": "sandbox_live",
+      "arena_status": "active",
+      "approval_mode": "stage_and_alert"
+    }
+  },
+  "/api/apple/reminders": {
+    "ok": true,
+    "data": {
+      "stored": 0
+    }
+  },
+  "/api/apple/reminders/r1/complete": {
+    "ok": true,
+    "data": {
+      "request_id": "rem-1",
+      "status": "staged_for_review",
+      "reminder": {
+        "id": "r1",
+        "title": "Review invoice",
+        "due": "2026-06-01T10:00:00Z",
+        "list": "Work",
+        "priority": 8,
+        "priority_label": "high",
+        "notes": "Needs payment approval.",
+        "minutes_away": 45,
+        "overdue": false,
+        "due_soon": true,
+        "completed": false,
+        "available_actions": ["complete", "snooze_1h"],
+        "decision_reason": "household_tasks is at stage_alert and must promote before live reminder_workflow actions."
+      },
+      "performed_action": "complete",
+      "boundary_decision": "stage",
+      "boundary_reason": "household_tasks is at stage_alert and must promote before live reminder_workflow actions.",
+      "trust_zone": "household_tasks",
+      "authority_stage": "stage_alert",
+      "arena_status": "active",
+      "approval_mode": "stage_and_alert"
+    }
+  },
+  "/api/apple/reminders/r1/snooze": {
+    "ok": true,
+    "data": {
+      "request_id": "rem-2",
+      "status": "staged_for_review",
+      "reminder": {
+        "id": "r1",
+        "title": "Review invoice",
+        "due": "2026-06-01T10:00:00Z",
+        "list": "Work",
+        "priority": 8,
+        "priority_label": "high",
+        "notes": "Needs payment approval.",
+        "minutes_away": 45,
+        "overdue": false,
+        "due_soon": true,
+        "completed": false,
+        "available_actions": ["complete", "snooze_1h"],
+        "decision_reason": "household_tasks is at stage_alert and must promote before live reminder_workflow actions."
+      },
+      "performed_action": "snooze",
+      "boundary_decision": "stage",
+      "boundary_reason": "household_tasks is at stage_alert and must promote before live reminder_workflow actions.",
+      "trust_zone": "household_tasks",
+      "authority_stage": "stage_alert",
+      "arena_status": "active",
+      "approval_mode": "stage_and_alert"
+    }
+  },
+  "/api/apple/focus": {
+    "ok": true,
+    "data": {
+      "request_id": "focus-1",
+      "status": "staged_for_review",
+      "stored": false,
+      "focus_active": true,
+      "performed_action": "apply_preset",
+      "boundary_decision": "stage",
+      "boundary_reason": "household_focus is at stage_alert and must promote before live focus_workflow actions.",
+      "trust_zone": "household_focus",
+      "authority_stage": "stage_alert",
+      "arena_status": "active",
+      "approval_mode": "stage_and_alert"
+    }
+  },
+  "/api/apple/sound-alert": {
+    "ok": true,
+    "data": {
+      "stored": true
+    }
+  },
+  "/api/apple/sound-alerts/sa-1/resolve": {
+    "ok": true,
+    "data": {
+      "request_id": "sig-sound-1",
+      "status": "staged_for_review",
+      "id": "sa-1",
+      "resolved_at": "",
+      "boundary_decision": "stage",
+      "boundary_reason": "household_safety is at stage_alert and must promote before live signal_resolution actions.",
+      "trust_zone": "household_safety",
+      "authority_stage": "stage_alert",
+      "arena_status": "active",
+      "approval_mode": "stage_and_alert"
+    }
+  },
+  "/api/apple/vision/scan": {
+    "ok": true,
+    "data": {
+      "stored": true
+    }
+  },
+  "/api/apple/vision/scans/vs-1/resolve": {
+    "ok": true,
+    "data": {
+      "request_id": "sig-vision-1",
+      "status": "resolved",
+      "id": "vs-1",
+      "resolved_at": "2026-06-01T08:06:00Z",
+      "boundary_decision": "allow",
+      "boundary_reason": "household_perception is cleared for signal_resolution.",
+      "trust_zone": "household_perception",
+      "authority_stage": "sandbox_live",
+      "arena_status": "active",
+      "approval_mode": "stage_and_alert"
+    }
+  },
+  "/api/apple/now-playing": {
+    "ok": true,
+    "data": {
+      "stored": true
+    }
+  },
+  "/api/apple/speak/push": {
+    "ok": true,
+    "data": {
+      "sent": true,
+      "chars": 8
+    }
+  },
+  "/api/apple/health/log": {
+    "ok": true,
+    "data": {
+      "logged": 1
+    }
+  },
+  "/api/apple/chronicle/capture": {
+    "ok": true,
+    "data": {
+      "captured": true,
+      "entry_id": "entry-1"
+    }
+  },
+  "/api/apple/chronicle/prayers/cp-1/pray": {
+    "ok": true,
+    "data": {
+      "status": "prayed",
+      "prayer_id": "cp-1",
+      "times_prayed": 3,
+      "last_prayed_at": "2026-06-01"
+    }
+  },
+  "/api/apple/chronicle/prayers/cp-1/answer": {
+    "ok": true,
+    "data": {
+      "status": "answered",
+      "prayer_id": "cp-1",
+      "answered_at": "2026-06-01T08:30:00Z"
+    }
+  },
+  "/api/apple/chronicle/study/save": {
+    "ok": true,
+    "data": {
+      "captured": true,
+      "entry_id": "study-1"
+    }
+  },
+  "/api/apple/faith/chat": {
+    "ok": true,
+    "data": {
+      "reply": "Bring that passage before God slowly and let peace guard your mind before you chase the next task.",
+      "agent_id": "ezra",
+      "agent_name": "Ezra"
+    }
+  },
+  "/api/apple/stewardship-lanes/family-stewardship/stage-review": {
+    "ok": true,
+    "data": {
+      "request_id": "lane-review::family-stewardship::123",
+      "review_id": "stewardship-review-1",
+      "status": "review_staged",
+      "performed_action": "stage_lane_review",
+      "lane_id": "family-stewardship",
+      "lane_title": "Family Stewardship",
+      "review_surface": "home",
+      "packet_target": "family",
+      "boundary_decision": "stage",
+      "boundary_reason": "household_home is at stage_alert and should surface this family lane before live widening.",
+      "trust_zone": "household_home",
+      "authority_stage": "stage_alert",
+      "arena_status": "active",
+      "approval_mode": "stage_and_alert"
+    }
+  },
+  "/api/apple/stewardship-reviews/stewardship-review-1/approve": {
+    "ok": true,
+    "data": {
+      "request_id": "stewardship-review-1",
+      "review_id": "stewardship-review-1",
+      "status": "approved",
+      "performed_action": "approve_stewardship_review",
+      "lane_id": "family-stewardship",
+      "lane_title": "Family Stewardship",
+      "review_surface": "home",
+      "packet_target": "family",
+      "boundary_decision": "stage",
+      "boundary_reason": "The family lane is still gated for reviewed household changes.",
+      "trust_zone": "household_home",
+      "authority_stage": "stage_alert",
+      "arena_status": "active",
+      "approval_mode": "stage_and_alert"
+    }
+  },
+  "/api/apple/stewardship-reviews/stewardship-review-1/route": {
+    "ok": true,
+    "data": {
+      "request_id": "stewardship-review-1",
+      "review_id": "stewardship-review-1",
+      "status": "rerouted",
+      "performed_action": "route_stewardship_review",
+      "lane_id": "family-stewardship",
+      "lane_title": "Family Stewardship",
+      "review_surface": "brief",
+      "packet_target": "executive",
+      "boundary_decision": "stage",
+      "boundary_reason": "The family lane is still gated for reviewed household changes.",
+      "trust_zone": "household_home",
+      "authority_stage": "stage_alert",
+      "arena_status": "active",
+      "approval_mode": "stage_and_alert"
+    }
+  },
+  "/api/apple/stewardship-reviews/stewardship-review-1/retire": {
+    "ok": true,
+    "data": {
+      "request_id": "stewardship-review-1",
+      "review_id": "stewardship-review-1",
+      "status": "retired",
+      "performed_action": "retire_stewardship_review",
+      "lane_id": "family-stewardship",
+      "lane_title": "Family Stewardship",
+      "review_surface": "home",
+      "packet_target": "family",
+      "boundary_decision": "stage",
+      "boundary_reason": "Family Stewardship was retired from Systems/Admin.",
+      "trust_zone": "household_home",
+      "authority_stage": "stage_alert",
+      "arena_status": "active",
+      "approval_mode": "stage_and_alert"
+    }
+  },
+  "/api/apple/governance-proposals/governance-family-stewardship/promote": {
+    "ok": true,
+    "data": {
+      "proposal_id": "governance-family-stewardship",
+      "candidate_id": "governance-family-stewardship",
+      "title": "Family Stewardship rollout posture should be codified",
+      "status": "promoted",
+      "performed_action": "promote_governance_proposal",
+      "message": "Family Stewardship was promoted into shared doctrine.",
+      "rule_id": "rule-governance-family-stewardship"
+    }
+  },
+  "/api/apple/governance-proposals/governance-family-stewardship/dismiss": {
+    "ok": true,
+    "data": {
+      "proposal_id": "governance-family-stewardship",
+      "candidate_id": "governance-family-stewardship",
+      "title": "Family Stewardship rollout posture should be codified",
+      "status": "dismissed",
+      "performed_action": "dismiss_governance_proposal",
+      "message": "Family Stewardship governance proposal was dismissed.",
+      "rule_id": ""
+    }
+  },
+  "/api/apple/publishing/reviews/rev-1/approve": {
+    "ok": true,
+    "data": {
+      "request_id": "pub-1",
+      "status": "staged_for_review",
+      "review": {
+        "review_id": "rev-1",
+        "title": "Shared Ownership Launch Draft",
+        "slug": "shared-ownership-launch",
+        "stage_key": "launch_copy",
+        "stage_display": "Launch Copy",
+        "content_preview": "Headline and social launch copy are ready for approval.",
+        "word_count": 480,
+        "ready_since": "2026-06-01T08:00:00Z",
+        "approval_id": "apr-pub-1",
+        "decision_reason": "publication_review is at stage_alert and must promote before live publishing_review actions."
+      },
+      "performed_action": "approve",
+      "boundary_decision": "stage",
+      "boundary_reason": "publication_review is at stage_alert and must promote before live publishing_review actions.",
+      "trust_zone": "publication_review",
+      "authority_stage": "stage_alert",
+      "arena_status": "active",
+      "approval_mode": "stage_and_alert",
+      "feedback": ""
+    }
+  },
+  "/api/apple/publishing/reviews/rev-1/revise": {
+    "ok": true,
+    "data": {
+      "request_id": "pub-2",
+      "status": "staged_for_review",
+      "review": {
+        "review_id": "rev-1",
+        "title": "Shared Ownership Launch Draft",
+        "slug": "shared-ownership-launch",
+        "stage_key": "launch_copy",
+        "stage_display": "Launch Copy",
+        "content_preview": "Headline and social launch copy are ready for approval.",
+        "word_count": 480,
+        "ready_since": "2026-06-01T08:00:00Z",
+        "approval_id": "apr-pub-1",
+        "decision_reason": "publication_review is at stage_alert and must promote before live publishing_review actions."
+      },
+      "performed_action": "revise",
+      "boundary_decision": "stage",
+      "boundary_reason": "publication_review is at stage_alert and must promote before live publishing_review actions.",
+      "trust_zone": "publication_review",
+      "authority_stage": "stage_alert",
+      "arena_status": "active",
+      "approval_mode": "stage_and_alert",
+      "feedback": "Please tighten section two."
+    }
+  },
+  "/api/apple/huddle/party-mode/start": {
+    "ok": true,
+    "data": {
+      "request_id": "huddle-1",
+      "status": "staged_for_review",
+      "performed_action": "start_party_mode",
+      "boundary_decision": "stage",
+      "boundary_reason": "household_huddle is at stage_alert and must promote before live huddle_workflow actions.",
+      "trust_zone": "household_huddle",
+      "authority_stage": "stage_alert",
+      "arena_status": "active",
+      "approval_mode": "stage_and_alert"
+    }
+  },
+  "/api/apple/forge/save": {
+    "ok": true,
+    "data": {
+      "saved": true,
+      "id": "fm-1"
+    }
+  },
+  "/api/apple/forge/submit": {
+    "ok": true,
+    "data": {
+      "queued": true,
+      "job_id": "forge-1",
+      "photo_count": 1
+    }
+  },
+  "/api/apple/systems/trust-zones/shared-email.stage/promote": {
+    "ok": true,
+    "data": {
+      "status": "promoted",
+      "zone_id": "shared-email.stage",
+      "authority_stage": "stage_alert",
+      "approval_mode": "stage_and_alert"
+    }
+  },
+  "/api/apple/systems/trust-zones/shared-email.stage/demote": {
+    "ok": true,
+    "data": {
+      "status": "demoted",
+      "zone_id": "shared-email.stage",
+      "authority_stage": "draft",
+      "approval_mode": "draft_only"
+    }
+  },
+  "/api/apple/systems/resource-arenas/gmail.shared.drafts/suspend": {
+    "ok": true,
+    "data": {
+      "status": "suspended",
+      "arena_id": "gmail.shared.drafts",
+      "linked_zone_id": "shared-email.stage"
+    }
+  },
+  "/api/apple/systems/resource-arenas/gmail.shared.drafts/resume": {
+    "ok": true,
+    "data": {
+      "status": "active",
+      "arena_id": "gmail.shared.drafts",
+      "linked_zone_id": "shared-email.stage"
+    }
+  },
+  "/api/apple/systems/self-improvement/jobs/sj-1/sandbox-execute": {
+    "ok": true,
+    "data": {
+      "ok": true,
+      "accepted": true,
+      "mode": "queued",
+      "job_id": "sj-1",
+      "status": "sandbox-queued",
+      "message": "Sandbox job queued for background execution.",
+      "active_run_id": "run-1",
+      "queue_active_count": 1
+    }
+  },
+  "/api/apple/systems/self-improvement/jobs/sj-1/sandbox-cancel": {
+    "ok": true,
+    "data": {
+      "ok": true,
+      "accepted": true,
+      "mode": "stop-requested",
+      "job_id": "sj-1",
+      "status": "sandbox-stop-requested",
+      "message": "Stop requested for sandbox job.",
+      "active_run_id": "run-1",
+      "queue_active_count": 1
+    }
+  },
+  "/api/apple/systems/self-improvement/jobs/sj-1/sandbox-recover": {
+    "ok": true,
+    "data": {
+      "ok": true,
+      "accepted": true,
+      "mode": "reset",
+      "job_id": "sj-1",
+      "status": "sandbox-reset",
+      "message": "Sandbox lane reset to baseline.",
+      "active_run_id": "",
+      "queue_active_count": 0
+    }
+  },
+  "/api/apple/systems/self-improvement/jobs/vendor-prep:vp-1/sandbox-execute": {
+    "ok": true,
+    "data": {
+      "ok": true,
+      "accepted": true,
+      "mode": "queued",
+      "job_id": "vendor-prep:vp-1",
+      "status": "sandbox-queued",
+      "message": "Vendor prep queued for sandbox review.",
+      "active_run_id": "vp-run-1",
+      "queue_active_count": 1
+    }
+  },
+  "/api/apple/systems/self-improvement/jobs/vendor-prep:vp-1/sandbox-cancel": {
+    "ok": true,
+    "data": {
+      "ok": true,
+      "accepted": true,
+      "mode": "stop-requested",
+      "job_id": "vendor-prep:vp-1",
+      "status": "sandbox-stop-requested",
+      "message": "Stop requested for vendor prep sandbox job.",
+      "active_run_id": "vp-run-1",
+      "queue_active_count": 1
+    }
+  },
+  "/api/apple/systems/self-improvement/jobs/vendor-prep:vp-1/sandbox-recover": {
+    "ok": true,
+    "data": {
+      "ok": true,
+      "accepted": true,
+      "mode": "reset",
+      "job_id": "vendor-prep:vp-1",
+      "status": "staged",
+      "message": "Vendor prep sandbox lane reset to staged baseline.",
+      "active_run_id": "",
+      "queue_active_count": 0
+    }
+  },
+  "/api/apple/systems/self-improvement/jobs/stewardship-review:stewardship-review-1/sandbox-execute": {
+    "ok": true,
+    "data": {
+      "ok": true,
+      "accepted": true,
+      "mode": "queued",
+      "job_id": "stewardship-review:stewardship-review-1",
+      "status": "sandbox-queued",
+      "message": "Stewardship review queued for sandbox packaging.",
+      "active_run_id": "stewardship-run-1",
+      "queue_active_count": 1
+    }
+  },
+  "/api/apple/systems/self-improvement/jobs/stewardship-review:stewardship-review-1/sandbox-cancel": {
+    "ok": true,
+    "data": {
+      "ok": true,
+      "accepted": true,
+      "mode": "stop-requested",
+      "job_id": "stewardship-review:stewardship-review-1",
+      "status": "sandbox-stop-requested",
+      "message": "Stop requested for stewardship review sandbox job.",
+      "active_run_id": "stewardship-run-1",
+      "queue_active_count": 1
+    }
+  },
+  "/api/apple/systems/self-improvement/jobs/stewardship-review:stewardship-review-1/sandbox-recover": {
+    "ok": true,
+    "data": {
+      "ok": true,
+      "accepted": true,
+      "mode": "reset",
+      "job_id": "stewardship-review:stewardship-review-1",
+      "status": "review_staged",
+      "message": "Stewardship review sandbox lane reset to staged baseline.",
+      "active_run_id": "",
+      "queue_active_count": 0
+    }
+  },
+  "/api/apple/notifications/n1/seen": {
+    "ok": true,
+    "data": {
+      "notification": {
+        "id": "n1"
+      },
+      "status": "seen"
+    }
+  },
+  "/api/apple/notifications/n1/dismiss": {
+    "ok": true,
+    "data": {
+      "notification": {
+        "id": "n1"
+      },
+      "status": "dismissed"
+    }
+  },
+  "/api/apple/notifications/n1/resolve": {
+    "ok": true,
+    "data": {
+      "request_id": "note-1",
+      "notification": {
+        "id": "n1"
+      },
+      "status": "staged_for_review",
+      "performed_action": "resolve",
+      "boundary_decision": "stage",
+      "boundary_reason": "household_attention is at stage_alert and must promote before live notification_workflow actions.",
+      "trust_zone": "household_attention",
+      "authority_stage": "stage_alert",
+      "arena_status": "active",
+      "approval_mode": "stage_and_alert"
+    }
+  },
+  "/api/apple/notifications/n1/snooze": {
+    "ok": true,
+    "data": {
+      "request_id": "note-2",
+      "notification": {
+        "id": "n1"
+      },
+      "status": "staged_for_review",
+      "performed_action": "snooze",
+      "boundary_decision": "stage",
+      "boundary_reason": "household_attention is at stage_alert and must promote before live notification_workflow actions.",
+      "trust_zone": "household_attention",
+      "authority_stage": "stage_alert",
+      "arena_status": "active",
+      "approval_mode": "stage_and_alert"
+    }
+  },
+  "/api/apple/notifications/n1/action": {
+    "ok": true,
+    "data": {
+      "ok": true,
+      "status": "seen",
+      "notification": {
+        "id": "n1"
+      },
+      "performed_action": "open"
+    }
+  }
+}

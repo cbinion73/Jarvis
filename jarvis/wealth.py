@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .openai_tasks import JarvisOpenAIClient
+from .persistence import append_jsonl, atomic_write_json
 
 
 def _now_iso() -> str:
@@ -65,24 +66,86 @@ class WealthLeverageStore:
     path: Path = field(init=False)
     finance_state_path: Path = field(init=False)
     finance_review_path: Path = field(init=False)
+    _log_paths: dict[Path, Path] = field(init=False)
+    _state_log_paths: dict[Path, Path] = field(init=False)
 
     def __post_init__(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
         self.path = self.root / "wealth_outcomes.json"
         self.finance_state_path = self.root / "finance_state.json"
         self.finance_review_path = self.root / "finance_reviews.json"
+        self._log_paths = {
+            self.path: self.root / "wealth_outcomes_log.jsonl",
+            self.finance_state_path: self.root / "finance_state_log.jsonl",
+            self.finance_review_path: self.root / "finance_reviews_log.jsonl",
+        }
+        self._state_log_paths = {
+            self.path: self.root / "wealth_outcomes_state_log.jsonl",
+            self.finance_state_path: self.root / "finance_state_state_log.jsonl",
+            self.finance_review_path: self.root / "finance_reviews_state_log.jsonl",
+        }
 
     def load(self) -> list[dict[str, Any]]:
         if not self.path.exists():
-            return []
+            return self._load_list_from_state_log(self.path)
         try:
             payload = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            return []
-        return payload if isinstance(payload, list) else []
+            return self._load_list_from_state_log(self.path)
+        if isinstance(payload, list) and payload:
+            return payload
+        return self._load_list_from_state_log(self.path)
 
     def save(self, records: list[dict[str, Any]]) -> None:
-        self.path.write_text(json.dumps(records, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(self.path, records)
+        append_jsonl(
+            self._log_paths[self.path],
+            {
+                "saved_at": _now_iso(),
+                "records": records,
+            },
+        )
+        append_jsonl(
+            self._state_log_paths[self.path],
+            {
+                "saved_at": _now_iso(),
+                "records": records,
+            },
+        )
+
+    def _load_list_from_log(self, path: Path) -> list[dict[str, Any]]:
+        log_path = self._log_paths[path]
+        if not log_path.exists():
+            return []
+        latest: list[dict[str, Any]] = []
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return []
+        return latest
+
+    def _load_list_from_state_log(self, path: Path) -> list[dict[str, Any]]:
+        log_path = self._state_log_paths[path]
+        if not log_path.exists():
+            return []
+        latest: list[dict[str, Any]] = []
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return []
+        return latest
 
     def append(self, record: dict[str, Any]) -> dict[str, Any]:
         records = self.load()
@@ -96,15 +159,73 @@ class WealthLeverageStore:
 
     def _load_json(self, path: Path, *, default: Any) -> Any:
         if not path.exists():
-            return deepcopy(default)
+            return self._load_json_from_state_log(path, default=default)
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            return deepcopy(default)
+            return self._load_json_from_state_log(path, default=default)
+        if payload == default:
+            return self._load_json_from_state_log(path, default=default)
         return payload
 
     def _save_json(self, path: Path, payload: Any) -> None:
-        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(path, payload)
+        append_jsonl(
+            self._log_paths[path],
+            {
+                "saved_at": _now_iso(),
+                "records": payload,
+            },
+        )
+        append_jsonl(
+            self._state_log_paths[path],
+            {
+                "saved_at": _now_iso(),
+                "records": payload,
+            },
+        )
+
+    def _load_json_from_log(self, path: Path, *, default: Any) -> Any:
+        log_path = self._log_paths[path]
+        if not log_path.exists():
+            return deepcopy(default)
+        latest: Any = deepcopy(default)
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                latest = payload.get("records", deepcopy(default))
+        except (OSError, json.JSONDecodeError):
+            return deepcopy(default)
+        if isinstance(default, dict):
+            return dict(latest) if isinstance(latest, dict) else deepcopy(default)
+        if isinstance(default, list):
+            if not isinstance(latest, list):
+                return deepcopy(default)
+            return [dict(item) if isinstance(item, dict) else item for item in latest]
+        return latest
+
+    def _load_json_from_state_log(self, path: Path, *, default: Any) -> Any:
+        log_path = self._state_log_paths[path]
+        if not log_path.exists():
+            return deepcopy(default)
+        latest: Any = deepcopy(default)
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                latest = payload.get("records", deepcopy(default))
+        except (OSError, json.JSONDecodeError):
+            return deepcopy(default)
+        if isinstance(default, dict):
+            return dict(latest) if isinstance(latest, dict) else deepcopy(default)
+        if isinstance(default, list):
+            if not isinstance(latest, list):
+                return deepcopy(default)
+            return [dict(item) if isinstance(item, dict) else item for item in latest]
+        return latest
 
     def finance_state(self) -> dict[str, Any]:
         payload = self._load_json(self.finance_state_path, default={})

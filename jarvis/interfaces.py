@@ -9,8 +9,10 @@ from typing import Any
 from urllib.parse import urlencode
 from urllib.error import URLError
 from urllib.request import Request, urlopen
+import time
 import uuid
 
+from .persistence import append_jsonl, atomic_write_json
 
 MANIFESTS_ROOT = Path(__file__).resolve().parent / "manifests"
 
@@ -26,19 +28,90 @@ class InterfaceRouterStore:
         self.sessions_path = self.root / "sessions.json"
         self.results_path = self.root / "results.json"
 
+    def _log_path(self, path: Path) -> Path:
+        return path.with_name(f"{path.stem}_log.jsonl")
+
+    def _state_log_path(self, path: Path) -> Path:
+        return path.with_name(f"{path.stem}_state_log.jsonl")
+
     def _load_map(self, path: Path) -> dict[str, dict[str, Any]]:
         if not path.exists():
-            return {}
+            payload = self._load_map_from_state_log(path)
+            if payload:
+                return payload
+            return self._load_map_from_log(path)
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            return {}
+            payload = self._load_map_from_state_log(path)
+            if payload:
+                return payload
+            return self._load_map_from_log(path)
         if not isinstance(payload, dict):
+            payload = self._load_map_from_state_log(path)
+            if payload:
+                return payload
             return {}
-        return {str(key): value for key, value in payload.items() if isinstance(value, dict)}
+        loaded = {str(key): value for key, value in payload.items() if isinstance(value, dict)}
+        if loaded:
+            return loaded
+        replayed = self._load_map_from_state_log(path)
+        if replayed:
+            return replayed
+        return loaded
+
+    def _load_map_from_log(self, path: Path) -> dict[str, dict[str, Any]]:
+        try:
+            log_path = self._log_path(path)
+            if not log_path.exists():
+                return {}
+            latest: dict[str, dict[str, Any]] = {}
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                state = payload.get("payload")
+                if not isinstance(state, dict):
+                    continue
+                latest = {str(key): value for key, value in state.items() if isinstance(value, dict)}
+            return latest
+        except (OSError, json.JSONDecodeError):
+            return {}
+
+    def _load_map_from_state_log(self, path: Path) -> dict[str, dict[str, Any]]:
+        try:
+            log_path = self._state_log_path(path)
+            if not log_path.exists():
+                return {}
+            latest: dict[str, dict[str, Any]] = {}
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                state = payload.get("payload")
+                if not isinstance(state, dict):
+                    continue
+                latest = {str(key): value for key, value in state.items() if isinstance(value, dict)}
+            return latest
+        except (OSError, json.JSONDecodeError):
+            return {}
 
     def _save_map(self, path: Path, payload: dict[str, dict[str, Any]]) -> None:
-        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(path, payload)
+        append_jsonl(
+            self._log_path(path),
+            {
+                "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "payload": payload,
+            },
+        )
+        append_jsonl(
+            self._state_log_path(path),
+            {
+                "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "payload": payload,
+            },
+        )
 
     def save_session(self, session: dict[str, Any]) -> dict[str, Any]:
         request_id = str(session.get("request_id", "")).strip()

@@ -5235,6 +5235,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       missionControl: null,
       activeMissionId: "",
       activeScene: "",
+      activeOverlay: {{ type: "", payload: null }},
       coreCommandOpen: false,
       packetStripExpanded: false,
       packetTreePath: [],
@@ -6107,6 +6108,12 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
 
     function toggleCoreCommandTree(forceOpen = null) {{
       state.coreCommandOpen = forceOpen === null ? !state.coreCommandOpen : !!forceOpen;
+      if (state.coreCommandOpen) {{
+        closeShellOverlays("core-command");
+        setActiveOverlay("core-command", {{ path: [...state.packetTreePath] }});
+      }} else if (state.activeOverlay?.type === "core-command") {{
+        setActiveOverlay("");
+      }}
       renderCoreCommandRing();
     }}
 
@@ -6115,6 +6122,9 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         return;
       }}
       state.coreCommandOpen = false;
+      if (state.activeOverlay?.type === "core-command") {{
+        setActiveOverlay("");
+      }}
       renderCoreCommandRing();
     }}
 
@@ -6284,8 +6294,37 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       modal.setAttribute("aria-hidden", isOpen ? "false" : "true");
     }}
 
+    function setActiveOverlay(type = "", payload = null) {{
+      state.activeOverlay = type
+        ? {{ type, payload: payload || {{}} }}
+        : {{ type: "", payload: null }};
+      document.body.dataset.activeOverlay = state.activeOverlay.type || "none";
+    }}
+
+    function closeShellOverlays(except = "") {{
+      if (except !== "modal" && state.packet) {{
+        closePacket();
+      }}
+      if (except !== "scene" && state.activeScene) {{
+        closeScene();
+      }}
+      if (except !== "mode") {{
+        closeModePanel();
+      }}
+      if (except !== "context") {{
+        closeContextPanel();
+      }}
+      if (except !== "core-command") {{
+        closeCoreCommandTree();
+      }}
+    }}
+
     function chamberHomeModeActive() {{
       return document.body.dataset.shellLayout === "quiet-home" && !state.layoutEditMode;
+    }}
+
+    function packetStripAllowed() {{
+      return Boolean(state.packet);
     }}
 
     function triageSummaryCanFloat() {{
@@ -8587,6 +8626,94 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       `;
     }}
 
+    function whileYouWereAwayCards(report = {{}}, maxItems = 2) {{
+      const rows = [];
+      const laneReports = Array.isArray(report.lane_reports) ? report.lane_reports : [];
+      const stewardshipLanes = Array.isArray(report.stewardship_lanes) ? report.stewardship_lanes : [];
+      if (laneReports.length) {{
+        rows.push({{
+          title: report.headline || "While You Were Away",
+          body: laneReports.slice(0, 2).map((item) => item.summary || item.title || "").filter(Boolean).join(" ")
+            || report.summary
+            || "JARVIS kept several lanes moving while you were away.",
+        }});
+      }}
+      stewardshipLanes.slice(0, 2).forEach((lane) => {{
+        const summary = Array.isArray(lane.report_summaries) && lane.report_summaries.length
+          ? lane.report_summaries[0]?.summary || lane.summary || ""
+          : lane.summary || "";
+        const chips = [
+          `Prepared ${{Array.isArray(lane.prepared_work) ? lane.prepared_work.length : 0}}`,
+          `Decisions ${{Array.isArray(lane.decision_cards) ? lane.decision_cards.length : 0}}`,
+        ];
+        rows.push({{
+          title: lane.title || "Stewardship lane",
+          body: [summary, chips.join(" · ")].filter(Boolean).join(" · "),
+        }});
+      }});
+      [["quiet_completions", "Quiet completion"], ["prepared_work", "Prepared"], ["blocked_work", "Blocked"]].forEach(([key, label]) => {{
+        const item = Array.isArray(report[key]) ? report[key][0] : null;
+        if (!item) {{
+          return;
+        }}
+        rows.push({{
+          title: `${{label}} · ${{item.title || item.lane || "Update"}}`,
+          body: [item.agent, item.summary].filter(Boolean).join(" · "),
+        }});
+      }});
+      if (report.recommendation) {{
+        rows.push({{
+          title: report.recommendation.title || "Recommendation",
+          body: report.recommendation.summary || report.recommendation.action || "",
+        }});
+      }}
+      return rows.slice(0, maxItems);
+    }}
+
+    function chamberCommandCards(chamber = {{}}, maxItems = 2) {{
+      const aggregate = chamber.home_aggregate || {{}};
+      const items = Array.isArray(aggregate.command_items) ? aggregate.command_items : [];
+      return items.slice(0, maxItems).map((item) => ({{
+        title: item.title || "Command",
+        body: [item.detail, item.priority === "high" ? "High priority" : ""].filter(Boolean).join(" · "),
+      }}));
+    }}
+
+    function deriveChamberHomeSignalModel(data = {{}}) {{
+      const chamber = data.chamber_home || null;
+      if (!chamber) {{
+        const summary = triageSummaryModel(data);
+        return {{
+          chamber: null,
+          routeId: "triage",
+          summary,
+          recommendationCards: [],
+          whileAwayCards: [],
+          commandCards: [],
+          briefingItems: [],
+          needsYou: [],
+          alreadyWorking: [],
+          chips: summary.chips || [],
+        }};
+      }}
+      return {{
+        chamber,
+        routeId: chamberRouteId(chamber),
+        summary: chamber.summary || {{}},
+        recommendationCards: (chamber.drift_risk || []).concat(
+          chamber.recommendation
+            ? [{{ title: chamber.recommendation.label || "Recommended next move", body: chamber.recommendation.body || "" }}]
+            : []
+        ),
+        whileAwayCards: whileYouWereAwayCards(chamber.while_you_were_away || {{}}, 3),
+        commandCards: chamberCommandCards(chamber, 2),
+        briefingItems: chamber.briefing_items || [],
+        needsYou: chamber.needs_you || [],
+        alreadyWorking: chamber.already_working || [],
+        chips: chamber.chips || [],
+      }};
+    }}
+
     function applyCoreHomeActions(chamber = {{}}) {{
       const primary = document.getElementById("core-home-primary-action");
       const secondary = document.getElementById("core-home-secondary-action");
@@ -8642,10 +8769,11 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       if (!line || !preview || !status) {{
         return;
       }}
-      const chamber = data.chamber_home || null;
+      const signals = deriveChamberHomeSignalModel(data);
+      const chamber = signals.chamber;
       const compactLaptopHome = window.innerHeight <= 940;
       if (!chamber) {{
-        const summary = triageSummaryModel(data);
+        const summary = signals.summary;
         if (kicker) kicker.textContent = "Triage And Transition";
         line.textContent = summary.line;
         const previewItems = summary.priorityItems.slice(0, 1).map((item) => `
@@ -8678,11 +8806,9 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         ? stateLineText.replace(/^good\\s+(morning|afternoon|evening)\\s*,?\\s+[^.?!]+[.?!-:]\\s*/i, "").trim()
         : stateLineText;
       line.textContent = [greetingText, normalizedStateLine].filter(Boolean).join(" ");
-      const recommendationCards = (chamber.drift_risk || []).concat(
-        chamber.recommendation
-          ? [{{ title: chamber.recommendation.label || "Recommended next move", body: chamber.recommendation.body || "" }}]
-          : []
-      );
+      const whileAwayCards = signals.whileAwayCards.slice(0, compactLaptopHome ? 2 : 3);
+      const commandCards = signals.commandCards.slice(0, compactLaptopHome ? 1 : 2);
+      const recommendationCards = signals.recommendationCards;
       let previewMarkup = "";
       if (routeId === "mobile-remote-briefing" || routeId === "mobile-companion") {{
         previewMarkup = `
@@ -8747,6 +8873,19 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
               }})
             }}
             ${{
+              whileAwayCards.length
+                ? chamberHomeSectionMarkup(whileAwayCards, "While You Were Away", {{
+                    emptyLabel: "No absence summary is ready yet.",
+                    quiet: true,
+                    maxItems: compactLaptopHome ? 1 : 2,
+                  }})
+                : chamberHomeSectionMarkup(commandCards, "Command Board", {{
+                    emptyLabel: "No command lanes are active right now.",
+                    quiet: true,
+                    maxItems: compactLaptopHome ? 1 : 2,
+                  }})
+            }}
+            ${{
               chamberHomeSectionMarkup(recommendationCards, "Watchlist And Next", {{
                 emptyLabel: "The chamber is calm right now.",
                 quiet: true,
@@ -8804,6 +8943,19 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
                 quiet: true,
                 maxItems: compactLaptopHome ? 1 : 2,
               }})
+            }}
+            ${{
+              whileAwayCards.length
+                ? chamberHomeSectionMarkup(whileAwayCards, "While You Were Away", {{
+                    emptyLabel: "No absence summary is ready yet.",
+                    quiet: true,
+                    maxItems: compactLaptopHome ? 1 : 2,
+                  }})
+                : chamberHomeSectionMarkup(commandCards, "Command Board", {{
+                    emptyLabel: "No command lanes are active right now.",
+                    quiet: true,
+                    maxItems: compactLaptopHome ? 1 : 2,
+                  }})
             }}
             ${{
               chamberHomeSectionMarkup(recommendationCards, "Watchlist And Next", {{
@@ -9150,6 +9302,234 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       return `<div class="packet-grid"><div class="metric">Scene unavailable.</div></div>`;
     }}
 
+    function renderDaySceneMarkup(data = {{}}, signals = {{}}) {{
+      const board = data.today_board || {{}};
+      const priorities = Array.isArray(board.priorities) ? board.priorities : [];
+      const needsYou = (signals.needsYou || []).slice(0, 3);
+      const prepared = (signals.alreadyWorking || []).slice(0, 3);
+      const whileAway = (signals.whileAwayCards || []).slice(0, 2);
+      return `
+        <div class="packet-grid">
+          ${{
+            packetBlock(
+              "Priorities",
+              priorities.length
+                ? renderList(priorities.map((item) => `
+                    <div>
+                      <strong>${{escapeHtml(item.title || "Priority")}}</strong>
+                      <br>${{escapeHtml(item.next_action || item.status || "Needs attention")}}
+                    </div>
+                  `))
+                : `<div class="core-home-empty">No major priorities are pressing right now.</div>`
+            )
+          }}
+          ${{
+            packetBlock(
+              "Decision Queue",
+              needsYou.length
+                ? renderList(needsYou.map((item) => `
+                    <div class="core-home-item approval">
+                      <strong>${{escapeHtml(item.title || "Decision")}}</strong>
+                      <br>${{escapeHtml(item.body || "Review the next decision.")}}
+                    </div>
+                  `))
+                : `<div class="core-home-empty">No approvals or decisions are waiting right now.</div>`
+            )
+          }}
+          ${{
+            packetBlock(
+              "Prepared Work",
+              prepared.length
+                ? renderList(prepared.map((item) => `
+                    <div class="core-home-item quiet">
+                      <strong>${{escapeHtml(item.title || "Prepared")}}</strong>
+                      <br>${{escapeHtml(item.body || "JARVIS has something ready.")}}
+                    </div>
+                  `))
+                : `<div class="core-home-empty">Nothing is quietly queued right now.</div>`
+            )
+          }}
+          ${{
+            packetBlock(
+              "Carry Forward",
+              whileAway.length
+                ? renderList(whileAway.map((item) => `<div><strong>${{escapeHtml(item.title || "Update")}}</strong><br>${{escapeHtml(item.body || "")}}</div>`))
+                : renderList((board.carry || []).map((item) => `<div>${{escapeHtml(item)}}</div>`))
+            )
+          }}
+        </div>`;
+    }}
+
+    function renderHomeSceneMarkup(data = {{}}, signals = {{}}) {{
+      const routeSummary = signals.chamber?.state_line || "Household state is available.";
+      const commands = (signals.commandCards || []).slice(0, 2);
+      return homeConnectorLive(data) ? `
+        <div class="packet-grid">
+          ${{
+            packetBlock("House Summary", `
+              <p>${{escapeHtml(routeSummary)}}</p>
+              ${{renderList((data.home_overview?.summary || []).map((item) => `<div>${{escapeHtml(item)}}</div>`))}}
+            `)
+          }}
+          ${{
+            packetBlock("Climate and Garage", `
+              <div class="stack">
+                <div class="metric"><strong>Climate</strong> ${{escapeHtml(data.climate_status?.[0]?.attributes?.targetTemperature || "--")}}° target</div>
+                <div class="metric"><strong>Garage</strong> ${{escapeHtml(data.garage_status?.[0]?.state || "--")}}</div>
+                <div class="metric"><strong>Home Mode</strong> ${{escapeHtml(data.home_overview?.mode || "--")}}</div>
+              </div>`)
+          }}
+          ${{
+            packetBlock("Leak Watch", renderList((data.leak_monitor?.all_sensors || []).map((item) => `<div>${{escapeHtml(item.name)}} · ${{escapeHtml(item.state)}}</div>`)))
+          }}
+          ${{
+            packetBlock(
+              "Command Board",
+              commands.length
+                ? renderList(commands.map((item) => `<div><strong>${{escapeHtml(item.title || "Command")}}</strong><br>${{escapeHtml(item.body || "")}}</div>`))
+                : `<div class="core-home-empty">No command lanes are active right now.</div>`
+            )
+          }}
+        </div>` : `
+        <div class="packet-grid">
+          ${{
+            packetBlock("Home Assistant Unavailable", `<p>Live home state is unavailable until Home Assistant is connected. Staged house data is hidden.</p>`)
+          }}
+        </div>`;
+    }}
+
+    function renderFamilySceneMarkup(data = {{}}, signals = {{}}) {{
+      const recommendation = (signals.recommendationCards || [])[0];
+      return `
+        <div class="packet-grid">
+          ${{
+            packetBlock("Mode Brief", `<p>${{escapeHtml(data.mode_brief?.summary || signals.chamber?.state_line || "")}}</p>${{renderList((data.mode_brief?.actions || []).map((item) => `<div>${{escapeHtml(item)}}</div>`))}}`)
+          }}
+          ${{
+            packetBlock("Departure", renderList((data.departure_runs?.[0]?.checklist || data.departure_checklist || []).map((item) => `<div>${{escapeHtml(item)}}</div>`)))
+          }}
+          ${{
+            packetBlock("Household Focus", renderList(Object.entries(data.family_focus || {{}}).map(([name, items]) => `<div><strong>${{escapeHtml(name)}}:</strong> ${{escapeHtml((items || []).join(", "))}}</div>`)))
+          }}
+          ${{
+            packetBlock(
+              "Keep In View",
+              recommendation
+                ? `<div class="core-home-item quiet"><strong>${{escapeHtml(recommendation.title || "Next move")}}</strong><br>${{escapeHtml(recommendation.body || "")}}</div>`
+                : `<div class="core-home-empty">The household picture is calm right now.</div>`
+            )
+          }}
+        </div>`;
+    }}
+
+    function renderBuildSceneMarkup(data = {{}}, signals = {{}}) {{
+      const prepared = (signals.alreadyWorking || []).slice(0, 2);
+      return `
+        <div class="packet-grid">
+          ${{
+            packetBlock("Printer Status", renderList((data.printer_status || []).map((item) => `<div><strong>${{escapeHtml(item.name)}}</strong> · ${{escapeHtml(item.status)}} · ${{escapeHtml(String(item.progress_percent))}}%</div>`)))
+          }}
+          ${{
+            packetBlock("Vendor Prep", renderList((data.vendor_preps || []).map((item) => `<div><strong>${{escapeHtml(item.part_name)}}</strong> · ${{escapeHtml(item.status)}}</div>`)))
+          }}
+          ${{
+            packetBlock("Inspections", renderList((data.workshop_inspections || []).map((item) => `<div><strong>${{escapeHtml(item.part_name)}}</strong><br>${{escapeHtml(item.diagnosis)}}</div>`)))
+          }}
+          ${{
+            packetBlock(
+              "Prepared Work",
+              prepared.length
+                ? renderList(prepared.map((item) => `<div><strong>${{escapeHtml(item.title || "Prepared")}}</strong><br>${{escapeHtml(item.body || "")}}</div>`))
+                : `
+                    <div class="stack">
+                      <div class="metric"><strong>Latest</strong> ${{escapeHtml(data.cad_packages?.[0]?.part_name || "No model package yet")}}</div>
+                      <div class="metric"><strong>Status</strong> ${{escapeHtml(data.cad_packages?.[0]?.export_status || "--")}}</div>
+                      <div class="inline-actions" style="margin-top:10px;">
+                        <button type="button" id="open-model-forge-packet">Open Viewer</button>
+                      </div>
+                    </div>
+                  `
+            )
+          }}
+        </div>`;
+    }}
+
+    function renderFaithSceneMarkup(data = {{}}, signals = {{}}) {{
+      const whileAway = (signals.whileAwayCards || []).slice(0, 2);
+      return `
+        <div class="packet-grid">
+          ${{
+            packetBlock(
+              "Formation Continuity",
+              whileAway.length
+                ? renderList(whileAway.map((item) => `<div><strong>${{escapeHtml(item.title || "Carry forward")}}</strong><br>${{escapeHtml(item.body || "")}}</div>`))
+                : `<div class="core-home-empty">No spiritual carry-forward summary is ready yet.</div>`
+            )
+          }}
+          <div class="chronicle-workspace-shell">
+            <div class="chronicle-handoff-bar">
+              <div class="chronicle-handoff-copy">
+                <strong>Sent to Chronicle</strong>
+                <span id="chronicle-handoff-summary">Preparing Chronicle…</span>
+              </div>
+              <div class="chronicle-handoff-actions">
+                <button type="button" id="chronicle-send-button">Send to Chronicle</button>
+                <button type="button" class="ghost-toggle" id="chronicle-open-app">Open Chronicle App</button>
+              </div>
+            </div>
+            <div class="workspace-frame">
+              <iframe id="chronicle-workspace-frame" title="Chronicle Workspace" src="about:blank"></iframe>
+            </div>
+          </div>
+        </div>`;
+    }}
+
+    function renderSystemSceneMarkup(data = {{}}, signals = {{}}) {{
+      const activeMode = data.active_mode || {{}};
+      const recommendation = (signals.recommendationCards || [])[0];
+      return `
+        <div class="packet-grid">
+          ${{
+            packetBlock("Shell Posture", `
+              <div class="metric"><strong>Mode</strong> ${{escapeHtml(activeMode.mode || "--")}}</div>
+              <div class="metric"><strong>Status</strong> ${{escapeHtml(activeMode.status || "--")}}</div>
+              <p>${{escapeHtml(activeMode.reason || signals.chamber?.state_line || "System posture is available.")}}</p>
+            `)
+          }}
+          ${{
+            packetBlock(
+              "Governance And Next",
+              recommendation
+                ? `<div class="core-home-item quiet"><strong>${{escapeHtml(recommendation.title || "Recommendation")}}</strong><br>${{escapeHtml(recommendation.body || "")}}</div>`
+                : `<div class="core-home-empty">No governance recommendation is surfaced right now.</div>`
+            )
+          }}
+          ${{
+            packetBlock(
+              "Controls",
+              `
+                <div class="inline-actions">
+                  <button type="button" id="scene-open-full-settings">Open Full Settings</button>
+                  <button type="button" class="ghost-toggle" id="scene-open-mode-panel">Open Household Mode</button>
+                  <button type="button" class="ghost-toggle" id="scene-open-approvals">Open Approvals</button>
+                </div>
+              `
+            )
+          }}
+        </div>`;
+    }}
+
+    function renderSceneMarkup(sceneId, data = {{}}) {{
+      const signals = deriveChamberHomeSignalModel(data);
+      if (sceneId === "day") return renderDaySceneMarkup(data, signals);
+      if (sceneId === "home") return renderHomeSceneMarkup(data, signals);
+      if (sceneId === "family") return renderFamilySceneMarkup(data, signals);
+      if (sceneId === "build") return renderBuildSceneMarkup(data, signals);
+      if (sceneId === "faith") return renderFaithSceneMarkup(data, signals);
+      if (sceneId === "system") return renderSystemSceneMarkup(data, signals);
+      return `<div class="packet-grid"><div class="metric">Scene unavailable.</div></div>`;
+    }}
+
     function wireScenePacket(packetId) {{
       if (packetId === "today") {{
         wireTodayBoardActions();
@@ -9183,6 +9563,9 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       state.windowStates.scene.minimized = false;
       state.windowStates.scene.maximized = false;
       document.body.dataset.activeScene = "false";
+      if (state.activeOverlay?.type === "scene") {{
+        setActiveOverlay("");
+      }}
       const stage = document.getElementById("scene-stage");
       const body = document.getElementById("scene-shell-body");
       if (stage) stage.classList.add("hidden");
@@ -9241,7 +9624,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
           }});
         return;
       }}
-      body.innerHTML = scenePacketMarkup(packetId, data);
+      body.innerHTML = renderSceneMarkup(sceneId, data);
       wireScenePacket(packetId);
     }}
 
@@ -9253,15 +9636,11 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         return;
       }}
       const packetId = packetIdForScene(sceneId);
-      if (state.packet) {{
-        closePacket();
-      }}
-      closeModePanel();
-      closeContextPanel();
-      closeCoreCommandTree();
+      closeShellOverlays("scene");
       syncPacketTreeToTarget(packetId, {{ catalystPage: state.catalystPage, scene: sceneId }});
       state.activeScene = sceneId;
       state.windowStates.scene.minimized = false;
+      setActiveOverlay("scene", {{ sceneId, packetId }});
       renderActiveScene();
       syncShellFocusMode();
       renderContextActionDock();
@@ -9274,6 +9653,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         state.packetStripExpanded = false;
         return;
       }}
+      const allowed = packetStripAllowed();
       const packetButtons = [
         ["approvals", "Approvals"],
         ["tasks", "Tasks"],
@@ -9292,8 +9672,9 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       strip.innerHTML = packetButtons
         .map(([packet, label]) => `<button type="button" class="ghost-toggle" data-packet="${{packet}}">${{label}}</button>`)
         .join("");
-      strip.classList.toggle("collapsed", !state.packetStripExpanded);
-      strip.setAttribute("aria-hidden", state.packetStripExpanded ? "false" : "true");
+      strip.classList.toggle("collapsed", !allowed || !state.packetStripExpanded);
+      strip.setAttribute("aria-hidden", allowed && state.packetStripExpanded ? "false" : "true");
+      toggle.classList.toggle("hidden", !allowed);
       toggle.textContent = state.packetStripExpanded ? "Hide Packets" : "Packets";
     }}
 
@@ -9328,6 +9709,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       if (!panel || !current) {{
         return;
       }}
+      closeShellOverlays("mode");
       document.getElementById("mode-panel-current").textContent =
         `Current mode: ${{(current.mode || "ambient-associate").replaceAll("-", " ")}}`;
       document.getElementById("mode-select").value = current.mode || availableModes[0] || "ambient-associate";
@@ -9335,6 +9717,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         current.reason ? `Current reason: ${{current.reason}}` : "Choose a new mode and apply it.";
       panel.classList.add("open");
       panel.setAttribute("aria-hidden", "false");
+      setActiveOverlay("mode", {{ mode: current.mode || "" }});
       applyWindowFrame("mode");
       bringWindowToFront("mode");
     }}
@@ -9346,6 +9729,9 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       }}
       panel.classList.remove("open");
       panel.setAttribute("aria-hidden", "true");
+      if (state.activeOverlay?.type === "mode") {{
+        setActiveOverlay("");
+      }}
     }}
 
     function syncContextPanelCopy() {{
@@ -9366,9 +9752,14 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       if (!panel) {{
         return;
       }}
+      closeShellOverlays("context");
       panel.classList.add("open");
       panel.setAttribute("aria-hidden", "false");
       syncContextPanelCopy();
+      setActiveOverlay("context", {{
+        actor: document.getElementById("actor")?.value || "Chris",
+        room: document.getElementById("room")?.value || "home",
+      }});
       applyWindowFrame("context");
       bringWindowToFront("context");
     }}
@@ -9380,6 +9771,9 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       }}
       panel.classList.remove("open");
       panel.setAttribute("aria-hidden", "true");
+      if (state.activeOverlay?.type === "context") {{
+        setActiveOverlay("");
+      }}
     }}
 
     function packetOverrideFromUrl() {{
@@ -12968,6 +13362,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       if (packetId !== "vision") {{
         stopVisionPreview();
       }}
+      closeShellOverlays("modal");
       syncPacketTreeToTarget(packetId, {{ catalystPage: state.catalystPage }});
       state.packet = packetId;
       state.windowStates.modal.minimized = false;
@@ -12977,8 +13372,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       }}
       state.packetStripExpanded = true;
       document.body.classList.add("modal-open");
-      closeModePanel();
-      closeContextPanel();
+      setActiveOverlay("modal", {{ packetId }});
       syncShellFocusMode();
       renderContextActionDock();
       fillPacketStrip();
@@ -13838,6 +14232,10 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         const selectedApprovals = Array.isArray(selectedMission?.approvals_detail) ? selectedMission.approvals_detail : [];
         const selectedAgents = Array.isArray(selectedMission?.agent_profiles) ? selectedMission.agent_profiles : [];
         const selectedOutputs = Array.isArray(selectedMission?.outputs) ? selectedMission.outputs : [];
+        const agentSociety = missionControl.agent_society || {{}};
+        const societySummary = agentSociety.summary || {{}};
+        const societyAgents = Array.isArray(agentSociety.agents) ? agentSociety.agents.slice(0, 6) : [];
+        const societyLanes = Array.isArray(agentSociety.lanes) ? agentSociety.lanes.slice(0, 6) : [];
         content = `
           <div class="stack">
             <div class="packet-grid">
@@ -13859,6 +14257,32 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
                 `)
               }}
               ${{
+                packetBlock("Agent Society", `
+                  <div class="metric"><strong>Active agents</strong> ${{escapeHtml(String(societySummary.active_agents || 0))}}</div>
+                  <div class="metric"><strong>Lead agents</strong> ${{escapeHtml(String(societySummary.lead_agents || 0))}}</div>
+                  <div class="metric"><strong>Blocked agents</strong> ${{escapeHtml(String(societySummary.blocked_agents || 0))}}</div>
+                  <div class="metric"><strong>Pending review agents</strong> ${{escapeHtml(String(societySummary.pending_review_agents || 0))}}</div>
+                  <div class="metric"><strong>Inbox / outbox</strong> ${{escapeHtml(String(societySummary.inbox_items || 0))}} / ${{escapeHtml(String(societySummary.outbox_items || 0))}}</div>
+                  <div class="metric"><strong>Hypotheses</strong> ${{escapeHtml(String(societySummary.hypotheses || 0))}}</div>
+                  ${{societyAgents.length ? renderList(societyAgents.map((item) => `
+                    <div>
+                      <strong>${{escapeHtml(item.label || item.agent_id || "Agent")}}</strong>
+                      <br>${{escapeHtml(item.primary_domain || "general")}} · lead ${{escapeHtml(String(item.lead_missions || 0))}}
+                      <br><span class="muted">active ${{escapeHtml(String(item.active_tasks || 0))}} · blocked ${{escapeHtml(String(item.blocked_tasks || 0))}} · review ${{escapeHtml(String(item.pending_reviews || 0))}}</span>
+                    </div>
+                  `)) : `<div class="empty">No society activity is visible yet.</div>`}}
+                `)
+              }}
+              ${{
+                packetBlock("Stewardship Lanes", societyLanes.length ? renderList(societyLanes.map((item) => `
+                  <div>
+                    <strong>${{escapeHtml(item.name || item.lane_id || "Lane")}}</strong>
+                    <br>agents ${{escapeHtml(String(item.total_agents || 0))}} · lead ${{escapeHtml(String(item.lead_agents || 0))}}
+                    <br><span class="muted">active ${{escapeHtml(String(item.active_tasks || 0))}} · blocked ${{escapeHtml(String(item.blocked_tasks || 0))}} · review ${{escapeHtml(String(item.pending_reviews || 0))}}</span>
+                  </div>
+                `)) : `<div class="empty">No stewardship lanes are active right now.</div>`)
+              }}
+              ${{
                 packetBlock("Active Dossiers", missionCards)
               }}
               ${{
@@ -13869,6 +14293,19 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
                     <br><span class="muted">${{escapeHtml(zone.description || "")}}</span>
                   </div>
                 `)))
+              }}
+              ${{
+                packetBlock("Promotion Queue", (() => {{
+                  const items = Array.isArray(data.governance?.promotion_recommendations) ? data.governance.promotion_recommendations : [];
+                  if (!items.length) return `<div class="empty">No promotion recommendations are surfaced right now.</div>`;
+                  return renderList(items.slice(0, 5).map((item) => `
+                    <div>
+                      <strong>${{escapeHtml(item.title || item.subject_id || "Recommendation")}}</strong>
+                      <br>${{escapeHtml(item.current_stage || "observe")}} → ${{escapeHtml(item.target_stage || "stage_alert")}} · ${{escapeHtml(item.decision || "hold")}}
+                      <br><span class="muted">${{escapeHtml(item.reason || item.summary || "")}}</span>
+                    </div>
+                  `));
+                }})())
               }}
             </div>
             ${{
@@ -14447,17 +14884,30 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
               packetBlock("Always-On Service", `
                 <div class="settings-grid">
                   <div class="settings-note">
-                    JARVIS should live as infrastructure. Track the primary host, LAN name, and whether boot-time launch and watchdog behavior are in place.
+                    JARVIS should live as infrastructure. Track the local household host, the Hetzner and Cloudflare edge, and whether boot-time launch plus watchdog behavior are really in place.
                   </div>
                   <div class="stack">
+                    <div class="metric"><strong>Deployment</strong> ${{escapeHtml(identityService.mode_label || "Hybrid household plus hosted edge")}}</div>
                     <div class="metric"><strong>Host</strong> ${{escapeHtml(identityService.host_label || "Primary JARVIS host")}}</div>
                     <div class="metric"><strong>LAN URL</strong> ${{escapeHtml(identityService.lan_url || window.location.origin)}}</div>
                     <div class="metric"><strong>Hostname</strong> ${{escapeHtml(identityService.hostname || "jarvis.local")}}</div>
+                    <div class="metric"><strong>Hosted URL</strong> ${{escapeHtml(identityService.hosted_base_url || "https://jarvis.teambinion.org")}}</div>
+                    <div class="metric"><strong>Edge</strong> ${{escapeHtml(identityService.edge_provider || "Cloudflare Tunnel")}} · ${{identityService.cloudflare_access_enabled !== false ? "Access protected" : "open"}}</div>
                     <div class="metric"><strong>Launch on boot</strong> ${{identityService.launch_on_boot ? "enabled" : "not yet"}}</div>
                   </div>
                   <div class="stack" id="runtime-service-status">
                     <div class="metric">Runtime service status is loading…</div>
                   </div>
+                  <label>
+                    Deployment mode
+                    <select id="identity-service-deployment-mode">
+                      ${{renderSelectOptions([
+                        {{ id: "hybrid", label: "Hybrid household + hosted edge" }},
+                        {{ id: "local", label: "Local household only" }},
+                        {{ id: "hosted", label: "Hosted edge only" }},
+                      ], identityService.deployment_mode || "hybrid")}}
+                    </select>
+                  </label>
                   <label>
                     Host label
                     <input id="identity-service-host-label" value="${{escapeHtml(identityService.host_label || "Primary JARVIS host")}}">
@@ -14475,6 +14925,34 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
                     <input id="identity-service-hostname" value="${{escapeHtml(identityService.hostname || "jarvis.local")}}">
                   </label>
                   <label>
+                    Hosted host label
+                    <input id="identity-service-hosted-host-label" value="${{escapeHtml(identityService.hosted_host_label || "Hetzner family stack")}}">
+                  </label>
+                  <label>
+                    Hosted provider
+                    <input id="identity-service-hosted-provider" value="${{escapeHtml(identityService.hosted_provider || "Hetzner")}}">
+                  </label>
+                  <label>
+                    Hosted base URL
+                    <input id="identity-service-hosted-base-url" value="${{escapeHtml(identityService.hosted_base_url || "https://jarvis.teambinion.org")}}">
+                  </label>
+                  <label>
+                    Remote admin host
+                    <input id="identity-service-remote-admin-host" value="${{escapeHtml(identityService.remote_admin_host || "")}}" placeholder="root@server or host only">
+                  </label>
+                  <label>
+                    Remote admin user
+                    <input id="identity-service-remote-admin-user" value="${{escapeHtml(identityService.remote_admin_user || "root")}}">
+                  </label>
+                  <label>
+                    Edge provider
+                    <input id="identity-service-edge-provider" value="${{escapeHtml(identityService.edge_provider || "Cloudflare Tunnel")}}">
+                  </label>
+                  <label>
+                    Compose project
+                    <input id="identity-service-compose-project" value="${{escapeHtml(identityService.compose_project || "jarvis-family")}}">
+                  </label>
+                  <label>
                     Notes
                     <textarea id="identity-service-notes" placeholder="How should this host behave as an always-on service?">${{escapeHtml(identityService.notes || "")}}</textarea>
                   </label>
@@ -14490,10 +14968,18 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
                     <input id="identity-service-watchdog" type="checkbox" ${{identityService.watchdog_enabled ? "checked" : ""}}>
                     Watchdog enabled
                   </label>
+                  <label class="toggle-row">
+                    <input id="identity-service-cloudflare-access" type="checkbox" ${{identityService.cloudflare_access_enabled !== false ? "checked" : ""}}>
+                    Cloudflare Access enforced
+                  </label>
+                  <label class="toggle-row">
+                    <input id="identity-service-tunnel-enabled" type="checkbox" ${{identityService.tunnel_enabled !== false ? "checked" : ""}}>
+                    Tunnel enabled
+                  </label>
                   <div class="inline-actions">
                     <button id="save-identity-service" type="button">Save Service Plan</button>
                   </div>
-                  <div class="settings-note" id="identity-service-status">Track the host plan here, then use <code>ops/install_launchd_services.sh</code> to install it for real.</div>
+                  <div class="settings-note" id="identity-service-status">Track the hybrid host plan here, then use <code>ops/install_launchd_services.sh</code> for local boot posture and <code>deploy/deploy.sh</code> for the Hetzner and Cloudflare hosted edge.</div>
                 </div>`)
             }}
             ${{
@@ -14770,9 +15256,13 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       state.packetHydrationToken += 1;
       state.packetHydrationPending = "";
       state.packet = "";
+      state.packetStripExpanded = false;
       state.windowStates.modal.minimized = false;
       state.windowStates.modal.maximized = false;
       document.body.classList.remove("modal-open");
+      if (state.activeOverlay?.type === "modal") {{
+        setActiveOverlay("");
+      }}
       syncShellFocusMode();
       renderContextActionDock();
       fillPacketStrip();
@@ -15213,12 +15703,31 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
           const data = await loadJSON("/api/runtime-service");
           const jarvis = data.runtime || {{}};
           const openviking = data.openviking || {{}};
+          const assistant = data.assistant_autonomy || {{}};
           const host = data.service_plan || {{}};
+          const routes = Array.isArray(data.public_routes) ? data.public_routes : [];
+          const composeServices = Array.isArray(data.compose_services) ? data.compose_services : [];
+          const hostedProbe = data.hosted_probe || {{}};
+          const hostedStatus = hostedProbe.status_code
+            ? `${{hostedProbe.status_code}}${{hostedProbe.headers?.www_authenticate ? " · Access protected" : ""}}`
+            : (hostedProbe.detail || "not probed");
+          const routeLine = routes.length
+            ? routes.slice(0, 3).map((route) => `${{escapeHtml(route.domain || route.url || "")}} → ${{escapeHtml(route.upstream || route.service_id || "")}}`).join("<br>")
+            : "No public routes discovered from deploy/nginx.conf.";
           container.innerHTML = `
+            <div class="metric"><strong>Deployment mode</strong> ${{escapeHtml(data.mode_label || host.mode_label || "Hybrid household plus hosted edge")}}</div>
             <div class="metric"><strong>JARVIS launch agent</strong> ${{jarvis.installed ? (jarvis.loaded ? "installed and loaded" : "installed but not loaded") : "not installed"}}</div>
             <div class="metric"><strong>OpenViking launch agent</strong> ${{openviking.installed ? (openviking.loaded ? "installed and loaded" : "installed but not loaded") : "not installed"}}</div>
+            <div class="metric"><strong>Assistant autonomy</strong> ${{assistant.installed ? (assistant.loaded ? "installed and loaded" : "installed but not loaded") : "not installed"}}</div>
             <div class="metric"><strong>LAN URL</strong> ${{escapeHtml(data.lan_url || host.lan_url || window.location.origin)}}</div>
             <div class="metric"><strong>Hostname</strong> ${{escapeHtml(data.hostname || host.hostname || "jarvis.local")}}</div>
+            <div class="metric"><strong>Hosted URL</strong> ${{escapeHtml(data.hosted_base_url || host.hosted_base_url || "https://jarvis.teambinion.org")}}</div>
+            <div class="metric"><strong>Hosted edge</strong> ${{escapeHtml(data.hosted_provider || host.hosted_provider || "Hetzner")}} via ${{escapeHtml(data.edge_provider || host.edge_provider || "Cloudflare Tunnel")}}</div>
+            <div class="metric"><strong>Access posture</strong> ${{data.cloudflare_access_enabled === false ? "Cloudflare edge without Access policy" : "Cloudflare Access protected"}} · ${{data.tunnel_enabled === false ? "tunnel disabled" : "tunnel enabled"}}</div>
+            <div class="metric"><strong>Remote admin</strong> ${{escapeHtml((data.remote_admin_user || host.remote_admin_user || "root") + ((data.remote_admin_host || host.remote_admin_host) ? `@${{data.remote_admin_host || host.remote_admin_host}}` : ""))}}</div>
+            <div class="metric"><strong>Compose services</strong> ${{composeServices.length ? composeServices.map((item) => escapeHtml(item.id || item.label || "")).join(", ") : "Not discovered"}}</div>
+            <div class="metric"><strong>Public routes</strong><br>${{routeLine}}</div>
+            <div class="metric"><strong>Hosted probe</strong> ${{escapeHtml(hostedStatus)}}</div>
           `;
         }} catch (error) {{
           container.innerHTML = `<div class="metric">Runtime service status unavailable: ${{escapeHtml(error.message || "request failed")}}</div>`;
@@ -15516,14 +16025,24 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       if (saveService) {{
         saveService.addEventListener("click", async () => {{
           const payload = {{
+            deployment_mode: document.getElementById("identity-service-deployment-mode")?.value || "hybrid",
             host_label: document.getElementById("identity-service-host-label")?.value || "",
             host_type: document.getElementById("identity-service-host-type")?.value || "",
             lan_url: document.getElementById("identity-service-lan-url")?.value || "",
             hostname: document.getElementById("identity-service-hostname")?.value || "",
+            hosted_host_label: document.getElementById("identity-service-hosted-host-label")?.value || "",
+            hosted_provider: document.getElementById("identity-service-hosted-provider")?.value || "",
+            hosted_base_url: document.getElementById("identity-service-hosted-base-url")?.value || "",
+            remote_admin_host: document.getElementById("identity-service-remote-admin-host")?.value || "",
+            remote_admin_user: document.getElementById("identity-service-remote-admin-user")?.value || "",
+            edge_provider: document.getElementById("identity-service-edge-provider")?.value || "",
+            compose_project: document.getElementById("identity-service-compose-project")?.value || "",
             notes: document.getElementById("identity-service-notes")?.value || "",
             always_on_enabled: !!document.getElementById("identity-service-always-on")?.checked,
             launch_on_boot: !!document.getElementById("identity-service-launch-on-boot")?.checked,
             watchdog_enabled: !!document.getElementById("identity-service-watchdog")?.checked,
+            cloudflare_access_enabled: !!document.getElementById("identity-service-cloudflare-access")?.checked,
+            tunnel_enabled: !!document.getElementById("identity-service-tunnel-enabled")?.checked,
           }};
           try {{
             const data = await loadJSON("/api/identity/service", {{
@@ -17536,6 +18055,8 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
     syncContextPanelCopy();
     autosizeCommandInput();
     renderAttachmentTray();
+    fillPacketStrip();
+    setActiveOverlay("");
     renderCoreCommandRing();
     enableAlwaysOnMic('Standing by for "Hey Jarvis", "Jarvis", or a double clap.');
   </script>

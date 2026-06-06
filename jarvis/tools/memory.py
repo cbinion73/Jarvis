@@ -11,6 +11,7 @@ import pathlib
 from datetime import datetime, timezone
 
 from .base import ApprovalFlag, ToolResult
+from ..persistence import append_jsonl, atomic_write_json
 
 # ---------------------------------------------------------------------------
 # Anthropic tool schema
@@ -45,6 +46,8 @@ DEFINITION: dict = {
 }
 
 _FACTS_PATH = pathlib.Path.home() / ".jarvis" / "agent_facts.json"
+_FACTS_LOG_PATH = _FACTS_PATH.with_name("agent_facts_log.jsonl")
+_FACTS_STATE_LOG_PATH = _FACTS_PATH.with_name("agent_facts_state_log.jsonl")
 
 
 # ---------------------------------------------------------------------------
@@ -63,24 +66,78 @@ def needs_approval(inputs: dict) -> ApprovalFlag:  # noqa: ARG001
 def _load_facts() -> list[dict]:
     """Load facts from disk; return empty list if file is missing or corrupt."""
     if not _FACTS_PATH.exists():
-        return []
+        facts = _load_facts_from_state_log()
+        if facts:
+            return facts
+        return _load_facts_from_log()
     try:
         raw = _FACTS_PATH.read_text(encoding="utf-8")
         data = json.loads(raw)
-        if isinstance(data, list):
+        if isinstance(data, list) and data:
             return data
+        facts = _load_facts_from_state_log()
+        if facts:
+            return facts
         return []
     except (json.JSONDecodeError, OSError):
-        return []
+        facts = _load_facts_from_state_log()
+        if facts:
+            return facts
+        return _load_facts_from_log()
 
 
 def _save_facts(facts: list[dict]) -> None:
     """Persist facts list to disk, creating parent directories as needed."""
     _FACTS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _FACTS_PATH.write_text(
-        json.dumps(facts, indent=2, ensure_ascii=False, default=str),
-        encoding="utf-8",
+    append_jsonl(
+        _FACTS_LOG_PATH,
+        {
+            "saved_at": datetime.now(tz=timezone.utc).isoformat(timespec="seconds"),
+            "facts": facts,
+        },
     )
+    append_jsonl(
+        _FACTS_STATE_LOG_PATH,
+        {
+            "saved_at": datetime.now(tz=timezone.utc).isoformat(timespec="seconds"),
+            "facts": facts,
+        },
+    )
+    atomic_write_json(_FACTS_PATH, facts, ensure_ascii=False)
+
+
+def _load_facts_from_log() -> list[dict]:
+    if not _FACTS_LOG_PATH.exists():
+        return []
+    latest: list[dict] = []
+    try:
+        for line in _FACTS_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            facts = payload.get("facts")
+            if isinstance(facts, list):
+                latest = [dict(item) for item in facts if isinstance(item, dict)]
+    except (json.JSONDecodeError, OSError):
+        return []
+    return latest
+
+
+def _load_facts_from_state_log() -> list[dict]:
+    if not _FACTS_STATE_LOG_PATH.exists():
+        return []
+    latest: list[dict] = []
+    try:
+        for line in _FACTS_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            facts = payload.get("facts")
+            if isinstance(facts, list):
+                latest = [dict(item) for item in facts if isinstance(item, dict)]
+    except (json.JSONDecodeError, OSError):
+        return []
+    return latest
 
 
 def _format_facts(facts: list[dict]) -> str:

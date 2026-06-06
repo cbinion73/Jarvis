@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Supervision Snapshot</title>
+  <style>
+    :root {
+      --bg: #061019;
+      --panel: #0d1724;
+      --line: rgba(143, 185, 255, 0.18);
+      --text: #edf6fc;
+      --muted: #8fa7bb;
+      --cyan: #68d4df;
+      --green: #66d89f;
+      --amber: #f0b86d;
+      --font-ui: "SF Pro Display", "Segoe UI", sans-serif;
+      --font-mono: "SF Mono", "JetBrains Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(180deg, var(--bg) 0%, #02070d 100%);
+      color: var(--text);
+      font-family: var(--font-ui);
+    }
+    .shell { width: min(1240px, calc(100% - 32px)); margin: 0 auto; padding: 28px 0 48px; }
+    .hero, .panel {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(13, 23, 36, 0.98), rgba(8, 15, 24, 0.98));
+      box-shadow: 0 24px 72px rgba(0, 0, 0, 0.34);
+    }
+    .hero { padding: 26px; margin-bottom: 18px; }
+    .eyebrow {
+      display: inline-block;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(104, 212, 223, 0.28);
+      background: rgba(104, 212, 223, 0.08);
+      color: var(--cyan);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    h1, h2, p, ul { margin: 0; }
+    h1 { margin-top: 14px; font-size: clamp(34px, 5vw, 56px); line-height: 0.95; letter-spacing: -0.05em; max-width: 12ch; }
+    .hero p { margin-top: 14px; max-width: 82ch; color: var(--muted); line-height: 1.65; }
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 20px; }
+    .stat { padding: 18px; border-radius: 18px; border: 1px solid var(--line); background: rgba(255,255,255,0.03); }
+    .stat strong { display: block; margin-bottom: 6px; font-size: 28px; font-variant-numeric: tabular-nums; }
+    .grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 18px; }
+    .panel { padding: 22px; }
+    .panel h2 { margin-bottom: 12px; font-size: 21px; letter-spacing: -0.03em; }
+    .panel ul { list-style: none; padding: 0; display: grid; gap: 10px; }
+    .panel li { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,0.03); }
+    .panel li strong { display: block; margin-bottom: 4px; }
+    .panel li span, .panel p { color: var(--muted); line-height: 1.6; }
+    .panel li.ok strong { color: var(--green); }
+    .panel li.warn strong { color: var(--amber); }
+    .mono { font-family: var(--font-mono); color: var(--cyan); }
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    button {
+      border: 1px solid var(--line);
+      background: rgba(104, 212, 223, 0.12);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 9px 12px;
+      font: inherit;
+      cursor: pointer;
+    }
+    button:hover { background: rgba(104, 212, 223, 0.2); }
+    .status-note {
+      margin-top: 10px;
+      color: var(--muted);
+      min-height: 1.2em;
+    }
+    .link-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .link-row a {
+      display: inline-flex;
+      align-items: center;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--text);
+      text-decoration: none;
+      background: rgba(255,255,255,0.03);
+    }
+    pre {
+      margin: 0;
+      padding: 16px;
+      overflow: auto;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,0.24);
+      color: #d7f1ff;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .stack { display: grid; gap: 18px; }
+    .empty { color: var(--muted); }
+    @media (max-width: 920px) {
+      .stats, .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="eyebrow">Level 9 Proof Surface</div>
+      <h1>JARVIS Supervision Snapshot</h1>
+      <p>
+        This is a live local supervision digest built from real approval, memory, registry,
+        integration, and Git lane state. It is meant to answer what changed, what needs
+        attention, and what Chris can inspect right now.
+      </p>
+      <div class="link-row">
+        <a href="/approval-queue">Open Approval Queue</a>
+        <a href="/api/approval-queue/snapshot">Approval Queue JSON</a>
+        <a href="/api/supervision-snapshot">Supervision Snapshot JSON</a>
+      </div>
+      <div class="stats">
+        <div class="stat"><strong>codex/apple-native-command-surface</strong>Current branch</div>
+        <div class="stat"><strong>8435cb0</strong>Current head</div>
+        <div class="stat"><strong>0</strong>Pending approvals</div>
+        <div class="stat"><strong>44</strong>Memory entries</div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <div class="stack">
+        <section class="panel">
+          <h2>Return Brief</h2>
+          <p>0 approvals pending, 3 integration issues, 2 memory proposals, 11 registered agents</p>
+        </section>
+        <section class="panel">
+          <h2>What Needs Me</h2>
+          <ul><li><strong>google-workspace</strong><span>Google account is not connected yet</span></li><li><strong>home-assistant</strong><span>HOME_ASSISTANT_URL or HOME_ASSISTANT_TOKEN is missing</span></li><li><strong>openviking</strong><span>&lt;urlopen error [Errno 1] Operation not permitted&gt;</span></li><li><strong>Emergency allergy note for household</strong><span>Pending memory proposal needs review</span></li><li><strong>Chris provided a detailed whitepaper describing how JARVIS should understand and</strong><span>Pending memory proposal needs review</span></li></ul>
+        </section>
+        <section class="panel">
+          <h2>Attention Queue</h2>
+          <ul><li class='empty'>Nothing pending right now.</li></ul>
+          <p class="status-note" id="status-note">Open this through the app to run live approval actions, or use the approval queue CLI and page for local file-based proof.</p>
+        </section>
+        <section class="panel">
+          <h2>Memory Inspector</h2>
+          <ul>
+            <li><strong>Entries</strong><span>44 entries stored</span></li>
+            <li><strong>Proposals</strong><span>2 proposals tracked</span></li>
+            <li><strong>Facts</strong><span>31 profile facts tracked</span></li>
+            <li><strong>Latest titles</strong><span>The JARVIS behavioral charter for Chris is to help him think clearly, create bol, Chris wants personal growth coaching to focus on repeatable rhythms, identity, s, Chris wants creative work to bring imagination with structure, with curated opti</span></li>
+          </ul>
+        </section>
+      </div>
+      <div class="stack">
+        <section class="panel">
+          <h2>Registry Status</h2>
+          <ul>
+            <li><strong>Agent count</strong><span>11</span></li>
+            <li><strong>Domains</strong><span>communications, core, executive, family, formation, memory, system, weather, workshop</span></li>
+            <li><strong>Authority stages</strong><span>observe, draft, stage_alert, sandbox_live, mature_live, suspended</span></li>
+          </ul>
+        </section>
+        <section class="panel">
+          <h2>Integration Status</h2>
+          <ul><li class="ok"><strong>openai-api</strong><span>OpenAI API key is configured</span></li><li class="ok"><strong>openclaw</strong><span>configured gateway ws://127.0.0.1:18789</span></li><li class="warn"><strong>google-workspace</strong><span>Google account is not connected yet</span></li><li class="warn"><strong>home-assistant</strong><span>HOME_ASSISTANT_URL or HOME_ASSISTANT_TOKEN is missing</span></li><li class="ok"><strong>home-profile</strong><span>loaded profile household/jarvis_home_assistant.example.json</span></li><li class="ok"><strong>memory-profile</strong><span>loaded profile household/jarvis_memory_profile.example.json</span></li><li class="warn"><strong>openviking</strong><span>&lt;urlopen error [Errno 1] Operation not permitted&gt;</span></li><li class="ok"><strong>perception-profile</strong><span>loaded profile household/jarvis_perception_profile.example.json</span></li><li class="ok"><strong>workshop-adapter</strong><span>loaded profile household/jarvis_workshop_profile.example.json</span></li></ul>
+        </section>
+        <section class="panel">
+          <h2>Lane Residue</h2>
+          <ul><li><code> M .agents/skills/bmad-advanced-elicitation/methods.csv</code></li><li><code> M .agents/skills/bmad-agent-analyst/SKILL.md</code></li><li><code> M .agents/skills/bmad-agent-architect/SKILL.md</code></li><li><code> M .agents/skills/bmad-agent-dev/SKILL.md</code></li><li><code> M .agents/skills/bmad-agent-dev/customize.toml</code></li><li><code> M .agents/skills/bmad-agent-pm/SKILL.md</code></li><li><code> M .agents/skills/bmad-agent-pm/customize.toml</code></li><li><code> M .agents/skills/bmad-agent-tech-writer/SKILL.md</code></li></ul>
+        </section>
+        <section class="panel">
+          <h2>Recent Seams</h2>
+          <ul><li><code>8435cb0 feat: serve approval queue surface</code></li><li><code>e863e8a feat: add approval queue operator surface</code></li><li><code>b39726b feat: add supervision snapshot proof surface</code></li><li><code>a5df9cd Add append-only replay to trust store</code></li><li><code>4df62a1 test: isolate legacy notification center regression</code></li></ul>
+        </section>
+      </div>
+    </div>
+
+    <section class="panel" style="margin-top: 18px;">
+      <h2>Raw Snapshot JSON</h2>
+      <pre>{
+  &quot;generated_at&quot;: &quot;2026-06-03T12:30:06.542442+00:00&quot;,
+  &quot;lane&quot;: {
+    &quot;branch&quot;: &quot;codex/apple-native-command-surface&quot;,
+    &quot;head&quot;: &quot;8435cb0&quot;,
+    &quot;dirty_count&quot;: 424,
+    &quot;recent_commits&quot;: [
+      &quot;8435cb0 feat: serve approval queue surface&quot;,
+      &quot;e863e8a feat: add approval queue operator surface&quot;,
+      &quot;b39726b feat: add supervision snapshot proof surface&quot;,
+      &quot;a5df9cd Add append-only replay to trust store&quot;,
+      &quot;4df62a1 test: isolate legacy notification center regression&quot;
+    ],
+    &quot;dirty_sample&quot;: [
+      &quot; M .agents/skills/bmad-advanced-elicitation/methods.csv&quot;,
+      &quot; M .agents/skills/bmad-agent-analyst/SKILL.md&quot;,
+      &quot; M .agents/skills/bmad-agent-architect/SKILL.md&quot;,
+      &quot; M .agents/skills/bmad-agent-dev/SKILL.md&quot;,
+      &quot; M .agents/skills/bmad-agent-dev/customize.toml&quot;,
+      &quot; M .agents/skills/bmad-agent-pm/SKILL.md&quot;,
+      &quot; M .agents/skills/bmad-agent-pm/customize.toml&quot;,
+      &quot; M .agents/skills/bmad-agent-tech-writer/SKILL.md&quot;
+    ]
+  },
+  &quot;return_brief&quot;: {
+    &quot;summary&quot;: &quot;0 approvals pending, 3 integration issues, 2 memory proposals, 11 registered agents&quot;,
+    &quot;what_needs_me_count&quot;: 5
+  },
+  &quot;attention_queue&quot;: [],
+  &quot;memory&quot;: {
+    &quot;entry_count&quot;: 44,
+    &quot;proposal_count&quot;: 2,
+    &quot;fact_count&quot;: 31,
+    &quot;latest_entry_titles&quot;: [
+      &quot;The JARVIS behavioral charter for Chris is to help him think clearly, create bol&quot;,
+      &quot;Chris wants personal growth coaching to focus on repeatable rhythms, identity, s&quot;,
+      &quot;Chris wants creative work to bring imagination with structure, with curated opti&quot;
+    ],
+    &quot;pending_proposals&quot;: [
+      &quot;Emergency allergy note for household&quot;,
+      &quot;Chris provided a detailed whitepaper describing how JARVIS should understand and&quot;
+    ]
+  },
+  &quot;registry&quot;: {
+    &quot;registry_id&quot;: &quot;jarvis-core-agent-registry&quot;,
+    &quot;mission_model_id&quot;: &quot;jarvis-core-mission-model&quot;,
+    &quot;schema_version&quot;: &quot;1.0&quot;,
+    &quot;agent_count&quot;: 11,
+    &quot;domains&quot;: [
+      &quot;communications&quot;,
+      &quot;core&quot;,
+      &quot;executive&quot;,
+      &quot;family&quot;,
+      &quot;formation&quot;,
+      &quot;memory&quot;,
+      &quot;system&quot;,
+      &quot;weather&quot;,
+      &quot;workshop&quot;
+    ],
+    &quot;authority_stages&quot;: [
+      &quot;observe&quot;,
+      &quot;draft&quot;,
+      &quot;stage_alert&quot;,
+      &quot;sandbox_live&quot;,
+      &quot;mature_live&quot;,
+      &quot;suspended&quot;
+    ],
+    &quot;posture&quot;: {
+      &quot;system_mode&quot;: &quot;always-on-orchestrator&quot;,
+      &quot;interaction_mode&quot;: &quot;oversight-and-steering&quot;,
+      &quot;voice_mode&quot;: &quot;voice-enabled-not-primary&quot;,
+      &quot;registry_mode&quot;: &quot;operational-contract&quot;
+    }
+  },
+  &quot;integrations&quot;: [
+    {
+      &quot;name&quot;: &quot;openai-api&quot;,
+      &quot;ok&quot;: true,
+      &quot;detail&quot;: &quot;OpenAI API key is configured&quot;
+    },
+    {
+      &quot;name&quot;: &quot;openclaw&quot;,
+      &quot;ok&quot;: true,
+      &quot;detail&quot;: &quot;configured gateway ws://127.0.0.1:18789&quot;
+    },
+    {
+      &quot;name&quot;: &quot;google-workspace&quot;,
+      &quot;ok&quot;: false,
+      &quot;detail&quot;: &quot;Google account is not connected yet&quot;
+    },
+    {
+      &quot;name&quot;: &quot;home-assistant&quot;,
+      &quot;ok&quot;: false,
+      &quot;detail&quot;: &quot;HOME_ASSISTANT_URL or HOME_ASSISTANT_TOKEN is missing&quot;
+    },
+    {
+      &quot;name&quot;: &quot;home-profile&quot;,
+      &quot;ok&quot;: true,
+      &quot;detail&quot;: &quot;loaded profile household/jarvis_home_assistant.example.json&quot;
+    },
+    {
+      &quot;name&quot;: &quot;memory-profile&quot;,
+      &quot;ok&quot;: true,
+      &quot;detail&quot;: &quot;loaded profile household/jarvis_memory_profile.example.json&quot;
+    },
+    {
+      &quot;name&quot;: &quot;openviking&quot;,
+      &quot;ok&quot;: false,
+      &quot;detail&quot;: &quot;&lt;urlopen error [Errno 1] Operation not permitted&gt;&quot;
+    },
+    {
+      &quot;name&quot;: &quot;perception-profile&quot;,
+      &quot;ok&quot;: true,
+      &quot;detail&quot;: &quot;loaded profile household/jarvis_perception_profile.example.json&quot;
+    },
+    {
+      &quot;name&quot;: &quot;workshop-adapter&quot;,
+      &quot;ok&quot;: true,
+      &quot;detail&quot;: &quot;loaded profile household/jarvis_workshop_profile.example.json&quot;
+    }
+  ],
+  &quot;what_needs_me&quot;: [
+    {
+      &quot;kind&quot;: &quot;integration&quot;,
+      &quot;title&quot;: &quot;google-workspace&quot;,
+      &quot;detail&quot;: &quot;Google account is not connected yet&quot;
+    },
+    {
+      &quot;kind&quot;: &quot;integration&quot;,
+      &quot;title&quot;: &quot;home-assistant&quot;,
+      &quot;detail&quot;: &quot;HOME_ASSISTANT_URL or HOME_ASSISTANT_TOKEN is missing&quot;
+    },
+    {
+      &quot;kind&quot;: &quot;integration&quot;,
+      &quot;title&quot;: &quot;openviking&quot;,
+      &quot;detail&quot;: &quot;&lt;urlopen error [Errno 1] Operation not permitted&gt;&quot;
+    },
+    {
+      &quot;kind&quot;: &quot;memory&quot;,
+      &quot;title&quot;: &quot;Emergency allergy note for household&quot;,
+      &quot;detail&quot;: &quot;Pending memory proposal needs review&quot;
+    },
+    {
+      &quot;kind&quot;: &quot;memory&quot;,
+      &quot;title&quot;: &quot;Chris provided a detailed whitepaper describing how JARVIS should understand and&quot;,
+      &quot;detail&quot;: &quot;Pending memory proposal needs review&quot;
+    }
+  ],
+  &quot;proof_paths&quot;: {
+    &quot;doctrine&quot;: &quot;/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/JARVIS_LEVEL9_DOCTRINE.md&quot;,
+    &quot;command_center_model&quot;: &quot;/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/docs/jarvis-desktop-command-center-model.md&quot;,
+    &quot;generated_html&quot;: &quot;/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/artifacts/generated/jarvis-supervision-snapshot.html&quot;,
+    &quot;generated_json&quot;: &quot;/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/artifacts/generated/jarvis-supervision-snapshot.json&quot;,
+    &quot;served_page&quot;: &quot;/supervision-snapshot&quot;,
+    &quot;approval_queue&quot;: &quot;/approval-queue&quot;,
+    &quot;approval_queue_snapshot&quot;: &quot;/api/approval-queue/snapshot&quot;
+  }
+}</pre>
+    </section>
+  </div>
+  <script>
+    const statusNote = document.getElementById("status-note");
+    for (const button of document.querySelectorAll("button[data-endpoint]")) {
+      button.addEventListener("click", async () => {
+        const endpoint = button.getAttribute("data-endpoint");
+        const method = button.getAttribute("data-method") || "POST";
+        const rawBody = button.getAttribute("data-body");
+        if (statusNote) statusNote.textContent = `Calling ${endpoint}...`;
+        try {
+          const response = await fetch(endpoint, {
+            method,
+            headers: rawBody ? { "Content-Type": "application/json" } : undefined,
+            body: rawBody || undefined,
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(payload.detail || `HTTP ${response.status}`);
+          }
+          if (statusNote) statusNote.textContent = `Success: ${endpoint}`;
+          window.setTimeout(() => window.location.reload(), 250);
+        } catch (error) {
+          if (statusNote) statusNote.textContent = `Action failed: ${String(error)}`;
+        }
+      });
+    }
+  </script>
+</body>
+</html>

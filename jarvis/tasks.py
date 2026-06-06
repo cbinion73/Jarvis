@@ -9,12 +9,17 @@ from __future__ import annotations
 import json
 import os
 import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json
+
 _TASKS_PATH = Path(os.path.expanduser("~/.jarvis/tasks.json"))
+_TASKS_LOG_PATH = _TASKS_PATH.with_name("tasks_log.jsonl")
+_TASKS_STATE_LOG_PATH = _TASKS_PATH.with_name("tasks_state_log.jsonl")
 _lock = threading.Lock()
 
 _PRIORITY_ORDER = {"high": 0, "normal": 1, "low": 2}
@@ -33,7 +38,46 @@ def _now_iso() -> str:
 def _load() -> list[dict]:
     try:
         if _TASKS_PATH.exists():
-            return json.loads(_TASKS_PATH.read_text())
+            payload = json.loads(_TASKS_PATH.read_text(encoding="utf-8"))
+            if isinstance(payload, list) and payload:
+                return payload
+            return _load_from_state_log()
+    except Exception:
+        return _load_from_state_log()
+    if not _TASKS_PATH.exists():
+        return _load_from_state_log()
+    return []
+
+
+def _load_from_log() -> list[dict]:
+    try:
+        if _TASKS_LOG_PATH.exists():
+            latest: list[dict] = []
+            for line in _TASKS_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+            return latest
+    except Exception:
+        pass
+    return []
+
+
+def _load_from_state_log() -> list[dict]:
+    try:
+        if _TASKS_STATE_LOG_PATH.exists():
+            latest: list[dict] = []
+            for line in _TASKS_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+            return latest
     except Exception:
         pass
     return []
@@ -41,7 +85,21 @@ def _load() -> list[dict]:
 
 def _save(tasks: list[dict]) -> None:
     _TASKS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _TASKS_PATH.write_text(json.dumps(tasks, indent=2))
+    atomic_write_json(_TASKS_PATH, tasks)
+    append_jsonl(
+        _TASKS_LOG_PATH,
+        {
+            "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "records": tasks,
+        },
+    )
+    append_jsonl(
+        _TASKS_STATE_LOG_PATH,
+        {
+            "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "records": tasks,
+        },
+    )
 
 
 def add_task(

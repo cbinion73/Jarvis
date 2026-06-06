@@ -11,6 +11,8 @@ from email.utils import parseaddr
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json
+
 logger = logging.getLogger("jarvis.gmail_bridge")
 
 # ---------------------------------------------------------------------------
@@ -142,6 +144,68 @@ class GmailBridge:
         self._credentials_path = Path(credentials_path)
         self._service = None
 
+    def _credentials_log_path(self) -> Path:
+        return self._credentials_path.with_name(f"{self._credentials_path.stem}_log.jsonl")
+
+    def _credentials_state_log_path(self) -> Path:
+        return self._credentials_path.with_name(f"{self._credentials_path.stem}_state_log.jsonl")
+
+    def _load_credentials_from_log(self) -> dict:
+        log_path = self._credentials_log_path()
+        if not log_path.exists():
+            return {}
+        latest: dict[str, Any] = {}
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                credentials = payload.get("credentials")
+                if isinstance(credentials, dict):
+                    latest = credentials
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("gmail_bridge: failed to replay credentials log %s: %s", log_path, exc)
+            return {}
+        return latest
+
+    def _load_credentials_from_state_log(self) -> dict:
+        log_path = self._credentials_state_log_path()
+        if not log_path.exists():
+            return {}
+        latest: dict[str, Any] = {}
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                credentials = payload.get("credentials")
+                if isinstance(credentials, dict):
+                    latest = credentials
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("gmail_bridge: failed to replay credentials state log %s: %s", log_path, exc)
+            return {}
+        return latest
+
+    def _persist_credentials_snapshot(self, payload: dict[str, Any]) -> None:
+        self._credentials_path.parent.mkdir(parents=True, exist_ok=True)
+        append_jsonl(
+            self._credentials_log_path(),
+            {
+                "saved_at": datetime.now(tz=timezone.utc).isoformat(),
+                "credentials": payload,
+            },
+            ensure_ascii=False,
+        )
+        append_jsonl(
+            self._credentials_state_log_path(),
+            {
+                "saved_at": datetime.now(tz=timezone.utc).isoformat(),
+                "credentials": payload,
+            },
+            ensure_ascii=False,
+        )
+        atomic_write_json(self._credentials_path, payload, ensure_ascii=False)
+
     # ------------------------------------------------------------------
     # Credential loading and service construction
     # ------------------------------------------------------------------
@@ -161,18 +225,33 @@ class GmailBridge:
           }
         """
         if not self._credentials_path.exists():
+            replayed = self._load_credentials_from_state_log()
+            if replayed:
+                return replayed
+            replayed = self._load_credentials_from_log()
+            if replayed:
+                return replayed
             logger.warning("gmail_bridge: credentials file not found: %s", self._credentials_path)
             return {}
         try:
             raw = self._credentials_path.read_text(encoding="utf-8")
             data = json.loads(raw)
             if not isinstance(data, dict):
+                replayed = self._load_credentials_from_state_log()
+                if replayed:
+                    return replayed
+                replayed = self._load_credentials_from_log()
+                if replayed:
+                    return replayed
                 logger.warning("gmail_bridge: credentials file is not a JSON object")
                 return {}
             return data
         except (OSError, json.JSONDecodeError) as exc:
             logger.error("gmail_bridge: failed to read credentials: %s", exc)
-            return {}
+            replayed = self._load_credentials_from_state_log()
+            if replayed:
+                return replayed
+            return self._load_credentials_from_log()
 
     def _get_service(self):
         """
@@ -227,10 +306,7 @@ class GmailBridge:
             cred_data["token"] = credentials.token
             if credentials.expiry:
                 cred_data["expiry"] = credentials.expiry.isoformat()
-            self._credentials_path.write_text(
-                json.dumps(cred_data, indent=2) + "\n",
-                encoding="utf-8",
-            )
+            self._persist_credentials_snapshot(cred_data)
             logger.debug("gmail_bridge: persisted refreshed token to %s", self._credentials_path)
         except Exception as exc:
             logger.warning("gmail_bridge: failed to persist refreshed token: %s", exc)

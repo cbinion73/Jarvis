@@ -6,6 +6,8 @@ from pathlib import Path
 import uuid
 from typing import Any, TYPE_CHECKING
 
+from .persistence import append_jsonl, atomic_write_json
+
 if TYPE_CHECKING:
     from .agentic import AgentDefinition, AgentRegistry
 
@@ -87,6 +89,7 @@ class AgentRuntimeKernelStore:
         self.root.mkdir(parents=True, exist_ok=True)
         self.state_path = self.root / "runtime_kernel_state.json"
         self.event_log_path = self.root / "runtime_kernel_events.jsonl"
+        self.event_state_log_path = self.root / "runtime_kernel_events_state_log.jsonl"
 
     def load(self) -> dict[str, Any]:
         if not self.state_path.exists():
@@ -105,27 +108,60 @@ class AgentRuntimeKernelStore:
     def save(self, payload: dict[str, Any]) -> None:
         payload = dict(payload)
         payload["schema_version"] = SCHEMA_VERSION
-        self.state_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(self.state_path, payload)
 
     def append_event(self, payload: dict[str, Any]) -> None:
-        with self.event_log_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(payload) + "\n")
+        append_jsonl(self.event_log_path, payload)
+        records = self._load_event_records()
+        records.append(dict(payload))
+        append_jsonl(
+            self.event_state_log_path,
+            {
+                "saved_at": _iso(_now()),
+                "records": records,
+            },
+        )
 
     def list_events(self, *, agent_id: str = "", limit: int = 40) -> list[dict[str, Any]]:
-        if not self.event_log_path.exists():
-            return []
-        records: list[dict[str, Any]] = []
-        for line in self.event_log_path.read_text(encoding="utf-8").splitlines():
-            if not line.strip():
-                continue
-            try:
-                payload = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if agent_id and str(payload.get("agent_id", "")).strip() != agent_id.strip():
-                continue
-            records.append(payload)
+        records = self._load_event_records()
+        if agent_id:
+            records = [payload for payload in records if str(payload.get("agent_id", "")).strip() == agent_id.strip()]
         return list(reversed(records[-max(1, int(limit)):]))
+
+    def _load_event_records(self) -> list[dict[str, Any]]:
+        records: list[dict[str, Any]] = []
+        if self.event_log_path.exists():
+            try:
+                for line in self.event_log_path.read_text(encoding="utf-8").splitlines():
+                    if not line.strip():
+                        continue
+                    try:
+                        payload = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if isinstance(payload, dict):
+                        records.append(payload)
+            except OSError:
+                records = []
+        if records:
+            return records
+        if not self.event_state_log_path.exists():
+            return []
+        try:
+            latest: list[dict[str, Any]] = []
+            for line in self.event_state_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                saved = payload.get("records")
+                if isinstance(saved, list):
+                    latest = [dict(item) for item in saved if isinstance(item, dict)]
+            return latest
+        except OSError:
+            return []
 
     def default_state(self) -> dict[str, Any]:
         return {

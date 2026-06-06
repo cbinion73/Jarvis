@@ -15,9 +15,14 @@ public struct HealthSummary: Codable, Sendable {
     public let thorNote: String
     public let lastSync: String
     public let dailyScore: HealthDailyScore?
+    public let readinessFactors: [HealthReadinessFactor]
+    public let thorSnapshot: HealthThorSnapshot?
+    public let completeness: HealthCompletenessSummary?
+    public let watchlist: [HealthWatchItem]
     public let protocolItems: [HealthProtocolItem]
     public let alerts: [HealthAlert]
     public let nextActions: [String]
+    public let continuity: HealthContinuity?
 
     public init(
         stepsToday: Int,
@@ -30,9 +35,14 @@ public struct HealthSummary: Codable, Sendable {
         thorNote: String,
         lastSync: String,
         dailyScore: HealthDailyScore? = nil,
+        readinessFactors: [HealthReadinessFactor] = [],
+        thorSnapshot: HealthThorSnapshot? = nil,
+        completeness: HealthCompletenessSummary? = nil,
+        watchlist: [HealthWatchItem] = [],
         protocolItems: [HealthProtocolItem] = [],
         alerts: [HealthAlert] = [],
-        nextActions: [String] = []
+        nextActions: [String] = [],
+        continuity: HealthContinuity? = nil
     ) {
         self.stepsToday = stepsToday
         self.heartRateAvg = heartRateAvg
@@ -44,9 +54,14 @@ public struct HealthSummary: Codable, Sendable {
         self.thorNote = thorNote
         self.lastSync = lastSync
         self.dailyScore = dailyScore
+        self.readinessFactors = readinessFactors
+        self.thorSnapshot = thorSnapshot
+        self.completeness = completeness
+        self.watchlist = watchlist
         self.protocolItems = protocolItems
         self.alerts = alerts
         self.nextActions = nextActions
+        self.continuity = continuity
     }
 
     enum CodingKeys: String, CodingKey {
@@ -60,9 +75,14 @@ public struct HealthSummary: Codable, Sendable {
         case thorNote = "thor_note"
         case lastSync = "last_sync"
         case dailyScore = "daily_score"
+        case readinessFactors = "readiness_factors"
+        case thorSnapshot = "thor_snapshot"
+        case completeness
+        case watchlist
         case protocolItems = "protocol_items"
         case alerts
         case nextActions = "next_actions"
+        case continuity
     }
 
     public init(from decoder: Decoder) throws {
@@ -77,10 +97,49 @@ public struct HealthSummary: Codable, Sendable {
         thorNote = try container.decode(String.self, forKey: .thorNote)
         lastSync = try container.decode(String.self, forKey: .lastSync)
         dailyScore = try container.decodeIfPresent(HealthDailyScore.self, forKey: .dailyScore)
+        readinessFactors = try container.decodeIfPresent([HealthReadinessFactor].self, forKey: .readinessFactors) ?? []
+        thorSnapshot = try container.decodeIfPresent(HealthThorSnapshot.self, forKey: .thorSnapshot)
+        completeness = try container.decodeIfPresent(HealthCompletenessSummary.self, forKey: .completeness)
+        watchlist = try container.decodeIfPresent([HealthWatchItem].self, forKey: .watchlist) ?? []
         protocolItems = try container.decodeIfPresent([HealthProtocolItem].self, forKey: .protocolItems) ?? []
         alerts = try container.decodeIfPresent([HealthAlert].self, forKey: .alerts) ?? []
         nextActions = try container.decodeIfPresent([String].self, forKey: .nextActions) ?? []
+        continuity = try container.decodeIfPresent(HealthContinuity.self, forKey: .continuity)
     }
+}
+
+public struct HealthContinuity: Codable, Sendable {
+    public let subjectDisplayName: String
+    public let readinessLane: String
+    public let recoveryFocus: String
+    public let activeConditions: [String]
+    public let guidanceLines: [String]
+    public let profileFactCount: Int
+    public let recentProfileFacts: [HealthContinuityFact]
+    public let recentFirstLight: [HealthContinuityMoment]
+
+    enum CodingKeys: String, CodingKey {
+        case subjectDisplayName = "subject_display_name"
+        case readinessLane = "readiness_lane"
+        case recoveryFocus = "recovery_focus"
+        case activeConditions = "active_conditions"
+        case guidanceLines = "guidance_lines"
+        case profileFactCount = "profile_fact_count"
+        case recentProfileFacts = "recent_profile_facts"
+        case recentFirstLight = "recent_first_light"
+    }
+}
+
+public struct HealthContinuityFact: Codable, Sendable, Identifiable {
+    public let id: String
+    public let title: String
+    public let summary: String
+}
+
+public struct HealthContinuityMoment: Codable, Sendable, Identifiable {
+    public let id: String
+    public let label: String
+    public let summary: String
 }
 
 public struct HealthDailyScore: Codable, Sendable {
@@ -121,6 +180,57 @@ public struct HealthAlert: Codable, Sendable, Identifiable {
         self.detail = detail
         self.severity = severity
     }
+}
+
+public struct HealthReadinessFactor: Codable, Sendable, Identifiable {
+    public var id: String { metric }
+    public let metric: String
+    public let label: String
+    public let value: Double?
+    public let score: Int?
+    public let missing: Bool
+}
+
+public struct HealthThorSnapshot: Codable, Sendable {
+    public let activityStreakDays: Int
+    public let totalActiveMinutesWeek: Int
+    public let avgDailySteps: Int
+    public let readiness: String
+    public let thorNote: String
+    public let needsRest: Bool
+    public let lastActivity: String
+
+    enum CodingKeys: String, CodingKey {
+        case activityStreakDays = "activity_streak_days"
+        case totalActiveMinutesWeek = "total_active_minutes_week"
+        case avgDailySteps = "avg_daily_steps"
+        case readiness
+        case thorNote = "thor_note"
+        case needsRest = "needs_rest"
+        case lastActivity = "last_activity"
+    }
+}
+
+public struct HealthCompletenessSummary: Codable, Sendable {
+    public let totalScore: Int
+    public let grade: String
+    public let criticalGaps: [String]
+    public let quickWins: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case totalScore = "total_score"
+        case grade
+        case criticalGaps = "critical_gaps"
+        case quickWins = "quick_wins"
+    }
+}
+
+public struct HealthWatchItem: Codable, Sendable, Identifiable {
+    public var id: String { "\(title)|\(kind)" }
+    public let kind: String
+    public let title: String
+    public let detail: String
+    public let severity: String
 }
 
 /// A single HealthKit sample sent to POST /api/apple/health/log

@@ -22,6 +22,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_jsonl
+
 logger = logging.getLogger("jarvis.agent_work")
 
 # ---------------------------------------------------------------------------
@@ -205,6 +207,7 @@ class AgentWorkStore:
         if base_dir is None:
             base_dir = Path.home() / ".jarvis" / "agents" / agent_id
         self._path = base_dir / "work.jsonl"
+        self._state_log_path = base_dir / "work_state_log.jsonl"
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
         self._items: list[WorkItem] = self._load()
@@ -215,7 +218,7 @@ class AgentWorkStore:
 
     def _load(self) -> list[WorkItem]:
         if not self._path.exists():
-            return []
+            return self._load_from_state_log()
         items: list[WorkItem] = []
         try:
             for line in self._path.read_text(encoding="utf-8").splitlines():
@@ -252,18 +255,74 @@ class AgentWorkStore:
                 except Exception:
                     pass
         except OSError:
-            pass
-        return items
+            return self._load_from_state_log()
+        return items or self._load_from_state_log()
 
     def _save(self) -> None:
         try:
-            lines = [json.dumps(asdict(item)) for item in self._items]
-            self._path.write_text(
-                "\n".join(lines) + ("\n" if lines else ""),
-                encoding="utf-8",
+            atomic_write_jsonl(self._path, [asdict(item) for item in self._items])
+            append_jsonl(
+                self._state_log_path,
+                {
+                    "saved_at": _now_iso(),
+                    "records": [asdict(item) for item in self._items],
+                },
             )
         except OSError as exc:
             logger.warning("[%s] Failed to save work store: %s", self.agent_id, exc)
+
+    def _load_from_state_log(self) -> list[WorkItem]:
+        if not self._state_log_path.exists():
+            return []
+        try:
+            latest: list[WorkItem] = []
+            for line in self._state_log_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                records = payload.get("records")
+                if not isinstance(records, list):
+                    continue
+                candidate: list[WorkItem] = []
+                for data in records:
+                    if not isinstance(data, dict):
+                        continue
+                    try:
+                        candidate.append(
+                            WorkItem(
+                                work_id=data.get("work_id", str(uuid.uuid4())),
+                                agent_id=data.get("agent_id", self.agent_id),
+                                domain=data.get("domain", "general"),
+                                title=data.get("title", ""),
+                                status=data.get("status", STATUS_DREAMED),
+                                idea=data.get("idea", ""),
+                                research=data.get("research", ""),
+                                proposal=data.get("proposal", ""),
+                                implementation=data.get("implementation", ""),
+                                metrics=data.get("metrics", ""),
+                                effectiveness_score=float(data.get("effectiveness_score", 0.0)),
+                                created_at=data.get("created_at", _now_iso()),
+                                updated_at=data.get("updated_at", _now_iso()),
+                                created_date=data.get("created_date", _today()),
+                                approved_at=data.get("approved_at", ""),
+                                closed_at=data.get("closed_at", ""),
+                                approved_by=data.get("approved_by", ""),
+                                rejection_reason=data.get("rejection_reason", ""),
+                                tags=data.get("tags", []),
+                                priority=int(data.get("priority", 5)),
+                                approval_request_id=data.get("approval_request_id", ""),
+                            )
+                        )
+                    except Exception:
+                        continue
+                latest = candidate
+            return latest
+        except OSError:
+            return []
 
     # ------------------------------------------------------------------
     # Mutations

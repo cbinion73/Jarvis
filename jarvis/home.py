@@ -5,9 +5,11 @@ import uuid
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 from urllib import error, request
 
 from .config import AppConfig
+from .persistence import append_jsonl, atomic_write_json
 
 
 def _now_iso() -> str:
@@ -20,14 +22,80 @@ class HomeStore:
         self.root.mkdir(parents=True, exist_ok=True)
         self.overrides_path = self.root / "entity_overrides.json"
         self.actions_path = self.root / "home_actions.json"
+        self._log_paths = {
+            self.overrides_path: self.root / "entity_overrides_log.jsonl",
+            self.actions_path: self.root / "home_actions_log.jsonl",
+        }
+        self._state_log_paths = {
+            self.overrides_path: self.root / "entity_overrides_state_log.jsonl",
+            self.actions_path: self.root / "home_actions_state_log.jsonl",
+        }
 
     def _load_json(self, path: Path, default: object) -> object:
         if not path.exists():
+            return self._load_json_from_state_log(path, default)
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return self._load_json_from_state_log(path, default)
+        if payload == default:
+            return self._load_json_from_state_log(path, default)
+        return payload
+
+    def _load_json_from_log(self, path: Path, default: object) -> object:
+        log_path = self._log_paths[path]
+        if not log_path.exists():
             return default
-        return json.loads(path.read_text(encoding="utf-8"))
+        latest: object = default
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                latest = payload.get("records", default)
+        except (OSError, json.JSONDecodeError):
+            return default
+        if isinstance(default, dict):
+            return dict(latest) if isinstance(latest, dict) else default
+        if isinstance(default, list):
+            return [dict(item) if isinstance(item, dict) else item for item in latest] if isinstance(latest, list) else default
+        return latest
+
+    def _load_json_from_state_log(self, path: Path, default: object) -> object:
+        log_path = self._state_log_paths[path]
+        if not log_path.exists():
+            return default
+        latest: object = default
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                latest = payload.get("records", default)
+        except (OSError, json.JSONDecodeError):
+            return default
+        if isinstance(default, dict):
+            return dict(latest) if isinstance(latest, dict) else default
+        if isinstance(default, list):
+            return [dict(item) if isinstance(item, dict) else item for item in latest] if isinstance(latest, list) else default
+        return latest
 
     def _save_json(self, path: Path, payload: object) -> None:
-        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(path, payload)
+        append_jsonl(
+            self._log_paths[path],
+            {
+                "saved_at": _now_iso(),
+                "records": payload,
+            },
+        )
+        append_jsonl(
+            self._state_log_paths[path],
+            {
+                "saved_at": _now_iso(),
+                "records": payload,
+            },
+        )
 
     def load_overrides(self) -> dict[str, dict]:
         payload = self._load_json(self.overrides_path, {})

@@ -32,6 +32,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json, atomic_write_jsonl
+
 logger = logging.getLogger("jarvis.catalyst_bridge")
 
 
@@ -156,6 +158,80 @@ class CatalystBridge:
         self._pending_path.parent.mkdir(parents=True, exist_ok=True)
         if not self._pending_path.exists():
             self._pending_path.write_text("", encoding="utf-8")
+
+    def _pending_log_path(self) -> Path:
+        return self.ROOT / "pending_handoffs_log.jsonl"
+
+    def _context_path(self, context_id: str) -> Path:
+        return self._contexts_dir / f"{context_id}.json"
+
+    def _context_log_path(self, context_id: str) -> Path:
+        return self._contexts_dir / f"{context_id}_log.jsonl"
+
+    def _load_pending_records_from_log(self) -> list[dict[str, Any]]:
+        log_path = self._pending_log_path()
+        if not log_path.exists():
+            return []
+        latest: list[dict[str, Any]] = []
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                items = payload.get("items")
+                if isinstance(items, list):
+                    latest = [item for item in items if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return []
+        return latest
+
+    def _persist_pending_records(self, items: list[dict[str, Any]]) -> None:
+        append_jsonl(
+            self._pending_log_path(),
+            {
+                "saved_at": _now_iso(),
+                "items": items,
+            },
+            ensure_ascii=False,
+        )
+        atomic_write_jsonl(self._pending_path, items, ensure_ascii=False)
+
+    def _load_context_payload(self, context_id: str) -> dict[str, Any] | None:
+        path = self._context_path(context_id)
+        if path.exists():
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                if isinstance(data, dict):
+                    return data
+            except (OSError, json.JSONDecodeError):
+                pass
+        log_path = self._context_log_path(context_id)
+        if not log_path.exists():
+            return None
+        latest: dict[str, Any] | None = None
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                entry = json.loads(line)
+                payload = entry.get("data")
+                if isinstance(payload, dict):
+                    latest = payload
+        except (OSError, json.JSONDecodeError):
+            return None
+        return latest
+
+    def _persist_context_payload(self, ctx: CatalystContext) -> None:
+        payload = ctx.to_dict()
+        append_jsonl(
+            self._context_log_path(ctx.context_id),
+            {
+                "saved_at": _now_iso(),
+                "data": payload,
+            },
+            ensure_ascii=False,
+        )
+        atomic_write_json(self._context_path(ctx.context_id), payload, ensure_ascii=False)
 
     # -----------------------------------------------------------------------
     # JARVIS → Catalyst
@@ -539,9 +615,16 @@ class CatalystBridge:
     def get_pending_handoffs(self) -> list[CatalystContext]:
         """Get contexts waiting to be sent to Catalyst."""
         results: list[CatalystContext] = []
-        if not self._pending_path.exists():
-            return results
-        for raw_line in self._pending_path.read_text(encoding="utf-8").splitlines():
+        if self._pending_path.exists():
+            try:
+                lines = self._pending_path.read_text(encoding="utf-8").splitlines()
+            except OSError:
+                lines = []
+        else:
+            lines = []
+        if not lines:
+            lines = [json.dumps(item) for item in self._load_pending_records_from_log()]
+        for raw_line in lines:
             line = raw_line.strip()
             if not line:
                 continue
@@ -556,35 +639,34 @@ class CatalystBridge:
 
     def mark_handoff_sent(self, context_id: str) -> None:
         """Mark a pending handoff as sent so it's no longer returned as pending."""
-        if not self._pending_path.exists():
-            return
-        lines = self._pending_path.read_text(encoding="utf-8").splitlines()
-        updated_lines: list[str] = []
+        if self._pending_path.exists():
+            try:
+                lines = self._pending_path.read_text(encoding="utf-8").splitlines()
+            except OSError:
+                lines = []
+        else:
+            lines = []
+        if not lines:
+            lines = [json.dumps(item) for item in self._load_pending_records_from_log()]
+        updated_records: list[dict[str, Any]] = []
         for raw_line in lines:
             line = raw_line.strip()
             if not line:
-                updated_lines.append(raw_line)
                 continue
             try:
                 data = json.loads(line)
                 if str(data.get("context_id", "")).strip() == context_id:
                     data["sent"] = True
-                updated_lines.append(json.dumps(data))
+                if isinstance(data, dict):
+                    updated_records.append(data)
             except (json.JSONDecodeError, TypeError):
-                updated_lines.append(raw_line)
-        self._pending_path.write_text(
-            "\n".join(updated_lines) + ("\n" if updated_lines else ""),
-            encoding="utf-8",
-        )
+                continue
+        self._persist_pending_records(updated_records)
         # Also update the persisted context file
-        ctx_path = self._contexts_dir / f"{context_id}.json"
-        if ctx_path.exists():
-            try:
-                data = json.loads(ctx_path.read_text(encoding="utf-8"))
-                data["sent"] = True
-                ctx_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-            except (OSError, json.JSONDecodeError):
-                pass
+        data = self._load_context_payload(context_id)
+        if data is not None:
+            data["sent"] = True
+            self._persist_context_payload(CatalystContext.from_dict(data))
 
     def get_recent_contexts(self, limit: int = 10) -> list[CatalystContext]:
         """Return recent contexts (most recent first), regardless of sent status."""
@@ -596,7 +678,9 @@ class CatalystBridge:
         results: list[CatalystContext] = []
         for ctx_file in ctx_files[:limit]:
             try:
-                data = json.loads(ctx_file.read_text(encoding="utf-8"))
+                data = self._load_context_payload(ctx_file.stem)
+                if data is None:
+                    continue
                 results.append(CatalystContext.from_dict(data))
             except (OSError, json.JSONDecodeError, TypeError):
                 continue
@@ -608,13 +692,23 @@ class CatalystBridge:
 
     def _persist_context(self, ctx: CatalystContext) -> None:
         """Write context to its own JSON file."""
-        path = self._contexts_dir / f"{ctx.context_id}.json"
-        path.write_text(json.dumps(ctx.to_dict(), indent=2) + "\n", encoding="utf-8")
+        self._persist_context_payload(ctx)
 
     def _enqueue_handoff(self, ctx: CatalystContext) -> None:
         """Append context to pending_handoffs.jsonl."""
-        with self._pending_path.open("a", encoding="utf-8") as fh:
-            fh.write(json.dumps(ctx.to_dict()) + "\n")
+        items = self._load_pending_records_from_log()
+        if not items and self._pending_path.exists():
+            try:
+                for line in self._pending_path.read_text(encoding="utf-8").splitlines():
+                    if not line.strip():
+                        continue
+                    payload = json.loads(line)
+                    if isinstance(payload, dict):
+                        items.append(payload)
+            except (OSError, json.JSONDecodeError):
+                items = []
+        items.append(ctx.to_dict())
+        self._persist_pending_records(items)
 
     def _append_event_log(self, record: dict) -> None:
         """Append a Catalyst→JARVIS event to a local log."""

@@ -34,6 +34,7 @@ final class SoundAnalysisManager: NSObject, ObservableObject {
     private var analyzer:      SNAudioStreamAnalyzer?
     private var observer:      SNResultsObserving?
     private let analysisQueue  = DispatchQueue(label: "jarvis.sound.analysis")
+    private var suspendedForSpeech = false
 
     private override init() {}
 
@@ -70,6 +71,21 @@ final class SoundAnalysisManager: NSObject, ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func suspendForSpeechCapture() {
+        guard isListening else {
+            suspendedForSpeech = false
+            return
+        }
+        suspendedForSpeech = true
+        stopListening()
+    }
+
+    func resumeAfterSpeechCapture() {
+        guard suspendedForSpeech else { return }
+        suspendedForSpeech = false
+        startListening()
     }
 
     // nonisolated so the AVAudio real-time tap callback fires without @MainActor isolation check

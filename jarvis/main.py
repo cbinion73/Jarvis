@@ -36,7 +36,7 @@ try:
 except Exception:  # pragma: no cover
     _APPROVALS_IMPORT_OK = False
 
-    def _init_approvals():  # type: ignore[misc]
+    def _init_approvals(*args, **kwargs):  # type: ignore[misc]
         return None, None
 
 try:
@@ -847,7 +847,7 @@ def command_serve(runtime: JarvisRuntime, host: str, port: int) -> int:
     # Initialise the Approval & Permission Layer (Epic 6) before the scheduler
     if _APPROVALS_IMPORT_OK:
         try:
-            _init_approvals()
+            _init_approvals(runtime.supervision_support, runtime.execute_sandbox_job)
         except Exception as exc:  # pragma: no cover
             import logging
             logging.getLogger("jarvis.main").warning(

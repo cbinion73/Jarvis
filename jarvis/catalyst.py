@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,6 +13,7 @@ from .config import AppConfig
 from .data_hygiene import filter_records
 from .openai_tasks import JarvisOpenAIClient
 from .persona import build_specialist_prompt
+from .persistence import append_jsonl, atomic_write_json
 
 
 def _now_iso() -> str:
@@ -36,14 +38,83 @@ class CatalystStore:
         self.pipeline_review_path = self.root / "pipeline_reviews.json"
         self.work_lifecycle_path = self.root / "work_lifecycle.json"
 
+    def _log_path(self, path: Path) -> Path:
+        return path.with_name(f"{path.stem}_log.jsonl")
+
+    def _state_log_path(self, path: Path) -> Path:
+        return path.with_name(f"{path.stem}_state_log.jsonl")
+
     def _load_records(self, path: Path) -> list[dict]:
         if not path.exists():
+            records = self._load_records_from_state_log(path)
+            if records:
+                return records
+            return self._load_records_from_log(path)
+        try:
+            records = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            replayed = self._load_records_from_state_log(path)
+            if replayed:
+                return replayed
+            return self._load_records_from_log(path)
+        loaded = filter_records(records if isinstance(records, list) else [])
+        if loaded:
+            return loaded
+        replayed = self._load_records_from_state_log(path)
+        if replayed:
+            return replayed
+        return loaded
+
+    def _load_records_from_log(self, path: Path) -> list[dict]:
+        try:
+            log_path = self._log_path(path)
+            if not log_path.exists():
+                return []
+            latest: list[dict] = []
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("payload")
+                if isinstance(records, list):
+                    latest = filter_records(records)
+            return latest
+        except (OSError, json.JSONDecodeError):
             return []
-        records = json.loads(path.read_text(encoding="utf-8"))
-        return filter_records(records if isinstance(records, list) else [])
+
+    def _load_records_from_state_log(self, path: Path) -> list[dict]:
+        try:
+            log_path = self._state_log_path(path)
+            if not log_path.exists():
+                return []
+            latest: list[dict] = []
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("payload")
+                if isinstance(records, list):
+                    latest = filter_records(records)
+            return latest
+        except (OSError, json.JSONDecodeError):
+            return []
 
     def _save_records(self, path: Path, records: list[dict]) -> None:
-        path.write_text(json.dumps(records, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(path, records)
+        append_jsonl(
+            self._log_path(path),
+            {
+                "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "payload": records,
+            },
+        )
+        append_jsonl(
+            self._state_log_path(path),
+            {
+                "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "payload": records,
+            },
+        )
 
     def add_record(self, path: Path, record: dict) -> None:
         records = self._load_records(path)
@@ -95,15 +166,72 @@ class CatalystStore:
 
     def _load_json(self, path: Path, *, default: Any) -> Any:
         if not path.exists():
-            return default
+            payload = self._load_json_from_state_log(path, default=default)
+            if payload != default:
+                return payload
+            return self._load_json_from_log(path, default=default)
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            return default
+            payload = self._load_json_from_state_log(path, default=default)
+            if payload != default:
+                return payload
+            return self._load_json_from_log(path, default=default)
+        if payload != default:
+            return payload
+        replayed = self._load_json_from_state_log(path, default=default)
+        if replayed != default:
+            return replayed
         return payload
 
+    def _load_json_from_log(self, path: Path, *, default: Any) -> Any:
+        try:
+            log_path = self._log_path(path)
+            if not log_path.exists():
+                return default
+            latest: Any = default
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                if "payload" in payload:
+                    latest = payload["payload"]
+            return latest
+        except (OSError, json.JSONDecodeError):
+            return default
+
+    def _load_json_from_state_log(self, path: Path, *, default: Any) -> Any:
+        try:
+            log_path = self._state_log_path(path)
+            if not log_path.exists():
+                return default
+            latest: Any = default
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                if "payload" in payload:
+                    latest = payload["payload"]
+            return latest
+        except (OSError, json.JSONDecodeError):
+            return default
+
     def _save_json(self, path: Path, payload: Any) -> None:
-        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(path, payload)
+        append_jsonl(
+            self._log_path(path),
+            {
+                "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "payload": payload,
+            },
+        )
+        append_jsonl(
+            self._state_log_path(path),
+            {
+                "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "payload": payload,
+            },
+        )
 
     def pipeline_state(self) -> dict[str, Any]:
         payload = self._load_json(self.pipeline_state_path, default={})

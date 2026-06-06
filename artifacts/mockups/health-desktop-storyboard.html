@@ -1,0 +1,3526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JARVIS Health Intelligence Desktop Experience</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #04090f;
+      --panel: #08131d;
+      --panel-2: #0b1b28;
+      --panel-3: #0d2232;
+      --line: rgba(140, 188, 214, 0.16);
+      --line-strong: rgba(168, 214, 236, 0.28);
+      --text: #ebf7ff;
+      --muted: #8da6b8;
+      --soft: #668196;
+      --blue: #77d7ff;
+      --blue-2: #49c0f5;
+      --green: #8de28a;
+      --green-2: #59c08d;
+      --amber: #f5c96d;
+      --orange: #ff9860;
+      --red: #ff7a6d;
+      --glow: 0 0 0 1px rgba(160, 218, 245, 0.15), 0 28px 70px rgba(0, 0, 0, 0.45);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(81, 195, 234, 0.08), transparent 30%),
+        radial-gradient(circle at top right, rgba(119, 215, 255, 0.06), transparent 24%),
+        linear-gradient(180deg, #04090f, #02060b 62%);
+      color: var(--text);
+      font-family: "IBM Plex Sans", sans-serif;
+    }
+
+    .storyboard {
+      width: min(1520px, calc(100vw - 32px));
+      margin: 14px auto 28px;
+    }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+      margin-bottom: 10px;
+    }
+
+    .title {
+      margin: 0;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 26px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    .title .accent {
+      color: #8edd7d;
+    }
+
+    .subtitle {
+      margin-top: 4px;
+      color: #c9d7e2;
+      font-size: 13px;
+    }
+
+    .brand-note {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 2px 0 0;
+      color: #c8d3dc;
+      min-width: 300px;
+      justify-content: flex-end;
+    }
+
+    .brand-badge {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 1px solid rgba(142, 226, 255, 0.25);
+      background:
+        radial-gradient(circle, rgba(115, 219, 255, 0.35), rgba(11, 30, 45, 0.84) 56%),
+        #08141d;
+      display: grid;
+      place-items: center;
+      box-shadow: inset 0 0 18px rgba(113, 216, 255, 0.22);
+      flex-shrink: 0;
+    }
+
+    .brand-badge svg {
+      width: 26px;
+      height: 26px;
+      stroke: #9ce6ff;
+      opacity: 0.9;
+    }
+
+    .brand-copy {
+      max-width: 240px;
+      font-size: 11px;
+      line-height: 1.35;
+      color: #abbac7;
+    }
+
+    .brand-copy strong {
+      display: block;
+      margin-bottom: 2px;
+      color: #d9e7f0;
+      font-weight: 500;
+    }
+
+    .story-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px 16px;
+    }
+
+    .story-card {
+      display: grid;
+      gap: 7px;
+    }
+
+    .story-label {
+      font-size: 13px;
+      color: #cdd8e1;
+      padding-left: 8px;
+      cursor: pointer;
+    }
+
+    .window {
+      position: relative;
+      background: linear-gradient(180deg, rgba(5, 10, 16, 0.92), rgba(5, 11, 17, 0.98));
+      border: 1px solid rgba(227, 171, 135, 0.35);
+      border-radius: 12px;
+      box-shadow: var(--glow);
+      overflow: hidden;
+      min-height: 360px;
+    }
+
+    .window.chrome {
+      display: grid;
+      grid-template-rows: 28px 1fr;
+    }
+
+    .window-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+    }
+
+    .dots {
+      display: flex;
+      gap: 5px;
+    }
+
+    .dots span {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: block;
+    }
+
+    .dots span:nth-child(1) { background: #ff6d60; }
+    .dots span:nth-child(2) { background: #ffc84d; }
+    .dots span:nth-child(3) { background: #74dc6a; }
+
+    .window-title {
+      margin-left: auto;
+      margin-right: auto;
+      padding-right: 32px;
+      font-size: 10px;
+      color: #d6e4ef;
+      letter-spacing: 0.01em;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 74px 1fr;
+      min-height: 332px;
+      background:
+        radial-gradient(circle at 70% 0%, rgba(64, 155, 201, 0.08), transparent 28%),
+        linear-gradient(180deg, rgba(5, 11, 17, 0.96), rgba(6, 15, 23, 0.98));
+    }
+
+    .nav {
+      display: flex;
+      flex-direction: column;
+      padding: 12px 8px 10px;
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      background: linear-gradient(180deg, rgba(7, 14, 22, 0.94), rgba(7, 15, 23, 0.98));
+    }
+
+    .nav-brand {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 13px;
+      letter-spacing: 0.02em;
+      margin-bottom: 12px;
+      color: #ecf6fd;
+    }
+
+    .nav-list {
+      display: grid;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      height: 23px;
+      padding: 0 7px;
+      border-radius: 6px;
+      color: #8ca6b9;
+      font-size: 8px;
+      letter-spacing: 0.01em;
+      background: rgba(255, 255, 255, 0.01);
+    }
+
+    .nav-item.active {
+      color: #eaf6ff;
+      background: linear-gradient(90deg, rgba(55, 164, 214, 0.22), rgba(34, 94, 131, 0.16));
+      box-shadow: inset 0 0 0 1px rgba(113, 212, 255, 0.14);
+    }
+
+    .nav-item::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 2px;
+      border: 1px solid rgba(161, 198, 219, 0.35);
+      opacity: 0.85;
+    }
+
+    .nav-profile {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      color: #d0dbe4;
+      font-size: 8px;
+    }
+
+    .avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #f3d5be, #8b5e43);
+      box-shadow: inset 0 -3px 8px rgba(0, 0, 0, 0.16);
+      flex-shrink: 0;
+    }
+
+    .surface {
+      padding: 12px 12px 10px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .surface-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .eyebrow {
+      font-size: 9px;
+      color: var(--soft);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .surface-title {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.01em;
+      color: #dbe8f2;
+    }
+
+    .hero-copy {
+      font-size: 9px;
+      color: var(--muted);
+    }
+
+    .surface h2,
+    .surface h3,
+    .surface h4,
+    .surface p {
+      margin: 0;
+    }
+
+    .metric-grid {
+      display: grid;
+      gap: 8px;
+    }
+
+    .metric-grid.command {
+      grid-template-columns: 1.3fr 1fr 1fr;
+      grid-template-rows: auto auto auto;
+    }
+
+    .metric-grid.command .readiness {
+      grid-row: span 2;
+      min-height: 118px;
+    }
+
+    .metric-grid.command .coach {
+      grid-column: 2 / 3;
+    }
+
+    .metric-grid.command .medications {
+      grid-column: 1 / 2;
+    }
+
+    .metric-grid.command .focus {
+      grid-column: 3 / 4;
+    }
+
+    .panel {
+      background:
+        linear-gradient(180deg, rgba(10, 25, 38, 0.95), rgba(8, 20, 31, 0.98)),
+        var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(132, 202, 231, 0.06), transparent 42%);
+      pointer-events: none;
+    }
+
+    .panel-title {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 8px;
+      color: #9ab2c4;
+      margin-bottom: 8px;
+      text-transform: none;
+    }
+
+    .panel-title strong {
+      color: #e7f3fb;
+      font-weight: 500;
+    }
+
+    .big-number {
+      position: relative;
+      z-index: 1;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: #f2fbff;
+    }
+
+    .sub-number {
+      position: relative;
+      z-index: 1;
+      font-size: 9px;
+      color: var(--muted);
+    }
+
+    .readiness-ring {
+      position: relative;
+      width: 116px;
+      height: 116px;
+      margin: 0 auto;
+      display: grid;
+      place-items: center;
+    }
+
+    .readiness-ring svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+
+    .ring-label {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+    }
+
+    .ring-score {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 30px;
+      font-weight: 600;
+      line-height: 1;
+      color: #f4fbff;
+    }
+
+    .ring-note {
+      font-size: 10px;
+      color: #8fd692;
+      margin-top: 5px;
+    }
+
+    .ring-trend {
+      font-size: 9px;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    .sparkline {
+      height: 52px;
+      width: 100%;
+    }
+
+    .sparkline path.line {
+      fill: none;
+      stroke: var(--blue);
+      stroke-width: 2;
+    }
+
+    .sparkline path.area {
+      fill: url(#spark-fill);
+      opacity: 0.2;
+    }
+
+    .micro-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .mini {
+      min-height: 62px;
+    }
+
+    .mini .big-number {
+      font-size: 18px;
+    }
+
+    .list {
+      display: grid;
+      gap: 7px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .list-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 9px;
+      color: #dce9f2;
+      padding: 2px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .list-row:last-child {
+      border-bottom: 0;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      height: 20px;
+      padding: 0 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 202, 225, 0.16);
+      background: rgba(255, 255, 255, 0.03);
+      font-size: 8px;
+      color: #b7cddd;
+    }
+
+    .window-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 9px 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      background: rgba(6, 15, 23, 0.84);
+      font-size: 8px;
+      color: var(--soft);
+    }
+
+    .voice-core {
+      display: grid;
+      place-items: center;
+      min-height: 170px;
+      border-radius: 12px;
+      border: 1px solid rgba(141, 207, 234, 0.12);
+      background: radial-gradient(circle, rgba(18, 47, 71, 0.45), rgba(7, 16, 25, 0.72) 58%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .voice-core::before,
+    .voice-core::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      border: 1px solid rgba(121, 223, 255, 0.1);
+    }
+
+    .voice-core::before {
+      width: 128px;
+      height: 128px;
+    }
+
+    .voice-core::after {
+      width: 180px;
+      height: 180px;
+      border-color: rgba(121, 223, 255, 0.06);
+    }
+
+    .wave {
+      width: 120px;
+      height: 120px;
+      display: grid;
+      place-items: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .wave svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .summary-block {
+      min-height: 92px;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .button,
+    .button-ghost {
+      height: 24px;
+      padding: 0 10px;
+      border-radius: 7px;
+      border: 1px solid rgba(145, 207, 233, 0.16);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      color: #d9e9f4;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .button {
+      background: linear-gradient(180deg, rgba(64, 187, 241, 0.18), rgba(42, 113, 147, 0.14));
+      border-color: rgba(96, 203, 255, 0.22);
+    }
+
+    .risk {
+      color: #ff8a76;
+    }
+
+    .ok {
+      color: #8be58f;
+    }
+
+    .trend-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .trend-card {
+      min-height: 86px;
+    }
+
+    .trend-card .big-number {
+      font-size: 20px;
+    }
+
+    .trend-card .mini-graph {
+      height: 44px;
+      width: 100%;
+      margin-top: 6px;
+    }
+
+    .bars {
+      display: flex;
+      align-items: end;
+      gap: 5px;
+      height: 58px;
+      margin-top: 6px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .bars span {
+      flex: 1;
+      border-radius: 5px 5px 2px 2px;
+      background: linear-gradient(180deg, rgba(101, 222, 255, 0.85), rgba(39, 125, 169, 0.24));
+    }
+
+    .bars.gold span {
+      background: linear-gradient(180deg, rgba(241, 203, 112, 0.88), rgba(120, 86, 24, 0.3));
+    }
+
+    .chip-grid {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .chip {
+      border-radius: 9px;
+      padding: 9px 10px;
+      border: 1px solid rgba(150, 205, 228, 0.12);
+      background: rgba(255, 255, 255, 0.03);
+      text-align: center;
+      font-size: 8px;
+      color: var(--muted);
+    }
+
+    .chip strong {
+      display: block;
+      color: #f2fbff;
+      font-size: 16px;
+      margin-bottom: 2px;
+      font-weight: 500;
+    }
+
+    .coach-layout {
+      display: grid;
+      grid-template-columns: 1.05fr 1.2fr 0.9fr;
+      gap: 8px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 8px;
+    }
+
+    .readiness-list {
+      display: grid;
+      gap: 6px;
+      margin-top: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .readiness-list .list-row {
+      font-size: 8px;
+      align-items: center;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+      background: var(--green);
+      box-shadow: 0 0 10px rgba(112, 222, 141, 0.28);
+    }
+
+    .status-dot.warn {
+      background: var(--amber);
+      box-shadow: 0 0 10px rgba(243, 199, 109, 0.26);
+    }
+
+    .status-dot.alert {
+      background: var(--red);
+      box-shadow: 0 0 10px rgba(255, 122, 109, 0.28);
+    }
+
+    .care-layout {
+      display: grid;
+      grid-template-columns: 1.2fr 0.95fr 0.88fr;
+      gap: 8px;
+    }
+
+    .schedule-list {
+      display: grid;
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .schedule-item {
+      display: flex;
+      gap: 8px;
+      font-size: 8px;
+      color: #d9e8f1;
+    }
+
+    .schedule-item .time {
+      width: 32px;
+      color: #7db6d4;
+      flex-shrink: 0;
+    }
+
+    .adherence-circle {
+      width: 90px;
+      height: 90px;
+      margin: 4px auto 0;
+      border-radius: 50%;
+      border: 3px solid rgba(129, 225, 143, 0.82);
+      display: grid;
+      place-items: center;
+      box-shadow: inset 0 0 24px rgba(132, 225, 160, 0.12);
+      position: relative;
+      z-index: 1;
+    }
+
+    .conversation-layout {
+      display: grid;
+      grid-template-columns: 1.52fr 0.72fr;
+      gap: 10px;
+    }
+
+    .chat-shell {
+      display: grid;
+      gap: 9px;
+    }
+
+    .assistant-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(146, 203, 227, 0.1);
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .assistant-copy {
+      min-width: 0;
+    }
+
+    .assistant-copy strong {
+      display: block;
+      font-size: 9px;
+      color: #f0f9ff;
+      font-weight: 600;
+    }
+
+    .assistant-copy span {
+      display: block;
+      margin-top: 2px;
+      font-size: 8px;
+      color: var(--muted);
+    }
+
+    .assistant-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .assistant-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      height: 24px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 202, 225, 0.14);
+      background: rgba(255, 255, 255, 0.03);
+      font-size: 8px;
+      color: #b7cddd;
+      cursor: pointer;
+    }
+
+    .assistant-pill.is-active {
+      color: #f5fcff;
+      border-color: rgba(136, 219, 255, 0.3);
+      background: linear-gradient(180deg, rgba(55, 177, 230, 0.22), rgba(28, 87, 118, 0.24));
+      box-shadow: inset 0 0 0 1px rgba(125, 221, 255, 0.14);
+    }
+
+    .message {
+      border-radius: 10px;
+      border: 1px solid rgba(146, 203, 227, 0.1);
+      padding: 9px 10px;
+      background: rgba(255, 255, 255, 0.02);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .message::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(124, 210, 245, 0.04), transparent 44%);
+      pointer-events: none;
+    }
+
+    .message-role {
+      position: relative;
+      z-index: 1;
+      font-size: 8px;
+      color: #96acc0;
+      margin-bottom: 4px;
+    }
+
+    .message-copy {
+      position: relative;
+      z-index: 1;
+      font-size: 9px;
+      color: #dbe8f2;
+      line-height: 1.45;
+    }
+
+    .chat-stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 7px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .chat-stats div {
+      border-radius: 8px;
+      padding: 7px 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(147, 206, 231, 0.08);
+      text-align: center;
+      font-size: 8px;
+      color: var(--muted);
+    }
+
+    .chat-stats strong {
+      display: block;
+      font-size: 16px;
+      color: #f4fcff;
+      font-weight: 500;
+    }
+
+    .side-metrics {
+      display: grid;
+      gap: 7px;
+    }
+
+    .side-metric {
+      border-radius: 9px;
+      padding: 8px 9px;
+      border: 1px solid rgba(151, 205, 227, 0.09);
+      background: rgba(255, 255, 255, 0.025);
+      font-size: 8px;
+      color: var(--muted);
+    }
+
+    .side-metric strong {
+      display: block;
+      margin-top: 2px;
+      color: #f2fbff;
+      font-size: 21px;
+      font-weight: 500;
+    }
+
+    .voice-input {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      padding-top: 8px;
+      font-size: 8px;
+      color: var(--soft);
+    }
+
+    .chat-composer {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-top: 6px;
+    }
+
+    .chat-composer input {
+      flex: 1;
+      min-width: 0;
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(115, 208, 242, 0.14);
+      background: rgba(14, 27, 39, 0.95);
+      color: #ecf8ff;
+      font-size: 9px;
+      outline: none;
+    }
+
+    .chat-composer input::placeholder {
+      color: #6f8798;
+    }
+
+    .sam-panel {
+      min-height: 148px;
+    }
+
+    .sam-greeting {
+      font-size: 10px;
+      color: var(--blue);
+      font-style: italic;
+      line-height: 1.45;
+      position: relative;
+      z-index: 1;
+    }
+
+    .sam-stat-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+      position: relative;
+      z-index: 1;
+      flex-wrap: wrap;
+    }
+
+    .sam-stat {
+      min-width: 52px;
+    }
+
+    .sam-stat strong {
+      display: block;
+      font-size: 16px;
+      color: #f2fbff;
+      font-weight: 600;
+    }
+
+    .sam-stat span {
+      font-size: 8px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .sam-focus {
+      margin-top: 10px;
+      padding: 9px 10px;
+      border-radius: 9px;
+      border: 1px solid rgba(150, 205, 228, 0.12);
+      background: rgba(255, 255, 255, 0.03);
+      position: relative;
+      z-index: 1;
+    }
+
+    .sam-focus-label {
+      font-size: 8px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 3px;
+    }
+
+    .sam-focus strong {
+      display: block;
+      font-size: 11px;
+      color: #f0fbff;
+      margin-bottom: 3px;
+    }
+
+    .sam-focus span {
+      font-size: 9px;
+      color: #c7d8e4;
+      line-height: 1.45;
+    }
+
+    .mic-wave {
+      height: 28px;
+      flex: 1;
+      border-radius: 999px;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(103, 214, 255, 0.18), transparent 40%),
+        linear-gradient(180deg, rgba(17, 37, 54, 0.8), rgba(10, 21, 31, 0.95));
+      border: 1px solid rgba(115, 208, 242, 0.14);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mic-wave::before {
+      content: "";
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      top: 50%;
+      height: 1px;
+      background: rgba(98, 202, 241, 0.85);
+      box-shadow:
+        36px -5px 0 rgba(98, 202, 241, 0.52),
+        72px 4px 0 rgba(98, 202, 241, 0.65),
+        112px -7px 0 rgba(98, 202, 241, 0.84),
+        160px 6px 0 rgba(98, 202, 241, 0.5),
+        210px -4px 0 rgba(98, 202, 241, 0.7);
+    }
+
+    .capability-row {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 0;
+      margin-top: 18px;
+      border: 1px solid rgba(226, 176, 138, 0.34);
+      border-radius: 16px;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(8, 17, 25, 0.82), rgba(5, 11, 17, 0.96));
+      box-shadow: var(--glow);
+    }
+
+    .capability {
+      padding: 16px 18px 14px;
+      border-right: 1px solid rgba(255, 255, 255, 0.04);
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .capability:last-child {
+      border-right: 0;
+    }
+
+    .cap-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      color: #dbf4da;
+      border: 1px solid rgba(140, 214, 160, 0.14);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .capability h4 {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      margin-bottom: 4px;
+      color: #f1f8fd;
+    }
+
+    .capability p {
+      font-size: 9px;
+      line-height: 1.45;
+      color: #aebfcc;
+    }
+
+    @media (max-width: 1240px) {
+      .story-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .capability-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .capability:nth-child(3n) {
+        border-right: 0;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .hero {
+        flex-direction: column;
+      }
+
+      .brand-note {
+        justify-content: flex-start;
+      }
+
+      .story-grid,
+      .capability-row {
+        grid-template-columns: 1fr;
+      }
+
+      .capability {
+        border-right: 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      }
+
+      .capability:last-child {
+        border-bottom: 0;
+      }
+    }
+
+    .window,
+    .nav-item,
+    .panel,
+    .pill,
+    .button,
+    .button-ghost,
+    .list-row,
+    .message,
+    .voice-input,
+    .capability {
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+    }
+
+    .window {
+      cursor: pointer;
+    }
+
+    .window:hover {
+      transform: translateY(-2px);
+      border-color: rgba(236, 190, 154, 0.48);
+      box-shadow: 0 0 0 1px rgba(173, 225, 248, 0.16), 0 34px 90px rgba(0, 0, 0, 0.48);
+    }
+
+    .window.is-prototype-screen,
+    .window.is-prototype-screen:hover {
+      cursor: default;
+      transform: none;
+    }
+
+    .nav-item,
+    .panel,
+    .pill,
+    .button,
+    .button-ghost,
+    .list-row,
+    .message,
+    .voice-input,
+    .capability {
+      cursor: pointer;
+    }
+
+    .pill.is-active,
+    .pill:hover,
+    .nav-item:hover {
+      color: #eef8ff;
+      border-color: rgba(136, 219, 255, 0.22);
+      background: rgba(67, 169, 214, 0.12);
+    }
+
+    .button:hover,
+    .button-ghost:hover {
+      transform: translateY(-1px);
+      border-color: rgba(145, 222, 255, 0.28);
+    }
+
+    .button.is-active,
+    .button-ghost.is-active {
+      color: #f5fcff;
+      border-color: rgba(136, 219, 255, 0.32);
+      background: linear-gradient(180deg, rgba(55, 177, 230, 0.22), rgba(28, 87, 118, 0.24));
+      box-shadow: inset 0 0 0 1px rgba(125, 221, 255, 0.14);
+    }
+
+    .panel.is-selected {
+      border-color: var(--line-strong);
+      box-shadow: inset 0 0 0 1px rgba(130, 221, 255, 0.08);
+    }
+
+    .action-complete {
+      opacity: 0.7;
+      text-decoration: line-through;
+    }
+
+    .voice-input.active {
+      color: #b9edff;
+      border-color: rgba(129, 213, 245, 0.24);
+    }
+
+    .message.live-response {
+      border-color: rgba(121, 223, 255, 0.2);
+    }
+
+    .prototype-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 7, 11, 0.84);
+      backdrop-filter: blur(14px);
+      z-index: 1000;
+      display: none;
+      padding: 18px;
+    }
+
+    .prototype-overlay.open {
+      display: block;
+    }
+
+    .prototype-shell {
+      width: min(1600px, calc(100vw - 36px));
+      height: min(980px, calc(100vh - 36px));
+      margin: 0 auto;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+    }
+
+    .prototype-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(6, 13, 20, 0.86);
+      box-shadow: var(--glow);
+    }
+
+    .prototype-toolbar strong {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .prototype-toolbar .toolbar-copy {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .toolbar-button {
+      height: 30px;
+      padding: 0 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(133, 209, 240, 0.16);
+      background: rgba(255, 255, 255, 0.03);
+      color: #e7f5fd;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .prototype-stage {
+      position: relative;
+      overflow: auto;
+      border-radius: 16px;
+    }
+
+    .prototype-stage .window {
+      width: min(1400px, 100%);
+      margin: 0 auto;
+      min-height: auto;
+    }
+
+    .prototype-stage .app {
+      min-height: 760px;
+    }
+
+    .prototype-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 11px;
+      padding: 0 4px;
+    }
+
+    .prototype-toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      min-width: 220px;
+      max-width: 320px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(142, 220, 255, 0.18);
+      background: rgba(7, 16, 24, 0.94);
+      color: #ebf8ff;
+      box-shadow: var(--glow);
+      font-size: 11px;
+      opacity: 0;
+      transform: translateY(14px);
+      pointer-events: none;
+      transition: opacity 180ms ease, transform 180ms ease;
+      z-index: 1100;
+    }
+
+    .prototype-toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .prototype-toast small {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+    }
+
+    .desktop-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 8, 12, 0.78);
+      backdrop-filter: blur(10px);
+      z-index: 1200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .desktop-modal.open {
+      display: flex;
+    }
+
+    .desktop-modal-card {
+      width: min(880px, calc(100vw - 48px));
+      max-height: min(760px, calc(100vh - 48px));
+      overflow: auto;
+      border-radius: 18px;
+      border: 1px solid rgba(226, 176, 138, 0.34);
+      background: linear-gradient(180deg, rgba(7, 15, 22, 0.98), rgba(5, 11, 17, 0.98));
+      box-shadow: var(--glow);
+      padding: 18px 18px 16px;
+    }
+
+    .desktop-modal-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .desktop-modal-head strong {
+      display: block;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 18px;
+      font-weight: 600;
+      color: #f2fbff;
+    }
+
+    .desktop-modal-head span {
+      display: block;
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .desktop-modal-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 202, 225, 0.16);
+      background: rgba(255, 255, 255, 0.03);
+      color: #e7f5fd;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .desktop-modal-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .desktop-modal-panel {
+      border-radius: 12px;
+      border: 1px solid rgba(150, 205, 228, 0.12);
+      background: rgba(255, 255, 255, 0.025);
+      padding: 12px;
+    }
+
+    .desktop-modal-panel h4 {
+      margin: 0 0 8px;
+      font-size: 11px;
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 500;
+      color: #f0fbff;
+    }
+
+    .desktop-modal-panel p {
+      margin: 0;
+      font-size: 10px;
+      color: #bfd2df;
+      line-height: 1.55;
+    }
+
+    .desktop-modal-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .desktop-modal-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 10px;
+      color: #dce9f2;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .desktop-modal-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+  </style>
+</head>
+<body>
+  <main class="storyboard">
+    <section class="hero">
+      <div>
+        <h1 class="title">JARVIS <span class="accent">Health Intelligence</span> Desktop Experience</h1>
+        <div class="subtitle">Concept Storyboard</div>
+      </div>
+      <div class="brand-note">
+        <div class="brand-badge" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none">
+            <path d="M2 16h4l2-6 4 13 4-17 4 10h4l2-5 2 5h4" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="brand-copy">
+          <strong>Personalized. Proactive. Private.</strong>
+          JARVIS looks after the details so you can live your life.
+        </div>
+      </div>
+    </section>
+
+    <section class="story-grid">
+      <article class="story-card">
+        <div class="story-label">1. Health Command Center</div>
+        <div class="window chrome" data-screen="command">
+          <div class="window-bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+          </div>
+          <div class="app">
+            <aside class="nav">
+              <div class="nav-brand">JARVIS</div>
+              <div class="nav-list">
+                <div class="nav-item active">Command Center</div>
+                <div class="nav-item">Vitals</div>
+                <div class="nav-item">Trends</div>
+                <div class="nav-item">Coach</div>
+                <div class="nav-item">Medications</div>
+                <div class="nav-item">Care</div>
+                <div class="nav-item">Nutrition</div>
+                <div class="nav-item">Fitness</div>
+                <div class="nav-item">Mind Health</div>
+                <div class="nav-item">Labs</div>
+                <div class="nav-item">Reports</div>
+                <div class="nav-item">Settings</div>
+              </div>
+              <div class="nav-profile">
+                <div class="avatar"></div>
+                <div>Chris<br><span style="color:var(--soft)">Personal Profile</span></div>
+              </div>
+            </aside>
+            <section class="surface">
+              <div class="surface-head">
+                <div>
+                  <h2 class="surface-title" style="font-size:13px;">Good morning, Chris.</h2>
+                  <p class="hero-copy">Here's your health command center.</p>
+                </div>
+                <div style="display:grid;gap:5px;text-align:right;">
+                  <div class="hero-copy">May 24, 2024</div>
+                  <div class="pill">72° Partly Cloudy</div>
+                </div>
+              </div>
+              <div class="metric-grid command">
+                <div class="panel readiness">
+                  <div class="panel-title"><strong>Daily Readiness</strong></div>
+                  <div class="readiness-ring">
+                    <svg viewBox="0 0 120 120">
+                      <circle cx="60" cy="60" r="44" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"></circle>
+                      <circle cx="60" cy="60" r="44" fill="none" stroke="url(#ring-readiness)" stroke-width="6" stroke-linecap="round" stroke-dasharray="219 60"></circle>
+                      <defs>
+                        <linearGradient id="ring-readiness" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0" stop-color="#8de28a"></stop>
+                          <stop offset="0.65" stop-color="#f5c96d"></stop>
+                          <stop offset="1" stop-color="#ff9860"></stop>
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div class="ring-label">
+                      <div class="ring-score">82</div>
+                      <div class="ring-note">Good to Go</div>
+                      <div class="ring-trend">↑ 8 vs yesterday</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="panel coach">
+                  <div class="panel-title"><strong>Sleep Recovery</strong><span>↗</span></div>
+                  <div class="big-number">78</div>
+                  <div class="sub-number">Good</div>
+                  <div style="height:10px"></div>
+                  <div class="big-number">7h 12m</div>
+                  <div class="sub-number">Time Asleep</div>
+                  <svg class="sparkline" viewBox="0 0 160 52">
+                    <defs><linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#79dfff"></stop><stop offset="1" stop-color="#79dfff" stop-opacity="0"></stop></linearGradient></defs>
+                    <path class="area" d="M0 44 L0 34 L18 30 L36 33 L54 26 L72 27 L90 18 L108 20 L126 12 L144 16 L160 10 L160 44 Z"></path>
+                    <path class="line" d="M0 34 L18 30 L36 33 L54 26 L72 27 L90 18 L108 20 L126 12 L144 16 L160 10"></path>
+                  </svg>
+                </div>
+                <div class="panel">
+                  <div class="panel-title"><strong>Blood Pressure</strong><span>7:32 AM</span></div>
+                  <div class="big-number">122/78 <span style="font-size:10px;color:var(--muted)">mmHg</span></div>
+                  <div class="sub-number">Normal</div>
+                  <svg class="sparkline" viewBox="0 0 160 52">
+                    <path class="area" d="M0 44 L0 37 L16 34 L32 35 L48 31 L64 33 L80 25 L96 29 L112 24 L128 27 L144 20 L160 21 L160 44 Z"></path>
+                    <path class="line" d="M0 37 L16 34 L32 35 L48 31 L64 33 L80 25 L96 29 L112 24 L128 27 L144 20 L160 21"></path>
+                  </svg>
+                </div>
+                <div class="panel">
+                  <div class="panel-title"><strong>Resting Heart Rate</strong><span>◌</span></div>
+                  <div class="big-number">68 <span style="font-size:10px;color:var(--muted)">bpm</span></div>
+                  <div class="sub-number">Resting</div>
+                  <svg class="sparkline" viewBox="0 0 160 52">
+                    <path class="area" d="M0 44 L0 34 L18 32 L36 36 L54 28 L72 31 L90 26 L108 30 L126 24 L144 28 L160 20 L160 44 Z"></path>
+                    <path class="line" d="M0 34 L18 32 L36 36 L54 28 L72 31 L90 26 L108 30 L126 24 L144 28 L160 20"></path>
+                  </svg>
+                </div>
+                <div class="micro-grid" style="grid-column: 1 / 4;">
+                  <div class="panel mini"><div class="panel-title"><strong>HRV</strong></div><div class="big-number">62 <span style="font-size:10px;color:var(--muted)">ms</span></div><div class="sub-number ok">Balanced</div></div>
+                  <div class="panel mini"><div class="panel-title"><strong>Stress Load</strong></div><div class="big-number">42</div><div class="sub-number" style="color:var(--amber)">Medium</div></div>
+                  <div class="panel mini"><div class="panel-title"><strong>Hydration</strong></div><div class="big-number">6/8 <span style="font-size:10px;color:var(--muted)">cups</span></div><div class="sub-number">On Track</div></div>
+                  <div class="panel mini"><div class="panel-title"><strong>Movement</strong></div><div class="big-number">6,800</div><div class="sub-number">Steps</div></div>
+                  <div class="panel mini"><div class="panel-title"><strong>Move Ring</strong></div><div class="big-number">42</div><div class="sub-number" style="color:var(--orange)">min</div></div>
+                </div>
+                <div class="panel medications">
+                  <div class="panel-title"><strong>Medications</strong></div>
+                  <div class="list">
+                    <div class="list-row"><span>Lisinopril · 8:00 AM</span><span class="ok">Taken</span></div>
+                    <div class="list-row"><span>Vitamin D3 · 7:20 PM</span><span>Due</span></div>
+                  </div>
+                </div>
+                <div class="panel">
+                  <div class="panel-title"><strong>JARVIS Coaching</strong></div>
+                  <div style="display:flex;gap:10px;align-items:center;position:relative;z-index:1;">
+                    <div class="brand-badge" style="width:44px;height:44px;"><svg viewBox="0 0 32 32" fill="none"><path d="M2 16h4l2-6 4 13 4-17 4 10h4l2-5 2 5h4" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                    <div class="hero-copy">Your recovery is trending well. Consider a Zone 2 walk or mobility session this afternoon.</div>
+                  </div>
+                  <div class="button-row"><div class="button">View Plan</div></div>
+                </div>
+                <div class="panel focus">
+                  <div class="panel-title"><strong>Today's Focus</strong></div>
+                  <div class="hero-copy" style="line-height:1.55;position:relative;z-index:1;">Protect your momentum. Stay hydrated and keep stress in check.</div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </article>
+
+      <article class="story-card">
+        <div class="story-label">2. Morning Health Brief</div>
+        <div class="window chrome" data-screen="brief">
+          <div class="window-bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="window-title">JARVIS Morning Brief</div>
+          </div>
+          <div class="app">
+            <aside class="nav">
+              <div class="nav-brand">JARVIS</div>
+              <div class="nav-list">
+                <div class="nav-item">Command</div>
+                <div class="nav-item active">Vitals</div>
+                <div class="nav-item">Trends</div>
+                <div class="nav-item">Coach</div>
+                <div class="nav-item">Medications</div>
+                <div class="nav-item">Care</div>
+                <div class="nav-item">Nutrition</div>
+                <div class="nav-item">Fitness</div>
+                <div class="nav-item">Mind Health</div>
+                <div class="nav-item">Labs</div>
+                <div class="nav-item">Reports</div>
+                <div class="nav-item">Settings</div>
+              </div>
+            </aside>
+            <section class="surface">
+              <div class="summary-grid">
+                <div class="voice-core">
+                  <div class="wave">
+                    <svg viewBox="0 0 120 120" fill="none">
+                      <path d="M12 60h10l6-24 10 46 11-58 10 64 10-43 8 22h12" stroke="#9be7ff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                  <div style="position:absolute;bottom:36px;text-align:center;">
+                    <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;letter-spacing:0.04em;">JARVIS</div>
+                    <div class="hero-copy">Your morning health briefing</div>
+                  </div>
+                  <div style="position:absolute;bottom:12px;left:14px;right:14px;display:flex;align-items:center;justify-content:space-between;font-size:8px;color:#89a8ba;">
+                    <span>00:38</span>
+                    <span class="pill">Pause</span>
+                  </div>
+                </div>
+                <div class="panel summary-block">
+                  <div class="panel-title"><strong>Overnight Summary</strong></div>
+                  <div class="list">
+                    <div class="list-row"><span>Sleep<br><span style="color:var(--soft)">7h 12m recovery</span></span><span class="ok">✓</span></div>
+                    <div class="list-row"><span>Blood Pressure<br><span style="color:var(--soft)">122/78 stable</span></span><span class="ok">✓</span></div>
+                    <div class="list-row"><span>Resting Heart Rate<br><span style="color:var(--soft)">68 bpm within normal range</span></span><span class="ok">✓</span></div>
+                    <div class="list-row"><span>HRV<br><span style="color:var(--soft)">62 ms balanced</span></span><span class="ok">✓</span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="summary-grid">
+                <div class="panel">
+                  <div class="panel-title"><strong>Key Risk To Watch</strong></div>
+                  <div class="big-number risk" style="font-size:12px;">Elevated BP trend</div>
+                  <div class="hero-copy" style="margin-top:6px;line-height:1.55;position:relative;z-index:1;">Your evening readings have been trending up for 5 days.</div>
+                  <div class="button-row"><div class="button-ghost">Review Trend</div></div>
+                </div>
+                <div class="panel">
+                  <div class="panel-title"><strong>Today's Recommendation</strong></div>
+                  <div class="big-number" style="font-size:12px;color:#a6efad;">Move more, stress less.</div>
+                  <div class="hero-copy" style="margin-top:6px;line-height:1.55;position:relative;z-index:1;">Take a 30-40 min Zone 2 walk this afternoon.</div>
+                  <div class="button-row"><div class="button">Add to Plan</div></div>
+                </div>
+              </div>
+              <div class="window-footer">
+                <span>Ask anything</span>
+                <span>◌</span>
+              </div>
+            </section>
+          </div>
+        </div>
+      </article>
+
+      <article class="story-card">
+        <div class="story-label">3. Vitals &amp; Trends Analysis</div>
+        <div class="window chrome" data-screen="trends">
+          <div class="window-bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="window-title">JARVIS Vitals</div>
+          </div>
+          <div class="app">
+            <aside class="nav">
+              <div class="nav-brand">JARVIS</div>
+              <div class="nav-list">
+                <div class="nav-item">Command</div>
+                <div class="nav-item active">Vitals</div>
+                <div class="nav-item">Trends</div>
+                <div class="nav-item">Coach</div>
+                <div class="nav-item">Medications</div>
+                <div class="nav-item">Care</div>
+                <div class="nav-item">Nutrition</div>
+                <div class="nav-item">Fitness</div>
+                <div class="nav-item">Mind Health</div>
+                <div class="nav-item">Labs</div>
+                <div class="nav-item">Reports</div>
+                <div class="nav-item">Settings</div>
+              </div>
+            </aside>
+            <section class="surface">
+              <div class="surface-head">
+                <div class="pill">1D</div>
+                <div style="display:flex;gap:6px;">
+                  <div class="pill">7D</div>
+                  <div class="pill">30D</div>
+                  <div class="pill">90D</div>
+                  <div class="pill">1Y</div>
+                </div>
+                <div class="hero-copy export-trigger">Export</div>
+              </div>
+              <div class="trend-grid">
+                <div class="panel trend-card">
+                  <div class="panel-title"><strong>Blood Pressure</strong></div>
+                  <div class="big-number">122/78 <span style="font-size:9px;color:var(--muted)">avg</span></div>
+                  <svg class="mini-graph" viewBox="0 0 180 44"><path class="line" d="M0 30 L18 29 L36 27 L54 24 L72 22 L90 19 L108 24 L126 18 L144 21 L162 19 L180 17"></path></svg>
+                </div>
+                <div class="panel trend-card">
+                  <div class="panel-title"><strong>Resting Heart Rate</strong></div>
+                  <div class="big-number">68 <span style="font-size:9px;color:var(--muted)">avg</span></div>
+                  <svg class="mini-graph" viewBox="0 0 180 44"><path class="line" d="M0 19 L18 24 L36 27 L54 22 L72 28 L90 24 L108 26 L126 21 L144 29 L162 22 L180 23"></path></svg>
+                </div>
+                <div class="panel trend-card">
+                  <div class="panel-title"><strong>Heart Rate Variability</strong></div>
+                  <div class="big-number">62 <span style="font-size:9px;color:var(--muted)">avg</span></div>
+                  <svg class="mini-graph" viewBox="0 0 180 44"><path class="line" d="M0 31 L18 29 L36 20 L54 24 L72 15 L90 17 L108 21 L126 14 L144 19 L162 17 L180 11"></path></svg>
+                </div>
+                <div class="panel trend-card">
+                  <div class="panel-title"><strong>Sleep</strong></div>
+                  <div class="big-number">7h 12m <span style="font-size:9px;color:var(--muted)">avg</span></div>
+                  <div class="bars">
+                    <span style="height:58%"></span><span style="height:42%"></span><span style="height:64%"></span><span style="height:50%"></span><span style="height:74%"></span><span style="height:63%"></span><span style="height:78%"></span><span style="height:54%"></span><span style="height:68%"></span><span style="height:81%"></span>
+                  </div>
+                </div>
+                <div class="panel trend-card">
+                  <div class="panel-title"><strong>Weight</strong></div>
+                  <div class="big-number">164.3 <span style="font-size:9px;color:var(--muted)">↓ 1.2</span></div>
+                  <svg class="mini-graph" viewBox="0 0 180 44"><path class="line" d="M0 25 L18 28 L36 24 L54 26 L72 21 L90 20 L108 18 L126 16 L144 18 L162 13 L180 15"></path></svg>
+                </div>
+                <div class="panel trend-card">
+                  <div class="panel-title"><strong>Glucose</strong></div>
+                  <div class="big-number">98 <span style="font-size:9px;color:var(--muted)">avg</span></div>
+                  <svg class="mini-graph" viewBox="0 0 180 44"><path class="line" d="M0 18 L18 22 L36 29 L54 20 L72 14 L90 18 L108 23 L126 19 L144 24 L162 16 L180 20"></path></svg>
+                </div>
+              </div>
+              <div class="window-footer">
+                <span class="ok">UI insight</span>
+                <span>View Details</span>
+              </div>
+            </section>
+          </div>
+        </div>
+      </article>
+
+      <article class="story-card">
+        <div class="story-label">4. Recovery &amp; Coaching Studio</div>
+        <div class="window chrome" data-screen="coach">
+          <div class="window-bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="window-title">JARVIS Coach</div>
+          </div>
+          <div class="app">
+            <aside class="nav">
+              <div class="nav-brand">JARVIS</div>
+              <div class="nav-list">
+                <div class="nav-item">Command</div>
+                <div class="nav-item">Vitals</div>
+                <div class="nav-item">Trends</div>
+                <div class="nav-item active">Coach</div>
+                <div class="nav-item">Care</div>
+                <div class="nav-item">Nutrition</div>
+                <div class="nav-item">Fitness</div>
+                <div class="nav-item">Mind Health</div>
+                <div class="nav-item">Labs</div>
+                <div class="nav-item">Reports</div>
+                <div class="nav-item">Settings</div>
+              </div>
+              <div class="nav-profile">
+                <div class="avatar"></div>
+                <div>Chris<br><span style="color:var(--soft)">Personal Profile</span></div>
+              </div>
+            </aside>
+            <section class="surface">
+              <div class="coach-layout">
+                <div class="panel">
+                  <div class="panel-title"><strong>Training Readiness</strong></div>
+                  <div class="readiness-ring" style="width:112px;height:112px;">
+                    <svg viewBox="0 0 120 120">
+                      <circle cx="60" cy="60" r="44" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="5"></circle>
+                      <circle cx="60" cy="60" r="44" fill="none" stroke="#89df8e" stroke-width="5" stroke-linecap="round" stroke-dasharray="218 62"></circle>
+                    </svg>
+                    <div class="ring-label">
+                      <div class="ring-score">82</div>
+                      <div class="ring-note">Ready to Train</div>
+                    </div>
+                  </div>
+                  <div class="sub-number" style="text-align:center;margin-top:4px;">Good Recovery</div>
+                  <div class="readiness-list">
+                    <div class="list-row"><span><span class="status-dot"></span>Sleep</span><span>Good</span></div>
+                    <div class="list-row"><span><span class="status-dot"></span>HRV</span><span>Balanced</span></div>
+                    <div class="list-row"><span><span class="status-dot"></span>Stress</span><span>In Range</span></div>
+                    <div class="list-row"><span><span class="status-dot alert"></span>Muscle Recovery</span><span>Good</span></div>
+                  </div>
+                </div>
+                <div class="stack">
+                  <div class="panel">
+                    <div class="panel-title"><strong>Recommended Plan</strong></div>
+                    <div class="big-number" style="font-size:12px;color:#dff7ff;">Zone 2 Endurance</div>
+                    <div class="sub-number">35 mins · Zone 2</div>
+                    <div class="hero-copy" style="margin-top:8px;line-height:1.55;position:relative;z-index:1;">Build aerobic base and improve cardiovascular efficiency.</div>
+                    <div class="button-row"><div class="button">Start Plan</div><div class="button-ghost">Adjust</div></div>
+                  </div>
+                  <div class="panel">
+                    <div class="panel-title"><strong>Recovery Actions</strong></div>
+                    <div class="list">
+                      <div class="list-row"><span>Mobility Flow<br><span style="color:var(--soft)">15 mins</span></span><span>Do It</span></div>
+                      <div class="list-row"><span>Cold Shower<br><span style="color:var(--soft)">2 mins</span></span><span>Do It</span></div>
+                      <div class="list-row"><span>Magnesium<br><span style="color:var(--soft)">200-400 mg</span></span><span>Do It</span></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="stack">
+                  <div class="panel">
+                    <div class="panel-title"><strong>Stress Load</strong></div>
+                    <div class="big-number">42</div>
+                    <div class="sub-number" style="color:var(--amber)">Medium</div>
+                    <div class="bars gold"><span style="height:24%"></span><span style="height:34%"></span><span style="height:58%"></span><span style="height:68%"></span><span style="height:74%"></span><span style="height:46%"></span><span style="height:40%"></span></div>
+                  </div>
+                  <div class="panel sam-panel">
+                    <div class="panel-title"><strong>Sam Wilson Check-In</strong><span>Morning Mode</span></div>
+                    <div class="sam-greeting">"On your left. Today is about steady work, not hero reps."</div>
+                    <div class="sam-stat-row">
+                      <div class="sam-stat"><strong>82</strong><span>Readiness</span></div>
+                      <div class="sam-stat"><strong>62</strong><span>HRV ms</span></div>
+                      <div class="sam-stat"><strong>7.2</strong><span>Sleep h</span></div>
+                      <div class="sam-stat"><strong>4d</strong><span>Streak</span></div>
+                    </div>
+                    <div class="sam-focus">
+                      <div class="sam-focus-label">Today's Focus</div>
+                      <strong>Zone 2 cardio</strong>
+                      <span>Keep the effort conversational and hit mobility work before dinner.</span>
+                    </div>
+                    <div class="button-row"><div class="button-ghost">View Full Protocol</div><div class="button-ghost">Talk to Sam</div></div>
+                  </div>
+                  <div class="panel">
+                    <div class="panel-title"><strong>Pacing Guidance</strong></div>
+                    <div class="hero-copy" style="line-height:1.55;position:relative;z-index:1;">Keep intensity moderate. Your body is ready for steady progress, not maximal effort.</div>
+                    <svg class="sparkline" viewBox="0 0 160 52"><path class="line" d="M0 42 L20 39 L40 36 L60 31 L80 28 L100 23 L120 17 L140 12 L160 10"></path></svg>
+                  </div>
+                </div>
+              </div>
+              <div class="window-footer">
+                <span style="display:flex;align-items:center;gap:8px;">
+                  <span class="brand-badge" style="width:24px;height:24px;"><svg viewBox="0 0 32 32" fill="none"><path d="M2 16h4l2-6 4 13 4-17 4 10h4l2-5 2 5h4" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                  JARVIS Insight: Your HRV is improving. Consistency over the next 7 days will unlock a reset.
+                </span>
+                <span>✦</span>
+              </div>
+            </section>
+          </div>
+        </div>
+      </article>
+
+      <article class="story-card">
+        <div class="story-label">5. Medication, Care &amp; Adherence Command</div>
+        <div class="window chrome" data-screen="care">
+          <div class="window-bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="window-title">JARVIS Care</div>
+          </div>
+          <div class="app">
+            <aside class="nav">
+              <div class="nav-brand">JARVIS</div>
+              <div class="nav-list">
+                <div class="nav-item">Command</div>
+                <div class="nav-item">Vitals</div>
+                <div class="nav-item">Trends</div>
+                <div class="nav-item">Coach</div>
+                <div class="nav-item active">Care</div>
+                <div class="nav-item">Nutrition</div>
+                <div class="nav-item">Fitness</div>
+                <div class="nav-item">Mind Health</div>
+                <div class="nav-item">Labs</div>
+                <div class="nav-item">Reports</div>
+                <div class="nav-item">Settings</div>
+              </div>
+              <div class="nav-profile">
+                <div class="avatar"></div>
+                <div>Chris<br><span style="color:var(--soft)">Personal Profile</span></div>
+              </div>
+            </aside>
+            <section class="surface">
+              <div class="care-layout">
+                <div class="stack">
+                  <div class="panel">
+                    <div class="panel-title"><strong>Medications</strong><span>Adherence 78%</span></div>
+                    <div class="list">
+                      <div class="list-row"><span>Lisinopril 10mg</span><span class="ok">Taken</span></div>
+                      <div class="list-row"><span>Atorvastatin 20mg</span><span>Upcoming</span></div>
+                      <div class="list-row"><span>Vitamin D3 2000 IU</span><span class="ok">Taken</span></div>
+                      <div class="list-row"><span>Aspirin 81mg</span><span class="ok">Taken</span></div>
+                    </div>
+                    <div class="button-row"><div class="button-ghost">View All</div></div>
+                  </div>
+                  <div class="panel">
+                    <div class="panel-title"><strong>Symptoms Log</strong></div>
+                    <div class="hero-copy" style="position:relative;z-index:1;line-height:1.55;">No new symptoms</div>
+                    <div class="hero-copy" style="margin-top:8px;position:relative;z-index:1;line-height:1.55;">Keep logging to help JARVIS detect patterns early.</div>
+                  </div>
+                </div>
+                <div class="stack">
+                  <div class="panel">
+                    <div class="panel-title"><strong>Today's Schedule</strong></div>
+                    <div class="schedule-list">
+                      <div class="schedule-item"><div class="time">8:00 AM</div><div>Lisinopril</div></div>
+                      <div class="schedule-item"><div class="time">12:00 PM</div><div>Vitamin D3</div></div>
+                      <div class="schedule-item"><div class="time">8:00 PM</div><div>Aspirin</div></div>
+                    </div>
+                  </div>
+                  <div class="panel">
+                    <div class="panel-title"><strong>Care Lane</strong></div>
+                    <div class="hero-copy" style="position:relative;z-index:1;">Family Safe</div>
+                    <div class="sub-number">Monitoring active</div>
+                    <div style="display:flex;gap:6px;margin-top:10px;position:relative;z-index:1;">
+                      <div class="avatar" style="width:22px;height:22px;"></div>
+                      <div class="avatar" style="width:22px;height:22px;"></div>
+                      <div class="avatar" style="width:22px;height:22px;"></div>
+                      <div class="avatar" style="width:22px;height:22px;"></div>
+                    </div>
+                    <div class="button-row"><div class="button-ghost">View Care Circle</div></div>
+                  </div>
+                </div>
+                <div class="stack">
+                  <div class="panel" style="text-align:center;">
+                    <div class="panel-title"><strong>Adherence Streak</strong></div>
+                    <div class="adherence-circle">
+                      <div>
+                        <div class="ring-score" style="font-size:26px;">24</div>
+                        <div class="sub-number">days</div>
+                      </div>
+                    </div>
+                    <div class="sub-number" style="margin-top:8px;color:#8edf8f;">Great job! Keep it going.</div>
+                  </div>
+                  <div class="panel">
+                    <div class="panel-title"><strong>Escalations</strong></div>
+                    <div class="hero-copy risk" style="position:relative;z-index:1;">Elevated BP Trend</div>
+                    <div class="sub-number">Escalation rule triggers if it rises 3 more nights.</div>
+                  </div>
+                  <div class="panel">
+                    <div class="panel-title"><strong>Lab &amp; Tests</strong></div>
+                    <div class="list">
+                      <div class="list-row"><span>A1C Test</span><span>Due Jun 12</span></div>
+                      <div class="list-row"><span>Lab Results</span><span class="ok">3 new</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="window-footer">
+                <span>JARVIS Recommendation</span>
+                <span>Continue current medication plan.</span>
+                <span>Review Plan</span>
+              </div>
+            </section>
+          </div>
+        </div>
+      </article>
+
+      <article class="story-card">
+        <div class="story-label">6. Voice &amp; Consultation</div>
+        <div class="window chrome" data-screen="conversation">
+          <div class="window-bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="window-title">JARVIS Conversation</div>
+          </div>
+          <div class="app">
+            <aside class="nav">
+              <div class="nav-brand">JARVIS</div>
+              <div class="nav-list">
+                <div class="nav-item">Command</div>
+                <div class="nav-item">Vitals</div>
+                <div class="nav-item">Trends</div>
+                <div class="nav-item">Coach</div>
+                <div class="nav-item">Medications</div>
+                <div class="nav-item active">Care</div>
+                <div class="nav-item">Fitness</div>
+                <div class="nav-item">Mind Health</div>
+                <div class="nav-item">Labs</div>
+                <div class="nav-item">Reports</div>
+                <div class="nav-item">Settings</div>
+              </div>
+            </aside>
+            <section class="surface">
+              <div class="conversation-layout">
+                <div class="chat-shell">
+                  <div class="assistant-bar">
+                    <div class="assistant-copy">
+                      <strong>Consult With</strong>
+                      <span>Switch between JARVIS, Sam Wilson, and your medical team.</span>
+                    </div>
+                    <div class="assistant-pills">
+                      <div class="assistant-pill is-active">◌ JARVIS</div>
+                      <div class="assistant-pill">🦅 Sam Wilson</div>
+                      <div class="assistant-pill">🧬 Helen Cho</div>
+                      <div class="assistant-pill">🩺 Dr. McCoy</div>
+                    </div>
+                  </div>
+                  <div class="message">
+                    <div class="message-role">You</div>
+                    <div class="message-copy">How was my sleep last night?</div>
+                  </div>
+                  <div class="message">
+                    <div class="message-role">JARVIS</div>
+                    <div class="message-copy">You slept for 7 hours and 12 minutes. Your sleep efficiency was 88%, with good deep sleep. Overall, a solid recovery night.</div>
+                    <div class="chat-stats">
+                      <div><strong>7h 12m</strong>Sleep</div>
+                      <div><strong>88%</strong>Efficiency</div>
+                      <div><strong>1h 48m</strong>Deep Sleep</div>
+                      <div><strong>10%</strong>Awake</div>
+                    </div>
+                  </div>
+                  <div class="message">
+                    <div class="message-role">You</div>
+                    <div class="message-copy">Should I work out today?</div>
+                  </div>
+                  <div class="message">
+                    <div class="message-role">JARVIS</div>
+                    <div class="message-copy">Yes, your readiness is high. I recommend a Zone 2 walk or easy endurance session for 30-40 minutes.</div>
+                    <div class="button-row"><div class="button">Start 30 Min Walk</div><div class="button-ghost">View Plan</div><div class="button-ghost">Adjust Intensity</div></div>
+                  </div>
+                  <div class="voice-input">
+                    <span>Ask anything about your health</span>
+                    <div class="mic-wave"></div>
+                    <span>Tap to stop</span>
+                  </div>
+                  <div class="chat-composer">
+                    <input type="text" value="" placeholder="Ask Helen Cho about labs, Sam about training, or JARVIS about the full picture">
+                    <div class="button">Send</div>
+                  </div>
+                </div>
+                <div class="side-metrics">
+                  <div class="side-metric">Readiness<strong>82</strong>Good</div>
+                  <div class="side-metric">HRV<strong>62</strong>Balanced</div>
+                  <div class="side-metric">RHR<strong>68</strong>Normal</div>
+                  <div class="side-metric">Sleep<strong>7h 12m</strong>Good</div>
+                  <div class="side-metric">Stress Load<strong>42</strong>Medium</div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="capability-row">
+      <div class="capability">
+        <div class="cap-icon">✓</div>
+        <div><h4>AI That Cares</h4><p>Personalized guidance that understands your full picture.</p></div>
+      </div>
+      <div class="capability">
+        <div class="cap-icon">⌁</div>
+        <div><h4>Private by Design</h4><p>Your data stays yours. End-to-end encrypted.</p></div>
+      </div>
+      <div class="capability">
+        <div class="cap-icon">♡</div>
+        <div><h4>Proactive Intelligence</h4><p>Detects risks early and guides you to better outcomes.</p></div>
+      </div>
+      <div class="capability">
+        <div class="cap-icon">▤</div>
+        <div><h4>All-in-One System</h4><p>Health, meds, labs, coaching, and care-unified.</p></div>
+      </div>
+      <div class="capability">
+        <div class="cap-icon">◌</div>
+        <div><h4>Family &amp; Care Circle</h4><p>Share safely. Coordinate care when it matters.</p></div>
+      </div>
+      <div class="capability">
+        <div class="cap-icon">↗</div>
+        <div><h4>Measurable Progress</h4><p>Track metrics that matter and see what improves.</p></div>
+      </div>
+    </section>
+
+    <section class="prototype-overlay" id="prototype-overlay" aria-hidden="true">
+      <div class="prototype-shell">
+        <div class="prototype-toolbar">
+          <div>
+            <strong id="prototype-title">Interactive Health Prototype</strong>
+            <div class="toolbar-copy" id="prototype-copy">Open any storyboard screen to explore the live mockup.</div>
+          </div>
+          <div class="toolbar-actions">
+            <button class="toolbar-button" id="prototype-prev">Previous</button>
+            <button class="toolbar-button" id="prototype-next">Next</button>
+            <button class="toolbar-button" id="prototype-close">Close</button>
+          </div>
+        </div>
+        <div class="prototype-stage" id="prototype-stage"></div>
+        <div class="prototype-footer">
+          <span id="prototype-state">Prototype mode: screen navigation, range filters, export, coaching, care, and voice demo are all interactive.</span>
+          <span>Tip: use the left navigation inside any screen to jump between views.</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="prototype-toast" id="prototype-toast" role="status" aria-live="polite"></div>
+
+    <section class="desktop-modal" id="desktop-modal" aria-hidden="true">
+      <div class="desktop-modal-card">
+        <div class="desktop-modal-head">
+          <div>
+            <strong id="desktop-modal-title">Desktop Detail</strong>
+            <span id="desktop-modal-copy">Additional settings and reports surface here.</span>
+          </div>
+          <button class="desktop-modal-close" id="desktop-modal-close">×</button>
+        </div>
+        <div id="desktop-modal-body"></div>
+      </div>
+    </section>
+  </main>
+  <script>
+    (() => {
+      const screenOrder = ["command", "brief", "trends", "coach", "care", "conversation"];
+      const screenMeta = {
+        command: {
+          title: "Health Command Center",
+          copy: "Top-level health cockpit with readiness, recovery, medications, and focus guidance."
+        },
+        brief: {
+          title: "Morning Health Brief",
+          copy: "Audio-first daily briefing with overnight summary, risk watch, and recommendation."
+        },
+        trends: {
+          title: "Vitals & Trends Analysis",
+          copy: "Trend surface for blood pressure, HRV, sleep, glucose, weight, and export."
+        },
+        coach: {
+          title: "Recovery & Coaching Studio",
+          copy: "Training readiness, recovery actions, pacing, and daily plan coaching."
+        },
+        care: {
+          title: "Medication, Care & Adherence Command",
+          copy: "Medication adherence, care lane coordination, schedule, and escalation tracking."
+        },
+        conversation: {
+          title: "Voice & Consultation",
+          copy: "Interactive consultation screen for spoken or guided health conversations."
+        }
+      };
+
+      const trendSeries = {
+        "1D": {
+          bp: "126/80",
+          rhr: "70",
+          hrv: "58",
+          sleep: "6h 48m",
+          weight: "165.1",
+          glucose: "103",
+          weightDelta: "↑ 0.4",
+          bars: [52, 46, 61, 51, 68, 59, 74, 48, 63, 70]
+        },
+        "7D": {
+          bp: "124/79",
+          rhr: "69",
+          hrv: "60",
+          sleep: "7h 02m",
+          weight: "164.7",
+          glucose: "100",
+          weightDelta: "↓ 0.5",
+          bars: [55, 43, 58, 47, 64, 56, 71, 52, 66, 74]
+        },
+        "30D": {
+          bp: "122/78",
+          rhr: "68",
+          hrv: "62",
+          sleep: "7h 12m",
+          weight: "164.3",
+          glucose: "98",
+          weightDelta: "↓ 1.2",
+          bars: [56, 40, 59, 45, 67, 55, 72, 49, 64, 76]
+        },
+        "90D": {
+          bp: "123/78",
+          rhr: "67",
+          hrv: "64",
+          sleep: "7h 18m",
+          weight: "163.5",
+          glucose: "96",
+          weightDelta: "↓ 2.0",
+          bars: [50, 44, 60, 49, 71, 62, 76, 57, 71, 81]
+        },
+        "1Y": {
+          bp: "125/80",
+          rhr: "69",
+          hrv: "61",
+          sleep: "7h 04m",
+          weight: "168.4",
+          glucose: "101",
+          weightDelta: "↓ 7.6",
+          bars: [38, 42, 46, 49, 52, 56, 61, 64, 68, 74]
+        }
+      };
+
+      const trendGraphSeeds = {
+        "1D": {
+          "Blood Pressure": [30, 28, 24, 27, 22, 18, 25, 19, 16, 20, 15],
+          "Resting Heart Rate": [15, 22, 26, 19, 24, 21, 28, 20, 25, 18, 22],
+          "Heart Rate Variability": [32, 29, 23, 27, 18, 16, 22, 14, 20, 15, 12],
+          "Weight": [18, 19, 21, 24, 28, 26, 30, 33, 31, 35, 34],
+          "Glucose": [16, 20, 27, 22, 18, 15, 21, 24, 19, 23, 18]
+        },
+        "7D": {
+          "Blood Pressure": [31, 29, 27, 24, 23, 20, 24, 19, 21, 18, 16],
+          "Resting Heart Rate": [19, 23, 24, 21, 27, 23, 25, 20, 26, 21, 22],
+          "Heart Rate Variability": [31, 28, 21, 24, 17, 18, 20, 14, 18, 15, 11],
+          "Weight": [20, 23, 24, 26, 22, 20, 18, 17, 16, 14, 13],
+          "Glucose": [18, 21, 26, 20, 16, 18, 22, 20, 23, 17, 19]
+        },
+        "30D": {
+          "Blood Pressure": [30, 29, 27, 24, 22, 19, 24, 18, 21, 19, 17],
+          "Resting Heart Rate": [19, 24, 27, 22, 28, 24, 26, 21, 29, 22, 23],
+          "Heart Rate Variability": [31, 29, 20, 24, 15, 17, 21, 14, 19, 17, 11],
+          "Weight": [25, 28, 24, 26, 21, 20, 18, 16, 18, 13, 15],
+          "Glucose": [18, 22, 29, 20, 14, 18, 23, 19, 24, 16, 20]
+        },
+        "90D": {
+          "Blood Pressure": [28, 27, 25, 23, 20, 18, 22, 17, 19, 18, 16],
+          "Resting Heart Rate": [17, 20, 22, 18, 21, 19, 20, 17, 22, 18, 19],
+          "Heart Rate Variability": [30, 27, 19, 22, 14, 16, 19, 13, 17, 14, 10],
+          "Weight": [30, 28, 26, 25, 23, 22, 20, 18, 17, 15, 14],
+          "Glucose": [20, 22, 24, 19, 15, 16, 19, 17, 20, 16, 18]
+        },
+        "1Y": {
+          "Blood Pressure": [26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16],
+          "Resting Heart Rate": [18, 19, 20, 18, 19, 18, 19, 18, 20, 19, 20],
+          "Heart Rate Variability": [33, 30, 27, 24, 22, 20, 18, 16, 15, 13, 11],
+          "Weight": [34, 33, 31, 29, 27, 25, 23, 20, 18, 16, 14],
+          "Glucose": [22, 23, 24, 21, 20, 19, 18, 17, 18, 17, 19]
+        }
+      };
+
+      const overlay = document.getElementById("prototype-overlay");
+      const stage = document.getElementById("prototype-stage");
+      const title = document.getElementById("prototype-title");
+      const copy = document.getElementById("prototype-copy");
+      const toast = document.getElementById("prototype-toast");
+      const desktopModal = document.getElementById("desktop-modal");
+      const desktopModalTitle = document.getElementById("desktop-modal-title");
+      const desktopModalCopy = document.getElementById("desktop-modal-copy");
+      const desktopModalBody = document.getElementById("desktop-modal-body");
+      const desktopModalClose = document.getElementById("desktop-modal-close");
+      const prevButton = document.getElementById("prototype-prev");
+      const nextButton = document.getElementById("prototype-next");
+      const closeButton = document.getElementById("prototype-close");
+      const stateLabel = document.getElementById("prototype-state");
+
+      const prototypeState = {
+        currentRange: "30D",
+        dataSource: "storybook",
+        activeAssistant: "jarvis",
+        readinessScore: 82,
+        readinessLabel: "Good to Go",
+        readinessGrade: "Good Recovery",
+        readinessTrend: "↑ 8 vs yesterday",
+        sleepScore: 78,
+        sleepLabel: "Good",
+        sleepHours: "7h 12m",
+        bloodPressure: "122/78",
+        bpLabel: "Normal",
+        rhr: "68",
+        hrv: "62",
+        hydration: "6/8",
+        movement: "6,800",
+        moveRing: "42",
+        stressLoad: "42",
+        stressLabel: "Medium",
+        weight: "164.3",
+        weightDelta: "↓ 1.2",
+        glucose: "98",
+        weather: "72° Partly Cloudy",
+        recommendationTitle: "Move more, stress less.",
+        recommendationDetail: "Take a 30-40 min Zone 2 walk this afternoon.",
+        riskWatchTitle: "Elevated BP trend",
+        riskWatchDetail: "Your evening readings have been trending up for 5 days.",
+        focusCopy: "Protect your momentum. Stay hydrated and keep stress in check.",
+        coachingCopy: "Your recovery is trending well. Consider a Zone 2 walk or mobility session this afternoon.",
+        pacingGuidance: "Keep intensity moderate. Your body is ready for steady progress, not maximal effort.",
+        coachInsight: "Your HRV is improving. Consistency over the next 7 days will unlock a reset.",
+        coachPlanTitle: "Zone 2 Endurance",
+        coachPlanDetail: "35 mins · Zone 2",
+        coachPlanCopy: "Build aerobic base and improve cardiovascular efficiency.",
+        planAdded: false,
+        careCircleViewed: false,
+        protocolViewed: false,
+        briefPaused: false,
+        voiceListening: false,
+        focusedConversationIndex: null,
+        lastUpdatedDate: "May 24, 2024",
+        samGreeting: "On your left. Today is about steady work, not hero reps.",
+        samFocusTitle: "Zone 2 cardio",
+        samFocusDetail: "Keep the effort conversational and hit mobility work before dinner.",
+        samStreak: "4d",
+        assistants: [
+          { id: "jarvis", name: "JARVIS", icon: "◌", title: "Whole-life orchestrator", kind: "local" },
+          { id: "sam", name: "Sam Wilson", icon: "🦅", title: "Health & Fitness Coach", kind: "sam" },
+          { id: "helen", name: "Helen Cho", icon: "🧬", title: "Chief Medical Intelligence Officer", kind: "doctor", doctorId: "helen-cho" },
+          { id: "mccoy", name: "Dr. McCoy", icon: "🩺", title: "Clinical translation and triage", kind: "doctor", doctorId: "dr-mccoy" }
+        ],
+        medications: {
+          "Lisinopril": "Taken",
+          "Lisinopril 10mg": "Taken",
+          "Atorvastatin 20mg": "Upcoming",
+          "Vitamin D3": "Due",
+          "Vitamin D3 2000 IU": "Taken",
+          "Aspirin": "Taken",
+          "Aspirin 81mg": "Taken"
+        },
+        recoveryActions: {
+          "Mobility Flow": false,
+          "Cold Shower": false,
+          "Magnesium": false
+        },
+        assistantConversations: {
+          jarvis: [
+            { role: "You", copy: "How was my sleep last night?" },
+            {
+              role: "JARVIS",
+              copy: "You slept for 7 hours and 12 minutes. Your sleep efficiency was 88%, with good deep sleep. Overall, a solid recovery night.",
+              stats: [
+                ["7h 12m", "Sleep"],
+                ["88%", "Efficiency"],
+                ["1h 48m", "Deep Sleep"],
+                ["10%", "Awake"]
+              ]
+            },
+            { role: "You", copy: "Should I work out today?" },
+            {
+              role: "JARVIS",
+              copy: "Yes, your readiness is high. I recommend a Zone 2 walk or easy endurance session for 30-40 minutes.",
+              actions: ["Start 30 Min Walk", "View Plan", "Adjust Intensity"]
+            }
+          ],
+          sam: [
+            { role: "You", copy: "What’s the move today, Sam?" },
+            {
+              role: "Sam Wilson",
+              copy: "Zone 2 walk, mobility before dinner, and stay on your water. We’re stacking clean wins today, brother.",
+              actions: ["Start 30 Min Walk", "View Full Protocol", "Log Food"]
+            }
+          ],
+          helen: [
+            { role: "You", copy: "What should I be watching medically right now?" },
+            {
+              role: "Helen Cho",
+              copy: "Your blood pressure trend deserves the closest attention. If the evening pattern persists, review the trend and medication timing with your care team.",
+              actions: ["Review Trend", "View Care Circle", "Doctor Packet"]
+            }
+          ],
+          mccoy: [
+            { role: "You", copy: "Translate the biggest issue for me plainly." },
+            {
+              role: "Dr. McCoy",
+              copy: "You’re not in crisis, but the blood pressure pattern needs respect. Keep logging, keep the stress load moderate, and don’t ignore a continued upward drift.",
+              actions: ["Review Trend", "Message Care Team", "Adjust Intensity"]
+            }
+          ]
+        }
+      };
+
+      let activeScreen = null;
+      let toastTimer = null;
+
+      const screenFromLabel = (label = "") => {
+        const normalized = String(label).trim().toLowerCase();
+        if (normalized.includes("command center") || normalized === "command") return "command";
+        if (normalized.includes("brief")) return "brief";
+        if (normalized.includes("vitals") || normalized.includes("trends") || normalized.includes("blood pressure")) return "trends";
+        if (normalized.includes("coach") || normalized.includes("recovery")) return "coach";
+        if (normalized.includes("medications") || normalized.includes("care")) return "care";
+        if (normalized.includes("conversation") || normalized.includes("ask anything")) return "conversation";
+        return null;
+      };
+
+      const setActiveAssistant = (assistantId) => {
+        if (!assistantId) return;
+        const exists = prototypeState.assistants.some((assistant) => assistant.id === assistantId);
+        if (exists) prototypeState.activeAssistant = assistantId;
+      };
+
+      const firstDoctorAssistantId = () =>
+        prototypeState.assistants.find((assistant) => assistant.kind === "doctor")?.id || "helen";
+
+      const handleNavDestination = (label = "") => {
+        const normalized = String(label).trim().toLowerCase();
+        if (!normalized) return { screen: "command" };
+        if (normalized.includes("command")) return { screen: "command" };
+        if (normalized.includes("vitals") || normalized.includes("trends")) return { screen: "trends" };
+        if (normalized.includes("coach")) return { screen: "coach" };
+        if (normalized.includes("medications")) return { screen: "care" };
+        if (normalized.includes("care")) return { screen: "care" };
+        if (normalized.includes("nutrition")) {
+          return { screen: "conversation", assistantId: "sam", detail: "Nutrition coaching is handled through Sam Wilson right now." };
+        }
+        if (normalized.includes("fitness")) {
+          return { screen: "coach", assistantId: "sam", detail: "Fitness guidance routes through Sam and the coaching studio." };
+        }
+        if (normalized.includes("mind health")) {
+          return { screen: "conversation", assistantId: "jarvis", detail: "Mind-health check-ins route through the consultation lane." };
+        }
+        if (normalized.includes("labs")) {
+          return { screen: "conversation", assistantId: firstDoctorAssistantId(), detail: "Lab interpretation routes to the medical team." };
+        }
+        if (normalized.includes("reports")) {
+          return { screen: "care", assistantId: firstDoctorAssistantId(), action: "reports-modal", detail: "Opening the latest doctor packet and care review." };
+        }
+        if (normalized.includes("settings")) {
+          return { screen: "command", action: "settings-modal", detail: "Opening health desktop settings." };
+        }
+        return { screen: screenFromLabel(label) || "command" };
+      };
+
+      const settingsModalHtml = () => `
+        <div class="desktop-modal-grid">
+          <div class="desktop-modal-panel">
+            <h4>Data Connections</h4>
+            <div class="desktop-modal-list">
+              <div class="desktop-modal-row"><span>Apple Health Auto Export</span><span>${prototypeState.dataSource === "live" ? "Connected" : "Storyboard"}</span></div>
+              <div class="desktop-modal-row"><span>Blood Pressure Feed</span><span>${prototypeState.bloodPressure}</span></div>
+              <div class="desktop-modal-row"><span>Family Safe Care Circle</span><span>${prototypeState.careCircleViewed ? "Synced" : "Monitoring"}</span></div>
+            </div>
+          </div>
+          <div class="desktop-modal-panel">
+            <h4>Assistant Routing</h4>
+            <div class="desktop-modal-list">
+              ${prototypeState.assistants.map((assistant) => `<div class="desktop-modal-row"><span>${escHtml(assistant.icon)} ${escHtml(assistant.name)}</span><span>${assistant.id === prototypeState.activeAssistant ? "Active" : escHtml(assistant.title)}</span></div>`).join("")}
+            </div>
+          </div>
+          <div class="desktop-modal-panel">
+            <h4>Privacy Profile</h4>
+            <p>Personalized. Proactive. Private. Local desktop state is active, doctor-team consults are scoped to your health workspace, and exports remain explicit user actions.</p>
+          </div>
+          <div class="desktop-modal-panel">
+            <h4>Desktop Controls</h4>
+            <p>Use the storyboard to move between command, brief, trends, coaching, care, and consultation. The fixed command bar spacing and short-desktop layout are already tuned for laptop screens in the live shell.</p>
+          </div>
+        </div>
+      `;
+
+      const reportsModalHtml = () => `
+        <div class="desktop-modal-grid">
+          <div class="desktop-modal-panel">
+            <h4>Doctor Packet</h4>
+            <p>The quarterly doctor packet is available and can be opened from the live endpoint for a deeper longitudinal review.</p>
+            <div class="button-row"><div class="button" data-open-doctor-packet>Open Packet</div></div>
+          </div>
+          <div class="desktop-modal-panel">
+            <h4>Current Risk Summary</h4>
+            <div class="desktop-modal-list">
+              <div class="desktop-modal-row"><span>Primary Watch</span><span>${escHtml(prototypeState.riskWatchTitle)}</span></div>
+              <div class="desktop-modal-row"><span>Readiness</span><span>${escHtml(String(prototypeState.readinessScore))}</span></div>
+              <div class="desktop-modal-row"><span>Stress Load</span><span>${escHtml(prototypeState.stressLabel)}</span></div>
+            </div>
+          </div>
+          <div class="desktop-modal-panel">
+            <h4>Action Queue</h4>
+            <p>${escHtml(prototypeState.recommendationDetail)}</p>
+          </div>
+          <div class="desktop-modal-panel">
+            <h4>Care Review</h4>
+            <p>${escHtml(prototypeState.careCircleViewed ? "Care circle synced and ready for follow-up." : "Care circle monitoring is active and can be promoted for review.")}</p>
+          </div>
+        </div>
+      `;
+
+      const escHtml = (value) =>
+        String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+
+      const showToast = (headline, detail = "") => {
+        clearTimeout(toastTimer);
+        toast.innerHTML = `${headline}${detail ? `<small>${detail}</small>` : ""}`;
+        toast.classList.add("show");
+        toastTimer = window.setTimeout(() => toast.classList.remove("show"), 2200);
+      };
+
+      const openDesktopModal = (modalTitle, modalCopy, bodyHtml) => {
+        desktopModalTitle.textContent = modalTitle;
+        desktopModalCopy.textContent = modalCopy;
+        desktopModalBody.innerHTML = bodyHtml;
+        desktopModal.classList.add("open");
+        desktopModal.setAttribute("aria-hidden", "false");
+      };
+
+      const closeDesktopModal = () => {
+        desktopModal.classList.remove("open");
+        desktopModal.setAttribute("aria-hidden", "true");
+      };
+
+      const setQueryScreen = (screen) => {
+        const url = new URL(window.location.href);
+        if (screen) url.searchParams.set("screen", screen);
+        else url.searchParams.delete("screen");
+        window.history.replaceState({}, "", url);
+      };
+
+      const cloneScreen = (screen) => {
+        const source = document.querySelector(`.story-grid .window[data-screen="${screen}"]`);
+        if (!source) return null;
+        const clone = source.cloneNode(true);
+        clone.classList.add("is-prototype-screen");
+        return clone;
+      };
+
+      const updatePrototypeMeta = (screen) => {
+        const meta = screenMeta[screen];
+        if (!meta) return;
+        title.textContent = meta.title;
+        copy.textContent = meta.copy;
+      };
+
+      const syncPrototypeStateLabel = () => {
+        const completedActions = Object.values(prototypeState.recoveryActions).filter(Boolean).length;
+        const medStats = Object.values(prototypeState.medications);
+        const takenCount = medStats.filter((status) => status === "Taken").length;
+        const activeAssistant = prototypeState.assistants.find((assistant) => assistant.id === prototypeState.activeAssistant)?.name || "JARVIS";
+        stateLabel.textContent = `Desktop mode: ${prototypeState.dataSource === "live" ? "live health data connected" : "storybook data active"}, ${completedActions}/3 recovery actions done, ${takenCount} medication states tracked, range ${prototypeState.currentRange}, active assistant ${activeAssistant}.`;
+      };
+
+      const renderPrototypeScreen = (screen) => {
+        const clone = cloneScreen(screen);
+        if (!clone) return;
+        activeScreen = screen;
+        stage.innerHTML = "";
+        stage.appendChild(clone);
+        overlay.classList.add("open");
+        overlay.setAttribute("aria-hidden", "false");
+        updatePrototypeMeta(screen);
+        syncAllScreens();
+        setQueryScreen(screen);
+      };
+
+      const closePrototype = () => {
+        overlay.classList.remove("open");
+        overlay.setAttribute("aria-hidden", "true");
+        stage.innerHTML = "";
+        activeScreen = null;
+        setQueryScreen("");
+      };
+
+      const cycleScreen = (direction) => {
+        if (!activeScreen) return;
+        const currentIndex = screenOrder.indexOf(activeScreen);
+        const nextIndex = (currentIndex + direction + screenOrder.length) % screenOrder.length;
+        renderPrototypeScreen(screenOrder[nextIndex]);
+      };
+
+      const metricTone = (score) => {
+        if (score >= 80) return { note: "Good to Go", grade: "Good Recovery", color: "#8de28a" };
+        if (score >= 65) return { note: "Ready", grade: "Moderate Load", color: "#f5c96d" };
+        return { note: "Ease Up", grade: "Recovery Focus", color: "#ff9860" };
+      };
+
+      const stressTone = (value) => {
+        const numeric = Number(value);
+        if (numeric >= 60) return { label: "High", color: "var(--red)" };
+        if (numeric >= 40) return { label: "Medium", color: "var(--amber)" };
+        return { label: "Low", color: "var(--green)" };
+      };
+
+      const bpTone = (value) => {
+        const [systolic = 0, diastolic = 0] = String(value).split("/").map((part) => Number(part));
+        if (systolic >= 140 || diastolic >= 90) return "High";
+        if (systolic >= 130 || diastolic >= 80) return "Elevated";
+        return "Normal";
+      };
+
+      const readinessCircumference = 2 * Math.PI * 44;
+
+      const findPanel = (root, titleText) =>
+        [...root.querySelectorAll(".panel")].find(
+          (panel) => panel.querySelector(".panel-title strong")?.textContent.trim() === titleText
+        );
+
+      const updateReadinessPanel = (panel, score, note, trend, grade) => {
+        if (!panel) return;
+        const tone = metricTone(score);
+        const ring = panel.querySelector("circle:nth-of-type(2)");
+        const ringScore = panel.querySelector(".ring-score");
+        const ringNote = panel.querySelector(".ring-note");
+        const ringTrend = panel.querySelector(".ring-trend");
+        const subNumber = panel.querySelector(".sub-number");
+        if (ring) {
+          ring.setAttribute("stroke", tone.color);
+          ring.setAttribute("stroke-dasharray", `${(Math.max(0, Math.min(100, score)) / 100) * readinessCircumference} ${readinessCircumference}`);
+        }
+        if (ringScore) ringScore.textContent = String(score);
+        if (ringNote) ringNote.textContent = note || tone.note;
+        if (ringTrend) ringTrend.textContent = trend || prototypeState.readinessTrend;
+        if (subNumber) subNumber.textContent = grade || tone.grade;
+      };
+
+      const updateMedList = (panel, mapStatuses) => {
+        if (!panel) return;
+        panel.querySelectorAll(".list-row").forEach((row) => {
+          const label = row.querySelector("span:first-child")?.textContent.trim().split("·")[0].trim();
+          const statusEl = row.querySelector("span:last-child");
+          const nextStatus = mapStatuses[label];
+          if (statusEl && nextStatus) {
+            statusEl.textContent = nextStatus;
+            statusEl.classList.toggle("ok", nextStatus === "Taken" || nextStatus.includes("new"));
+          }
+        });
+      };
+
+      const buildMiniGraphPath = (titleText, range) => {
+        const series = trendGraphSeeds[range]?.[titleText] || trendGraphSeeds["30D"][titleText];
+        if (!series) return "";
+        const width = 180;
+        const height = 44;
+        const step = width / (series.length - 1);
+        return series
+          .map((value, index) => `${index === 0 ? "M" : "L"}${Math.round(index * step)} ${value}`)
+          .join(" ");
+      };
+
+      const applyCommandState = (root) => {
+        const surfaceTitle = root.querySelector(".surface-title");
+        const weatherPill = [...root.querySelectorAll(".pill")].find((pill) => pill.textContent.includes("Cloudy"));
+        const focusPanel = findPanel(root, "Today's Focus");
+        const sleepPanel = findPanel(root, "Sleep Recovery");
+        const bpPanel = findPanel(root, "Blood Pressure");
+        const rhrPanel = findPanel(root, "Resting Heart Rate");
+        const coachPanel = findPanel(root, "JARVIS Coaching");
+
+        if (surfaceTitle) surfaceTitle.textContent = "Good morning, Chris.";
+        if (weatherPill) weatherPill.textContent = prototypeState.weather;
+        updateReadinessPanel(findPanel(root, "Daily Readiness"), prototypeState.readinessScore, prototypeState.readinessLabel, prototypeState.readinessTrend);
+        if (sleepPanel) {
+          const numbers = sleepPanel.querySelectorAll(".big-number");
+          const subNumbers = sleepPanel.querySelectorAll(".sub-number");
+          if (numbers[0]) numbers[0].textContent = prototypeState.sleepScore;
+          if (numbers[1]) numbers[1].textContent = prototypeState.sleepHours;
+          if (subNumbers[0]) subNumbers[0].textContent = prototypeState.sleepLabel;
+        }
+        if (bpPanel) {
+          const number = bpPanel.querySelector(".big-number");
+          const sub = bpPanel.querySelector(".sub-number");
+          if (number) number.innerHTML = `${prototypeState.bloodPressure} <span style="font-size:10px;color:var(--muted)">mmHg</span>`;
+          if (sub) sub.textContent = prototypeState.bpLabel;
+        }
+        if (rhrPanel) {
+          const number = rhrPanel.querySelector(".big-number");
+          if (number) number.innerHTML = `${prototypeState.rhr} <span style="font-size:10px;color:var(--muted)">bpm</span>`;
+        }
+        root.querySelectorAll(".micro-grid .panel").forEach((panel) => {
+          const label = panel.querySelector(".panel-title strong")?.textContent.trim();
+          const big = panel.querySelector(".big-number");
+          const sub = panel.querySelector(".sub-number");
+          if (!label || !big) return;
+          if (label === "HRV") big.innerHTML = `${prototypeState.hrv} <span style="font-size:10px;color:var(--muted)">ms</span>`;
+          if (label === "Stress Load") {
+            const tone = stressTone(prototypeState.stressLoad);
+            big.textContent = prototypeState.stressLoad;
+            if (sub) {
+              sub.textContent = tone.label;
+              sub.style.color = tone.color;
+            }
+          }
+          if (label === "Hydration") big.innerHTML = `${prototypeState.hydration} <span style="font-size:10px;color:var(--muted)">cups</span>`;
+          if (label === "Movement") big.textContent = prototypeState.movement;
+          if (label === "Move Ring") big.textContent = prototypeState.moveRing;
+        });
+        updateMedList(findPanel(root, "Medications"), prototypeState.medications);
+        if (coachPanel) {
+          const copyEl = coachPanel.querySelector(".hero-copy");
+          const button = coachPanel.querySelector(".button");
+          if (copyEl) copyEl.textContent = prototypeState.coachingCopy;
+          if (button) {
+            button.textContent = prototypeState.planAdded ? "Open Active Plan" : "View Plan";
+            button.classList.toggle("is-active", prototypeState.planAdded);
+          }
+        }
+        if (focusPanel) {
+          const copyEl = focusPanel.querySelector(".hero-copy");
+          if (copyEl) copyEl.textContent = prototypeState.focusCopy;
+        }
+      };
+
+      const applyBriefState = (root) => {
+        const pausePill = [...root.querySelectorAll(".pill")].find((pill) => pill.textContent.trim() === "Pause" || pill.textContent.trim() === "Resume");
+        const summaryPanel = findPanel(root, "Overnight Summary");
+        const riskPanel = findPanel(root, "Key Risk To Watch");
+        const recommendationPanel = findPanel(root, "Today's Recommendation");
+        if (pausePill) pausePill.textContent = prototypeState.briefPaused ? "Resume" : "Pause";
+        if (summaryPanel) {
+          const rows = summaryPanel.querySelectorAll(".list-row");
+          const summaryValues = [
+            ["Sleep", `${prototypeState.sleepHours} recovery`],
+            ["Blood Pressure", `${prototypeState.bloodPressure} ${prototypeState.bpLabel.toLowerCase()}`],
+            ["Resting Heart Rate", `${prototypeState.rhr} bpm within normal range`],
+            ["HRV", `${prototypeState.hrv} ms balanced`]
+          ];
+          rows.forEach((row, index) => {
+            const first = row.querySelector("span:first-child");
+            if (first && summaryValues[index]) {
+              first.innerHTML = `${summaryValues[index][0]}<br><span style="color:var(--soft)">${summaryValues[index][1]}</span>`;
+            }
+          });
+        }
+        if (riskPanel) {
+          const titleEl = riskPanel.querySelector(".big-number");
+          const copyEl = riskPanel.querySelector(".hero-copy");
+          if (titleEl) titleEl.textContent = prototypeState.riskWatchTitle;
+          if (copyEl) copyEl.textContent = prototypeState.riskWatchDetail;
+        }
+        if (recommendationPanel) {
+          const titleEl = recommendationPanel.querySelector(".big-number");
+          const copyEl = recommendationPanel.querySelector(".hero-copy");
+          const button = recommendationPanel.querySelector(".button");
+          if (titleEl) titleEl.textContent = prototypeState.recommendationTitle;
+          if (copyEl) copyEl.textContent = prototypeState.recommendationDetail;
+          if (button) {
+            button.textContent = prototypeState.planAdded ? "Added to Today" : "Add to Plan";
+            button.classList.toggle("is-active", prototypeState.planAdded);
+          }
+        }
+      };
+
+      const applyTrendState = (root) => {
+        const data = trendSeries[prototypeState.currentRange] || trendSeries["30D"];
+        const cards = root.querySelectorAll(".trend-card");
+        root.querySelectorAll(".surface-head .pill").forEach((pill) => {
+          pill.classList.toggle("is-active", pill.textContent.trim() === prototypeState.currentRange);
+        });
+        cards.forEach((card) => {
+          const cardTitle = card.querySelector(".panel-title strong")?.textContent.trim();
+          const number = card.querySelector(".big-number");
+          const line = card.querySelector(".mini-graph .line");
+          if (!cardTitle || !number) return;
+          if (cardTitle === "Blood Pressure") number.innerHTML = `${data.bp} <span style="font-size:9px;color:var(--muted)">avg</span>`;
+          if (cardTitle === "Resting Heart Rate") number.innerHTML = `${data.rhr} <span style="font-size:9px;color:var(--muted)">avg</span>`;
+          if (cardTitle === "Heart Rate Variability") number.innerHTML = `${data.hrv} <span style="font-size:9px;color:var(--muted)">avg</span>`;
+          if (cardTitle === "Sleep") number.innerHTML = `${data.sleep} <span style="font-size:9px;color:var(--muted)">avg</span>`;
+          if (cardTitle === "Weight") number.innerHTML = `${data.weight} <span style="font-size:9px;color:var(--muted)">${data.weightDelta}</span>`;
+          if (cardTitle === "Glucose") number.innerHTML = `${data.glucose} <span style="font-size:9px;color:var(--muted)">avg</span>`;
+          if (line) line.setAttribute("d", buildMiniGraphPath(cardTitle, prototypeState.currentRange));
+        });
+        const sleepCardBars = cards[3]?.querySelectorAll(".bars span") || [];
+        sleepCardBars.forEach((bar, index) => {
+          bar.style.height = `${data.bars[index] || 50}%`;
+        });
+        const insight = root.querySelector(".window-footer .ok");
+        if (insight) insight.textContent = prototypeState.currentRange === "1D" ? "Recent insight" : "UI insight";
+      };
+
+      const applyCoachState = (root) => {
+        updateReadinessPanel(findPanel(root, "Training Readiness"), prototypeState.readinessScore, "Ready to Train", prototypeState.readinessTrend, prototypeState.readinessGrade);
+        const planPanel = findPanel(root, "Recommended Plan");
+        const recoveryPanel = findPanel(root, "Recovery Actions");
+        const stressPanel = findPanel(root, "Stress Load");
+        const samPanel = findPanel(root, "Sam Wilson Check-In");
+        const pacingPanel = findPanel(root, "Pacing Guidance");
+        const footer = root.querySelector(".window-footer");
+
+        if (planPanel) {
+          const titleEl = planPanel.querySelector(".big-number");
+          const detailEl = planPanel.querySelector(".sub-number");
+          const copyEl = planPanel.querySelector(".hero-copy");
+          const buttons = planPanel.querySelectorAll(".button, .button-ghost");
+          if (titleEl) titleEl.textContent = prototypeState.coachPlanTitle;
+          if (detailEl) detailEl.textContent = prototypeState.coachPlanDetail;
+          if (copyEl) copyEl.textContent = prototypeState.coachPlanCopy;
+          buttons.forEach((button) => {
+            button.classList.toggle("is-active", prototypeState.planAdded && button.textContent.includes("Start"));
+            if (button.textContent.includes("Start")) button.textContent = prototypeState.planAdded ? "Plan Active" : "Start Plan";
+          });
+        }
+        if (recoveryPanel) {
+          recoveryPanel.querySelectorAll(".list-row").forEach((row) => {
+            const label = row.querySelector("span:first-child")?.textContent.trim().split("\n")[0].trim();
+            const actionState = prototypeState.recoveryActions[label];
+            row.classList.toggle("action-complete", !!actionState);
+            const status = row.querySelector("span:last-child");
+            if (status) status.textContent = actionState ? "Done" : "Do It";
+          });
+        }
+        if (stressPanel) {
+          const tone = stressTone(prototypeState.stressLoad);
+          const big = stressPanel.querySelector(".big-number");
+          const sub = stressPanel.querySelector(".sub-number");
+          if (big) big.textContent = prototypeState.stressLoad;
+          if (sub) {
+            sub.textContent = tone.label;
+            sub.style.color = tone.color;
+          }
+        }
+        if (samPanel) {
+          const mode = samPanel.querySelector(".panel-title span");
+          const greeting = samPanel.querySelector(".sam-greeting");
+          const focusTitle = samPanel.querySelector(".sam-focus strong");
+          const focusDetail = samPanel.querySelector(".sam-focus span");
+          const statValues = samPanel.querySelectorAll(".sam-stat strong");
+          const buttons = samPanel.querySelectorAll(".button-ghost");
+          if (mode) mode.textContent = prototypeState.protocolViewed ? "Protocol Open" : "Morning Mode";
+          if (greeting) greeting.textContent = `"${prototypeState.samGreeting}"`;
+          if (focusTitle) focusTitle.textContent = prototypeState.samFocusTitle;
+          if (focusDetail) focusDetail.textContent = prototypeState.samFocusDetail;
+          if (statValues[0]) statValues[0].textContent = String(prototypeState.readinessScore);
+          if (statValues[1]) statValues[1].textContent = prototypeState.hrv;
+          if (statValues[2]) statValues[2].textContent = prototypeState.sleepHours.replace("h ", ".").replace("m", "");
+          if (statValues[3]) statValues[3].textContent = prototypeState.samStreak;
+          buttons.forEach((button) => {
+            if (button.textContent.includes("View Full Protocol")) {
+              button.classList.toggle("is-active", prototypeState.protocolViewed);
+              button.textContent = prototypeState.protocolViewed ? "Protocol Ready" : "View Full Protocol";
+            }
+            if (button.textContent.includes("Talk to Sam")) {
+              button.classList.toggle("is-active", prototypeState.activeAssistant === "sam");
+            }
+          });
+        }
+        if (pacingPanel) {
+          const copyEl = pacingPanel.querySelector(".hero-copy");
+          if (copyEl) copyEl.textContent = prototypeState.pacingGuidance;
+        }
+        if (footer) {
+          const textNode = footer.querySelector("span:last-child");
+          if (textNode) textNode.textContent = "✦";
+          const insightCopy = footer.querySelector("span:first-child");
+          if (insightCopy) insightCopy.innerHTML = `<span class="brand-badge" style="width:24px;height:24px;"><svg viewBox="0 0 32 32" fill="none"><path d="M2 16h4l2-6 4 13 4-17 4 10h4l2-5 2 5h4" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>${escHtml(`JARVIS Insight: ${prototypeState.coachInsight}`)}`;
+        }
+      };
+
+      const applyCareState = (root) => {
+        const medsPanel = findPanel(root, "Medications");
+        const carePanel = findPanel(root, "Care Lane");
+        const adherencePanel = findPanel(root, "Adherence Streak");
+        const escalationPanel = findPanel(root, "Escalations");
+        const footerSpans = root.querySelectorAll(".window-footer span");
+        const medStatuses = Object.entries(prototypeState.medications).filter(([label]) => label.includes("mg") || label.includes("IU"));
+        const takenCount = medStatuses.filter(([, status]) => status === "Taken").length;
+        const adherence = Math.round((takenCount / medStatuses.length) * 100);
+
+        if (medsPanel) {
+          const panelTitle = medsPanel.querySelector(".panel-title span");
+          if (panelTitle) panelTitle.textContent = `Adherence ${adherence}%`;
+          updateMedList(medsPanel, prototypeState.medications);
+        }
+        if (carePanel) {
+          const hero = carePanel.querySelector(".hero-copy");
+          const sub = carePanel.querySelector(".sub-number");
+          const button = carePanel.querySelector(".button-ghost");
+          if (hero) hero.textContent = prototypeState.careCircleViewed ? "Care Circle Synced" : "Family Safe";
+          if (sub) sub.textContent = prototypeState.careCircleViewed ? "4 family members have the latest update" : "Monitoring active";
+          if (button) {
+            button.textContent = prototypeState.careCircleViewed ? "Care Circle Updated" : "View Care Circle";
+            button.classList.toggle("is-active", prototypeState.careCircleViewed);
+          }
+        }
+        if (adherencePanel) {
+          const score = adherencePanel.querySelector(".ring-score");
+          const note = adherencePanel.querySelector(".sub-number");
+          if (score) score.textContent = String(24 + Math.max(0, takenCount - 2));
+          if (note) note.textContent = adherence >= 75 ? "Great job! Keep it going." : "A few doses need attention.";
+        }
+        if (escalationPanel) {
+          const hero = escalationPanel.querySelector(".hero-copy");
+          const sub = escalationPanel.querySelector(".sub-number");
+          if (hero) hero.textContent = prototypeState.riskWatchTitle;
+          if (sub) sub.textContent = prototypeState.riskWatchDetail;
+        }
+        if (footerSpans[1]) footerSpans[1].textContent = prototypeState.planAdded ? "Zone 2 session added to this afternoon." : "Continue current medication plan.";
+      };
+
+      const getActiveAssistant = () =>
+        prototypeState.assistants.find((assistant) => assistant.id === prototypeState.activeAssistant) || prototypeState.assistants[0];
+
+      const getActiveConversation = () =>
+        prototypeState.assistantConversations[prototypeState.activeAssistant] || [];
+
+      const buildConversationMessage = (message, index, totalMessages) => {
+        const isFocused = prototypeState.focusedConversationIndex === index;
+        const classes = ["message"];
+        if (message.role !== "You" && index >= totalMessages - 2) classes.push("live-response");
+        if (isFocused) classes.push("is-selected");
+        return `
+          <div class="${classes.join(" ")}" data-message-index="${index}">
+            <div class="message-role">${escHtml(message.role)}</div>
+            <div class="message-copy">${escHtml(message.copy)}</div>
+            ${message.stats ? `<div class="chat-stats">${message.stats.map(([value, label]) => `<div><strong>${escHtml(value)}</strong>${escHtml(label)}</div>`).join("")}</div>` : ""}
+            ${message.actions ? `<div class="button-row">${message.actions.map((label) => `<div class="${label.includes("Start") ? "button" : "button-ghost"} ${prototypeState.planAdded && label.includes("Start") ? "is-active" : ""}">${escHtml(label.includes("Start") && prototypeState.planAdded ? "Plan Active" : label)}</div>`).join("")}</div>` : ""}
+          </div>
+        `;
+      };
+
+      const applyConversationState = (root) => {
+        const shell = root.querySelector(".chat-shell");
+        const sideMetrics = root.querySelectorAll(".side-metric");
+        const activeAssistant = getActiveAssistant();
+        const activeConversation = getActiveConversation();
+        if (shell) {
+          const introCopy = activeAssistant.kind === "sam"
+            ? "Sam handles training, recovery, food logging, and day-to-day accountability."
+            : activeAssistant.kind === "doctor"
+              ? `${activeAssistant.name} is part of your medical team and can answer clinical questions.`
+              : "Switch between JARVIS, Sam Wilson, and your medical team.";
+          const placeholder = activeAssistant.kind === "sam"
+            ? "Ask Sam about training, recovery, meals, or how the day is going"
+            : activeAssistant.kind === "doctor"
+              ? `Ask ${activeAssistant.name} about labs, medications, or what to watch`
+              : "Ask JARVIS how the pieces fit together across your health day";
+          shell.innerHTML = `
+            <div class="assistant-bar">
+              <div class="assistant-copy">
+                <strong>Consult With</strong>
+                <span>${escHtml(introCopy)}</span>
+              </div>
+              <div class="assistant-pills">
+                ${prototypeState.assistants.map((assistant) => `<div class="assistant-pill ${assistant.id === prototypeState.activeAssistant ? "is-active" : ""}" data-assistant-id="${assistant.id}">${escHtml(assistant.icon)} ${escHtml(assistant.name)}</div>`).join("")}
+              </div>
+            </div>
+            ${activeConversation.map((message, index) => buildConversationMessage(message, index, activeConversation.length)).join("")}
+            <div class="voice-input ${prototypeState.voiceListening ? "active" : ""}">
+              <span>${activeAssistant.kind === "sam" ? "Talk it through with Sam" : activeAssistant.kind === "doctor" ? `Voice consult with ${activeAssistant.name}` : "Ask anything about your health"}</span>
+              <div class="mic-wave"></div>
+              <span>${prototypeState.voiceListening ? "Listening…" : "Tap to stop"}</span>
+            </div>
+            <div class="chat-composer">
+              <input type="text" data-chat-input value="" placeholder="${escHtml(placeholder)}">
+              <div class="button" data-chat-send>Send</div>
+            </div>
+          `;
+        }
+        const sideMetricValues = [
+          ["Readiness", prototypeState.readinessScore, prototypeState.readinessLabel],
+          ["HRV", prototypeState.hrv, "Balanced"],
+          ["RHR", prototypeState.rhr, "Normal"],
+          ["Sleep", prototypeState.sleepHours, prototypeState.sleepLabel],
+          ["Stress Load", prototypeState.stressLoad, prototypeState.stressLabel]
+        ];
+        sideMetrics.forEach((metric, index) => {
+          const strong = metric.querySelector("strong");
+          const [label, value, status] = sideMetricValues[index] || ["", "", ""];
+          metric.innerHTML = `${escHtml(label)}<strong>${escHtml(String(value))}</strong>${escHtml(status)}`;
+        });
+      };
+
+      const syncWindowForScreen = (root, screen) => {
+        if (screen === "command") applyCommandState(root);
+        if (screen === "brief") applyBriefState(root);
+        if (screen === "trends") applyTrendState(root);
+        if (screen === "coach") applyCoachState(root);
+        if (screen === "care") applyCareState(root);
+        if (screen === "conversation") applyConversationState(root);
+      };
+
+      const syncAllScreens = () => {
+        document.querySelectorAll(".window[data-screen]").forEach((windowEl) => {
+          syncWindowForScreen(windowEl, windowEl.dataset.screen);
+        });
+        syncPrototypeStateLabel();
+      };
+
+      const addConversationTurn = (prompt, response, assistantOverride = null) => {
+        const assistant = assistantOverride || getActiveAssistant();
+        const bucket = prototypeState.assistantConversations[assistant.id] || [];
+        bucket.push({ role: "You", copy: prompt });
+        bucket.push({
+          role: assistant.name,
+          copy: response,
+          actions: assistant.kind === "sam"
+            ? ["Start 30 Min Walk", "View Full Protocol", "Log Food"]
+            : assistant.kind === "doctor"
+              ? ["Review Trend", "View Care Circle", "Doctor Packet"]
+              : ["Start 30 Min Walk", "View Plan", "Adjust Intensity"]
+        });
+        prototypeState.assistantConversations[assistant.id] = bucket;
+        prototypeState.focusedConversationIndex = bucket.length - 1;
+      };
+
+      const fallbackAssistantReply = (assistant, prompt) => {
+        if (assistant.kind === "sam") {
+          return `We keep it simple today: ${prototypeState.samFocusTitle.toLowerCase()}, hydration, and one clean nutrition win. ${prompt ? "I heard you." : ""}`.trim();
+        }
+        if (assistant.kind === "doctor") {
+          return `${prototypeState.riskWatchTitle}. ${prototypeState.riskWatchDetail}`;
+        }
+        return `I’m connecting the dots across your day. ${prototypeState.recommendationDetail}`;
+      };
+
+      const sendAssistantMessage = async (root, prompt) => {
+        const assistant = getActiveAssistant();
+        let reply = "";
+        try {
+          if (assistant.kind === "sam") {
+            const response = await fetch("/api/health/sam/chat", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                message: prompt,
+                history: (prototypeState.assistantConversations.sam || []).slice(-6).map((entry) => ({
+                  role: entry.role === "You" ? "user" : "assistant",
+                  content: entry.copy
+                })),
+                mode: "chat"
+              })
+            }).catch(() => null);
+            if (response?.ok) {
+              const data = await response.json();
+              reply = data.reply || "";
+            }
+          } else if (assistant.kind === "doctor") {
+            const response = await fetch("/api/health/chat", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                doctor: assistant.doctorId || "helen-cho",
+                message: prompt,
+                history: (prototypeState.assistantConversations[assistant.id] || []).slice(-10).map((entry) => ({
+                  role: entry.role === "You" ? "user" : "assistant",
+                  content: entry.copy
+                }))
+              })
+            }).catch(() => null);
+            if (response?.ok) {
+              const data = await response.json();
+              reply = data.reply || "";
+            }
+          }
+        } catch (error) {
+          console.warn("assistant send failed", error);
+        }
+        addConversationTurn(prompt, reply || fallbackAssistantReply(assistant, prompt), assistant);
+        syncAllScreens();
+        if (root?.dataset?.screen === "conversation") {
+          const input = root.querySelector("[data-chat-input]");
+          if (input) input.value = "";
+        }
+        showToast(`${assistant.name} replied`, assistant.kind === "doctor" ? "Medical team consult updated." : "Coaching thread updated.");
+      };
+
+      const exportTrendPayload = () => {
+        const metrics = trendSeries[prototypeState.currentRange] || trendSeries["30D"];
+        const payload = {
+          exported_at: new Date().toISOString(),
+          source: prototypeState.dataSource,
+          screen: "trends",
+          range: prototypeState.currentRange,
+          readiness: prototypeState.readinessScore,
+          recommendation: prototypeState.recommendationDetail,
+          metrics
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "jarvis-health-vitals-export.json";
+        link.click();
+        URL.revokeObjectURL(url);
+      };
+
+      const numberOrNull = (value) => {
+        if (value === null || value === undefined || value === "") return null;
+        const numeric = Number(value);
+        return Number.isFinite(numeric) ? numeric : null;
+      };
+
+      const formatSleepHours = (value) => {
+        const numeric = numberOrNull(value);
+        if (numeric === null) return null;
+        const hours = Math.floor(numeric);
+        const minutes = Math.round((numeric - hours) * 60);
+        return `${hours}h ${String(minutes).padStart(2, "0")}m`;
+      };
+
+      const hydrateFromLiveHealth = async () => {
+        try {
+          const [summaryRes, bpRes, helenRes, samMorningRes, samDailyRes, doctorsRes] = await Promise.all([
+            fetch("/api/health/summary").catch(() => null),
+            fetch("/api/health/bp").catch(() => null),
+            fetch("/api/health/helen/analysis").catch(() => null),
+            fetch("/api/health/sam/morning-checkin").catch(() => null),
+            fetch("/api/health/sam/daily").catch(() => null),
+            fetch("/api/health/chat/doctors").catch(() => null)
+          ]);
+
+          if (summaryRes?.ok) {
+            const summary = await summaryRes.json();
+            const readinessScore = numberOrNull(summary?.readiness?.score);
+            if (readinessScore !== null) {
+              const tone = metricTone(readinessScore);
+              prototypeState.readinessScore = readinessScore;
+              prototypeState.readinessLabel = summary.readiness.grade || tone.note;
+              prototypeState.readinessGrade = tone.grade;
+              prototypeState.readinessTrend = summary.readiness.message || prototypeState.readinessTrend;
+            }
+            const metrics = summary.metrics || {};
+            const hrv = numberOrNull(metrics.hrv);
+            const restingHr = numberOrNull(metrics.resting_hr);
+            const steps = numberOrNull(metrics.steps);
+            const sleepHours = formatSleepHours(metrics.sleep_hours);
+            const weight = numberOrNull(metrics.weight);
+            if (hrv !== null) prototypeState.hrv = String(Math.round(hrv));
+            if (restingHr !== null) prototypeState.rhr = String(Math.round(restingHr));
+            if (steps !== null) prototypeState.movement = Math.round(steps).toLocaleString("en-US");
+            if (sleepHours) prototypeState.sleepHours = sleepHours;
+            if (weight !== null) prototypeState.weight = weight.toFixed(1);
+            if (summary.date) prototypeState.lastUpdatedDate = summary.date;
+            prototypeState.dataSource = "live";
+          }
+
+          if (bpRes?.ok) {
+            const bp = await bpRes.json();
+            const latest = (bp.readings || []).slice(-1)[0];
+            if (latest?.systolic && latest?.diastolic) {
+              prototypeState.bloodPressure = `${latest.systolic}/${latest.diastolic}`;
+              prototypeState.bpLabel = bpTone(prototypeState.bloodPressure);
+            }
+          }
+
+          if (helenRes?.ok) {
+            const helen = await helenRes.json();
+            if (helen && helen.status !== "generating" && !helen.error) {
+              if (helen.headline) prototypeState.riskWatchTitle = helen.headline;
+              if (helen.analysis_narrative) prototypeState.riskWatchDetail = helen.analysis_narrative.split("\n")[0];
+              if (Array.isArray(helen.priority_actions) && helen.priority_actions[0]) {
+                prototypeState.recommendationTitle = helen.priority_actions[0].title || prototypeState.recommendationTitle;
+                prototypeState.recommendationDetail = helen.priority_actions[0].recommendation || prototypeState.recommendationDetail;
+                prototypeState.focusCopy = helen.priority_actions[0].why || prototypeState.focusCopy;
+              }
+            }
+          }
+
+          if (samMorningRes?.ok) {
+            const samMorning = await samMorningRes.json();
+            if (samMorning.greeting) prototypeState.samGreeting = samMorning.greeting;
+            if (samMorning.focus_primary) prototypeState.samFocusTitle = samMorning.focus_primary;
+            if (samMorning.focus_details) prototypeState.samFocusDetail = samMorning.focus_details;
+            if (samMorning.readiness != null) prototypeState.readinessScore = Number(samMorning.readiness) || prototypeState.readinessScore;
+            if (samMorning.hrv != null) prototypeState.hrv = String(samMorning.hrv);
+            if (samMorning.sleep_hours != null) {
+              const sleep = formatSleepHours(samMorning.sleep_hours);
+              if (sleep) prototypeState.sleepHours = sleep;
+            }
+            const streak = samMorning.streak?.streak;
+            if (streak != null) prototypeState.samStreak = `${streak}d`;
+          }
+
+          if (samDailyRes?.ok) {
+            const samDaily = await samDailyRes.json();
+            const protocol = samDaily.protocol || {};
+            if (protocol.movement?.primary) prototypeState.samFocusTitle = protocol.movement.primary;
+            if (protocol.movement?.focus) prototypeState.samFocusDetail = protocol.movement.focus;
+            const streak = samDaily.streak?.streak;
+            if (streak != null) prototypeState.samStreak = `${streak}d`;
+          }
+
+          if (doctorsRes?.ok) {
+            const doctorPayload = await doctorsRes.json();
+            const doctors = Array.isArray(doctorPayload.doctors) ? doctorPayload.doctors.slice(0, 4) : [];
+            if (doctors.length) {
+              const mappedDoctors = doctors.map((doctor) => ({
+                id: String(doctor.agent_id || doctor.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+                name: doctor.name || "Doctor",
+                icon: doctor.icon || "⚕️",
+                title: doctor.title || doctor.specialty || "Medical specialist",
+                kind: "doctor",
+                doctorId: doctor.agent_id || "helen-cho"
+              }));
+              const baseAssistants = prototypeState.assistants.filter((assistant) => assistant.kind !== "doctor");
+              prototypeState.assistants = [...baseAssistants, ...mappedDoctors];
+              mappedDoctors.forEach((doctor) => {
+                if (!prototypeState.assistantConversations[doctor.id]) {
+                  prototypeState.assistantConversations[doctor.id] = [
+                    {
+                      role: doctor.name,
+                      copy: `Ask me anything in my lane. I’ll focus on ${doctor.title.toLowerCase()}.`,
+                      actions: ["Review Trend", "View Care Circle", "Doctor Packet"]
+                    }
+                  ];
+                }
+              });
+            }
+          }
+        } catch (error) {
+          console.warn("health storyboard live hydrate failed", error);
+        } finally {
+          prototypeState.stressLabel = stressTone(prototypeState.stressLoad).label;
+          syncAllScreens();
+          if (activeScreen) updatePrototypeMeta(activeScreen);
+        }
+      };
+
+      document.querySelectorAll(".window[data-screen]").forEach((windowEl) => {
+        windowEl.addEventListener("click", (event) => {
+          if (event.target.closest(".nav-item, .pill, .button, .button-ghost, .panel, .list-row, .message, .voice-input, .export-trigger")) return;
+          renderPrototypeScreen(windowEl.dataset.screen);
+        });
+      });
+
+      document.querySelectorAll(".story-card").forEach((card) => {
+        card.querySelector(".story-label")?.addEventListener("click", () => {
+          const screen = card.querySelector(".window[data-screen]")?.dataset.screen;
+          if (screen) renderPrototypeScreen(screen);
+        });
+      });
+
+      document.addEventListener("click", (event) => {
+        const navItem = event.target.closest(".nav-item");
+        if (navItem) {
+          const destination = handleNavDestination(navItem.textContent);
+          event.preventDefault();
+          if (destination.assistantId) setActiveAssistant(destination.assistantId);
+          renderPrototypeScreen(destination.screen || "command");
+          if (destination.action === "reports-modal") {
+            openDesktopModal("Health Reports", "Review packet and care summary for upcoming doctor conversations.", reportsModalHtml());
+          }
+          if (destination.action === "settings-modal") {
+            openDesktopModal("Desktop Settings", "Control connected data, assistants, and desktop behaviors.", settingsModalHtml());
+          }
+          if (destination.detail) showToast(navItem.textContent.trim(), destination.detail);
+          return;
+        }
+
+        const capability = event.target.closest(".capability");
+        if (capability) {
+          const label = capability.querySelector("h4")?.textContent || "";
+          const screen = label.includes("Care Circle")
+            ? "care"
+            : label.includes("Progress")
+              ? "trends"
+              : label.includes("Intelligence")
+                ? "brief"
+                : label.includes("AI That Cares")
+                  ? "conversation"
+                  : label.includes("All-in-One")
+                    ? "command"
+                    : "coach";
+          renderPrototypeScreen(screen);
+          return;
+        }
+
+        const exportTrigger = event.target.closest(".export-trigger");
+        if (exportTrigger) {
+          exportTrendPayload();
+          showToast("Vitals export downloaded", `Range ${prototypeState.currentRange} exported as JSON.`);
+          return;
+        }
+
+        const footerAction = event.target.closest(".window-footer span");
+        if (footerAction) {
+          const label = footerAction.textContent.trim();
+          if (label === "View Details") {
+            renderPrototypeScreen("trends");
+            return;
+          }
+          if (label === "Review Plan") {
+            renderPrototypeScreen("care");
+            showToast("Care review opened");
+            return;
+          }
+          if (label === "Ask anything") {
+            renderPrototypeScreen("conversation");
+            return;
+          }
+        }
+
+        const pill = event.target.closest(".pill");
+        if (pill) {
+          const text = pill.textContent.trim();
+          if (trendSeries[text]) {
+            prototypeState.currentRange = text;
+            syncAllScreens();
+            showToast(`Trend range switched to ${text}`, "Vitals and sleep visuals refreshed.");
+            return;
+          }
+          if (text.includes("Cloudy")) {
+            showToast("Weather insight refreshed", "Recovery outlook remains favorable for a walk this afternoon.");
+            return;
+          }
+          if (text === "Pause" || text === "Resume") {
+            prototypeState.briefPaused = !prototypeState.briefPaused;
+            syncAllScreens();
+            showToast("Morning brief playback toggled");
+            return;
+          }
+        }
+
+        const assistantPill = event.target.closest(".assistant-pill");
+        if (assistantPill) {
+          const assistantId = assistantPill.dataset.assistantId;
+          if (assistantId) {
+            prototypeState.activeAssistant = assistantId;
+            prototypeState.focusedConversationIndex = null;
+            syncAllScreens();
+            const assistant = getActiveAssistant();
+            showToast(`${assistant.name} selected`, assistant.kind === "doctor" ? "Medical consult lane is active." : "Conversation lane switched.");
+          }
+          return;
+        }
+
+        const voiceInput = event.target.closest(".voice-input");
+        if (voiceInput) {
+          const rootWindow = voiceInput.closest(".window");
+          if (!rootWindow?.classList.contains("is-prototype-screen")) {
+            renderPrototypeScreen("conversation");
+            return;
+          }
+          prototypeState.voiceListening = !prototypeState.voiceListening;
+          syncAllScreens();
+          if (prototypeState.voiceListening) {
+            window.setTimeout(() => {
+              prototypeState.voiceListening = false;
+              const assistant = getActiveAssistant();
+              addConversationTurn(
+                assistant.kind === "sam" ? "What should I tighten up the rest of today?" : "What’s my biggest recovery risk today?",
+                assistant.kind === "sam"
+                  ? `Stay with ${prototypeState.samFocusTitle.toLowerCase()}, hydrate, and don’t chase intensity tonight.`
+                  : `${prototypeState.riskWatchTitle}. ${prototypeState.recommendationDetail}`,
+                assistant
+              );
+              syncAllScreens();
+              showToast("Voice capture complete", `${assistant.name} responded with an updated insight.`);
+            }, 600);
+          }
+          return;
+        }
+
+        const chatSend = event.target.closest("[data-chat-send]");
+        if (chatSend) {
+          const rootWindow = event.target.closest(".window");
+          const input = rootWindow?.querySelector("[data-chat-input]");
+          const prompt = input?.value.trim();
+          if (prompt) {
+            sendAssistantMessage(rootWindow, prompt);
+          }
+          return;
+        }
+
+        const button = event.target.closest(".button, .button-ghost");
+        if (button) {
+          const label = button.textContent.trim();
+          if (button.matches("[data-open-doctor-packet]")) {
+            window.open("/api/health/quarterly/doctor-packet", "_blank", "noopener");
+            showToast("Doctor packet opened", "Quarterly review packet launched in a new tab.");
+            return;
+          }
+          if (label.includes("Talk to Sam")) {
+            prototypeState.activeAssistant = "sam";
+            syncAllScreens();
+            renderPrototypeScreen("conversation");
+            showToast("Sam Wilson opened", "Coach conversation is ready.");
+            return;
+          }
+          if (label.includes("View Full Protocol") || label.includes("Protocol Ready")) {
+            prototypeState.protocolViewed = true;
+            prototypeState.activeAssistant = "sam";
+            prototypeState.samFocusDetail = "Protocol opened. Sam is tracking training, food, hydration, and recovery from one place.";
+            syncAllScreens();
+            showToast("Sam protocol opened", "Training and recovery guidance expanded.");
+            return;
+          }
+          if (label.includes("Doctor Packet")) {
+            openDesktopModal("Doctor Packet", "Open the quarterly packet or stay in the desktop flow for care review.", reportsModalHtml());
+            return;
+          }
+          if (label.includes("Message Care Team")) {
+            prototypeState.activeAssistant = prototypeState.assistants.find((assistant) => assistant.kind === "doctor")?.id || "helen";
+            syncAllScreens();
+            showToast("Care team lane active", "Medical team consult is ready.");
+            return;
+          }
+          if (label.includes("Log Food")) {
+            prototypeState.activeAssistant = "sam";
+            addConversationTurn("I had eggs and toast for breakfast.", "Logged. Good protein start. Keep lunch clean and stay ahead on hydration.", getActiveAssistant());
+            syncAllScreens();
+            showToast("Food log captured", "Sam updated the coaching thread.");
+            return;
+          }
+          if (label.includes("Review Trend")) {
+            renderPrototypeScreen("trends");
+            showToast("Trend review opened", "Blood pressure context expanded in the trends screen.");
+            return;
+          }
+          if (label.includes("Add to Plan")) {
+            prototypeState.planAdded = true;
+            prototypeState.coachInsight = "Zone 2 walk locked in for this afternoon. Recovery guidance will adapt as the day progresses.";
+            syncAllScreens();
+            showToast("Added to plan", "Zone 2 session is now part of today’s schedule.");
+            return;
+          }
+          if (label.includes("View Care Circle")) {
+            prototypeState.careCircleViewed = true;
+            syncAllScreens();
+            showToast("Care Circle opened", "Family-safe monitoring context is now synced.");
+            return;
+          }
+          if (label.includes("View All") || label.includes("Review Plan")) {
+            renderPrototypeScreen("care");
+            showToast(label, "Medication and care details opened.");
+            return;
+          }
+          if (label.includes("View Plan") || label.includes("Start Plan") || label.includes("Plan Active") || label.includes("Adjust")) {
+            prototypeState.planAdded = true;
+            syncAllScreens();
+            renderPrototypeScreen("coach");
+            showToast(label, "Opening the coaching surface.");
+            return;
+          }
+          if (label.includes("Start 30 Min Walk")) {
+            prototypeState.planAdded = true;
+            prototypeState.coachPlanDetail = "30 mins · Zone 2 walk";
+            prototypeState.coachInsight = "Walking plan started. Pace guidance and readiness will stay aligned across the desktop.";
+            syncAllScreens();
+            showToast("Walk started", "JARVIS moved today’s recommendation into an active plan.");
+            return;
+          }
+        }
+
+        const listRow = event.target.closest(".list-row");
+        if (listRow) {
+          const panelTitle = listRow.closest(".panel")?.querySelector(".panel-title strong")?.textContent || "";
+          const label = listRow.querySelector("span:first-child")?.textContent.trim().split("\n")[0].split("·")[0].trim();
+          if (panelTitle.includes("Recovery Actions") && label) {
+            prototypeState.recoveryActions[label] = !prototypeState.recoveryActions[label];
+            syncAllScreens();
+            showToast("Recovery action updated", `${label} marked ${prototypeState.recoveryActions[label] ? "done" : "active"}.`);
+            return;
+          }
+          if (panelTitle.includes("Medications") && label) {
+            const current = prototypeState.medications[label] || "Due";
+            prototypeState.medications[label] = current === "Taken" ? "Due" : "Taken";
+            syncAllScreens();
+            showToast("Medication state updated", `${label} is now ${prototypeState.medications[label]}.`);
+            return;
+          }
+          if (panelTitle.includes("Lab & Tests")) {
+            if (label?.includes("A1C")) {
+              setActiveAssistant(firstDoctorAssistantId());
+              renderPrototypeScreen("conversation");
+              showToast("A1C test review", "Opening the medical consult lane for lab planning.");
+              return;
+            }
+            if (label?.includes("Lab Results")) {
+              setActiveAssistant(firstDoctorAssistantId());
+              renderPrototypeScreen("conversation");
+              showToast("Lab results opened", "Helen and the medical team are ready to review the latest labs.");
+              return;
+            }
+          }
+        }
+
+        const scheduleItem = event.target.closest(".schedule-item");
+        if (scheduleItem) {
+          scheduleItem.classList.toggle("action-complete");
+          const medLabel = scheduleItem.querySelector("div:last-child")?.textContent.trim();
+          if (medLabel && prototypeState.medications[medLabel] !== undefined) {
+            prototypeState.medications[medLabel] = scheduleItem.classList.contains("action-complete") ? "Taken" : "Upcoming";
+          }
+          syncAllScreens();
+          showToast("Schedule updated", `${medLabel || "Dose"} ${scheduleItem.classList.contains("action-complete") ? "marked complete" : "returned to schedule"}.`);
+          return;
+        }
+
+        const message = event.target.closest(".message");
+        if (message && event.target.closest(".window")?.dataset.screen === "conversation") {
+          const index = Number(message.dataset.messageIndex);
+          prototypeState.focusedConversationIndex = Number.isFinite(index) ? index : null;
+          syncAllScreens();
+          showToast("Conversation message focused", "This thread can be promoted into a deeper health consult.");
+          return;
+        }
+
+        const panel = event.target.closest(".panel");
+        if (panel) {
+          const rootWindow = event.target.closest(".window");
+          rootWindow?.querySelectorAll(".panel.is-selected").forEach((node) => node.classList.remove("is-selected"));
+          panel.classList.add("is-selected");
+          const titleText = panel.querySelector(".panel-title strong")?.textContent || "";
+          if (titleText.includes("Symptoms Log")) {
+            setActiveAssistant(firstDoctorAssistantId());
+            renderPrototypeScreen("conversation");
+            showToast("Symptoms log", "Use the medical consult lane to record or review symptoms.");
+            return;
+          }
+          if (titleText.includes("Sam Wilson Check-In")) {
+            setActiveAssistant("sam");
+            prototypeState.protocolViewed = true;
+            syncAllScreens();
+            showToast("Sam check-in focused", "Coach protocol and chat are now active.");
+            return;
+          }
+          if (titleText.includes("Lab & Tests")) {
+            setActiveAssistant(firstDoctorAssistantId());
+            renderPrototypeScreen("conversation");
+            showToast("Lab review", "Routing to the medical team for test follow-up.");
+            return;
+          }
+          const targetScreen = screenFromLabel(titleText) ||
+            (titleText.includes("JARVIS Coaching") ? "coach" :
+              titleText.includes("Medications") ? "care" :
+              titleText.includes("Blood Pressure") ? "trends" : null);
+          if (!rootWindow?.classList.contains("is-prototype-screen")) {
+            renderPrototypeScreen(targetScreen || rootWindow?.dataset.screen || "command");
+            return;
+          }
+          showToast(`${titleText} selected`, targetScreen ? "Use the left navigation to jump across prototype screens." : "");
+        }
+      });
+
+      overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) closePrototype();
+      });
+
+      desktopModal.addEventListener("click", (event) => {
+        if (event.target === desktopModal) closeDesktopModal();
+      });
+
+      desktopModalClose.addEventListener("click", closeDesktopModal);
+
+      prevButton.addEventListener("click", () => cycleScreen(-1));
+      nextButton.addEventListener("click", () => cycleScreen(1));
+      closeButton.addEventListener("click", closePrototype);
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && event.target instanceof HTMLInputElement && event.target.matches("[data-chat-input]")) {
+          event.preventDefault();
+          const rootWindow = event.target.closest(".window");
+          const prompt = event.target.value.trim();
+          if (prompt) sendAssistantMessage(rootWindow, prompt);
+          return;
+        }
+        if (!overlay.classList.contains("open")) return;
+        if (event.key === "Escape") closePrototype();
+        if (event.key === "ArrowLeft") cycleScreen(-1);
+        if (event.key === "ArrowRight") cycleScreen(1);
+      });
+
+      syncAllScreens();
+      hydrateFromLiveHealth();
+
+      const initialScreen = new URL(window.location.href).searchParams.get("screen");
+      if (initialScreen && screenMeta[initialScreen]) {
+        renderPrototypeScreen(initialScreen);
+      }
+    })();
+  </script>
+</body>
+</html>

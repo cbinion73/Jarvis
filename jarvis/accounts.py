@@ -4,15 +4,21 @@ import json
 import re
 import uuid
 from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 from .models import HouseholdProfile
+from .persistence import append_jsonl, atomic_write_json
 
 
 ACCOUNTS_PATH = Path.cwd() / "data" / "settings" / "accounts.json"
 SUPPORTED_PROVIDERS = ("google", "outlook", "imap", "other")
 SUPPORTED_SERVICES = ("mail", "calendar", "mail_calendar")
 EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 @dataclass(slots=True)
@@ -35,16 +41,64 @@ class AccountRegistry:
     def __init__(self, household: HouseholdProfile, path: Path = ACCOUNTS_PATH) -> None:
         self.household = household
         self.path = path
+        self.log_path = self.path.with_name(f"{self.path.stem}_log.jsonl")
+        self.state_log_path = self.path.with_name(f"{self.path.stem}_state_log.jsonl")
 
     def list_accounts(self) -> list[PersonalAccount]:
         if not self.path.exists():
-            return []
+            return self._load_from_state_log()
         try:
             payload = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            return []
+            return self._load_from_state_log()
         accounts: list[PersonalAccount] = []
         for item in payload if isinstance(payload, list) else []:
+            try:
+                accounts.append(self._coerce(item))
+            except Exception:
+                continue
+        if accounts:
+            return accounts
+        return self._load_from_state_log()
+
+    def _load_from_state_log(self) -> list[PersonalAccount]:
+        if not self.state_log_path.exists():
+            return self._load_from_log()
+        latest: list[dict] = []
+        try:
+            for line in self.state_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return self._load_from_log()
+        accounts: list[PersonalAccount] = []
+        for item in latest:
+            try:
+                accounts.append(self._coerce(item))
+            except Exception:
+                continue
+        return accounts
+
+    def _load_from_log(self) -> list[PersonalAccount]:
+        if not self.log_path.exists():
+            return []
+        latest: list[dict] = []
+        try:
+            for line in self.log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return []
+        accounts: list[PersonalAccount] = []
+        for item in latest:
             try:
                 accounts.append(self._coerce(item))
             except Exception:
@@ -127,9 +181,22 @@ class AccountRegistry:
 
     def _save(self, accounts: list[PersonalAccount]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(
-            json.dumps([item.to_dict() for item in accounts], indent=2) + "\n",
-            encoding="utf-8",
+        payload = [item.to_dict() for item in accounts]
+        saved_at = _now_iso()
+        atomic_write_json(self.path, payload)
+        append_jsonl(
+            self.log_path,
+            {
+                "saved_at": saved_at,
+                "records": payload,
+            },
+        )
+        append_jsonl(
+            self.state_log_path,
+            {
+                "saved_at": saved_at,
+                "records": payload,
+            },
         )
 
     def _coerce(self, payload: dict) -> PersonalAccount:

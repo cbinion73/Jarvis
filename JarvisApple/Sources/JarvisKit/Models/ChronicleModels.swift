@@ -7,10 +7,13 @@ public struct ChronicleOverview: Codable, Sendable {
     public let entries: [ChronicleEntry]
     public let context: ChronicleContext?
     public let patterns: ChroniclePatterns?
+    public let continuity: ChronicleContinuity?
+    public let studyWorkspace: ChronicleStudyWorkspace?
     public let updatedAt: String
 
     enum CodingKeys: String, CodingKey {
-        case entries, context, patterns
+        case entries, context, patterns, continuity
+        case studyWorkspace = "study_workspace"
         case updatedAt = "updated_at"
     }
 
@@ -18,11 +21,15 @@ public struct ChronicleOverview: Codable, Sendable {
         entries: [ChronicleEntry] = [],
         context: ChronicleContext? = nil,
         patterns: ChroniclePatterns? = nil,
+        continuity: ChronicleContinuity? = nil,
+        studyWorkspace: ChronicleStudyWorkspace? = nil,
         updatedAt: String = ""
     ) {
         self.entries = entries
         self.context = context
         self.patterns = patterns
+        self.continuity = continuity
+        self.studyWorkspace = studyWorkspace
         self.updatedAt = updatedAt
     }
 
@@ -31,6 +38,8 @@ public struct ChronicleOverview: Codable, Sendable {
         entries = try container.decodeIfPresent([ChronicleEntry].self, forKey: .entries) ?? []
         context = try container.decodeIfPresent(ChronicleContext.self, forKey: .context)
         patterns = try container.decodeIfPresent(ChroniclePatterns.self, forKey: .patterns)
+        continuity = try container.decodeIfPresent(ChronicleContinuity.self, forKey: .continuity)
+        studyWorkspace = try container.decodeIfPresent(ChronicleStudyWorkspace.self, forKey: .studyWorkspace)
         updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt) ?? ""
     }
 }
@@ -105,6 +114,17 @@ public struct ChroniclePrayer: Codable, Identifiable, Sendable {
     public let id: String
     public let text: String
     public let category: String
+    public let timesPrayed: Int
+    public let lastPrayedAt: String
+    public let answered: Bool
+    public let answerSummary: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, text, category, answered
+        case timesPrayed = "times_prayed"
+        case lastPrayedAt = "last_prayed_at"
+        case answerSummary = "answer_summary"
+    }
 }
 
 public struct ChronicleRhythm: Codable, Sendable {
@@ -189,18 +209,167 @@ public struct ChroniclePrayerArc: Codable, Sendable {
     }
 }
 
+public struct ChronicleStudyWorkspace: Codable, Sendable {
+    public let passage: String
+    public let title: String
+    public let date: String
+    public let focusSummary: String
+    public let prompts: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case passage, title, date, prompts
+        case focusSummary = "focus_summary"
+    }
+}
+
+public struct ChronicleContinuity: Codable, Sendable {
+    public let relevantFacts: [ChronicleContinuityFact]
+    public let similarEntries: [ChronicleEntry]
+    public let situations: [ChronicleContinuitySituation]
+    public let recallPrompt: String
+
+    enum CodingKeys: String, CodingKey {
+        case relevantFacts = "relevant_facts"
+        case similarEntries = "similar_entries"
+        case situations
+        case recallPrompt = "recall_prompt"
+    }
+}
+
+public struct ChronicleContinuityFact: Codable, Identifiable, Sendable {
+    public let factId: String
+    public let title: String
+    public let summary: String
+    public let lane: String
+    public let updatedAt: String
+    public let tags: [String]
+
+    public var id: String { factId }
+
+    enum CodingKeys: String, CodingKey {
+        case title, summary, lane, tags
+        case factId = "fact_id"
+        case updatedAt = "updated_at"
+    }
+}
+
+public struct ChronicleContinuitySituation: Codable, Identifiable, Sendable {
+    public let id: String
+    public let label: String
+    public let summary: String
+    public let signals: [String]
+    public let matchedFactCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id, label, summary, signals
+        case matchedFactCount = "matched_fact_count"
+    }
+}
+
 // MARK: - FaithOverview
 
 /// Daily word and morning spiritual context returned by GET /api/apple/faith
 public struct FaithOverview: Codable, Sendable {
     public let dailyWord: DailyWord
     public let morningContext: [String: String]
+    public let agents: [FaithAgentSummary]
+    public let formationPrompts: [String]
+    public let continuity: FaithContinuity?
     public let updatedAt: String
 
     enum CodingKeys: String, CodingKey {
         case dailyWord = "daily_word"
         case morningContext = "morning_context"
+        case agents
+        case formationPrompts = "formation_prompts"
+        case continuity
         case updatedAt = "updated_at"
+    }
+}
+
+public struct FaithContinuity: Codable, Sendable {
+    public let subjectDisplayName: String
+    public let theme: String
+    public let focus: String
+    public let passage: String
+    public let councilDomains: [String]
+    public let guidanceLines: [String]
+    public let profileFactCount: Int
+    public let recentProfileFacts: [FaithContinuityFact]
+    public let recentFirstLight: [FaithContinuityMoment]
+
+    enum CodingKeys: String, CodingKey {
+        case subjectDisplayName = "subject_display_name"
+        case theme, focus, passage
+        case councilDomains = "council_domains"
+        case guidanceLines = "guidance_lines"
+        case profileFactCount = "profile_fact_count"
+        case recentProfileFacts = "recent_profile_facts"
+        case recentFirstLight = "recent_first_light"
+    }
+}
+
+public struct FaithContinuityFact: Codable, Identifiable, Sendable {
+    public let id: String
+    public let title: String
+    public let summary: String
+}
+
+public struct FaithContinuityMoment: Codable, Identifiable, Sendable {
+    public let id: String
+    public let label: String
+    public let summary: String
+}
+
+public struct FaithAgentSummary: Codable, Identifiable, Sendable {
+    public let id: String
+    public let name: String
+    public let title: String
+    public let domain: String
+    public let color: String
+    public let initials: String
+    public let description: String
+}
+
+public struct FaithChatMessage: Codable, Identifiable, Sendable {
+    public let id: String
+    public let role: String
+    public let content: String
+
+    public init(id: String = UUID().uuidString, role: String, content: String) {
+        self.id = id
+        self.role = role
+        self.content = content
+    }
+}
+
+public struct FaithChatPayload: Encodable, Sendable {
+    public let agentId: String
+    public let passage: String
+    public let messages: [FaithChatMessage]
+
+    public init(agentId: String, passage: String = "", messages: [FaithChatMessage]) {
+        self.agentId = agentId
+        self.passage = passage
+        self.messages = messages
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case agentId = "agent_id"
+        case passage
+        case messages
+    }
+}
+
+public struct FaithChatResponse: Decodable, Sendable {
+    public let reply: String
+    public let agentId: String
+    public let agentName: String
+
+    enum CodingKeys: String, CodingKey {
+        case reply
+        case agentId = "agent_id"
+        case agentName = "agent_name"
     }
 }
 
@@ -238,5 +407,65 @@ public struct ChronicleCapture: Codable, Sendable {
     enum CodingKeys: String, CodingKey {
         case type, note
         case actorId = "actor_id"
+    }
+}
+
+public struct ChroniclePrayerActionPayload: Codable, Sendable {
+    public let actorId: String
+    public let note: String
+
+    public init(actorId: String = "chris", note: String = "") {
+        self.actorId = actorId
+        self.note = note
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case note
+        case actorId = "actor_id"
+    }
+}
+
+public struct ChroniclePrayerActionResult: Codable, Sendable {
+    public let status: String
+    public let prayerId: String
+    public let timesPrayed: Int?
+    public let lastPrayedAt: String?
+    public let answeredAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case status
+        case prayerId = "prayer_id"
+        case timesPrayed = "times_prayed"
+        case lastPrayedAt = "last_prayed_at"
+        case answeredAt = "answered_at"
+    }
+}
+
+public struct ChronicleStudySavePayload: Codable, Sendable {
+    public let actorId: String
+    public let title: String
+    public let passage: String
+    public let notes: String
+
+    public init(actorId: String = "chris", title: String, passage: String, notes: String) {
+        self.actorId = actorId
+        self.title = title
+        self.passage = passage
+        self.notes = notes
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case title, passage, notes
+        case actorId = "actor_id"
+    }
+}
+
+public struct ChronicleStudySaveResult: Codable, Sendable {
+    public let captured: Bool
+    public let entryId: String
+
+    enum CodingKeys: String, CodingKey {
+        case captured
+        case entryId = "entry_id"
     }
 }

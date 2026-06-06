@@ -30,6 +30,8 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json, atomic_write_jsonl
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -201,8 +203,13 @@ class GrowthStore:
         self._learning_path = self.root / "learning.json"
         self._relationships_path = self.root / "relationships.json"
         self._occasions_path = self.root / "occasions.json"
+        self._learning_log_path = self.root / "learning_log.jsonl"
+        self._relationships_log_path = self.root / "relationships_log.jsonl"
+        self._occasions_log_path = self.root / "occasions_log.jsonl"
         self._signals_path = self.root / "signals.jsonl"
+        self._signals_state_log_path = self.root / "signals_state_log.jsonl"
         self._health_path = self.root / "health_log.jsonl"
+        self._health_state_log_path = self.root / "health_log_state_log.jsonl"
         self._seed_if_empty()
 
     # ------------------------------------------------------------------
@@ -211,17 +218,56 @@ class GrowthStore:
 
     def _load_json(self, path: Path, *, default: Any = None) -> Any:
         if not path.exists():
-            return default if default is not None else []
+            return self._load_json_from_log(path, default=default)
         try:
             return json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            return default if default is not None else []
+            return self._load_json_from_log(path, default=default)
 
     def _save_json(self, path: Path, payload: Any) -> None:
-        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(path, payload)
+        append_jsonl(
+            self._log_path_for(path),
+            {
+                "saved_at": _now_iso(),
+                "records": payload,
+            },
+        )
+
+    def _log_path_for(self, path: Path) -> Path:
+        if path == self._learning_path:
+            return self._learning_log_path
+        if path == self._relationships_path:
+            return self._relationships_log_path
+        if path == self._occasions_path:
+            return self._occasions_log_path
+        return path.with_name(f"{path.stem}_log.jsonl")
+
+    def _load_json_from_log(self, path: Path, *, default: Any = None) -> Any:
+        log_path = self._log_path_for(path)
+        if not log_path.exists():
+            return default if default is not None else []
+        try:
+            latest: Any = default if default is not None else []
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) if isinstance(item, dict) else item for item in records]
+                elif records is not None:
+                    latest = records
+            return latest
+        except (OSError, json.JSONDecodeError):
+            return default if default is not None else []
 
     def _load_jsonl(self, path: Path) -> list[dict]:
         if not path.exists():
+            if path == self._signals_path:
+                return self._load_signal_records_from_log()
+            if path == self._health_path:
+                return self._load_health_records_from_log()
             return []
         records: list[dict] = []
         try:
@@ -234,6 +280,10 @@ class GrowthStore:
                         pass
         except OSError:
             pass
+        if not records and path == self._signals_path:
+            return self._load_signal_records_from_log()
+        if not records and path == self._health_path:
+            return self._load_health_records_from_log()
         return records
 
     def _append_jsonl(self, path: Path, record: dict) -> None:
@@ -242,6 +292,58 @@ class GrowthStore:
                 fh.write(json.dumps(record) + "\n")
         except OSError:
             pass
+
+    def _load_signal_records_from_log(self) -> list[dict]:
+        if not self._signals_state_log_path.exists():
+            return []
+        latest: list[dict] = []
+        try:
+            for line in self._signals_state_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return []
+        return latest
+
+    def _persist_signal_records(self, records: list[dict]) -> None:
+        atomic_write_jsonl(self._signals_path, records)
+        append_jsonl(
+            self._signals_state_log_path,
+            {
+                "saved_at": _now_iso(),
+                "records": records,
+            },
+        )
+
+    def _load_health_records_from_log(self) -> list[dict]:
+        if not self._health_state_log_path.exists():
+            return []
+        latest: list[dict] = []
+        try:
+            for line in self._health_state_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return []
+        return latest
+
+    def _persist_health_records(self, records: list[dict]) -> None:
+        atomic_write_jsonl(self._health_path, records)
+        append_jsonl(
+            self._health_state_log_path,
+            {
+                "saved_at": _now_iso(),
+                "records": records,
+            },
+        )
 
     # ------------------------------------------------------------------
     # Learning
@@ -309,7 +411,9 @@ class GrowthStore:
         return signals
 
     def append_signal(self, signal: WorldSignal) -> None:
-        self._append_jsonl(self._signals_path, asdict(signal))
+        records = self._load_jsonl(self._signals_path)
+        records.append(asdict(signal))
+        self._persist_signal_records(records)
 
     def update_signal(self, signal_id: str, **kwargs: Any) -> bool:
         """Update a signal record by rewriting the JSONL."""
@@ -320,12 +424,7 @@ class GrowthStore:
                 rec.update(kwargs)
                 found = True
         if found:
-            try:
-                with self._signals_path.open("w", encoding="utf-8") as fh:
-                    for rec in records:
-                        fh.write(json.dumps(rec) + "\n")
-            except OSError:
-                pass
+            self._persist_signal_records(records)
         return found
 
     # ------------------------------------------------------------------
@@ -344,7 +443,9 @@ class GrowthStore:
         return logs
 
     def append_health_log(self, log: HealthLog) -> None:
-        self._append_jsonl(self._health_path, asdict(log))
+        records = self._load_jsonl(self._health_path)
+        records.append(asdict(log))
+        self._persist_health_records(records)
 
     # ------------------------------------------------------------------
     # Seed

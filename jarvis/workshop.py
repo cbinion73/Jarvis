@@ -27,6 +27,7 @@ from .models import (
 )
 from .openai_tasks import JarvisOpenAIClient
 from .persona import build_specialist_prompt
+from .persistence import append_jsonl, atomic_write_json
 
 _CADQUERY_MODULE: Any | None = None
 _CADQUERY_EXPORTERS: Any | None = None
@@ -47,16 +48,91 @@ class WorkshopStore:
         self.safety_checks_path = self.root / "safety_checks.json"
         self.concept_sessions_path = self.root / "concept_sessions.json"
 
+    def _log_path_for(self, path: Path) -> Path:
+        return path.with_name(f"{path.stem}_log.jsonl")
+
+    def _state_log_path_for(self, path: Path) -> Path:
+        return path.with_name(f"{path.stem}_state_log.jsonl")
+
+    def _load_records_from_log(self, path: Path) -> list[dict]:
+        log_path = self._log_path_for(path)
+        if not log_path.exists():
+            return []
+        latest: list[dict] = []
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return []
+        return filter_records(latest)
+
+    def _load_jsonl_records_from_state_log(self, path: Path) -> list[dict]:
+        log_path = self._state_log_path_for(path)
+        if not log_path.exists():
+            return []
+        latest: list[dict] = []
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return []
+        return filter_records(latest)
+
+    def _load_records_from_state_log(self, path: Path) -> list[dict]:
+        log_path = self._state_log_path_for(path)
+        if not log_path.exists():
+            return []
+        latest: list[dict] = []
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return []
+        return filter_records(latest)
+
+    def _load_inspections(self) -> list[dict]:
+        if not self.inspections_path.exists():
+            return self._load_jsonl_records_from_state_log(self.inspections_path)
+        try:
+            lines = self.inspections_path.read_text(encoding="utf-8").splitlines()
+            records = [json.loads(line) for line in lines if line.strip()]
+        except (OSError, json.JSONDecodeError):
+            return self._load_jsonl_records_from_state_log(self.inspections_path)
+        cleaned = filter_records(records)
+        return cleaned or self._load_jsonl_records_from_state_log(self.inspections_path)
+
+    def _save_inspections(self, records: list[dict]) -> None:
+        append_jsonl(
+            self._state_log_path_for(self.inspections_path),
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "records": records,
+            },
+        )
+        atomic_write_json(self.inspections_path, records, indent=None)
+
     def add_inspection(self, inspection: WorkshopInspection) -> None:
-        with self.inspections_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(asdict(inspection)) + "\n")
+        records = self._load_inspections()
+        records.append(asdict(inspection))
+        self._save_inspections(records)
 
     def list_inspections(self, limit: int = 10) -> list[dict]:
-        if not self.inspections_path.exists():
-            return []
-        lines = self.inspections_path.read_text(encoding="utf-8").splitlines()
-        records = [json.loads(line) for line in lines if line.strip()]
-        cleaned = filter_records(records)
+        cleaned = self._load_inspections()
         return list(reversed(cleaned[-limit:]))
 
     def latest_inspection_for_part(self, part_name: str) -> dict | None:
@@ -68,17 +144,49 @@ class WorkshopStore:
 
     def _load_vendor_preps(self) -> list[dict]:
         if not self.vendor_preps_path.exists():
-            return []
-        records = json.loads(self.vendor_preps_path.read_text(encoding="utf-8"))
-        return filter_records(records if isinstance(records, list) else [])
+            return self._load_records_from_state_log(self.vendor_preps_path)
+        try:
+            records = json.loads(self.vendor_preps_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return self._load_records_from_state_log(self.vendor_preps_path)
+        cleaned = filter_records(records if isinstance(records, list) else [])
+        return cleaned or self._load_records_from_state_log(self.vendor_preps_path)
 
     def _save_vendor_preps(self, records: list[dict]) -> None:
-        self.vendor_preps_path.write_text(json.dumps(records, indent=2) + "\n", encoding="utf-8")
+        append_jsonl(
+            self._log_path_for(self.vendor_preps_path),
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "records": records,
+            },
+        )
+        append_jsonl(
+            self._state_log_path_for(self.vendor_preps_path),
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "records": records,
+            },
+        )
+        atomic_write_json(self.vendor_preps_path, records)
 
     def add_vendor_prep(self, prep: VendorPrep) -> None:
         records = self._load_vendor_preps()
         records.append(asdict(prep))
         self._save_vendor_preps(records)
+
+    def upsert_vendor_prep(self, prep: VendorPrep) -> dict:
+        records = self._load_vendor_preps()
+        payload = asdict(prep)
+        replaced = False
+        for index, item in enumerate(records):
+            if str(item.get("prep_id", "")).strip() == prep.prep_id:
+                records[index] = payload
+                replaced = True
+                break
+        if not replaced:
+            records.append(payload)
+        self._save_vendor_preps(records)
+        return payload
 
     def list_vendor_preps(self, limit: int = 10) -> list[dict]:
         records = self._load_vendor_preps()
@@ -90,6 +198,7 @@ class WorkshopStore:
         for item in records:
             if item["prep_id"] == prep_id:
                 item["status"] = status
+                item["updated_at"] = datetime.now(timezone.utc).isoformat()
                 updated = item
                 break
         if updated is not None:
@@ -98,12 +207,30 @@ class WorkshopStore:
 
     def _load_json_records(self, path: Path) -> list[dict]:
         if not path.exists():
-            return []
-        records = json.loads(path.read_text(encoding="utf-8"))
-        return filter_records(records if isinstance(records, list) else [])
+            return self._load_records_from_state_log(path)
+        try:
+            records = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return self._load_records_from_state_log(path)
+        cleaned = filter_records(records if isinstance(records, list) else [])
+        return cleaned or self._load_records_from_state_log(path)
 
     def _save_json_records(self, path: Path, records: list[dict]) -> None:
-        path.write_text(json.dumps(records, indent=2) + "\n", encoding="utf-8")
+        append_jsonl(
+            self._log_path_for(path),
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "records": records,
+            },
+        )
+        append_jsonl(
+            self._state_log_path_for(path),
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "records": records,
+            },
+        )
+        atomic_write_json(path, records)
 
     def add_cad_package(self, package: CadPackage) -> None:
         records = self._load_json_records(self.cad_packages_path)
@@ -701,13 +828,13 @@ class WorkshopSupport:
             approval_request_id="",
             status="staged",
             timestamp=datetime.now(timezone.utc).isoformat(),
+            updated_at=datetime.now(timezone.utc).isoformat(),
         )
         return asdict(prep)
 
     def save_vendor_prep(self, prep_payload: dict) -> dict:
         prep = VendorPrep(**prep_payload)
-        self.store.add_vendor_prep(prep)
-        return asdict(prep)
+        return self.store.upsert_vendor_prep(prep)
 
     def list_vendor_preps(self, limit: int = 10) -> list[dict]:
         return self.store.list_vendor_preps(limit=limit)

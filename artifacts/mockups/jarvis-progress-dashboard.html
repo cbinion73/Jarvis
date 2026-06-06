@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Progress Dashboard</title>
+  <style>
+    :root {
+      --bg: #071018;
+      --bg-2: #0a1624;
+      --panel: rgba(9, 18, 29, 0.94);
+      --panel-2: rgba(14, 27, 43, 0.96);
+      --line: rgba(136, 188, 224, 0.18);
+      --line-strong: rgba(136, 188, 224, 0.36);
+      --text: #edf6fc;
+      --muted: #8ea5b9;
+      --cyan: #6ed7e0;
+      --blue: #94bcff;
+      --green: #6ddd9f;
+      --amber: #f1bd70;
+      --red: #f18c95;
+      --orange: #f09960;
+      --shadow: 0 24px 72px rgba(0, 0, 0, 0.34);
+      --radius-xl: 26px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --font-ui: "SF Pro Display", "Segoe UI", sans-serif;
+      --font-mono: "SF Mono", "JetBrains Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font-ui);
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(110, 215, 224, 0.16), transparent 26%),
+        radial-gradient(circle at top right, rgba(148, 188, 255, 0.15), transparent 24%),
+        linear-gradient(180deg, var(--bg) 0%, #03080f 100%);
+    }
+
+    a { color: inherit; }
+    h1, h2, h3, p { margin: 0; }
+
+    .shell {
+      width: min(1320px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 42px;
+    }
+
+    .hero,
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 28px;
+      margin-bottom: 18px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(110, 215, 224, 0.28);
+      background: rgba(110, 215, 224, 0.08);
+      color: var(--cyan);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .hero h1 {
+      margin-top: 14px;
+      font-size: clamp(36px, 5vw, 62px);
+      line-height: 0.92;
+      letter-spacing: -0.05em;
+      max-width: 11ch;
+    }
+
+    .hero p {
+      margin-top: 14px;
+      max-width: 80ch;
+      line-height: 1.7;
+      color: var(--muted);
+    }
+
+    .hero-grid,
+    .matrix,
+    .double {
+      display: grid;
+      gap: 18px;
+    }
+
+    .hero-grid {
+      grid-template-columns: 1.2fr 0.8fr;
+      margin-top: 20px;
+    }
+
+    .double {
+      grid-template-columns: 1fr 1fr;
+      margin-top: 18px;
+    }
+
+    .matrix {
+      grid-template-columns: 1.2fr 0.8fr;
+      margin-top: 18px;
+    }
+
+    .panel {
+      padding: 24px;
+    }
+
+    .panel h2 {
+      margin-bottom: 12px;
+      font-size: 22px;
+      letter-spacing: -0.03em;
+    }
+
+    .panel p,
+    .panel li {
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .summary-card {
+      padding: 18px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .summary-card strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 28px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .truth-question {
+      padding: 18px;
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(241, 140, 149, 0.22);
+      background: linear-gradient(180deg, rgba(241, 140, 149, 0.12), rgba(241, 140, 149, 0.04));
+    }
+
+    .truth-question strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text);
+      font-size: 15px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .table th,
+    .table td {
+      padding: 12px 14px;
+      text-align: left;
+      vertical-align: top;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .table tr:first-child th,
+    .table tr:first-child td {
+      border-top: 0;
+    }
+
+    .table th {
+      color: var(--blue);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .table td strong {
+      color: var(--text);
+    }
+
+    .stack-list,
+    .score-list,
+    .questions {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .nav-links a {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .stack-item,
+    .score-item,
+    .question-item {
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .stack-item strong,
+    .score-item strong,
+    .question-item strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .pill.green { color: var(--green); background: rgba(109, 221, 159, 0.12); border-color: rgba(109, 221, 159, 0.22); }
+    .pill.yellow { color: var(--amber); background: rgba(241, 189, 112, 0.12); border-color: rgba(241, 189, 112, 0.22); }
+    .pill.red { color: var(--red); background: rgba(241, 140, 149, 0.12); border-color: rgba(241, 140, 149, 0.22); }
+    .pill.blue { color: var(--blue); background: rgba(148, 188, 255, 0.12); border-color: rgba(148, 188, 255, 0.22); }
+    .pill.orange { color: var(--orange); background: rgba(240, 153, 96, 0.12); border-color: rgba(240, 153, 96, 0.22); }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .status-card {
+      padding: 16px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .status-card strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    .mono {
+      font-family: var(--font-mono);
+      color: var(--cyan);
+    }
+
+    @media (max-width: 1100px) {
+      .hero-grid,
+      .matrix,
+      .double,
+      .summary-grid,
+      .status-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="eyebrow">Truth-Telling View</div>
+      <h1>JARVIS Progress Dashboard</h1>
+      <p>
+        This dashboard does not ask how many boxes were checked. It asks how much of
+        JARVIS is now real, stable, connected, reusable, and compounding. That is the
+        only progress story that matters for an orchestration system.
+      </p>
+      <div class="nav-links">
+        <a href="./jarvis-seam-tracker.html">Open Seam Tracker</a>
+        <a href="./jarvis-path-to-level-9-checklist.html">Open Level 9 Checklist</a>
+        <a href="./jarvis-next-arc-checklist.html">Open Next Arc Checklist</a>
+      </div>
+
+      <div class="hero-grid">
+        <div class="panel">
+          <h2>The Core Question</h2>
+          <div class="truth-question">
+            <strong>What is now real, stable, connected, and compounding?</strong>
+            A normal checklist tracks visible ambition. This view separates mockup
+            progress, seam progress, substrate progress, and usable product reality so
+            the team can see what is actual product and what is still theater.
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Progress Formula</h2>
+          <div class="stack-list">
+            <div class="stack-item">
+              <strong>Usable behaviors</strong>
+              What a human can successfully do right now.
+            </div>
+            <div class="stack-item">
+              <strong>Reusable substrate</strong>
+              What got stronger underneath multiple features or agents.
+            </div>
+            <div class="stack-item">
+              <strong>Completed seams</strong>
+              What internal capability became real and landed.
+            </div>
+            <div class="stack-item">
+              <strong>Reduced theater</strong>
+              What stopped being mocked, stubbed, or aspirational.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Four Layers</h2>
+      <p>
+        JARVIS should be measured across four layers at the same time so visible roadmap
+        motion never hides weak internals, and strong internals get credit even before the
+        screen polish catches up.
+      </p>
+      <table class="table">
+        <tr>
+          <th>Layer</th>
+          <th>Question It Answers</th>
+          <th>Example</th>
+        </tr>
+        <tr>
+          <td><strong>Roadmap</strong></td>
+          <td>What visible capability are we trying to ship?</td>
+          <td>Daily Brief, Chronicle, Huddle, Navigation</td>
+        </tr>
+        <tr>
+          <td><strong>Seams</strong></td>
+          <td>What real engineering checkpoints have been completed?</td>
+          <td>Agent state seam, memory seam, inbox ingestion seam</td>
+        </tr>
+        <tr>
+          <td><strong>Substrate</strong></td>
+          <td>Is the underlying system becoming reusable and stronger?</td>
+          <td>Shared agent registry, event bus, memory model, permissions</td>
+        </tr>
+        <tr>
+          <td><strong>Experience</strong></td>
+          <td>Can a human actually use this in a meaningful way?</td>
+          <td>JARVIS briefed me this morning and helped me act</td>
+        </tr>
+      </table>
+    </section>
+
+    <div class="double">
+      <section class="panel">
+        <h2>Current Cross-Layer Status</h2>
+        <table class="table">
+          <tr>
+            <th>Area</th>
+            <th>Roadmap</th>
+            <th>Seam</th>
+            <th>Substrate</th>
+            <th>User Value</th>
+            <th>Confidence</th>
+          </tr>
+          <tr>
+            <td><strong>Daily Brief</strong></td>
+            <td>60%</td>
+            <td>45%</td>
+            <td><span class="pill yellow">Yellow</span></td>
+            <td>Medium</td>
+            <td>Medium</td>
+          </tr>
+          <tr>
+            <td><strong>Chronicle</strong></td>
+            <td>40%</td>
+            <td>55%</td>
+            <td><span class="pill green">Green</span></td>
+            <td>Medium</td>
+            <td>High</td>
+          </tr>
+          <tr>
+            <td><strong>Huddle</strong></td>
+            <td>25%</td>
+            <td>30%</td>
+            <td><span class="pill yellow">Yellow</span></td>
+            <td>Low</td>
+            <td>Medium</td>
+          </tr>
+          <tr>
+            <td><strong>Navigation</strong></td>
+            <td>50%</td>
+            <td>35%</td>
+            <td><span class="pill red">Red</span></td>
+            <td>Medium</td>
+            <td>Low</td>
+          </tr>
+          <tr>
+            <td><strong>Agent Registry</strong></td>
+            <td>&mdash;</td>
+            <td>70%</td>
+            <td><span class="pill green">Green</span></td>
+            <td>High</td>
+            <td>High</td>
+          </tr>
+          <tr>
+            <td><strong>Memory Layer</strong></td>
+            <td>&mdash;</td>
+            <td>45%</td>
+            <td><span class="pill yellow">Yellow</span></td>
+            <td>High</td>
+            <td>Medium</td>
+          </tr>
+          <tr>
+            <td><strong>Background Work</strong></td>
+            <td>&mdash;</td>
+            <td>25%</td>
+            <td><span class="pill red">Red</span></td>
+            <td>Very High</td>
+            <td>Low</td>
+          </tr>
+        </table>
+      </section>
+
+      <section class="panel">
+        <h2>Status Categories</h2>
+        <p>
+          Avoid vague labels like “in progress.” Use categories that tell the truth about
+          how real a capability is.
+        </p>
+        <div class="status-grid">
+          <div class="status-card">
+            <strong>Mocked</strong>
+            It exists visually, but does not work yet.
+          </div>
+          <div class="status-card">
+            <strong>Stubbed</strong>
+            It has fake or placeholder logic.
+          </div>
+          <div class="status-card">
+            <strong>Wired</strong>
+            It connects to real data or real agents.
+          </div>
+          <div class="status-card">
+            <strong>Useful</strong>
+            A human can use it successfully in a real scenario.
+          </div>
+          <div class="status-card">
+            <strong>Durable</strong>
+            It is stable, reusable, tested, and not fragile.
+          </div>
+          <div class="status-card">
+            <strong>Compounding</strong>
+            It enables multiple other features or agents.
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="matrix">
+      <section class="panel">
+        <h2>Seam Truth Questions</h2>
+        <p>
+          Every seam should answer these five questions. If it cannot, the progress story
+          is probably too vague.
+        </p>
+        <div class="questions">
+          <div class="question-item">
+            <strong>What became real?</strong>
+            Avoids vague progress and forces a concrete before-and-after story.
+          </div>
+          <div class="question-item">
+            <strong>What roadmap items did this enable?</strong>
+            Connects hidden substrate work to visible value.
+          </div>
+          <div class="question-item">
+            <strong>What can now be reused?</strong>
+            Shows whether the architecture is compounding.
+          </div>
+          <div class="question-item">
+            <strong>What changed for the user?</strong>
+            Keeps the work from becoming engineering theater.
+          </div>
+          <div class="question-item">
+            <strong>What remains blocked or fragile?</strong>
+            Keeps everyone honest about reality.
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Compounding Capability</h2>
+        <p>
+          The most important question is not whether one feature moved. It is whether the
+          work made several future features easier.
+        </p>
+        <div class="stack-list">
+          <div class="stack-item">
+            <strong>Calendar read seam</strong>
+            Helps Daily Brief, Navigation, Huddle, and Focus Mode.
+          </div>
+          <div class="stack-item">
+            <strong>Agent status seam</strong>
+            Helps the desktop command center, iPhone home, watch views, and notifications.
+          </div>
+          <div class="stack-item">
+            <strong>Memory summary seam</strong>
+            Helps Chronicle, Daily Brief, coaching, and spiritual reflection.
+          </div>
+          <div class="stack-item">
+            <strong>Background task seam</strong>
+            Helps nearly everything JARVIS does while you are absent.
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="double">
+      <section class="panel">
+        <h2>Theater List</h2>
+        <p>
+          Every AI product needs a brutally honest list of what is still mostly fake.
+          That list is how vision stops pretending to be product.
+        </p>
+        <table class="table">
+          <tr>
+            <th>Item</th>
+            <th>Current Reality</th>
+          </tr>
+          <tr>
+            <td><strong>Agent autonomy</strong></td>
+            <td>Partly structural, but still constrained by review and runtime gaps.</td>
+          </tr>
+          <tr>
+            <td><strong>Memory</strong></td>
+            <td>Partly real, but still needs stronger rules, retrieval, and continuity logic.</td>
+          </tr>
+          <tr>
+            <td><strong>Notifications</strong></td>
+            <td>Mixed: some routing is real, but background trigger coverage is still incomplete.</td>
+          </tr>
+          <tr>
+            <td><strong>Health intelligence</strong></td>
+            <td>Connected in places, but still fragile across data and device surfaces.</td>
+          </tr>
+          <tr>
+            <td><strong>Voice commands</strong></td>
+            <td>More real than demo-only, but still not fully universal action-taking.</td>
+          </tr>
+        </table>
+      </section>
+
+      <section class="panel">
+        <h2>Domain Scorecard</h2>
+        <p>
+          Score each major domain from idea-only through compounding capability so the
+          foundation layers can be pushed to 4 or 5 before polish hides weak reality.
+        </p>
+        <div class="score-list">
+          <div class="score-item">
+            <strong>0 to 5 Score Meaning</strong>
+            0 = idea only, 1 = visual mockup, 2 = clickable prototype or static flow,
+            3 = real data wired in, 4 = real agent action and user value, 5 = stable,
+            reusable, compounding system capability.
+          </div>
+          <div class="score-item">
+            <strong>Desktop Command Center — 2</strong>
+            Looks and flows exist, but it still needs stronger real substrate under it.
+          </div>
+          <div class="score-item">
+            <strong>Daily Brief — 3</strong>
+            Some real data is wired, but the whole behavior is not yet durable.
+          </div>
+          <div class="score-item">
+            <strong>Chronicle — 2</strong>
+            The concept is strong, but the lived experience is still partial.
+          </div>
+          <div class="score-item">
+            <strong>Agent Orchestration — 2</strong>
+            Real pieces are landing, but the registry/state model is still maturing.
+          </div>
+          <div class="score-item">
+            <strong>Background Work — 1</strong>
+            The vision is clear, but the runtime still needs more architecture.
+          </div>
+          <div class="score-item">
+            <strong>Mobile Experience — 2</strong>
+            Mockups exist and the interaction model is emerging.
+          </div>
+          <div class="score-item">
+            <strong>Memory Layer — 2</strong>
+            Needs stronger schema, retrieval logic, and cross-agent reuse.
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="double">
+      <section class="panel">
+        <h2>What To Track Weekly</h2>
+        <p>
+          A weekly review should focus on what became real, what became reusable, and
+          what is still theatrical smoke instead of reporting only design or checklist
+          motion.
+        </p>
+        <div class="questions">
+          <div class="question-item">
+            <strong>1. What seams were completed?</strong>
+            Name the internal capability that became real, not just the screens that moved.
+          </div>
+          <div class="question-item">
+            <strong>2. What user-facing behaviors improved?</strong>
+            Example: JARVIS can summarize tomorrow&apos;s calendar and identify preparation needs.
+          </div>
+          <div class="question-item">
+            <strong>3. What got reusable?</strong>
+            Example: the event ingestion layer can now support Calendar, Tasks, and future Email.
+          </div>
+          <div class="question-item">
+            <strong>4. What is still fake?</strong>
+            Keep a living theater list for autonomy, memory, notifications, health intelligence, and voice.
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Truth-Telling Example</h2>
+        <p>
+          Replace vague percentage language with state-based statements that explain what
+          is mocked, stubbed, wired, and actually useful.
+        </p>
+        <div class="stack-list">
+          <div class="stack-item">
+            <strong>Weak reporting</strong>
+            Daily Brief: 60% complete.
+          </div>
+          <div class="stack-item">
+            <strong>Truthful reporting</strong>
+            Daily Brief is mocked visually, stubbed logically, but not yet wired to real
+            calendar, health, task, and memory data.
+          </div>
+          <div class="stack-item">
+            <strong>Why this is better</strong>
+            It tells you what is real, what is fake, and exactly what has to happen next.
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h2>What JARVIS Can Actually Do Today</h2>
+      <p>
+        This is the grounding view. No future poetry, no mockup inflation, no “eventually.”
+        Just whether the current system can do the job now.
+      </p>
+      <table class="table">
+        <tr>
+          <th>Capability</th>
+          <th>Can JARVIS do it today?</th>
+          <th>Reality</th>
+          <th>Notes</th>
+        </tr>
+        <tr>
+          <td><strong>Brief me on my day</strong></td>
+          <td>Partial</td>
+          <td><span class="pill yellow">Partial</span></td>
+          <td>Needs stronger calendar, task, health, and memory integration.</td>
+        </tr>
+        <tr>
+          <td><strong>Work while I am away</strong></td>
+          <td>No</td>
+          <td><span class="pill red">Mostly fake</span></td>
+          <td>Needs fuller background agent runtime and durable autonomy controls.</td>
+        </tr>
+        <tr>
+          <td><strong>Track agent progress</strong></td>
+          <td>Partial</td>
+          <td><span class="pill blue">Structural</span></td>
+          <td>Seam tracker and operator surfaces now support this more honestly.</td>
+        </tr>
+        <tr>
+          <td><strong>Remember important context</strong></td>
+          <td>Partial</td>
+          <td><span class="pill yellow">Partial</span></td>
+          <td>Needs stronger memory rules and continuity behavior.</td>
+        </tr>
+        <tr>
+          <td><strong>Recommend next actions</strong></td>
+          <td>Partial</td>
+          <td><span class="pill yellow">Partial</span></td>
+          <td>Depends heavily on data quality and substrate consistency.</td>
+        </tr>
+        <tr>
+          <td><strong>Execute tasks</strong></td>
+          <td>Limited</td>
+          <td><span class="pill orange">Constrained</span></td>
+          <td>Needs a stronger shared tool/action layer plus durable oversight.</td>
+        </tr>
+      </table>
+    </section>
+  </div>
+</body>
+</html>

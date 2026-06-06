@@ -70,6 +70,7 @@ def render_glass_shell(runtime, initial_packet: str = "") -> str:
   --nav-h:    58px;
   --strip-h:  2px;
   --bar-h:    70px;
+  --bar-safe-h: 150px;
 }}
 
 /* ── Domain overrides — ONLY the 4 hue vars change ── */
@@ -854,7 +855,7 @@ body::after {{
   position: relative;
   z-index: 1;
   padding-top: 24px;
-  padding-bottom: calc(var(--bar-h) + 24px);
+  padding-bottom: calc(var(--bar-safe-h) + env(safe-area-inset-bottom, 0px));
   padding-left: calc(var(--nav-w) + 24px);
   padding-right: 24px;
   max-width: none;
@@ -1305,6 +1306,37 @@ body::after {{
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 20px;
+}}
+@media (max-width: 1440px), (max-height: 940px) {{
+  :root {{
+    --bar-safe-h: 166px;
+  }}
+
+  .main {{
+    padding-top: 18px;
+    padding-right: 18px;
+  }}
+
+  .view-header,
+  .stats-strip,
+  .overview-hero-zone,
+  .overview-priority-strip,
+  .overview-ambient-row {{
+    margin-bottom: 14px;
+  }}
+
+  .overview-hero-zone {{
+    gap: 14px;
+    min-height: 0;
+  }}
+
+  .overview-priority-strip {{
+    gap: 12px;
+  }}
+
+  .mode-pill {{
+    padding: 6px 13px;
+  }}
 }}
 .ambient-tile {{
   display: inline-flex;
@@ -4171,7 +4203,7 @@ body::after {{
     0 -4px 32px rgba(0,0,0,0.55),
     0 -1px 0 rgba(var(--hue-rgb),0.10),
     inset 0 1px 0 rgba(255,255,255,0.08);
-  padding: 8px 24px 12px;
+  padding: 8px 24px calc(12px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -7616,6 +7648,7 @@ body::after {{
       <div class="view-title">HEALTH INTELLIGENCE</div>
       <div style="display:flex;align-items:center;gap:12px;">
         <div style="font-size:11px;color:var(--text-3);" id="health-last-sync">—</div>
+        <button class="btn-ghost" onclick="openHealthDesktopExperience()" style="font-size:10px;">Open Desktop Experience</button>
         <button class="vitals-log-btn" onclick="openVitalsEntry()" title="Log missed vitals">＋ Log vitals</button>
         <button class="btn btn-hue btn-sm" onclick="helenRefresh()" id="helen-refresh-btn" style="font-size:10px;">↻ Refresh Analysis</button>
       </div>
@@ -18197,6 +18230,10 @@ async function loadHealth() {{
   samLoadFoodLog();
   // Init health chat (load doctor roster)
   hchatInit();
+}}
+
+function openHealthDesktopExperience() {{
+  window.open('/health-desktop', '_blank', 'noopener');
 }}
 
 /* ═══ MANUAL VITALS ENTRY ════════════════════════════════════ */

@@ -19,7 +19,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json
+
 _IDEAS_PATH = Path.home() / ".jarvis" / "ideas.json"
+_IDEAS_LOG_PATH = _IDEAS_PATH.with_name("ideas_log.jsonl")
+_IDEAS_STATE_LOG_PATH = _IDEAS_PATH.with_name("ideas_state_log.jsonl")
 _lock = threading.Lock()
 
 VALID_STATUSES = ["captured", "queued", "researching", "done", "passed"]
@@ -33,7 +37,45 @@ def _load() -> list[dict]:
     try:
         if _IDEAS_PATH.exists():
             data = json.loads(_IDEAS_PATH.read_text(encoding="utf-8"))
-            return data if isinstance(data, list) else []
+            if isinstance(data, list) and data:
+                return data
+            return _load_from_state_log()
+    except Exception:
+        return _load_from_state_log()
+    if not _IDEAS_PATH.exists():
+        return _load_from_state_log()
+    return []
+
+
+def _load_from_state_log() -> list[dict]:
+    try:
+        if _IDEAS_STATE_LOG_PATH.exists():
+            latest: list[dict] = []
+            for line in _IDEAS_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+            return latest
+    except Exception:
+        return _load_from_log()
+    return _load_from_log()
+
+
+def _load_from_log() -> list[dict]:
+    try:
+        if _IDEAS_LOG_PATH.exists():
+            latest: list[dict] = []
+            for line in _IDEAS_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+            return latest
     except Exception:
         pass
     return []
@@ -41,7 +83,22 @@ def _load() -> list[dict]:
 
 def _save(ideas: list[dict]) -> None:
     _IDEAS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _IDEAS_PATH.write_text(json.dumps(ideas, indent=2) + "\n", encoding="utf-8")
+    saved_at = _now()
+    atomic_write_json(_IDEAS_PATH, ideas)
+    append_jsonl(
+        _IDEAS_LOG_PATH,
+        {
+            "saved_at": saved_at,
+            "records": ideas,
+        },
+    )
+    append_jsonl(
+        _IDEAS_STATE_LOG_PATH,
+        {
+            "saved_at": saved_at,
+            "records": ideas,
+        },
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,24 @@
+{
+  "calendar-route:evt-codex-calendar-route-proof": {
+    "run_id": "2ac0259d-0662-469f-b844-1bf7b0b8175f",
+    "job_id": "calendar-route:evt-codex-calendar-route-proof",
+    "title": "Calendar route for Codex Route Proof",
+    "job_type": "calendar-route",
+    "actor": "chris",
+    "status": "review-ready",
+    "current_step": "review-ready",
+    "message": "Calendar route sandbox run finished. Review the handoff packet before opening live navigation.",
+    "queued_at": "2026-06-02T08:49:14.173650+00:00",
+    "started_at": "2026-06-02T08:49:14.175069+00:00",
+    "updated_at": "2026-06-02T08:49:14.178012+00:00",
+    "worktree_path": "/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/data/state/calendar_route_sandbox/evt-codex-calendar-route-proof",
+    "mutation_route": {},
+    "metadata": {
+      "triggered_by": "approval-guard",
+      "event_id": "evt-codex-calendar-route-proof",
+      "lane_kind": "calendar-route",
+      "report_path": "/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/data/system/calendar_route_sandbox_reports/2ac0259d-0662-469f-b844-1bf7b0b8175f.json"
+    },
+    "finished_at": "2026-06-02T08:49:14.178012+00:00"
+  }
+}

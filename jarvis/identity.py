@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
@@ -9,6 +10,7 @@ from typing import Any
 
 from .data_hygiene import record_looks_like_test_data
 from .models import HouseholdProfile
+from .persistence import append_jsonl, atomic_write_json
 
 
 IDENTITY_PATH = Path.cwd() / "data" / "settings" / "identity.json"
@@ -73,23 +75,88 @@ class IdentityRegistry:
         self.household = household
         self.path = path
 
-    def load(self) -> dict[str, Any]:
-        defaults = self._defaults()
-        if not self.path.exists():
-            return defaults
-        try:
-            payload = json.loads(self.path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return defaults
-        members = self._load_members(payload.get("members", []), defaults["members"])
-        devices = self._load_devices(payload.get("devices", []))
+    def _log_path(self) -> Path:
+        if self.path == IDENTITY_PATH:
+            return self.path.with_name("identity_log.jsonl")
+        return self.path.with_name(f"{self.path.stem}_log.jsonl")
+
+    def _state_log_path(self) -> Path:
+        if self.path == IDENTITY_PATH:
+            return self.path.with_name("identity_state_log.jsonl")
+        return self.path.with_name(f"{self.path.stem}_state_log.jsonl")
+
+    def _state_from_payload(self, state_payload: dict[str, Any], defaults: dict[str, Any]) -> dict[str, Any]:
+        members = self._load_members(state_payload.get("members", []), defaults["members"])
+        devices = self._load_devices(state_payload.get("devices", []))
         data = {
             "members": members,
             "devices": devices,
-            "service": self._coerce_service(payload.get("service", defaults["service"])),
-            "updated_at": str(payload.get("updated_at", defaults["updated_at"])),
+            "service": self._coerce_service(state_payload.get("service", defaults["service"])),
+            "updated_at": str(state_payload.get("updated_at", defaults["updated_at"])),
         }
         return self._sync_member_devices(data)
+
+    def _load_from_log(self) -> dict[str, Any]:
+        defaults = self._defaults()
+        try:
+            log_path = self._log_path()
+            if not log_path.exists():
+                return defaults
+            latest: dict[str, Any] | None = None
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                state = payload.get("state")
+                if isinstance(state, dict):
+                    latest = dict(state)
+            if latest is None:
+                return defaults
+            return self._state_from_payload(latest, defaults)
+        except (OSError, json.JSONDecodeError):
+            return defaults
+
+    def _load_from_state_log(self) -> dict[str, Any]:
+        defaults = self._defaults()
+        try:
+            log_path = self._state_log_path()
+            if not log_path.exists():
+                return defaults
+            latest: dict[str, Any] | None = None
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                state = payload.get("state")
+                if isinstance(state, dict):
+                    latest = dict(state)
+            if latest is None:
+                return defaults
+            return self._state_from_payload(latest, defaults)
+        except (OSError, json.JSONDecodeError):
+            return defaults
+
+    def load(self) -> dict[str, Any]:
+        defaults = self._defaults()
+        if not self.path.exists():
+            state = self._load_from_state_log()
+            if state != defaults:
+                return state
+            return self._load_from_log()
+        try:
+            payload = json.loads(self.path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            state = self._load_from_state_log()
+            if state != defaults:
+                return state
+            return self._load_from_log()
+        state = self._state_from_payload(payload, defaults)
+        if state != defaults:
+            return state
+        replayed_state = self._load_from_state_log()
+        if replayed_state != defaults:
+            return replayed_state
+        return self._load_from_log()
 
     def describe(self) -> dict[str, Any]:
         state = self.load()
@@ -545,7 +612,21 @@ class IdentityRegistry:
             "service": state["service"],
             "updated_at": _now_iso(),
         }
-        self.path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(self.path, payload)
+        append_jsonl(
+            self._log_path(),
+            {
+                "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "state": payload,
+            },
+        )
+        append_jsonl(
+            self._state_log_path(),
+            {
+                "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "state": payload,
+            },
+        )
 
     def _defaults(self) -> dict[str, Any]:
         members = [
@@ -658,11 +739,26 @@ class IdentityRegistry:
             "always_on_enabled": bool(payload.get("always_on_enabled", False)),
             "host_label": str(payload.get("host_label", "Primary JARVIS host")).strip() or "Primary JARVIS host",
             "host_type": str(payload.get("host_type", "desktop")).strip() or "desktop",
+            "deployment_mode": str(payload.get("deployment_mode", "hybrid")).strip() or "hybrid",
             "lan_url": str(payload.get("lan_url", "")).strip(),
             "hostname": str(payload.get("hostname", "jarvis.local")).strip() or "jarvis.local",
+            "hosted_host_label": str(payload.get("hosted_host_label", "Hetzner family stack")).strip() or "Hetzner family stack",
+            "hosted_provider": str(payload.get("hosted_provider", "Hetzner")).strip() or "Hetzner",
+            "hosted_base_url": str(payload.get("hosted_base_url", "https://jarvis.teambinion.org")).strip(),
+            "remote_admin_host": str(payload.get("remote_admin_host", "")).strip(),
+            "remote_admin_user": str(payload.get("remote_admin_user", "root")).strip() or "root",
+            "edge_provider": str(payload.get("edge_provider", "Cloudflare Tunnel")).strip() or "Cloudflare Tunnel",
+            "cloudflare_access_enabled": bool(payload.get("cloudflare_access_enabled", True)),
+            "tunnel_enabled": bool(payload.get("tunnel_enabled", True)),
+            "compose_project": str(payload.get("compose_project", "jarvis-family")).strip() or "jarvis-family",
             "launch_on_boot": bool(payload.get("launch_on_boot", False)),
             "watchdog_enabled": bool(payload.get("watchdog_enabled", False)),
-            "notes": str(payload.get("notes", "Run JARVIS as local infrastructure, not a manual dev process.")).strip(),
+            "notes": str(
+                payload.get(
+                    "notes",
+                    "Run JARVIS as infrastructure with a household host plan plus the Hetzner and Cloudflare hosted edge."
+                )
+            ).strip(),
         }
 
     def _sync_member_devices(self, state: dict[str, Any]) -> dict[str, Any]:

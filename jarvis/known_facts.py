@@ -19,6 +19,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json
+
 # ---------------------------------------------------------------------------
 # Memory domains
 # ---------------------------------------------------------------------------
@@ -191,19 +193,85 @@ class KnownFactsStore:
     def _index_path(self, domain: str) -> Path:
         return self._domain_dir(domain) / "_index.json"
 
+    def _index_log_path(self, domain: str) -> Path:
+        return self._domain_dir(domain) / "_index_log.jsonl"
+
+    def _index_state_log_path(self, domain: str) -> Path:
+        return self._domain_dir(domain) / "_index_state_log.jsonl"
+
     def _load_index(self, domain: str) -> dict[str, str]:
         """Returns {composite_key → fact_id}."""
         path = self._index_path(domain)
         if not path.exists():
-            return {}
+            return self._load_index_from_state_log(domain)
         try:
-            return json.loads(path.read_text(encoding="utf-8"))
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(payload, dict) and payload:
+                return payload
+            return self._load_index_from_state_log(domain)
+        except (json.JSONDecodeError, OSError):
+            return self._load_index_from_state_log(domain)
+
+    def _load_index_from_state_log(self, domain: str) -> dict[str, str]:
+        path = self._index_state_log_path(domain)
+        if not path.exists():
+            return self._load_index_from_log(domain)
+        latest: dict[str, str] = {}
+        try:
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, dict):
+                    latest = {
+                        str(key): str(value)
+                        for key, value in records.items()
+                        if str(key).strip() and str(value).strip()
+                    }
+        except (json.JSONDecodeError, OSError):
+            return self._load_index_from_log(domain)
+        return latest
+
+    def _load_index_from_log(self, domain: str) -> dict[str, str]:
+        path = self._index_log_path(domain)
+        if not path.exists():
+            return {}
+        latest: dict[str, str] = {}
+        try:
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, dict):
+                    latest = {
+                        str(key): str(value)
+                        for key, value in records.items()
+                        if str(key).strip() and str(value).strip()
+                    }
         except (json.JSONDecodeError, OSError):
             return {}
+        return latest
 
     def _save_index(self, domain: str, index: dict[str, str]) -> None:
         path = self._index_path(domain)
-        path.write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
+        saved_at = _now_iso()
+        atomic_write_json(path, index)
+        append_jsonl(
+            self._index_log_path(domain),
+            {
+                "saved_at": saved_at,
+                "records": index,
+            },
+        )
+        append_jsonl(
+            self._index_state_log_path(domain),
+            {
+                "saved_at": saved_at,
+                "records": index,
+            },
+        )
 
     @staticmethod
     def _composite_key(actor_id: str, domain: str, key: str) -> str:
@@ -211,7 +279,7 @@ class KnownFactsStore:
 
     def _write_fact(self, fact: MemoryFact) -> None:
         path = self._fact_path(fact.domain, fact.fact_id)
-        path.write_text(json.dumps(fact.to_dict(), indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(path, fact.to_dict())
 
     def _read_fact_file(self, domain: str, fact_id: str) -> MemoryFact | None:
         path = self._fact_path(domain, fact_id)
@@ -363,21 +431,104 @@ class KnownFactsStore:
     def _drift_path(self, drift_id: str) -> Path:
         return self._drift_dir() / f"{drift_id}.json"
 
+    def _drift_log_path(self, drift_id: str) -> Path:
+        path = self._drift_path(drift_id)
+        return path.with_name(f"{path.stem}_log.jsonl")
+
+    def _drift_state_log_path(self, drift_id: str) -> Path:
+        path = self._drift_path(drift_id)
+        return path.with_name(f"{path.stem}_state_log.jsonl")
+
     def log_drift(self, drift: DriftEvent) -> None:
         """Persist a drift event."""
         path = self._drift_path(drift.drift_id)
-        path.write_text(json.dumps(drift.to_dict(), indent=2) + "\n", encoding="utf-8")
+        payload = drift.to_dict()
+        saved_at = _now_iso()
+        atomic_write_json(path, payload)
+        append_jsonl(
+            self._drift_log_path(drift.drift_id),
+            {
+                "saved_at": saved_at,
+                "records": payload,
+            },
+        )
+        append_jsonl(
+            self._drift_state_log_path(drift.drift_id),
+            {
+                "saved_at": saved_at,
+                "records": payload,
+            },
+        )
+
+    def _load_drift_from_state_log(self, drift_id: str) -> DriftEvent | None:
+        path = self._drift_state_log_path(drift_id)
+        if not path.exists():
+            return self._load_drift_from_log(drift_id)
+        latest: dict[str, Any] | None = None
+        try:
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, dict):
+                    latest = dict(records)
+        except (json.JSONDecodeError, OSError):
+            return self._load_drift_from_log(drift_id)
+        if latest is None:
+            return self._load_drift_from_log(drift_id)
+        try:
+            return DriftEvent.from_dict(latest)
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    def _load_drift_from_log(self, drift_id: str) -> DriftEvent | None:
+        path = self._drift_log_path(drift_id)
+        if not path.exists():
+            return None
+        latest: dict[str, Any] | None = None
+        try:
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, dict):
+                    latest = dict(records)
+        except (json.JSONDecodeError, OSError):
+            return None
+        if latest is None:
+            return None
+        try:
+            return DriftEvent.from_dict(latest)
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    def _read_drift(self, drift_id: str) -> DriftEvent | None:
+        path = self._drift_path(drift_id)
+        if not path.exists():
+            return self._load_drift_from_state_log(drift_id)
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return DriftEvent.from_dict(data)
+        except (json.JSONDecodeError, OSError, KeyError):
+            return self._load_drift_from_state_log(drift_id)
 
     def _all_drift_events(self) -> list[DriftEvent]:
         events: list[DriftEvent] = []
+        drift_ids: set[str] = set()
         for path in sorted(self._drift_dir().glob("*.json")):
             if path.name.startswith("_"):
                 continue
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-                events.append(DriftEvent.from_dict(data))
-            except (json.JSONDecodeError, OSError, KeyError):
-                continue
+            drift_ids.add(path.stem)
+        for path in sorted(self._drift_dir().glob("*_state_log.jsonl")):
+            stem = path.stem.removesuffix("_state_log")
+            if stem and not stem.startswith("_"):
+                drift_ids.add(stem)
+        for drift_id in sorted(drift_ids):
+            drift = self._read_drift(drift_id)
+            if drift is not None:
+                events.append(drift)
         return events
 
     def get_active_drift(self, actor_id: str = "chris") -> list[DriftEvent]:
@@ -388,30 +539,54 @@ class KnownFactsStore:
         ]
 
     def acknowledge_drift(self, drift_id: str) -> bool:
-        path = self._drift_path(drift_id)
-        if not path.exists():
+        drift = self._read_drift(drift_id)
+        if drift is None:
             return False
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-            data["acknowledged"] = True
-            path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-            return True
-        except (json.JSONDecodeError, OSError):
-            return False
+        payload = drift.to_dict()
+        payload["acknowledged"] = True
+        saved_at = _now_iso()
+        atomic_write_json(self._drift_path(drift_id), payload)
+        append_jsonl(
+            self._drift_log_path(drift_id),
+            {
+                "saved_at": saved_at,
+                "records": payload,
+            },
+        )
+        append_jsonl(
+            self._drift_state_log_path(drift_id),
+            {
+                "saved_at": saved_at,
+                "records": payload,
+            },
+        )
+        return True
 
     def resolve_drift(self, drift_id: str) -> bool:
-        path = self._drift_path(drift_id)
-        if not path.exists():
+        drift = self._read_drift(drift_id)
+        if drift is None:
             return False
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-            data["resolved"] = True
-            data["acknowledged"] = True
-            data["resolved_at"] = _now_iso()
-            path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-            return True
-        except (json.JSONDecodeError, OSError):
-            return False
+        payload = drift.to_dict()
+        payload["resolved"] = True
+        payload["acknowledged"] = True
+        payload["resolved_at"] = _now_iso()
+        saved_at = _now_iso()
+        atomic_write_json(self._drift_path(drift_id), payload)
+        append_jsonl(
+            self._drift_log_path(drift_id),
+            {
+                "saved_at": saved_at,
+                "records": payload,
+            },
+        )
+        append_jsonl(
+            self._drift_state_log_path(drift_id),
+            {
+                "saved_at": saved_at,
+                "records": payload,
+            },
+        )
+        return True
 
     # ------------------------------------------------------------------
     # Context assembly

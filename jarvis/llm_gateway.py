@@ -23,6 +23,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from .persistence import append_jsonl, atomic_write_jsonl
+
 _log = logging.getLogger("jarvis.llm_gateway")
 
 # ---------------------------------------------------------------------------
@@ -30,6 +32,7 @@ _log = logging.getLogger("jarvis.llm_gateway")
 # ---------------------------------------------------------------------------
 
 _USAGE_LOG_PATH = Path(__file__).parent.parent / "data" / "logs" / "llm_usage.jsonl"
+_USAGE_STATE_LOG_PATH = _USAGE_LOG_PATH.with_name("llm_usage_state_log.jsonl")
 _usage_write_lock = threading.Lock()
 
 # Approximate cost per 1M tokens (input, output) in USD — update as pricing changes.
@@ -63,12 +66,61 @@ def _record_usage(entry: dict) -> None:
     """Append one usage record to llm_usage.jsonl. Thread-safe. Never raises."""
     try:
         _USAGE_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        line = json.dumps(entry, separators=(",", ":")) + "\n"
         with _usage_write_lock:
-            with _USAGE_LOG_PATH.open("a", encoding="utf-8") as fh:
-                fh.write(line)
+            records = _load_usage_records_locked()
+            records.append(entry)
+            append_jsonl(
+                _USAGE_STATE_LOG_PATH,
+                {
+                    "saved_at": datetime.now(timezone.utc).isoformat(),
+                    "records": records,
+                },
+            )
+            atomic_write_jsonl(_USAGE_LOG_PATH, records)
     except Exception as exc:
         _log.debug("Usage tracking write failed: %s", exc)
+
+
+def _load_usage_records_locked() -> list[dict]:
+    if _USAGE_LOG_PATH.exists():
+        try:
+            records: list[dict] = []
+            for raw in _USAGE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                raw = raw.strip()
+                if not raw:
+                    continue
+                try:
+                    rec = json.loads(raw)
+                except Exception:
+                    continue
+                if isinstance(rec, dict):
+                    records.append(rec)
+            if records:
+                return records
+        except Exception:
+            pass
+    return _load_usage_records_from_state_log_locked()
+
+
+def _load_usage_records_from_state_log_locked() -> list[dict]:
+    if not _USAGE_STATE_LOG_PATH.exists():
+        return []
+    try:
+        latest: list[dict] = []
+        for raw in _USAGE_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                payload = json.loads(raw)
+            except Exception:
+                continue
+            records = payload.get("records")
+            if isinstance(records, list):
+                latest = [dict(item) for item in records if isinstance(item, dict)]
+        return latest
+    except Exception:
+        return []
 
 
 def usage_summary(hours: int = 24) -> dict:
@@ -104,13 +156,14 @@ def usage_summary(hours: int = 24) -> dict:
     }
 
     if not _USAGE_LOG_PATH.exists():
-        return result
-
-    try:
         with _usage_write_lock:
-            lines = _USAGE_LOG_PATH.read_text(encoding="utf-8").splitlines()
-    except Exception:
-        return result
+            lines = [json.dumps(item, separators=(",", ":")) for item in _load_usage_records_locked()]
+    else:
+        try:
+            with _usage_write_lock:
+                lines = [json.dumps(item, separators=(",", ":")) for item in _load_usage_records_locked()]
+        except Exception:
+            return result
 
     for raw in lines:
         raw = raw.strip()

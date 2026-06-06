@@ -2,288 +2,491 @@
 
 ## Purpose
 
-This roadmap connects present-day JARVIS to the long-horizon civilization-scale vision.
+This document connects present-day JARVIS to the full civilization-scale
+vision.
 
-It is meant to answer three questions clearly:
+It exists to answer five questions clearly:
 
-1. Where are we now?
-2. What has to happen next?
-3. What sequence gets us from a strong household command system to a sovereign intelligence environment for human life?
+1. What is JARVIS ultimately becoming?
+2. What is already real?
+3. What is still missing?
+4. What order must the work happen in?
+5. How do we avoid drifting back into "assistant" thinking?
 
-## North Star
+This roadmap should be read after:
 
-JARVIS becomes a sovereign intelligence environment for a family:
+- `docs/jarvis-canonical-operating-model.md`
+- `docs/always-on-agent-backend-blueprint.md`
+- `docs/JARVIS-MATURITY-MODEL.md`
 
-- one source of truth
+If another roadmap or planning document conflicts with this one, this document
+wins unless deliberately revised.
+
+## Canonical Frame
+
+JARVIS is not a chat interface, dashboard, or smart-home wrapper.
+
+JARVIS is an always-on orchestrator composed of specialized agents operating on
+behalf of a household across time.
+
+Direct interaction is only one operating mode inside a continuously running
+system.
+
+The household should experience:
+
 - one governed intelligence layer
 - one continuity engine across time
-- one system that helps the household think, decide, coordinate, protect, grow, and remember better
+- one institutional memory system
+- one command-and-oversight surface for live steering
+- one background society of agents doing bounded delegated work
 
-The final category is not “assistant.”
+The final category is not "assistant software."
 
 The final category is civilization software for a human life.
 
+## North Star
+
+At civilization scale, JARVIS becomes a governed household intelligence that:
+
+- helps a family close the gap between stated values and lived reality
+- preserves institutional memory across years, not sessions
+- earns authority through evidence instead of assuming it
+- remains inspectable, overridable, and household-operable
+- compounds wisdom, continuity, and stewardship across generations
+
+The deepest promise is not convenience.
+
+The deepest promise is:
+
+**you're not carrying this alone**
+
+## Roadmap Doctrine
+
+Everything below this point should obey six non-negotiables.
+
+### 1. Always-on beats reactive
+
+JARVIS must continue useful work when no one is actively using an interface.
+
+### 2. Oversight beats chat
+
+The core user experience is:
+
+- what changed
+- what matters
+- what is underway
+- what needs approval
+- what should be redirected
+
+### 3. Governance beats raw autonomy
+
+No expansion of agent authority should outrun supervision, auditability,
+rollback posture, or trust boundaries.
+
+### 4. Event truth beats opaque mutable state
+
+Where practical, the event log should become the system ground truth, with
+state derived from typed, versioned, replayable history.
+
+### 5. Household-operable beats builder-dependent
+
+The long-term target is not "Chris can operate everything."
+
+It is "the household can benefit from JARVIS directly, at the right level of
+responsibility and complexity."
+
+### 6. Earned authority beats assumed authority
+
+The promotion engine is a core civilization primitive.
+
+JARVIS should eventually earn the right to do more by:
+
+- generating evidence
+- demonstrating repeatability
+- passing review
+- crossing explicit consent boundaries
+
+## Load-Bearing Systems
+
+Civilization scale does not come from more features.
+
+It comes from a small set of load-bearing systems becoming real.
+
+### 1. Always-on runtime kernel
+
+JARVIS needs durable agent lifecycle control:
+
+- wake
+- run
+- pause
+- resume
+- interrupt
+- escalate
+- retire
+
+### 2. Event-grounded system truth
+
+JARVIS needs append-only, typed, versioned history for:
+
+- state change
+- agent action
+- human override
+- escalation
+- promotion
+- failure
+
+### 3. Governed agent society
+
+JARVIS needs a real supervision plane for:
+
+- trust zones
+- authority stages
+- sandbox vs live execution
+- review and escalation
+- rollback posture
+- doctrine formation
+
+### 4. Institutional memory and continuity
+
+JARVIS needs memory that compounds and is actually used:
+
+- people
+- patterns
+- rituals
+- commitments
+- lessons learned
+- prior resolutions
+
+### 5. Household command and participation
+
+JARVIS needs product surfaces that make the society visible and steerable:
+
+- command center
+- silent-first phone operation
+- approvals
+- continuity surfaces
+- household-safe controls
+- role-aware participation
+
+### 6. Promotion and earned authority
+
+JARVIS needs the mechanism that converts track record into bounded authority.
+
+This is the bridge from "sandbox intelligence" to "governed real work."
+
 ## Where We Are Now
 
-Current JARVIS is in the transition from a multi-surface intelligent product to a true household operating system.
+JARVIS is no longer just a speculative architecture.
+
+It is in the transition from a multi-surface intelligent product to a real
+always-on household operating system.
 
 ### Already real
 
 - live production stack on Hetzner behind Cloudflare
-- web JARVIS as the current behavioral source of truth
-- production iPhone app pointed at `jarvis.teambinion.org`
-- Apple contract layer through `/api/apple/*`
-- parity work across `Brief`, `Needs`, `Health`, `Weather`, `Home`, `Chronicle`, `Publish`, `Huddle`, and `Navigation`
-- live physical-device verification discipline
-- recurring contract verification on the deployed stack
-- existing doctrine around family mandate, trust zones, sandbox execution, staged authority, and promotion from draft to live
+- deployed Apple contract layer through `/api/apple/*`
+- production iPhone app targeting the live hosted environment
+- real command surfaces across the major household tabs
+- recurring runtime verification discipline
+- doctrine for trust zones, sandboxing, staged authority, and governed action
+- canonical docs that define JARVIS as an always-on orchestrator
+- backend foundations for registry, runtime, routing, supervision, and work
+  state
 
-### Not yet complete
+### Emerging but not yet complete
 
-- final Navigation parity and reliability polish
-- fuller settings/admin breadth
-- trust-zone control plane implementation
-- ambient intelligence orchestration
-- durable memory graph
-- bounded autonomous execution arenas
-- growth and legacy systems
+- live shared-state and notification coherence across all surfaces
+- full trust-zone control plane implementation
+- event-grounded system truth as a first-class primitive
+- durable agent-local work state with safe concurrency guarantees
+- promotion engine and earned-authority pipeline
+- fully household-operable governance and participation
+- ambient orchestration that is helpful without becoming noisy
 
-### Current maturity
+### Current maturity statement
 
 JARVIS today is best described as:
 
-**an emerging command OS with real live surfaces and strong doctrine, but not yet a fully governed family intelligence environment**
+**an emerging household command OS with real doctrine, real runtime truth, and
+early agent-society foundations, but not yet a full civilization-scale governed
+intelligence environment**
 
-## Roadmap Phases
+## Phase Map
+
+The phases below are intentionally ordered.
+
+Each phase should make the next one more truthful, not merely more ambitious.
 
 ### Phase 0: Unified Runtime
 
 Goal:
-Make web, backend, and iPhone operate as one system.
+Make web, backend, and iPhone behave like one system.
 
-What it includes:
+Includes:
 
-- shared truth across app surfaces
+- shared truth across surfaces
 - Apple contract stability
-- live deployment and verification discipline
-- removal of split-brain behavior
+- deploy and verification discipline
+- elimination of split-brain behavior
 
 Current status:
 
-- mostly complete
-- core source-of-truth stabilization is in place
+- largely achieved
 
-Exit condition:
+Exit gate:
 
-- phone and web behave as one product for core household flows
+- core household flows behave consistently across web and phone
 
 ### Phase 1: Household Command OS
 
 Goal:
-Make JARVIS indispensable in the daily life of the household.
+Make JARVIS indispensable in ordinary family life.
 
-What it includes:
+Includes:
 
-- morning command center
-- approvals and staged actions
+- daily brief and command posture
+- approvals and staged action
 - home-state coordination
-- route/weather/household posture integration
+- calendar, weather, route, and household posture integration
 - systems visibility and sync truth
 
 Current status:
 
-- materially underway
-- core command surfaces exist and are live-backed
+- actively real
 
-Exit condition:
+Exit gate:
 
-- JARVIS can run a real household day better than the existing mix of tools
+- JARVIS runs a real household day better than the current mix of disconnected
+  tools
 
-### Phase 2: Depth And Behavioral Parity
+### Phase 2: Behavioral Depth and Surface Credibility
 
 Goal:
-Make the phone and web feel like one coherent system with real depth, not a thin companion app.
+Make the major surfaces behaviorally credible, not just connected.
 
-What it includes:
+Includes:
 
-- deeper workflow support in `Needs`
+- deeper `Needs`
 - richer `Health`
-- Chronicle context and patterns
-- Publishing workflow depth
-- Huddle roster depth
-- stronger Navigation parity
+- credible `Chronicle`
+- stronger `Navigation`
+- broader admin and systems reliability
 
 Current status:
 
-- complete
-- core phone parity is now behaviorally credible across the major tabs
+- materially underway
 
-Exit condition:
+Exit gate:
 
-- major phone tabs are not just live-backed but behaviorally credible against the web instance
+- the primary phone and web surfaces are believable enough for daily trust, not
+  just demos
 
 ### Phase 3: Shared-State Intelligence Surfaces
 
 Goal:
-Expose the deeper shared-state layers that make JARVIS feel like one ambient system.
+Expose the shared-state spine that makes JARVIS feel like one ambient system.
 
-What it includes:
+Includes:
 
-- notifications workflow
-- deeper calendar/reminders surfaces
-- focus-state and interruption posture
-- richer sound/vision histories
-- more complete systems/admin truth
+- notification workflow
+- deeper calendar and reminders state
+- focus and interruption posture
+- sound and vision histories
+- richer systems and admin truth
+- inspectable cross-surface continuity
 
 Current status:
 
-- ready to begin
-- mirror visibility exists, but the shared event spine and notification workflow do not yet exist
+- beginning
 
-Exit condition:
+Exit gate:
 
-- household shared-state flows feel native, inspectable, and actionable across surfaces
+- foreground and background state can be surfaced coherently as one running
+  system
 
 ### Phase 4: Trust-Zone Control Plane
 
 Goal:
-Implement governed agency, not just helpful UI.
+Turn doctrine into live execution truth.
 
-What it includes:
+Includes:
 
 - trust-zone registry
-- authority-stage model
-- promotion and demotion
-- action explainability
+- authority-stage enforcement
+- promotion and demotion actions
+- explainability
 - audit trails
 - escalation boundaries
+- bounded rollback posture
 
 Current status:
 
-- doctrine exists
-- implementation is still ahead of us
+- doctrine is ahead of implementation
 
-Exit condition:
+Exit gate:
 
-- every consequential action has explicit authority, scope, and escalation rules
+- every consequential action has explicit authority, scope, escalation, and
+  review semantics in code
 
-### Phase 5: Ambient JARVIS
+### Phase 5: Agent Runtime and Event Spine
+
+Goal:
+Make the always-on society real in the backend, not just conceptual in docs.
+
+Includes:
+
+- durable runtime kernel
+- wake conditions and scheduler fabric
+- event bus and event log discipline
+- agent inbox, outbox, and worklog state
+- cross-agent handoff
+- concurrency-safe persistence
+
+Current status:
+
+- foundations exist, but this remains the major structural buildout lane
+
+Exit gate:
+
+- JARVIS can run persistent delegated work safely, explainably, and without
+  brittle shared-state corruption
+
+### Phase 6: Ambient JARVIS
 
 Goal:
 Make JARVIS proactively useful without becoming intrusive.
 
-What it includes:
+Includes:
 
-- watch/phone/car/home surface routing
+- watch, phone, car, and home routing
 - presence-aware prompts
 - quiet warnings
-- mode-aware and room-aware delivery
-- proactive but bounded interventions
+- room-aware and mode-aware delivery
+- interruption discipline
+- background-to-foreground escalation rules
 
-Exit condition:
+Exit gate:
 
-- JARVIS helps before being asked, while still preserving peace and trust
+- JARVIS helps before being asked while still preserving peace, quiet, and
+  trust
 
-### Phase 6: Memory And Continuity Engine
+### Phase 7: Memory and Continuity Engine
 
 Goal:
-Turn JARVIS into a household second mind.
+Turn JARVIS into the household's second mind.
 
-What it includes:
+Includes:
 
-- memory graph for people, places, commitments, rituals, and patterns
+- event-grounded institutional memory
 - Chronicle as narrative interface
 - retrieval by situation
-- lessons learned and “how we handled this before”
+- lessons learned
+- prior resolution recall
 - longitudinal household continuity
 
-Exit condition:
+Exit gate:
 
-- current decisions are materially improved by real remembered family context
+- current decisions and long-running work materially improve because JARVIS
+  remembers what the household has already lived
 
-### Phase 7: Growth, Formation, And Stewardship
+### Phase 8: Promotion Engine and Sandbox Agency
+
+Goal:
+Let JARVIS earn bounded authority through evidence.
+
+Includes:
+
+- sandbox execution arenas
+- proposer and candidate-agent path
+- promotion records
+- evidence thresholds
+- human consent boundaries
+- rollback and pause controls
+
+Exit gate:
+
+- JARVIS can independently complete real useful work under governance, with
+  authority expanding only through earned track record
+
+### Phase 9: Formation, Stewardship, and Legacy
 
 Goal:
 Help the family not just operate, but become.
 
-What it includes:
+Includes:
 
-- adaptive tutoring
-- parenting support
+- parenting and growth scaffolding
 - health protocol loops
 - faith and ritual orchestration
-- personal growth scaffolding
-- household stewardship and values alignment
-
-Exit condition:
-
-- JARVIS improves real formation loops, not just operational efficiency
-
-### Phase 8: Sandbox Agency
-
-Goal:
-Let JARVIS do bounded real work under governance.
-
-What it includes:
-
-- sandbox execution arenas
-- publishing operations
-- research and synthesis
-- low-risk household automations
-- task orchestration
-- rollback and pause controls
-
-Exit condition:
-
-- JARVIS can independently complete real useful work with auditability and guardrails
-
-### Phase 9: Family Civilization Layer
-
-Goal:
-Make JARVIS a long-horizon system for household identity, continuity, and legacy.
-
-What it includes:
-
-- family constitution and doctrine as operating logic
 - season-of-life detection
-- conflict-risk and overload detection
-- household modes
+- overload and conflict-risk sensing
 - legacy archive
 - intergenerational memory bundles
 - value-aligned decision simulation
 
-Exit condition:
+Exit gate:
 
-- JARVIS is helping shape what kind of family this is becoming across years, not only what happens today
+- JARVIS is helping shape what kind of family this is becoming across years,
+  not just what happens this week
 
-## Practical Sequence From Here
+## Dependency Rules
 
-### Immediate next sequence
+The most important sequencing rules are:
 
-1. Finish the remaining Navigation parity and reliability work.
-2. Close the outstanding pre-Phase-3 checklist items.
-3. Start Phase 3 with shared-state workflow surfaces.
-4. Build Phase 4 trust-zone implementation before broadening autonomy.
+1. Do not widen autonomy before the trust-zone control plane is real.
+2. Do not trust background multi-agent work without concurrency-safe durable
+   state.
+3. Do not claim "civilization layer" progress if the household cannot inspect
+   and steer the system.
+4. Do not let memory become a write-only archive.
+5. Do not expand ambient behavior before interruption discipline is solid.
+6. Do not confuse surface breadth with civilization depth.
 
-### What not to do too early
+## Immediate Program From Here
 
-- do not over-generalize before household proof
-- do not widen autonomy before governance
-- do not scale ambient behavior before interruption discipline is solid
-- do not build memory everywhere before provenance and retrieval rules are clear
+The next practical build order should be:
 
-## Roadmap Summary
+1. finish command-surface credibility and shared-state truth
+2. complete the trust-zone control plane
+3. complete the agent runtime, event spine, and safe persistence layer
+4. make the promotion engine real enough to govern sandbox-to-live progression
+5. then broaden ambient and household-operable participation
 
-The build order is intentional:
+In concrete terms, the highest-value near-term work is:
+
+- stable shared-state surfaces across phone and web
+- permission and governance ownership in real product flows
+- live backend contract truth
+- concurrency-safe agent state
+- event-grounded runtime history
+- promotion-engine scaffolding
+
+## What To Avoid
+
+The most common failure modes from here are:
+
+- drifting back into reactive assistant thinking
+- shipping ambient behavior before governance
+- adding more tabs instead of strengthening shared state
+- building autonomy theater without runtime enforcement
+- accumulating memory without retrieval or explanation
+- letting the product remain builder-operated instead of becoming
+  household-operable
+
+## Summary
+
+The build order is deliberate:
 
 1. unify the runtime
-2. prove the command OS
-3. deepen the surfaces
-4. implement governance
-5. add ambient intelligence
-6. add memory
-7. add formation
-8. add bounded autonomy
-9. become the family civilization layer
+2. prove the household command OS
+3. deepen the behavioral credibility
+4. surface the shared-state spine
+5. implement governance as code
+6. complete the agent runtime and event spine
+7. add ambient intelligence
+8. add real memory and continuity
+9. add earned authority and sandbox agency
+10. become a formation, stewardship, and legacy system
 
-That is how JARVIS gets from “strong household app” to “civilization-scale intelligence environment.”
+That is the path from "strong household product" to "civilization-scale
+intelligence environment."

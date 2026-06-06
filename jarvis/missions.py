@@ -29,6 +29,7 @@ from .models import (
     TaskAgentProfile,
     TrustZone,
 )
+from .persistence import atomic_write_json
 from .trust import TrustSupport
 
 
@@ -63,7 +64,7 @@ class MissionStore:
         return payload if isinstance(payload, list) else []
 
     def _save_records(self, path: Path, records: list[dict[str, Any]]) -> None:
-        path.write_text(json.dumps(records, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(path, records)
 
     def list_dossiers(self) -> list[dict[str, Any]]:
         return self._load_records(self.dossiers_path)
@@ -1320,6 +1321,141 @@ class MissionSupport:
             "active_missions": active,
             "pending_approvals": approvals[:10],
             "family_alerts": family_alerts[:10],
+            "agent_society": self._agent_society_summary(active),
+        }
+
+    def _agent_society_summary(self, active_missions: list[dict[str, Any]]) -> dict[str, Any]:
+        registry = self.agent_registry.by_id()
+        agents: dict[str, dict[str, Any]] = {}
+        lanes: dict[str, dict[str, Any]] = {}
+
+        for mission in active_missions:
+            mission_id = str(mission.get("mission_id", "")).strip()
+            mission_title = str(mission.get("title", "")).strip() or "Mission"
+            work_states = dict(mission.get("agent_work_states") or {})
+            for agent_id, workspace in work_states.items():
+                state = dict(workspace or {})
+                agent_key = str(agent_id).strip()
+                if not agent_key:
+                    continue
+                details = registry.get(agent_key)
+                domain = str(getattr(details, "primary_domain", "") or state.get("role") or "general").strip() or "general"
+                row = agents.setdefault(
+                    agent_key,
+                    {
+                        "agent_id": agent_key,
+                        "label": str(getattr(details, "label", "") or agent_key),
+                        "primary_domain": domain,
+                        "mission_ids": [],
+                        "mission_titles": [],
+                        "roles": [],
+                        "statuses": [],
+                        "ownership_modes": [],
+                        "current_focuses": [],
+                        "active_tasks": 0,
+                        "blocked_tasks": 0,
+                        "pending_reviews": 0,
+                        "inbox_items": 0,
+                        "outbox_items": 0,
+                        "hypotheses": 0,
+                        "recent_decisions": 0,
+                        "lead_missions": 0,
+                        "last_updated_at": "",
+                    },
+                )
+                row["mission_ids"].append(mission_id)
+                row["mission_titles"].append(mission_title)
+                row["roles"] = self._trim_records(list(row.get("roles") or []) + [str(state.get("role", "")).strip()], limit=6)
+                row["statuses"] = self._trim_records(list(row.get("statuses") or []) + [str(state.get("status", "")).strip()], limit=6)
+                ownership_mode = str(state.get("ownership_mode", "")).strip() or "supporting"
+                row["ownership_modes"] = self._trim_records(list(row.get("ownership_modes") or []) + [ownership_mode], limit=6)
+                current_focus = str(state.get("current_focus", "")).strip()
+                if current_focus:
+                    row["current_focuses"] = self._trim_records(list(row.get("current_focuses") or []) + [current_focus], limit=4)
+                row["active_tasks"] += len(list(state.get("active_tasks") or []))
+                row["blocked_tasks"] += len(list(state.get("blocked_tasks") or []))
+                row["pending_reviews"] += len(list(state.get("pending_reviews") or []))
+                row["inbox_items"] += len(list(state.get("inbox") or []))
+                row["outbox_items"] += len(list(state.get("outbox") or []))
+                row["hypotheses"] += len(list(state.get("current_hypotheses") or []))
+                row["recent_decisions"] += len(list(state.get("recent_decisions") or []))
+                if ownership_mode == "lead":
+                    row["lead_missions"] += 1
+                updated_at = str(state.get("updated_at", "")).strip()
+                if updated_at and updated_at > str(row.get("last_updated_at", "")):
+                    row["last_updated_at"] = updated_at
+
+                lane = lanes.setdefault(
+                    domain,
+                    {
+                        "lane_id": domain,
+                        "name": domain.replace("-", " ").title(),
+                        "total_agents": 0,
+                        "lead_agents": 0,
+                        "active_tasks": 0,
+                        "blocked_tasks": 0,
+                        "pending_reviews": 0,
+                        "hypotheses": 0,
+                        "missions": [],
+                    },
+                )
+                lane["active_tasks"] += len(list(state.get("active_tasks") or []))
+                lane["blocked_tasks"] += len(list(state.get("blocked_tasks") or []))
+                lane["pending_reviews"] += len(list(state.get("pending_reviews") or []))
+                lane["hypotheses"] += len(list(state.get("current_hypotheses") or []))
+                if mission_id and mission_id not in lane["missions"]:
+                    lane["missions"].append(mission_id)
+
+        for row in agents.values():
+            domain = str(row.get("primary_domain") or "general")
+            lane = lanes.setdefault(
+                domain,
+                {
+                    "lane_id": domain,
+                    "name": domain.replace("-", " ").title(),
+                    "total_agents": 0,
+                    "lead_agents": 0,
+                    "active_tasks": 0,
+                    "blocked_tasks": 0,
+                    "pending_reviews": 0,
+                    "hypotheses": 0,
+                    "missions": [],
+                },
+            )
+            lane["total_agents"] += 1
+            if int(row.get("lead_missions", 0) or 0) > 0:
+                lane["lead_agents"] += 1
+
+        agent_rows = sorted(
+            agents.values(),
+            key=lambda item: (
+                -int(item.get("blocked_tasks", 0) or 0),
+                -int(item.get("pending_reviews", 0) or 0),
+                -int(item.get("active_tasks", 0) or 0),
+                str(item.get("label") or item.get("agent_id") or ""),
+            ),
+        )
+        lane_rows = sorted(
+            lanes.values(),
+            key=lambda item: (
+                -int(item.get("blocked_tasks", 0) or 0),
+                -int(item.get("pending_reviews", 0) or 0),
+                -int(item.get("active_tasks", 0) or 0),
+                str(item.get("name") or item.get("lane_id") or ""),
+            ),
+        )
+        return {
+            "summary": {
+                "active_agents": len(agent_rows),
+                "lead_agents": len([item for item in agent_rows if int(item.get("lead_missions", 0) or 0) > 0]),
+                "blocked_agents": len([item for item in agent_rows if int(item.get("blocked_tasks", 0) or 0) > 0]),
+                "pending_review_agents": len([item for item in agent_rows if int(item.get("pending_reviews", 0) or 0) > 0]),
+                "inbox_items": sum(int(item.get("inbox_items", 0) or 0) for item in agent_rows),
+                "outbox_items": sum(int(item.get("outbox_items", 0) or 0) for item in agent_rows),
+                "hypotheses": sum(int(item.get("hypotheses", 0) or 0) for item in agent_rows),
+            },
+            "agents": agent_rows,
+            "lanes": lane_rows,
         }
 
     def add_mission_evidence(self, mission_id: str, payload: dict[str, Any]) -> dict[str, Any]:

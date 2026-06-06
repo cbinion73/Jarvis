@@ -3426,5 +3426,68 @@
         "installable": false
       }
     ]
+  },
+  {
+    "run_id": "2ac0259d-0662-469f-b844-1bf7b0b8175f",
+    "job_id": "calendar-route:evt-codex-calendar-route-proof",
+    "job_title": "Calendar route for Codex Route Proof",
+    "generated_at": "2026-06-02T08:49:14.174027+00:00",
+    "mode": "calendar-route-sandbox",
+    "status": "review-ready",
+    "compile": {
+      "ok": true,
+      "mode": "route-handoff"
+    },
+    "tests": {
+      "ok": true,
+      "mode": "route-handoff"
+    },
+    "patch_bundle": {
+      "path": "/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/data/state/calendar_route_sandbox/evt-codex-calendar-route-proof/calendar_route_packet.md"
+    },
+    "report_path": "/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/data/system/calendar_route_sandbox_reports/2ac0259d-0662-469f-b844-1bf7b0b8175f.json",
+    "workspace_path": "/Users/chris/Library/CloudStorage/OneDrive-Personal/CODE/CODE/JARVIS/data/state/calendar_route_sandbox/evt-codex-calendar-route-proof",
+    "event_id": "evt-codex-calendar-route-proof",
+    "location": "123 Main St, Franklin, TN"
+  },
+  {
+    "run_id": "run-control-proof",
+    "job_id": "calendar-route:evt-codex-calendar-route-control",
+    "job_title": "Calendar route for Control Proof",
+    "generated_at": "2026-06-02T09:00:31.892552+00:00",
+    "mode": "calendar-route-sandbox",
+    "status": "cancelled",
+    "compile": {
+      "ok": true,
+      "mode": "route-handoff"
+    },
+    "tests": {
+      "ok": true,
+      "mode": "route-handoff"
+    },
+    "patch_bundle": {
+      "path": ""
+    },
+    "reason": "control proof cancel"
+  },
+  {
+    "run_id": "260bb59a-f7fb-488a-803b-73b4f80f69b1",
+    "job_id": "calendar-route:evt-codex-calendar-route-control",
+    "job_title": "Calendar route for Control Proof",
+    "generated_at": "2026-06-02T09:00:31.896207+00:00",
+    "mode": "calendar-route-sandbox-recovery",
+    "status": "reset",
+    "compile": {
+      "ok": true
+    },
+    "tests": {
+      "ok": true
+    },
+    "patch_bundle": {
+      "path": ""
+    },
+    "reason": "control proof recover",
+    "removed_workspace": false,
+    "workspace_error": ""
   }
 ]

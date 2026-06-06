@@ -7,6 +7,10 @@ public struct NowPlayingStateOverview: Codable, Sendable {
     public let isPlaying: Bool
     public let updatedAt: String
     public let artworkAvailable: Bool
+    public let summary: NowPlayingSummary
+    public let routingRules: [NowPlayingRoutingRule]
+    public let responsePlans: [NowPlayingResponsePlan]
+    public let suggestedControls: [NowPlayingSuggestedControl]
     public let recentItems: [NowPlayingHistoryItem]
 
     enum CodingKeys: String, CodingKey {
@@ -14,8 +18,47 @@ public struct NowPlayingStateOverview: Codable, Sendable {
         case isPlaying = "is_playing"
         case updatedAt = "updated_at"
         case artworkAvailable = "artwork_available"
+        case summary
+        case routingRules = "routing_rules"
+        case responsePlans = "response_plans"
+        case suggestedControls = "suggested_controls"
         case recentItems = "recent_items"
     }
+}
+
+public struct NowPlayingSummary: Codable, Sendable {
+    public let label: String
+    public let detail: String
+}
+
+public struct NowPlayingRoutingRule: Codable, Sendable, Identifiable {
+    public let id: String
+    public let title: String
+    public let detail: String
+    public let deliveryMode: String
+    public let active: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, detail, active
+        case deliveryMode = "delivery_mode"
+    }
+}
+
+public struct NowPlayingResponsePlan: Codable, Sendable, Identifiable {
+    public let id: String
+    public let title: String
+    public let detail: String
+    public let target: String
+    public let priority: String
+    public let active: Bool
+}
+
+public struct NowPlayingSuggestedControl: Codable, Sendable, Identifiable {
+    public let id: String
+    public let title: String
+    public let detail: String
+    public let style: String
+    public let active: Bool
 }
 
 public struct NowPlayingHistoryItem: Codable, Sendable, Identifiable {

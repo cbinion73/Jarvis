@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json
+
 
 ADAPTATION_PATH = Path.cwd() / "data" / "settings" / "adaptation_profiles.json"
 
@@ -16,17 +18,19 @@ def _now_iso() -> str:
 class AdaptationStore:
     def __init__(self, path: Path = ADAPTATION_PATH) -> None:
         self.path = path
+        self.log_path = self.path.with_name(f"{self.path.stem}_log.jsonl")
+        self.state_log_path = self.path.with_name(f"{self.path.stem}_state_log.jsonl")
 
     def load(self) -> dict[str, Any]:
         default = {"profiles": {}, "history": [], "personalization": {"settings": {}, "history": []}}
         if not self.path.exists():
-            return default
+            return self._load_from_state_log(default)
         try:
             payload = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            return default
-        if not isinstance(payload, dict):
-            return default
+            return self._load_from_state_log(default)
+        if not isinstance(payload, dict) or not payload:
+            return self._load_from_state_log(default)
         payload.setdefault("profiles", {})
         payload.setdefault("history", [])
         personalization = payload.get("personalization")
@@ -37,9 +41,72 @@ class AdaptationStore:
         payload["personalization"] = personalization
         return payload
 
+    def _load_from_state_log(self, default: dict[str, Any]) -> dict[str, Any]:
+        if not self.state_log_path.exists():
+            return self._load_from_log(default)
+        latest: dict[str, Any] = default
+        try:
+            for line in self.state_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, dict):
+                    latest = dict(records)
+        except (OSError, json.JSONDecodeError):
+            return self._load_from_log(default)
+        latest.setdefault("profiles", {})
+        latest.setdefault("history", [])
+        personalization = latest.get("personalization")
+        if not isinstance(personalization, dict):
+            personalization = {"settings": {}, "history": []}
+        personalization.setdefault("settings", {})
+        personalization.setdefault("history", [])
+        latest["personalization"] = personalization
+        return latest
+
+    def _load_from_log(self, default: dict[str, Any]) -> dict[str, Any]:
+        if not self.log_path.exists():
+            return default
+        latest: dict[str, Any] = default
+        try:
+            for line in self.log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, dict):
+                    latest = dict(records)
+        except (OSError, json.JSONDecodeError):
+            return default
+        latest.setdefault("profiles", {})
+        latest.setdefault("history", [])
+        personalization = latest.get("personalization")
+        if not isinstance(personalization, dict):
+            personalization = {"settings": {}, "history": []}
+        personalization.setdefault("settings", {})
+        personalization.setdefault("history", [])
+        latest["personalization"] = personalization
+        return latest
+
     def save(self, payload: dict[str, Any]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        saved_at = _now_iso()
+        atomic_write_json(self.path, payload)
+        append_jsonl(
+            self.log_path,
+            {
+                "saved_at": saved_at,
+                "records": payload,
+            },
+        )
+        append_jsonl(
+            self.state_log_path,
+            {
+                "saved_at": saved_at,
+                "records": payload,
+            },
+        )
 
     def profile(self, user_id: str) -> dict[str, Any] | None:
         return self.load().get("profiles", {}).get(user_id)

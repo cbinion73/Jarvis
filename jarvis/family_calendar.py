@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -8,8 +9,12 @@ from typing import Any
 
 import requests
 
+from .persistence import append_jsonl, atomic_write_json
+
 
 FAMILY_CALENDAR_SETTINGS_PATH = Path.cwd() / "data" / "settings" / "family_calendar.json"
+FAMILY_CALENDAR_SETTINGS_LOG_PATH = FAMILY_CALENDAR_SETTINGS_PATH.with_name("family_calendar_log.jsonl")
+FAMILY_CALENDAR_SETTINGS_STATE_LOG_PATH = FAMILY_CALENDAR_SETTINGS_PATH.with_name("family_calendar_state_log.jsonl")
 
 
 def _unfold_ics_lines(text: str) -> list[str]:
@@ -50,21 +55,77 @@ def _sort_key(value: str) -> tuple[int, str]:
 class FamilyCalendarSupport:
     path: Path = FAMILY_CALENDAR_SETTINGS_PATH
 
+    def _log_path(self) -> Path:
+        if self.path == FAMILY_CALENDAR_SETTINGS_PATH:
+            return FAMILY_CALENDAR_SETTINGS_LOG_PATH
+        return self.path.with_name(f"{self.path.stem}_log.jsonl")
+
+    def _state_log_path(self) -> Path:
+        if self.path == FAMILY_CALENDAR_SETTINGS_PATH:
+            return FAMILY_CALENDAR_SETTINGS_STATE_LOG_PATH
+        return self.path.with_name(f"{self.path.stem}_state_log.jsonl")
+
     def load_settings(self) -> dict[str, Any]:
         default = {"label": "Family Shared Calendar", "source": "cozi", "ics_url": ""}
         if not self.path.exists():
-            return default
+            return self._load_from_state_log(default)
         try:
             payload = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            return default
-        if not isinstance(payload, dict):
-            return default
+            return self._load_from_state_log(default)
+        if not isinstance(payload, dict) or not payload:
+            return self._load_from_state_log(default)
         return {
             "label": str(payload.get("label", default["label"])).strip() or default["label"],
             "source": str(payload.get("source", default["source"])).strip() or default["source"],
             "ics_url": str(payload.get("ics_url", default["ics_url"])).strip(),
         }
+
+    def _load_from_state_log(self, default: dict[str, Any]) -> dict[str, Any]:
+        try:
+            log_path = self._state_log_path()
+            if not log_path.exists():
+                return self._load_from_log(default)
+            latest: dict[str, Any] | None = None
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                settings = payload.get("settings")
+                if isinstance(settings, dict):
+                    latest = dict(settings)
+            if not latest:
+                return self._load_from_log(default)
+            return {
+                "label": str(latest.get("label", default["label"])).strip() or default["label"],
+                "source": str(latest.get("source", default["source"])).strip() or default["source"],
+                "ics_url": str(latest.get("ics_url", default["ics_url"])).strip(),
+            }
+        except (OSError, json.JSONDecodeError):
+            return self._load_from_log(default)
+
+    def _load_from_log(self, default: dict[str, Any]) -> dict[str, Any]:
+        try:
+            log_path = self._log_path()
+            if not log_path.exists():
+                return default
+            latest: dict[str, Any] | None = None
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                settings = payload.get("settings")
+                if isinstance(settings, dict):
+                    latest = dict(settings)
+            if not latest:
+                return default
+            return {
+                "label": str(latest.get("label", default["label"])).strip() or default["label"],
+                "source": str(latest.get("source", default["source"])).strip() or default["source"],
+                "ics_url": str(latest.get("ics_url", default["ics_url"])).strip(),
+            }
+        except (OSError, json.JSONDecodeError):
+            return default
 
     def save_settings(self, payload: dict[str, Any]) -> dict[str, Any]:
         current = self.load_settings()
@@ -76,7 +137,22 @@ class FamilyCalendarSupport:
             }
         )
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(current, indent=2) + "\n", encoding="utf-8")
+        saved_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        atomic_write_json(self.path, current)
+        append_jsonl(
+            self._log_path(),
+            {
+                "saved_at": saved_at,
+                "settings": current,
+            },
+        )
+        append_jsonl(
+            self._state_log_path(),
+            {
+                "saved_at": saved_at,
+                "settings": current,
+            },
+        )
         return current
 
     def summary(self, *, event_limit: int = 12, horizon_days: int = 30) -> dict[str, Any]:

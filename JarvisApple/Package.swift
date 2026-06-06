@@ -38,7 +38,10 @@ let package = Package(
         .testTarget(
             name: "JarvisKitTests",
             dependencies: ["JarvisKit", "JarvisKitHealth"],
-            path: "Tests/JarvisKitTests"
+            path: "Tests/JarvisKitTests",
+            resources: [
+                .process("Fixtures"),
+            ]
         ),
     ]
 )

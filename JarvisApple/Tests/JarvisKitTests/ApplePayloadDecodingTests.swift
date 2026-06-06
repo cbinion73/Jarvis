@@ -21,6 +21,28 @@ struct ApplePayloadDecodingTests {
     }
 
     @Test
+    func decodesSystemsAdminStewardshipReviewWithoutSandboxJobId() throws {
+        let json = """
+        {
+          "id": "stewardship-review-1",
+          "lane_id": "family-stewardship",
+          "lane_title": "Family Stewardship",
+          "status": "review_staged",
+          "review_surface": "home",
+          "packet_target": "family",
+          "boundary_decision": "stage",
+          "boundary_reason": "The family lane is still gated for reviewed household changes.",
+          "approval_mode": "stage_and_alert",
+          "timestamp": "2026-06-01T08:28:00Z"
+        }
+        """.data(using: .utf8)!
+
+        let decoded = try JSONDecoder().decode(SystemsAdminStewardshipReviewItem.self, from: json)
+        #expect(decoded.id == "stewardship-review-1")
+        #expect(decoded.sandboxJobId.isEmpty)
+    }
+
+    @Test
     func decodesLiveApplePayloadFixtureWhenProvided() throws {
         guard let fixturePath = ProcessInfo.processInfo.environment["JARVIS_APPLE_PAYLOAD_FIXTURE"] else {
             return

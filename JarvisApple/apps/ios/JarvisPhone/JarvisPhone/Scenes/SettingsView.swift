@@ -30,6 +30,7 @@ struct SettingsView: View {
     @State private var remoteNotificationsRegistered = false
     @State private var pingError: String?
     @State private var isRefreshing = false
+    @State private var refreshGeneration = 0
     @State private var showingInbox = false
     @State private var calendarWorkflowMessage = ""
     @State private var calendarWorkflowError = ""
@@ -43,6 +44,7 @@ struct SettingsView: View {
     @State private var governanceWorkflowMessage = ""
     @State private var governanceWorkflowError = ""
     @State private var governanceActionInFlight: String?
+    @State private var adminSummaryDiagnostics = "Idle"
 
     private let steel = Color(red: 0.55, green: 0.65, blue: 0.78)
 
@@ -79,6 +81,12 @@ struct SettingsView: View {
                                         .foregroundStyle(.secondary)
                                         .lineLimit(1)
                                 }
+                                if adminSummary == nil {
+                                    Text("Admin fetch: \(adminSummaryDiagnostics)")
+                                        .font(.caption2.monospaced())
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(2)
+                                }
                             }
                             Spacer()
                             // Ping button
@@ -98,18 +106,53 @@ struct SettingsView: View {
                         .padding(14)
                         .glassEffect(in: RoundedRectangle(cornerRadius: 16))
 
+                        if let adminSummary {
+                            SystemsSection(title: "Governed", icon: "point.3.connected.trianglepath.dotted", accent: .teal) {
+                                HStack(spacing: 10) {
+                                    systemsMetric("Pending", "\(adminSummary.governedWorkflows.pendingApprovalCount)")
+                                    systemsMetric("Lane Reviews", "\(adminSummary.governedWorkflows.stagedStewardshipReviewCount)")
+                                    systemsMetric("Routes", "\(adminSummary.governedWorkflows.stagedCalendarRouteCount)")
+                                    systemsMetric("Rules", "\(adminSummary.governedWorkflows.activeRuleCount)")
+                                }
+                                if let route = adminSummary.governedWorkflows.recentCalendarRoutes.first {
+                                    SysRow(label: "Top Route Lane") {
+                                        VStack(alignment: .trailing, spacing: 2) {
+                                            Text(route.title)
+                                                .foregroundStyle(.white)
+                                                .lineLimit(1)
+                                            Text(route.status.replacingOccurrences(of: "_", with: " ").capitalized)
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                                if let review = adminSummary.governedWorkflows.recentStewardshipReviews.first {
+                                    SysRow(label: "Top Review Lane") {
+                                        VStack(alignment: .trailing, spacing: 2) {
+                                            Text(review.laneTitle)
+                                                .foregroundStyle(.white)
+                                                .lineLimit(1)
+                                            Text(review.status.replacingOccurrences(of: "_", with: " ").capitalized)
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         // ── Server environment ──────────────────────
                         SystemsSection(title: "Server", icon: "wifi", accent: steel) {
                             HStack {
                                 Text("Environment")
                                     .font(.caption).foregroundStyle(.secondary)
                                 Spacer()
-                                Text("Production")
+                                Text(JARVISEnvironment.environmentLabel)
                                     .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.green)
+                                    .foregroundStyle(JARVISEnvironment.isOverrideActive ? .yellow : .green)
                             }
 
-                            Text("This app is locked to the live JARVIS production server.")
+                            Text(JARVISEnvironment.environmentSummary)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
 
@@ -124,6 +167,17 @@ struct SettingsView: View {
                                     .foregroundStyle(steel.opacity(0.9))
                                     .lineLimit(1)
                                     .truncationMode(.middle)
+                            }
+
+                            if adminSummary == nil {
+                                Divider().opacity(0.3)
+                                SysRow(label: "Admin Fetch") {
+                                    Text(adminSummaryDiagnostics)
+                                        .font(.caption2.monospaced())
+                                        .foregroundStyle(.white)
+                                        .multilineTextAlignment(.trailing)
+                                        .lineLimit(3)
+                                }
                             }
 
                             if let watchStatus {
@@ -797,6 +851,7 @@ struct SettingsView: View {
                                     systemsMetric("Pending", "\(adminSummary.governedWorkflows.pendingApprovalCount)")
                                     systemsMetric("Auto", "\(adminSummary.governedWorkflows.automaticActionCount)")
                                     systemsMetric("Lane Reviews", "\(adminSummary.governedWorkflows.stagedStewardshipReviewCount)")
+                                    systemsMetric("Routes", "\(adminSummary.governedWorkflows.stagedCalendarRouteCount)")
                                     systemsMetric("Gov Props", "\(adminSummary.governedWorkflows.governanceProposalCount)")
                                     systemsMetric("Rules", "\(adminSummary.governedWorkflows.activeRuleCount)")
                                 }
@@ -842,6 +897,11 @@ struct SettingsView: View {
                                                     .font(.caption2)
                                                     .foregroundStyle(.secondary)
                                                     .lineLimit(1)
+                                                if !review.sandboxJobId.isEmpty {
+                                                    Text("Sandbox lane available")
+                                                        .font(.caption2)
+                                                        .foregroundStyle(.secondary)
+                                                }
                                                 HStack(spacing: 8) {
                                                     Button("Approve") {
                                                         Task { await approveStewardshipReview(review) }
@@ -863,6 +923,18 @@ struct SettingsView: View {
                                                     .background(Color.blue.opacity(0.16), in: Capsule())
                                                     .font(.caption2.weight(.semibold))
 
+                                                    if !review.sandboxJobId.isEmpty {
+                                                        Button("Sandbox") {
+                                                            Task { await executeStewardshipReviewSandbox(review) }
+                                                        }
+                                                        .disabled(governanceActionInFlight != nil)
+                                                        .buttonStyle(.plain)
+                                                        .padding(.horizontal, 8)
+                                                        .padding(.vertical, 4)
+                                                        .background(Color.orange.opacity(0.16), in: Capsule())
+                                                        .font(.caption2.weight(.semibold))
+                                                    }
+
                                                     Button("Retire") {
                                                         Task { await retireStewardshipReview(review) }
                                                     }
@@ -872,6 +944,72 @@ struct SettingsView: View {
                                                     .padding(.vertical, 4)
                                                     .background(Color.red.opacity(0.16), in: Capsule())
                                                     .font(.caption2.weight(.semibold))
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                if !adminSummary.governedWorkflows.recentCalendarRoutes.isEmpty {
+                                    Divider().opacity(0.3)
+                                    Text("Calendar Route Lanes")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        ForEach(adminSummary.governedWorkflows.recentCalendarRoutes.prefix(2)) { route in
+                                            let normalizedStatus = route.status.replacingOccurrences(of: "_", with: "-").lowercased()
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                HStack(alignment: .firstTextBaseline) {
+                                                    Text(route.title)
+                                                        .font(.caption.bold())
+                                                        .foregroundStyle(.white)
+                                                    Spacer()
+                                                    syncStatusChip(label: route.status.replacingOccurrences(of: "_", with: " ").capitalized)
+                                                }
+                                                Text(route.summary.isEmpty ? route.location : route.summary)
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                                    .lineLimit(2)
+                                                Text("\(route.location) · \(route.reviewLevel.replacingOccurrences(of: "_", with: " "))")
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                                    .lineLimit(1)
+                                                if !route.sandboxJobId.isEmpty {
+                                                    Text("Sandbox lane available")
+                                                        .font(.caption2)
+                                                        .foregroundStyle(.secondary)
+                                                }
+                                                HStack(spacing: 8) {
+                                                    if !route.sandboxJobId.isEmpty && (normalizedStatus.contains("queued") || normalizedStatus.contains("running") || normalizedStatus.contains("stop-requested")) {
+                                                        Button("Cancel") {
+                                                            Task { await cancelCalendarRouteSandbox(route) }
+                                                        }
+                                                        .disabled(governanceActionInFlight != nil)
+                                                        .buttonStyle(.plain)
+                                                        .padding(.horizontal, 8)
+                                                        .padding(.vertical, 4)
+                                                        .background(Color.red.opacity(0.16), in: Capsule())
+                                                        .font(.caption2.weight(.semibold))
+                                                    } else if !route.sandboxJobId.isEmpty && (normalizedStatus.contains("sandboxed") || normalizedStatus.contains("failed") || normalizedStatus.contains("cancelled")) {
+                                                        Button("Reset") {
+                                                            Task { await recoverCalendarRouteSandbox(route) }
+                                                        }
+                                                        .disabled(governanceActionInFlight != nil)
+                                                        .buttonStyle(.plain)
+                                                        .padding(.horizontal, 8)
+                                                        .padding(.vertical, 4)
+                                                        .background(Color.blue.opacity(0.16), in: Capsule())
+                                                        .font(.caption2.weight(.semibold))
+                                                    } else if !route.sandboxJobId.isEmpty {
+                                                        Button("Sandbox") {
+                                                            Task { await executeCalendarRouteSandbox(route) }
+                                                        }
+                                                        .disabled(governanceActionInFlight != nil)
+                                                        .buttonStyle(.plain)
+                                                        .padding(.horizontal, 8)
+                                                        .padding(.vertical, 4)
+                                                        .background(Color.orange.opacity(0.16), in: Capsule())
+                                                        .font(.caption2.weight(.semibold))
+                                                    }
                                                 }
                                             }
                                         }
@@ -973,9 +1111,15 @@ struct SettingsView: View {
                                     }
                                 }
                             } else {
-                                Text("Admin settings summary not loaded yet.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Admin settings summary not loaded yet.")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Text("Fetch state: \(adminSummaryDiagnostics)")
+                                        .font(.caption2.monospaced())
+                                        .foregroundStyle(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
                             }
                         }
 
@@ -2189,73 +2333,73 @@ struct SettingsView: View {
         }
     }
 
+    @MainActor
     private func refreshSystems() async {
+        let startedAt = Date()
+        refreshGeneration += 1
+        let generation = refreshGeneration
+        print("[JARVIS Systems] refresh \(generation) started")
         isRefreshing = true
-        defer { isRefreshing = false }
-        await refreshNotificationStatus()
+        defer {
+            if generation == refreshGeneration {
+                isRefreshing = false
+            }
+            print("[JARVIS Systems] refresh \(generation) finished in \(String(format: "%.3f", Date().timeIntervalSince(startedAt)))s")
+        }
+        let notificationStatusTask = Task {
+            await refreshNotificationStatus()
+        }
+        async let watchStatusRequest = AppleAPIClient.shared.fetchStatus()
+        async let appStateRequest = AppleAPIClient.shared.fetchAppState()
+        let controlPlaneTask = Task {
+            try await AppleAPIClient.shared.fetchControlPlaneState()
+        }
+        adminSummaryDiagnostics = "Request queued at \(Date().formatted(date: .omitted, time: .standard))"
+        let adminSummaryTask = Task {
+            try await AppleAPIClient.shared.fetchSystemsAdminSummary()
+        }
+
+        Task {
+            do {
+                let result = try await adminSummaryTask.value
+                await MainActor.run {
+                    guard generation == refreshGeneration else { return }
+                    adminSummary = result
+                    adminSummaryDiagnostics = "Loaded in \(String(format: "%.3f", Date().timeIntervalSince(startedAt)))s"
+                    print("[JARVIS Systems] refresh \(generation) promoted adminSummary in \(String(format: "%.3f", Date().timeIntervalSince(startedAt)))s")
+                }
+            } catch {
+                await MainActor.run {
+                    guard generation == refreshGeneration else { return }
+                    adminSummary = nil
+                    adminSummaryDiagnostics = "Failed after \(String(format: "%.3f", Date().timeIntervalSince(startedAt)))s: \(error.localizedDescription)"
+                    print("[JARVIS Systems] refresh \(generation) adminSummary failed after \(String(format: "%.3f", Date().timeIntervalSince(startedAt)))s error=\(error.localizedDescription)")
+                }
+            }
+        }
+
+        Task {
+            let result = try? await controlPlaneTask.value
+            await MainActor.run {
+                guard generation == refreshGeneration else { return }
+                controlPlane = result
+            }
+        }
 
         var essentialIssues: [String] = []
 
         do {
-            watchStatus = try await AppleAPIClient.shared.fetchStatus()
+            watchStatus = try await watchStatusRequest
         } catch {
             watchStatus = nil
             essentialIssues.append("Status: \(error.localizedDescription)")
         }
 
         do {
-            appState = try await AppleAPIClient.shared.fetchAppState()
+            appState = try await appStateRequest
         } catch {
             appState = nil
             essentialIssues.append("App State: \(error.localizedDescription)")
-        }
-
-        do {
-            calendarState = try await AppleAPIClient.shared.fetchCalendarState()
-        } catch {
-            calendarState = nil
-        }
-
-        do {
-            remindersState = try await AppleAPIClient.shared.fetchRemindersState()
-        } catch {
-            remindersState = nil
-        }
-
-        do {
-            focusState = try await AppleAPIClient.shared.fetchFocusState()
-        } catch {
-            focusState = nil
-        }
-
-        do {
-            soundHistory = try await AppleAPIClient.shared.fetchSoundHistory()
-        } catch {
-            soundHistory = nil
-        }
-
-        do {
-            visionHistory = try await AppleAPIClient.shared.fetchVisionHistory()
-        } catch {
-            visionHistory = nil
-        }
-
-        do {
-            nowPlayingState = try await AppleAPIClient.shared.fetchNowPlayingState()
-        } catch {
-            nowPlayingState = nil
-        }
-
-        do {
-            controlPlane = try await AppleAPIClient.shared.fetchControlPlaneState()
-        } catch {
-            controlPlane = nil
-        }
-
-        do {
-            adminSummary = try await AppleAPIClient.shared.fetchSystemsAdminSummary()
-        } catch {
-            adminSummary = nil
         }
 
         serverOK = essentialIssues.isEmpty
@@ -2263,6 +2407,40 @@ struct SettingsView: View {
         if serverOK {
             calendarWorkflowError = ""
             reminderWorkflowError = ""
+        }
+
+        await notificationStatusTask.value
+
+        // Promote shared-state truth as soon as the fast critical sections are ready
+        // instead of withholding Admin and control-plane data behind slower history loads.
+        _ = try? await adminSummaryTask.value
+        _ = try? await controlPlaneTask.value
+
+        Task {
+            async let calendarStateRequest = AppleAPIClient.shared.fetchCalendarState()
+            async let remindersStateRequest = AppleAPIClient.shared.fetchRemindersState()
+            async let focusStateRequest = AppleAPIClient.shared.fetchFocusState()
+            async let soundHistoryRequest = AppleAPIClient.shared.fetchSoundHistory()
+            async let visionHistoryRequest = AppleAPIClient.shared.fetchVisionHistory()
+            async let nowPlayingStateRequest = AppleAPIClient.shared.fetchNowPlayingState()
+
+            let calendar = try? await calendarStateRequest
+            let reminders = try? await remindersStateRequest
+            let focus = try? await focusStateRequest
+            let sound = try? await soundHistoryRequest
+            let vision = try? await visionHistoryRequest
+            let nowPlaying = try? await nowPlayingStateRequest
+
+            await MainActor.run {
+                guard generation == refreshGeneration else { return }
+                calendarState = calendar
+                remindersState = reminders
+                focusState = focus
+                soundHistory = sound
+                visionHistory = vision
+                nowPlayingState = nowPlaying
+                print("[JARVIS Systems] refresh \(generation) deferred slices promoted in \(String(format: "%.3f", Date().timeIntervalSince(startedAt)))s")
+            }
         }
     }
 
@@ -2463,6 +2641,82 @@ struct SettingsView: View {
             governanceWorkflowMessage = result.boundaryReason.isEmpty
                 ? "\(result.laneTitle) retired."
                 : result.boundaryReason
+            await refreshSystems()
+        } catch {
+            governanceWorkflowError = error.localizedDescription
+        }
+        governanceActionInFlight = nil
+    }
+
+    private func executeStewardshipReviewSandbox(_ review: SystemsAdminStewardshipReviewItem) async {
+        guard !review.sandboxJobId.isEmpty else { return }
+        governanceActionInFlight = "stewardship-sandbox-\(review.id)"
+        governanceWorkflowError = ""
+        do {
+            let result = try await AppleAPIClient.shared.executeSandboxJob(
+                review.sandboxJobId,
+                triggeredBy: "apple-stewardship-review"
+            )
+            governanceWorkflowMessage = result.message.isEmpty
+                ? "\(review.laneTitle) entered the bounded sandbox lane."
+                : result.message
+            await refreshSystems()
+        } catch {
+            governanceWorkflowError = error.localizedDescription
+        }
+        governanceActionInFlight = nil
+    }
+
+    private func executeCalendarRouteSandbox(_ route: SystemsAdminCalendarRouteItem) async {
+        guard !route.sandboxJobId.isEmpty else { return }
+        governanceActionInFlight = "calendar-route-sandbox-\(route.id)"
+        governanceWorkflowError = ""
+        do {
+            let result = try await AppleAPIClient.shared.executeSandboxJob(
+                route.sandboxJobId,
+                triggeredBy: "apple-calendar-route"
+            )
+            governanceWorkflowMessage = result.message.isEmpty
+                ? "\(route.title) entered the bounded calendar route lane."
+                : result.message
+            await refreshSystems()
+        } catch {
+            governanceWorkflowError = error.localizedDescription
+        }
+        governanceActionInFlight = nil
+    }
+
+    private func cancelCalendarRouteSandbox(_ route: SystemsAdminCalendarRouteItem) async {
+        guard !route.sandboxJobId.isEmpty else { return }
+        governanceActionInFlight = "calendar-route-cancel-\(route.id)"
+        governanceWorkflowError = ""
+        do {
+            let result = try await AppleAPIClient.shared.cancelSandboxJob(
+                route.sandboxJobId,
+                reason: "manual stop from calendar route lane"
+            )
+            governanceWorkflowMessage = result.message.isEmpty
+                ? "\(route.title) left the bounded calendar route lane."
+                : result.message
+            await refreshSystems()
+        } catch {
+            governanceWorkflowError = error.localizedDescription
+        }
+        governanceActionInFlight = nil
+    }
+
+    private func recoverCalendarRouteSandbox(_ route: SystemsAdminCalendarRouteItem) async {
+        guard !route.sandboxJobId.isEmpty else { return }
+        governanceActionInFlight = "calendar-route-recover-\(route.id)"
+        governanceWorkflowError = ""
+        do {
+            let result = try await AppleAPIClient.shared.recoverSandboxJob(
+                route.sandboxJobId,
+                reason: "manual recovery reset from calendar route lane"
+            )
+            governanceWorkflowMessage = result.message.isEmpty
+                ? "\(route.title) returned to the governed route baseline."
+                : result.message
             await refreshSystems()
         } catch {
             governanceWorkflowError = error.localizedDescription

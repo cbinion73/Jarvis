@@ -40,6 +40,7 @@ except Exception:  # pragma: no cover
     def _render_glass_shell(runtime, initial_packet=""):  # type: ignore[misc]
         return render_voice_shell(runtime, initial_packet=initial_packet)
 from .apple_api import _register_apple_api
+from .audit import AuditLog
 from . import layout_engine as _layout_engine
 
 try:
@@ -60,7 +61,89 @@ except Exception:  # pragma: no cover
 
     def get_time_aware_greeting(name: str = "boss") -> str:  # type: ignore[misc]
         return f"Good day, {name}."
-from .render_pages import render_agent_hierarchy_page, render_agent_workspace_page, render_catalyst_workspace_page
+from .render_pages import (
+    render_approval_module_page,
+    render_activity_module_page,
+    render_agent_ops_module_page,
+    render_agent_hierarchy_page,
+    render_agent_workspace_page,
+    render_catalyst_workspace_page,
+    render_chronicle_module_page,
+    render_daily_brief_module_page,
+    render_health_module_page,
+    render_huddle_module_page,
+    render_mission_board_module_page,
+    render_navigation_module_page,
+    render_progress_module_page,
+    render_publish_module_page,
+    render_recovery_module_page,
+    render_settings_module_page,
+    render_supervision_module_page,
+)
+try:
+    from .approval_queue_surface import build_approval_queue_snapshot, render_approval_queue_html
+    _APPROVAL_QUEUE_SURFACE_AVAILABLE = True
+except Exception:  # pragma: no cover
+    _APPROVAL_QUEUE_SURFACE_AVAILABLE = False
+
+    def build_approval_queue_snapshot(*, approvals_root=None, history_limit=12):  # type: ignore[misc]
+        return {
+            "generated_at": "",
+            "pending_count": 0,
+            "history_count": 0,
+            "pending": [],
+            "history": [],
+            "what_needs_me": [],
+            "proof_paths": {},
+            "error": "approval queue surface unavailable",
+        }
+
+    def render_approval_queue_html(snapshot):  # type: ignore[misc]
+        return "<html><body><h1>Approval queue surface unavailable.</h1></body></html>"
+try:
+    from .supervision_snapshot import build_supervision_snapshot, render_supervision_snapshot_html
+    _SUPERVISION_SNAPSHOT_AVAILABLE = True
+except Exception:  # pragma: no cover
+    _SUPERVISION_SNAPSHOT_AVAILABLE = False
+
+    def build_supervision_snapshot(*, memory_root=None, approvals_root=None, config=None, integration_statuses=None):  # type: ignore[misc]
+        return {
+            "generated_at": "",
+            "lane": {"branch": "", "head": "", "dirty_count": 0, "recent_commits": [], "dirty_sample": []},
+            "return_brief": {"summary": "supervision snapshot unavailable", "what_needs_me_count": 0},
+            "attention_queue": [],
+            "memory": {"entry_count": 0, "proposal_count": 0, "fact_count": 0, "latest_entry_titles": []},
+            "registry": {"agent_count": 0, "domains": [], "authority_stages": []},
+            "integrations": [],
+            "what_needs_me": [],
+            "proof_paths": {},
+            "error": "supervision snapshot unavailable",
+        }
+
+    def render_supervision_snapshot_html(snapshot):  # type: ignore[misc]
+        return "<html><body><h1>Supervision snapshot unavailable.</h1></body></html>"
+try:
+    from .command_center_index import DEFAULT_AUDIT_ROOT, build_command_center_index, render_command_center_index_html
+    _COMMAND_CENTER_INDEX_AVAILABLE = True
+except Exception:  # pragma: no cover
+    _COMMAND_CENTER_INDEX_AVAILABLE = False
+    DEFAULT_AUDIT_ROOT = Path.cwd() / "data" / "logs"
+
+    def build_command_center_index():  # type: ignore[misc]
+        return {
+            "generated_at": "",
+            "branch": "",
+            "head": "",
+            "what_needs_me": [],
+            "surface_count": 0,
+            "surfaces": [],
+            "json_endpoints": [],
+            "proof_paths": {},
+            "error": "command center index unavailable",
+        }
+
+    def render_command_center_index_html(payload):  # type: ignore[misc]
+        return "<html><body><h1>Command center index unavailable.</h1></body></html>"
 
 try:
     from .scheduler import get_scheduler, get_briefing_builder
@@ -904,12 +987,88 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             raise HTTPException(status_code=404, detail="Health desktop is unavailable.")
         return FileResponse(storyboard_path, media_type="text/html")
 
+    @app.get("/health-center", response_class=HTMLResponse)
+    async def health_center() -> HTMLResponse:
+        return HTMLResponse(render_health_module_page(await _build_health_module_payload()))
+
+    @app.get("/chronicle-center", response_class=HTMLResponse)
+    async def chronicle_center() -> HTMLResponse:
+        return HTMLResponse(render_chronicle_module_page(await _build_chronicle_module_payload()))
+
+    @app.get("/navigation-center", response_class=HTMLResponse)
+    async def navigation_center() -> HTMLResponse:
+        return HTMLResponse(render_navigation_module_page(await _build_navigation_module_payload()))
+
+    @app.get("/huddle-center", response_class=HTMLResponse)
+    async def huddle_center() -> HTMLResponse:
+        return HTMLResponse(render_huddle_module_page(await _build_huddle_module_payload()))
+
+    @app.get("/briefing-center", response_class=HTMLResponse)
+    async def briefing_center(actor: str = "Chris") -> HTMLResponse:
+        return HTMLResponse(render_daily_brief_module_page(await _build_daily_brief_module_payload(actor)))
+
+    @app.get("/progress-center", response_class=HTMLResponse)
+    async def progress_center() -> HTMLResponse:
+        return HTMLResponse(render_progress_module_page(await _build_progress_module_payload()))
+
+    @app.get("/recovery-center", response_class=HTMLResponse)
+    async def recovery_center() -> HTMLResponse:
+        return HTMLResponse(render_recovery_module_page(await _build_recovery_module_payload()))
+
+    @app.get("/mission-board", response_class=HTMLResponse)
+    async def mission_board_center() -> HTMLResponse:
+        return HTMLResponse(render_mission_board_module_page(await _build_mission_board_module_payload()))
+
+    @app.get("/activity-center", response_class=HTMLResponse)
+    async def activity_center() -> HTMLResponse:
+        return HTMLResponse(render_activity_module_page(await _build_activity_module_payload()))
+
+    @app.get("/agent-ops-center", response_class=HTMLResponse)
+    async def agent_ops_center() -> HTMLResponse:
+        return HTMLResponse(render_agent_ops_module_page(await _build_agent_ops_module_payload()))
+
+    @app.get("/settings-center", response_class=HTMLResponse)
+    async def settings_center() -> HTMLResponse:
+        return HTMLResponse(render_settings_module_page(await _build_settings_module_payload()))
+
     @app.get("/implementation-outline")
     async def implementation_outline() -> Response:
         outline_path = Path.cwd() / "artifacts" / "mockups" / "jarvis-numbered-outline-checklist.html"
         if not outline_path.exists():
             raise HTTPException(status_code=404, detail="Implementation outline is unavailable.")
         return FileResponse(outline_path, media_type="text/html")
+
+    @app.get("/approval-queue", response_class=HTMLResponse)
+    async def approval_queue_surface() -> HTMLResponse:
+        return HTMLResponse(render_approval_module_page(await _build_approval_module_payload()))
+
+    @app.get("/api/approval-queue/snapshot")
+    async def api_approval_queue_snapshot() -> JSONResponse:
+        return _json(build_approval_queue_snapshot())
+
+    @app.get("/api/approval/module")
+    async def api_approval_module() -> JSONResponse:
+        return _json(await _build_approval_module_payload())
+
+    @app.get("/supervision-snapshot", response_class=HTMLResponse)
+    async def supervision_snapshot_surface() -> HTMLResponse:
+        return HTMLResponse(render_supervision_module_page(await _build_supervision_module_payload()))
+
+    @app.get("/api/supervision-snapshot")
+    async def api_supervision_snapshot() -> JSONResponse:
+        return _json(build_supervision_snapshot())
+
+    @app.get("/api/supervision/module")
+    async def api_supervision_module() -> JSONResponse:
+        return _json(await _build_supervision_module_payload())
+
+    @app.get("/command-center", response_class=HTMLResponse)
+    async def command_center_index() -> HTMLResponse:
+        return HTMLResponse(render_command_center_index_html(build_command_center_index()))
+
+    @app.get("/api/command-center")
+    async def api_command_center_index() -> JSONResponse:
+        return _json(build_command_center_index())
 
     @app.get("/storm-assets/{filename}")
     async def storm_asset(filename: str) -> Response:
@@ -927,6 +1086,217 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_storm_route_weather(origin: str, destination: str) -> JSONResponse:
         return _json(runtime.storm_route_weather(origin, destination))
 
+    async def _build_navigation_module_payload() -> dict[str, Any]:
+        generated_at = ""
+        try:
+            from datetime import datetime, timezone
+
+            generated_at = datetime.now(timezone.utc).isoformat()
+        except Exception:
+            generated_at = ""
+
+        payload: dict[str, Any] = {
+            "generated_at": generated_at,
+            "available": True,
+            "status": "Useful",
+            "summary": "Navigation now has a dedicated module route with persisted route state and live route-preview intelligence.",
+            "what_became_real": "Navigation is now represented as a dedicated app module instead of only the shared shell surface.",
+            "remains_partial": "Cross-surface navigation continuity and stronger auditability still need follow-on slices.",
+            "navigation_state": {},
+            "saved_locations": [],
+            "route_preview": {"summary": "", "hazard_active": False, "sections": []},
+            "proof_paths": {
+                "module_route": "/navigation-center",
+                "module_api": "/api/navigation/module",
+                "route_api": "/api/navigation/module/route",
+                "state_api": "/api/navigation/module/state",
+                "storm_route_api": "/api/storm-route-weather",
+            },
+            "errors": [],
+        }
+
+        try:
+            from .apple_api import _load_navigation_state, LOCATION_SETTINGS_PATH
+            import json
+
+            payload["navigation_state"] = _load_navigation_state()
+            if LOCATION_SETTINGS_PATH.exists():
+                raw = json.loads(LOCATION_SETTINGS_PATH.read_text(encoding="utf-8"))
+                saved = raw.get("saved_locations") if isinstance(raw, dict) else []
+                payload["saved_locations"] = [
+                    {
+                        "id": str(item.get("id") or ""),
+                        "label": str(item.get("label") or ""),
+                        "address": str(item.get("address") or ""),
+                        "geography": str(item.get("geography") or ""),
+                        "latitude": item.get("latitude"),
+                        "longitude": item.get("longitude"),
+                        "source": str(item.get("source") or ""),
+                        "notes": str(item.get("notes") or ""),
+                    }
+                    for item in saved
+                    if isinstance(item, dict)
+                ]
+        except Exception as exc:
+            payload["status"] = "Wired"
+            payload["available"] = False
+            payload["summary"] = "Navigation center route is live, but saved navigation state did not fully hydrate."
+            payload["remains_partial"] = "Live navigation state sources still need repair or population in this runtime."
+            payload["errors"].append(f"navigation_state: {exc}")
+
+        state = payload["navigation_state"] if isinstance(payload.get("navigation_state"), dict) else {}
+        origin = str(((state.get("last_route") or {}).get("origin") if isinstance(state.get("last_route"), dict) else "") or "").strip()
+        destination = str(((state.get("last_route") or {}).get("destination") if isinstance(state.get("last_route"), dict) else "") or "").strip()
+        if origin and destination:
+            try:
+                preview = await _build_navigation_route_preview(
+                    origin=origin,
+                    destination=destination,
+                    parks_historic_radius_miles=float(state.get("parks_historic_radius_miles") or 25),
+                    persist=False,
+                )
+                payload["route_preview"] = preview
+            except Exception as exc:
+                payload["errors"].append(f"route_preview: {exc}")
+
+        if payload["status"] == "Useful":
+            payload["summary"] = (
+                f"Navigation center loaded {len(payload['saved_locations'])} saved location(s), "
+                f"{len((state.get('favorite_destinations') or [])) if isinstance(state, dict) else 0} favorite destination(s), "
+                f"and a persisted route preview surface."
+            )
+        if payload["errors"] and payload["status"] == "Useful":
+            payload["remains_partial"] = "Some navigation sources still failed to hydrate; inspect the payload preview for details."
+        return payload
+
+    async def _build_navigation_route_preview(
+        *,
+        origin: str,
+        destination: str,
+        parks_historic_radius_miles: float,
+        persist: bool,
+    ) -> dict[str, Any]:
+        from .apple_api import _save_navigation_state, _NAV_STOP_LABELS, _nav_bridge, _nav_nps_along_route, _nav_route_points, _nav_state_codes
+        from .nav_bridge import haversine, sample_route_points
+
+        route_packet = runtime.storm_route_weather(origin, destination)
+        route_info = route_packet.get("route") if isinstance(route_packet, dict) else {}
+        route_points = _nav_route_points(route_info if isinstance(route_info, dict) else {})
+        total_miles = float(route_info.get("distance_miles") or 0) if isinstance(route_info, dict) else 0.0
+        sections: list[dict[str, Any]] = []
+        if route_points:
+            bridge = _nav_bridge()
+            interval = 12.0
+            if total_miles > 0 and total_miles < 24:
+                interval = max(5.0, total_miles / 3)
+            samples = sample_route_points(route_points, interval_miles=interval)
+            mile_markers: list[float] = [0.0]
+            cumulative = 0.0
+            next_threshold = interval
+            for idx in range(1, len(route_points)):
+                cumulative += haversine(
+                    route_points[idx - 1][0], route_points[idx - 1][1],
+                    route_points[idx][0], route_points[idx][1],
+                )
+                if cumulative >= next_threshold:
+                    mile_markers.append(round(cumulative, 1))
+                    next_threshold += interval
+            while len(mile_markers) < len(samples):
+                mile_markers.append(round(total_miles, 1))
+
+            categories = ["food", "starbucks", "parks", "historic", "family", "gas"]
+            seen_by_category: dict[str, set[str]] = {}
+            for category in categories:
+                seen_by_category[category] = set()
+                radius_m = min(int(parks_historic_radius_miles * 1609.34), 50_000) if category in {"parks", "historic"} else 2400
+                items: list[dict[str, Any]] = []
+                for sample_idx, (slat, slng) in enumerate(samples):
+                    marker = mile_markers[sample_idx] if sample_idx < len(mile_markers) else round(total_miles, 1)
+                    for poi in bridge.search_places_near(slat, slng, category, radius_m=radius_m):
+                        key = str(poi.get("place_id") or poi.get("name") or "")
+                        if not key or key in seen_by_category[category]:
+                            continue
+                        seen_by_category[category].add(key)
+                        items.append(
+                            {
+                                "name": str(poi.get("name") or ""),
+                                "address": str(poi.get("address") or ""),
+                                "route_mile_marker": marker,
+                                "rating": poi.get("rating"),
+                            }
+                        )
+                if category == "parks":
+                    states = _nav_state_codes(
+                        str((route_packet.get("origin") or {}).get("label") or ""),
+                        str((route_packet.get("destination") or {}).get("label") or ""),
+                    )
+                    if states:
+                        for park in _nav_nps_along_route(bridge, route_points, states, max_distance_miles=parks_historic_radius_miles):
+                            key = f"nps:{park.get('name')}"
+                            if key in seen_by_category[category]:
+                                continue
+                            seen_by_category[category].add(key)
+                            items.append(
+                                {
+                                    "name": str(park.get("name") or ""),
+                                    "address": str(park.get("address") or ""),
+                                    "route_mile_marker": park.get("route_mile_marker"),
+                                    "rating": None,
+                                }
+                            )
+                items.sort(key=lambda item: item.get("route_mile_marker") or 0)
+                sections.append(
+                    {
+                        "id": category,
+                        "label": _NAV_STOP_LABELS.get(category, category.title()),
+                        "items": items[:8],
+                    }
+                )
+        if persist:
+            _save_navigation_state(
+                {
+                    "parks_historic_radius_miles": parks_historic_radius_miles,
+                    "last_route": {"origin": origin, "destination": destination},
+                    "recent_destinations": [destination],
+                }
+            )
+        return {
+            "origin": origin,
+            "destination": destination,
+            "summary": str(route_packet.get("summary") or ""),
+            "hazard_active": bool(route_packet.get("hazard_active")),
+            "route": route_packet.get("route") if isinstance(route_packet, dict) else {},
+            "sections": sections,
+        }
+
+    @app.get("/api/navigation/module")
+    async def api_navigation_module() -> JSONResponse:
+        return _json(await _build_navigation_module_payload())
+
+    @app.post("/api/navigation/module/route")
+    async def api_navigation_module_route(payload: dict[str, Any]) -> JSONResponse:
+        origin = str(payload.get("origin") or "").strip()
+        destination = str(payload.get("destination") or "").strip()
+        if not origin or not destination:
+            raise HTTPException(status_code=400, detail="origin and destination are required")
+        radius = max(5.0, min(float(payload.get("parks_historic_radius_miles") or 25), 100.0))
+        return _json(
+            await _build_navigation_route_preview(
+                origin=origin,
+                destination=destination,
+                parks_historic_radius_miles=radius,
+                persist=True,
+            )
+        )
+
+    @app.post("/api/navigation/module/state")
+    async def api_navigation_module_state(payload: dict[str, Any]) -> JSONResponse:
+        from .apple_api import _save_navigation_state
+
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail="payload must be an object")
+        return _json(_save_navigation_state(payload))
+
     @app.get("/agents/hierarchy", response_class=HTMLResponse)
     async def agent_hierarchy() -> str:
         return render_agent_hierarchy_page(runtime)
@@ -938,6 +1308,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/catalyst/view/{page}", response_class=HTMLResponse)
     async def catalyst_view(page: str) -> str:
         return render_catalyst_workspace_page(runtime, page)
+
+    @app.get("/publish", response_class=HTMLResponse)
+    async def publish_module_surface() -> HTMLResponse:
+        return HTMLResponse(render_publish_module_page(_build_publish_module_payload()))
 
     @app.get("/accounts/{account_id}/connect")
     async def account_connect(account_id: str, request: Request) -> Response:
@@ -1375,6 +1749,578 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             }
         )
 
+    async def _build_daily_brief_module_payload(actor_name: str = "Chris") -> dict[str, Any]:
+        from datetime import datetime, timezone
+
+        actor_lookup = getattr(runtime, "get_actor", None)
+        actor = actor_lookup(actor_name) if callable(actor_lookup) else None
+        actor_display = str(getattr(actor, "display_name", "") or actor_name or "Chris")
+        actor_user_id = str(getattr(actor, "user_id", "") or actor_display.lower() or "chris")
+        household = getattr(runtime, "household", None)
+        actor_options = (
+            [{"id": user.display_name, "label": user.display_name} for user in household.users.values()]
+            if household is not None and getattr(household, "users", None)
+            else [{"id": actor_display, "label": actor_display}]
+        )
+        payload: dict[str, Any] = {
+            "actor": actor_display,
+            "actor_options": actor_options,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "available": True,
+            "status": "Useful",
+            "summary": "Daily Brief now has a dedicated module route with live briefing text, today-board posture, and open-loop follow-through actions inside JARVIS.",
+            "headline": "",
+            "what_became_real": "Daily Brief is now a standalone app module instead of only a shell packet and preview panel.",
+            "remains_partial": "Deeper briefing-specific action loops, richer continuity capture, and broader module drill-ins still need follow-on slices.",
+            "briefing_text": "",
+            "live_briefing": {},
+            "today_board": {},
+            "open_loops": {"items": [], "summary": {}},
+            "counts": {
+                "priority_count": 0,
+                "waiting_on_you": 0,
+                "needs_revisit": 0,
+                "notification_count": 0,
+                "calendar_count": 0,
+            },
+            "proof_paths": {
+                "module_route": "/briefing-center",
+                "module_api": "/api/briefing/module",
+                "briefing_api": f"/api/briefing?actor={actor_display}",
+                "live_brief_api": f"/api/briefing/live?actor={actor_display}",
+                "today_board_api": f"/api/today-board?actor={actor_display}",
+                "open_loops_api": f"/api/open-loops?actor={actor_display}",
+                "open_loop_action_api": "/api/open-loops/action",
+            },
+            "errors": [],
+        }
+
+        open_loops: dict[str, Any] = {}
+        try:
+            open_loops = await asyncio.to_thread(runtime.unified_open_loops, actor_display, 18)
+            payload["open_loops"] = open_loops
+            payload["counts"]["waiting_on_you"] = int(((open_loops.get("summary") or {}).get("waiting_on_you", 0)) or 0)
+            payload["counts"]["needs_revisit"] = int(((open_loops.get("summary") or {}).get("needs_revisit", 0)) or 0)
+        except Exception as exc:
+            payload["errors"].append(f"open_loops: {exc}")
+
+        try:
+            today_board = await asyncio.to_thread(runtime.today_board, actor_display, open_loops=open_loops or None)
+            payload["today_board"] = today_board
+            payload["counts"]["priority_count"] = len(list(today_board.get("priorities") or []))
+            payload["counts"]["notification_count"] = len(list(today_board.get("assistant_notifications") or []))
+            payload["counts"]["calendar_count"] = len(list(today_board.get("calendar") or []))
+            if not payload["summary"]:
+                payload["summary"] = "Daily brief module hydrated from the live today board."
+        except Exception as exc:
+            payload["errors"].append(f"today_board: {exc}")
+
+        try:
+            briefing_text = await asyncio.to_thread(runtime.morning_brief, actor_display)
+            payload["briefing_text"] = briefing_text
+            lines = [line.strip() for line in str(briefing_text).splitlines() if line.strip()]
+            payload["headline"] = lines[0] if lines else ""
+        except Exception as exc:
+            payload["errors"].append(f"briefing: {exc}")
+
+        try:
+            builder = get_briefing_builder()
+            if builder is not None:
+                payload["live_briefing"] = await asyncio.to_thread(builder.build, actor_user_id)
+        except Exception as exc:
+            payload["errors"].append(f"live_briefing: {exc}")
+
+        if payload["counts"]["priority_count"] or payload["counts"]["waiting_on_you"]:
+            payload["summary"] = (
+                f"Daily brief for {actor_display} loaded "
+                f"{payload['counts']['priority_count']} priority item(s) and "
+                f"{payload['counts']['waiting_on_you']} item(s) waiting on a decision."
+            )
+
+        if payload["errors"]:
+            payload["status"] = "Wired"
+            if not payload["briefing_text"] and not payload["today_board"]:
+                payload["available"] = False
+                payload["summary"] = "Daily brief route is live, but key briefing sources did not fully hydrate."
+                payload["remains_partial"] = "Live briefing and today-board sources still need repair or population in this runtime."
+            else:
+                payload["summary"] = "Daily brief route is live with partial briefing and day-state hydration."
+                payload["remains_partial"] = "Some briefing sources still failed to hydrate; inspect the payload preview for details."
+        return payload
+
+    @app.get("/api/briefing/module")
+    async def api_briefing_module(actor: str = "Chris") -> JSONResponse:
+        return _json(await _build_daily_brief_module_payload(actor))
+
+    async def _build_progress_module_payload() -> dict[str, Any]:
+        command_center = build_command_center_index()
+        progress_dashboard = dict(command_center.get("progress_dashboard") or {})
+        seam_tracker = dict(command_center.get("seam_tracker") or {})
+        level3_checklist = dict(command_center.get("level3_checklist") or {})
+        lane_progress = dict(command_center.get("lane_progress") or {})
+        failure_recovery = dict(command_center.get("failure_recovery") or {})
+        hosted_deployment = dict(command_center.get("hosted_deployment") or {})
+        core_modules = dict(command_center.get("core_modules") or {})
+        counts = dict(progress_dashboard.get("counts") or {})
+        next_focus = ""
+        progress_items = [item for item in list(progress_dashboard.get("items") or []) if isinstance(item, dict)]
+        for item in progress_items:
+            status = str(item.get("status", "")).strip()
+            if status in {"Wired", "Stubbed", "Mocked", "Idea"}:
+                next_focus = str(item.get("module", "")).strip()
+                break
+        if not next_focus:
+            next_focus = str((progress_items[0] if progress_items else {}).get("module", "")).strip()
+        return {
+            "generated_at": command_center.get("generated_at", ""),
+            "available": True,
+            "status": "Useful",
+            "summary": "Progress now has a dedicated module route with live readiness rows, seam posture, lane state, and failure evidence inside JARVIS.",
+            "what_became_real": "Progress is now represented as a standalone app module instead of only a command-center panel.",
+            "remains_partial": "Richer route-to-route progress actions, deeper per-module mutation flows, and broader persistence still need follow-on slices.",
+            "progress_dashboard": progress_dashboard,
+            "seam_tracker": seam_tracker,
+            "level3_checklist": level3_checklist,
+            "lane_progress": lane_progress,
+            "failure_recovery": failure_recovery,
+            "hosted_deployment": hosted_deployment,
+            "core_modules": core_modules,
+            "counts": {
+                "useful": int(counts.get("useful", 0) or 0),
+                "wired": int(counts.get("wired", 0) or 0),
+                "durable": int(counts.get("durable", 0) or 0),
+                "compounding": int(counts.get("compounding", 0) or 0),
+                "seam_count": int(seam_tracker.get("item_count", 0) or 0),
+            },
+            "progress_next_focus": next_focus or "No next progress focus recorded yet.",
+            "proof_paths": {
+                "module_route": "/progress-center",
+                "module_api": "/api/progress/module",
+                "command_center_api": "/api/command-center",
+                "agent_registry_api": "/api/agent-registry",
+                "open_loops_api": "/api/open-loops?actor=Chris",
+                "hosted_url": str(hosted_deployment.get("hosted_url", "")).strip() or "https://jarvis.teambinion.org",
+                "deploy_script": "deploy/deploy.sh",
+                "deploy_workflow": ".github/workflows/deploy.yml",
+            },
+        }
+
+    @app.get("/api/progress/module")
+    async def api_progress_module() -> JSONResponse:
+        return _json(await _build_progress_module_payload())
+
+    async def _build_supervision_module_payload() -> dict[str, Any]:
+        snapshot = build_supervision_snapshot()
+        lane = dict(snapshot.get("lane") or {})
+        attention_queue = list(snapshot.get("attention_queue") or [])
+        integrations = list(snapshot.get("integrations") or [])
+        what_needs_me = list(snapshot.get("what_needs_me") or [])
+        memory = dict(snapshot.get("memory") or {})
+        registry = dict(snapshot.get("registry") or {})
+        issue_count = sum(1 for item in integrations if not bool(item.get("ok")))
+        summary = str((snapshot.get("return_brief") or {}).get("summary", "")).strip() or (
+            "Supervision Snapshot now has a dedicated module route with live lane posture, approval attention, integration issues, and memory cues inside JARVIS."
+        )
+
+        return {
+            "generated_at": snapshot.get("generated_at", ""),
+            "available": True,
+            "status": "Useful" if (attention_queue or what_needs_me or issue_count or int(lane.get("dirty_count", 0) or 0)) else "Wired",
+            "summary": summary,
+            "what_became_real": "Supervision Snapshot is now represented as a dedicated app module instead of only an older proof-style surface.",
+            "remains_partial": "Deeper supervision mutation, broader lane recovery controls, and richer continuity into linked modules still need follow-on slices.",
+            "lane": lane,
+            "return_brief": dict(snapshot.get("return_brief") or {}),
+            "attention_queue": attention_queue,
+            "memory": memory,
+            "registry": registry,
+            "integrations": integrations,
+            "what_needs_me": what_needs_me,
+            "counts": {
+                "needs_review_count": len(what_needs_me),
+                "pending_approval_count": len(attention_queue),
+                "integration_issue_count": issue_count,
+                "memory_proposal_count": int(memory.get("proposal_count", 0) or 0),
+                "registered_agent_count": int(registry.get("agent_count", 0) or 0),
+            },
+            "proof_paths": {
+                "module_route": "/supervision-snapshot",
+                "module_api": "/api/supervision/module",
+                "legacy_snapshot_api": "/api/supervision-snapshot",
+                "approval_queue_route": "/approval-queue",
+                "approval_queue_api": "/api/approval/module",
+                "command_center_route": "/command-center",
+            },
+        }
+
+    async def _build_approval_module_payload() -> dict[str, Any]:
+        snapshot = build_approval_queue_snapshot()
+        pending = list(snapshot.get("pending") or [])
+        history = list(snapshot.get("history") or [])
+        what_needs_me = list(snapshot.get("what_needs_me") or [])
+        high_risk_pending_count = sum(1 for item in pending if str(item.get("risk_tier", "")).lower() in {"high", "critical"})
+        approval_ready_count = sum(
+            1
+            for item in pending
+            if str((item.get("supervision_decision") or {}).get("resolution", "")).lower() in {"allow", "approved"}
+            or str(item.get("status", "")).lower() == "approved"
+        )
+        summary = "Approval Queue now has a dedicated module route with live pending requests, history detail, and direct approval actions inside JARVIS."
+        if pending or history:
+            summary = (
+                f"Approval queue surfaced {len(pending)} pending request(s), "
+                f"{len(history)} recent decision record(s), and {len(what_needs_me)} operator review cue(s)."
+            )
+
+        payload: dict[str, Any] = {
+            "generated_at": snapshot.get("generated_at", ""),
+            "available": not bool(snapshot.get("error")),
+            "status": "Useful" if (pending or history or what_needs_me) else "Wired",
+            "summary": summary,
+            "what_became_real": "Approval Queue is now represented as a dedicated app module instead of only an older standalone proof surface.",
+            "remains_partial": "Broader approval creation/edit workflows, deeper trust-zone drill-ins, and richer continuity back into linked modules still need follow-on slices.",
+            "pending": pending,
+            "history": history,
+            "what_needs_me": what_needs_me,
+            "counts": {
+                "pending_count": len(pending),
+                "history_count": len(history),
+                "high_risk_pending_count": high_risk_pending_count,
+                "approval_ready_count": approval_ready_count,
+            },
+            "proof_paths": {
+                "module_route": "/approval-queue",
+                "module_api": "/api/approval/module",
+                "legacy_snapshot_api": "/api/approval-queue/snapshot",
+                "pending_api": "/api/approvals/pending",
+                "history_api": "/api/approvals/history",
+                "submit_api": "/api/approvals/submit",
+                "command_center_route": "/command-center",
+                "recovery_route": "/recovery-center",
+            },
+            "errors": [],
+        }
+
+        if snapshot.get("error"):
+            payload["errors"].append(str(snapshot.get("error")))
+            payload["status"] = "Wired"
+            payload["summary"] = "Approval queue route is live, but approval hydration is currently unavailable."
+            payload["remains_partial"] = "Approval queue substrate did not fully hydrate in this runtime."
+
+        return payload
+
+    async def _build_recovery_module_payload() -> dict[str, Any]:
+        command_center = build_command_center_index()
+        failure_recovery = dict(command_center.get("failure_recovery") or {})
+        pending_approvals = list(command_center.get("pending_approvals") or [])
+        activity_feed = list(command_center.get("activity_feed") or [])
+        supervision_snapshot = build_supervision_snapshot()
+        approval_snapshot = build_approval_queue_snapshot()
+        action_items = list(failure_recovery.get("action_items") or [])
+        failing_integrations = list(failure_recovery.get("failing_integrations") or [])
+        recent_failures = list(failure_recovery.get("recent_failures") or [])
+        summary = "Failure & Recovery now has a dedicated module route with live recovery posture, pending approval gates, and recent failure signals inside JARVIS."
+
+        if action_items:
+            summary = (
+                f"Failure and recovery surfaced {len(action_items)} recovery action(s), "
+                f"{int(failure_recovery.get('pending_approval_count', 0) or 0)} pending approval gate(s), "
+                f"and {int(failure_recovery.get('integration_issue_count', 0) or 0)} integration issue(s)."
+            )
+
+        payload: dict[str, Any] = {
+            "generated_at": command_center.get("generated_at", ""),
+            "available": True,
+            "status": "Useful" if (action_items or pending_approvals or failing_integrations or recent_failures) else "Wired",
+            "summary": summary,
+            "what_became_real": "Failure & Recovery is now a standalone app module instead of only a command-center and progress-dashboard posture summary.",
+            "remains_partial": "Deeper automated remediation, richer retry workflows, and broader cross-module recovery continuity still need follow-on slices.",
+            "failure_recovery": failure_recovery,
+            "pending_approvals": pending_approvals,
+            "activity_feed": activity_feed,
+            "supervision_snapshot": supervision_snapshot,
+            "approval_snapshot": approval_snapshot,
+            "counts": {
+                "integration_issues": int(failure_recovery.get("integration_issue_count", 0) or 0),
+                "recent_failures": int(failure_recovery.get("recent_failure_count", 0) or 0),
+                "pending_approval_gates": int(failure_recovery.get("pending_approval_count", 0) or 0),
+                "dirty_count": int(failure_recovery.get("dirty_count", 0) or 0),
+                "action_count": len(action_items),
+            },
+            "proof_paths": {
+                "module_route": "/recovery-center",
+                "module_api": "/api/recovery/module",
+                "supervision_route": "/supervision-snapshot",
+                "supervision_api": "/api/supervision-snapshot",
+                "approval_queue_route": "/approval-queue",
+                "approval_queue_api": "/api/approval-queue/snapshot",
+                "activity_api": "/api/activity",
+                "approve_api_prefix": "/api/approvals/",
+            },
+        }
+        return payload
+
+    @app.get("/api/recovery/module")
+    async def api_recovery_module() -> JSONResponse:
+        return _json(await _build_recovery_module_payload())
+
+    async def _build_mission_board_module_payload() -> dict[str, Any]:
+        command_center = build_command_center_index()
+        mission_task_board = dict(command_center.get("mission_task_board") or {})
+        items = list(mission_task_board.get("items") or [])
+        counts = dict(mission_task_board.get("counts") or {})
+        payload: dict[str, Any] = {
+            "generated_at": command_center.get("generated_at", ""),
+            "available": True,
+            "status": "Useful" if int(mission_task_board.get("item_count", 0) or 0) else "Wired",
+            "summary": "Mission & Task Board now has a dedicated module route with live lane posture, mission detail, and mission status mutation inside JARVIS.",
+            "what_became_real": "Mission & Task Board is now a standalone app module instead of only a command-center panel and mission API proof path.",
+            "remains_partial": "Deeper task mutation, broader mission creation/edit flows, and richer cross-seam linkage still need follow-on slices.",
+            "mission_task_board": mission_task_board,
+            "mission_details": {},
+            "counts": {
+                "now": int(counts.get("now", 0) or 0),
+                "next": int(counts.get("next", 0) or 0),
+                "blocked": int(counts.get("blocked", 0) or 0),
+                "completed": int(counts.get("completed", 0) or 0),
+            },
+            "proof_paths": {
+                "module_route": "/mission-board",
+                "module_api": "/api/mission-board/module",
+                "missions_api": "/api/missions",
+                "mission_status_api_prefix": "/api/missions/",
+                "mission_control_api": "/api/mission-control",
+            },
+            "errors": [],
+        }
+
+        mission_snapshot = getattr(runtime, "mission_snapshot", None)
+        if callable(mission_snapshot):
+            details: dict[str, Any] = {}
+            for item in items[:4]:
+                mission_id = str(item.get("mission_id", "")).strip()
+                if not mission_id:
+                    continue
+                try:
+                    details[mission_id] = await asyncio.to_thread(mission_snapshot, mission_id)
+                except Exception as exc:
+                    payload["errors"].append(f"mission_snapshot[{mission_id}]: {exc}")
+            payload["mission_details"] = details
+
+        if items:
+            payload["summary"] = (
+                f"Mission board loaded {len(items)} mission(s): "
+                f"{payload['counts']['now']} now, {payload['counts']['next']} next, "
+                f"{payload['counts']['blocked']} blocked, and {payload['counts']['completed']} completed."
+            )
+
+        if payload["errors"] and not items:
+            payload["available"] = False
+            payload["status"] = "Wired"
+            payload["summary"] = "Mission board route is live, but mission sources only partially hydrated."
+            payload["remains_partial"] = "Mission store or runtime mission detail sources still need repair or population in this runtime."
+        elif payload["errors"]:
+            payload["status"] = "Useful"
+            payload["summary"] = "Mission board route is live with partial mission detail hydration."
+            payload["remains_partial"] = "Some mission detail sources still failed to hydrate; inspect the payload preview for details."
+
+        return payload
+
+    @app.get("/api/mission-board/module")
+    async def api_mission_board_module() -> JSONResponse:
+        return _json(await _build_mission_board_module_payload())
+
+    async def _build_activity_module_payload() -> dict[str, Any]:
+        command_center = build_command_center_index()
+        activity_feed = list(command_center.get("activity_feed") or [])
+        action_journal = dict(command_center.get("action_journal") or {})
+        home_overview = dict(command_center.get("home_overview") or {})
+        home_action_result = dict(home_overview.get("action_result") or {})
+
+        def related_route_for(entry: dict[str, Any]) -> str:
+            haystack = " ".join(
+                [
+                    str(entry.get("title", "")),
+                    str(entry.get("subtitle", "")),
+                    str(entry.get("detail", "")),
+                    str(entry.get("result", "")),
+                    str(entry.get("entry_type", "")),
+                    str(entry.get("related_kind", "")),
+                ]
+            ).lower()
+            if "approval" in haystack:
+                return "/approval-queue"
+            if any(token in haystack for token in ("recover", "rollback", "fail", "error", "blocked")):
+                return "/recovery-center"
+            if "mission" in haystack:
+                return "/mission-board"
+            if "agent" in haystack:
+                return "/agent-ops-center"
+            if any(token in haystack for token in ("brief", "daily")):
+                return "/briefing-center"
+            return "/command-center"
+
+        enriched_activity = []
+        bridge = dict(home_action_result.get("activity_bridge") or {})
+        has_durable_home_action = any(str(item.get("entry_type", "")).strip() == "home-action" for item in activity_feed)
+        if bridge and not has_durable_home_action:
+            bridge_entry = dict(bridge)
+            bridge_entry["source_kind"] = "home-action-result"
+            bridge_entry["subtitle"] = str(home_action_result.get("summary", "")).strip() or str(bridge.get("result_summary", "")).strip()
+            bridge_entry["detail"] = str(bridge.get("detail", "")).strip() or str(home_action_result.get("detail", "")).strip()
+            bridge_entry["related_route"] = str(home_action_result.get("route", "")).strip() or "/command-center"
+            bridge_entry["route_label"] = str(home_action_result.get("route_label", "")).strip() or "Open Related Surface"
+            bridge_entry["timestamp"] = str(command_center.get("generated_at", "")).strip()
+            enriched_activity.append(bridge_entry)
+        for item in activity_feed:
+            enriched = dict(item)
+            enriched["source_kind"] = str(item.get("entry_type", "")).strip() or "activity"
+            enriched["detail"] = str(item.get("result", "")).strip() or str(item.get("subtitle", "")).strip()
+            enriched["related_route"] = str(item.get("related_route", "")).strip() or related_route_for(enriched)
+            enriched["route_label"] = str(item.get("route_label", "")).strip() or "Open Related Surface"
+            enriched_activity.append(enriched)
+
+        enriched_journal = []
+        for item in list(action_journal.get("entries") or []):
+            enriched = dict(item)
+            enriched["related_route"] = related_route_for(enriched)
+            enriched_journal.append(enriched)
+        action_journal["entries"] = enriched_journal
+
+        return {
+            "generated_at": command_center.get("generated_at", ""),
+            "available": True,
+            "status": "Useful" if enriched_activity else "Wired",
+            "summary": f"Activity feed loaded {len(enriched_activity)} recent event(s) and {len(enriched_journal)} journal item(s) into a dedicated module route inside JARVIS.",
+            "what_became_real": "Activity Feed is now a standalone app module instead of only a command-center panel.",
+            "remains_partial": "Richer event mutation, deeper audit filtering, and broader cross-module resume continuity still need follow-on slices.",
+            "home_action_result": home_action_result,
+            "activity_feed": enriched_activity,
+            "action_journal": action_journal,
+            "counts": {
+                "activity_count": len(enriched_activity),
+                "journal_count": len(enriched_journal),
+                "home_bridge_count": 1 if bridge else 0,
+            },
+            "proof_paths": {
+                "module_route": "/activity-center",
+                "module_api": "/api/activity/module",
+                "activity_api": "/api/activity",
+                "command_center_route": "/command-center",
+                "approval_queue_route": "/approval-queue",
+                "recovery_route": "/recovery-center",
+                "mission_board_route": "/mission-board",
+                "agent_ops_route": "/agent-ops-center",
+            },
+        }
+
+    @app.get("/api/activity/module")
+    async def api_activity_module() -> JSONResponse:
+        return _json(await _build_activity_module_payload())
+
+    async def _build_agent_ops_module_payload() -> dict[str, Any]:
+        command_center = build_command_center_index()
+        roster = dict(command_center.get("agent_ops_roster") or {})
+        counts = dict(roster.get("counts") or {})
+        runtime_counts = {"registry_count": 0, "runtime_count": 0, "background_count": 0}
+
+        payload: dict[str, Any] = {
+            "generated_at": command_center.get("generated_at", ""),
+            "available": True,
+            "status": "Useful" if int(roster.get("item_count", 0) or 0) else "Wired",
+            "summary": "Agent Operations now has a dedicated module route with live roster posture, runtime summary, and queue-run controls inside JARVIS.",
+            "what_became_real": "Agent Operations is now a standalone app module instead of being split across command-center summaries and hierarchy/workspace routes.",
+            "remains_partial": "Richer assignment mutation, deeper per-agent review workflows, and broader ops continuity still need follow-on slices.",
+            "agent_ops_roster": roster,
+            "registry": {},
+            "background_agents": {},
+            "agent_runtime": {},
+            "scheduler_status": {},
+            "runtime_counts": runtime_counts,
+            "counts": {
+                "visible_agents": int(roster.get("item_count", 0) or 0),
+                "running": int(counts.get("running", 0) or 0),
+                "blocked": int(counts.get("blocked", 0) or 0),
+                "attention": int(counts.get("attention", 0) or 0),
+            },
+            "proof_paths": {
+                "module_route": "/agent-ops-center",
+                "module_api": "/api/agent-ops/module",
+                "agent_hierarchy_route": "/agents/hierarchy",
+                "registry_api": "/api/agent-registry",
+                "background_agents_api": "/api/agents",
+                "agent_runtime_api": "/api/agent-runtime",
+                "scheduler_status_api": "/api/scheduler/status",
+                "queue_run_api_prefix": "/api/scheduler/run/",
+            },
+            "errors": [],
+        }
+
+        registry_snapshot = getattr(runtime, "agent_registry_snapshot", None)
+        if callable(registry_snapshot):
+            try:
+                payload["registry"] = await asyncio.to_thread(registry_snapshot)
+                payload["runtime_counts"]["registry_count"] = int(
+                    len(list((payload["registry"] or {}).get("agents") or []))
+                )
+            except Exception as exc:
+                payload["errors"].append(f"registry: {exc}")
+
+        background_agent_status = getattr(runtime, "background_agent_status", None)
+        if callable(background_agent_status):
+            try:
+                payload["background_agents"] = await asyncio.to_thread(background_agent_status)
+                background_items = payload["background_agents"]
+                if isinstance(background_items, dict):
+                    payload["runtime_counts"]["background_count"] = int(
+                        len(list(background_items.get("agents") or []))
+                    )
+            except Exception as exc:
+                payload["errors"].append(f"background_agents: {exc}")
+
+        agent_runtime_snapshot = getattr(runtime, "agent_runtime_snapshot", None)
+        if callable(agent_runtime_snapshot):
+            try:
+                payload["agent_runtime"] = await asyncio.to_thread(agent_runtime_snapshot)
+                runtime_agents = (payload["agent_runtime"] or {}).get("agents") if isinstance(payload["agent_runtime"], dict) else {}
+                if isinstance(runtime_agents, dict):
+                    payload["runtime_counts"]["runtime_count"] = int(len(runtime_agents))
+            except Exception as exc:
+                payload["errors"].append(f"agent_runtime: {exc}")
+
+        try:
+            scheduler = get_scheduler()
+            if scheduler is None:
+                payload["scheduler_status"] = {"running": False, "error": "Scheduler not initialised"}
+            else:
+                payload["scheduler_status"] = scheduler.get_status()
+        except Exception as exc:
+            payload["scheduler_status"] = {"running": False, "error": str(exc)}
+            payload["errors"].append(f"scheduler: {exc}")
+
+        if payload["counts"]["visible_agents"]:
+            payload["summary"] = (
+                f"Agent operations loaded {payload['counts']['visible_agents']} visible agent(s), "
+                f"{payload['counts']['running']} running, {payload['counts']['blocked']} blocked, "
+                f"and {payload['counts']['attention']} needing attention."
+            )
+
+        if payload["errors"] and not payload["counts"]["visible_agents"]:
+            payload["available"] = False
+            payload["status"] = "Wired"
+            payload["summary"] = "Agent operations route is live, but the runtime posture only partially hydrated."
+            payload["remains_partial"] = "Agent registry, runtime, or scheduler sources still need repair or population in this runtime."
+        elif payload["errors"]:
+            payload["status"] = "Useful"
+            payload["summary"] = "Agent operations route is live with partial runtime or scheduler hydration."
+            payload["remains_partial"] = "Some ops sources still failed to hydrate; inspect the payload preview for details."
+
+        return payload
+
+    @app.get("/api/agent-ops/module")
+    async def api_agent_ops_module() -> JSONResponse:
+        return _json(await _build_agent_ops_module_payload())
+
     @app.get("/api/first-light")
     async def api_first_light(
         actor: str = "Chris",
@@ -1402,7 +2348,58 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
     @app.get("/api/activity")
     async def api_activity() -> JSONResponse:
-        return _json(runtime.recent_activity())
+        activity = list(build_command_center_index().get("activity_feed") or [])
+        return _json(activity or runtime.recent_activity())
+
+    @app.post("/api/activity/home-action")
+    async def api_activity_home_action(payload: dict[str, Any]) -> JSONResponse:
+        action_label = str(payload.get("action") or payload.get("label") or payload.get("title") or "Home action").strip() or "Home action"
+        status = str(payload.get("status") or payload.get("result") or "ok").strip() or "ok"
+        detail = str(payload.get("detail") or "").strip()
+        audit = AuditLog(DEFAULT_AUDIT_ROOT)
+        audit.log_event(
+            "home-action",
+            {
+                "actor": str(payload.get("actor") or "Chris").strip() or "Chris",
+                "domain": str(payload.get("domain") or "command-center").strip() or "command-center",
+                "action": action_label,
+                "title": action_label,
+                "detail": detail,
+                "why_now": str(payload.get("why_now") or detail or "Command center home action updated the current day posture.").strip(),
+                "result_summary": str(payload.get("result_summary") or f"Home action result: {status}").strip() or f"Home action result: {status}",
+                "related_route": str(payload.get("route") or "/command-center").strip() or "/command-center",
+                "route_label": str(payload.get("route_label") or "Open Related Surface").strip() or "Open Related Surface",
+                "succeeded": bool(payload.get("succeeded", True)),
+                "source_kind": "home-action",
+            },
+        )
+        return _json({"status": "recorded", "entry_type": "home-action", "action": action_label})
+
+    @app.post("/api/activity/operator-action")
+    async def api_activity_operator_action(payload: dict[str, Any]) -> JSONResponse:
+        action_label = str(payload.get("action") or payload.get("label") or payload.get("title") or "Operator action").strip() or "Operator action"
+        status = str(payload.get("status") or payload.get("result") or "ok").strip() or "ok"
+        detail = str(payload.get("detail") or "").strip()
+        audit = AuditLog(DEFAULT_AUDIT_ROOT)
+        audit.log_event(
+            "operator-action",
+            {
+                "actor": str(payload.get("actor") or "Chris").strip() or "Chris",
+                "domain": str(payload.get("domain") or "command-center").strip() or "command-center",
+                "action": action_label,
+                "title": str(payload.get("title") or action_label).strip() or action_label,
+                "detail": detail,
+                "why_now": str(payload.get("why_now") or detail or "Command center operator action updated a shared workflow surface.").strip(),
+                "result_summary": str(payload.get("result_summary") or f"Operator action result: {status}").strip() or f"Operator action result: {status}",
+                "related_route": str(payload.get("route") or "/command-center").strip() or "/command-center",
+                "route_label": str(payload.get("route_label") or "Open Related Surface").strip() or "Open Related Surface",
+                "related_kind": str(payload.get("related_kind") or "activity").strip() or "activity",
+                "related_label": str(payload.get("related_label") or action_label).strip() or action_label,
+                "succeeded": bool(payload.get("succeeded", True)),
+                "source_kind": "operator-action",
+            },
+        )
+        return _json({"status": "recorded", "entry_type": "operator-action", "action": action_label})
 
     @app.get("/api/open-loops")
     async def api_open_loops(actor: str = "Chris", limit: int = 30) -> JSONResponse:
@@ -1499,6 +2496,127 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/location-settings")
     async def api_location_settings() -> JSONResponse:
         return _json(location_settings.describe())
+
+    async def _build_settings_module_payload() -> dict[str, Any]:
+        try:
+            from datetime import datetime, timezone
+
+            generated_at = datetime.now(timezone.utc).isoformat()
+        except Exception:
+            generated_at = ""
+
+        payload: dict[str, Any] = {
+            "generated_at": generated_at,
+            "available": True,
+            "status": "Useful",
+            "summary": "Settings now has a dedicated module route with live voice, location, account, and permissions posture inside JARVIS.",
+            "what_became_real": "Settings & Permissions is now a standalone app module instead of only a shell packet with scattered APIs behind it.",
+            "remains_partial": "Broader permissions drill-ins, richer save flows, and deeper connector continuity still need follow-on slices.",
+            "voice": {},
+            "voice_options": {},
+            "location": {},
+            "accounts": {"accounts": []},
+            "google": {},
+            "identity": {"members": [], "devices": []},
+            "permissions": {
+                "governance": {},
+                "notifications": {},
+                "privacy": {},
+                "dashboard": {},
+                "insights": [],
+                "rhythms": [],
+            },
+            "counts": {
+                "account_count": 0,
+                "connected_account_count": 0,
+                "saved_location_count": 0,
+                "insight_count": 0,
+            },
+            "proof_paths": {
+                "module_route": "/settings-center",
+                "module_api": "/api/settings/module",
+                "voice_api": "/api/voice-settings",
+                "location_api": "/api/location-settings",
+                "voice_options_api": "/api/voice-options",
+                "accounts_api": "/api/accounts",
+                "identity_api": "/api/identity",
+                "google_summary_api": "/api/google/summary",
+                "google_client_api": "/api/google/client-secret",
+                "google_disconnect_api": "/api/google/disconnect",
+                "personalization_api": "/api/personalization/settings",
+            },
+            "errors": [],
+        }
+
+        try:
+            payload["voice"] = voice_settings.describe()
+            payload["voice_options"] = voice_settings.voice_options()
+        except Exception as exc:
+            payload["errors"].append(f"voice: {exc}")
+
+        try:
+            location = location_settings.describe()
+            payload["location"] = location
+            payload["counts"]["saved_location_count"] = len(list(location.get("saved_locations") or []))
+        except Exception as exc:
+            payload["errors"].append(f"location: {exc}")
+
+        try:
+            accounts = runtime.account_registry_snapshot()
+            payload["accounts"] = accounts
+            account_items = list(accounts.get("accounts") or [])
+            payload["counts"]["account_count"] = len(account_items)
+            payload["counts"]["connected_account_count"] = sum(
+                1
+                for item in account_items
+                if str(item.get("status", "")).strip().lower() == "connected"
+                or str((item.get("connection") or {}).get("status", "")).strip().lower() == "connected"
+                or str(item.get("connection", "")).strip().lower() == "connected"
+            )
+        except Exception as exc:
+            payload["errors"].append(f"accounts: {exc}")
+
+        try:
+            payload["google"] = runtime.google_workspace_summary()
+        except Exception as exc:
+            payload["errors"].append(f"google: {exc}")
+
+        try:
+            payload["identity"] = runtime.identity_overview()
+        except Exception as exc:
+            payload["errors"].append(f"identity: {exc}")
+
+        try:
+            from .user_profile import load_profile
+
+            actor = runtime.get_actor("Chris")
+            profile = load_profile(actor.user_id)
+            personalization = runtime._personalization_snapshot(actor)
+            permissions = payload["permissions"]
+            permissions["governance"] = dict(personalization.get("governance") or {})
+            permissions["insights"] = list(personalization.get("insights") or [])[:6]
+            permissions["rhythms"] = list(personalization.get("rhythms") or [])[:4]
+            permissions["notifications"] = dict(profile.get("notifications") or {})
+            permissions["privacy"] = dict(profile.get("privacy") or {})
+            permissions["dashboard"] = dict(profile.get("dashboard") or {})
+            payload["counts"]["insight_count"] = len(permissions["insights"])
+        except Exception as exc:
+            payload["errors"].append(f"permissions: {exc}")
+
+        if payload["errors"]:
+            payload["status"] = "Wired"
+            if not payload["voice"] and not payload["location"]:
+                payload["available"] = False
+                payload["summary"] = "Settings center route is live, but key settings sources did not fully hydrate."
+                payload["remains_partial"] = "Live settings sources still need repair or population in this runtime."
+            else:
+                payload["summary"] = "Settings center route is live with partial voice, location, account, and permissions posture."
+                payload["remains_partial"] = "Some settings or permissions sources still failed to hydrate; inspect the payload preview for details."
+        return payload
+
+    @app.get("/api/settings/module")
+    async def api_settings_module() -> JSONResponse:
+        return _json(await _build_settings_module_payload())
 
     @app.get("/api/design-review-state")
     async def api_design_review_state() -> JSONResponse:
@@ -2446,6 +3564,60 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/authority-stages")
     async def api_authority_stages() -> JSONResponse:
         return _json({"stages": runtime.list_authority_stages()})
+
+    @app.get("/api/promotion-records")
+    async def api_promotion_records(limit: int = 50) -> JSONResponse:
+        return _json({"records": runtime.list_promotion_records(limit=limit)})
+
+    @app.get("/api/promotion-recommendations")
+    async def api_promotion_recommendations(limit: int = 12) -> JSONResponse:
+        return _json({"recommendations": runtime.list_promotion_recommendations(limit=limit)})
+
+    @app.post("/api/promotion/evaluate")
+    async def api_promotion_evaluate(payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = runtime.evaluate_promotion_claim(
+                subject_kind=str(payload.get("subject_kind", "")),
+                subject_id=str(payload.get("subject_id", "")),
+                target_stage=str(payload.get("target_stage", "")),
+                actor=str(payload.get("actor", "system")),
+                basis=str(payload.get("basis", "promotion-evaluation")),
+                human_consent=bool(payload.get("human_consent", False)),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(result)
+
+    @app.post("/api/promotion/apply")
+    async def api_promotion_apply(payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = runtime.apply_promotion_decision(
+                subject_kind=str(payload.get("subject_kind", "")),
+                subject_id=str(payload.get("subject_id", "")),
+                target_stage=str(payload.get("target_stage", "")),
+                actor=str(payload.get("actor", "system-steward")),
+                basis=str(payload.get("basis", "promotion-application")),
+                human_consent=bool(payload.get("human_consent", False)),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except PermissionError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(result)
+
+    @app.post("/api/promotion/apply-recommendations")
+    async def api_promotion_apply_recommendations(payload: dict[str, Any] | None = None) -> JSONResponse:
+        payload = payload or {}
+        result = runtime.apply_promotion_recommendations(
+            actor=str(payload.get("actor", "system-steward")),
+            basis=str(payload.get("basis", "auto-apply-promotion-recommendations")),
+            limit=int(payload.get("limit", 12) or 12),
+        )
+        return _json(result)
 
     @app.get("/api/stage/queue")
     async def api_stage_queue() -> JSONResponse:
@@ -3410,7 +4582,18 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             )
         except KeyError as exc:
             raise HTTPException(status_code=400, detail=f"Missing required field: {exc.args[0]}") from exc
-        return _json({"status": "submitted", "request_id": request_id}, status_code=201)
+        queue = get_approval_queue()
+        item = queue.get_by_id(request_id) if queue is not None else None
+        return _json(
+            {
+                "status": "submitted",
+                "request_id": request_id,
+                "supervision_decision": dict(getattr(item, "supervision_decision", {}) or {}),
+                "trust_zone_id": str(getattr(item, "trust_zone_id", "") or ""),
+                "lane_id": str(getattr(item, "lane_id", "") or ""),
+            },
+            status_code=201,
+        )
 
     @app.post("/api/approvals/{request_id}/execute")
     async def api_approvals_execute(request_id: str) -> JSONResponse:
@@ -3421,7 +4604,14 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         result = guard.execute_approved(request_id)
         if result.get("status") == "error":
             raise HTTPException(status_code=400, detail=result.get("detail", "Execution failed"))
-        return _json({"status": "executed", "result": result, "request_id": request_id})
+        return _json(
+            {
+                "status": "executed",
+                "result": result,
+                "request_id": request_id,
+                "supervision_decision": dict(result.get("supervision_decision", {}) or {}),
+            }
+        )
 
     @app.post("/api/message-drafts/{draft_id}")
     async def api_update_message_draft(draft_id: str, payload: dict[str, Any]) -> JSONResponse:
@@ -4071,6 +5261,194 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     # Agent Work System — GET routes (work items, standup, huddle)
     # ------------------------------------------------------------------
 
+    async def _build_huddle_module_payload() -> dict[str, Any]:
+        generated_at = ""
+        try:
+            from datetime import datetime, timezone
+
+            generated_at = datetime.now(timezone.utc).isoformat()
+        except Exception:
+            generated_at = ""
+
+        payload: dict[str, Any] = {
+            "generated_at": generated_at,
+            "available": True,
+            "status": "Useful",
+            "summary": "Huddle now has a dedicated module route with live standups, runtime posture, dossiers, and idea capture.",
+            "what_became_real": "Huddle is now represented as a dedicated app module instead of a shell-only packet path.",
+            "remains_partial": "Deeper huddle workflows, richer approvals handling, and broader continuity review still need follow-on slices.",
+            "total_active_work": 0,
+            "approvals_count": 0,
+            "blocker_count": 0,
+            "ready_dossier_count": 0,
+            "reports": [],
+            "approvals": [],
+            "blockers": [],
+            "highlights": [],
+            "runtime": {},
+            "party_mode": {},
+            "dossiers": [],
+            "idea_inbox": {
+                "total": 0,
+                "captured_count": 0,
+                "queued_count": 0,
+                "recent": [],
+            },
+            "proof_paths": {
+                "module_route": "/huddle-center",
+                "module_api": "/api/huddle/module",
+                "huddle_api": "/api/huddle",
+                "party_start_api": "/api/party-mode/start",
+                "ideas_api": "/api/ideas",
+                "dossiers_api": "/api/dossiers",
+            },
+            "errors": [],
+        }
+
+        try:
+            from dataclasses import asdict
+
+            from .standup import collect_all_standups
+
+            huddle = await asyncio.to_thread(collect_all_standups, None, runtime, False)
+            data = asdict(huddle)
+            reports = []
+            for entry in list(data.get("agent_reports") or [])[:12]:
+                reports.append(
+                    {
+                        "agent_id": str(entry.get("agent_id") or ""),
+                        "agent_name": str(entry.get("agent_name") or entry.get("agent_id") or ""),
+                        "domain": str(entry.get("domain") or ""),
+                        "status": str(entry.get("status") or "ok"),
+                        "summary": str(entry.get("summary") or entry.get("headline") or entry.get("today") or ""),
+                        "needs": str(entry.get("needs") or ""),
+                        "active_work_count": int(entry.get("active_work_count") or 0),
+                        "highlights": [str(item) for item in list(entry.get("highlights") or [])[:4]],
+                    }
+                )
+            approvals = []
+            for entry in list(data.get("approvals_needed") or [])[:8]:
+                approvals.append(
+                    {
+                        "work_id": str(entry.get("work_id") or ""),
+                        "title": str(entry.get("title") or "Untitled"),
+                        "agent": str(entry.get("agent") or entry.get("agent_id") or ""),
+                        "proposal": str(entry.get("proposal") or entry.get("idea") or ""),
+                        "domain": str(entry.get("domain") or ""),
+                    }
+                )
+            payload["reports"] = reports
+            payload["approvals"] = approvals
+            payload["blockers"] = [str(item) for item in list(data.get("blockers") or [])[:6]]
+            payload["highlights"] = [str(item) for item in list(data.get("highlights") or [])[:8]]
+            payload["total_active_work"] = int(data.get("total_active_work") or 0)
+            payload["approvals_count"] = len(approvals)
+            payload["blocker_count"] = len(payload["blockers"])
+        except Exception as exc:
+            payload["status"] = "Wired"
+            payload["available"] = False
+            payload["summary"] = "Huddle center route is live, but standup aggregation did not fully hydrate."
+            payload["remains_partial"] = "Live huddle standup sources still need repair or population in this runtime."
+            payload["errors"].append(f"standups: {exc}")
+
+        try:
+            runtime_snapshot = runtime.background_agent_status()
+            statuses = []
+            for item in list(runtime_snapshot.get("statuses") or [])[:6]:
+                if not isinstance(item, dict):
+                    continue
+                statuses.append(
+                    {
+                        "agent_id": str(item.get("agent_id") or ""),
+                        "label": str(item.get("label") or item.get("agent_id") or ""),
+                        "state": str(item.get("state") or "idle"),
+                        "reason": str(item.get("reason") or ""),
+                        "last_run_at": str(item.get("last_run_at") or ""),
+                    }
+                )
+            payload["runtime"] = {
+                "active_mode": str(runtime_snapshot.get("active_mode") or ""),
+                "quiet_hours_active": bool(runtime_snapshot.get("quiet_hours_active")),
+                "awake_count": int(runtime_snapshot.get("awake_count") or 0),
+                "idle_count": int(runtime_snapshot.get("idle_count") or 0),
+                "blocked_count": int(runtime_snapshot.get("blocked_count") or 0),
+                "last_tick_at": str(runtime_snapshot.get("last_tick_at") or ""),
+                "statuses": statuses,
+            }
+        except Exception as exc:
+            payload["errors"].append(f"runtime: {exc}")
+
+        try:
+            from .party_mode import get_party_controller
+
+            payload["party_mode"] = get_party_controller(runtime).get_status()
+        except Exception as exc:
+            payload["errors"].append(f"party_mode: {exc}")
+
+        try:
+            from .dossier import get_dossier_store
+
+            store = get_dossier_store()
+            items = []
+            for dossier in store.get_all():
+                if str(getattr(dossier, "status", "") or "").strip().lower() == "presented":
+                    continue
+                items.append(
+                    {
+                        "dossier_id": str(getattr(dossier, "dossier_id", "") or ""),
+                        "title": str(getattr(dossier, "title", "") or "Untitled"),
+                        "status": str(getattr(dossier, "status", "") or ""),
+                        "executive_summary": str(
+                            getattr(dossier, "executive_summary", "") or getattr(dossier, "market_opportunity", "") or ""
+                        ),
+                        "first_action": str(getattr(dossier, "first_action", "") or ""),
+                        "confidence_score": float(getattr(dossier, "confidence_score", 0.0) or 0.0),
+                        "updated_at": str(getattr(dossier, "updated_at", "") or getattr(dossier, "created_at", "") or ""),
+                    }
+                )
+            items.sort(key=lambda item: item["updated_at"], reverse=True)
+            payload["dossiers"] = items[:6]
+            payload["ready_dossier_count"] = len(items)
+        except Exception as exc:
+            payload["errors"].append(f"dossiers: {exc}")
+
+        try:
+            from .ideas import list_ideas, stats
+
+            summary = stats()
+            ideas = list_ideas()
+            by_status = dict(summary.get("by_status") or {})
+            payload["idea_inbox"] = {
+                "total": int(summary.get("total") or 0),
+                "captured_count": int(by_status.get("captured") or 0),
+                "queued_count": int(by_status.get("queued") or 0),
+                "recent": [
+                    {
+                        "id": str(item.get("id") or ""),
+                        "text": str(item.get("text") or ""),
+                        "status": str(item.get("status") or ""),
+                        "domain": str(item.get("domain") or ""),
+                        "created_at": str(item.get("created_at") or ""),
+                    }
+                    for item in ideas[:6]
+                ],
+            }
+        except Exception as exc:
+            payload["errors"].append(f"ideas: {exc}")
+
+        if payload["status"] == "Useful":
+            payload["summary"] = (
+                f"Huddle center loaded {len(payload['reports'])} standup report(s), "
+                f"{payload['approvals_count']} approval item(s), and {payload['ready_dossier_count']} ready dossier(s)."
+            )
+            if not payload["reports"]:
+                payload["status"] = "Wired"
+                payload["remains_partial"] = "The dedicated Huddle screen is live, but no standup reports were available in this runtime."
+
+        if payload["errors"] and payload["status"] == "Useful":
+            payload["remains_partial"] = "Some huddle sources still failed to hydrate; inspect the payload preview for details."
+        return payload
+
     @app.get("/api/huddle")
     async def api_huddle() -> JSONResponse:
         """Return the daily huddle: all agent standups aggregated."""
@@ -4088,6 +5466,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         except Exception as exc:
             logger.exception("Huddle generation failed: %s", exc)
             return _json({"error": str(exc), "agent_reports": [], "blockers": [], "highlights": []})
+
+    @app.get("/api/huddle/module")
+    async def api_huddle_module() -> JSONResponse:
+        return _json(await _build_huddle_module_payload())
 
     @app.get("/api/agent-work")
     async def api_agent_work_list(agent_id: str = Query(default=""), status: str = Query(default="")) -> JSONResponse:
@@ -4648,6 +6030,101 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     # Chronicle Bridge endpoints (Epic 9)
     # ------------------------------------------------------------------
 
+    async def _build_chronicle_module_payload() -> dict[str, Any]:
+        generated_at = ""
+        try:
+            from datetime import datetime, timezone
+
+            generated_at = datetime.now(timezone.utc).isoformat()
+        except Exception:
+            generated_at = ""
+
+        payload: dict[str, Any] = {
+            "generated_at": generated_at,
+            "available": True,
+            "status": "Useful",
+            "summary": "Chronicle now has a dedicated module route with live devotional, capture, continuity, and bridge posture.",
+            "what_became_real": "Chronicle is now represented as a dedicated app module instead of a shell-only packet.",
+            "remains_partial": "Deeper Chronicle review workflows, richer study surfaces, and broader external handoff continuity still need follow-on slices.",
+            "entry_count": 0,
+            "pending_entry_count": 0,
+            "timeline": [],
+            "theme_summary": {"themes": [], "entries_considered": 0},
+            "morning_context": {},
+            "workflow_status": {},
+            "insights": [],
+            "bridge_status": "not_loaded",
+            "bridge_note": "Chronicle bridge is not initialised in this runtime.",
+            "proof_paths": {
+                "module_route": "/chronicle-center",
+                "module_api": "/api/chronicle/module",
+                "status_api": "/api/chronicle/status",
+                "capture_api": "/api/chronicle-capture",
+                "devotional_api": "/api/devotional-pause",
+                "family_devotional_api": "/api/family-devotional",
+            },
+            "errors": [],
+        }
+
+        try:
+            if callable(getattr(runtime, "chronicle_timeline", None)):
+                timeline = runtime.chronicle_timeline(limit=10)
+                payload["timeline"] = timeline if isinstance(timeline, list) else []
+                payload["entry_count"] = len(payload["timeline"])
+            if callable(getattr(runtime, "chronicle_theme_summary", None)):
+                theme_summary = runtime.chronicle_theme_summary(limit=25)
+                if isinstance(theme_summary, dict):
+                    payload["theme_summary"] = theme_summary
+        except Exception as exc:
+            payload["status"] = "Wired"
+            payload["available"] = False
+            payload["summary"] = "Chronicle center route is live, but timeline and theme sources did not fully hydrate."
+            payload["remains_partial"] = "Live Chronicle continuity sources still need repair or population in this runtime."
+            payload["errors"].append(f"chronicle_core: {exc}")
+
+        try:
+            bridge = _get_chronicle_bridge()
+            if bridge is not None:
+                payload["bridge_status"] = "loaded"
+                payload["bridge_note"] = "Chronicle bridge is initialised."
+                morning_context = await asyncio.to_thread(bridge.get_morning_spiritual_context, "chris")
+                payload["morning_context"] = morning_context if isinstance(morning_context, dict) else {}
+                insights = await asyncio.to_thread(bridge.get_insights)
+                payload["insights"] = [
+                    item.to_dict() if hasattr(item, "to_dict") else item
+                    for item in list(insights or [])[:8]
+                ]
+                pending_entries = await asyncio.to_thread(bridge.get_pending_entries)
+                payload["pending_entry_count"] = len(list(pending_entries or []))
+            else:
+                payload["morning_context"] = {}
+        except Exception as exc:
+            payload["errors"].append(f"chronicle_bridge: {exc}")
+
+        try:
+            disciple = _get_disciple()
+            if disciple is not None:
+                workflow_status = await asyncio.to_thread(disciple.get_workflow_status)
+                payload["workflow_status"] = workflow_status if isinstance(workflow_status, dict) else {}
+            else:
+                payload["workflow_status"] = {}
+        except Exception as exc:
+            payload["errors"].append(f"chronicle_status: {exc}")
+
+        if payload["status"] == "Useful":
+            payload["summary"] = (
+                f"Chronicle center loaded {payload['entry_count']} entry(s), "
+                f"{len((payload['theme_summary'] or {}).get('themes') or [])} recurring theme(s), and "
+                f"{len(payload['insights'])} bridge insight(s)."
+            )
+            if not payload["timeline"]:
+                payload["status"] = "Wired"
+                payload["remains_partial"] = "The dedicated Chronicle screen is live, but no Chronicle entries were available in this runtime."
+
+        if payload["errors"] and payload["status"] == "Useful":
+            payload["remains_partial"] = "Some Chronicle sources still failed to hydrate; inspect the payload preview for details."
+        return payload
+
     @app.get("/api/chronicle/entries/pending")
     async def api_chronicle_pending_entries() -> JSONResponse:
         """Return Chronicle entries waiting to be pushed to Chronicle."""
@@ -4656,6 +6133,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             raise HTTPException(status_code=503, detail="ChronicleBridge not initialised")
         entries = await asyncio.to_thread(bridge.get_pending_entries)
         return _json({"entries": [e.to_dict() for e in entries], "count": len(entries)})
+
+    @app.get("/api/chronicle/module")
+    async def api_chronicle_module() -> JSONResponse:
+        return _json(await _build_chronicle_module_payload())
 
     @app.post("/api/chronicle/entries/{entry_id}/sent")
     async def api_chronicle_mark_sent(entry_id: str) -> JSONResponse:
@@ -4897,6 +6378,111 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         if pub is None:
             raise HTTPException(status_code=503, detail="PublishingSuite not initialised")
         return pub
+
+    def _build_publish_module_payload() -> dict[str, Any]:
+        from datetime import datetime, timezone
+
+        generated_at = datetime.now(timezone.utc).isoformat()
+        bridge = _get_ghostwritr_bridge()
+        pub = _get_publishing()
+        payload: dict[str, Any] = {
+            "generated_at": generated_at,
+            "available": bool(pub is not None or bridge is not None),
+            "status": "Stubbed",
+            "summary": "Publish now has a dedicated module route, but backend publishing sources are not initialised in this runtime.",
+            "what_became_real": "JARVIS now exposes Publish as a dedicated app module route instead of leaving it hidden behind APIs and shared workspaces.",
+            "remains_partial": "Cross-launch continuity, richer drill-ins, and broader publishing controls still need follow-on slices.",
+            "project_count": 0,
+            "active_project_count": 0,
+            "review_count": 0,
+            "scheduled_post_count": 0,
+            "overdue_calendar_count": 0,
+            "projects": [],
+            "calendar": {"upcoming": [], "overdue": []},
+            "social": {"posts": []},
+            "revenue": {
+                "monthly_estimate_total": 0.0,
+                "active_stream_count": 0,
+                "attention_count": 0,
+            },
+            "launch_control": {"active_project": None, "next_action": "Publishing sources are not initialised yet."},
+            "proof_paths": {
+                "module_route": "/publish",
+                "module_api": "/api/publish/module",
+                "status_api": "/api/publishing/status",
+                "projects_api": "/api/publishing/projects",
+                "calendar_api": "/api/publishing/calendar",
+                "social_api": "/api/publishing/social/posts",
+            },
+            "errors": [],
+        }
+
+        if bridge is not None:
+            try:
+                pending_reviews = bridge.get_pending_reviews()
+                payload["review_count"] = len(pending_reviews)
+            except Exception as exc:
+                payload["errors"].append(f"ghostwritr_bridge: {exc}")
+
+        if pub is None:
+            return payload
+
+        payload["status"] = "Useful"
+        payload["summary"] = "Publish now has a dedicated route with live projects, launch control, calendar, social, and revenue posture."
+
+        try:
+            projects = list(pub._store.list_projects())
+            payload["projects"] = [project.to_dict() for project in projects[:8]]
+            payload["project_count"] = len(projects)
+            payload["active_project_count"] = sum(1 for project in projects if str(getattr(project, "status", "")).strip() not in {"", "archived", "completed"})
+        except Exception as exc:
+            payload["errors"].append(f"projects: {exc}")
+
+        try:
+            upcoming = list(pub.calendar.get_upcoming(14))
+            overdue = list(pub.calendar.get_overdue())
+            payload["calendar"] = {
+                "upcoming": [item.to_dict() for item in upcoming[:8]],
+                "overdue": [item.to_dict() for item in overdue[:4]],
+            }
+            payload["overdue_calendar_count"] = len(overdue)
+        except Exception as exc:
+            payload["errors"].append(f"calendar: {exc}")
+
+        try:
+            posts = list(pub._store.get_scheduled_posts())
+            payload["social"] = {"posts": [post.to_dict() for post in posts[:8]]}
+            payload["scheduled_post_count"] = len(posts)
+        except Exception as exc:
+            payload["errors"].append(f"social: {exc}")
+
+        try:
+            revenue = dict(pub.sage.get_revenue_summary() or {})
+            streams = list(revenue.get("streams") or [])
+            attention = list(revenue.get("attention_flags") or [])
+            payload["revenue"] = {
+                "monthly_estimate_total": revenue.get("monthly_estimate_total", 0.0),
+                "active_stream_count": len([item for item in streams if bool(item.get("active", True))]),
+                "attention_count": len(attention),
+            }
+        except Exception as exc:
+            payload["errors"].append(f"revenue: {exc}")
+
+        try:
+            launch_control = _build_launch_control_payload(None)
+            payload["launch_control"] = launch_control
+            if launch_control.get("active_project"):
+                payload["what_became_real"] = "Publish now has a dedicated app route backed by live launch-control, project, social, and revenue state."
+        except Exception as exc:
+            payload["errors"].append(f"launch_control: {exc}")
+
+        if payload["errors"]:
+            payload["remains_partial"] = "Some publishing sources still failed to hydrate; see errors in the payload preview."
+        return payload
+
+    @app.get("/api/publish/module")
+    async def api_publish_module() -> JSONResponse:
+        return _json(_build_publish_module_payload())
 
     @app.get("/api/publishing/projects")
     async def api_publishing_list_projects(
@@ -6527,6 +8113,91 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     # ------------------------------------------------------------------
     # Phase 4: Symptom Triage Engine (Oracle-First Protocol)
     # ------------------------------------------------------------------
+
+    async def _build_health_module_payload() -> dict[str, Any]:
+        generated_at = ""
+        try:
+            from datetime import datetime, timezone
+
+            generated_at = datetime.now(timezone.utc).isoformat()
+        except Exception:
+            generated_at = ""
+
+        payload: dict[str, Any] = {
+            "generated_at": generated_at,
+            "available": True,
+            "status": "Useful",
+            "summary": "Health now has a dedicated module route with live drift, objective, and triage posture inside JARVIS.",
+            "what_became_real": "Health is now represented as a dedicated app module instead of a storyboard-only route.",
+            "remains_partial": "Deeper health workflows, historical review, and broader manual data entry still need follow-on slices.",
+            "signal_count": 0,
+            "active_cluster_count": 0,
+            "objective_count": 0,
+            "current_signals": {},
+            "baseline_deviations": [],
+            "drift_scan": {
+                "overall_drift_status": "unknown",
+                "active_clusters": [],
+                "one_next_action": "Health module payload is still hydrating.",
+                "oracle_review_needed": False,
+            },
+            "objectives": [],
+            "red_flags": {},
+            "proof_paths": {
+                "module_route": "/health-center",
+                "module_api": "/api/health/module",
+                "drift_scan_api": "/api/health/drift/scan",
+                "objectives_api": "/api/health/quarterly/objectives",
+                "triage_api": "/api/health/symptom/triage",
+            },
+            "errors": [],
+        }
+
+        try:
+            from .drift_detection import get_baseline_deviations, get_current_signals, run_drift_scan
+
+            current_signals = await get_current_signals()
+            baseline_deviations = await get_baseline_deviations(current_signals)
+            drift_scan = await run_drift_scan()
+            payload["current_signals"] = current_signals
+            payload["baseline_deviations"] = baseline_deviations
+            payload["drift_scan"] = drift_scan
+            payload["signal_count"] = len(current_signals)
+            payload["active_cluster_count"] = len(list(drift_scan.get("active_clusters") or []))
+            payload["summary"] = f"Health center loaded {len(current_signals)} current signal(s) with {len(list(drift_scan.get('active_clusters') or []))} active drift cluster(s)."
+            if not current_signals:
+                payload["status"] = "Wired"
+                payload["remains_partial"] = "The dedicated Health screen is live, but current signal sources are still sparse in this runtime."
+        except Exception as exc:
+            payload["status"] = "Wired"
+            payload["available"] = False
+            payload["errors"].append(f"drift: {exc}")
+            payload["summary"] = "Health center route is live, but drift and signal sources did not fully hydrate."
+            payload["remains_partial"] = "Live health sources still need repair or population in this runtime."
+
+        try:
+            from .quarterly_review import get_current_objectives
+
+            objectives = await get_current_objectives()
+            payload["objectives"] = objectives
+            payload["objective_count"] = len(objectives)
+        except Exception as exc:
+            payload["errors"].append(f"objectives: {exc}")
+
+        try:
+            from .symptom_triage import get_red_flags_for_patient
+
+            payload["red_flags"] = get_red_flags_for_patient()
+        except Exception as exc:
+            payload["errors"].append(f"red_flags: {exc}")
+
+        if payload["errors"] and payload["status"] == "Useful":
+            payload["remains_partial"] = "Some health sources still failed to hydrate; inspect the payload preview for details."
+        return payload
+
+    @app.get("/api/health/module")
+    async def api_health_module() -> JSONResponse:
+        return _json(await _build_health_module_payload())
 
     @app.post("/api/health/symptom/triage")
     async def api_symptom_triage(request: Request) -> JSONResponse:

@@ -33,6 +33,8 @@ from urllib.parse import urlencode
 
 import httpx
 
+from .persistence import append_jsonl, atomic_write_json
+
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -71,6 +73,8 @@ _SCOPES = "bloodpressure activity weight openid offline_access"
 # ---------------------------------------------------------------------------
 
 _TOKENS_PATH = Path.home() / ".jarvis" / "omron_tokens.json"
+_TOKENS_LOG_PATH = _TOKENS_PATH.with_name("omron_tokens_log.jsonl")
+_TOKENS_STATE_LOG_PATH = _TOKENS_PATH.with_name("omron_tokens_state_log.jsonl")
 _TOKENS_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
@@ -79,12 +83,67 @@ def _load_tokens() -> dict:
         try:
             return json.loads(_TOKENS_PATH.read_text())
         except Exception:
-            pass
+            log.warning("Omron token snapshot unreadable; replaying state log")
+    tokens = _load_tokens_from_state_log()
+    if tokens:
+        atomic_write_json(_TOKENS_PATH, tokens)
+        return tokens
+    tokens = _load_tokens_from_log()
+    if tokens:
+        atomic_write_json(_TOKENS_PATH, tokens)
+        return tokens
+    return {}
+
+
+def _load_tokens_from_state_log() -> dict:
+    if not _TOKENS_STATE_LOG_PATH.exists():
+        return {}
+    try:
+        last: dict[str, Any] | None = None
+        for line in _TOKENS_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            payload = json.loads(line)
+            tokens = payload.get("tokens")
+            if isinstance(tokens, dict):
+                last = tokens
+        if last is not None:
+            return last
+    except Exception:
+        log.warning("Omron token state log unreadable", exc_info=True)
+    return {}
+
+
+def _load_tokens_from_log() -> dict:
+    if not _TOKENS_LOG_PATH.exists():
+        return {}
+    try:
+        last: dict[str, Any] | None = None
+        for line in _TOKENS_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            payload = json.loads(line)
+            if isinstance(payload, dict):
+                last = payload
+        if last is not None:
+            return last
+    except Exception:
+        log.warning("Omron token append log unreadable", exc_info=True)
     return {}
 
 
 def _save_tokens(tokens: dict) -> None:
-    _TOKENS_PATH.write_text(json.dumps(tokens, indent=2))
+    append_jsonl(_TOKENS_LOG_PATH, tokens)
+    append_jsonl(
+        _TOKENS_STATE_LOG_PATH,
+        {
+            "saved_at": datetime.utcnow().isoformat(),
+            "tokens": tokens,
+        },
+    )
+    atomic_write_json(_TOKENS_PATH, tokens)
 
 
 def _decode_jwt_payload(token: str) -> dict:

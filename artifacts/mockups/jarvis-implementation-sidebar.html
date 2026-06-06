@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Comprehensive Checklist</title>
+  <style>
+    :root {
+      --bg: #081019;
+      --bg-soft: #0c1723;
+      --panel: rgba(11, 20, 31, 0.92);
+      --line: rgba(131, 182, 214, 0.16);
+      --text: #eef6fb;
+      --muted: #89a0b5;
+      --cyan: #63d6df;
+      --green: #62d99d;
+      --amber: #f2b55a;
+      --red: #eb7178;
+      --blue: #83b8ff;
+      --shadow: 0 20px 54px rgba(0, 0, 0, 0.28);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: "SF Pro Display", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(99, 214, 223, 0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(131, 184, 255, 0.12), transparent 24%),
+        linear-gradient(180deg, #081019 0%, #050c14 100%);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 340px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 28px 22px;
+      border-right: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(8, 15, 24, 0.98), rgba(8, 15, 24, 0.94));
+      backdrop-filter: blur(16px);
+      overflow: auto;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      padding: 6px 10px;
+      border: 1px solid rgba(99, 214, 223, 0.3);
+      border-radius: 999px;
+      color: var(--cyan);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 14px 0 10px;
+      font-size: 29px;
+      line-height: 1.03;
+    }
+
+    p, .muted {
+      color: var(--muted);
+    }
+
+    .stats {
+      display: grid;
+      gap: 10px;
+      margin: 24px 0;
+    }
+
+    .stat {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.03);
+      box-shadow: var(--shadow);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+
+    .progress {
+      height: 10px;
+      margin: 16px 0 8px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .progress > span {
+      display: block;
+      width: 74%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--cyan), var(--green));
+    }
+
+    .nav {
+      display: grid;
+      gap: 8px;
+      margin-top: 24px;
+    }
+
+    .nav a {
+      text-decoration: none;
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid transparent;
+    }
+
+    .nav a:hover {
+      border-color: var(--line);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    main {
+      padding: 30px;
+    }
+
+    .hero, .panel {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 26px;
+      margin-bottom: 24px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .hero-card {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--line);
+    }
+
+    .hero-card strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .section {
+      margin-bottom: 24px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .section h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .badge.done { background: rgba(98, 217, 157, 0.12); color: var(--green); }
+    .badge.active { background: rgba(242, 181, 90, 0.12); color: var(--amber); }
+    .badge.next { background: rgba(131, 184, 255, 0.12); color: var(--blue); }
+    .badge.risk { background: rgba(235, 113, 120, 0.12); color: var(--red); }
+
+    .panel {
+      padding: 18px 18px 10px;
+    }
+
+    .checklist {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .item {
+      display: grid;
+      grid-template-columns: 22px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 12px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .item:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .check {
+      width: 22px;
+      height: 22px;
+      margin-top: 1px;
+      border-radius: 7px;
+      border: 1px solid var(--line);
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .item.done .check {
+      color: #042014;
+      background: linear-gradient(180deg, var(--green), #39c383);
+      border-color: transparent;
+    }
+
+    .item.active .check {
+      color: #2f2105;
+      background: linear-gradient(180deg, #ffd58c, var(--amber));
+      border-color: transparent;
+    }
+
+    .item.next .check {
+      color: #08182d;
+      background: linear-gradient(180deg, #b6d2ff, var(--blue));
+      border-color: transparent;
+    }
+
+    .item.risk .check {
+      color: #2c070a;
+      background: linear-gradient(180deg, #ff9aa2, var(--red));
+      border-color: transparent;
+    }
+
+    .item-title {
+      font-weight: 650;
+      margin-bottom: 4px;
+    }
+
+    .item-note {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 1100px) {
+      .layout, .grid-2, .hero-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <span class="eyebrow">Temporary Codex Board</span>
+      <h1>JARVIS Comprehensive Checklist</h1>
+      <p>This is the merged current-state board: old sidebar truth, newer next-arc work, and the Claude recommendations that still survive repo verification.</p>
+
+      <div class="stats">
+        <div class="stat">
+          <strong>21</strong>
+          <span class="muted">Phone parity surfaces verified full</span>
+        </div>
+        <div class="stat">
+          <strong>9</strong>
+          <span class="muted">Longitudinal continuity surfaces live</span>
+        </div>
+        <div class="stat">
+          <strong>Now</strong>
+          <span class="muted">Real device integrations are now the current active build slice.</span>
+        </div>
+      </div>
+
+      <div class="progress"><span></span></div>
+      <div class="muted">Progress reflects platform maturity. Stale blockers were removed instead of being counted as open work.</div>
+
+      <nav class="nav">
+        <a href="#done">Verified Done</a>
+        <a href="#active">Active Queue</a>
+        <a href="#open">Open Platform Work</a>
+        <a href="#later">Later Civilizational Work</a>
+        <a href="#stale">Already Covered</a>
+      </nav>
+    </aside>
+
+    <main>
+      <section class="hero">
+        <span class="eyebrow">Current Assessment</span>
+        <h2>June 1, 2026</h2>
+        <p class="muted">The older sidebar is no longer the right source of truth by itself. Parity is effectively closed, governance and stewardship are much farther along than the earlier plan assumed, and the remaining work now clusters around rollout automation, sandbox-agency closeout, deeper memory, infrastructure, integrations, and the later civilizational layers.</p>
+
+        <div class="hero-grid">
+          <div class="hero-card">
+            <strong>Already Landed</strong>
+            Phone parity, broad Apple contract verification, trust controls, stewardship reviews, governance history, governance learning synthesis, and governance proposal convergence are all live.
+          </div>
+          <div class="hero-card">
+            <strong>Still Open</strong>
+            Voice full duplex, the web chamber refactor, and deployment-awareness closeout are now closed, and the next real platform work starts with real device integrations while later infrastructure, integrations, and civilizational layers remain open behind it.
+          </div>
+          <div class="hero-card">
+            <strong>How This Board Works</strong>
+            Items marked done are repo-backed and already green. Items marked active or next are the real remaining checklist, not aspirational duplicates from stale plans.
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="done">
+        <div class="section-head">
+          <h2>Verified Done</h2>
+          <span class="badge done">Green</span>
+        </div>
+        <div class="panel">
+          <ul class="checklist">
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Phone parity closeout</div>
+                <div class="item-note">The iPhone parity matrix is effectively full across Brief, Weather, Systems, Needs, Home, Voice, Catalyst, Forge, Faith, Health, Chronicle, Publish, Huddle, Notifications, Calendar, Reminders, Focus, Sound Alerts, Vision Scan, and Now Playing.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Governed workflow foundations</div>
+                <div class="item-note">Trust zones, arenas, authority stages, promote/demote/suspend/resume controls, boundary enforcement slices, and review visibility are all live through the Apple admin surface.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Cross-domain workflow boundaries</div>
+                <div class="item-note">Calendar routing, sound and vision responses, notifications, reminders, publishing review, focus, and huddle actions now run through governed boundary outcomes instead of pretending every mutation executes live.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">While You Were Away synthesis</div>
+                <div class="item-note">The report is no longer just a concept. It is synthesized in runtime, exposed through Apple contracts, rendered on phone surfaces, reused in Home and chamber, and now carries normalized stewardship lanes.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Stewardship review loop</div>
+                <div class="item-note">Lane contracts, execution primitives, review convergence, rollout controls, governance history, governance learning synthesis, and governance proposal convergence are already implemented and verified.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Sandbox operations foundation</div>
+                <div class="item-note">Self-improvement and vendor-prep both run through bounded sandbox lanes with execute, stop, recover, recent-run reporting, and Systems/Admin visibility.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Memory and continuity slices</div>
+                <div class="item-note">Chronicle continuity, retrieval-by-situation, reflective-memory review, and longitudinal continuity are already live on Brief, Home, Voice, Catalyst, Health, Publish, Faith, Forge, and Huddle.</div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section" id="active">
+        <div class="section-head">
+          <h2>Active Queue</h2>
+          <span class="badge active">Build Next</span>
+        </div>
+        <div class="panel">
+          <ul class="checklist">
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Governance rollout posture automation</div>
+                <div class="item-note">Completed green. Promoted rollout-posture doctrine now feeds back into the stewardship lane execution primitive, changing default packet target, review surface, action framing, and bounded review behavior instead of staying advisory-only in Systems/Admin.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Sandbox agency closeout</div>
+                <div class="item-note">Completed green. Sandbox operations now run through a unified multi-lane runtime router with richer lane summaries and a third bounded stewardship-review lane alongside self-improvement and vendor-prep.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Memory and continuity engine closeout</div>
+                <div class="item-note">Completed green. The durable memory graph now drives longer-horizon continuity, shared thread recall, and reflective-memory graph coverage across Brief, Home, Voice, and Systems/Admin.</div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section" id="open">
+        <div class="section-head">
+          <h2>Open Platform Work</h2>
+          <span class="badge next">Add To List</span>
+        </div>
+        <div class="panel">
+          <ul class="checklist">
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Voice full duplex closeout</div>
+                <div class="item-note">Completed green. The phone voice loop now runs through a duplex-safe speech session with live partial transcript handling, interruptible reply playback, and continuous turn-taking instead of split listen-then-speak phases.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Web chamber refactor</div>
+                <div class="item-note">Completed green. The chamber shell now uses a derived home signal model, scene-native renderers, one overlay authority for modal and scene transitions, and packet-strip suppression on default home so packet chrome becomes secondary.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Always-on hardware deployment</div>
+                <div class="item-note">Completed green. The service contract now models the real hybrid deployment: local always-on posture plus the Hetzner and Cloudflare hosted edge, discovered compose services and public routes, Cloudflare Access-protected hosted probes, and surfaced deployment visibility in the chamber and phone admin views.</div>
+              </div>
+            </li>
+            <li class="item active">
+              <div class="check">□</div>
+              <div>
+                <div class="item-title">Real device integrations</div>
+                <div class="item-note">Home Assistant entity mapping, real calendar and reminder source mapping, push-path verification, live focus-state wiring, porch and garage perception feeds, workshop hardware telemetry, and health sync hardening still remain.</div>
+              </div>
+            </li>
+            <li class="item next">
+              <div class="check">□</div>
+              <div>
+                <div class="item-title">Stewardship lane framework expansion</div>
+                <div class="item-note">The lane model is real, but Wealth and Opportunity, stronger Family and Executive detection, secondary lanes, and a full scheduler-driven cadence model are still open.</div>
+              </div>
+            </li>
+            <li class="item next">
+              <div class="check">□</div>
+              <div>
+                <div class="item-title">Intent routing layer</div>
+                <div class="item-note">The docs define the routing taxonomy, but the full classifier, capability manifests, standardized handoff and result envelopes, and routed session tracking are not closed.</div>
+              </div>
+            </li>
+            <li class="item next">
+              <div class="check">□</div>
+              <div>
+                <div class="item-title">SQLite migration</div>
+                <div class="item-note">The schema docs are present and some subsystems already use SQLite, but the broad planned migration for approvals, memory metadata, conversation sessions, router sessions, and hot operating state is still incomplete.</div>
+              </div>
+            </li>
+            <li class="item next">
+              <div class="check">□</div>
+              <div>
+                <div class="item-title">Approvals executor stub replacements</div>
+                <div class="item-note">`send_message`, `home_control`, `social_post`, `purchase`, `deploy`, `document_send`, `external_api`, and `file_write` still have explicit stub executors in `jarvis/approvals.py` and belong on the open list.</div>
+              </div>
+            </li>
+            <li class="item next">
+              <div class="check">□</div>
+              <div>
+                <div class="item-title">CLI and operator command closeout</div>
+                <div class="item-note">`fresh-start` exists, but a real `away-report` operator flow and memory publishing or export paths still need to be finished if they are meant to be first-class runtime tools.</div>
+              </div>
+            </li>
+            <li class="item next">
+              <div class="check">□</div>
+              <div>
+                <div class="item-title">Memory publishing and Obsidian-facing layer</div>
+                <div class="item-note">The deeper memory engine is still not connected to a human-facing publishing layer like Obsidian, which remains an explicit blocker in the docs.</div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section" id="later">
+        <div class="section-head">
+          <h2>Later Civilizational Work</h2>
+          <span class="badge next">Long Horizon</span>
+        </div>
+        <div class="panel">
+          <ul class="checklist">
+            <li class="item next">
+              <div class="check">◇</div>
+              <div>
+                <div class="item-title">Ambient JARVIS</div>
+                <div class="item-note">Watch, phone, car, and home routing with presence, mode, room, and quiet-hours discipline still belongs on the long-horizon list.</div>
+              </div>
+            </li>
+            <li class="item next">
+              <div class="check">◇</div>
+              <div>
+                <div class="item-title">Recursive foundry and specialist-agent generation</div>
+                <div class="item-note">The builder-agent and newborn-agent pipeline from the recursive roadmap is not yet an active governed foundry.</div>
+              </div>
+            </li>
+            <li class="item next">
+              <div class="check">◇</div>
+              <div>
+                <div class="item-title">Growth and stewardship formation systems</div>
+                <div class="item-note">Adaptive tutoring, parenting support, health loops, faith orchestration, and values-aligned household formation are still later-phase work.</div>
+              </div>
+            </li>
+            <li class="item next">
+              <div class="check">◇</div>
+              <div>
+                <div class="item-title">Family civilization layer</div>
+                <div class="item-note">Season-of-life detection, overload and conflict sensing, legacy archive, and intergenerational memory bundles still remain explicitly open.</div>
+              </div>
+            </li>
+            <li class="item next">
+              <div class="check">◇</div>
+              <div>
+                <div class="item-title">Interaction Bible agent universe expansion</div>
+                <div class="item-note">Several later-domain agents from the Interaction Bible are still not built, including Scout Operations, Travel, Vehicles, Legal and Tax, Relationship, Creative Brand, Grocery and Meal Planning, Course Growth, and Investment and Market lanes.</div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section" id="stale">
+        <div class="section-head">
+          <h2>Already Covered</h2>
+          <span class="badge risk">Do Not Re-Add</span>
+        </div>
+        <div class="panel">
+          <ul class="checklist">
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">`SystemsAdminSummary` missing model</div>
+                <div class="item-note">Already exists in the Apple models and is wired through the client and Settings surface.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">`book_launch.load_assets()` blocker</div>
+                <div class="item-note">Already exists. This should not remain on the open checklist.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Missing Apple governance routes</div>
+                <div class="item-note">Promote, demote, suspend, resume, and the broader governance review paths are already present.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Hardcoded trust owner cleanup</div>
+                <div class="item-note">The old `owner_principal=&quot;chris&quot;` default concern has already been addressed and should stay checked off.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">Apple guardrail and decode coverage</div>
+                <div class="item-note">The Swift decode tests and Apple contract verification battery are already part of the verified foundation and should not be relisted as missing blockers.</div>
+              </div>
+            </li>
+            <li class="item done">
+              <div class="check">✓</div>
+              <div>
+                <div class="item-title">`fresh-start` command missing</div>
+                <div class="item-note">The CLI command exists in `jarvis/main.py`, so only the remaining operator-command gaps should stay open.</div>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="footer-note">This file is intentionally temporary and human-edited. We can keep using it as the visual sidebar and update it whenever a checklist item is verified or reclassified.</div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

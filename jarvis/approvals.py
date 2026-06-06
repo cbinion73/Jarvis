@@ -28,6 +28,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_jsonl
+
 logger = logging.getLogger("jarvis.approvals")
 
 
@@ -305,6 +307,12 @@ class ApprovalRequest:
     tags: list = field(default_factory=list)
     requires_confirmation: bool = False
     confirmation_phrase: str = ""
+    trust_zone_id: str = ""
+    lane_id: str = ""
+    arena_id: str = ""
+    requested_outcome: str = ""
+    supervision_context: dict = field(default_factory=dict)
+    supervision_decision: dict = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -328,6 +336,8 @@ class ApprovalQueue:
         self.ROOT.mkdir(parents=True, exist_ok=True)
         self._queue_path = self.ROOT / "queue.jsonl"
         self._history_path = self.ROOT / "history.jsonl"
+        self._queue_state_log_path = self.ROOT / "queue_state_log.jsonl"
+        self._history_state_log_path = self.ROOT / "history_state_log.jsonl"
         self._lock = threading.Lock()
         self._items: list[ApprovalRequest] = []
         self._load()
@@ -505,10 +515,13 @@ class ApprovalQueue:
         if len(history) > self.HISTORY_LIMIT:
             history = history[-self.HISTORY_LIMIT:]
         try:
-            lines = [json.dumps(asdict(r)) for r in history]
-            self._history_path.write_text(
-                "\n".join(lines) + ("\n" if lines else ""),
-                encoding="utf-8",
+            atomic_write_jsonl(self._history_path, [asdict(r) for r in history])
+            append_jsonl(
+                self._history_state_log_path,
+                {
+                    "saved_at": _now_iso(),
+                    "records": [asdict(r) for r in history],
+                },
             )
         except OSError as exc:
             logger.warning("Failed to write history: %s", exc)
@@ -522,10 +535,13 @@ class ApprovalQueue:
     def _save_unlocked(self) -> None:
         try:
             active = [i for i in self._items if i.status in ("pending", "approved")]
-            lines = [json.dumps(asdict(i)) for i in active]
-            self._queue_path.write_text(
-                "\n".join(lines) + ("\n" if lines else ""),
-                encoding="utf-8",
+            atomic_write_jsonl(self._queue_path, [asdict(i) for i in active])
+            append_jsonl(
+                self._queue_state_log_path,
+                {
+                    "saved_at": _now_iso(),
+                    "records": [asdict(i) for i in active],
+                },
             )
         except OSError as exc:
             logger.warning("Failed to persist queue: %s", exc)
@@ -533,6 +549,7 @@ class ApprovalQueue:
     def _load(self) -> None:
         self._items = []
         if not self._queue_path.exists():
+            self._items = self._load_queue_from_state_log()
             return
         try:
             for line in self._queue_path.read_text(encoding="utf-8").splitlines():
@@ -546,12 +563,38 @@ class ApprovalQueue:
                     self._items.append(ApprovalRequest(**data))
                 except Exception:
                     logger.debug("Skipping corrupt queue line", exc_info=True)
-        except OSError:
-            pass
+        except (OSError, json.JSONDecodeError):
+            self._items = self._load_queue_from_state_log()
+            return
+        if not self._items:
+            self._items = self._load_queue_from_state_log()
+
+    def _load_queue_from_state_log(self) -> list[ApprovalRequest]:
+        if not self._queue_state_log_path.exists():
+            return []
+        try:
+            latest: list[ApprovalRequest] = []
+            for line in self._queue_state_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if not isinstance(records, list):
+                    continue
+                candidate: list[ApprovalRequest] = []
+                for item in records:
+                    if not isinstance(item, dict):
+                        continue
+                    item.setdefault("tags", [])
+                    candidate.append(ApprovalRequest(**item))
+                latest = candidate
+            return latest
+        except Exception:
+            return []
 
     def _load_history(self) -> list[ApprovalRequest]:
         if not self._history_path.exists():
-            return []
+            return self._load_history_from_state_log()
         records: list[ApprovalRequest] = []
         try:
             for line in self._history_path.read_text(encoding="utf-8").splitlines():
@@ -564,9 +607,32 @@ class ApprovalQueue:
                     records.append(ApprovalRequest(**data))
                 except Exception:
                     pass
-        except OSError:
-            pass
-        return records
+        except (OSError, json.JSONDecodeError):
+            return self._load_history_from_state_log()
+        return records or self._load_history_from_state_log()
+
+    def _load_history_from_state_log(self) -> list[ApprovalRequest]:
+        if not self._history_state_log_path.exists():
+            return []
+        try:
+            latest: list[ApprovalRequest] = []
+            for line in self._history_state_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if not isinstance(records, list):
+                    continue
+                candidate: list[ApprovalRequest] = []
+                for item in records:
+                    if not isinstance(item, dict):
+                        continue
+                    item.setdefault("tags", [])
+                    candidate.append(ApprovalRequest(**item))
+                latest = candidate
+            return latest
+        except Exception:
+            return []
 
 
 # ---------------------------------------------------------------------------
@@ -799,8 +865,21 @@ class ApprovalGuard:
             # Execution happens when approved via approve() + execute_approved()
     """
 
-    def __init__(self, queue: ApprovalQueue) -> None:
+    def __init__(
+        self,
+        queue: ApprovalQueue,
+        supervision_support: Any | None = None,
+        sandbox_router: Any | None = None,
+    ) -> None:
         self._queue = queue
+        self._supervision_support = supervision_support
+        self._sandbox_router = sandbox_router
+
+    def set_supervision_support(self, supervision_support: Any | None) -> None:
+        self._supervision_support = supervision_support
+
+    def set_sandbox_router(self, sandbox_router: Any | None) -> None:
+        self._sandbox_router = sandbox_router
 
     # ------------------------------------------------------------------
     # Agent-facing API
@@ -849,6 +928,30 @@ class ApprovalGuard:
         if requires_confirmation:
             confirmation_phrase = _make_confirmation_phrase(action_type, title)
 
+        trust_zone_id = str(context.get("trust_zone_id", "")).strip()
+        lane_id = str(context.get("lane_id", "")).strip()
+        arena_id = str(context.get("arena_id", "")).strip()
+        requested_outcome = str(context.get("requested_outcome", "")).strip() or description.strip() or title.strip()
+        supervision_context = {
+            key: value
+            for key, value in context.items()
+            if key not in {"trust_zone_id", "lane_id", "arena_id", "requested_outcome"}
+        }
+        supervision_decision: dict[str, Any] = {}
+        if self._supervision_support is not None and (trust_zone_id or lane_id):
+            try:
+                supervision_decision = self._supervision_support.evaluate_action(
+                    agent_id=agent_id,
+                    action_type=action_type,
+                    requested_outcome=requested_outcome or title,
+                    trust_zone_id=trust_zone_id,
+                    lane_id=lane_id,
+                    arena_id=arena_id,
+                    context=supervision_context,
+                )
+            except Exception:
+                logger.warning("Supervision decision evaluation failed during request staging", exc_info=True)
+
         request = ApprovalRequest(
             request_id=str(uuid.uuid4()),
             agent_id=agent_id,
@@ -867,6 +970,12 @@ class ApprovalGuard:
             tags=list(tags or []),
             requires_confirmation=requires_confirmation,
             confirmation_phrase=confirmation_phrase,
+            trust_zone_id=trust_zone_id,
+            lane_id=lane_id,
+            arena_id=arena_id,
+            requested_outcome=requested_outcome,
+            supervision_context=supervision_context,
+            supervision_decision=supervision_decision,
         )
         return self._queue.submit(request)
 
@@ -881,6 +990,44 @@ class ApprovalGuard:
             return {"status": "error", "detail": "Request not found"}
         if item.status != "approved":
             return {"status": "error", "detail": f"Request status is '{item.status}', not 'approved'"}
+
+        decision = self._resolve_supervision_decision(item)
+        if decision:
+            resolution = str(decision.get("resolution", "")).strip().lower()
+            if resolution == "forbidden":
+                return {
+                    "status": "error",
+                    "detail": "Execution blocked by supervision policy",
+                    "supervision_decision": decision,
+                }
+            if bool(decision.get("sandbox_required")) and not bool(item.payload.get("_sandbox_execution")):
+                sandbox_job_id = str(item.payload.get("_sandbox_job_id", "")).strip()
+                if self._sandbox_router is not None and sandbox_job_id:
+                    try:
+                        routed = self._sandbox_router(
+                            actor_name=item.approved_by or item.actor_id or "chris",
+                            job_id=sandbox_job_id,
+                            triggered_by="approval-guard",
+                        )
+                    except Exception as exc:
+                        logger.warning("Sandbox routing failed for %s: %s", request_id, exc, exc_info=True)
+                        return {
+                            "status": "error",
+                            "detail": f"Sandbox routing failed: {exc}",
+                            "supervision_decision": decision,
+                        }
+                    return {
+                        "status": "sandbox_routed",
+                        "detail": "Execution was routed into the governed sandbox lane",
+                        "supervision_decision": decision,
+                        "sandbox_job_id": sandbox_job_id,
+                        "sandbox_result": routed,
+                    }
+                return {
+                    "status": "error",
+                    "detail": "Execution requires sandbox routing before live dispatch",
+                    "supervision_decision": decision,
+                }
 
         executor = ActionExecutors._DISPATCH.get(
             item.action_type, ActionExecutors.other
@@ -904,6 +1051,26 @@ class ApprovalGuard:
             result.get("status"),
         )
         return result
+
+    def _resolve_supervision_decision(self, item: ApprovalRequest) -> dict[str, Any]:
+        stored = dict(item.supervision_decision or {})
+        if self._supervision_support is None:
+            return stored
+        if not any((item.trust_zone_id, item.lane_id, stored)):
+            return {}
+        try:
+            return self._supervision_support.evaluate_action(
+                agent_id=item.agent_id,
+                action_type=item.action_type,
+                requested_outcome=item.requested_outcome or item.description or item.title,
+                trust_zone_id=item.trust_zone_id,
+                lane_id=item.lane_id,
+                arena_id=item.arena_id,
+                context=dict(item.supervision_context or {}),
+            )
+        except Exception:
+            logger.warning("Supervision decision evaluation failed during execution", exc_info=True)
+            return stored
 
     def get_pending_for_ui(self, actor_id: str = "chris") -> list[dict]:
         """
@@ -931,6 +1098,7 @@ class ApprovalGuard:
                 "confirmation_phrase": item.confirmation_phrase,
                 "requested_at": item.requested_at,
                 "auto_approve_at": item.auto_approve_at,
+                "payload": item.payload,
             })
         return result
 
@@ -975,7 +1143,21 @@ def get_approval_queue() -> ApprovalQueue | None:
     return _queue_singleton
 
 
-def init_approvals() -> tuple[ApprovalQueue, ApprovalGuard]:
+def configure_approval_guard(
+    supervision_support: Any | None = None,
+    sandbox_router: Any | None = None,
+) -> ApprovalGuard | None:
+    if _guard_singleton is None:
+        return None
+    _guard_singleton.set_supervision_support(supervision_support)
+    _guard_singleton.set_sandbox_router(sandbox_router)
+    return _guard_singleton
+
+
+def init_approvals(
+    supervision_support: Any | None = None,
+    sandbox_router: Any | None = None,
+) -> tuple[ApprovalQueue, ApprovalGuard]:
     """
     Initialize the module-level ApprovalQueue and ApprovalGuard singletons.
     Safe to call multiple times — subsequent calls are no-ops.
@@ -983,11 +1165,17 @@ def init_approvals() -> tuple[ApprovalQueue, ApprovalGuard]:
     global _guard_singleton, _queue_singleton
 
     if _guard_singleton is not None:
+        _guard_singleton.set_supervision_support(supervision_support)
+        _guard_singleton.set_sandbox_router(sandbox_router)
         assert _queue_singleton is not None
         return _queue_singleton, _guard_singleton
 
     queue = ApprovalQueue()
-    guard = ApprovalGuard(queue)
+    guard = ApprovalGuard(
+        queue,
+        supervision_support=supervision_support,
+        sandbox_router=sandbox_router,
+    )
 
     _queue_singleton = queue
     _guard_singleton = guard
@@ -1017,6 +1205,36 @@ def request_document_review(
 
     All fields are pre-filled for the Ghostwritr / Stan Lee use case.
     """
+    guard = get_approval_guard()
+    if guard is not None:
+        return guard.request_approval(
+            agent_id="stan-lee",
+            agent_label="Stan Lee",
+            action_type="document_review",
+            title=f"Review draft: {title}",
+            description=(
+                f"Draft review for {track_type}: {title}\n\n"
+                f"Preview: {preview[:300]}{'...' if len(preview) > 300 else ''}"
+            ),
+            payload={
+                "submission_id": submission_id,
+                "project_id": project_id,
+                "track_type": track_type,
+                "chapter_number": chapter_number,
+                "ghostwritr_url": ghostwritr_url,
+            },
+            actor_id="chris",
+            priority=5,
+            tags=["writing", "ghostwritr", track_type],
+            context={
+                "trust_zone_id": "publication_review",
+                "lane_id": "wealth-opportunity",
+                "requested_outcome": f"Review and stage publishing feedback for '{title}'",
+                "touches_external_state": False,
+                "reversible": True,
+            },
+        )
+
     queue = get_approval_queue()
     if queue is None:
         logger.warning("request_document_review: ApprovalQueue not initialised")

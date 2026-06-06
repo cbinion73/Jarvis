@@ -1,5 +1,4 @@
 import SwiftUI
-import WatchKit
 
 @main
 struct JarvisWatchApp: App {

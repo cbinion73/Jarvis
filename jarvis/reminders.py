@@ -9,14 +9,65 @@ import json, os, time, threading
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json
+
 _REMINDERS_PATH = Path(os.path.expanduser("~/.jarvis/reminders.json"))
+_REMINDERS_LOG_PATH = _REMINDERS_PATH.with_name("reminders_log.jsonl")
+_REMINDERS_STATE_LOG_PATH = _REMINDERS_PATH.with_name("reminders_state_log.jsonl")
 _lock = threading.Lock()
 
 
 def _load() -> list[dict]:
     try:
         if _REMINDERS_PATH.exists():
-            return json.loads(_REMINDERS_PATH.read_text())
+            payload = json.loads(_REMINDERS_PATH.read_text())
+            if isinstance(payload, list) and payload:
+                return payload
+    except Exception:
+        replayed = _load_from_state_log()
+        if replayed:
+            return replayed
+        return _load_from_log()
+    if not _REMINDERS_PATH.exists():
+        replayed = _load_from_state_log()
+        if replayed:
+            return replayed
+        return _load_from_log()
+    replayed = _load_from_state_log()
+    if replayed:
+        return replayed
+    return []
+
+
+def _load_from_log() -> list[dict]:
+    try:
+        if _REMINDERS_LOG_PATH.exists():
+            latest: list[dict] = []
+            for line in _REMINDERS_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+            return latest
+    except Exception:
+        pass
+    return []
+
+
+def _load_from_state_log() -> list[dict]:
+    try:
+        if _REMINDERS_STATE_LOG_PATH.exists():
+            latest: list[dict] = []
+            for line in _REMINDERS_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+            return latest
     except Exception:
         pass
     return []
@@ -24,7 +75,21 @@ def _load() -> list[dict]:
 
 def _save(reminders: list[dict]) -> None:
     _REMINDERS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _REMINDERS_PATH.write_text(json.dumps(reminders, indent=2))
+    atomic_write_json(_REMINDERS_PATH, reminders)
+    append_jsonl(
+        _REMINDERS_LOG_PATH,
+        {
+            "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "records": reminders,
+        },
+    )
+    append_jsonl(
+        _REMINDERS_STATE_LOG_PATH,
+        {
+            "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "records": reminders,
+        },
+    )
 
 
 def list_reminders() -> list[dict]:

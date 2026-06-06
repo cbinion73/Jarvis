@@ -785,6 +785,5437 @@ def render_catalyst_workspace_page(runtime: JarvisRuntime, page: str) -> str:
     )
 
 
+def render_publish_module_page(payload: dict) -> str:
+    raw_json = json.dumps(payload, indent=2)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Publish</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #07111b;
+      --bg-2: #0d1824;
+      --panel: rgba(10, 21, 34, 0.88);
+      --line: rgba(121, 216, 255, 0.14);
+      --text: #eaf6ff;
+      --muted: #9bb7cd;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: "SF Pro Display", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(121, 216, 255, 0.18), transparent 36%),
+        linear-gradient(180deg, #050b13 0%, var(--bg) 42%, var(--bg-2) 100%);
+      color: var(--text);
+    }}
+    .shell {{ max-width: 1340px; margin: 0 auto; padding: 36px 24px 60px; }}
+    .hero {{
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(11, 24, 38, 0.94), rgba(8, 17, 28, 0.9));
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+    }}
+    .eyebrow {{ color: #79d8ff; letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
+    h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
+    p {{ color: var(--muted); line-height: 1.6; }}
+    .stats {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }}
+    .stat, .panel {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+    }}
+    .stat span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
+    .stat strong {{ display: block; margin-top: 6px; font-size: 24px; }}
+    .layout {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }}
+    .span-4 {{ grid-column: span 4; }}
+    .span-6 {{ grid-column: span 6; }}
+    .span-8 {{ grid-column: span 8; }}
+    ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
+    li {{
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+    }}
+    li strong {{ display: block; margin-bottom: 4px; }}
+    li span {{ color: var(--muted); display: block; }}
+    .actions {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }}
+    a, button {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(121, 216, 255, 0.12);
+      color: var(--text);
+      text-decoration: none;
+      font: inherit;
+      cursor: pointer;
+    }}
+    form {{ display: grid; gap: 12px; }}
+    .form-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }}
+    label {{ display: grid; gap: 6px; color: var(--muted); font-size: 13px; }}
+    input, select {{
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(4, 12, 20, 0.92);
+      color: var(--text);
+      padding: 12px 14px;
+      font: inherit;
+    }}
+    pre {{
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      background: rgba(3, 10, 18, 0.9);
+      color: #d7e8f4;
+      overflow-x: auto;
+    }}
+    .status-note {{ min-height: 1.3em; color: var(--muted); margin-top: 10px; }}
+    @media (max-width: 980px) {{
+      .span-4, .span-6, .span-8 {{ grid-column: span 12; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Level 3 Core Module</div>
+      <h1>JARVIS Publish</h1>
+      <p>A dedicated publishing workspace inside JARVIS with live project, launch, calendar, and social posture. This turns Publish into a visible app module instead of an API-only seam.</p>
+      <div class="actions">
+        <a href="/command-center">Back to Command Center</a>
+        <button type="button" id="refresh-publish">Refresh Publish State</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
+        <div class="stat"><span>Projects</span><strong id="hero-projects">0</strong></div>
+        <div class="stat"><span>Pending Reviews</span><strong id="hero-reviews">0</strong></div>
+        <div class="stat"><span>Scheduled Posts</span><strong id="hero-posts">0</strong></div>
+      </div>
+      <p class="status-note" id="publish-status-note">Loading publish module state…</p>
+    </section>
+    <div class="layout">
+      <section class="panel span-8">
+        <h2>Launch Control</h2>
+        <ul id="launch-control-list"></ul>
+      </section>
+      <section class="panel span-4">
+        <h2>Module Status</h2>
+        <ul id="module-status-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Projects</h2>
+        <ul id="project-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Content Calendar</h2>
+        <ul id="calendar-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Social Queue</h2>
+        <ul id="social-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Revenue Signals</h2>
+        <ul id="revenue-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Quick Draft Project</h2>
+        <form id="create-project-form">
+          <div class="form-grid">
+            <label>Title<input id="project-title" placeholder="Launch-ready book or campaign"></label>
+            <label>Type
+              <select id="project-type">
+                <option value="book">Book</option>
+                <option value="course">Course</option>
+                <option value="social">Social</option>
+              </select>
+            </label>
+            <label>Platform<input id="project-platform" placeholder="Amazon KDP, Gumroad, YouTube"></label>
+          </div>
+          <button type="submit">Create Draft Project</button>
+        </form>
+        <p class="status-note" id="create-project-note">Create a small draft to verify the module can write real publishing state.</p>
+      </section>
+      <section class="panel span-6">
+        <h2>Payload Preview</h2>
+        <pre id="payload-preview"></pre>
+      </section>
+    </div>
+  </main>
+  <script>
+    const initialPayload = {raw_json};
+    const heroStatus = document.getElementById("hero-status");
+    const heroProjects = document.getElementById("hero-projects");
+    const heroReviews = document.getElementById("hero-reviews");
+    const heroPosts = document.getElementById("hero-posts");
+    const statusNote = document.getElementById("publish-status-note");
+    const projectNote = document.getElementById("create-project-note");
+    const launchControlList = document.getElementById("launch-control-list");
+    const moduleStatusList = document.getElementById("module-status-list");
+    const projectList = document.getElementById("project-list");
+    const calendarList = document.getElementById("calendar-list");
+    const socialList = document.getElementById("social-list");
+    const revenueList = document.getElementById("revenue-list");
+    const payloadPreview = document.getElementById("payload-preview");
+
+    function esc(value) {{
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }}
+
+    function li(title, summary, detail = "") {{
+      return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
+    }}
+
+    function render(payload) {{
+      const launch = payload.launch_control || {{}};
+      const activeProject = launch.active_project || null;
+      const calendar = payload.calendar || {{}};
+      const social = payload.social || {{}};
+      const revenue = payload.revenue || {{}};
+      const projects = Array.isArray(payload.projects) ? payload.projects : [];
+      const upcoming = Array.isArray(calendar.upcoming) ? calendar.upcoming : [];
+      const overdue = Array.isArray(calendar.overdue) ? calendar.overdue : [];
+      const posts = Array.isArray(social.posts) ? social.posts : [];
+
+      heroStatus.textContent = payload.status || "Stubbed";
+      heroProjects.textContent = String(payload.project_count || 0);
+      heroReviews.textContent = String(payload.review_count || 0);
+      heroPosts.textContent = String(payload.scheduled_post_count || 0);
+      statusNote.textContent = payload.summary || "No publish summary captured yet.";
+
+      moduleStatusList.innerHTML = [
+        li("Availability", payload.available ? "Publishing data is live." : "Publishing data is unavailable; the screen is running in fallback mode."),
+        li("What Became Real", payload.what_became_real || "No publish seam note recorded yet."),
+        li("What Remains Partial", payload.remains_partial || "No partial work recorded."),
+        li("Proof API", "/api/publish/module", "/api/publishing/status"),
+      ].join("");
+
+      launchControlList.innerHTML = [
+        li("Active Project", activeProject ? activeProject.title || activeProject.project_id : "No active project selected yet.", activeProject ? `Phase: ${{activeProject.phase || "unknown"}} · Days to launch: ${{activeProject.days_to_launch ?? "n/a"}}` : ""),
+        li("Next Action", launch.next_action || "No launch-control action recorded yet."),
+        li("Pending Reviews", String(payload.review_count || 0), "Ghostwritr review pressure"),
+        li("Scheduled Posts", String(payload.scheduled_post_count || 0), "Publishing queue pressure"),
+      ].join("");
+
+      projectList.innerHTML = projects.length
+        ? projects.slice(0, 6).map((item) => li(item.title || "Untitled project", `${{item.project_type || "project"}} · ${{item.status || "draft"}}`, item.platform || "No platform")).join("")
+        : '<li><strong>No projects yet.</strong><span>Create a draft project below to seed the publish workspace.</span></li>';
+
+      calendarList.innerHTML = [
+        ...upcoming.slice(0, 4).map((item) => li(item.title || "Calendar item", `${{item.content_type || "content"}} · ${{item.status || "planned"}}`, item.planned_date || "")),
+        ...overdue.slice(0, 2).map((item) => li(item.title || "Overdue item", `Overdue · ${{item.status || "planned"}}`, item.planned_date || "")),
+      ].join("") || '<li><strong>No calendar items yet.</strong><span>Publishing calendar is clear right now.</span></li>';
+
+      socialList.innerHTML = posts.length
+        ? posts.slice(0, 6).map((item) => li(item.platform || "Platform", item.status || "draft", String(item.content || "").slice(0, 120) || "No post content")).join("")
+        : '<li><strong>No social queue yet.</strong><span>Draft or scheduled posts will appear here.</span></li>';
+
+      revenueList.innerHTML = [
+        li("Monthly Estimate", String(revenue.monthly_estimate_total ?? 0)),
+        li("Active Streams", String(revenue.active_stream_count ?? 0)),
+        li("Attention Flags", String(revenue.attention_count ?? 0)),
+      ].join("");
+
+      payloadPreview.textContent = JSON.stringify(payload, null, 2);
+    }}
+
+    async function refreshPublishState() {{
+      statusNote.textContent = "Refreshing publish module state…";
+      try {{
+        const response = await fetch("/api/publish/module");
+        const payload = await response.json();
+        render(payload);
+        statusNote.textContent = payload.summary || "Publish module refreshed.";
+      }} catch (error) {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function createDraftProject(event) {{
+      event.preventDefault();
+      projectNote.textContent = "Creating draft project…";
+      try {{
+        const response = await fetch("/api/publishing/projects", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            title: document.getElementById("project-title").value,
+            project_type: document.getElementById("project-type").value,
+            platform: document.getElementById("project-platform").value,
+            status: "draft",
+          }}),
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Create project failed");
+        }}
+        projectNote.textContent = `Created draft project: ${{payload.title || payload.project_id || "project"}}.`;
+        await refreshPublishState();
+      }} catch (error) {{
+        projectNote.textContent = `Create failed: ${{String(error)}}`;
+      }}
+    }}
+
+    document.getElementById("refresh-publish").addEventListener("click", () => {{
+      refreshPublishState().catch((error) => {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }});
+    }});
+    document.getElementById("create-project-form").addEventListener("submit", createDraftProject);
+    render(initialPayload);
+  </script>
+</body>
+</html>
+"""
+
+
+def render_agent_ops_module_page(payload: dict) -> str:
+    raw_json = json.dumps(payload, indent=2)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Agent Operations</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #071019;
+      --bg-2: #0a1623;
+      --panel: rgba(10, 21, 34, 0.9);
+      --line: rgba(121, 216, 255, 0.14);
+      --text: #edf8ff;
+      --muted: #97b5cb;
+      --accent: #79d8ff;
+      --ok: #94f0bf;
+      --warn: #ffd48a;
+      --risk: #ffb0b0;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: "SF Pro Display", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(121, 216, 255, 0.14), transparent 36%),
+        linear-gradient(180deg, #040b12 0%, var(--bg) 44%, var(--bg-2) 100%);
+      color: var(--text);
+    }}
+    .shell {{ max-width: 1440px; margin: 0 auto; padding: 36px 24px 60px; }}
+    .hero {{
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(11, 24, 38, 0.94), rgba(7, 17, 28, 0.92));
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+    }}
+    .eyebrow {{ color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
+    h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
+    h2 {{ margin: 0 0 14px; font-size: 18px; }}
+    p {{ color: var(--muted); line-height: 1.6; }}
+    .actions {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }}
+    a, button {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(121, 216, 255, 0.12);
+      color: var(--text);
+      text-decoration: none;
+      font: inherit;
+      cursor: pointer;
+    }}
+    button.alt {{
+      background: rgba(255,255,255,0.04);
+    }}
+    .stats {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }}
+    .stat, .panel {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+    }}
+    .stat span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
+    .stat strong {{ display: block; margin-top: 6px; font-size: 24px; }}
+    .layout {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }}
+    .span-4 {{ grid-column: span 4; }}
+    .span-5 {{ grid-column: span 5; }}
+    .span-7 {{ grid-column: span 7; }}
+    .span-8 {{ grid-column: span 8; }}
+    ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
+    li {{
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+    }}
+    li strong {{ display: block; margin-bottom: 4px; }}
+    li span {{ color: var(--muted); display: block; }}
+    .roster {{ display: grid; gap: 10px; }}
+    .agent-card {{
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.03);
+      display: grid;
+      gap: 10px;
+    }}
+    .agent-head {{
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: start;
+    }}
+    .chips {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }}
+    .chip {{
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--muted);
+      background: rgba(255,255,255,0.04);
+    }}
+    .chip.accepted {{ color: var(--ok); border-color: rgba(148,240,191,0.28); }}
+    .chip.regressed {{ color: var(--risk); border-color: rgba(255,176,176,0.28); }}
+    .chip.steady {{ color: var(--warn); border-color: rgba(255,212,138,0.28); }}
+    .meta {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }}
+    .meta div {{
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.02);
+    }}
+    .meta label {{
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }}
+    .detail-copy {{
+      min-height: 1.3em;
+      color: var(--muted);
+      margin-top: 10px;
+    }}
+    pre {{
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      background: rgba(3, 10, 18, 0.9);
+      color: #d7e8f4;
+      overflow-x: auto;
+    }}
+    @media (max-width: 1080px) {{
+      .span-4, .span-5, .span-7, .span-8 {{ grid-column: span 12; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Level 3 Core Module</div>
+      <h1>JARVIS Agent Operations</h1>
+      <p>A dedicated operations surface for the live agent roster, runtime posture, and queue-run controls. This turns Agent Operations into a real app module instead of leaving it split between command-center summaries and hierarchy pages.</p>
+      <div class="actions">
+        <a href="/command-center">Back to Command Center</a>
+        <a href="/agents/hierarchy">Open Agent Hierarchy</a>
+        <button type="button" id="refresh-agent-ops">Refresh Agent Ops State</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
+        <div class="stat"><span>Visible Agents</span><strong id="hero-visible-agents">0</strong></div>
+        <div class="stat"><span>Running</span><strong id="hero-running">0</strong></div>
+        <div class="stat"><span>Blocked</span><strong id="hero-blocked">0</strong></div>
+        <div class="stat"><span>Needs Attention</span><strong id="hero-attention">0</strong></div>
+      </div>
+      <p class="detail-copy" id="agent-ops-status-note">Loading agent operations state…</p>
+    </section>
+    <div class="layout">
+      <section class="panel span-7">
+        <h2>Agent Roster</h2>
+        <div id="agent-roster" class="roster"></div>
+      </section>
+      <section class="panel span-5">
+        <h2>Selected Agent Detail</h2>
+        <div id="selected-agent-detail"></div>
+        <p class="detail-copy" id="agent-action-note">Select an agent or queue a live run to inspect current posture.</p>
+      </section>
+      <section class="panel span-4">
+        <h2>Scheduler Posture</h2>
+        <ul id="scheduler-list"></ul>
+      </section>
+      <section class="panel span-4">
+        <h2>Runtime Summary</h2>
+        <ul id="runtime-list"></ul>
+      </section>
+      <section class="panel span-4">
+        <h2>Proof Paths</h2>
+        <ul id="proof-list"></ul>
+      </section>
+      <section class="panel span-8">
+        <h2>Payload Preview</h2>
+        <pre id="payload-preview"></pre>
+      </section>
+    </div>
+  </main>
+  <script>
+    const initialPayload = {raw_json};
+    let latestPayload = initialPayload;
+    let selectedAgentId = "";
+
+    const heroStatus = document.getElementById("hero-status");
+    const heroVisibleAgents = document.getElementById("hero-visible-agents");
+    const heroRunning = document.getElementById("hero-running");
+    const heroBlocked = document.getElementById("hero-blocked");
+    const heroAttention = document.getElementById("hero-attention");
+    const rosterEl = document.getElementById("agent-roster");
+    const detailEl = document.getElementById("selected-agent-detail");
+    const schedulerEl = document.getElementById("scheduler-list");
+    const runtimeEl = document.getElementById("runtime-list");
+    const proofEl = document.getElementById("proof-list");
+    const payloadPreview = document.getElementById("payload-preview");
+    const statusNote = document.getElementById("agent-ops-status-note");
+    const actionNote = document.getElementById("agent-action-note");
+
+    function esc(value) {{
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }}
+
+    function item(title, summary, detail = "") {{
+      return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
+    }}
+
+    function chip(label, klass = "") {{
+      return `<span class="chip ${{esc(klass)}}">${{esc(label)}}</span>`;
+    }}
+
+    function rosterItems(payload) {{
+      return Array.isArray((payload.agent_ops_roster || {{}}).items) ? payload.agent_ops_roster.items : [];
+    }}
+
+    function setSelectedAgent(agentId) {{
+      selectedAgentId = agentId || "";
+      render(latestPayload);
+    }}
+
+    async function queueAgentRun(agentId) {{
+      actionNote.textContent = `Queueing agent run for ${{agentId}}…`;
+      try {{
+        const response = await fetch(`/api/scheduler/run/${{encodeURIComponent(agentId)}}`, {{
+          method: "POST",
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Queue request failed");
+        }}
+        actionNote.textContent = `Queued ${{agentId}} with item ${{payload.item_id || "unknown"}}.`;
+        await refreshAgentOpsState();
+      }} catch (error) {{
+        actionNote.textContent = `Queue Agent Run failed: ${{String(error)}}`;
+      }}
+    }}
+
+    function renderDetail(agent) {{
+      if (!agent) {{
+        detailEl.innerHTML = "<p class=\\"detail-copy\\">No visible agent selected yet.</p>";
+        return;
+      }}
+      const roles = Array.isArray(agent.mission_roles) ? agent.mission_roles : [];
+      detailEl.innerHTML = `
+        <div class="agent-card">
+          <div class="agent-head">
+            <div>
+              <strong>${{esc(agent.name || agent.agent_id || "Agent")}}</strong>
+              <p>${{esc(agent.purpose || "No purpose recorded.")}}</p>
+            </div>
+            <div class="chips">
+              ${{chip(agent.status || "unknown", agent.status_class || "")}}
+              ${{chip(agent.maturity || "Useful", agent.maturity_class || "")}}
+            </div>
+          </div>
+          <div class="meta">
+            <div><label>Assignment</label><strong>${{esc(agent.assignment || "unassigned")}}</strong></div>
+            <div><label>Module</label><strong>${{esc(agent.module || "general")}}</strong></div>
+            <div><label>Authority Stage</label><strong>${{esc(agent.authority_stage || "draft")}}</strong></div>
+            <div><label>Heartbeat</label><strong>${{esc(agent.heartbeat_status || "unknown")}}</strong></div>
+            <div><label>Last Activity</label><strong>${{esc(agent.last_activity || "not recorded")}}</strong></div>
+            <div><label>Attention</label><strong>${{esc(agent.attention_reason || "No active attention reason recorded.")}}</strong></div>
+          </div>
+          <div class="chips">
+            ${{roles.length ? roles.map((role) => chip(role)).join("") : chip("No mission roles")}}
+          </div>
+          <div class="actions">
+            <button type="button" data-queue-run="${{esc(agent.agent_id || "")}}">Queue Agent Run</button>
+            <a href="/agents/workspace/${{encodeURIComponent(agent.agent_id || "")}}">Open Agent Workspace</a>
+          </div>
+        </div>
+      `;
+    }}
+
+    function render(payload) {{
+      latestPayload = payload || {{}};
+      const roster = payload.agent_ops_roster || {{}};
+      const counts = roster.counts || {{}};
+      const items = rosterItems(payload);
+      const scheduler = payload.scheduler_status || {{}};
+      const runtimeCounts = payload.runtime_counts || {{}};
+      const proofs = payload.proof_paths || {{}};
+
+      heroStatus.textContent = payload.status || "Stubbed";
+      heroVisibleAgents.textContent = String(roster.item_count || items.length || 0);
+      heroRunning.textContent = String(counts.running || 0);
+      heroBlocked.textContent = String(counts.blocked || 0);
+      heroAttention.textContent = String(counts.attention || 0);
+      statusNote.textContent = payload.summary || "No agent operations summary recorded yet.";
+
+      const currentSelection = items.find((item) => item.agent_id === selectedAgentId) || items[0] || null;
+      if (!selectedAgentId && currentSelection) {{
+        selectedAgentId = currentSelection.agent_id || "";
+      }}
+
+      rosterEl.innerHTML = items.length
+        ? items.map((agent) => `
+            <div class="agent-card">
+              <div class="agent-head">
+                <div>
+                  <strong>${{esc(agent.name || agent.agent_id || "Agent")}}</strong>
+                  <span>${{esc(agent.domain || "general")}} · ${{esc(agent.assignment || "unassigned")}}</span>
+                </div>
+                <div class="chips">
+                  ${{chip(agent.status || "unknown", agent.status_class || "")}}
+                  ${{chip(agent.maturity || "Useful", agent.maturity_class || "")}}
+                </div>
+              </div>
+              <span>${{esc(agent.purpose || "No purpose recorded.")}}</span>
+              <span>${{esc(agent.last_activity || "not recorded")}}</span>
+              <div class="actions">
+                <button type="button" class="alt" data-select-agent="${{esc(agent.agent_id || "")}}">Inspect Agent</button>
+                <button type="button" data-queue-run="${{esc(agent.agent_id || "")}}">Queue Agent Run</button>
+              </div>
+            </div>
+          `).join("")
+        : '<div class="agent-card"><strong>No visible agents yet.</strong><span>The module is live, but no roster items are currently visible.</span></div>';
+
+      renderDetail(currentSelection);
+
+      schedulerEl.innerHTML = [
+        item("Scheduler Running", scheduler.running ? "Scheduler is active." : "Scheduler is unavailable or not initialised."),
+        item("Known Agents", String(scheduler.agent_count ?? scheduler.total_agents ?? 0)),
+        item("Queued Items", String(scheduler.queued_count ?? scheduler.pending_count ?? 0)),
+        item("Last Error", scheduler.error || "No scheduler error recorded."),
+      ].join("");
+
+      runtimeEl.innerHTML = [
+        item("Registry Count", String(runtimeCounts.registry_count ?? 0)),
+        item("Runtime Count", String(runtimeCounts.runtime_count ?? 0)),
+        item("Background Agents", String(runtimeCounts.background_count ?? 0)),
+        item("What Became Real", payload.what_became_real || "No module note recorded yet."),
+        item("What Remains Partial", payload.remains_partial || "No partial work recorded."),
+      ].join("");
+
+      proofEl.innerHTML = Object.entries(proofs).map(([key, value]) => item(key, value)).join("");
+      payloadPreview.textContent = JSON.stringify(payload, null, 2);
+
+      document.querySelectorAll("[data-select-agent]").forEach((button) => {{
+        button.addEventListener("click", () => setSelectedAgent(button.getAttribute("data-select-agent") || ""));
+      }});
+      document.querySelectorAll("[data-queue-run]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          const agentId = button.getAttribute("data-queue-run") || "";
+          if (agentId) {{
+            queueAgentRun(agentId).catch((error) => {{
+              actionNote.textContent = `Queue Agent Run failed: ${{String(error)}}`;
+            }});
+          }}
+        }});
+      }});
+    }}
+
+    async function refreshAgentOpsState() {{
+      statusNote.textContent = "Refreshing agent operations state…";
+      try {{
+        const response = await fetch("/api/agent-ops/module");
+        const payload = await response.json();
+        render(payload);
+        statusNote.textContent = payload.summary || "Agent operations module refreshed.";
+      }} catch (error) {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }}
+    }}
+
+    document.getElementById("refresh-agent-ops").addEventListener("click", () => {{
+      refreshAgentOpsState().catch((error) => {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }});
+    }});
+
+    render(initialPayload);
+  </script>
+</body>
+</html>
+"""
+
+
+def render_recovery_module_page(payload: dict) -> str:
+    raw_json = json.dumps(payload, indent=2)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Failure and Recovery</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #071018;
+      --bg-2: #091523;
+      --panel: rgba(9, 20, 33, 0.92);
+      --line: rgba(121, 216, 255, 0.14);
+      --text: #edf7ff;
+      --muted: #9eb8cb;
+      --accent: #79d8ff;
+      --ok: #94f0bf;
+      --warn: #ffd48a;
+      --risk: #ffb0b0;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: "SF Pro Display", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(121, 216, 255, 0.12), transparent 36%),
+        linear-gradient(180deg, #040b12 0%, var(--bg) 44%, var(--bg-2) 100%);
+      color: var(--text);
+    }}
+    .shell {{ max-width: 1460px; margin: 0 auto; padding: 36px 24px 60px; }}
+    .hero {{
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(11, 24, 38, 0.94), rgba(7, 17, 28, 0.92));
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+    }}
+    .eyebrow {{ color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
+    h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
+    h2 {{ margin: 0 0 14px; font-size: 18px; }}
+    p {{ color: var(--muted); line-height: 1.6; }}
+    .actions {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }}
+    a, button {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(121, 216, 255, 0.12);
+      color: var(--text);
+      text-decoration: none;
+      font: inherit;
+      cursor: pointer;
+    }}
+    button.alt {{ background: rgba(255,255,255,0.04); }}
+    .stats {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }}
+    .stat, .panel {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+    }}
+    .stat span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
+    .stat strong {{ display: block; margin-top: 6px; font-size: 24px; }}
+    .layout {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }}
+    .span-4 {{ grid-column: span 4; }}
+    .span-5 {{ grid-column: span 5; }}
+    .span-7 {{ grid-column: span 7; }}
+    .span-8 {{ grid-column: span 8; }}
+    ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
+    li {{
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+    }}
+    li strong {{ display: block; margin-bottom: 4px; }}
+    li span {{ color: var(--muted); display: block; }}
+    .detail-copy {{
+      min-height: 1.3em;
+      color: var(--muted);
+      margin-top: 10px;
+    }}
+    .entry-card {{
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.03);
+      display: grid;
+      gap: 10px;
+    }}
+    .chips {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }}
+    .chip {{
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--muted);
+      background: rgba(255,255,255,0.04);
+    }}
+    .chip.accepted {{ color: var(--ok); border-color: rgba(148,240,191,0.28); }}
+    .chip.regressed {{ color: var(--risk); border-color: rgba(255,176,176,0.28); }}
+    .chip.steady {{ color: var(--warn); border-color: rgba(255,212,138,0.28); }}
+    .action-row {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }}
+    .meta {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }}
+    .meta div {{
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.02);
+    }}
+    .meta label {{
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }}
+    pre {{
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      background: rgba(3, 10, 18, 0.9);
+      color: #d7e8f4;
+      overflow-x: auto;
+    }}
+    @media (max-width: 1080px) {{
+      .span-4, .span-5, .span-7, .span-8 {{ grid-column: span 12; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Level 3 Working Surface</div>
+      <h1>JARVIS Failure &amp; Recovery</h1>
+      <p>A dedicated recovery workspace for current integration failures, approval-gated fixes, recent failure signals, and next recovery actions. This turns Failure &amp; Recovery into a real app module instead of leaving it inside progress and command-center summaries.</p>
+      <div class="actions">
+        <a href="/command-center">Back to Command Center</a>
+        <a href="/supervision-snapshot">Open Supervision Snapshot</a>
+        <button type="button" id="refresh-recovery">Refresh Failure State</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
+        <div class="stat"><span>Integration Issues</span><strong id="hero-issues">0</strong></div>
+        <div class="stat"><span>Pending Recovery Gates</span><strong id="hero-approvals">0</strong></div>
+        <div class="stat"><span>Recent Failure Signals</span><strong id="hero-failures">0</strong></div>
+        <div class="stat"><span>Dirty Lane</span><strong id="hero-dirty">0</strong></div>
+      </div>
+      <p class="detail-copy" id="recovery-status-note">Loading failure and recovery state…</p>
+    </section>
+    <div class="layout">
+      <section class="panel span-7">
+        <h2>Recovery Actions</h2>
+        <div id="recovery-actions-list"></div>
+      </section>
+      <section class="panel span-5">
+        <h2>Selected Recovery Detail</h2>
+        <div id="recovery-detail"></div>
+        <p class="detail-copy" id="recovery-action-note">Select a recovery item or resolve a pending gate to inspect the latest posture.</p>
+      </section>
+      <section class="panel span-4">
+        <h2>Pending Recovery Gates</h2>
+        <div id="approval-list"></div>
+      </section>
+      <section class="panel span-4">
+        <h2>Integration Failures</h2>
+        <div id="integration-list"></div>
+      </section>
+      <section class="panel span-4">
+        <h2>Recent Failure Signals</h2>
+        <div id="failure-list"></div>
+      </section>
+      <section class="panel span-8">
+        <h2>Proof Paths</h2>
+        <ul id="proof-list"></ul>
+      </section>
+      <section class="panel span-4">
+        <h2>Payload Preview</h2>
+        <pre id="payload-preview"></pre>
+      </section>
+    </div>
+  </main>
+  <script>
+    const initialPayload = {raw_json};
+    let currentPayload = initialPayload;
+    let currentSelection = {{ kind: "action", index: 0 }};
+
+    const heroStatus = document.getElementById("hero-status");
+    const heroIssues = document.getElementById("hero-issues");
+    const heroApprovals = document.getElementById("hero-approvals");
+    const heroFailures = document.getElementById("hero-failures");
+    const heroDirty = document.getElementById("hero-dirty");
+    const recoveryActionsList = document.getElementById("recovery-actions-list");
+    const approvalList = document.getElementById("approval-list");
+    const integrationList = document.getElementById("integration-list");
+    const failureList = document.getElementById("failure-list");
+    const proofList = document.getElementById("proof-list");
+    const recoveryDetail = document.getElementById("recovery-detail");
+    const payloadPreview = document.getElementById("payload-preview");
+    const statusNote = document.getElementById("recovery-status-note");
+    const actionNote = document.getElementById("recovery-action-note");
+
+    function esc(value) {{
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }}
+
+    function li(title, summary, detail = "") {{
+      return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
+    }}
+
+    function chip(label, klass = "") {{
+      return `<span class="chip ${{esc(klass)}}">${{esc(label)}}</span>`;
+    }}
+
+    function listOrEmpty(items, renderItem, emptyTitle, emptyDetail) {{
+      return items.length
+        ? items.map(renderItem).join("")
+        : `<div class="entry-card"><strong>${{esc(emptyTitle)}}</strong><span>${{esc(emptyDetail)}}</span></div>`;
+    }}
+
+    function selectedItem(payload) {{
+      const failure = payload.failure_recovery || {{}};
+      const pending = Array.isArray(payload.pending_approvals) ? payload.pending_approvals : [];
+      const actions = Array.isArray(failure.action_items) ? failure.action_items : [];
+      const integrations = Array.isArray(failure.failing_integrations) ? failure.failing_integrations : [];
+      const recent = Array.isArray(failure.recent_failures) ? failure.recent_failures : [];
+      if (currentSelection.kind === "approval") return pending[currentSelection.index] || pending[0] || null;
+      if (currentSelection.kind === "integration") return integrations[currentSelection.index] || integrations[0] || null;
+      if (currentSelection.kind === "failure") return recent[currentSelection.index] || recent[0] || null;
+      return actions[currentSelection.index] || actions[0] || null;
+    }}
+
+    function renderDetail(payload) {{
+      const item = selectedItem(payload);
+      const failure = payload.failure_recovery || {{}};
+      if (!item) {{
+        recoveryDetail.innerHTML = "<p class=\\"detail-copy\\">No recovery detail available right now.</p>";
+        return;
+      }}
+      const title = item.title || item.name || item.request_id || "Recovery item";
+      const summary = item.detail || item.description || item.summary || "No recovery detail recorded.";
+      const route = item.route || (payload.proof_paths || {{}}).supervision_route || "/supervision-snapshot";
+      recoveryDetail.innerHTML = `
+        <div class="entry-card">
+          <strong>${{esc(title)}}</strong>
+          <span>${{esc(summary)}}</span>
+          <div class="chips">
+            ${{item.request_id ? chip("approval gate", "steady") : ""}}
+            ${{item.name ? chip("integration", "regressed") : ""}}
+            ${{item.timestamp ? chip(item.timestamp, "steady") : ""}}
+            ${{item.risk_tier ? chip(item.risk_tier, "steady") : ""}}
+          </div>
+          <div class="meta">
+            <div><label>Pending Approvals</label><strong>${{esc(String(failure.pending_approval_count || 0))}}</strong></div>
+            <div><label>Integration Issues</label><strong>${{esc(String(failure.integration_issue_count || 0))}}</strong></div>
+            <div><label>Recent Failures</label><strong>${{esc(String(failure.recent_failure_count || 0))}}</strong></div>
+            <div><label>Dirty Lane</label><strong>${{esc(String(failure.dirty_count || 0))}}</strong></div>
+          </div>
+          <div class="action-row">
+            <a href="${{esc(route)}}">Open Recovery View</a>
+            ${{item.request_id ? `<button type="button" data-approve-id="${{esc(item.request_id)}}">Approve Recovery Gate</button>` : ""}}
+            ${{item.request_id ? `<button type="button" class="alt" data-reject-id="${{esc(item.request_id)}}">Reject Recovery Gate</button>` : ""}}
+          </div>
+        </div>
+      `;
+      document.querySelectorAll("[data-approve-id]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          resolveApproval(button.getAttribute("data-approve-id") || "", "approve").catch((error) => {{
+            actionNote.textContent = `Approve failed: ${{String(error)}}`;
+          }});
+        }});
+      }});
+      document.querySelectorAll("[data-reject-id]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          resolveApproval(button.getAttribute("data-reject-id") || "", "reject").catch((error) => {{
+            actionNote.textContent = `Reject failed: ${{String(error)}}`;
+          }});
+        }});
+      }});
+    }}
+
+    function render(payload) {{
+      currentPayload = payload || {{}};
+      const failure = payload.failure_recovery || {{}};
+      const actions = Array.isArray(failure.action_items) ? failure.action_items : [];
+      const pending = Array.isArray(payload.pending_approvals) ? payload.pending_approvals : [];
+      const integrations = Array.isArray(failure.failing_integrations) ? failure.failing_integrations : [];
+      const recent = Array.isArray(failure.recent_failures) ? failure.recent_failures : [];
+      const proofs = payload.proof_paths || {{}};
+
+      heroStatus.textContent = payload.status || "Wired";
+      heroIssues.textContent = String(failure.integration_issue_count || 0);
+      heroApprovals.textContent = String(failure.pending_approval_count || 0);
+      heroFailures.textContent = String(failure.recent_failure_count || 0);
+      heroDirty.textContent = String(failure.dirty_count || 0);
+      statusNote.textContent = payload.summary || "No recovery summary captured yet.";
+
+      recoveryActionsList.innerHTML = listOrEmpty(
+        actions,
+        (item, index) => `
+          <div class="entry-card">
+            <strong>${{esc(item.title || "Recovery Action")}}</strong>
+            <span>${{esc(item.detail || "No recovery detail recorded.")}}</span>
+            <div class="action-row">
+              <button type="button" data-select-kind="action" data-select-index="${{esc(String(index))}}">Inspect Recovery Item</button>
+            </div>
+          </div>
+        `,
+        "Recovery posture is stable.",
+        "No active recovery actions are currently surfaced."
+      );
+
+      approvalList.innerHTML = listOrEmpty(
+        pending,
+        (item, index) => `
+          <div class="entry-card">
+            <strong>${{esc(item.title || item.request_id || "Pending Approval")}}</strong>
+            <span>${{esc(item.description || "Approval-gated recovery action.")}}</span>
+            <div class="chips">
+              ${{chip(item.risk_tier || "pending", "steady")}}
+              ${{item.agent_label ? chip(item.agent_label) : ""}}
+            </div>
+            <div class="action-row">
+              <button type="button" data-select-kind="approval" data-select-index="${{esc(String(index))}}">Inspect Recovery Gate</button>
+              <button type="button" data-approve-id="${{esc(item.request_id || "")}}">Approve Recovery Gate</button>
+              <button type="button" class="alt" data-reject-id="${{esc(item.request_id || "")}}">Reject</button>
+            </div>
+          </div>
+        `,
+        "No pending recovery gates.",
+        "Approvals that block recovery work will appear here."
+      );
+
+      integrationList.innerHTML = listOrEmpty(
+        integrations,
+        (item, index) => `
+          <div class="entry-card">
+            <strong>${{esc(item.name || "Integration")}}</strong>
+            <span>${{esc(item.detail || "Integration needs review.")}}</span>
+            <div class="action-row">
+              <button type="button" data-select-kind="integration" data-select-index="${{esc(String(index))}}">Inspect Integration</button>
+            </div>
+          </div>
+        `,
+        "No active integration failures.",
+        "Broken connectors and runtime integrations will surface here."
+      );
+
+      failureList.innerHTML = listOrEmpty(
+        recent,
+        (item, index) => `
+          <div class="entry-card">
+            <strong>${{esc(item.title || "Failure Signal")}}</strong>
+            <span>${{esc(item.detail || "No failure detail recorded.")}}</span>
+            <div class="chips">${{item.timestamp ? chip(item.timestamp, "steady") : ""}}</div>
+            <div class="action-row">
+              <button type="button" data-select-kind="failure" data-select-index="${{esc(String(index))}}">Inspect Failure Signal</button>
+            </div>
+          </div>
+        `,
+        "No recent failure signals.",
+        "Recent runtime failures and rollback signals will appear here."
+      );
+
+      proofList.innerHTML = Object.entries(proofs).map(([key, value]) => li(key, value)).join("");
+      payloadPreview.textContent = JSON.stringify(payload, null, 2);
+
+      document.querySelectorAll("[data-select-kind]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          currentSelection = {{
+            kind: button.getAttribute("data-select-kind") || "action",
+            index: Number(button.getAttribute("data-select-index") || "0"),
+          }};
+          renderDetail(payload);
+          actionNote.textContent = `Focused ${{currentSelection.kind}} detail for review.`;
+        }});
+      }});
+      document.querySelectorAll("[data-approve-id]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          resolveApproval(button.getAttribute("data-approve-id") || "", "approve").catch((error) => {{
+            actionNote.textContent = `Approve failed: ${{String(error)}}`;
+          }});
+        }});
+      }});
+      document.querySelectorAll("[data-reject-id]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          resolveApproval(button.getAttribute("data-reject-id") || "", "reject").catch((error) => {{
+            actionNote.textContent = `Reject failed: ${{String(error)}}`;
+          }});
+        }});
+      }});
+
+      renderDetail(payload);
+    }}
+
+    async function refreshRecoveryState() {{
+      statusNote.textContent = "Refreshing failure and recovery state…";
+      try {{
+        const response = await fetch("/api/recovery/module");
+        const payload = await response.json();
+        render(payload);
+        statusNote.textContent = payload.summary || "Failure and recovery module refreshed.";
+      }} catch (error) {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function resolveApproval(requestId, action) {{
+      if (!requestId) return;
+      actionNote.textContent = `${{action === "approve" ? "Approving" : "Rejecting"}} recovery gate ${{requestId}}…`;
+      const endpoint = action === "approve"
+        ? `/api/approvals/${{encodeURIComponent(requestId)}}/approve`
+        : `/api/approvals/${{encodeURIComponent(requestId)}}/reject`;
+      const body = action === "approve"
+        ? {{ approved_by: "Chris" }}
+        : {{ reason: "Needs more recovery review", rejected_by: "Chris" }};
+      try {{
+        const response = await fetch(endpoint, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify(body),
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || `${{action}} failed`);
+        }}
+        actionNote.textContent = action === "approve"
+          ? `Approved recovery gate ${{requestId}}.`
+          : `Rejected recovery gate ${{requestId}}.`;
+        await refreshRecoveryState();
+      }} catch (error) {{
+        actionNote.textContent = `${{action === "approve" ? "Approve" : "Reject"}} failed: ${{String(error)}}`;
+      }}
+    }}
+
+    document.getElementById("refresh-recovery").addEventListener("click", () => {{
+      refreshRecoveryState().catch((error) => {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }});
+    }});
+
+    render(initialPayload);
+  </script>
+</body>
+</html>
+"""
+
+
+def render_mission_board_module_page(payload: dict) -> str:
+    raw_json = json.dumps(payload, indent=2)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Mission and Task Board</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #071019;
+      --bg-2: #0a1624;
+      --panel: rgba(10, 21, 34, 0.9);
+      --line: rgba(121, 216, 255, 0.14);
+      --text: #edf8ff;
+      --muted: #97b5cb;
+      --accent: #79d8ff;
+      --ok: #94f0bf;
+      --warn: #ffd48a;
+      --risk: #ffb0b0;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: "SF Pro Display", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(121, 216, 255, 0.14), transparent 36%),
+        linear-gradient(180deg, #040b12 0%, var(--bg) 44%, var(--bg-2) 100%);
+      color: var(--text);
+    }}
+    .shell {{ max-width: 1480px; margin: 0 auto; padding: 36px 24px 60px; }}
+    .hero {{
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(11, 24, 38, 0.94), rgba(7, 17, 28, 0.92));
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+    }}
+    .eyebrow {{ color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
+    h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
+    h2 {{ margin: 0 0 14px; font-size: 18px; }}
+    p {{ color: var(--muted); line-height: 1.6; }}
+    .actions {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }}
+    a, button {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(121, 216, 255, 0.12);
+      color: var(--text);
+      text-decoration: none;
+      font: inherit;
+      cursor: pointer;
+    }}
+    button.alt {{ background: rgba(255,255,255,0.04); }}
+    .stats {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }}
+    .stat, .panel {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+    }}
+    .stat span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
+    .stat strong {{ display: block; margin-top: 6px; font-size: 24px; }}
+    .layout {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }}
+    .span-4 {{ grid-column: span 4; }}
+    .span-5 {{ grid-column: span 5; }}
+    .span-7 {{ grid-column: span 7; }}
+    .span-8 {{ grid-column: span 8; }}
+    .span-12 {{ grid-column: span 12; }}
+    .board-grid {{
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }}
+    .lane {{
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(255,255,255,0.02);
+      display: grid;
+      gap: 10px;
+      min-height: 220px;
+    }}
+    .lane h3 {{
+      margin: 0;
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }}
+    .mission-card {{
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      display: grid;
+      gap: 8px;
+    }}
+    .mission-card strong {{ display: block; }}
+    .mission-card span {{ color: var(--muted); display: block; }}
+    .chips {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }}
+    .chip {{
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--muted);
+      background: rgba(255,255,255,0.04);
+    }}
+    .chip.accepted {{ color: var(--ok); border-color: rgba(148,240,191,0.28); }}
+    .chip.regressed {{ color: var(--risk); border-color: rgba(255,176,176,0.28); }}
+    .chip.steady {{ color: var(--warn); border-color: rgba(255,212,138,0.28); }}
+    .action-row {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }}
+    .meta {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }}
+    .meta div {{
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.02);
+    }}
+    .meta label {{
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }}
+    ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
+    li {{
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+    }}
+    li strong {{ display: block; margin-bottom: 4px; }}
+    li span {{ color: var(--muted); display: block; }}
+    pre {{
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      background: rgba(3, 10, 18, 0.9);
+      color: #d7e8f4;
+      overflow-x: auto;
+    }}
+    .status-note {{
+      min-height: 1.3em;
+      color: var(--muted);
+      margin-top: 10px;
+    }}
+    @media (max-width: 1180px) {{
+      .board-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+    }}
+    @media (max-width: 980px) {{
+      .span-4, .span-5, .span-7, .span-8, .span-12 {{ grid-column: span 12; }}
+      .board-grid {{ grid-template-columns: 1fr; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Level 3 Working Surface</div>
+      <h1>JARVIS Mission &amp; Task Board</h1>
+      <p>A dedicated mission workspace for live now/next/blocked/completed missions, selected-agent context, task-agent context, and mission lane changes. This turns the mission board into a real app module instead of leaving it only in the command center.</p>
+      <div class="actions">
+        <a href="/command-center">Back to Command Center</a>
+        <button type="button" id="refresh-mission-board">Refresh Mission Board</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
+        <div class="stat"><span>Now</span><strong id="hero-now">0</strong></div>
+        <div class="stat"><span>Next</span><strong id="hero-next">0</strong></div>
+        <div class="stat"><span>Blocked</span><strong id="hero-blocked">0</strong></div>
+        <div class="stat"><span>Completed</span><strong id="hero-completed">0</strong></div>
+      </div>
+      <p class="status-note" id="mission-status-note">Loading mission board state…</p>
+    </section>
+    <div class="layout">
+      <section class="panel span-12">
+        <h2>Mission Lanes</h2>
+        <div id="mission-board" class="board-grid"></div>
+      </section>
+      <section class="panel span-7">
+        <h2>Selected Mission Detail</h2>
+        <div id="mission-detail"></div>
+        <p class="status-note" id="mission-action-note">Select a mission or change its lane to inspect the current board posture.</p>
+      </section>
+      <section class="panel span-5">
+        <h2>Mission Evidence</h2>
+        <ul id="mission-evidence-list"></ul>
+      </section>
+      <section class="panel span-8">
+        <h2>Mission API Proof</h2>
+        <ul id="proof-list"></ul>
+      </section>
+      <section class="panel span-4">
+        <h2>Payload Preview</h2>
+        <pre id="payload-preview"></pre>
+      </section>
+    </div>
+  </main>
+  <script>
+    const initialPayload = {raw_json};
+    let currentPayload = initialPayload;
+    let selectedMissionId = "";
+
+    const heroStatus = document.getElementById("hero-status");
+    const heroNow = document.getElementById("hero-now");
+    const heroNext = document.getElementById("hero-next");
+    const heroBlocked = document.getElementById("hero-blocked");
+    const heroCompleted = document.getElementById("hero-completed");
+    const boardEl = document.getElementById("mission-board");
+    const detailEl = document.getElementById("mission-detail");
+    const evidenceEl = document.getElementById("mission-evidence-list");
+    const proofEl = document.getElementById("proof-list");
+    const payloadPreview = document.getElementById("payload-preview");
+    const statusNote = document.getElementById("mission-status-note");
+    const actionNote = document.getElementById("mission-action-note");
+
+    function esc(value) {{
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }}
+
+    function li(title, summary, detail = "") {{
+      return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
+    }}
+
+    function chip(label, klass = "") {{
+      return `<span class="chip ${{esc(klass)}}">${{esc(label)}}</span>`;
+    }}
+
+    function missions(payload) {{
+      return Array.isArray((payload.mission_task_board || {{}}).items) ? payload.mission_task_board.items : [];
+    }}
+
+    function currentMission(payload) {{
+      const items = missions(payload);
+      return items.find((item) => item.mission_id === selectedMissionId) || items[0] || null;
+    }}
+
+    async function recordMissionActivity(payload) {{
+      try {{
+        const response = await fetch("/api/activity/operator-action", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify(payload || {{}}),
+        }});
+        if (!response.ok) return false;
+        await response.json().catch(() => ({{}}));
+        return true;
+      }} catch (_error) {{
+        return false;
+      }}
+    }}
+
+    async function updateMissionStatus(missionId, status) {{
+      if (!missionId) return;
+      const mission = currentMission(currentPayload) || {{}};
+      const actionLabel = {{
+        active: "Move Mission to Now",
+        blocked: "Mark Mission Blocked",
+        completed: "Mark Mission Completed",
+      }}[String(status || "").trim()] || "Update Mission Status";
+      actionNote.textContent = `Updating mission ${{missionId}} to ${{status}}…`;
+      try {{
+        const response = await fetch(`/api/missions/${{encodeURIComponent(missionId)}}/status`, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            status,
+            note: `Updated from mission board module to ${{status}}`,
+          }}),
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Mission status update failed");
+        }}
+        const recorded = await recordMissionActivity({{
+          actor: "Chris",
+          domain: "mission-board",
+          action: actionLabel,
+          title: mission.title || missionId,
+          status: String(payload.status || payload.result || status || "ok"),
+          detail: `Action succeeded: /api/missions/${{missionId}}/status`,
+          why_now: mission.next_step || mission.brief || `Mission board changed ${{missionId}} to ${{status}}.`,
+          result_summary: `Mission action result: ${{String(payload.status || payload.result || status || "ok")}}`,
+          route: "/mission-board",
+          route_label: "Open Mission Board",
+          related_kind: "mission",
+          related_label: mission.title || missionId,
+          succeeded: true,
+        }});
+        actionNote.textContent = recorded
+          ? `Mission ${{missionId}} updated to ${{status}} and recorded in shared activity.`
+          : `Mission ${{missionId}} updated to ${{status}}.`;
+        await refreshMissionBoard();
+      }} catch (error) {{
+        const errorText = String(error);
+        await recordMissionActivity({{
+          actor: "Chris",
+          domain: "mission-board",
+          action: actionLabel,
+          title: mission.title || missionId,
+          status: "failed",
+          detail: `Action failed: ${{errorText}}`,
+          why_now: `Mission board failed to change ${{missionId}} to ${{status}}.`,
+          result_summary: "Mission action failed before the mission board refresh completed.",
+          route: "/mission-board",
+          route_label: "Open Mission Board",
+          related_kind: "mission",
+          related_label: mission.title || missionId,
+          succeeded: false,
+        }});
+        actionNote.textContent = `Mission status update failed: ${{errorText}}`;
+      }}
+    }}
+
+    function renderDetail(payload) {{
+      const mission = currentMission(payload);
+      if (!mission) {{
+        detailEl.innerHTML = "<p class=\\"status-note\\">No mission detail available right now.</p>";
+        evidenceEl.innerHTML = "<li><strong>No mission evidence.</strong><span>Mission records will appear once the board is hydrated.</span></li>";
+        return;
+      }}
+      selectedMissionId = mission.mission_id || "";
+      const selectedAgents = Array.isArray(mission.selected_agents) ? mission.selected_agents : [];
+      const taskAgents = Array.isArray(mission.task_agent_labels) ? mission.task_agent_labels : [];
+      detailEl.innerHTML = `
+        <div class="mission-card">
+          <strong>${{esc(mission.title || mission.mission_id || "Mission")}}</strong>
+          <span>${{esc(mission.brief || "No mission brief captured yet.")}}</span>
+          <div class="chips">
+            ${{chip(mission.lane || "next", mission.lane_class || "")}}
+            ${{chip(mission.primary_domain || "general")}}
+            ${{chip(mission.owner_agent || "jarvis-orchestrator")}}
+          </div>
+          <div class="meta">
+            <div><label>Mission ID</label><strong>${{esc(mission.mission_id || "not recorded")}}</strong></div>
+            <div><label>Next Step</label><strong>${{esc(mission.next_step || "Review mission brief")}}</strong></div>
+            <div><label>Updated</label><strong>${{esc(mission.updated_at || "not recorded")}}</strong></div>
+            <div><label>Subtasks</label><strong>${{esc(`${{mission.subtask_count || 0}} total / ${{mission.active_count || 0}} active / ${{mission.blocked_count || 0}} blocked / ${{mission.completed_count || 0}} completed`)}}</strong></div>
+          </div>
+          <div class="chips">
+            ${{selectedAgents.length ? selectedAgents.map((item) => chip(item)).join("") : chip("No selected agents")}}
+            ${{taskAgents.length ? taskAgents.map((item) => chip(item, "steady")).join("") : chip("No task agents", "steady")}}
+          </div>
+          <div class="action-row">
+            <button type="button" data-mission-status="active">Move to Now</button>
+            <button type="button" data-mission-status="blocked">Mark Blocked</button>
+            <button type="button" data-mission-status="completed">Mark Completed</button>
+          </div>
+        </div>
+      `;
+      document.querySelectorAll("[data-mission-status]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          updateMissionStatus(selectedMissionId, button.getAttribute("data-mission-status") || "").catch((error) => {{
+            actionNote.textContent = `Mission status update failed: ${{String(error)}}`;
+          }});
+        }});
+      }});
+
+      evidenceEl.innerHTML = [
+        li("What Became Real", mission.what_became_real || "Mission board record loaded from the local mission store."),
+        li("What Remains Partial", mission.remains_partial || "No remaining mission detail captured."),
+        li("Owner Agent", mission.owner_agent || "jarvis-orchestrator"),
+        li("Selected Agents", selectedAgents.join(", ") || "none recorded"),
+        li("Task Agents", taskAgents.join(", ") || "none recorded"),
+      ].join("");
+    }}
+
+    function render(payload) {{
+      currentPayload = payload || {{}};
+      const board = payload.mission_task_board || {{}};
+      const counts = board.counts || {{}};
+      const items = missions(payload);
+      const lanes = [
+        {{ key: "now", title: "Now" }},
+        {{ key: "next", title: "Next" }},
+        {{ key: "blocked", title: "Blocked" }},
+        {{ key: "completed", title: "Completed" }},
+      ];
+
+      heroStatus.textContent = payload.status || "Wired";
+      heroNow.textContent = String(counts.now || 0);
+      heroNext.textContent = String(counts.next || 0);
+      heroBlocked.textContent = String(counts.blocked || 0);
+      heroCompleted.textContent = String(counts.completed || 0);
+      statusNote.textContent = payload.summary || "No mission board summary captured yet.";
+
+      boardEl.innerHTML = lanes.map((lane) => {{
+        const laneItems = items.filter((item) => String(item.lane || "next") === lane.key);
+        const cards = laneItems.length
+          ? laneItems.map((item) => `
+              <div class="mission-card">
+                <strong>${{esc(item.title || item.mission_id || "Mission")}}</strong>
+                <span>${{esc(item.brief || "No mission brief captured yet.")}}</span>
+                <div class="chips">
+                  ${{chip(item.primary_domain || "general")}}
+                  ${{chip(item.owner_agent || "jarvis-orchestrator")}}
+                </div>
+                <span>${{esc(item.next_step || "Review mission brief")}}</span>
+                <div class="action-row">
+                  <button type="button" data-select-mission="${{esc(item.mission_id || "")}}">Inspect Mission</button>
+                </div>
+              </div>
+            `).join("")
+          : `<div class="mission-card"><strong>No ${{esc(lane.title)}} missions.</strong><span>This lane is currently clear.</span></div>`;
+        return `<div class="lane"><h3>${{esc(lane.title)}}</h3>${{cards}}</div>`;
+      }}).join("");
+
+      document.querySelectorAll("[data-select-mission]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          selectedMissionId = button.getAttribute("data-select-mission") || "";
+          renderDetail(payload);
+          actionNote.textContent = `Focused mission ${{selectedMissionId || "detail"}} for review.`;
+        }});
+      }});
+
+      proofEl.innerHTML = Object.entries(payload.proof_paths || {{}}).map(([key, value]) => li(key, value)).join("");
+      payloadPreview.textContent = JSON.stringify(payload, null, 2);
+      renderDetail(payload);
+    }}
+
+    async function refreshMissionBoard() {{
+      statusNote.textContent = "Refreshing mission board state…";
+      try {{
+        const response = await fetch("/api/mission-board/module");
+        const payload = await response.json();
+        render(payload);
+        statusNote.textContent = payload.summary || "Mission board refreshed.";
+      }} catch (error) {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }}
+    }}
+
+    document.getElementById("refresh-mission-board").addEventListener("click", () => {{
+      refreshMissionBoard().catch((error) => {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }});
+    }});
+
+    render(initialPayload);
+  </script>
+</body>
+</html>
+"""
+
+
+def render_activity_module_page(payload: dict) -> str:
+    raw_json = json.dumps(payload, indent=2)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Activity Feed</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #071019;
+      --bg-2: #0a1624;
+      --panel: rgba(10, 21, 34, 0.9);
+      --line: rgba(121, 216, 255, 0.14);
+      --text: #edf8ff;
+      --muted: #97b5cb;
+      --accent: #79d8ff;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: "SF Pro Display", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(121, 216, 255, 0.14), transparent 36%),
+        linear-gradient(180deg, #040b12 0%, var(--bg) 44%, var(--bg-2) 100%);
+      color: var(--text);
+    }}
+    .shell {{ max-width: 1480px; margin: 0 auto; padding: 36px 24px 60px; }}
+    .hero {{
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(11, 24, 38, 0.94), rgba(7, 17, 28, 0.92));
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+    }}
+    .eyebrow {{ color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
+    h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
+    h2 {{ margin: 0 0 14px; font-size: 18px; }}
+    p {{ color: var(--muted); line-height: 1.6; }}
+    .actions {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }}
+    a, button {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(121, 216, 255, 0.12);
+      color: var(--text);
+      text-decoration: none;
+      font: inherit;
+      cursor: pointer;
+    }}
+    button.alt {{ background: rgba(255,255,255,0.04); }}
+    .stats {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }}
+    .stat, .panel {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+    }}
+    .stat span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
+    .stat strong {{ display: block; margin-top: 6px; font-size: 24px; }}
+    .layout {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }}
+    .span-4 {{ grid-column: span 4; }}
+    .span-5 {{ grid-column: span 5; }}
+    .span-7 {{ grid-column: span 7; }}
+    .span-8 {{ grid-column: span 8; }}
+    .span-12 {{ grid-column: span 12; }}
+    .filter-row {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }}
+    .entry-list {{
+      display: grid;
+      gap: 10px;
+    }}
+    .entry-card {{
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      display: grid;
+      gap: 8px;
+    }}
+    .entry-card strong {{ display: block; }}
+    .entry-card span {{ color: var(--muted); display: block; }}
+    .chips {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }}
+    .chip {{
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--muted);
+      background: rgba(255,255,255,0.04);
+    }}
+    .action-row {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }}
+    .meta {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }}
+    .meta div {{
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.02);
+    }}
+    .meta label {{
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }}
+    ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
+    li {{
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+    }}
+    li strong {{ display: block; margin-bottom: 4px; }}
+    li span {{ color: var(--muted); display: block; }}
+    pre {{
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      background: rgba(3, 10, 18, 0.9);
+      color: #d7e8f4;
+      overflow-x: auto;
+    }}
+    .status-note {{
+      min-height: 1.3em;
+      color: var(--muted);
+      margin-top: 10px;
+    }}
+    @media (max-width: 980px) {{
+      .span-4, .span-5, .span-7, .span-8, .span-12 {{ grid-column: span 12; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Level 3 Working Surface</div>
+      <h1>JARVIS Activity Feed</h1>
+      <p>A dedicated activity workspace for recent agent updates, failures, system notices, user actions, and journal context. This turns the activity stream into a navigable app surface instead of leaving it only inside the command center.</p>
+      <div class="actions">
+        <a href="/command-center">Back to Command Center</a>
+        <button type="button" id="refresh-activity-feed">Refresh Activity Feed</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
+        <div class="stat"><span>Recent Events</span><strong id="hero-events">0</strong></div>
+        <div class="stat"><span>Journal Actions</span><strong id="hero-journal">0</strong></div>
+        <div class="stat"><span>Operator Actions</span><strong id="hero-operator">0</strong></div>
+        <div class="stat"><span>Autonomous Actions</span><strong id="hero-autonomous">0</strong></div>
+        <div class="stat"><span>Home Bridges</span><strong id="hero-home-bridges">0</strong></div>
+      </div>
+      <p class="status-note" id="activity-status-note">Loading activity feed state…</p>
+    </section>
+    <div class="layout">
+      <section class="panel span-7">
+        <h2>Recent Activity</h2>
+        <div class="filter-row">
+          <button type="button" data-filter="all">All Activity</button>
+          <button type="button" class="alt" data-filter="failures">Failures</button>
+          <button type="button" class="alt" data-filter="approvals">Approvals</button>
+          <button type="button" class="alt" data-filter="system">System Notices</button>
+        </div>
+        <div id="activity-list" class="entry-list"></div>
+      </section>
+      <section class="panel span-5">
+        <h2>Selected Event Detail</h2>
+        <div id="activity-detail"></div>
+        <p class="status-note" id="activity-action-note">Select an event or jump into a related surface to inspect the current activity context.</p>
+      </section>
+      <section class="panel span-7">
+        <h2>Action Journal</h2>
+        <div id="journal-list" class="entry-list"></div>
+      </section>
+      <section class="panel span-5">
+        <h2>Activity Evidence</h2>
+        <ul id="activity-evidence-list"></ul>
+      </section>
+      <section class="panel span-8">
+        <h2>Proof Paths</h2>
+        <ul id="proof-list"></ul>
+      </section>
+      <section class="panel span-4">
+        <h2>Payload Preview</h2>
+        <pre id="payload-preview"></pre>
+      </section>
+    </div>
+  </main>
+  <script>
+    const initialPayload = {raw_json};
+    let currentPayload = initialPayload;
+    let currentSelection = {{ kind: "activity", index: 0 }};
+    let currentFilter = "all";
+
+    const heroStatus = document.getElementById("hero-status");
+    const heroEvents = document.getElementById("hero-events");
+    const heroJournal = document.getElementById("hero-journal");
+    const heroOperator = document.getElementById("hero-operator");
+    const heroAutonomous = document.getElementById("hero-autonomous");
+    const heroHomeBridges = document.getElementById("hero-home-bridges");
+    const activityList = document.getElementById("activity-list");
+    const journalList = document.getElementById("journal-list");
+    const detailEl = document.getElementById("activity-detail");
+    const evidenceEl = document.getElementById("activity-evidence-list");
+    const proofEl = document.getElementById("proof-list");
+    const payloadPreview = document.getElementById("payload-preview");
+    const statusNote = document.getElementById("activity-status-note");
+    const actionNote = document.getElementById("activity-action-note");
+
+    function esc(value) {{
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }}
+
+    function li(title, summary, detail = "") {{
+      return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
+    }}
+
+    function chip(label) {{
+      return `<span class="chip">${{esc(label)}}</span>`;
+    }}
+
+    function filteredActivity(payload) {{
+      const items = Array.isArray(payload.activity_feed) ? payload.activity_feed : [];
+      if (currentFilter === "failures") {{
+        return items.filter((item) => /fail|error|blocked|recover/i.test(`${{item.title || ""}} ${{item.result || ""}} ${{item.entry_type || ""}}`));
+      }}
+      if (currentFilter === "approvals") {{
+        return items.filter((item) => /approval|review/i.test(`${{item.title || ""}} ${{item.subtitle || ""}} ${{item.entry_type || ""}}`));
+      }}
+      if (currentFilter === "system") {{
+        return items.filter((item) => /assistant|runtime|system|notification/i.test(`${{item.title || ""}} ${{item.subtitle || ""}} ${{item.entry_type || ""}}`));
+      }}
+      return items;
+    }}
+
+    function selectedItem(payload) {{
+      const activity = filteredActivity(payload);
+      const journal = ((payload.action_journal || {{}}).entries) || [];
+      if (currentSelection.kind === "journal") {{
+        return journal[currentSelection.index] || journal[0] || null;
+      }}
+      return activity[currentSelection.index] || activity[0] || null;
+    }}
+
+    function renderDetail(payload) {{
+      const item = selectedItem(payload);
+      if (!item) {{
+        detailEl.innerHTML = "<p class=\\"status-note\\">No activity detail available right now.</p>";
+        evidenceEl.innerHTML = "<li><strong>No activity evidence.</strong><span>Activity evidence will appear once the feed is hydrated.</span></li>";
+        return;
+      }}
+      const relatedRoute = item.related_route || "/command-center";
+      detailEl.innerHTML = `
+        <div class="entry-card">
+          <strong>${{esc(item.title || "Activity Event")}}</strong>
+          <span>${{esc(item.detail || item.result || item.subtitle || "No activity detail captured.")}}</span>
+          <div class="chips">
+            ${{chip(item.entry_type || item.kind || "activity")}}
+            ${{item.timestamp ? chip(item.timestamp) : ""}}
+            ${{item.actor ? chip(item.actor) : ""}}
+          </div>
+          <div class="meta">
+            <div><label>Source</label><strong>${{esc(item.source_kind || item.entry_type || "activity")}}</strong></div>
+            <div><label>Result</label><strong>${{esc(item.result || item.summary || "No result captured")}}</strong></div>
+            <div><label>Related Surface</label><strong>${{esc(relatedRoute)}}</strong></div>
+            <div><label>Review Time</label><strong>${{esc(item.timestamp || "recent")}}</strong></div>
+          </div>
+          <div class="action-row">
+            <button type="button" data-related-route="${{esc(relatedRoute)}}">Jump to Related</button>
+            <a href="/api/activity">Open Activity JSON</a>
+          </div>
+        </div>
+      `;
+      document.querySelectorAll("[data-related-route]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          const route = button.getAttribute("data-related-route") || "/command-center";
+          window.location.href = route;
+        }});
+      }});
+      evidenceEl.innerHTML = [
+        li("What Became Real", payload.what_became_real || "No activity seam note recorded yet."),
+        li("What Remains Partial", payload.remains_partial || "No remaining partials recorded."),
+        li("Feed Summary", payload.summary || "No activity summary captured."),
+        li("Journal Summary", ((payload.action_journal || {{}}).summary) || "No journal summary captured."),
+        li(
+          "Home Continuity",
+          ((payload.home_action_result || {{}}).summary) || "No seeded home action bridge is currently attached.",
+          ((payload.home_action_result || {{}}).detail) || "",
+        ),
+      ].join("");
+    }}
+
+    function render(payload) {{
+      currentPayload = payload || {{}};
+      const activity = filteredActivity(payload);
+      const journal = Array.isArray((payload.action_journal || {{}}).entries) ? payload.action_journal.entries : [];
+      const counts = payload.counts || {{}};
+
+      heroStatus.textContent = payload.status || "Wired";
+      heroEvents.textContent = String(counts.activity_count || 0);
+      heroJournal.textContent = String(counts.journal_count || 0);
+      heroOperator.textContent = String((payload.action_journal || {{}}).operator_count || 0);
+      heroAutonomous.textContent = String((payload.action_journal || {{}}).autonomous_count || 0);
+      heroHomeBridges.textContent = String(counts.home_bridge_count || 0);
+      statusNote.textContent = payload.summary || "No activity summary captured yet.";
+
+      activityList.innerHTML = activity.length
+        ? activity.map((item, index) => `
+            <div class="entry-card">
+              <strong>${{esc(item.title || "Activity Event")}}</strong>
+              <span>${{esc(item.subtitle || item.result || "No activity detail captured.")}}</span>
+              <div class="chips">
+                ${{chip(item.entry_type || "activity")}}
+                ${{item.actor ? chip(item.actor) : ""}}
+              </div>
+              <div class="action-row">
+                <button type="button" data-select-kind="activity" data-select-index="${{esc(String(index))}}">Inspect Event</button>
+              </div>
+            </div>
+          `).join("")
+        : `<div class="entry-card"><strong>No matching activity.</strong><span>The current filter does not have any visible events.</span></div>`;
+
+      journalList.innerHTML = journal.length
+        ? journal.map((item, index) => `
+            <div class="entry-card">
+              <strong>${{esc(item.title || "Journal Entry")}}</strong>
+              <span>${{esc(item.detail || "No journal detail captured.")}}</span>
+              <div class="chips">
+                ${{chip(item.kind || "journal")}}
+                ${{item.related_kind ? chip(item.related_kind) : ""}}
+              </div>
+              <div class="action-row">
+                <button type="button" data-select-kind="journal" data-select-index="${{esc(String(index))}}">Inspect Journal Entry</button>
+                ${{item.related_route ? `<button type="button" data-jump-route="${{esc(item.related_route)}}">Jump to Related</button>` : ""}}
+              </div>
+            </div>
+          `).join("")
+        : `<div class="entry-card"><strong>No journal entries yet.</strong><span>The action journal will appear here once recent activity is available.</span></div>`;
+
+      document.querySelectorAll("[data-select-kind]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          currentSelection = {{
+            kind: button.getAttribute("data-select-kind") || "activity",
+            index: Number(button.getAttribute("data-select-index") || "0"),
+          }};
+          renderDetail(payload);
+          actionNote.textContent = `Focused ${{currentSelection.kind}} detail for review.`;
+        }});
+      }});
+      document.querySelectorAll("[data-jump-route]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          const route = button.getAttribute("data-jump-route") || "/command-center";
+          window.location.href = route;
+        }});
+      }});
+
+      proofEl.innerHTML = Object.entries(payload.proof_paths || {{}}).map(([key, value]) => li(key, value)).join("");
+      payloadPreview.textContent = JSON.stringify(payload, null, 2);
+      renderDetail(payload);
+    }}
+
+    async function refreshActivityFeed() {{
+      statusNote.textContent = "Refreshing activity feed state…";
+      try {{
+        const response = await fetch("/api/activity/module");
+        const payload = await response.json();
+        render(payload);
+        statusNote.textContent = payload.summary || "Activity feed refreshed.";
+      }} catch (error) {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }}
+    }}
+
+    document.querySelectorAll("[data-filter]").forEach((button) => {{
+      button.addEventListener("click", () => {{
+        currentFilter = button.getAttribute("data-filter") || "all";
+        render(currentPayload);
+      }});
+    }});
+    document.getElementById("refresh-activity-feed").addEventListener("click", () => {{
+      refreshActivityFeed().catch((error) => {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }});
+    }});
+
+    render(initialPayload);
+  </script>
+</body>
+</html>
+"""
+
+
+def render_approval_module_page(payload: dict) -> str:
+    raw_json = json.dumps(payload, indent=2)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Approval Queue</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #061019;
+      --bg-2: #0a1624;
+      --panel: rgba(10, 21, 34, 0.9);
+      --line: rgba(121, 216, 255, 0.14);
+      --text: #edf8ff;
+      --muted: #97b5cb;
+      --accent: #79d8ff;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: "SF Pro Display", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(121, 216, 255, 0.12), transparent 38%),
+        linear-gradient(180deg, #040b12 0%, var(--bg) 44%, var(--bg-2) 100%);
+      color: var(--text);
+    }}
+    .shell {{ max-width: 1480px; margin: 0 auto; padding: 36px 24px 60px; }}
+    .hero {{
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(11, 24, 38, 0.94), rgba(7, 17, 28, 0.92));
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+    }}
+    .eyebrow {{ color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
+    h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
+    h2 {{ margin: 0 0 14px; font-size: 18px; }}
+    p {{ color: var(--muted); line-height: 1.6; }}
+    .actions {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }}
+    a, button {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(121, 216, 255, 0.12);
+      color: var(--text);
+      text-decoration: none;
+      font: inherit;
+      cursor: pointer;
+    }}
+    button.alt {{ background: rgba(255,255,255,0.04); }}
+    .stats {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }}
+    .stat, .panel {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+    }}
+    .stat span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
+    .stat strong {{ display: block; margin-top: 6px; font-size: 24px; }}
+    .layout {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }}
+    .span-4 {{ grid-column: span 4; }}
+    .span-5 {{ grid-column: span 5; }}
+    .span-7 {{ grid-column: span 7; }}
+    .span-8 {{ grid-column: span 8; }}
+    .span-12 {{ grid-column: span 12; }}
+    .filter-row {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }}
+    .entry-list {{
+      display: grid;
+      gap: 10px;
+    }}
+    .entry-card {{
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      display: grid;
+      gap: 8px;
+    }}
+    .entry-card strong {{ display: block; }}
+    .entry-card span {{ color: var(--muted); display: block; }}
+    .chips {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }}
+    .chip {{
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--muted);
+      background: rgba(255,255,255,0.04);
+    }}
+    .action-row {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }}
+    .meta {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }}
+    .meta div {{
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.02);
+    }}
+    .meta label {{
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }}
+    ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
+    li {{
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+    }}
+    li strong {{ display: block; margin-bottom: 4px; }}
+    li span {{ color: var(--muted); display: block; }}
+    pre {{
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      background: rgba(3, 10, 18, 0.9);
+      color: #d7e8f4;
+      overflow-x: auto;
+    }}
+    .status-note {{
+      min-height: 1.3em;
+      color: var(--muted);
+      margin-top: 10px;
+    }}
+    @media (max-width: 980px) {{
+      .span-4, .span-5, .span-7, .span-8, .span-12 {{ grid-column: span 12; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Level 3 Working Surface</div>
+      <h1>JARVIS Approval Queue</h1>
+      <p>A dedicated approval workspace for pending requests, decision history, trust-zone context, and direct review actions. This keeps approvals visible and testable as a real app surface instead of leaving them in an older standalone proof lane.</p>
+      <div class="actions">
+        <a href="/command-center">Back to Command Center</a>
+        <button type="button" id="refresh-approval-queue">Refresh Approval Queue</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
+        <div class="stat"><span>Pending Requests</span><strong id="hero-pending">0</strong></div>
+        <div class="stat"><span>Decision History</span><strong id="hero-history">0</strong></div>
+        <div class="stat"><span>High Risk Pending</span><strong id="hero-risk">0</strong></div>
+        <div class="stat"><span>Needs Review</span><strong id="hero-needs">0</strong></div>
+      </div>
+      <p class="status-note" id="approval-status-note">Loading approval queue state…</p>
+    </section>
+    <div class="layout">
+      <section class="panel span-7">
+        <h2>Pending Requests</h2>
+        <div class="filter-row">
+          <button type="button" data-filter="all">All Pending</button>
+          <button type="button" class="alt" data-filter="high-risk">High Risk</button>
+          <button type="button" class="alt" data-filter="approval-ready">Ready to Execute</button>
+        </div>
+        <div id="pending-list" class="entry-list"></div>
+      </section>
+      <section class="panel span-5">
+        <h2>Selected Approval Detail</h2>
+        <div id="approval-detail"></div>
+        <p class="status-note" id="approval-action-note">Inspect a request or history entry, then use the direct approval controls if the current proof still matches intent.</p>
+      </section>
+      <section class="panel span-7">
+        <h2>Decision History</h2>
+        <div id="history-list" class="entry-list"></div>
+      </section>
+      <section class="panel span-5">
+        <h2>Needs Review</h2>
+        <ul id="needs-review-list"></ul>
+      </section>
+      <section class="panel span-8">
+        <h2>Proof Paths</h2>
+        <ul id="proof-list"></ul>
+      </section>
+      <section class="panel span-4">
+        <h2>Payload Preview</h2>
+        <pre id="payload-preview"></pre>
+      </section>
+    </div>
+  </main>
+  <script>
+    const initialPayload = {raw_json};
+    let currentPayload = initialPayload;
+    let currentSelection = {{ kind: "pending", index: 0 }};
+    let currentFilter = "all";
+
+    const heroStatus = document.getElementById("hero-status");
+    const heroPending = document.getElementById("hero-pending");
+    const heroHistory = document.getElementById("hero-history");
+    const heroRisk = document.getElementById("hero-risk");
+    const heroNeeds = document.getElementById("hero-needs");
+    const pendingList = document.getElementById("pending-list");
+    const historyList = document.getElementById("history-list");
+    const detailEl = document.getElementById("approval-detail");
+    const needsReviewEl = document.getElementById("needs-review-list");
+    const proofEl = document.getElementById("proof-list");
+    const payloadPreview = document.getElementById("payload-preview");
+    const statusNote = document.getElementById("approval-status-note");
+    const actionNote = document.getElementById("approval-action-note");
+
+    function esc(value) {{
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }}
+
+    function li(title, summary, detail = "") {{
+      return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
+    }}
+
+    function chip(label) {{
+      return `<span class="chip">${{esc(label)}}</span>`;
+    }}
+
+    function filteredPending(payload) {{
+      const items = Array.isArray(payload.pending) ? payload.pending : [];
+      if (currentFilter === "high-risk") {{
+        return items.filter((item) => /high|critical/i.test(String(item.risk_tier || "")));
+      }}
+      if (currentFilter === "approval-ready") {{
+        return items.filter((item) => /allow|approved/i.test(String((item.supervision_decision || {{}}).resolution || item.status || "")));
+      }}
+      return items;
+    }}
+
+    function selectedItem(payload) {{
+      const pending = filteredPending(payload);
+      const history = Array.isArray(payload.history) ? payload.history : [];
+      if (currentSelection.kind === "history") {{
+        return history[currentSelection.index] || history[0] || null;
+      }}
+      return pending[currentSelection.index] || pending[0] || null;
+    }}
+
+    function renderDetail(payload) {{
+      const item = selectedItem(payload);
+      if (!item) {{
+        detailEl.innerHTML = "<p class=\\"status-note\\">No approval detail available right now.</p>";
+        return;
+      }}
+      const supervision = item.supervision_decision || {{}};
+      const relatedRoute = supervision.resolution === "deny" ? "/recovery-center" : "/command-center";
+      const controls = currentSelection.kind === "pending"
+        ? `
+            <button type="button" data-request-action="approve" data-request-id="${{esc(item.request_id || "")}}">Approve</button>
+            <button type="button" class="alt" data-request-action="reject" data-request-id="${{esc(item.request_id || "")}}">Reject</button>
+            <button type="button" class="alt" data-request-action="cancel" data-request-id="${{esc(item.request_id || "")}}">Cancel</button>
+            <button type="button" class="alt" data-request-action="execute" data-request-id="${{esc(item.request_id || "")}}">Execute</button>
+          `
+        : "";
+      detailEl.innerHTML = `
+        <div class="entry-card">
+          <strong>${{esc(item.title || "Approval Request")}}</strong>
+          <span>${{esc(item.description || item.rejection_reason || "No approval detail captured.")}}</span>
+          <div class="chips">
+            ${{chip(item.status || currentSelection.kind)}}
+            ${{item.risk_tier ? chip(item.risk_tier) : ""}}
+            ${{item.action_type ? chip(item.action_type) : ""}}
+          </div>
+          <div class="meta">
+            <div><label>Agent</label><strong>${{esc(item.agent_label || item.agent_id || "Unknown agent")}}</strong></div>
+            <div><label>Actor</label><strong>${{esc(item.actor_id || "Unknown actor")}}</strong></div>
+            <div><label>Trust Zone</label><strong>${{esc(item.trust_zone_id || "unspecified")}}</strong></div>
+            <div><label>Lane</label><strong>${{esc(item.lane_id || "unassigned")}}</strong></div>
+            <div><label>Resolution</label><strong>${{esc(supervision.resolution || item.status || "unclassified")}}</strong></div>
+            <div><label>Requested</label><strong>${{esc(item.requested_at || item.approved_at || item.executed_at || "recent")}}</strong></div>
+          </div>
+          <div class="action-row">
+            ${{controls}}
+            <a href="/api/approval-queue/snapshot">Open Legacy Snapshot</a>
+            <button type="button" data-related-route="${{esc(relatedRoute)}}">Jump to Related</button>
+          </div>
+        </div>
+      `;
+      document.querySelectorAll("[data-related-route]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          const route = button.getAttribute("data-related-route") || "/command-center";
+          window.location.href = route;
+        }});
+      }});
+      document.querySelectorAll("[data-request-action]").forEach((button) => {{
+        button.addEventListener("click", async () => {{
+          const requestId = button.getAttribute("data-request-id") || "";
+          const action = button.getAttribute("data-request-action") || "";
+          if (!requestId || !action) return;
+          const endpointMap = {{
+            approve: `/api/approvals/${{encodeURIComponent(requestId)}}/approve`,
+            reject: `/api/approvals/${{encodeURIComponent(requestId)}}/reject`,
+            cancel: `/api/approvals/${{encodeURIComponent(requestId)}}/cancel`,
+            execute: `/api/approvals/${{encodeURIComponent(requestId)}}/execute`,
+          }};
+          const body = action === "approve"
+            ? {{ approved_by: "Chris" }}
+            : action === "reject"
+              ? {{ reason: "Need safer plan before execution", rejected_by: "Chris" }}
+              : undefined;
+          actionNote.textContent = `Running approval action: ${{action}}…`;
+          try {{
+            const response = await fetch(endpointMap[action], {{
+              method: "POST",
+              headers: body ? {{ "Content-Type": "application/json" }} : {{}},
+              body: body ? JSON.stringify(body) : undefined,
+            }});
+            const result = await response.json();
+            await refreshApprovalQueue();
+            actionNote.textContent = result.status
+              ? `Approval action recorded: ${{result.status}}.`
+              : `Approval action completed: ${{action}}.`;
+          }} catch (error) {{
+            actionNote.textContent = `Approval action failed: ${{String(error)}}`;
+          }}
+        }});
+      }});
+    }}
+
+    function render(payload) {{
+      currentPayload = payload || {{}};
+      const pending = filteredPending(payload);
+      const history = Array.isArray(payload.history) ? payload.history : [];
+      const counts = payload.counts || {{}};
+
+      heroStatus.textContent = payload.status || "Wired";
+      heroPending.textContent = String(counts.pending_count || 0);
+      heroHistory.textContent = String(counts.history_count || 0);
+      heroRisk.textContent = String(counts.high_risk_pending_count || 0);
+      heroNeeds.textContent = String((payload.what_needs_me || []).length || 0);
+      statusNote.textContent = payload.summary || "No approval summary captured yet.";
+
+      pendingList.innerHTML = pending.length
+        ? pending.map((item, index) => `
+            <div class="entry-card">
+              <strong>${{esc(item.title || "Approval Request")}}</strong>
+              <span>${{esc(item.description || "No request detail captured.")}}</span>
+              <div class="chips">
+                ${{chip(item.risk_tier || "unspecified")}}
+                ${{item.action_type ? chip(item.action_type) : ""}}
+                ${{item.agent_label ? chip(item.agent_label) : ""}}
+              </div>
+              <div class="action-row">
+                <button type="button" data-select-kind="pending" data-select-index="${{esc(String(index))}}">Inspect Request</button>
+              </div>
+            </div>
+          `).join("")
+        : `<div class="entry-card"><strong>No pending approvals.</strong><span>The queue is currently clear.</span></div>`;
+
+      historyList.innerHTML = history.length
+        ? history.map((item, index) => `
+            <div class="entry-card">
+              <strong>${{esc(item.title || "Decision History Entry")}}</strong>
+              <span>${{esc(item.status || "No status captured")}} by ${{esc(item.approved_by || item.actor_id || "unknown actor")}}</span>
+              <div class="chips">
+                ${{chip(item.status || "history")}}
+                ${{item.agent_label ? chip(item.agent_label) : ""}}
+              </div>
+              <div class="action-row">
+                <button type="button" data-select-kind="history" data-select-index="${{esc(String(index))}}">Inspect Decision History</button>
+              </div>
+            </div>
+          `).join("")
+        : `<div class="entry-card"><strong>No decision history yet.</strong><span>Resolved approval records will appear here.</span></div>`;
+
+      needsReviewEl.innerHTML = Array.isArray(payload.what_needs_me) && payload.what_needs_me.length
+        ? payload.what_needs_me.map((item) => li(item.title || "Approval review", item.detail || "Needs operator review.", item.command || "")).join("")
+        : `<li><strong>No urgent approval work.</strong><span>Nothing currently needs a human decision.</span></li>`;
+
+      document.querySelectorAll("[data-select-kind]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          currentSelection = {{
+            kind: button.getAttribute("data-select-kind") || "pending",
+            index: Number(button.getAttribute("data-select-index") || "0"),
+          }};
+          renderDetail(payload);
+          actionNote.textContent = `Focused ${{currentSelection.kind}} detail for review.`;
+        }});
+      }});
+
+      proofEl.innerHTML = Object.entries(payload.proof_paths || {{}}).map(([key, value]) => li(key, value)).join("");
+      payloadPreview.textContent = JSON.stringify(payload, null, 2);
+      renderDetail(payload);
+    }}
+
+    async function refreshApprovalQueue() {{
+      statusNote.textContent = "Refreshing approval queue state…";
+      try {{
+        const response = await fetch("/api/approval/module");
+        const payload = await response.json();
+        render(payload);
+        statusNote.textContent = payload.summary || "Approval queue refreshed.";
+      }} catch (error) {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }}
+    }}
+
+    document.querySelectorAll("[data-filter]").forEach((button) => {{
+      button.addEventListener("click", () => {{
+        currentFilter = button.getAttribute("data-filter") || "all";
+        render(currentPayload);
+      }});
+    }});
+    document.getElementById("refresh-approval-queue").addEventListener("click", () => {{
+      refreshApprovalQueue().catch((error) => {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }});
+    }});
+
+    render(initialPayload);
+  </script>
+</body>
+</html>
+"""
+
+
+def render_supervision_module_page(payload: dict) -> str:
+    raw_json = json.dumps(payload, indent=2)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Supervision Snapshot</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #061019;
+      --bg-2: #0a1624;
+      --panel: rgba(10, 21, 34, 0.9);
+      --line: rgba(121, 216, 255, 0.14);
+      --text: #edf8ff;
+      --muted: #97b5cb;
+      --accent: #79d8ff;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: "SF Pro Display", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(121, 216, 255, 0.12), transparent 38%),
+        linear-gradient(180deg, #040b12 0%, var(--bg) 44%, var(--bg-2) 100%);
+      color: var(--text);
+    }}
+    .shell {{ max-width: 1480px; margin: 0 auto; padding: 36px 24px 60px; }}
+    .hero {{
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(11, 24, 38, 0.94), rgba(7, 17, 28, 0.92));
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+    }}
+    .eyebrow {{ color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
+    h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
+    h2 {{ margin: 0 0 14px; font-size: 18px; }}
+    p {{ color: var(--muted); line-height: 1.6; }}
+    .actions {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }}
+    a, button {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(121, 216, 255, 0.12);
+      color: var(--text);
+      text-decoration: none;
+      font: inherit;
+      cursor: pointer;
+    }}
+    button.alt {{ background: rgba(255,255,255,0.04); }}
+    .stats {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }}
+    .stat, .panel {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+    }}
+    .stat span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
+    .stat strong {{ display: block; margin-top: 6px; font-size: 24px; }}
+    .layout {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }}
+    .span-4 {{ grid-column: span 4; }}
+    .span-5 {{ grid-column: span 5; }}
+    .span-7 {{ grid-column: span 7; }}
+    .span-8 {{ grid-column: span 8; }}
+    .span-12 {{ grid-column: span 12; }}
+    .entry-list {{
+      display: grid;
+      gap: 10px;
+    }}
+    .entry-card {{
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      display: grid;
+      gap: 8px;
+    }}
+    .entry-card strong {{ display: block; }}
+    .entry-card span {{ color: var(--muted); display: block; }}
+    .chips {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }}
+    .chip {{
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--muted);
+      background: rgba(255,255,255,0.04);
+    }}
+    .action-row {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }}
+    .meta {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }}
+    .meta div {{
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.02);
+    }}
+    .meta label {{
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }}
+    ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
+    li {{
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+    }}
+    li strong {{ display: block; margin-bottom: 4px; }}
+    li span {{ color: var(--muted); display: block; }}
+    pre {{
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      background: rgba(3, 10, 18, 0.9);
+      color: #d7e8f4;
+      overflow-x: auto;
+    }}
+    .status-note {{
+      min-height: 1.3em;
+      color: var(--muted);
+      margin-top: 10px;
+    }}
+    @media (max-width: 980px) {{
+      .span-4, .span-5, .span-7, .span-8, .span-12 {{ grid-column: span 12; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Level 3 Working Surface</div>
+      <h1>JARVIS Supervision Snapshot</h1>
+      <p>A dedicated supervision workspace for lane posture, active approvals, failing integrations, memory review cues, and registry state. This upgrades supervision from an older proof surface into the newer app-module family while preserving the same live substrate.</p>
+      <div class="actions">
+        <a href="/command-center">Back to Command Center</a>
+        <button type="button" id="refresh-supervision-state">Refresh Supervision State</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
+        <div class="stat"><span>Needs Review</span><strong id="hero-needs">0</strong></div>
+        <div class="stat"><span>Pending Approvals</span><strong id="hero-approvals">0</strong></div>
+        <div class="stat"><span>Integration Issues</span><strong id="hero-integrations">0</strong></div>
+        <div class="stat"><span>Dirty Files</span><strong id="hero-dirty">0</strong></div>
+      </div>
+      <p class="status-note" id="supervision-status-note">Loading supervision state…</p>
+    </section>
+    <div class="layout">
+      <section class="panel span-7">
+        <h2>Attention Queue</h2>
+        <div id="attention-list" class="entry-list"></div>
+      </section>
+      <section class="panel span-5">
+        <h2>Selected Supervision Detail</h2>
+        <div id="supervision-detail"></div>
+        <p class="status-note" id="supervision-action-note">Inspect a supervision item, then use the route jump or direct approval controls if the current proof still matches intent.</p>
+      </section>
+      <section class="panel span-4">
+        <h2>What Needs Me</h2>
+        <ul id="needs-me-list"></ul>
+      </section>
+      <section class="panel span-4">
+        <h2>Integration Status</h2>
+        <div id="integration-list" class="entry-list"></div>
+      </section>
+      <section class="panel span-4">
+        <h2>Lane Residue</h2>
+        <ul id="lane-residue-list"></ul>
+      </section>
+      <section class="panel span-8">
+        <h2>Registry and Memory</h2>
+        <ul id="registry-memory-list"></ul>
+      </section>
+      <section class="panel span-4">
+        <h2>Proof Paths</h2>
+        <ul id="proof-list"></ul>
+      </section>
+      <section class="panel span-12">
+        <h2>Payload Preview</h2>
+        <pre id="payload-preview"></pre>
+      </section>
+    </div>
+  </main>
+  <script>
+    const initialPayload = {raw_json};
+    let currentPayload = initialPayload;
+    let currentSelection = {{ kind: "attention", index: 0 }};
+
+    const heroStatus = document.getElementById("hero-status");
+    const heroNeeds = document.getElementById("hero-needs");
+    const heroApprovals = document.getElementById("hero-approvals");
+    const heroIntegrations = document.getElementById("hero-integrations");
+    const heroDirty = document.getElementById("hero-dirty");
+    const attentionList = document.getElementById("attention-list");
+    const detailEl = document.getElementById("supervision-detail");
+    const needsMeEl = document.getElementById("needs-me-list");
+    const integrationList = document.getElementById("integration-list");
+    const laneResidueEl = document.getElementById("lane-residue-list");
+    const registryMemoryEl = document.getElementById("registry-memory-list");
+    const proofEl = document.getElementById("proof-list");
+    const payloadPreview = document.getElementById("payload-preview");
+    const statusNote = document.getElementById("supervision-status-note");
+    const actionNote = document.getElementById("supervision-action-note");
+
+    function esc(value) {{
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }}
+
+    function li(title, summary, detail = "") {{
+      return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
+    }}
+
+    function chip(label) {{
+      return `<span class="chip">${{esc(label)}}</span>`;
+    }}
+
+    function selectedAttention(payload) {{
+      const items = Array.isArray(payload.attention_queue) ? payload.attention_queue : [];
+      return items[currentSelection.index] || items[0] || null;
+    }}
+
+    function renderDetail(payload) {{
+      const item = selectedAttention(payload);
+      if (!item) {{
+        detailEl.innerHTML = "<p class=\\"status-note\\">No active supervision detail available right now.</p>";
+        return;
+      }}
+      const actions = item.actions || {{}};
+      detailEl.innerHTML = `
+        <div class="entry-card">
+          <strong>${{esc(item.title || "Supervision Item")}}</strong>
+          <span>${{esc(item.why_now || "No supervision detail captured.")}}</span>
+          <div class="chips">
+            ${{item.risk_tier ? chip(item.risk_tier) : ""}}
+            ${{item.action_type ? chip(item.action_type) : ""}}
+            ${{item.agent_label ? chip(item.agent_label) : ""}}
+          </div>
+          <div class="meta">
+            <div><label>Actor</label><strong>${{esc(item.actor_id || "Unknown actor")}}</strong></div>
+            <div><label>Requested</label><strong>${{esc(item.requested_at || "recent")}}</strong></div>
+            <div><label>Expires</label><strong>${{esc(item.expires_at || "unspecified")}}</strong></div>
+            <div><label>Request ID</label><strong>${{esc(item.request_id || "n/a")}}</strong></div>
+          </div>
+          <div class="action-row">
+            ${{actions.approve ? `<button type="button" data-request-action="approve" data-endpoint="${{esc(actions.approve)}}">Approve</button>` : ""}}
+            ${{actions.reject ? `<button type="button" class="alt" data-request-action="reject" data-endpoint="${{esc(actions.reject)}}" data-body='{{"reason":"Need a safer plan first"}}'>Reject</button>` : ""}}
+            ${{actions.cancel ? `<button type="button" class="alt" data-request-action="cancel" data-endpoint="${{esc(actions.cancel)}}">Cancel</button>` : ""}}
+            ${{actions.execute ? `<button type="button" class="alt" data-request-action="execute" data-endpoint="${{esc(actions.execute)}}">Execute</button>` : ""}}
+            <button type="button" data-route-jump="/approval-queue">Open Approval Queue</button>
+          </div>
+        </div>
+      `;
+      document.querySelectorAll("[data-route-jump]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          window.location.href = button.getAttribute("data-route-jump") || "/command-center";
+        }});
+      }});
+      document.querySelectorAll("[data-request-action]").forEach((button) => {{
+        button.addEventListener("click", async () => {{
+          const endpoint = button.getAttribute("data-endpoint") || "";
+          const rawBody = button.getAttribute("data-body");
+          const action = button.getAttribute("data-request-action") || "action";
+          actionNote.textContent = `Running supervision action: ${{action}}…`;
+          try {{
+            const response = await fetch(endpoint, {{
+              method: "POST",
+              headers: rawBody ? {{ "Content-Type": "application/json" }} : {{}},
+              body: rawBody || undefined,
+            }});
+            const result = await response.json().catch(() => ({{}}));
+            if (!response.ok) {{
+              throw new Error(result.detail || `HTTP ${{response.status}}`);
+            }}
+            await refreshSupervisionState();
+            actionNote.textContent = result.status
+              ? `Supervision action recorded: ${{result.status}}.`
+              : `Supervision action completed: ${{action}}.`;
+          }} catch (error) {{
+            actionNote.textContent = `Supervision action failed: ${{String(error)}}`;
+          }}
+        }});
+      }});
+    }}
+
+    function render(payload) {{
+      currentPayload = payload || {{}};
+      const counts = payload.counts || {{}};
+      const attention = Array.isArray(payload.attention_queue) ? payload.attention_queue : [];
+      const needs = Array.isArray(payload.what_needs_me) ? payload.what_needs_me : [];
+      const integrations = Array.isArray(payload.integrations) ? payload.integrations : [];
+      const lane = payload.lane || {{}};
+      const memory = payload.memory || {{}};
+      const registry = payload.registry || {{}};
+
+      heroStatus.textContent = payload.status || "Wired";
+      heroNeeds.textContent = String(counts.needs_review_count || 0);
+      heroApprovals.textContent = String(counts.pending_approval_count || 0);
+      heroIntegrations.textContent = String(counts.integration_issue_count || 0);
+      heroDirty.textContent = String((lane.dirty_count || 0));
+      statusNote.textContent = payload.summary || "No supervision summary captured yet.";
+
+      attentionList.innerHTML = attention.length
+        ? attention.map((item, index) => `
+            <div class="entry-card">
+              <strong>${{esc(item.title || "Supervision Item")}}</strong>
+              <span>${{esc(item.why_now || "No supervision detail captured.")}}</span>
+              <div class="chips">
+                ${{item.risk_tier ? chip(item.risk_tier) : ""}}
+                ${{item.agent_label ? chip(item.agent_label) : ""}}
+              </div>
+              <div class="action-row">
+                <button type="button" data-select-index="${{esc(String(index))}}">Inspect Supervision Item</button>
+              </div>
+            </div>
+          `).join("")
+        : `<div class="entry-card"><strong>No active supervision items.</strong><span>The current supervision queue is clear.</span></div>`;
+
+      needsMeEl.innerHTML = needs.length
+        ? needs.map((item) => li(item.title || "Needs Review", item.detail || "No detail captured.", item.kind || "")).join("")
+        : `<li><strong>No urgent review work.</strong><span>Nothing currently needs direct supervision review.</span></li>`;
+
+      integrationList.innerHTML = integrations.length
+        ? integrations.map((item) => `
+            <div class="entry-card">
+              <strong>${{esc(item.name || "Integration")}}</strong>
+              <span>${{esc(item.detail || "No integration detail captured.")}}</span>
+              <div class="chips">
+                ${{chip(item.ok ? "ok" : "issue")}}
+              </div>
+            </div>
+          `).join("")
+        : `<div class="entry-card"><strong>No integration posture available.</strong><span>Integration state did not hydrate.</span></div>`;
+
+      laneResidueEl.innerHTML = Array.isArray(lane.dirty_sample) && lane.dirty_sample.length
+        ? lane.dirty_sample.map((line) => li("Dirty File", line)).join("")
+        : `<li><strong>Clean sample unavailable.</strong><span>No dirty sample was captured.</span></li>`;
+
+      registryMemoryEl.innerHTML = [
+        li("Current Branch", lane.branch || "unknown", lane.head || "unknown head"),
+        li("Recent Seams", Array.isArray(lane.recent_commits) ? lane.recent_commits.slice(0, 3).join(" | ") : "No recent commits"),
+        li("Registered Agents", String(registry.agent_count || 0), Array.isArray(registry.domains) ? registry.domains.join(", ") : ""),
+        li("Memory Entries", String(memory.entry_count || 0), Array.isArray(memory.latest_entry_titles) ? memory.latest_entry_titles.join(", ") : ""),
+      ].join("");
+
+      document.querySelectorAll("[data-select-index]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          currentSelection = {{ kind: "attention", index: Number(button.getAttribute("data-select-index") || "0") }};
+          renderDetail(payload);
+          actionNote.textContent = "Focused supervision detail for review.";
+        }});
+      }});
+
+      proofEl.innerHTML = Object.entries(payload.proof_paths || {{}}).map(([key, value]) => li(key, value)).join("");
+      payloadPreview.textContent = JSON.stringify(payload, null, 2);
+      renderDetail(payload);
+    }}
+
+    async function refreshSupervisionState() {{
+      statusNote.textContent = "Refreshing supervision state…";
+      try {{
+        const response = await fetch("/api/supervision/module");
+        const payload = await response.json();
+        render(payload);
+        statusNote.textContent = payload.summary || "Supervision state refreshed.";
+      }} catch (error) {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }}
+    }}
+
+    document.getElementById("refresh-supervision-state").addEventListener("click", () => {{
+      refreshSupervisionState().catch((error) => {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }});
+    }});
+
+    render(initialPayload);
+  </script>
+</body>
+</html>
+"""
+
+
+def render_progress_module_page(payload: dict) -> str:
+    raw_json = json.dumps(payload, indent=2)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Progress</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #071018;
+      --bg-2: #091522;
+      --panel: rgba(9, 20, 33, 0.92);
+      --line: rgba(121, 216, 255, 0.14);
+      --text: #edf7ff;
+      --muted: #9eb8cb;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: "SF Pro Display", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(121, 216, 255, 0.12), transparent 36%),
+        linear-gradient(180deg, #040b12 0%, var(--bg) 44%, var(--bg-2) 100%);
+      color: var(--text);
+    }}
+    .shell {{ max-width: 1420px; margin: 0 auto; padding: 36px 24px 60px; }}
+    .hero {{
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(10, 22, 35, 0.96), rgba(7, 16, 27, 0.92));
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+    }}
+    .eyebrow {{ color: #79d8ff; letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
+    h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
+    h2 {{ margin-top: 0; }}
+    p {{ color: var(--muted); line-height: 1.6; }}
+    .stats {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }}
+    .stat, .panel {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+    }}
+    .stat span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
+    .stat strong {{ display: block; margin-top: 6px; font-size: 24px; }}
+    .layout {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }}
+    .span-4 {{ grid-column: span 4; }}
+    .span-6 {{ grid-column: span 6; }}
+    .span-8 {{ grid-column: span 8; }}
+    .span-12 {{ grid-column: span 12; }}
+    ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
+    li {{
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }}
+    li strong {{ display: block; margin-bottom: 4px; }}
+    li span {{ color: var(--muted); display: block; }}
+    li code {{ display: block; margin-top: 8px; color: #d7e8f4; }}
+    .actions, .action-row {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }}
+    a, button {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(121, 216, 255, 0.12);
+      color: var(--text);
+      text-decoration: none;
+      font: inherit;
+      cursor: pointer;
+    }}
+    pre {{
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      background: rgba(3, 10, 18, 0.9);
+      color: #d7e8f4;
+      overflow-x: auto;
+    }}
+    .status-note {{ min-height: 1.3em; color: var(--muted); margin-top: 10px; }}
+    .readiness-chip {{
+      display: inline-flex;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      margin-top: 8px;
+      width: fit-content;
+    }}
+    .route-links {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }}
+    @media (max-width: 980px) {{
+      .span-4, .span-6, .span-8, .span-12 {{ grid-column: span 12; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Level 3 Core Module</div>
+      <h1>JARVIS Progress</h1>
+      <p>A dedicated progress workspace inside JARVIS with live readiness rows, seam posture, lane status, failure signals, and concrete evidence for what became real versus what still needs another slice. This promotes Progress out of the command-center panel into a real module route.</p>
+      <div class="actions">
+        <a href="/command-center">Back to Command Center</a>
+        <a href="#level3-checklist">Open Remaining Level 3 Checklist</a>
+        <button type="button" id="refresh-progress">Refresh Progress State</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
+        <div class="stat"><span>Useful Modules</span><strong id="hero-useful">0</strong></div>
+        <div class="stat"><span>Wired Modules</span><strong id="hero-wired">0</strong></div>
+        <div class="stat"><span>Visible Seams</span><strong id="hero-seams">0</strong></div>
+      </div>
+      <p class="status-note" id="progress-status-note">Loading progress module state…</p>
+    </section>
+    <div class="layout">
+      <section class="panel span-4">
+        <h2>Module Status</h2>
+        <ul id="module-status-list"></ul>
+      </section>
+      <section class="panel span-8">
+        <h2>Progress Dashboard</h2>
+        <ul id="progress-items-list"></ul>
+      </section>
+      <section class="panel span-12" id="level3-checklist">
+        <h2>Remaining Level 3 Checklist</h2>
+        <ul id="level3-checklist-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Readiness Detail</h2>
+        <ul id="readiness-detail-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Seam Highlights</h2>
+        <ul id="seam-highlights-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Lane & Failure Posture</h2>
+        <ul id="lane-failure-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Hosted Readiness</h2>
+        <ul id="hosted-readiness-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Core Module Links</h2>
+        <ul id="module-links-list"></ul>
+      </section>
+      <section class="panel span-12">
+        <h2>Payload Preview</h2>
+        <pre id="payload-preview"></pre>
+      </section>
+    </div>
+  </main>
+  <script>
+    const initialPayload = {raw_json};
+    const heroStatus = document.getElementById("hero-status");
+    const heroUseful = document.getElementById("hero-useful");
+    const heroWired = document.getElementById("hero-wired");
+    const heroSeams = document.getElementById("hero-seams");
+    const statusNote = document.getElementById("progress-status-note");
+    const moduleStatusList = document.getElementById("module-status-list");
+    const progressItemsList = document.getElementById("progress-items-list");
+    const level3ChecklistList = document.getElementById("level3-checklist-list");
+    const readinessDetailList = document.getElementById("readiness-detail-list");
+    const seamHighlightsList = document.getElementById("seam-highlights-list");
+    const laneFailureList = document.getElementById("lane-failure-list");
+    const hostedReadinessList = document.getElementById("hosted-readiness-list");
+    const moduleLinksList = document.getElementById("module-links-list");
+    const payloadPreview = document.getElementById("payload-preview");
+    let currentPayload = initialPayload;
+    let currentDetailIndex = 0;
+
+    function esc(value) {{
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }}
+
+    function li(title, summary, detail = "") {{
+      return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
+    }}
+
+    function progressRow(item, index) {{
+      return `
+        <li>
+          <strong>${{esc(item.module || "Progress Module")}}</strong>
+          <span>${{esc(item.summary || "No progress summary captured yet.")}}</span>
+          <span>${{esc(item.evidence || "No evidence captured yet.")}}</span>
+          <code class="readiness-chip">${{esc(`${{item.roadmap_level || "Level 3"}} · ${{item.status_label || item.status || "wired"}}`)}}</code>
+          <div class="action-row">
+            <button type="button" data-progress-index="${{esc(String(index))}}">Inspect Readiness</button>
+          </div>
+        </li>
+      `;
+    }}
+
+    function checklistRow(item) {{
+      const files = Array.isArray(item.exact_files) ? item.exact_files : [];
+      const routes = Array.isArray(item.proof_routes) ? item.proof_routes : [];
+      return `
+        <li>
+          <strong>${{esc(item.title || "Remaining Slice")}}</strong>
+          <span>${{esc(item.area || "Level 3")}}</span>
+          <span>${{esc(item.why_open || "No remaining gap summary captured yet.")}}</span>
+          <span>${{esc(item.live_signal || "No live signal captured yet.")}}</span>
+          <code>Files: ${{esc(files.join(" | "))}}</code>
+          <code>Next Recommended Slice: ${{esc(item.next_slice || "No next slice recorded yet.")}}</code>
+          <div class="route-links">
+            ${{routes.map((route) => `<a href="${{esc(route)}}">${{esc(route)}}</a>`).join("")}}
+          </div>
+        </li>
+      `;
+    }}
+
+    function renderDetail(payload, index) {{
+      const board = payload.progress_dashboard || {{}};
+      const items = Array.isArray(board.items) ? board.items : [];
+      const item = items[index] || items[0] || null;
+      currentDetailIndex = item ? Math.max(0, index) : 0;
+      readinessDetailList.innerHTML = item
+        ? [
+            li("Module", item.module || "Progress Module", item.roadmap_level || "Level 3"),
+            li("Status", item.status || "Wired", item.status_label || ""),
+            li("Summary", item.summary || "No summary captured."),
+            li("Evidence", item.evidence || "No evidence captured."),
+            li("Next Slice", payload.progress_next_focus || "No next focus recorded yet."),
+          ].join("")
+        : '<li><strong>No progress detail available.</strong><span>Select a readiness row to inspect it.</span></li>';
+    }}
+
+    function render(payload) {{
+      currentPayload = payload;
+      const board = payload.progress_dashboard || {{}};
+      const counts = board.counts || {{}};
+      const seamTracker = payload.seam_tracker || {{}};
+      const laneProgress = payload.lane_progress || {{}};
+      const failureRecovery = payload.failure_recovery || {{}};
+      const hostedDeployment = payload.hosted_deployment || {{}};
+      const moduleLinks = Array.isArray((payload.core_modules || {{}}).items) ? payload.core_modules.items : [];
+
+      heroStatus.textContent = payload.status || "Wired";
+      heroUseful.textContent = String(counts.useful || 0);
+      heroWired.textContent = String(counts.wired || 0);
+      heroSeams.textContent = String(seamTracker.item_count || 0);
+      statusNote.textContent = payload.summary || "No progress summary captured yet.";
+
+      moduleStatusList.innerHTML = [
+        li("What Became Real", payload.what_became_real || "No progress seam note recorded yet."),
+        li("What Remains Partial", payload.remains_partial || "No remaining partials recorded."),
+        li("Proof API", "/api/progress/module", "/api/command-center"),
+        li("Seam Summary", seamTracker.summary || "No seam summary captured."),
+      ].join("");
+
+      progressItemsList.innerHTML = (Array.isArray(board.items) ? board.items : []).map((item, index) => progressRow(item, index)).join("") || '<li><strong>No progress rows loaded.</strong><span>The dedicated progress module will surface readiness rows here.</span></li>';
+
+      const checklist = payload.level3_checklist || {{}};
+      level3ChecklistList.innerHTML = (Array.isArray(checklist.items) ? checklist.items : []).map((item) => checklistRow(item)).join("") || '<li><strong>No remaining Level 3 checklist loaded.</strong><span>The live progress module will surface remaining slices here.</span></li>';
+
+      seamHighlightsList.innerHTML = (Array.isArray(seamTracker.items) ? seamTracker.items : []).slice(0, 4).map((item) => li(
+        item.name || "Seam",
+        item.what_became_real || item.module || "No seam outcome recorded.",
+        item.remains_partial || item.commit_status || ""
+      )).join("") || '<li><strong>No seam highlights loaded.</strong><span>Seam tracker evidence will appear here.</span></li>';
+
+      laneFailureList.innerHTML = [
+        li("Lane Posture", `${{laneProgress.branch || "unknown branch"}} · ${{laneProgress.head || "unknown head"}}`, `${{laneProgress.dirty_count || 0}} local change(s)`),
+        li("Recent Commit", (Array.isArray(laneProgress.recent_commits) ? laneProgress.recent_commits[0] : "") || "No recent commit captured."),
+        li("Failure & Recovery", `${{failureRecovery.integration_issue_count || 0}} integration issue(s)`, `${{failureRecovery.pending_approval_count || 0}} pending approval gate(s)`),
+      ].join("");
+
+      hostedReadinessList.innerHTML = [
+        li("Hosted URL", hostedDeployment.hosted_url || "https://jarvis.teambinion.org", hostedDeployment.edge_provider || "Hosted edge provider not captured."),
+        li("Deploy Mode", hostedDeployment.deploy_mode || "unknown", hostedDeployment.remote_detail || "No deploy mode detail captured."),
+        li("Deploy Proof", Array.isArray(hostedDeployment.proof_files) ? hostedDeployment.proof_files.join(" | ") : "No deploy proof files captured.", hostedDeployment.next_action || "No deploy next action recorded yet."),
+      ].join("");
+
+      moduleLinksList.innerHTML = moduleLinks.slice(0, 6).map((item) => li(
+        item.title || "Module",
+        item.screen_path || "/command-center",
+        item.evidence || item.summary || ""
+      )).join("") || '<li><strong>No module links loaded.</strong><span>Core module evidence will appear here.</span></li>';
+
+      payloadPreview.textContent = JSON.stringify(payload, null, 2);
+      renderDetail(payload, currentDetailIndex);
+    }}
+
+    async function refreshProgressState() {{
+      statusNote.textContent = "Refreshing progress module state…";
+      try {{
+        const response = await fetch("/api/progress/module");
+        const payload = await response.json();
+        render(payload);
+        statusNote.textContent = payload.summary || "Progress module refreshed.";
+      }} catch (error) {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }}
+    }}
+
+    document.getElementById("refresh-progress").addEventListener("click", () => {{
+      refreshProgressState().catch((error) => {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }});
+    }});
+
+    window.setInterval(() => {{
+      refreshProgressState().catch(() => {{}});
+    }}, 60000);
+
+    progressItemsList.addEventListener("click", (event) => {{
+      const button = event.target.closest("[data-progress-index]");
+      if (!button) return;
+      const index = Number(button.getAttribute("data-progress-index") || "0");
+      renderDetail(currentPayload, index);
+      statusNote.textContent = "Readiness detail updated from the live progress snapshot.";
+    }});
+
+    render(initialPayload);
+  </script>
+</body>
+</html>
+"""
+
+
+def render_daily_brief_module_page(payload: dict) -> str:
+    raw_json = json.dumps(payload, indent=2)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Daily Brief</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #071018;
+      --bg-2: #091522;
+      --panel: rgba(9, 20, 33, 0.92);
+      --line: rgba(121, 216, 255, 0.14);
+      --text: #edf7ff;
+      --muted: #9eb8cb;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: "SF Pro Display", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(121, 216, 255, 0.12), transparent 36%),
+        linear-gradient(180deg, #040b12 0%, var(--bg) 44%, var(--bg-2) 100%);
+      color: var(--text);
+    }}
+    .shell {{ max-width: 1420px; margin: 0 auto; padding: 36px 24px 60px; }}
+    .hero {{
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(10, 22, 35, 0.96), rgba(7, 16, 27, 0.92));
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+    }}
+    .eyebrow {{ color: #79d8ff; letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
+    h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
+    h2 {{ margin-top: 0; }}
+    p {{ color: var(--muted); line-height: 1.6; }}
+    .stats {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }}
+    .stat, .panel {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+    }}
+    .stat span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
+    .stat strong {{ display: block; margin-top: 6px; font-size: 24px; }}
+    .layout {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }}
+    .span-4 {{ grid-column: span 4; }}
+    .span-6 {{ grid-column: span 6; }}
+    .span-8 {{ grid-column: span 8; }}
+    .span-12 {{ grid-column: span 12; }}
+    ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
+    li {{
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }}
+    li strong {{ display: block; margin-bottom: 4px; }}
+    li span {{ color: var(--muted); display: block; }}
+    .actions {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }}
+    .controls {{ display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }}
+    a, button {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(121, 216, 255, 0.12);
+      color: var(--text);
+      text-decoration: none;
+      font: inherit;
+      cursor: pointer;
+    }}
+    select, textarea, input {{
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(4, 12, 20, 0.92);
+      color: var(--text);
+      padding: 12px 14px;
+      font: inherit;
+    }}
+    pre {{
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      background: rgba(3, 10, 18, 0.9);
+      color: #d7e8f4;
+      overflow-x: auto;
+    }}
+    .status-note {{ min-height: 1.3em; color: var(--muted); margin-top: 10px; }}
+    .loop-actions {{ display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }}
+    .loop-actions select {{ max-width: 220px; }}
+    @media (max-width: 980px) {{
+      .span-4, .span-6, .span-8, .span-12 {{ grid-column: span 12; }}
+      .controls {{ flex-direction: column; align-items: stretch; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Level 3 Core Module</div>
+      <h1>JARVIS Daily Brief</h1>
+      <p>A dedicated daily-brief workspace inside JARVIS with live briefing text, today-board priorities, calendar context, open-loop pressure, and inline follow-through actions. This promotes Daily Brief out of the shell packet into a real day-operations module.</p>
+      <div class="controls">
+        <select id="brief-actor"></select>
+        <a href="/command-center">Back to Command Center</a>
+        <button type="button" id="refresh-brief">Refresh Daily Brief</button>
+        <button type="button" id="generate-live-brief">Generate Live Brief</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
+        <div class="stat"><span>Priorities</span><strong id="hero-priorities">0</strong></div>
+        <div class="stat"><span>Waiting On You</span><strong id="hero-waiting">0</strong></div>
+        <div class="stat"><span>Notifications</span><strong id="hero-notifications">0</strong></div>
+      </div>
+      <p class="status-note" id="brief-status-note">Loading daily brief module state…</p>
+    </section>
+    <div class="layout">
+      <section class="panel span-4">
+        <h2>Module Status</h2>
+        <ul id="module-status-list"></ul>
+      </section>
+      <section class="panel span-8">
+        <h2>Briefing Text</h2>
+        <pre id="briefing-text"></pre>
+      </section>
+      <section class="panel span-6">
+        <h2>Today Priorities</h2>
+        <ul id="priorities-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Carry Forward</h2>
+        <ul id="carry-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Calendar</h2>
+        <ul id="calendar-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Live Brief Packet</h2>
+        <pre id="live-brief-output">Generate a live brief packet to inspect the richer builder output.</pre>
+      </section>
+      <section class="panel span-12">
+        <h2>Open Loops</h2>
+        <ul id="open-loops-list"></ul>
+        <p class="status-note" id="open-loop-note">Apply an open-loop action here to turn the daily brief into a real follow-through surface.</p>
+      </section>
+      <section class="panel span-6">
+        <h2>Assistant Notifications</h2>
+        <ul id="notifications-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Payload Preview</h2>
+        <pre id="payload-preview"></pre>
+      </section>
+    </div>
+  </main>
+  <script>
+    const initialPayload = {raw_json};
+    const actorSelect = document.getElementById("brief-actor");
+    const heroStatus = document.getElementById("hero-status");
+    const heroPriorities = document.getElementById("hero-priorities");
+    const heroWaiting = document.getElementById("hero-waiting");
+    const heroNotifications = document.getElementById("hero-notifications");
+    const statusNote = document.getElementById("brief-status-note");
+    const moduleStatusList = document.getElementById("module-status-list");
+    const briefingText = document.getElementById("briefing-text");
+    const prioritiesList = document.getElementById("priorities-list");
+    const carryList = document.getElementById("carry-list");
+    const calendarList = document.getElementById("calendar-list");
+    const notificationsList = document.getElementById("notifications-list");
+    const openLoopsList = document.getElementById("open-loops-list");
+    const payloadPreview = document.getElementById("payload-preview");
+    const liveBriefOutput = document.getElementById("live-brief-output");
+    let currentPayload = initialPayload;
+
+    function esc(value) {{
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }}
+
+    function li(title, summary, detail = "") {{
+      return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
+    }}
+
+    function actorOptionsMarkup(items, selectedId) {{
+      return (Array.isArray(items) ? items : []).map((item) => {{
+        const value = item.id || item.label || "Chris";
+        const selected = value === selectedId ? " selected" : "";
+        return `<option value="${{esc(value)}}"${{selected}}>${{esc(item.label || value)}}</option>`;
+      }}).join("");
+    }}
+
+    function actionOptionsMarkup(actions) {{
+      return (Array.isArray(actions) ? actions : []).map((action) => `<option value="${{esc(action.id || "")}}">${{esc(action.label || action.id || "Action")}}</option>`).join("");
+    }}
+
+    function render(payload) {{
+      currentPayload = payload;
+      const counts = payload.counts || {{}};
+      const board = payload.today_board || {{}};
+      const boardOpenLoops = (board.open_loops || {{}}).summary || {{}};
+      const priorities = Array.isArray(board.priorities) ? board.priorities : [];
+      const carry = Array.isArray(board.carry) ? board.carry : [];
+      const calendar = Array.isArray(board.calendar) ? board.calendar : [];
+      const notifications = Array.isArray(board.assistant_notifications) ? board.assistant_notifications : [];
+      const openLoops = Array.isArray((payload.open_loops || {{}}).items) ? payload.open_loops.items : [];
+
+      actorSelect.innerHTML = actorOptionsMarkup(payload.actor_options, payload.actor || "Chris");
+      heroStatus.textContent = payload.status || "Stubbed";
+      heroPriorities.textContent = String(counts.priority_count || priorities.length || 0);
+      heroWaiting.textContent = String(counts.waiting_on_you || boardOpenLoops.waiting_on_you || 0);
+      heroNotifications.textContent = String(counts.notification_count || notifications.length || 0);
+      statusNote.textContent = payload.summary || "No daily brief summary captured yet.";
+
+      moduleStatusList.innerHTML = [
+        li("What Became Real", payload.what_became_real || "No brief seam note recorded yet."),
+        li("What Remains Partial", payload.remains_partial || "No partial work recorded."),
+        li("Proof API", "/api/briefing/module", "/api/briefing, /api/today-board, /api/open-loops"),
+        li("Headline", payload.headline || "No briefing headline captured yet."),
+        li("Needs Revisit", String(counts.needs_revisit || boardOpenLoops.needs_revisit || 0)),
+      ].join("");
+
+      briefingText.textContent = payload.briefing_text || "No briefing text captured yet.";
+      prioritiesList.innerHTML = priorities.map((item) => li(
+        item.title || "Priority",
+        item.next_action || item.status || "No next action recorded.",
+        item.owner_agent || ""
+      )).join("") || '<li><strong>No priorities loaded.</strong><span>The today board will populate priorities here when available.</span></li>';
+      carryList.innerHTML = carry.map((item, index) => li(`Carry ${{index + 1}}`, item)).join("") || '<li><strong>No carry-forward lines.</strong><span>The day is currently light.</span></li>';
+      calendarList.innerHTML = calendar.map((item) => li(
+        item.summary || "(Untitled event)",
+        item.start || item.when || "No start time recorded.",
+        item.source || ""
+      )).join("") || '<li><strong>No calendar items loaded.</strong><span>Upcoming events will appear here.</span></li>';
+      notificationsList.innerHTML = notifications.map((item) => li(
+        item.title || item.summary || "Notification",
+        item.summary || item.detail || "No detail recorded.",
+        item.channel || item.urgency || ""
+      )).join("") || '<li><strong>No unread assistant notifications.</strong><span>Fresh assistant notices will appear here.</span></li>';
+      openLoopsList.innerHTML = openLoops.map((item) => `
+        <li data-domain="${{esc(item.domain || "")}}" data-item-id="${{esc(item.item_id || "")}}">
+          <strong>${{esc(item.title || "Open loop")}}</strong>
+          <span>${{esc(item.summary || item.next_action || "No summary recorded.")}}</span>
+          <span>${{esc(`${{item.domain || "general"}} · ${{item.status || "open"}} · ${{item.owner_agent || "JARVIS"}}`)}}</span>
+          <div class="loop-actions">
+            <select class="open-loop-action">${{actionOptionsMarkup(item.available_actions)}}</select>
+            <button type="button" class="apply-open-loop-action">Apply Action</button>
+          </div>
+        </li>
+      `).join("") || '<li><strong>No open loops surfaced.</strong><span>The day currently has no visible follow-through pressure.</span></li>';
+      payloadPreview.textContent = JSON.stringify(payload, null, 2);
+    }}
+
+    async function refreshBrief() {{
+      const actor = actorSelect.value || "Chris";
+      statusNote.textContent = `Refreshing daily brief for ${{actor}}…`;
+      try {{
+        const response = await fetch(`/api/briefing/module?actor=${{encodeURIComponent(actor)}}`);
+        const payload = await response.json();
+        render(payload);
+        statusNote.textContent = payload.summary || "Daily brief refreshed.";
+      }} catch (error) {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function generateLiveBrief() {{
+      const actor = actorSelect.value || "Chris";
+      liveBriefOutput.textContent = `Generating live brief for ${{actor}}…`;
+      try {{
+        const response = await fetch(`/api/briefing/live?actor=${{encodeURIComponent(actor)}}`);
+        const payload = await response.json();
+        liveBriefOutput.textContent = JSON.stringify(payload, null, 2);
+      }} catch (error) {{
+        liveBriefOutput.textContent = `Live brief failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function applyOpenLoopAction(button) {{
+      const host = button.closest("li[data-domain]");
+      if (!host) return;
+      const actionSelect = host.querySelector(".open-loop-action");
+      const actor = actorSelect.value || "Chris";
+      const note = document.getElementById("open-loop-note");
+      note.textContent = "Applying open-loop action…";
+      try {{
+        const response = await fetch("/api/open-loops/action", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            actor,
+            domain: host.getAttribute("data-domain") || "",
+            item_id: host.getAttribute("data-item-id") || "",
+            action: actionSelect ? actionSelect.value : "",
+          }}),
+        }});
+        const payload = await response.json();
+        note.textContent = payload.ok ? `Applied ${{payload.action || "action"}}.` : "Open-loop action returned a response.";
+        await refreshBrief();
+      }} catch (error) {{
+        note.textContent = `Open-loop action failed: ${{String(error)}}`;
+      }}
+    }}
+
+    document.getElementById("refresh-brief").addEventListener("click", () => {{
+      refreshBrief().catch((error) => {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }});
+    }});
+    document.getElementById("generate-live-brief").addEventListener("click", () => {{
+      generateLiveBrief().catch((error) => {{
+        liveBriefOutput.textContent = `Live brief failed: ${{String(error)}}`;
+      }});
+    }});
+    actorSelect.addEventListener("change", () => {{
+      refreshBrief().catch((error) => {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }});
+    }});
+    openLoopsList.addEventListener("click", (event) => {{
+      const button = event.target.closest(".apply-open-loop-action");
+      if (!button) return;
+      applyOpenLoopAction(button).catch((error) => {{
+        document.getElementById("open-loop-note").textContent = `Open-loop action failed: ${{String(error)}}`;
+      }});
+    }});
+    render(initialPayload);
+  </script>
+</body>
+</html>
+"""
+
+
+def render_health_module_page(payload: dict) -> str:
+    raw_json = json.dumps(payload, indent=2)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Health</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #07111b;
+      --bg-2: #0b1724;
+      --panel: rgba(9, 21, 34, 0.9);
+      --line: rgba(121, 216, 255, 0.14);
+      --text: #ecf7ff;
+      --muted: #9db7cc;
+      --good: #9ce7bf;
+      --warn: #ffd37d;
+      --alert: #ff9d9d;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: "SF Pro Display", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(121, 216, 255, 0.16), transparent 38%),
+        linear-gradient(180deg, #040b13 0%, var(--bg) 42%, var(--bg-2) 100%);
+      color: var(--text);
+    }}
+    .shell {{ max-width: 1360px; margin: 0 auto; padding: 36px 24px 60px; }}
+    .hero {{
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(11, 24, 38, 0.94), rgba(8, 17, 28, 0.9));
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+    }}
+    .eyebrow {{ color: #79d8ff; letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
+    h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
+    p {{ color: var(--muted); line-height: 1.6; }}
+    .stats {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }}
+    .stat, .panel {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+    }}
+    .stat span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
+    .stat strong {{ display: block; margin-top: 6px; font-size: 24px; }}
+    .layout {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }}
+    .span-4 {{ grid-column: span 4; }}
+    .span-5 {{ grid-column: span 5; }}
+    .span-6 {{ grid-column: span 6; }}
+    .span-7 {{ grid-column: span 7; }}
+    .span-8 {{ grid-column: span 8; }}
+    ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
+    li {{
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+    }}
+    li strong {{ display: block; margin-bottom: 4px; }}
+    li span {{ color: var(--muted); display: block; }}
+    .actions {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }}
+    a, button {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(121, 216, 255, 0.12);
+      color: var(--text);
+      text-decoration: none;
+      font: inherit;
+      cursor: pointer;
+    }}
+    .good {{ color: var(--good); }}
+    .warn {{ color: var(--warn); }}
+    .alert {{ color: var(--alert); }}
+    form {{ display: grid; gap: 12px; }}
+    label {{ display: grid; gap: 6px; color: var(--muted); font-size: 13px; }}
+    textarea, input {{
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(4, 12, 20, 0.92);
+      color: var(--text);
+      padding: 12px 14px;
+      font: inherit;
+    }}
+    textarea {{ min-height: 120px; }}
+    pre {{
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      background: rgba(3, 10, 18, 0.9);
+      color: #d7e8f4;
+      overflow-x: auto;
+    }}
+    .status-note {{ min-height: 1.3em; color: var(--muted); margin-top: 10px; }}
+    @media (max-width: 980px) {{
+      .span-4, .span-5, .span-6, .span-7, .span-8 {{ grid-column: span 12; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Level 3 Core Module</div>
+      <h1>JARVIS Health</h1>
+      <p>A dedicated health workspace inside JARVIS with live drift posture, baseline deviation evidence, current objectives, and symptom triage. This replaces the old storyboard-only entry with a real module surface.</p>
+      <div class="actions">
+        <a href="/command-center">Back to Command Center</a>
+        <button type="button" id="refresh-health">Refresh Health State</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
+        <div class="stat"><span>Signals</span><strong id="hero-signals">0</strong></div>
+        <div class="stat"><span>Active Clusters</span><strong id="hero-clusters">0</strong></div>
+        <div class="stat"><span>Objectives</span><strong id="hero-objectives">0</strong></div>
+      </div>
+      <p class="status-note" id="health-status-note">Loading health module state…</p>
+    </section>
+    <div class="layout">
+      <section class="panel span-8">
+        <h2>Drift Overview</h2>
+        <ul id="drift-overview-list"></ul>
+      </section>
+      <section class="panel span-4">
+        <h2>Module Status</h2>
+        <ul id="module-status-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Current Signals</h2>
+        <ul id="signals-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Baseline Deviations</h2>
+        <ul id="deviations-list"></ul>
+      </section>
+      <section class="panel span-5">
+        <h2>Quarterly Objectives</h2>
+        <ul id="objectives-list"></ul>
+      </section>
+      <section class="panel span-7">
+        <h2>Personalized Red Flags</h2>
+        <ul id="red-flags-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Symptom Triage</h2>
+        <form id="triage-form">
+          <label>Symptoms
+            <textarea id="triage-symptoms" placeholder="Describe what is going on right now."></textarea>
+          </label>
+          <label>Duration
+            <input id="triage-duration" placeholder="e.g. 2 hours, since yesterday">
+          </label>
+          <label>Context
+            <input id="triage-context" placeholder="Medication change, workout, poor sleep, stress">
+          </label>
+          <button type="submit">Run Symptom Triage</button>
+        </form>
+        <p class="status-note" id="triage-note">Use this to test a real Health interaction against the live triage endpoint.</p>
+        <pre id="triage-output">Awaiting symptom triage.</pre>
+      </section>
+      <section class="panel span-6">
+        <h2>Payload Preview</h2>
+        <pre id="payload-preview"></pre>
+      </section>
+    </div>
+  </main>
+  <script>
+    const initialPayload = {raw_json};
+    const heroStatus = document.getElementById("hero-status");
+    const heroSignals = document.getElementById("hero-signals");
+    const heroClusters = document.getElementById("hero-clusters");
+    const heroObjectives = document.getElementById("hero-objectives");
+    const statusNote = document.getElementById("health-status-note");
+    const triageNote = document.getElementById("triage-note");
+    const driftOverviewList = document.getElementById("drift-overview-list");
+    const moduleStatusList = document.getElementById("module-status-list");
+    const signalsList = document.getElementById("signals-list");
+    const deviationsList = document.getElementById("deviations-list");
+    const objectivesList = document.getElementById("objectives-list");
+    const redFlagsList = document.getElementById("red-flags-list");
+    const triageOutput = document.getElementById("triage-output");
+    const payloadPreview = document.getElementById("payload-preview");
+
+    function esc(value) {{
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }}
+
+    function li(title, summary, detail = "") {{
+      return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
+    }}
+
+    function render(payload) {{
+      const drift = payload.drift_scan || {{}};
+      const signals = payload.current_signals || {{}};
+      const deviations = Array.isArray(payload.baseline_deviations) ? payload.baseline_deviations : [];
+      const objectives = Array.isArray(payload.objectives) ? payload.objectives : [];
+      const redFlags = payload.red_flags || {{}};
+      const activeClusters = Array.isArray(drift.active_clusters) ? drift.active_clusters : [];
+
+      heroStatus.textContent = payload.status || "Stubbed";
+      heroSignals.textContent = String(payload.signal_count || 0);
+      heroClusters.textContent = String(payload.active_cluster_count || 0);
+      heroObjectives.textContent = String(payload.objective_count || 0);
+      statusNote.textContent = payload.summary || "No health summary captured yet.";
+
+      moduleStatusList.innerHTML = [
+        li("Availability", payload.available ? "Health data is live." : "Health data fell back to safe defaults."),
+        li("What Became Real", payload.what_became_real || "No health seam note recorded yet."),
+        li("What Remains Partial", payload.remains_partial || "No partial work recorded."),
+        li("Proof API", "/api/health/module", "/api/health/drift/scan"),
+      ].join("");
+
+      driftOverviewList.innerHTML = [
+        li("Overall Drift Status", drift.overall_drift_status || "unknown"),
+        li("One Next Action", drift.one_next_action || "No next action captured."),
+        li("Oracle Review Needed", String(Boolean(drift.oracle_review_needed))),
+        ...activeClusters.slice(0, 4).map((item) => li(item.name || item.cluster_id || "Cluster", `${{item.severity || "unknown"}} · ${{item.confidence || "unknown"}}`, (item.signals_present || []).join(", "))),
+      ].join("");
+
+      signalsList.innerHTML = Object.entries(signals).slice(0, 8).map(([key, value]) => {{
+        const item = value || {{}};
+        return li(key, `${{item.value ?? "n/a"}} ${{item.unit || ""}}`, `${{item.source || "unknown"}} · ${{item.date || "undated"}}`);
+      }}).join("") || '<li><strong>No live signals yet.</strong><span>Signal loading did not return any current health metrics.</span></li>';
+
+      deviationsList.innerHTML = deviations.slice(0, 8).map((item) => {{
+        const pct = item.deviation_pct ?? 0;
+        return li(item.metric || "metric", `${{item.current}} vs baseline ${{item.baseline}} (${{
+          pct >= 0 ? "+" : ""
+        }}${{pct}}%)`, `${{item.significant ? "significant" : "watch"}} · ${{item.source || "unknown"}}`);
+      }}).join("") || '<li><strong>No deviations yet.</strong><span>Baseline comparison has no live deviations to show.</span></li>';
+
+      objectivesList.innerHTML = objectives.slice(0, 6).map((item) => li(item.objective || "Objective", item.target || "No target", item.domain || "No domain")).join("")
+        || '<li><strong>No saved objectives yet.</strong><span>Quarterly objectives will appear here once they are defined.</span></li>';
+
+      const urgent = (redFlags.contact_clinician_urgently || {{}}).patient_specific || [];
+      const emergency = (redFlags.go_to_er || {{}}).patient_specific || [];
+      const critical = (redFlags.absolute_contraindications || []);
+      redFlagsList.innerHTML = [
+        ...urgent.slice(0, 3).map((item) => li("Urgent", item)),
+        ...emergency.slice(0, 3).map((item) => li("ER", item)),
+        ...critical.slice(0, 2).map((item) => li(item.trigger || "Contraindication", item.action || "Critical rule")),
+      ].join("") || '<li><strong>No red flags loaded.</strong><span>Personalized health red flags are unavailable right now.</span></li>';
+
+      payloadPreview.textContent = JSON.stringify(payload, null, 2);
+    }}
+
+    async function refreshHealthState() {{
+      statusNote.textContent = "Refreshing health module state…";
+      try {{
+        const response = await fetch("/api/health/module");
+        const payload = await response.json();
+        render(payload);
+        statusNote.textContent = payload.summary || "Health module refreshed.";
+      }} catch (error) {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function runTriage(event) {{
+      event.preventDefault();
+      triageNote.textContent = "Running symptom triage…";
+      try {{
+        const response = await fetch("/api/health/symptom/triage", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            symptoms: document.getElementById("triage-symptoms").value,
+            duration: document.getElementById("triage-duration").value,
+            context: document.getElementById("triage-context").value,
+          }}),
+        }});
+        const payload = await response.json();
+        triageOutput.textContent = JSON.stringify(payload, null, 2);
+        triageNote.textContent = payload.oracle_pathway
+          ? `Triage complete: ${{payload.oracle_pathway}}`
+          : "Triage complete.";
+      }} catch (error) {{
+        triageNote.textContent = `Triage failed: ${{String(error)}}`;
+      }}
+    }}
+
+    document.getElementById("refresh-health").addEventListener("click", () => {{
+      refreshHealthState().catch((error) => {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }});
+    }});
+    document.getElementById("triage-form").addEventListener("submit", runTriage);
+    render(initialPayload);
+  </script>
+</body>
+</html>
+"""
+
+
+def render_huddle_module_page(payload: dict) -> str:
+    raw_json = json.dumps(payload, indent=2)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Huddle</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #06101a;
+      --bg-2: #0a1521;
+      --panel: rgba(8, 20, 33, 0.92);
+      --line: rgba(121, 216, 255, 0.14);
+      --text: #edf7ff;
+      --muted: #9eb8cb;
+      --good: #9ce7bf;
+      --warn: #ffd37d;
+      --alert: #ff9d9d;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: "SF Pro Display", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(121, 216, 255, 0.14), transparent 36%),
+        linear-gradient(180deg, #040b12 0%, var(--bg) 44%, var(--bg-2) 100%);
+      color: var(--text);
+    }}
+    .shell {{ max-width: 1400px; margin: 0 auto; padding: 36px 24px 60px; }}
+    .hero {{
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(10, 22, 35, 0.96), rgba(7, 16, 27, 0.92));
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+    }}
+    .eyebrow {{ color: #79d8ff; letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
+    h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
+    h2 {{ margin-top: 0; }}
+    p {{ color: var(--muted); line-height: 1.6; }}
+    .stats {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }}
+    .stat, .panel {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+    }}
+    .stat span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
+    .stat strong {{ display: block; margin-top: 6px; font-size: 24px; }}
+    .layout {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }}
+    .span-4 {{ grid-column: span 4; }}
+    .span-5 {{ grid-column: span 5; }}
+    .span-6 {{ grid-column: span 6; }}
+    .span-7 {{ grid-column: span 7; }}
+    .span-8 {{ grid-column: span 8; }}
+    ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
+    li {{
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }}
+    li strong {{ display: block; margin-bottom: 4px; }}
+    li span {{ color: var(--muted); display: block; }}
+    .actions {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }}
+    a, button {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(121, 216, 255, 0.12);
+      color: var(--text);
+      text-decoration: none;
+      font: inherit;
+      cursor: pointer;
+    }}
+    form {{ display: grid; gap: 12px; }}
+    label {{ display: grid; gap: 6px; color: var(--muted); font-size: 13px; }}
+    textarea, input, select {{
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(4, 12, 20, 0.92);
+      color: var(--text);
+      padding: 12px 14px;
+      font: inherit;
+    }}
+    textarea {{ min-height: 110px; }}
+    pre {{
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      background: rgba(3, 10, 18, 0.9);
+      color: #d7e8f4;
+      overflow-x: auto;
+    }}
+    .status-note {{ min-height: 1.3em; color: var(--muted); margin-top: 10px; }}
+    @media (max-width: 980px) {{
+      .span-4, .span-5, .span-6, .span-7, .span-8 {{ grid-column: span 12; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Level 3 Core Module</div>
+      <h1>JARVIS Huddle</h1>
+      <p>A dedicated Huddle workspace inside JARVIS with live standups, approvals, blockers, runtime posture, ready dossiers, party-mode state, and idea capture. This promotes Huddle out of the mission-control shell path into a real app module.</p>
+      <div class="actions">
+        <a href="/command-center">Back to Command Center</a>
+        <button type="button" id="refresh-huddle">Refresh Huddle State</button>
+        <button type="button" id="start-party-mode">Start Overnight Research</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
+        <div class="stat"><span>Active Work</span><strong id="hero-active-work">0</strong></div>
+        <div class="stat"><span>Approvals</span><strong id="hero-approvals">0</strong></div>
+        <div class="stat"><span>Ready Dossiers</span><strong id="hero-dossiers">0</strong></div>
+        <div class="stat"><span>Queued Ideas</span><strong id="hero-ideas">0</strong></div>
+      </div>
+      <p class="status-note" id="huddle-status-note">Loading huddle module state…</p>
+    </section>
+    <div class="layout">
+      <section class="panel span-8">
+        <h2>Agent Standups</h2>
+        <ul id="reports-list"></ul>
+      </section>
+      <section class="panel span-4">
+        <h2>Module Status</h2>
+        <ul id="module-status-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Approvals &amp; Blockers</h2>
+        <ul id="approvals-list"></ul>
+        <div style="height: 14px;"></div>
+        <ul id="blockers-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Runtime &amp; Party Mode</h2>
+        <ul id="runtime-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Ready Dossiers</h2>
+        <ul id="dossiers-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Idea Inbox</h2>
+        <form id="idea-form">
+          <label>Idea
+            <textarea id="idea-text" placeholder="Capture something the Huddle should research next."></textarea>
+          </label>
+          <label>Domain
+            <select id="idea-domain">
+              <option value="passive-income">Passive Income</option>
+              <option value="general">General</option>
+              <option value="operations">Operations</option>
+              <option value="family">Family</option>
+            </select>
+          </label>
+          <button type="submit">Capture Huddle Idea</button>
+        </form>
+        <p class="status-note" id="idea-note">Use this to push a real idea into the live inbox.</p>
+        <pre id="idea-output">Awaiting idea capture.</pre>
+      </section>
+      <section class="panel span-12">
+        <h2>Payload Preview</h2>
+        <pre id="payload-preview"></pre>
+      </section>
+    </div>
+  </main>
+  <script>
+    const initialPayload = {raw_json};
+    const heroStatus = document.getElementById("hero-status");
+    const heroActiveWork = document.getElementById("hero-active-work");
+    const heroApprovals = document.getElementById("hero-approvals");
+    const heroDossiers = document.getElementById("hero-dossiers");
+    const heroIdeas = document.getElementById("hero-ideas");
+    const statusNote = document.getElementById("huddle-status-note");
+    const ideaNote = document.getElementById("idea-note");
+    const reportsList = document.getElementById("reports-list");
+    const moduleStatusList = document.getElementById("module-status-list");
+    const approvalsList = document.getElementById("approvals-list");
+    const blockersList = document.getElementById("blockers-list");
+    const runtimeList = document.getElementById("runtime-list");
+    const dossiersList = document.getElementById("dossiers-list");
+    const ideaOutput = document.getElementById("idea-output");
+    const payloadPreview = document.getElementById("payload-preview");
+
+    function esc(value) {{
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }}
+
+    function li(title, summary, detail = "") {{
+      return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
+    }}
+
+    function render(payload) {{
+      const reports = Array.isArray(payload.reports) ? payload.reports : [];
+      const approvals = Array.isArray(payload.approvals) ? payload.approvals : [];
+      const blockers = Array.isArray(payload.blockers) ? payload.blockers : [];
+      const dossiers = Array.isArray(payload.dossiers) ? payload.dossiers : [];
+      const runtime = payload.runtime || {{}};
+      const party = payload.party_mode || {{}};
+      const inbox = payload.idea_inbox || {{}};
+      const queuedIdeas = Number(inbox.queued_count || 0) + Number(inbox.captured_count || 0);
+
+      heroStatus.textContent = payload.status || "Stubbed";
+      heroActiveWork.textContent = String(payload.total_active_work || 0);
+      heroApprovals.textContent = String(payload.approvals_count || 0);
+      heroDossiers.textContent = String(payload.ready_dossier_count || 0);
+      heroIdeas.textContent = String(queuedIdeas);
+      statusNote.textContent = payload.summary || "No huddle summary captured yet.";
+
+      moduleStatusList.innerHTML = [
+        li("What Became Real", payload.what_became_real || "No huddle seam note recorded yet."),
+        li("What Remains Partial", payload.remains_partial || "No partial work recorded."),
+        li("Proof API", "/api/huddle/module", "/api/huddle and /api/party-mode/start"),
+        li("Party Mode", party.status || "idle", party.last_log || ""),
+      ].join("");
+
+      reportsList.innerHTML = reports.slice(0, 8).map((item) => li(
+        item.agent_name || item.agent_id || "Agent",
+        item.summary || item.today || "No standup summary.",
+        `${{item.domain || "general"}} · ${{item.status || "ok"}} · ${{item.active_work_count || 0}} active`
+      )).join("") || '<li><strong>No standups loaded.</strong><span>Huddle payload did not return any agent reports.</span></li>';
+
+      approvalsList.innerHTML = approvals.slice(0, 6).map((item) => li(
+        item.title || "Approval",
+        item.agent || item.agent_id || "Unknown agent",
+        item.proposal || item.domain || ""
+      )).join("") || '<li><strong>No approvals waiting.</strong><span>The huddle does not currently have queued approval proposals.</span></li>';
+
+      blockersList.innerHTML = blockers.slice(0, 5).map((item) => li("Blocker", item)).join("")
+        || '<li><strong>No blockers recorded.</strong><span>No agent escalations are currently asking for Chris.</span></li>';
+
+      runtimeList.innerHTML = [
+        li("Runtime Mode", runtime.active_mode || "unknown", `awake ${{runtime.awake_count || 0}} · blocked ${{runtime.blocked_count || 0}}`),
+        li("Party Session", party.status || "idle", party.started_at || party.last_log || "No active session"),
+        li("Highlights", (payload.highlights || []).slice(0, 2).join(" | ") || "No cross-agent highlights yet."),
+      ].join("");
+
+      dossiersList.innerHTML = dossiers.slice(0, 6).map((item) => li(
+        item.title || "Dossier",
+        item.executive_summary || item.first_action || "No summary available.",
+        `confidence ${{item.confidence_score || 0}} · updated ${{item.updated_at || "unknown"}}`
+      )).join("") || '<li><strong>No ready dossiers.</strong><span>Start overnight research or research an idea to generate dossier output.</span></li>';
+
+      payloadPreview.textContent = JSON.stringify(payload, null, 2);
+    }}
+
+    async function refreshHuddleState() {{
+      statusNote.textContent = "Refreshing huddle module state…";
+      try {{
+        const response = await fetch("/api/huddle/module");
+        const payload = await response.json();
+        render(payload);
+        statusNote.textContent = payload.summary || "Huddle module refreshed.";
+      }} catch (error) {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function startPartyMode() {{
+      statusNote.textContent = "Starting overnight research…";
+      try {{
+        const response = await fetch("/api/party-mode/start", {{ method: "POST" }});
+        const payload = await response.json();
+        statusNote.textContent = payload.status === "started"
+          ? "Party mode started."
+          : payload.status === "already_running"
+            ? "Party mode is already running."
+            : JSON.stringify(payload);
+        await refreshHuddleState();
+      }} catch (error) {{
+        statusNote.textContent = `Party mode failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function captureIdea(event) {{
+      event.preventDefault();
+      ideaNote.textContent = "Capturing idea…";
+      try {{
+        const response = await fetch("/api/ideas", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            text: document.getElementById("idea-text").value,
+            domain: document.getElementById("idea-domain").value,
+          }}),
+        }});
+        const payload = await response.json();
+        ideaOutput.textContent = JSON.stringify(payload, null, 2);
+        ideaNote.textContent = payload.idea ? "Idea captured in the live inbox." : "Idea capture returned without an idea payload.";
+        document.getElementById("idea-text").value = "";
+        await refreshHuddleState();
+      }} catch (error) {{
+        ideaNote.textContent = `Idea capture failed: ${{String(error)}}`;
+      }}
+    }}
+
+    document.getElementById("refresh-huddle").addEventListener("click", () => {{
+      refreshHuddleState().catch((error) => {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }});
+    }});
+    document.getElementById("start-party-mode").addEventListener("click", () => {{
+      startPartyMode().catch((error) => {{
+        statusNote.textContent = `Party mode failed: ${{String(error)}}`;
+      }});
+    }});
+    document.getElementById("idea-form").addEventListener("submit", captureIdea);
+    render(initialPayload);
+  </script>
+</body>
+</html>
+"""
+
+
+def render_chronicle_module_page(payload: dict) -> str:
+    raw_json = json.dumps(payload, indent=2)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Chronicle</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #071018;
+      --bg-2: #0a1420;
+      --panel: rgba(9, 20, 33, 0.92);
+      --line: rgba(121, 216, 255, 0.14);
+      --text: #edf7ff;
+      --muted: #9eb8cb;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: "SF Pro Display", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(121, 216, 255, 0.12), transparent 36%),
+        linear-gradient(180deg, #040b12 0%, var(--bg) 44%, var(--bg-2) 100%);
+      color: var(--text);
+    }}
+    .shell {{ max-width: 1400px; margin: 0 auto; padding: 36px 24px 60px; }}
+    .hero {{
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(10, 22, 35, 0.96), rgba(7, 16, 27, 0.92));
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+    }}
+    .eyebrow {{ color: #79d8ff; letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
+    h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
+    h2 {{ margin-top: 0; }}
+    p {{ color: var(--muted); line-height: 1.6; }}
+    .stats {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }}
+    .stat, .panel {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+    }}
+    .stat span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
+    .stat strong {{ display: block; margin-top: 6px; font-size: 24px; }}
+    .layout {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }}
+    .span-4 {{ grid-column: span 4; }}
+    .span-5 {{ grid-column: span 5; }}
+    .span-6 {{ grid-column: span 6; }}
+    .span-7 {{ grid-column: span 7; }}
+    .span-8 {{ grid-column: span 8; }}
+    ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
+    li {{
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }}
+    li strong {{ display: block; margin-bottom: 4px; }}
+    li span {{ color: var(--muted); display: block; }}
+    .actions {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }}
+    a, button {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(121, 216, 255, 0.12);
+      color: var(--text);
+      text-decoration: none;
+      font: inherit;
+      cursor: pointer;
+    }}
+    form {{ display: grid; gap: 12px; }}
+    label {{ display: grid; gap: 6px; color: var(--muted); font-size: 13px; }}
+    textarea, input, select {{
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(4, 12, 20, 0.92);
+      color: var(--text);
+      padding: 12px 14px;
+      font: inherit;
+    }}
+    textarea {{ min-height: 110px; }}
+    pre {{
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      background: rgba(3, 10, 18, 0.9);
+      color: #d7e8f4;
+      overflow-x: auto;
+    }}
+    .status-note {{ min-height: 1.3em; color: var(--muted); margin-top: 10px; }}
+    @media (max-width: 980px) {{
+      .span-4, .span-5, .span-6, .span-7, .span-8 {{ grid-column: span 12; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Level 3 Core Module</div>
+      <h1>JARVIS Chronicle</h1>
+      <p>A dedicated Chronicle workspace inside JARVIS with devotional generation, family-devotional prep, reflection capture, recurring theme visibility, morning formation context, and continuity status. This promotes Chronicle out of the shell packet into a real module surface.</p>
+      <div class="actions">
+        <a href="/command-center">Back to Command Center</a>
+        <button type="button" id="refresh-chronicle">Refresh Chronicle State</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
+        <div class="stat"><span>Entries</span><strong id="hero-entries">0</strong></div>
+        <div class="stat"><span>Themes</span><strong id="hero-themes">0</strong></div>
+        <div class="stat"><span>Insights</span><strong id="hero-insights">0</strong></div>
+        <div class="stat"><span>Pending Bridge</span><strong id="hero-pending">0</strong></div>
+      </div>
+      <p class="status-note" id="chronicle-status-note">Loading chronicle module state…</p>
+    </section>
+    <div class="layout">
+      <section class="panel span-4">
+        <h2>Module Status</h2>
+        <ul id="module-status-list"></ul>
+      </section>
+      <section class="panel span-8">
+        <h2>Morning Context</h2>
+        <ul id="morning-context-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Devotional Pause</h2>
+        <form id="chronicle-devotional-form">
+          <label>Actor
+            <input id="chronicle-actor" value="Chris">
+          </label>
+          <label>Mode
+            <select id="chronicle-mode">
+              <option value="scripture">Scripture</option>
+              <option value="prayer">Prayer</option>
+              <option value="silence">Silence</option>
+            </select>
+          </label>
+          <label>Theme
+            <input id="chronicle-theme" placeholder="stewardship under pressure">
+          </label>
+          <button type="submit">Generate Devotional Pause</button>
+        </form>
+        <p class="status-note" id="chronicle-devotional-note">Use this to request a live devotional pause.</p>
+        <pre id="chronicle-devotional-output">Awaiting devotional request.</pre>
+      </section>
+      <section class="panel span-6">
+        <h2>Family Devotional</h2>
+        <form id="family-devotional-form">
+          <label>Theme
+            <input id="family-devotional-theme" placeholder="leadership without striving">
+          </label>
+          <label>Context
+            <textarea id="family-devotional-context" placeholder="Prepare something suitable for tonight after a long day and troop meeting."></textarea>
+          </label>
+          <button type="submit">Prepare Family Devotional</button>
+        </form>
+        <p class="status-note" id="family-devotional-note">Use this to request a live family devotional prep.</p>
+        <pre id="family-devotional-output">Awaiting family devotional request.</pre>
+      </section>
+      <section class="panel span-6">
+        <h2>Capture Reflection</h2>
+        <form id="chronicle-capture-form">
+          <label>Theme
+            <input id="chronicle-capture-theme" placeholder="gratitude in the middle of fatigue">
+          </label>
+          <label>Chronicle Reflection Note
+            <textarea id="chronicle-note" placeholder="What happened today, and where did grace meet us?"></textarea>
+          </label>
+          <button type="submit">Capture Chronicle Note</button>
+        </form>
+        <p class="status-note" id="chronicle-capture-note">Use this to append a real Chronicle reflection entry.</p>
+        <pre id="chronicle-capture-output">Awaiting Chronicle note.</pre>
+      </section>
+      <section class="panel span-6">
+        <h2>Recurring Themes</h2>
+        <ul id="themes-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Recent Timeline</h2>
+        <ul id="timeline-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Insights</h2>
+        <ul id="insights-list"></ul>
+      </section>
+      <section class="panel span-12">
+        <h2>Payload Preview</h2>
+        <pre id="payload-preview"></pre>
+      </section>
+    </div>
+  </main>
+  <script>
+    const initialPayload = {raw_json};
+    const heroStatus = document.getElementById("hero-status");
+    const heroEntries = document.getElementById("hero-entries");
+    const heroThemes = document.getElementById("hero-themes");
+    const heroInsights = document.getElementById("hero-insights");
+    const heroPending = document.getElementById("hero-pending");
+    const statusNote = document.getElementById("chronicle-status-note");
+    const moduleStatusList = document.getElementById("module-status-list");
+    const morningContextList = document.getElementById("morning-context-list");
+    const themesList = document.getElementById("themes-list");
+    const timelineList = document.getElementById("timeline-list");
+    const insightsList = document.getElementById("insights-list");
+    const payloadPreview = document.getElementById("payload-preview");
+
+    function esc(value) {{
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }}
+
+    function li(title, summary, detail = "") {{
+      return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
+    }}
+
+    function render(payload) {{
+      const timeline = Array.isArray(payload.timeline) ? payload.timeline : [];
+      const themes = ((payload.theme_summary || {{}}).themes || []);
+      const insights = Array.isArray(payload.insights) ? payload.insights : [];
+      const morning = payload.morning_context || {{}};
+
+      heroStatus.textContent = payload.status || "Stubbed";
+      heroEntries.textContent = String(payload.entry_count || 0);
+      heroThemes.textContent = String(themes.length);
+      heroInsights.textContent = String(insights.length);
+      heroPending.textContent = String(payload.pending_entry_count || 0);
+      statusNote.textContent = payload.summary || "No chronicle summary captured yet.";
+
+      moduleStatusList.innerHTML = [
+        li("What Became Real", payload.what_became_real || "No chronicle seam note recorded yet."),
+        li("What Remains Partial", payload.remains_partial || "No partial work recorded."),
+        li("Proof API", "/api/chronicle/module", "/api/chronicle/status and /api/devotional-pause"),
+        li("Bridge Status", payload.bridge_status || "unknown", payload.bridge_note || ""),
+      ].join("");
+
+      morningContextList.innerHTML = [
+        li("Focus", morning.focus || morning.current_focus || "No morning focus available."),
+        li("Prayer Count", String(morning.prayer_count || 0), String(morning.active_prayer_count || 0) + " active"),
+        li("Guidance", (morning.guidance || []).slice(0, 2).join(" | ") || "No guidance lines available."),
+      ].join("");
+
+      themesList.innerHTML = themes.slice(0, 6).map((item) => li(
+        item.theme || "Theme",
+        `${{item.count || 0}} recurring entries`,
+        (item.recent_reflections || []).slice(0, 2).join(" | ")
+      )).join("") || '<li><strong>No Chronicle themes yet.</strong><span>Theme rollups will appear once entries are available.</span></li>';
+
+      timelineList.innerHTML = timeline.slice(0, 8).map((item) => li(
+        item.theme || "Reflection",
+        item.reflection || item.note || "No reflection text available.",
+        `${{item.actor || "unknown"}} · ${{item.timestamp || "undated"}}`
+      )).join("") || '<li><strong>No Chronicle entries yet.</strong><span>Capture a note to seed the timeline.</span></li>';
+
+      insightsList.innerHTML = insights.slice(0, 6).map((item) => li(
+        item.title || item.theme || "Insight",
+        item.summary || item.description || "No summary available.",
+        item.status || item.insight_type || ""
+      )).join("") || '<li><strong>No Chronicle insights yet.</strong><span>Bridge-derived formation insights will appear here when available.</span></li>';
+
+      payloadPreview.textContent = JSON.stringify(payload, null, 2);
+    }}
+
+    async function refreshChronicleState() {{
+      statusNote.textContent = "Refreshing chronicle module state…";
+      try {{
+        const response = await fetch("/api/chronicle/module");
+        const payload = await response.json();
+        render(payload);
+        statusNote.textContent = payload.summary || "Chronicle module refreshed.";
+      }} catch (error) {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function submitDevotional(event) {{
+      event.preventDefault();
+      const note = document.getElementById("chronicle-devotional-note");
+      note.textContent = "Generating devotional pause…";
+      try {{
+        const response = await fetch("/api/devotional-pause", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            actor: document.getElementById("chronicle-actor").value,
+            theme: document.getElementById("chronicle-theme").value,
+            mode: document.getElementById("chronicle-mode").value,
+          }}),
+        }});
+        const payload = await response.json();
+        document.getElementById("chronicle-devotional-output").textContent = payload.output_text || "(No devotional pause returned.)";
+        note.textContent = "Devotional pause generated.";
+      }} catch (error) {{
+        note.textContent = `Devotional request failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function submitFamilyDevotional(event) {{
+      event.preventDefault();
+      const note = document.getElementById("family-devotional-note");
+      note.textContent = "Preparing family devotional…";
+      try {{
+        const response = await fetch("/api/family-devotional", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            actor: document.getElementById("chronicle-actor").value,
+            theme: document.getElementById("family-devotional-theme").value,
+            context: document.getElementById("family-devotional-context").value,
+          }}),
+        }});
+        const payload = await response.json();
+        document.getElementById("family-devotional-output").textContent = payload.output_text || "(No family devotional returned.)";
+        note.textContent = "Family devotional prepared.";
+      }} catch (error) {{
+        note.textContent = `Family devotional failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function submitCapture(event) {{
+      event.preventDefault();
+      const note = document.getElementById("chronicle-capture-note");
+      note.textContent = "Capturing Chronicle note…";
+      try {{
+        const response = await fetch("/api/chronicle-capture", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            actor: document.getElementById("chronicle-actor").value,
+            theme: document.getElementById("chronicle-capture-theme").value,
+            note: document.getElementById("chronicle-note").value,
+          }}),
+        }});
+        const payload = await response.json();
+        document.getElementById("chronicle-capture-output").textContent = JSON.stringify(payload, null, 2);
+        note.textContent = "Chronicle note captured.";
+        document.getElementById("chronicle-note").value = "";
+        await refreshChronicleState();
+      }} catch (error) {{
+        note.textContent = `Chronicle capture failed: ${{String(error)}}`;
+      }}
+    }}
+
+    document.getElementById("refresh-chronicle").addEventListener("click", () => {{
+      refreshChronicleState().catch((error) => {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }});
+    }});
+    document.getElementById("chronicle-devotional-form").addEventListener("submit", submitDevotional);
+    document.getElementById("family-devotional-form").addEventListener("submit", submitFamilyDevotional);
+    document.getElementById("chronicle-capture-form").addEventListener("submit", submitCapture);
+    render(initialPayload);
+  </script>
+</body>
+</html>
+"""
+
+
+def render_settings_module_page(payload: dict) -> str:
+    raw_json = json.dumps(payload, indent=2)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Settings</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #071018;
+      --bg-2: #091522;
+      --panel: rgba(9, 20, 33, 0.92);
+      --line: rgba(121, 216, 255, 0.14);
+      --text: #edf7ff;
+      --muted: #9eb8cb;
+      --accent: #79d8ff;
+      --success: #a7f3c8;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: "SF Pro Display", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(121, 216, 255, 0.12), transparent 36%),
+        linear-gradient(180deg, #040b12 0%, var(--bg) 44%, var(--bg-2) 100%);
+      color: var(--text);
+    }}
+    .shell {{ max-width: 1420px; margin: 0 auto; padding: 36px 24px 60px; }}
+    .hero {{
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(10, 22, 35, 0.96), rgba(7, 16, 27, 0.92));
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+    }}
+    .eyebrow {{ color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
+    h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
+    h2 {{ margin-top: 0; }}
+    p {{ color: var(--muted); line-height: 1.6; }}
+    .stats {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }}
+    .stat, .panel {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+    }}
+    .stat span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
+    .stat strong {{ display: block; margin-top: 6px; font-size: 24px; }}
+    .layout {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }}
+    .span-4 {{ grid-column: span 4; }}
+    .span-6 {{ grid-column: span 6; }}
+    .span-8 {{ grid-column: span 8; }}
+    .span-12 {{ grid-column: span 12; }}
+    ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
+    li {{
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }}
+    li strong {{ display: block; margin-bottom: 4px; }}
+    li span {{ color: var(--muted); display: block; }}
+    .actions {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }}
+    a, button {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(121, 216, 255, 0.12);
+      color: var(--text);
+      text-decoration: none;
+      font: inherit;
+      cursor: pointer;
+    }}
+    form {{ display: grid; gap: 12px; }}
+    label {{ display: grid; gap: 6px; color: var(--muted); font-size: 13px; }}
+    textarea, input, select {{
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(4, 12, 20, 0.92);
+      color: var(--text);
+      padding: 12px 14px;
+      font: inherit;
+    }}
+    pre {{
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      background: rgba(3, 10, 18, 0.9);
+      color: #d7e8f4;
+      overflow-x: auto;
+    }}
+    .status-note {{ min-height: 1.3em; color: var(--muted); margin-top: 10px; }}
+    .ok {{ color: var(--success); }}
+    @media (max-width: 980px) {{
+      .span-4, .span-6, .span-8, .span-12 {{ grid-column: span 12; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Level 3 Core Module</div>
+      <h1>JARVIS Settings</h1>
+      <p>A dedicated settings and permissions workspace inside JARVIS with live voice controls, location posture, account connectivity, and governance signals. This promotes Settings out of the shell packet into a real module route.</p>
+      <div class="actions">
+        <a href="/command-center">Back to Command Center</a>
+        <button type="button" id="refresh-settings">Refresh Settings State</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
+        <div class="stat"><span>Accounts</span><strong id="hero-accounts">0</strong></div>
+        <div class="stat"><span>Locations</span><strong id="hero-locations">0</strong></div>
+        <div class="stat"><span>Insights</span><strong id="hero-insights">0</strong></div>
+      </div>
+      <p class="status-note" id="settings-status-note">Loading settings module state…</p>
+    </section>
+    <div class="layout">
+      <section class="panel span-4">
+        <h2>Module Status</h2>
+        <ul id="module-status-list"></ul>
+      </section>
+      <section class="panel span-8">
+        <h2>Accounts & Connectors</h2>
+        <ul id="accounts-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Voice Controls</h2>
+        <form id="voice-settings-form">
+          <label>TTS Provider
+            <select id="voice-provider"></select>
+          </label>
+          <label>ElevenLabs Voice
+            <select id="voice-elevenlabs"></select>
+          </label>
+          <label>Piper Voice Model
+            <select id="voice-piper"></select>
+          </label>
+          <label>Piper Speaker
+            <input id="voice-speaker" placeholder="Optional speaker id">
+          </label>
+          <button type="submit">Save Voice Settings</button>
+        </form>
+        <p class="status-note" id="voice-note">Save live voice settings through the same runtime-backed store used by the shell.</p>
+      </section>
+      <section class="panel span-6">
+        <h2>Location Controls</h2>
+        <form id="location-settings-form">
+          <label>Preferred Location
+            <select id="location-preferred"></select>
+          </label>
+          <button type="submit">Save Location Settings</button>
+        </form>
+        <p class="status-note" id="location-note">Persist the preferred location through the live location store used by the shell.</p>
+      </section>
+      <section class="panel span-6">
+        <h2>Permissions & Governance</h2>
+        <ul id="permissions-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Identity & Devices</h2>
+        <ul id="identity-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Saved Locations</h2>
+        <ul id="locations-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Payload Preview</h2>
+        <pre id="payload-preview"></pre>
+      </section>
+    </div>
+  </main>
+  <script>
+    const initialPayload = {raw_json};
+    const heroStatus = document.getElementById("hero-status");
+    const heroAccounts = document.getElementById("hero-accounts");
+    const heroLocations = document.getElementById("hero-locations");
+    const heroInsights = document.getElementById("hero-insights");
+    const statusNote = document.getElementById("settings-status-note");
+    const moduleStatusList = document.getElementById("module-status-list");
+    const accountsList = document.getElementById("accounts-list");
+    const permissionsList = document.getElementById("permissions-list");
+    const identityList = document.getElementById("identity-list");
+    const locationsList = document.getElementById("locations-list");
+    const payloadPreview = document.getElementById("payload-preview");
+
+    function esc(value) {{
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }}
+
+    function li(title, summary, detail = "") {{
+      return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
+    }}
+
+    function optionMarkup(items, selectedId) {{
+      const values = Array.isArray(items) ? items : [];
+      return values.map((item) => {{
+        const id = item.id ?? "";
+        const label = item.label ?? id;
+        const detail = item.detail ? ` · ${{item.detail}}` : "";
+        const text = `${{label}}${{detail}}`;
+        const selected = id === selectedId ? " selected" : "";
+        return `<option value="${{esc(id)}}"${{selected}}>${{esc(text)}}</option>`;
+      }}).join("");
+    }}
+
+    function connectedSummary(account) {{
+      const connection = account.connection;
+      if (typeof connection === "string") {{
+        return connection;
+      }}
+      if (connection && typeof connection === "object") {{
+        return connection.status || connection.state || connection.detail || "configured";
+      }}
+      return account.status || "unknown";
+    }}
+
+    function render(payload) {{
+      const voice = payload.voice || {{}};
+      const voiceOptions = payload.voice_options || {{}};
+      const location = payload.location || {{}};
+      const accounts = Array.isArray((payload.accounts || {{}}).accounts) ? payload.accounts.accounts : [];
+      const permissions = payload.permissions || {{}};
+      const identity = payload.identity || {{}};
+      const savedLocations = Array.isArray(location.saved_locations) ? location.saved_locations : [];
+      const insights = Array.isArray(permissions.insights) ? permissions.insights : [];
+      const activeLocation = location.active_location || {{}};
+      const deviceLocation = location.device_location || {{}};
+
+      heroStatus.textContent = payload.status || "Stubbed";
+      heroAccounts.textContent = String(accounts.length);
+      heroLocations.textContent = String(savedLocations.length);
+      heroInsights.textContent = String(insights.length);
+      statusNote.textContent = payload.summary || "No settings summary captured yet.";
+
+      document.getElementById("voice-provider").innerHTML = optionMarkup(voiceOptions.providers, voice.tts_provider);
+      document.getElementById("voice-elevenlabs").innerHTML = `<option value="">No ElevenLabs voice selected</option>${{optionMarkup(voiceOptions.elevenlabs, voice.elevenlabs_voice)}}`;
+      document.getElementById("voice-piper").innerHTML = `<option value="">No Piper model selected</option>${{optionMarkup(voiceOptions.piper, voice.piper_model_path)}}`;
+      document.getElementById("voice-speaker").value = voice.piper_speaker || "";
+
+      document.getElementById("location-preferred").innerHTML = savedLocations.map((item) => {{
+        const selected = item.id === location.preferred_location_id ? " selected" : "";
+        return `<option value="${{esc(item.id)}}"${{selected}}>${{esc(item.label || item.id)}}</option>`;
+      }}).join("");
+      const stackStatus = voice.stack_status || voiceOptions.stack_status || {{}};
+      const clientSecret = (((payload.google || {{}}).client_secret) || {{}});
+      moduleStatusList.innerHTML = [
+        li("What Became Real", payload.what_became_real || "No settings seam note recorded yet."),
+        li("What Remains Partial", payload.remains_partial || "No partial work recorded."),
+        li("Proof API", "/api/settings/module", "/api/voice-settings and /api/location-settings"),
+        li("Voice Stack", stackStatus.summary || voice.selected_provider_label || "No voice stack summary available."),
+        li("Google Client Secret", clientSecret.configured ? "Configured" : "Missing", clientSecret.detail || ""),
+      ].join("");
+
+      accountsList.innerHTML = accounts.slice(0, 8).map((account) => li(
+        account.label || account.account_id || "Account",
+        `${{account.provider || "provider"}} · ${{connectedSummary(account)}}`,
+        account.login_hint || account.service_scope || ""
+      )).join("") || '<li><strong>No accounts configured.</strong><span>Saved Google or Outlook accounts will appear here.</span></li>';
+
+      const governance = permissions.governance || {{}};
+      const privacy = permissions.privacy || {{}};
+      const notifications = permissions.notifications || {{}};
+      permissionsList.innerHTML = [
+        li("Governance", governance.enabled ? "Enabled" : "Paused", governance.review_required ? "Adult review required" : "No extra review flag"),
+        li("Privacy", privacy.private_chronicle ? "Chronicle is private by default." : "Chronicle is shareable by default.", privacy.share_health_with_family ? "Health sharing enabled." : "Health sharing disabled."),
+        li("Notifications", notifications.approvals ? "Approvals alerts enabled." : "Approvals alerts disabled.", notifications.health_alerts ? "Health alerts enabled." : "Health alerts disabled."),
+        ...insights.slice(0, 3).map((item) => li(item.title || item.insight_id || "Insight", item.summary || "No summary.", item.status || "")),
+      ].join("");
+
+      const members = Array.isArray(identity.members) ? identity.members : [];
+      const devices = Array.isArray(identity.devices) ? identity.devices : [];
+      identityList.innerHTML = [
+        li("Identity Members", `${{members.length}} member profile(s)`, members.slice(0, 2).map((item) => item.display_name).join(" | ") || "No members loaded."),
+        li("Devices", `${{devices.length}} device record(s)`, devices.slice(0, 2).map((item) => item.label || item.device_id).join(" | ") || "No devices loaded."),
+        li("Active Location", activeLocation.label || "Unknown", activeLocation.geography || ""),
+      ].join("");
+
+      locationsList.innerHTML = savedLocations.slice(0, 8).map((item) => li(
+        item.label || "Location",
+        item.geography || "No geography recorded.",
+        item.source || item.notes || ""
+      )).join("") || '<li><strong>No saved locations.</strong><span>Saved locations will appear here when available.</span></li>';
+
+      payloadPreview.textContent = JSON.stringify(payload, null, 2);
+    }}
+
+    async function refreshSettingsState() {{
+      statusNote.textContent = "Refreshing settings module state…";
+      try {{
+        const response = await fetch("/api/settings/module");
+        const payload = await response.json();
+        render(payload);
+        statusNote.textContent = payload.summary || "Settings module refreshed.";
+      }} catch (error) {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function saveVoiceSettings(event) {{
+      event.preventDefault();
+      const note = document.getElementById("voice-note");
+      note.textContent = "Saving voice settings…";
+      try {{
+        const response = await fetch("/api/voice-settings", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            tts_provider: document.getElementById("voice-provider").value,
+            elevenlabs_voice: document.getElementById("voice-elevenlabs").value,
+            piper_model_path: document.getElementById("voice-piper").value,
+            piper_speaker: document.getElementById("voice-speaker").value,
+          }}),
+        }});
+        const payload = await response.json();
+        note.textContent = payload.message || "Voice settings updated.";
+        await refreshSettingsState();
+      }} catch (error) {{
+        note.textContent = `Voice save failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function saveLocationSettings(event) {{
+      event.preventDefault();
+      const note = document.getElementById("location-note");
+      note.textContent = "Saving location settings…";
+      try {{
+        const response = await fetch("/api/location-settings", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            preferred_location_id: document.getElementById("location-preferred").value,
+          }}),
+        }});
+        const payload = await response.json();
+        note.textContent = payload.ok ? "Location settings updated." : "Location settings response received.";
+        await refreshSettingsState();
+      }} catch (error) {{
+        note.textContent = `Location save failed: ${{String(error)}}`;
+      }}
+    }}
+
+    document.getElementById("refresh-settings").addEventListener("click", () => {{
+      refreshSettingsState().catch((error) => {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }});
+    }});
+    document.getElementById("voice-settings-form").addEventListener("submit", saveVoiceSettings);
+    document.getElementById("location-settings-form").addEventListener("submit", saveLocationSettings);
+    render(initialPayload);
+  </script>
+</body>
+</html>
+"""
+
+
+def render_navigation_module_page(payload: dict) -> str:
+    raw_json = json.dumps(payload, indent=2)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Navigation</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #071018;
+      --bg-2: #091522;
+      --panel: rgba(9, 20, 33, 0.92);
+      --line: rgba(121, 216, 255, 0.14);
+      --text: #edf7ff;
+      --muted: #9eb8cb;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: "SF Pro Display", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(121, 216, 255, 0.12), transparent 36%),
+        linear-gradient(180deg, #040b12 0%, var(--bg) 44%, var(--bg-2) 100%);
+      color: var(--text);
+    }}
+    .shell {{ max-width: 1400px; margin: 0 auto; padding: 36px 24px 60px; }}
+    .hero {{
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(10, 22, 35, 0.96), rgba(7, 16, 27, 0.92));
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+    }}
+    .eyebrow {{ color: #79d8ff; letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
+    h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
+    h2 {{ margin-top: 0; }}
+    p {{ color: var(--muted); line-height: 1.6; }}
+    .stats {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }}
+    .stat, .panel {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+    }}
+    .stat span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
+    .stat strong {{ display: block; margin-top: 6px; font-size: 24px; }}
+    .layout {{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }}
+    .span-4 {{ grid-column: span 4; }}
+    .span-6 {{ grid-column: span 6; }}
+    .span-8 {{ grid-column: span 8; }}
+    .span-12 {{ grid-column: span 12; }}
+    ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
+    li {{
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }}
+    li strong {{ display: block; margin-bottom: 4px; }}
+    li span {{ color: var(--muted); display: block; }}
+    .actions {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }}
+    a, button {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(121, 216, 255, 0.12);
+      color: var(--text);
+      text-decoration: none;
+      font: inherit;
+      cursor: pointer;
+    }}
+    form {{ display: grid; gap: 12px; }}
+    label {{ display: grid; gap: 6px; color: var(--muted); font-size: 13px; }}
+    textarea, input, select {{
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(4, 12, 20, 0.92);
+      color: var(--text);
+      padding: 12px 14px;
+      font: inherit;
+    }}
+    pre {{
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      background: rgba(3, 10, 18, 0.9);
+      color: #d7e8f4;
+      overflow-x: auto;
+    }}
+    .status-note {{ min-height: 1.3em; color: var(--muted); margin-top: 10px; }}
+    @media (max-width: 980px) {{
+      .span-4, .span-6, .span-8, .span-12 {{ grid-column: span 12; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Level 3 Core Module</div>
+      <h1>JARVIS Navigation</h1>
+      <p>A dedicated navigation workspace inside JARVIS with persisted route state, saved locations, route-weather preview, and along-route stop intelligence. This promotes Navigation out of the generic shell surface into a real route-aware module.</p>
+      <div class="actions">
+        <a href="/command-center">Back to Command Center</a>
+        <button type="button" id="refresh-navigation">Refresh Navigation State</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
+        <div class="stat"><span>Saved Locations</span><strong id="hero-locations">0</strong></div>
+        <div class="stat"><span>Favorites</span><strong id="hero-favorites">0</strong></div>
+        <div class="stat"><span>Recent Destinations</span><strong id="hero-recent">0</strong></div>
+      </div>
+      <p class="status-note" id="navigation-status-note">Loading navigation module state…</p>
+    </section>
+    <div class="layout">
+      <section class="panel span-4">
+        <h2>Module Status</h2>
+        <ul id="module-status-list"></ul>
+      </section>
+      <section class="panel span-8">
+        <h2>Saved Locations</h2>
+        <ul id="locations-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Route Preview</h2>
+        <form id="navigation-route-form">
+          <label>Origin
+            <input id="navigation-origin" placeholder="Home">
+          </label>
+          <label>Destination
+            <input id="navigation-destination" placeholder="Destination">
+          </label>
+          <label>Parks / Historic Radius (miles)
+            <input id="navigation-radius" type="number" min="5" max="100" step="1" value="25">
+          </label>
+          <button type="submit">Preview Route Intelligence</button>
+        </form>
+        <p class="status-note" id="navigation-route-note">Use this to run a live route preview and persist the route state.</p>
+        <pre id="navigation-route-output">Awaiting route preview.</pre>
+      </section>
+      <section class="panel span-6">
+        <h2>Current Navigation State</h2>
+        <ul id="state-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Stop Categories</h2>
+        <ul id="stops-list"></ul>
+      </section>
+      <section class="panel span-6">
+        <h2>Payload Preview</h2>
+        <pre id="payload-preview"></pre>
+      </section>
+    </div>
+  </main>
+  <script>
+    const initialPayload = {raw_json};
+    const heroStatus = document.getElementById("hero-status");
+    const heroLocations = document.getElementById("hero-locations");
+    const heroFavorites = document.getElementById("hero-favorites");
+    const heroRecent = document.getElementById("hero-recent");
+    const statusNote = document.getElementById("navigation-status-note");
+    const moduleStatusList = document.getElementById("module-status-list");
+    const locationsList = document.getElementById("locations-list");
+    const stateList = document.getElementById("state-list");
+    const stopsList = document.getElementById("stops-list");
+    const payloadPreview = document.getElementById("payload-preview");
+
+    function esc(value) {{
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }}
+
+    function li(title, summary, detail = "") {{
+      return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
+    }}
+
+    function render(payload) {{
+      const state = payload.navigation_state || {{}};
+      const locations = Array.isArray(payload.saved_locations) ? payload.saved_locations : [];
+      const preview = payload.route_preview || {{}};
+
+      heroStatus.textContent = payload.status || "Stubbed";
+      heroLocations.textContent = String(locations.length);
+      heroFavorites.textContent = String((state.favorite_destinations || []).length);
+      heroRecent.textContent = String((state.recent_destinations || []).length);
+      statusNote.textContent = payload.summary || "No navigation summary captured yet.";
+
+      document.getElementById("navigation-origin").value = (state.last_route || {{}}).origin || "";
+      document.getElementById("navigation-destination").value = (state.last_route || {{}}).destination || "";
+      document.getElementById("navigation-radius").value = String(state.parks_historic_radius_miles || 25);
+
+      moduleStatusList.innerHTML = [
+        li("What Became Real", payload.what_became_real || "No navigation seam note recorded yet."),
+        li("What Remains Partial", payload.remains_partial || "No partial work recorded."),
+        li("Proof API", "/api/navigation/module", "/api/navigation/module/route"),
+        li("Last Route", `${{(state.last_route || {{}}).origin || "Unknown"}} -> ${{(state.last_route || {{}}).destination || "Unknown"}}`),
+      ].join("");
+
+      locationsList.innerHTML = locations.slice(0, 8).map((item) => li(
+        item.label || "Location",
+        item.address || item.geography || "No address available.",
+        item.source || item.notes || ""
+      )).join("") || '<li><strong>No saved locations.</strong><span>Saved family locations will appear here when available.</span></li>';
+
+      stateList.innerHTML = [
+        li("Origin Mode", state.selected_origin_mode || "home"),
+        li("Favorite Destinations", (state.favorite_destinations || []).join(" | ") || "No favorites saved."),
+        li("Recent Destinations", (state.recent_destinations || []).join(" | ") || "No recent destinations saved."),
+      ].join("");
+
+      stopsList.innerHTML = (preview.sections || []).slice(0, 6).map((section) => li(
+        section.label || section.id || "Category",
+        `${{(section.items || []).length}} stop suggestion(s)`,
+        (section.items || []).slice(0, 2).map((item) => item.name).join(" | ")
+      )).join("") || '<li><strong>No stop suggestions yet.</strong><span>Run a route preview to load along-route stops.</span></li>';
+
+      document.getElementById("navigation-route-output").textContent = JSON.stringify(preview, null, 2);
+      payloadPreview.textContent = JSON.stringify(payload, null, 2);
+    }}
+
+    async function refreshNavigationState() {{
+      statusNote.textContent = "Refreshing navigation module state…";
+      try {{
+        const response = await fetch("/api/navigation/module");
+        const payload = await response.json();
+        render(payload);
+        statusNote.textContent = payload.summary || "Navigation module refreshed.";
+      }} catch (error) {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }}
+    }}
+
+    async function previewRoute(event) {{
+      event.preventDefault();
+      const note = document.getElementById("navigation-route-note");
+      note.textContent = "Loading route preview…";
+      try {{
+        const response = await fetch("/api/navigation/module/route", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            origin: document.getElementById("navigation-origin").value,
+            destination: document.getElementById("navigation-destination").value,
+            parks_historic_radius_miles: document.getElementById("navigation-radius").value,
+          }}),
+        }});
+        const payload = await response.json();
+        document.getElementById("navigation-route-output").textContent = JSON.stringify(payload, null, 2);
+        note.textContent = payload.summary || "Route preview loaded.";
+        await refreshNavigationState();
+      }} catch (error) {{
+        note.textContent = `Route preview failed: ${{String(error)}}`;
+      }}
+    }}
+
+    document.getElementById("refresh-navigation").addEventListener("click", () => {{
+      refreshNavigationState().catch((error) => {{
+        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+      }});
+    }});
+    document.getElementById("navigation-route-form").addEventListener("submit", previewRoute);
+    render(initialPayload);
+  </script>
+</body>
+</html>
+"""
+
+
 def render_agent_hierarchy_page(runtime: JarvisRuntime) -> str:
     system_registry = runtime.agent_registry_snapshot().get("agents", [])
     system_status = runtime.background_agent_status()

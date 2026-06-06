@@ -55,6 +55,7 @@ Typical signs:
 - approvals, home, route, focus, reminders, and notifications work together
 - daily orchestration is proactive, not only reactive
 - the product helps decide what matters now
+- background agent work is becoming real, even if still narrow and uneven
 
 JARVIS status:
 
@@ -78,6 +79,7 @@ Typical signs:
 - explainable action posture
 - promotion from draft to live
 - escalation boundaries
+- durable multi-agent background work with inspectable oversight
 
 JARVIS status:
 
@@ -95,6 +97,7 @@ Typical signs:
 - route, weather, home, and household risk alerts
 - quiet delivery to the right surface at the right time
 - strong interruption discipline
+- foreground and background agent focus shift cleanly based on engagement
 
 JARVIS status:
 
@@ -112,6 +115,7 @@ Typical signs:
 - Chronicle feeds a broader memory layer
 - prior context improves current decisions
 - continuity compounds across months and years
+- long-running agents work from institutional memory, not just local session state
 
 JARVIS status:
 

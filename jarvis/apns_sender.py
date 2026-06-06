@@ -26,6 +26,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -35,6 +37,8 @@ logger = logging.getLogger(__name__)
 _CONFIG_PATH  = Path("data/settings/apns_config.json")
 _KEY_PATH     = Path("data/settings/apns_key.p8")
 _TOKENS_PATH  = Path("data/settings/apns_device_tokens.json")
+_TOKENS_LOG_PATH = _TOKENS_PATH.with_name("apns_device_tokens_log.jsonl")
+_TOKENS_STATE_LOG_PATH = _TOKENS_PATH.with_name("apns_device_tokens_state_log.jsonl")
 _BUNDLE_ID    = "com.binion.jarvisphone"
 
 # ---------------------------------------------------------------------------
@@ -44,16 +48,88 @@ _BUNDLE_ID    = "com.binion.jarvisphone"
 def _load_tokens() -> dict[str, list[str]]:
     """Load {actor_id: [token, …]} from disk."""
     if not _TOKENS_PATH.exists():
-        return {}
+        replayed = _load_tokens_from_state_log()
+        if replayed:
+            return replayed
+        return _load_tokens_from_log()
     try:
-        return json.loads(_TOKENS_PATH.read_text())
+        payload = json.loads(_TOKENS_PATH.read_text())
+        if isinstance(payload, dict) and payload:
+            return payload
     except Exception:
-        return {}
+        replayed = _load_tokens_from_state_log()
+        if replayed:
+            return replayed
+        return _load_tokens_from_log()
+    replayed = _load_tokens_from_state_log()
+    if replayed:
+        return replayed
+    return {}
 
 
 def _save_tokens(tokens: dict[str, list[str]]) -> None:
     _TOKENS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _TOKENS_PATH.write_text(json.dumps(tokens, indent=2))
+    append_jsonl(
+        _TOKENS_LOG_PATH,
+        {
+            "saved_at": int(time.time()),
+            "tokens": tokens,
+        },
+    )
+    append_jsonl(
+        _TOKENS_STATE_LOG_PATH,
+        {
+            "saved_at": int(time.time()),
+            "tokens": tokens,
+        },
+    )
+    atomic_write_json(_TOKENS_PATH, tokens)
+
+
+def _load_tokens_from_log() -> dict[str, list[str]]:
+    if not _TOKENS_LOG_PATH.exists():
+        return {}
+    latest: dict[str, Any] | None = None
+    try:
+        for line in _TOKENS_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            tokens = payload.get("tokens")
+            if isinstance(tokens, dict):
+                latest = tokens
+    except Exception:
+        return {}
+    if not isinstance(latest, dict):
+        return {}
+    normalized: dict[str, list[str]] = {}
+    for actor_id, values in latest.items():
+        if isinstance(actor_id, str) and isinstance(values, list):
+            normalized[actor_id] = [str(item) for item in values if str(item).strip()]
+    return normalized
+
+
+def _load_tokens_from_state_log() -> dict[str, list[str]]:
+    if not _TOKENS_STATE_LOG_PATH.exists():
+        return {}
+    latest: dict[str, Any] | None = None
+    try:
+        for line in _TOKENS_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            tokens = payload.get("tokens")
+            if isinstance(tokens, dict):
+                latest = tokens
+    except Exception:
+        return {}
+    if not isinstance(latest, dict):
+        return {}
+    normalized: dict[str, list[str]] = {}
+    for actor_id, values in latest.items():
+        if isinstance(actor_id, str) and isinstance(values, list):
+            normalized[actor_id] = [str(item) for item in values if str(item).strip()]
+    return normalized
 
 
 def register_device_token(actor_id: str, token: str, platform: str = "ios") -> None:

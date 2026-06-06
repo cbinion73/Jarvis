@@ -22,6 +22,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json
+
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -34,6 +36,7 @@ _DAY_CARD_PATH       = _HEALTH_DIR / "day_card.json"
 _MORNING_BRIEF_PATH  = _HEALTH_DIR / "morning_brief.json"
 _APPOINTMENTS_PATH   = _HEALTH_DIR / "appointments.json"
 _PREDICTIONS_PATH    = _HEALTH_DIR / "twin_predictions.jsonl"
+_PREDICTIONS_STATE_LOG_PATH = _HEALTH_DIR / "twin_predictions_state_log.jsonl"
 _SCHEDULE_CONFIG_PATH = _HEALTH_DIR / "schedule_config.json"
 _SCHEDULE_STATUS_PATH = _HEALTH_DIR / "schedule_status.json"
 
@@ -72,6 +75,32 @@ def _ensure_health_dir() -> None:
     _HEALTH_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _log_path_for(path: Path) -> Path:
+    return path.with_name(f"{path.stem}_log.jsonl")
+
+
+def _load_from_log(path: Path) -> Any:
+    log_path = _log_path_for(path)
+    if not log_path.exists():
+        return None
+    latest: Any = None
+    try:
+        with log_path.open(encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(entry, dict) and "data" in entry:
+                    latest = entry["data"]
+    except Exception as exc:
+        log.warning("Failed to replay %s from log: %s", path, exc)
+    return latest
+
+
 def _load_json(path: Path, default: Any = None) -> Any:
     """Load JSON from *path*, returning *default* if missing or corrupt."""
     try:
@@ -79,18 +108,70 @@ def _load_json(path: Path, default: Any = None) -> Any:
             return json.loads(path.read_text())
     except Exception as exc:
         log.warning("Failed to read %s: %s", path, exc)
+    replayed = _load_from_log(path)
+    if replayed is not None:
+        return replayed
     return default if default is not None else {}
 
 
 def _save_json(path: Path, data: Any, *, indent: int = 2) -> None:
     """Atomically save *data* as JSON to *path*."""
     _ensure_health_dir()
-    tmp = path.with_suffix(".tmp")
     try:
-        tmp.write_text(json.dumps(data, indent=indent, default=str))
-        tmp.replace(path)
+        append_jsonl(
+            _log_path_for(path),
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "data": data,
+            },
+        )
+        atomic_write_json(path, data)
     except Exception as exc:
         log.error("Failed to write %s: %s", path, exc)
+
+
+def _load_prediction_records() -> list[dict]:
+    if _PREDICTIONS_PATH.exists():
+        try:
+            payload = json.loads(_PREDICTIONS_PATH.read_text(encoding="utf-8"))
+            if isinstance(payload, list):
+                return [dict(item) for item in payload if isinstance(item, dict)]
+        except Exception as exc:
+            log.warning("run_prediction_scorer: could not read predictions file: %s", exc)
+    if not _PREDICTIONS_STATE_LOG_PATH.exists():
+        return []
+    try:
+        latest: list[dict] = []
+        for line in _PREDICTIONS_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            records = payload.get("records")
+            if isinstance(records, list):
+                latest = [dict(item) for item in records if isinstance(item, dict)]
+        return latest
+    except Exception as exc:
+        log.warning("run_prediction_scorer: could not replay predictions log: %s", exc)
+        return []
+
+
+def _save_prediction_records(records: list[dict]) -> None:
+    _ensure_health_dir()
+    try:
+        append_jsonl(
+            _PREDICTIONS_STATE_LOG_PATH,
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "records": records,
+            },
+        )
+        atomic_write_json(_PREDICTIONS_PATH, records, indent=None)
+    except Exception as exc:
+        log.error("run_prediction_scorer: failed to save predictions: %s", exc)
 
 
 def _load_health_state() -> dict:
@@ -494,20 +575,7 @@ async def run_prediction_scorer() -> dict:
         elif isinstance(section_val, (int, float, str)):
             metric_lookup[section_key.lower()] = section_val
 
-    predictions: list[dict] = []
-    if _PREDICTIONS_PATH.exists():
-        try:
-            raw_lines = _PREDICTIONS_PATH.read_text().splitlines()
-            for line in raw_lines:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    predictions.append(json.loads(line))
-                except json.JSONDecodeError as exc:
-                    log.warning("run_prediction_scorer: skipping malformed line: %s", exc)
-        except Exception as exc:
-            log.warning("run_prediction_scorer: could not read predictions file: %s", exc)
+    predictions = _load_prediction_records()
 
     total = len(predictions)
     checked = 0
@@ -562,13 +630,7 @@ async def run_prediction_scorer() -> dict:
 
     # Save back
     if predictions:
-        _ensure_health_dir()
-        try:
-            _PREDICTIONS_PATH.write_text(
-                "\n".join(json.dumps(p, default=str) for p in updated) + "\n"
-            )
-        except Exception as exc:
-            log.error("run_prediction_scorer: failed to save predictions: %s", exc)
+        _save_prediction_records(updated)
 
     still_pending = sum(
         1 for p in updated

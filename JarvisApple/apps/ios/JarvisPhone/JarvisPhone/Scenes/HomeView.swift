@@ -12,6 +12,8 @@ struct HomeView: View {
     @State private var serverError: String?
     @State private var stagedHomeActionID: String?
     @State private var stagedHomeActionMessage: String?
+    @State private var stagedLaneReviewID: String?
+    @State private var stagedLaneReviewMessage: String?
 
     private let amber = Color.orange
 
@@ -251,6 +253,11 @@ struct HomeView: View {
                                 .font(.caption2)
                                 .foregroundStyle(amber.opacity(0.9))
                         }
+                        if let stagedLaneReviewMessage, !stagedLaneReviewMessage.isEmpty {
+                            Text(stagedLaneReviewMessage)
+                                .font(.caption2)
+                                .foregroundStyle(.cyan.opacity(0.9))
+                        }
                     }
                 }
 
@@ -304,6 +311,341 @@ struct HomeView: View {
                                         .padding(.vertical, 2)
                                 }
                             }
+                        }
+                    }
+                }
+
+                if let homeOps = state.homeOps {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Home Ops")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(amber)
+
+                        HStack(spacing: 10) {
+                            liveMetric(title: "Unread", value: "\(homeOps.email.totalUnread)")
+                            liveMetric(title: "Open Tasks", value: "\(homeOps.tasks.openCount)")
+                            liveMetric(title: "Projects", value: "\(homeOps.projects.activeCount)")
+                        }
+
+                        HStack(spacing: 10) {
+                            liveMetric(title: "Today", value: "\(homeOps.calendar.todayCount)")
+                            liveMetric(title: "Overdue", value: "\(homeOps.tasks.overdueCount)")
+                            liveMetric(title: "Signals", value: "\(homeOps.projects.unclassifiedSignalCount)")
+                        }
+
+                        if homeOps.email.totalUnread > 0 || homeOps.email.flaggedTotal > 0 {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Inbox")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                Text("Gmail \(homeOps.email.gmailUnread) · Outlook \(homeOps.email.outlookUnread) · Flagged \(homeOps.email.flaggedTotal)")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        }
+
+                        if !homeOps.tasks.topTitles.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Task Queue")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                ForEach(homeOps.tasks.topTitles, id: \.self) { title in
+                                    Text(title)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary.opacity(0.9))
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        }
+
+                        if !homeOps.projects.topTitles.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Active Projects")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                ForEach(homeOps.projects.topTitles, id: \.self) { title in
+                                    Text(title)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary.opacity(0.9))
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                if homeOps.projects.stalledCount > 0 {
+                                    Text("\(homeOps.projects.stalledCount) stalled project" + (homeOps.projects.stalledCount == 1 ? "" : "s"))
+                                        .font(.caption2)
+                                        .foregroundStyle(Color.orange.opacity(0.88))
+                                }
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        }
+
+                        if !homeOps.calendar.nextTitle.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Next Calendar Move")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                Text(homeOps.calendar.nextTitle)
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.9))
+                                Text(homeOps.calendar.nextStart.isEmpty ? "Within the next 7 days" : homeOps.calendar.nextStart)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                if !homeOps.calendar.nextLocation.isEmpty {
+                                    Text(homeOps.calendar.nextLocation)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary.opacity(0.85))
+                                }
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        }
+
+                        if !homeOps.sync.connectedSources.isEmpty || !homeOps.sync.attentionSources.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Sync Health")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                if !homeOps.sync.connectedSources.isEmpty {
+                                    Text("Connected: " + homeOps.sync.connectedSources.joined(separator: " • "))
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary.opacity(0.9))
+                                }
+                                if !homeOps.sync.attentionSources.isEmpty {
+                                    Text("Needs attention: " + homeOps.sync.attentionSources.joined(separator: " • "))
+                                        .font(.caption2)
+                                        .foregroundStyle(.orange.opacity(0.88))
+                                }
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        }
+                    }
+                }
+
+                if let whileAway = state.whileYouWereAway {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("While You Were Away")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(amber)
+
+                        Text(whileAway.headline)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white)
+
+                        if !whileAway.summary.isEmpty {
+                            Text(whileAway.summary)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if !whileAway.laneReports.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                ForEach(whileAway.laneReports.prefix(3)) { lane in
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(lane.title)
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.white)
+                                        Text(lane.summary)
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary.opacity(0.9))
+                                            .lineLimit(2)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        }
+
+                        if !whileAway.stewardshipLanes.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Stewardship Lanes")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                ForEach(whileAway.stewardshipLanes.prefix(2)) { lane in
+                                    homeStewardshipLaneCard(lane)
+                                }
+                            }
+                        }
+
+                        if let completion = whileAway.quietCompletions.first {
+                            homeWhileAwayRow(
+                                label: "Quiet Completion",
+                                item: completion,
+                                accent: .green
+                            )
+                        }
+
+                        if let prepared = whileAway.preparedWork.first {
+                            homeWhileAwayRow(
+                                label: "Prepared For You",
+                                item: prepared,
+                                accent: .cyan
+                            )
+                        }
+
+                        if let blocked = whileAway.blockedWork.first {
+                            homeWhileAwayRow(
+                                label: "Blocked Work",
+                                item: blocked,
+                                accent: .orange
+                            )
+                        }
+
+                        if let recommendation = whileAway.recommendation {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Recommendation")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                Text(recommendation.title)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white.opacity(0.96))
+                                Text(recommendation.summary)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary.opacity(0.9))
+                                    .lineLimit(3)
+                                if !recommendation.action.isEmpty {
+                                    Text(recommendation.action)
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(Color.cyan.opacity(0.92))
+                                        .lineLimit(2)
+                                }
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        }
+                    }
+                }
+
+                if let continuity = state.continuity {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Carry Forward")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(amber)
+
+                        HStack(spacing: 10) {
+                            liveMetric(title: "Facts", value: "\(continuity.profileFactCount)")
+                            liveMetric(
+                                title: "Mode",
+                                value: continuity.activeMode.isEmpty ? "—" : continuity.activeMode.replacingOccurrences(of: "_", with: " ").capitalized
+                            )
+                            liveMetric(title: "Rooms", value: continuity.primaryRooms.isEmpty ? "0" : "\(continuity.primaryRooms.count)")
+                        }
+
+                        if !continuity.guidanceLines.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Household Rhythm")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                ForEach(continuity.guidanceLines, id: \.self) { line in
+                                    Text(line)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary.opacity(0.9))
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        }
+
+                        if !continuity.longHorizonLines.isEmpty || !continuity.activeThreads.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Long Horizon")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                ForEach(continuity.longHorizonLines.prefix(2), id: \.self) { line in
+                                    Text(line)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary.opacity(0.9))
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                if !continuity.activeThreads.isEmpty {
+                                    Text(continuity.activeThreads.joined(separator: " • "))
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary.opacity(0.82))
+                                        .lineLimit(2)
+                                }
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        }
+
+                        if !continuity.primaryRooms.isEmpty || !continuity.morningRoom.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Where JARVIS Holds Continuity")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                if !continuity.primaryRooms.isEmpty {
+                                    Text(continuity.primaryRooms.joined(separator: " • "))
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary.opacity(0.9))
+                                }
+                                if !continuity.morningRoom.isEmpty {
+                                    Text("Morning room: \(continuity.morningRoom)")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary.opacity(0.82))
+                                }
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        }
+
+                        if !continuity.recentProfileFacts.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Durable Patterns")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                ForEach(continuity.recentProfileFacts) { fact in
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(fact.title)
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.white.opacity(0.94))
+                                        Text(fact.summary)
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary.opacity(0.9))
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        }
+
+                        if !continuity.recentFirstLight.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Recent First Light")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                ForEach(continuity.recentFirstLight) { moment in
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(moment.label)
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.white.opacity(0.94))
+                                        Text(moment.summary)
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary.opacity(0.9))
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
                         }
                     }
                 }
@@ -385,10 +727,20 @@ struct HomeView: View {
         stagedHomeActionID = item.id
         defer { stagedHomeActionID = nil }
         do {
-            _ = try await AppleAPIClient.shared.sendHomeCommand(
+            let response = try await AppleAPIClient.shared.sendHomeCommand(
                 HomeCommand(command: item.command, entityId: item.entityId, service: item.service)
             )
-            stagedHomeActionMessage = "Queued for approval: \(item.title)"
+            switch response.status {
+            case "executed_live":
+                stagedHomeActionMessage = "Executed live: \(item.title)"
+            case "blocked_by_boundary":
+                stagedHomeActionMessage = response.boundaryReason ?? "Blocked by trust boundary."
+            default:
+                let detail = response.boundaryDecision == "stage"
+                    ? "Queued for approval: \(item.title)"
+                    : "Queued: \(item.title)"
+                stagedHomeActionMessage = detail
+            }
             await loadServerState()
         } catch {
             stagedHomeActionMessage = error.localizedDescription
@@ -403,6 +755,104 @@ struct HomeView: View {
             return amber
         default:
             return .cyan
+        }
+    }
+
+    private func homeWhileAwayRow(
+        label: String,
+        item: WhileYouWereAwayRow,
+        accent: Color
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(accent)
+            Text(item.title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white)
+            Text("\(item.agent) · \(item.lane)")
+                .font(.caption2)
+                .foregroundStyle(.secondary.opacity(0.85))
+            Text(item.summary)
+                .font(.caption2)
+                .foregroundStyle(.secondary.opacity(0.9))
+                .lineLimit(3)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func homeStewardshipLaneCard(_ lane: WhileYouWereAwayStewardshipLane) -> some View {
+        let reportLine = lane.reportSummaries.first?.summary ?? lane.summary
+        let primitive = lane.executionPrimitive
+        return VStack(alignment: .leading, spacing: 8) {
+            Text(lane.title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white)
+            Text(reportLine)
+                .font(.caption2)
+                .foregroundStyle(.secondary.opacity(0.9))
+                .lineLimit(2)
+            Text("Prepared \(lane.preparedWork.count) · Decisions \(lane.decisionCards.count) · Drift \(lane.driftCards.count)")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.cyan.opacity(0.92))
+            if let primitive, !primitive.routeSummary.isEmpty {
+                Text(primitive.routeSummary)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary.opacity(0.88))
+                    .lineLimit(2)
+            }
+            if let primitive {
+                HStack(spacing: 8) {
+                    Text(primitive.laneStatus.replacingOccurrences(of: "-", with: " ").capitalized)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(amber.opacity(0.92))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(.white.opacity(0.06), in: Capsule())
+                    Spacer()
+                    Button {
+                        Task { await stageStewardshipLaneReview(lane.id) }
+                    } label: {
+                        if stagedLaneReviewID == lane.id {
+                            ProgressView()
+                                .tint(amber)
+                                .scaleEffect(0.8)
+                        } else {
+                            Text("Stage Review")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(amber)
+                        }
+                    }
+                    .glassEffect(in: Capsule())
+                    .disabled(stagedLaneReviewID == lane.id)
+                }
+                Text(primitive.actionDetail)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary.opacity(0.82))
+                    .lineLimit(2)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func stageStewardshipLaneReview(_ laneId: String) async {
+        stagedLaneReviewID = laneId
+        stagedLaneReviewMessage = nil
+        defer { stagedLaneReviewID = nil }
+        do {
+            let result = try await AppleAPIClient.shared.stageStewardshipLaneReview(laneId)
+            if result.status == "review_staged" {
+                stagedLaneReviewMessage = "\(result.laneTitle) is queued in \(result.reviewSurface.capitalized) for review."
+            } else {
+                stagedLaneReviewMessage = result.boundaryReason
+            }
+            await loadServerState()
+        } catch {
+            stagedLaneReviewMessage = error.localizedDescription
         }
     }
 }

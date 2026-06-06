@@ -14,9 +14,12 @@ from __future__ import annotations
 import json
 import statistics
 import threading
+import time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any
+
+from .persistence import append_jsonl, atomic_write_json
 
 _HEALTH_DIR = Path.home() / ".jarvis" / "health" / "daily"
 _lock = threading.Lock()
@@ -58,11 +61,74 @@ def _today() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
+def _day_path(date: str) -> Path:
+    return _HEALTH_DIR / f"{date}.json"
+
+
+def _day_log_path(date: str) -> Path:
+    return _HEALTH_DIR / f"{date}_log.jsonl"
+
+
+def _day_state_log_path(date: str) -> Path:
+    return _HEALTH_DIR / f"{date}_state_log.jsonl"
+
+
 def _load_day(date: str) -> dict:
-    path = _HEALTH_DIR / f"{date}.json"
+    path = _day_path(date)
     try:
         if path.exists():
-            return json.loads(path.read_text(encoding="utf-8"))
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(payload, dict) and payload:
+                return payload
+    except Exception:
+        replayed = _load_day_from_state_log(date)
+        if replayed:
+            return replayed
+        return _load_day_from_log(date)
+    if not path.exists():
+        replayed = _load_day_from_state_log(date)
+        if replayed:
+            return replayed
+        return _load_day_from_log(date)
+    replayed = _load_day_from_state_log(date)
+    if replayed:
+        return replayed
+    return {}
+
+
+def _load_day_from_log(date: str) -> dict:
+    try:
+        path = _day_log_path(date)
+        if path.exists():
+            latest: dict[str, Any] | None = None
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                record = payload.get("record")
+                if isinstance(record, dict):
+                    latest = dict(record)
+            if latest is not None:
+                return latest
+    except Exception:
+        pass
+    return {}
+
+
+def _load_day_from_state_log(date: str) -> dict:
+    try:
+        path = _day_state_log_path(date)
+        if path.exists():
+            latest: dict[str, Any] | None = None
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                record = payload.get("record")
+                if isinstance(record, dict):
+                    latest = dict(record)
+            if latest is not None:
+                return latest
     except Exception:
         pass
     return {}
@@ -70,8 +136,22 @@ def _load_day(date: str) -> dict:
 
 def _save_day(date: str, data: dict) -> None:
     _HEALTH_DIR.mkdir(parents=True, exist_ok=True)
-    path = _HEALTH_DIR / f"{date}.json"
-    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    path = _day_path(date)
+    atomic_write_json(path, data)
+    append_jsonl(
+        _day_log_path(date),
+        {
+            "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "record": data,
+        },
+    )
+    append_jsonl(
+        _day_state_log_path(date),
+        {
+            "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "record": data,
+        },
+    )
 
 
 def ingest(source: str, metrics: dict[str, Any], date: str | None = None) -> dict:

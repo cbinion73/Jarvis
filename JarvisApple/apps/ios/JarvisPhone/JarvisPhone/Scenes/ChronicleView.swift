@@ -12,6 +12,10 @@ struct ChronicleView: View {
     @State private var capturing  = false
     @State private var captureType = "reflection"
     @State private var captureText = ""
+    @State private var selectedPrayer: ChroniclePrayer?
+    @State private var prayerNote = ""
+    @State private var studyDraft = ""
+    @State private var showingStudyWorkspace = false
     @FocusState private var captureFieldFocused: Bool
 
     private let amber = Color(red: 0.9, green: 0.65, blue: 0.25)
@@ -44,6 +48,14 @@ struct ChronicleView: View {
             }
             .navigationTitle("Chronicle")
             .navigationBarTitleDisplayMode(.large)
+            .sheet(item: $selectedPrayer) { prayer in
+                prayerActionSheet(prayer)
+            }
+            .sheet(isPresented: $showingStudyWorkspace) {
+                if let workspace = overview?.studyWorkspace {
+                    studyWorkspaceSheet(workspace)
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { Task { await load() } } label: {
@@ -91,6 +103,14 @@ struct ChronicleView: View {
 
                 if let patterns = ov.patterns {
                     patternsSection(patterns)
+                }
+
+                if let continuity = ov.continuity {
+                    continuitySection(continuity)
+                }
+
+                if let studyWorkspace = ov.studyWorkspace {
+                    studyWorkspaceSection(studyWorkspace)
                 }
 
                 if ov.entries.isEmpty {
@@ -170,27 +190,63 @@ struct ChronicleView: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(amber.opacity(0.85))
                     ForEach(context.activePrayers.prefix(3)) { prayer in
-                        HStack(alignment: .top, spacing: 8) {
-                            Image(systemName: "hands.sparkles.fill")
-                                .font(.caption2)
-                                .foregroundStyle(.purple.opacity(0.85))
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(prayer.text)
-                                    .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.84))
-                                if !prayer.category.isEmpty {
-                                    Text(prayer.category)
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
+                        prayerRow(prayer)
                     }
                 }
             }
 
             if !context.topThemes.isEmpty {
                 themeChipWrap(context.topThemes.map { ChronicleThemeCount(theme: $0, count: 0) }, showsCounts: false)
+            }
+        }
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 18))
+    }
+
+    @ViewBuilder
+    private func studyWorkspaceSection(_ workspace: ChronicleStudyWorkspace) -> some View {
+        sectionHeader("Study Workflow", subtitle: "Save deeper study reflections back into Chronicle")
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(workspace.title)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                    if !workspace.passage.isEmpty {
+                        Text(workspace.passage)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(amber.opacity(0.9))
+                    }
+                    if !workspace.focusSummary.isEmpty {
+                        Text(workspace.focusSummary)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.72))
+                    }
+                }
+                Spacer()
+                Button("Open Study") {
+                    studyDraft = ""
+                    showingStudyWorkspace = true
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(amber)
+            }
+
+            if !workspace.prompts.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(workspace.prompts, id: \.self) { prompt in
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "text.quote")
+                                .font(.caption2)
+                                .foregroundStyle(amber.opacity(0.85))
+                                .padding(.top, 2)
+                            Text(prompt)
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.8))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
             }
         }
         .padding(16)
@@ -238,6 +294,95 @@ struct ChronicleView: View {
         .glassEffect(in: RoundedRectangle(cornerRadius: 18))
     }
 
+    @ViewBuilder
+    private func continuitySection(_ continuity: ChronicleContinuity) -> some View {
+        if !continuity.relevantFacts.isEmpty || !continuity.similarEntries.isEmpty || !continuity.situations.isEmpty || !continuity.recallPrompt.isEmpty {
+            sectionHeader("How We Handled This Before", subtitle: "Durable continuity from memory and Chronicle history")
+            VStack(alignment: .leading, spacing: 12) {
+                if !continuity.recallPrompt.isEmpty {
+                    Text(continuity.recallPrompt)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.86))
+                }
+
+                if !continuity.situations.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Situation Matches")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(amber.opacity(0.85))
+                        ForEach(continuity.situations.prefix(2)) { situation in
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack(alignment: .center, spacing: 8) {
+                                    Text(situation.label)
+                                        .font(.subheadline.bold())
+                                        .foregroundStyle(.white)
+                                    if situation.matchedFactCount > 0 {
+                                        Text("\(situation.matchedFactCount) fact\(situation.matchedFactCount == 1 ? "" : "s")")
+                                            .font(.caption2.weight(.semibold))
+                                            .foregroundStyle(amber.opacity(0.85))
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(amber.opacity(0.12), in: Capsule())
+                                    }
+                                }
+                                Text(situation.summary)
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.78))
+                                if !situation.signals.isEmpty {
+                                    Text(situation.signals.prefix(4).joined(separator: " · "))
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+                        }
+                    }
+                }
+
+                if !continuity.relevantFacts.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Durable Facts")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(amber.opacity(0.85))
+                        ForEach(continuity.relevantFacts) { fact in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(fact.title)
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(.white)
+                                Text(fact.summary)
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.78))
+                                if !fact.tags.isEmpty {
+                                    Text(fact.tags.prefix(3).joined(separator: " · "))
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+                        }
+                    }
+                }
+
+                if !continuity.similarEntries.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Similar Moments")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(amber.opacity(0.85))
+                        ForEach(continuity.similarEntries.prefix(2)) { entry in
+                            EntryCard(entry: entry, amber: amber)
+                        }
+                    }
+                }
+            }
+            .padding(16)
+            .glassEffect(in: RoundedRectangle(cornerRadius: 18))
+        }
+    }
+
     private func sectionHeader(_ title: String, subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title)
@@ -281,6 +426,64 @@ struct ChronicleView: View {
                 .padding(.vertical, 7)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(amber.opacity(0.12), in: Capsule())
+            }
+        }
+    }
+
+    private func prayerRow(_ prayer: ChroniclePrayer) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: prayer.answered ? "checkmark.seal.fill" : "hands.sparkles.fill")
+                    .font(.caption2)
+                    .foregroundStyle((prayer.answered ? Color.green : Color.purple).opacity(0.9))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(prayer.text)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.84))
+                    HStack(spacing: 6) {
+                        if !prayer.category.isEmpty {
+                            Text(prayer.category)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        if prayer.timesPrayed > 0 {
+                            Text("Prayed \(prayer.timesPrayed)x")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        if prayer.answered {
+                            Text("Answered")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.green.opacity(0.9))
+                        }
+                    }
+                    if let answerSummary = prayer.answerSummary, !answerSummary.isEmpty {
+                        Text(answerSummary)
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.65))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Spacer()
+            }
+
+            HStack(spacing: 8) {
+                Button(prayer.answered ? "Answered" : "Log Prayer") {
+                    prayerNote = ""
+                    selectedPrayer = prayer
+                }
+                .buttonStyle(.bordered)
+                .tint(prayer.answered ? .green : .purple)
+                .disabled(prayer.answered)
+
+                if !prayer.answered {
+                    Button("Mark Answered") {
+                        prayerNote = ""
+                        selectedPrayer = prayer
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.green)
+                }
             }
         }
     }
@@ -339,6 +542,141 @@ struct ChronicleView: View {
             .padding(.bottom, 12)
         }
         .background(.ultraThinMaterial)
+    }
+
+    private func prayerActionSheet(_ prayer: ChroniclePrayer) -> some View {
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                VStack(alignment: .leading, spacing: 16) {
+                    Text(prayer.text)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                    TextField(
+                        prayer.answered ? "Answer summary…" : "Optional prayer note…",
+                        text: $prayerNote,
+                        axis: .vertical
+                    )
+                    .lineLimit(3...6)
+                    .foregroundStyle(.white)
+                    .tint(amber)
+                    .padding(12)
+                    .glassEffect(in: RoundedRectangle(cornerRadius: 14))
+
+                    HStack(spacing: 10) {
+                        if !prayer.answered {
+                            Button("Log Prayed") {
+                                Task {
+                                    _ = try? await AppleAPIClient.shared.markChroniclePrayerPrayed(
+                                        prayer.id,
+                                        payload: ChroniclePrayerActionPayload(note: prayerNote)
+                                    )
+                                    selectedPrayer = nil
+                                    prayerNote = ""
+                                    await load()
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.purple)
+
+                            Button("Mark Answered") {
+                                Task {
+                                    _ = try? await AppleAPIClient.shared.markChroniclePrayerAnswered(
+                                        prayer.id,
+                                        payload: ChroniclePrayerActionPayload(note: prayerNote)
+                                    )
+                                    selectedPrayer = nil
+                                    prayerNote = ""
+                                    await load()
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.green)
+                        } else {
+                            Button("Done") {
+                                selectedPrayer = nil
+                                prayerNote = ""
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.green)
+                        }
+                    }
+
+                    Spacer()
+                }
+                .padding(20)
+            }
+            .navigationTitle("Prayer Follow-up")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private func studyWorkspaceSheet(_ workspace: ChronicleStudyWorkspace) -> some View {
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(workspace.title)
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        if !workspace.passage.isEmpty {
+                            Text(workspace.passage)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(amber.opacity(0.9))
+                        }
+                    }
+
+                    if !workspace.prompts.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(workspace.prompts, id: \.self) { prompt in
+                                Text(prompt)
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.75))
+                            }
+                        }
+                    }
+
+                    TextField("Write your study reflection…", text: $studyDraft, axis: .vertical)
+                        .lineLimit(8...14)
+                        .foregroundStyle(.white)
+                        .tint(amber)
+                        .padding(12)
+                        .glassEffect(in: RoundedRectangle(cornerRadius: 14))
+
+                    Button("Save to Chronicle") {
+                        Task {
+                            let title = workspace.title.isEmpty ? "Bible Study" : workspace.title
+                            _ = try? await AppleAPIClient.shared.saveChronicleStudy(
+                                ChronicleStudySavePayload(
+                                    title: title,
+                                    passage: workspace.passage,
+                                    notes: studyDraft
+                                )
+                            )
+                            showingStudyWorkspace = false
+                            studyDraft = ""
+                            await load()
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(amber)
+                    .disabled(studyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                    Spacer()
+                }
+                .padding(20)
+            }
+            .navigationTitle("Study")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Close") {
+                        showingStudyWorkspace = false
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Error

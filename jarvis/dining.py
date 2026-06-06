@@ -16,6 +16,8 @@ from typing import Any
 
 import httpx
 
+from .persistence import append_jsonl, atomic_write_json
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -35,6 +37,10 @@ DEFAULT_RADIUS_M = 16000   # ~10 miles — reaches Cincinnati metro
 CACHE_TTL = 2 * 3600       # 2 hours
 CACHE_PATH = Path("data/cache/dining_cache.json")
 FAVORITES_PATH = Path("data/settings/dining_favorites.json")
+CACHE_LOG_PATH = CACHE_PATH.with_name("dining_cache_log.jsonl")
+FAVORITES_LOG_PATH = FAVORITES_PATH.with_name("dining_favorites_log.jsonl")
+CACHE_STATE_LOG_PATH = CACHE_PATH.with_name("dining_cache_state_log.jsonl")
+FAVORITES_STATE_LOG_PATH = FAVORITES_PATH.with_name("dining_favorites_state_log.jsonl")
 _cache_lock = threading.Lock()
 
 # Cuisine type → Google Places type mapping
@@ -66,18 +72,70 @@ CUISINE_MAP: dict[str, str] = {
 def _load_cache() -> dict:
     try:
         if CACHE_PATH.exists():
-            return json.loads(CACHE_PATH.read_text())
+            return json.loads(CACHE_PATH.read_text(encoding="utf-8"))
     except Exception:
-        pass
+        return _load_cache_from_state_log() or _load_cache_from_log()
+    if not CACHE_PATH.exists():
+        return _load_cache_from_state_log() or _load_cache_from_log()
     return {}
 
 
 def _save_cache(cache: dict) -> None:
     try:
         CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        CACHE_PATH.write_text(json.dumps(cache, indent=2))
+        atomic_write_json(CACHE_PATH, cache)
+        append_jsonl(
+            CACHE_LOG_PATH,
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "cache": cache,
+            },
+        )
+        append_jsonl(
+            CACHE_STATE_LOG_PATH,
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "cache": cache,
+            },
+        )
     except Exception as exc:
         logger.warning("dining: cache write failed: %s", exc)
+
+
+def _load_cache_from_log() -> dict:
+    try:
+        if CACHE_LOG_PATH.exists():
+            latest: dict[str, Any] | None = None
+            for line in CACHE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                cache = payload.get("cache")
+                if isinstance(cache, dict):
+                    latest = dict(cache)
+            if latest is not None:
+                return latest
+    except Exception:
+        pass
+    return {}
+
+
+def _load_cache_from_state_log() -> dict:
+    try:
+        if CACHE_STATE_LOG_PATH.exists():
+            latest: dict[str, Any] | None = None
+            for line in CACHE_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                cache = payload.get("cache")
+                if isinstance(cache, dict):
+                    latest = dict(cache)
+            if latest is not None:
+                return latest
+    except Exception:
+        pass
+    return {}
 
 
 def _cache_get(key: str) -> list[dict] | None:
@@ -334,7 +392,43 @@ def recommend_restaurants(runtime=None, limit: int = 3) -> dict:
 def get_favorites() -> list[dict]:
     try:
         if FAVORITES_PATH.exists():
-            return json.loads(FAVORITES_PATH.read_text()).get("favorites", [])
+            return json.loads(FAVORITES_PATH.read_text(encoding="utf-8")).get("favorites", [])
+    except Exception:
+        return _load_favorites_from_state_log() or _load_favorites_from_log()
+    if not FAVORITES_PATH.exists():
+        return _load_favorites_from_state_log() or _load_favorites_from_log()
+    return []
+
+
+def _load_favorites_from_log() -> list[dict]:
+    try:
+        if FAVORITES_LOG_PATH.exists():
+            latest: list[dict] = []
+            for line in FAVORITES_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                favorites = payload.get("favorites")
+                if isinstance(favorites, list):
+                    latest = [dict(item) for item in favorites if isinstance(item, dict)]
+            return latest
+    except Exception:
+        pass
+    return []
+
+
+def _load_favorites_from_state_log() -> list[dict]:
+    try:
+        if FAVORITES_STATE_LOG_PATH.exists():
+            latest: list[dict] = []
+            for line in FAVORITES_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                favorites = payload.get("favorites")
+                if isinstance(favorites, list):
+                    latest = [dict(item) for item in favorites if isinstance(item, dict)]
+            return latest
     except Exception:
         pass
     return []
@@ -360,7 +454,22 @@ def toggle_favorite(place_id: str, name: str, address: str, rating: float | None
 
     try:
         FAVORITES_PATH.parent.mkdir(parents=True, exist_ok=True)
-        FAVORITES_PATH.write_text(json.dumps({"favorites": favs}, indent=2))
+        payload = {"favorites": favs}
+        atomic_write_json(FAVORITES_PATH, payload)
+        append_jsonl(
+            FAVORITES_LOG_PATH,
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "favorites": favs,
+            },
+        )
+        append_jsonl(
+            FAVORITES_STATE_LOG_PATH,
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "favorites": favs,
+            },
+        )
     except Exception as exc:
         logger.warning("dining: favorites write failed: %s", exc)
 

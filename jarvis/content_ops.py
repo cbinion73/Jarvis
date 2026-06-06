@@ -10,6 +10,7 @@ from typing import Any
 from .config import AppConfig
 from .data_hygiene import filter_records
 from .openai_tasks import JarvisOpenAIClient
+from .persistence import append_jsonl, atomic_write_json
 
 
 def _now_iso() -> str:
@@ -24,6 +25,8 @@ class ContentOpsStore:
     exports_root: Path = field(init=False)
     marketing_state_path: Path = field(init=False)
     marketing_review_path: Path = field(init=False)
+    _log_paths: dict[Path, Path] = field(init=False)
+    _state_log_paths: dict[Path, Path] = field(init=False)
 
     def __post_init__(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
@@ -33,19 +36,82 @@ class ContentOpsStore:
         self.marketing_state_path = self.root / "marketing_state.json"
         self.marketing_review_path = self.root / "marketing_reviews.json"
         self.exports_root.mkdir(parents=True, exist_ok=True)
+        self._log_paths = {
+            self.idea_runs_path: self.root / "veronica_idea_runs_log.jsonl",
+            self.queue_path: self.root / "veronica_queue_log.jsonl",
+            self.marketing_state_path: self.root / "marketing_state_log.jsonl",
+            self.marketing_review_path: self.root / "marketing_reviews_log.jsonl",
+        }
+        self._state_log_paths = {
+            self.idea_runs_path: self.root / "veronica_idea_runs_state_log.jsonl",
+            self.queue_path: self.root / "veronica_queue_state_log.jsonl",
+            self.marketing_state_path: self.root / "marketing_state_state_log.jsonl",
+            self.marketing_review_path: self.root / "marketing_reviews_state_log.jsonl",
+        }
 
     def _load(self, path: Path) -> list[dict[str, Any]]:
         if not path.exists():
-            return []
+            return self._load_from_state_log(path)
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            return []
+            return self._load_from_state_log(path)
         records = payload if isinstance(payload, list) else []
-        return filter_records(records)
+        if records:
+            return filter_records(records)
+        return self._load_from_state_log(path)
 
     def _save(self, path: Path, records: list[dict[str, Any]]) -> None:
-        path.write_text(json.dumps(records, indent=2) + "\n", encoding="utf-8")
+        saved_at = _now_iso()
+        atomic_write_json(path, records)
+        append_jsonl(
+            self._log_paths[path],
+            {
+                "saved_at": saved_at,
+                "records": records,
+            },
+        )
+        append_jsonl(
+            self._state_log_paths[path],
+            {
+                "saved_at": saved_at,
+                "records": records,
+            },
+        )
+
+    def _load_from_state_log(self, path: Path) -> list[dict[str, Any]]:
+        log_path = self._state_log_paths[path]
+        if not log_path.exists():
+            return self._load_from_log(path)
+        latest: list[dict[str, Any]] = []
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return self._load_from_log(path)
+        return filter_records(latest)
+
+    def _load_from_log(self, path: Path) -> list[dict[str, Any]]:
+        log_path = self._log_paths[path]
+        if not log_path.exists():
+            return []
+        latest: list[dict[str, Any]] = []
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return []
+        return filter_records(latest)
 
     def add_record(self, path: Path, record: dict[str, Any]) -> dict[str, Any]:
         records = self._load(path)
@@ -68,15 +134,74 @@ class ContentOpsStore:
 
     def _load_json(self, path: Path, *, default: Any) -> Any:
         if not path.exists():
-            return default
+            return self._load_json_from_state_log(path, default=default)
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            return default
+            return self._load_json_from_state_log(path, default=default)
+        if payload in ({}, [], ""):
+            return self._load_json_from_state_log(path, default=default)
         return payload
 
     def _save_json(self, path: Path, payload: Any) -> None:
-        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        saved_at = _now_iso()
+        atomic_write_json(path, payload)
+        append_jsonl(
+            self._log_paths[path],
+            {
+                "saved_at": saved_at,
+                "records": payload,
+            },
+        )
+        append_jsonl(
+            self._state_log_paths[path],
+            {
+                "saved_at": saved_at,
+                "records": payload,
+            },
+        )
+
+    def _load_json_from_state_log(self, path: Path, *, default: Any) -> Any:
+        log_path = self._state_log_paths[path]
+        if not log_path.exists():
+            return self._load_json_from_log(path, default=default)
+        latest: Any = default
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                latest = payload.get("records", default)
+        except (OSError, json.JSONDecodeError):
+            return self._load_json_from_log(path, default=default)
+        if isinstance(default, dict):
+            return dict(latest) if isinstance(latest, dict) else default
+        if isinstance(default, list):
+            if not isinstance(latest, list):
+                return default
+            return [dict(item) if isinstance(item, dict) else item for item in latest]
+        return latest
+
+    def _load_json_from_log(self, path: Path, *, default: Any) -> Any:
+        log_path = self._log_paths[path]
+        if not log_path.exists():
+            return default
+        latest: Any = default
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                latest = payload.get("records", default)
+        except (OSError, json.JSONDecodeError):
+            return default
+        if isinstance(default, dict):
+            return dict(latest) if isinstance(latest, dict) else default
+        if isinstance(default, list):
+            if not isinstance(latest, list):
+                return default
+            return [dict(item) if isinstance(item, dict) else item for item in latest]
+        return latest
 
     def marketing_state(self) -> dict[str, Any]:
         payload = self._load_json(self.marketing_state_path, default={})

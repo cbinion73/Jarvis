@@ -15,6 +15,8 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .persistence import append_jsonl, atomic_write_json
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -22,6 +24,9 @@ from pathlib import Path
 LAYOUT_STATE_PATH    = Path("data/settings/layout_state.json")
 INTERACTIONS_LOG     = Path("data/logs/layout_interactions.jsonl")
 WEIGHTS_CACHE_PATH   = Path("data/settings/layout_weights_cache.json")
+LAYOUT_STATE_LOG_PATH  = LAYOUT_STATE_PATH.with_name(f"{LAYOUT_STATE_PATH.stem}_log.jsonl")
+WEIGHTS_CACHE_LOG_PATH = WEIGHTS_CACHE_PATH.with_name(f"{WEIGHTS_CACHE_PATH.stem}_log.jsonl")
+MODE_HISTORY_LOG_PATH  = Path("data/family/mode_history_state_log.jsonl")
 MANUAL_OVERRIDE_TTL  = 4 * 3600   # seconds — 4 hours, then returns to auto
 LEARNING_WINDOW_DAYS = 30
 WEIGHTS_CACHE_TTL_H  = 1          # hours — rebuild cache if older than this
@@ -131,16 +136,58 @@ def _load_state() -> dict:
         if LAYOUT_STATE_PATH.exists():
             return json.loads(LAYOUT_STATE_PATH.read_text())
     except Exception:
+        return _load_state_from_log()
+    if not LAYOUT_STATE_PATH.exists():
+        return _load_state_from_log()
+    return {}
+
+
+def _load_state_from_log() -> dict:
+    try:
+        if LAYOUT_STATE_LOG_PATH.exists():
+            latest: dict = {}
+            for line in LAYOUT_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, dict):
+                    latest = dict(records)
+            return latest
+    except Exception:
         pass
     return {}
 
 
 def _save_state(state: dict) -> None:
     try:
-        LAYOUT_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        LAYOUT_STATE_PATH.write_text(json.dumps(state, indent=2))
+        atomic_write_json(LAYOUT_STATE_PATH, state)
+        append_jsonl(
+            LAYOUT_STATE_LOG_PATH,
+            {
+                "saved_at": _now_iso(),
+                "records": state,
+            },
+        )
     except Exception:
         pass
+
+
+def _load_weights_cache_from_log() -> dict:
+    try:
+        if WEIGHTS_CACHE_LOG_PATH.exists():
+            latest: dict = {}
+            for line in WEIGHTS_CACHE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, dict):
+                    latest = dict(records)
+            return latest
+    except Exception:
+        pass
+    return {}
 
 
 def _compute_auto_mode() -> str:
@@ -223,8 +270,14 @@ def set_mode(mode: str, *, manual: bool = True) -> dict:
             "timestamp": now.isoformat(),
         }
         with _log_lock:
-            with log_path.open("a") as f:
-                f.write(json.dumps(record) + "\n")
+            append_jsonl(log_path, record)
+            append_jsonl(
+                MODE_HISTORY_LOG_PATH,
+                {
+                    "saved_at": now.isoformat(),
+                    "records": [record],
+                },
+            )
     except Exception:
         pass
 
@@ -266,9 +319,15 @@ def rebuild_weights_cache() -> dict:
     try:
         for mode in MODES:
             cache["weights"][mode] = get_learned_weights(mode)
-        WEIGHTS_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
         with _log_lock:
-            WEIGHTS_CACHE_PATH.write_text(json.dumps(cache, indent=2))
+            atomic_write_json(WEIGHTS_CACHE_PATH, cache)
+            append_jsonl(
+                WEIGHTS_CACHE_LOG_PATH,
+                {
+                    "saved_at": _now_iso(),
+                    "records": cache,
+                },
+            )
         _cache_dirty = False
     except Exception:
         pass
@@ -288,7 +347,20 @@ def get_cached_weights(mode: str) -> dict[str, float]:
         try:
             if WEIGHTS_CACHE_PATH.exists():
                 cache = json.loads(WEIGHTS_CACHE_PATH.read_text())
-                updated_str = cache.get("updated_at", "")
+            else:
+                cache = _load_weights_cache_from_log()
+            updated_str = cache.get("updated_at", "") if isinstance(cache, dict) else ""
+            if updated_str:
+                updated = datetime.fromisoformat(updated_str)
+                if updated.tzinfo is None:
+                    updated = updated.replace(tzinfo=timezone.utc)
+                age_h = (_now_utc() - updated).total_seconds() / 3600
+                if age_h <= WEIGHTS_CACHE_TTL_H:
+                    return cache.get("weights", {}).get(mode, {})
+        except Exception:
+            try:
+                cache = _load_weights_cache_from_log()
+                updated_str = cache.get("updated_at", "") if isinstance(cache, dict) else ""
                 if updated_str:
                     updated = datetime.fromisoformat(updated_str)
                     if updated.tzinfo is None:
@@ -296,8 +368,8 @@ def get_cached_weights(mode: str) -> dict[str, float]:
                     age_h = (_now_utc() - updated).total_seconds() / 3600
                     if age_h <= WEIGHTS_CACHE_TTL_H:
                         return cache.get("weights", {}).get(mode, {})
-        except Exception:
-            pass
+            except Exception:
+                pass
     # Cache miss, stale, or dirty — live scan (cache will be rebuilt by background job)
     return get_learned_weights(mode)
 

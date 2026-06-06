@@ -5,11 +5,13 @@ import uuid
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from .config import AppConfig
 from .models import ArrivalEvent, SecurityIncident, UnlockAssessment, WeatherAdvisory
 from .openai_tasks import JarvisOpenAIClient
 from .persona import build_specialist_prompt
+from .persistence import append_jsonl, atomic_write_json
 
 
 def _now_iso() -> str:
@@ -24,14 +26,48 @@ class SecurityStore:
         self.weather_path = self.root / "weather_advisories.json"
         self.arrivals_path = self.root / "arrival_events.json"
         self.unlocks_path = self.root / "unlock_assessments.json"
+        self._log_paths = {
+            self.incidents_path: self.root / "security_incidents_log.jsonl",
+            self.weather_path: self.root / "weather_advisories_log.jsonl",
+            self.arrivals_path: self.root / "arrival_events_log.jsonl",
+            self.unlocks_path: self.root / "unlock_assessments_log.jsonl",
+        }
 
     def _load_json(self, path: Path) -> list[dict]:
         if not path.exists():
-            return []
-        return json.loads(path.read_text(encoding="utf-8"))
+            return self._load_json_from_log(path)
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return self._load_json_from_log(path)
+        return payload if isinstance(payload, list) else self._load_json_from_log(path)
 
     def _save_json(self, path: Path, payload: list[dict]) -> None:
-        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        atomic_write_json(path, payload)
+        append_jsonl(
+            self._log_paths[path],
+            {
+                "saved_at": _now_iso(),
+                "records": payload,
+            },
+        )
+
+    def _load_json_from_log(self, path: Path) -> list[dict[str, Any]]:
+        log_path = self._log_paths[path]
+        if not log_path.exists():
+            return []
+        latest: list[dict[str, Any]] = []
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return []
+        return latest
 
     def add_incident(self, incident: SecurityIncident) -> None:
         records = self._load_json(self.incidents_path)

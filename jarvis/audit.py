@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .models import ApprovalRequest, RequestPlan
+from .persistence import append_jsonl, atomic_write_json, atomic_write_jsonl
 
 
 class AuditLog:
@@ -13,13 +14,51 @@ class AuditLog:
         self.root = root
         self.root.mkdir(parents=True, exist_ok=True)
         self.actions_path = self.root / "actions.jsonl"
+        self.actions_state_log_path = self.root / "actions_state_log.jsonl"
+
+    def _load_actions(self) -> list[dict]:
+        if not self.actions_path.exists():
+            return self._load_actions_from_state_log()
+        try:
+            lines = self.actions_path.read_text(encoding="utf-8").splitlines()
+            records = [json.loads(line) for line in lines if line.strip()]
+        except (OSError, json.JSONDecodeError):
+            return self._load_actions_from_state_log()
+        return [dict(item) for item in records if isinstance(item, dict)] or self._load_actions_from_state_log()
+
+    def _load_actions_from_state_log(self) -> list[dict]:
+        if not self.actions_state_log_path.exists():
+            return []
+        latest: list[dict] = []
+        try:
+            for line in self.actions_state_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return []
+        return latest
+
+    def _append_action(self, entry: dict) -> None:
+        records = self._load_actions()
+        records.append(dict(entry))
+        atomic_write_jsonl(self.actions_path, records)
+        append_jsonl(
+            self.actions_state_log_path,
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "records": records,
+            },
+        )
 
     def log_plan(self, plan: RequestPlan) -> None:
         entry = asdict(plan)
         entry["entry_type"] = "plan"
         entry["timestamp"] = datetime.now(timezone.utc).isoformat()
-        with self.actions_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(entry) + "\n")
+        self._append_action(entry)
 
     def log_response(
         self,
@@ -36,8 +75,7 @@ class AuditLog:
         entry["active_nodes"] = active_nodes
         entry["output_preview"] = output_text[:280]
         entry["timestamp"] = datetime.now(timezone.utc).isoformat()
-        with self.actions_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(entry) + "\n")
+        self._append_action(entry)
 
     def log_assistant_action(
         self,
@@ -87,8 +125,7 @@ class AuditLog:
             entry["caused_friction"] = bool(caused_friction)
         if friction_reason.strip():
             entry["friction_reason"] = friction_reason.strip()
-        with self.actions_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(entry) + "\n")
+        self._append_action(entry)
 
     def log_event(self, entry_type: str, payload: dict) -> None:
         entry = {
@@ -96,14 +133,10 @@ class AuditLog:
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         entry.update(dict(payload))
-        with self.actions_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(entry) + "\n")
+        self._append_action(entry)
 
     def list_recent(self, limit: int = 25, entry_type: str | None = None) -> list[dict]:
-        if not self.actions_path.exists():
-            return []
-        lines = self.actions_path.read_text(encoding="utf-8").splitlines()
-        records = [json.loads(line) for line in lines if line.strip()]
+        records = self._load_actions()
         if entry_type:
             records = [item for item in records if item.get("entry_type") == entry_type]
         return list(reversed(records[-limit:]))
@@ -114,14 +147,41 @@ class ApprovalStore:
         self.root = root
         self.root.mkdir(parents=True, exist_ok=True)
         self.pending_path = self.root / "pending.json"
+        self.pending_log_path = self.root / "pending_log.jsonl"
 
     def _load(self) -> list[dict]:
         if not self.pending_path.exists():
+            return self._load_from_log()
+        try:
+            return json.loads(self.pending_path.read_text())
+        except Exception:
+            return self._load_from_log()
+
+    def _load_from_log(self) -> list[dict]:
+        if not self.pending_log_path.exists():
             return []
-        return json.loads(self.pending_path.read_text())
+        try:
+            latest: list[dict] = []
+            for line in self.pending_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+            return latest
+        except Exception:
+            return []
 
     def _save(self, records: list[dict]) -> None:
-        self.pending_path.write_text(json.dumps(records, indent=2) + "\n")
+        atomic_write_json(self.pending_path, records)
+        append_jsonl(
+            self.pending_log_path,
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "records": records,
+            },
+        )
 
     def add(self, approval: ApprovalRequest) -> None:
         records = self._load()

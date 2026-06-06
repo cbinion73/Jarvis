@@ -425,6 +425,48 @@ class PromotionRecord:
 
 
 @dataclass(slots=True)
+class PromotionThreshold:
+    min_runs: int
+    min_success: float
+    max_boundary_violations: int = 0
+    requires_human_consent: bool = False
+
+
+@dataclass(slots=True)
+class PromotionClaim:
+    claim_id: str
+    subject_kind: str
+    subject_id: str
+    current_stage: str
+    target_stage: str
+    actor: str
+    basis: str = ""
+    trust_zone: str = ""
+    arena_id: str = ""
+    human_consent: bool = False
+    submitted_at: str = ""
+    evidence_summary: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class PromotionVerdict:
+    claim_id: str
+    subject_kind: str
+    subject_id: str
+    current_stage: str
+    target_stage: str
+    decision: str
+    reason: str
+    threshold: PromotionThreshold
+    metrics: dict[str, object] = field(default_factory=dict)
+    trust_zone: str = ""
+    arena_id: str = ""
+    human_consent_required: bool = False
+    human_consent_present: bool = False
+    evaluated_at: str = ""
+
+
+@dataclass(slots=True)
 class MissionActionDecision:
     action_type: str
     trust_zone: str

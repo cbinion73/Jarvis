@@ -9,6 +9,8 @@ struct HuddleView: View {
     @State private var overview: HuddleOverview?
     @State private var isLoading  = false
     @State private var error: String?
+    @State private var isStartingPartyMode = false
+    @State private var partyModeMessage = ""
 
     private let teal = Color(red: 0.15, green: 0.75, blue: 0.75)
 
@@ -76,6 +78,18 @@ struct HuddleView: View {
                 }
                 .padding(14)
                 .glassEffect(in: RoundedRectangle(cornerRadius: 14))
+
+                if let continuity = ov.continuity {
+                    continuitySection(continuity)
+                }
+
+                if let runtime = ov.runtime {
+                    runtimeSection(runtime)
+                }
+
+                if let partyMode = ov.partyMode {
+                    partyModeSection(partyMode, dossiers: ov.dossiers)
+                }
 
                 if !ov.approvals.isEmpty {
                     HuddleSection(title: "Awaiting Approval", icon: "checklist.checked", accent: .orange) {
@@ -157,6 +171,213 @@ struct HuddleView: View {
         catch { self.error = error.localizedDescription }
         isLoading = false
     }
+
+    @ViewBuilder
+    private func runtimeSection(_ runtime: HuddleRuntimeSummary) -> some View {
+        HuddleSection(title: "Runtime Posture", icon: "waveform.path.ecg.rectangle.fill", accent: teal) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 10) {
+                    runtimePill("\(runtime.awakeCount)", "Awake", tint: teal)
+                    runtimePill("\(runtime.idleCount)", "Idle", tint: .secondary)
+                    runtimePill("\(runtime.blockedCount)", "Blocked", tint: runtime.blockedCount == 0 ? .green : .red)
+                }
+                HStack(spacing: 8) {
+                    if !runtime.activeMode.isEmpty {
+                        RuntimeBadge(text: runtime.activeMode.replacingOccurrences(of: "-", with: " ").uppercased(), color: teal)
+                    }
+                    if runtime.quietHoursActive {
+                        RuntimeBadge(text: "QUIET HOURS", color: .orange)
+                    }
+                    if !runtime.lastTickAt.isEmpty {
+                        Text(runtime.lastTickAt.prefix(19).replacingOccurrences(of: "T", with: " "))
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                if !runtime.statuses.isEmpty {
+                    ForEach(runtime.statuses) { status in
+                        RuntimeAgentRow(status: status, accent: teal)
+                        if status.id != runtime.statuses.last?.id { Divider().opacity(0.2) }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func partyModeSection(_ partyMode: HuddlePartyStatus, dossiers: [HuddleDossierSummary]) -> some View {
+        HuddleSection(title: "Overnight Orchestration", icon: "moon.stars.fill", accent: .purple) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(partyModeTitle(partyMode.status))
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        if !partyMode.lastLog.isEmpty {
+                            Text(partyMode.lastLog)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Spacer()
+                    Button(isStartingPartyMode ? "Starting…" : partyButtonTitle(partyMode.status)) {
+                        Task { await startPartyMode() }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.purple)
+                    .disabled(isStartingPartyMode || partyMode.status.lowercased() == "running")
+                }
+
+                if !partyModeMessage.isEmpty {
+                    Text(partyModeMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack(spacing: 10) {
+                    runtimePill("\(partyMode.dossiersBuiltCount)", "Built", tint: .purple)
+                    runtimePill("\(partyMode.itemsDreamed)", "Dreamed", tint: .cyan)
+                    runtimePill("\(dossiers.count)", "Ready", tint: .green)
+                }
+
+                if !dossiers.isEmpty {
+                    ForEach(dossiers) { dossier in
+                        DossierRow(dossier: dossier)
+                        if dossier.id != dossiers.last?.id { Divider().opacity(0.2) }
+                    }
+                }
+            }
+        }
+    }
+
+    private func startPartyMode() async {
+        isStartingPartyMode = true
+        partyModeMessage = ""
+        do {
+            let result = try await AppleAPIClient.shared.startHuddlePartyMode()
+            switch result.status {
+            case "started":
+                partyModeMessage = "Party mode started."
+            case "already_running":
+                partyModeMessage = "Party mode is already running."
+            case "staged_for_review":
+                partyModeMessage = result.boundaryReason ?? "Party mode start was staged for review."
+            case "blocked_by_boundary":
+                partyModeMessage = result.boundaryReason ?? "Party mode start was blocked by governance boundaries."
+            default:
+                partyModeMessage = result.status.replacingOccurrences(of: "_", with: " ").capitalized
+            }
+            await load()
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isStartingPartyMode = false
+    }
+
+    private func partyModeTitle(_ status: String) -> String {
+        switch status.lowercased() {
+        case "running": return "Agents Working Overnight"
+        case "completed": return "Last Session Completed"
+        default: return "Overnight Research Idle"
+        }
+    }
+
+    private func partyButtonTitle(_ status: String) -> String {
+        status.lowercased() == "completed" ? "Run Again" : "Wake Agents"
+    }
+
+    @ViewBuilder
+    private func continuitySection(_ continuity: HuddleContinuity) -> some View {
+        HuddleSection(title: "Carry Forward", icon: "clock.arrow.trianglehead.counterclockwise.rotate.90", accent: .cyan) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 10) {
+                    runtimePill("\(continuity.profileFactCount)", "Facts", tint: .cyan)
+                    runtimePill("\(continuity.readyDossierCount)", "Dossiers", tint: .purple)
+                    runtimePill("\(continuity.activeDomains.count)", "Domains", tint: teal)
+                }
+
+                if !continuity.councilFocus.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("COUNCIL FOCUS")
+                            .font(.system(size: 10, weight: .bold))
+                            .tracking(1.0)
+                            .foregroundStyle(.cyan.opacity(0.85))
+                        Text(continuity.councilFocus)
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                if !continuity.activeDomains.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("ACTIVE DOMAINS")
+                            .font(.system(size: 10, weight: .bold))
+                            .tracking(1.0)
+                            .foregroundStyle(.cyan.opacity(0.85))
+                        Text(continuity.activeDomains.joined(separator: " • "))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if !continuity.guidanceLines.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("COUNCIL RHYTHM")
+                            .font(.system(size: 10, weight: .bold))
+                            .tracking(1.0)
+                            .foregroundStyle(.cyan.opacity(0.85))
+                        ForEach(Array(continuity.guidanceLines.enumerated()), id: \.offset) { _, line in
+                            Text(line)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+
+                if !continuity.recentProfileFacts.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("DURABLE PATTERNS")
+                            .font(.system(size: 10, weight: .bold))
+                            .tracking(1.0)
+                            .foregroundStyle(.cyan.opacity(0.85))
+                        ForEach(continuity.recentProfileFacts.prefix(2)) { fact in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(fact.title)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                Text(fact.summary)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                }
+
+                if !continuity.recentFirstLight.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("RECENT FIRST LIGHT")
+                            .font(.system(size: 10, weight: .bold))
+                            .tracking(1.0)
+                            .foregroundStyle(.cyan.opacity(0.85))
+                        ForEach(continuity.recentFirstLight.prefix(2)) { moment in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(moment.label)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                Text(moment.summary)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Summary stat tile
@@ -175,6 +396,20 @@ private struct SituationStat: View {
                 .font(.caption2).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
+    }
+}
+
+private struct RuntimeBadge: View {
+    let text: String
+    let color: Color
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 9, weight: .bold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.14), in: Capsule())
     }
 }
 
@@ -198,6 +433,123 @@ private struct HuddleSection<Content: View>: View {
         .padding(14)
         .glassEffect(in: RoundedRectangle(cornerRadius: 16))
     }
+}
+
+private struct RuntimeAgentRow: View {
+    let status: HuddleRuntimeAgent
+    let accent: Color
+
+    private var stateColor: Color {
+        switch status.state.lowercased() {
+        case "awake": return accent
+        case "blocked": return .red
+        case "idle": return .secondary
+        default: return .white.opacity(0.55)
+        }
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Circle()
+                .fill(stateColor.opacity(0.18))
+                .frame(width: 26, height: 26)
+                .overlay(
+                    Image(systemName: status.state.lowercased() == "blocked" ? "exclamationmark.octagon.fill" : status.state.lowercased() == "awake" ? "bolt.fill" : "moon.zzz.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(stateColor)
+                )
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(status.label.isEmpty ? status.agentId : status.label)
+                        .font(.subheadline)
+                        .foregroundStyle(.white)
+                    Spacer()
+                    Text(status.state.capitalized)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(stateColor)
+                }
+                if !status.reason.isEmpty {
+                    Text(status.reason)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                HStack(spacing: 8) {
+                    if !status.nextRunAt.isEmpty {
+                        Text("Next \(status.nextRunAt.prefix(16).replacingOccurrences(of: "T", with: " "))")
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                    if status.dueNow {
+                        Text("Due now")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.orange)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+private struct DossierRow: View {
+    let dossier: HuddleDossierSummary
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(dossier.title)
+                        .font(.subheadline)
+                        .foregroundStyle(.white)
+                    Text(dossier.status.replacingOccurrences(of: "_", with: " ").capitalized)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.purple.opacity(0.85))
+                }
+                Spacer()
+                if dossier.revenueEstimateHigh > 0 {
+                    Text("$\(dossier.revenueEstimateLow)-$\(dossier.revenueEstimateHigh)")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.green)
+                }
+            }
+            if !dossier.executiveSummary.isEmpty {
+                Text(dossier.executiveSummary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            if !dossier.firstAction.isEmpty {
+                Text("First action: \(dossier.firstAction)")
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.78))
+            }
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+private struct RuntimeMetricPill: View {
+    let value: String
+    let label: String
+    let tint: Color
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.system(size: 16, weight: .bold).monospacedDigit())
+                .foregroundStyle(tint)
+            Text(label.uppercased())
+                .font(.system(size: 8, weight: .bold))
+                .tracking(0.8)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+private func runtimePill(_ value: String, _ label: String, tint: Color) -> some View {
+    RuntimeMetricPill(value: value, label: label, tint: tint)
 }
 
 // MARK: - Agent report row

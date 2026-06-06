@@ -1,5 +1,4 @@
 import SwiftUI
-import WatchKit
 
 /// Lets you dictate a command to JARVIS from your wrist.
 /// Uses watchOS's built-in scribble / dictation input.
@@ -91,11 +90,11 @@ struct VoiceCommandView: View {
         guard !commandText.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         sending = true
         focused = false
-        WKInterfaceDevice.current().play(.click)
+        playWatchHaptic(.click)
         vm.sendVoiceCommand(commandText) {
             sending = false
             sent    = true
-            WKInterfaceDevice.current().play(.success)
+            playWatchHaptic(.success)
         }
     }
 }

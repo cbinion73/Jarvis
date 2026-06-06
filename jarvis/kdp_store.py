@@ -12,6 +12,8 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .persistence import append_jsonl, atomic_write_json
+
 log = logging.getLogger("jarvis.kdp_store")
 
 # ---------------------------------------------------------------------------
@@ -20,8 +22,11 @@ log = logging.getLogger("jarvis.kdp_store")
 
 KDP_DATA_DIR   = Path("data/kdp")
 BOOKS_PATH     = KDP_DATA_DIR / "books.json"
+BOOKS_LOG_PATH = KDP_DATA_DIR / "books_log.jsonl"
 SALES_PATH     = KDP_DATA_DIR / "sales_history.jsonl"
+SALES_STATE_LOG_PATH = KDP_DATA_DIR / "sales_history_state_log.jsonl"
 SYNC_META_PATH = KDP_DATA_DIR / "sync_meta.json"
+SYNC_META_LOG_PATH = KDP_DATA_DIR / "sync_meta_log.jsonl"
 
 # Imported here for get_status()
 try:
@@ -63,9 +68,15 @@ def save_sync_result(result: dict) -> None:
 
         # ── Books ────────────────────────────────────────────────────────
         try:
-            BOOKS_PATH.write_text(
-                json.dumps(books, ensure_ascii=False, indent=2),
-                encoding="utf-8",
+            atomic_write_json(
+                BOOKS_PATH,
+                books,
+                ensure_ascii=False,
+            )
+            append_jsonl(
+                BOOKS_LOG_PATH,
+                {"saved_at": synced_at, "books": books},
+                ensure_ascii=False,
             )
         except Exception as exc:
             log.warning("KDP store: failed to write books.json: %s", exc)
@@ -74,8 +85,19 @@ def save_sync_result(result: dict) -> None:
         if sales:
             snapshot = {**sales, "synced_at": synced_at}
             try:
-                with SALES_PATH.open("a", encoding="utf-8") as fh:
-                    fh.write(json.dumps(snapshot, ensure_ascii=False) + "\n")
+                existing = load_sales_history(limit=1000)
+                existing.append(snapshot)
+                append_jsonl(
+                    SALES_STATE_LOG_PATH,
+                    {"saved_at": synced_at, "records": existing},
+                    ensure_ascii=False,
+                )
+                atomic_write_json(
+                    SALES_PATH,
+                    existing,
+                    indent=None,
+                    ensure_ascii=False,
+                )
             except Exception as exc:
                 log.warning("KDP store: failed to append sales_history.jsonl: %s", exc)
 
@@ -87,9 +109,15 @@ def save_sync_result(result: dict) -> None:
             "status": "synced" if ok else "error",
         }
         try:
-            SYNC_META_PATH.write_text(
-                json.dumps(meta, ensure_ascii=False, indent=2),
-                encoding="utf-8",
+            atomic_write_json(
+                SYNC_META_PATH,
+                meta,
+                ensure_ascii=False,
+            )
+            append_jsonl(
+                SYNC_META_LOG_PATH,
+                {"saved_at": synced_at, "meta": meta},
+                ensure_ascii=False,
             )
         except Exception as exc:
             log.warning("KDP store: failed to write sync_meta.json: %s", exc)
@@ -108,10 +136,28 @@ def load_books() -> list[dict]:
     """Read BOOKS_PATH. Return [] if not found or on error."""
     try:
         if not BOOKS_PATH.exists():
-            return []
+            return _load_books_from_log()
         return json.loads(BOOKS_PATH.read_text(encoding="utf-8")) or []
     except Exception as exc:
         log.warning("KDP store: failed to load books.json: %s", exc)
+        return _load_books_from_log()
+
+
+def _load_books_from_log() -> list[dict]:
+    try:
+        if not BOOKS_LOG_PATH.exists():
+            return []
+        latest: list[dict] = []
+        for line in BOOKS_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            books = payload.get("books")
+            if isinstance(books, list):
+                latest = [dict(item) for item in books if isinstance(item, dict)]
+        return latest
+    except Exception as exc:
+        log.warning("KDP store: failed to replay books log: %s", exc)
         return []
 
 
@@ -126,19 +172,32 @@ def load_sales_history(limit: int = 90) -> list[dict]:
     """
     try:
         if not SALES_PATH.exists():
-            return []
-        lines = SALES_PATH.read_text(encoding="utf-8").splitlines()
-        # Take last `limit` non-empty lines
-        recent_lines = [l for l in lines if l.strip()][-limit:]
-        records: list[dict] = []
-        for line in recent_lines:
-            try:
-                records.append(json.loads(line))
-            except json.JSONDecodeError:
-                pass
-        return records
+            return _load_sales_history_from_log(limit=limit)
+        payload = json.loads(SALES_PATH.read_text(encoding="utf-8"))
+        if isinstance(payload, list):
+            records = [dict(item) for item in payload if isinstance(item, dict)]
+            return records[-limit:]
+        return _load_sales_history_from_log(limit=limit)
     except Exception as exc:
         log.warning("KDP store: failed to load sales_history.jsonl: %s", exc)
+        return _load_sales_history_from_log(limit=limit)
+
+
+def _load_sales_history_from_log(limit: int = 90) -> list[dict]:
+    try:
+        if not SALES_STATE_LOG_PATH.exists():
+            return []
+        latest: list[dict] = []
+        for line in SALES_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            records = payload.get("records")
+            if isinstance(records, list):
+                latest = [dict(item) for item in records if isinstance(item, dict)]
+        return latest[-limit:]
+    except Exception as exc:
+        log.warning("KDP store: failed to replay sales history log: %s", exc)
         return []
 
 
@@ -153,11 +212,30 @@ def load_sync_meta() -> dict:
     """
     try:
         if not SYNC_META_PATH.exists():
-            return {"last_synced_at": None, "book_count": 0, "status": "never_synced"}
+            return _load_sync_meta_from_log()
         return json.loads(SYNC_META_PATH.read_text(encoding="utf-8"))
     except Exception as exc:
         log.warning("KDP store: failed to load sync_meta.json: %s", exc)
-        return {"last_synced_at": None, "book_count": 0, "status": "error"}
+        return _load_sync_meta_from_log(error_fallback=True)
+
+
+def _load_sync_meta_from_log(*, error_fallback: bool = False) -> dict:
+    default = {"last_synced_at": None, "book_count": 0, "status": "error" if error_fallback else "never_synced"}
+    try:
+        if not SYNC_META_LOG_PATH.exists():
+            return default
+        latest: dict | None = None
+        for line in SYNC_META_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            meta = payload.get("meta")
+            if isinstance(meta, dict):
+                latest = dict(meta)
+        return latest or default
+    except Exception as exc:
+        log.warning("KDP store: failed to replay sync_meta log: %s", exc)
+        return default
 
 
 # ---------------------------------------------------------------------------

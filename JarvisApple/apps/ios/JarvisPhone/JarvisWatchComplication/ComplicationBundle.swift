@@ -18,13 +18,20 @@ struct JarvisComplication: Widget {
         }
         .configurationDisplayName("JARVIS")
         .description("Briefing mode and pending approvals.")
-        .supportedFamilies([
-            .accessoryCircular,
-            .accessoryRectangular,
-            .accessoryInline,
-            .accessoryCorner,
-        ])
+        .supportedFamilies(supportedComplicationFamilies)
     }
+}
+
+private var supportedComplicationFamilies: [WidgetFamily] {
+    var families: [WidgetFamily] = [
+        .accessoryCircular,
+        .accessoryRectangular,
+        .accessoryInline,
+    ]
+#if os(watchOS)
+    families.append(.accessoryCorner)
+#endif
+    return families
 }
 
 // MARK: - Entry view router
@@ -38,7 +45,9 @@ struct JarvisComplicationEntryView: View {
         case .accessoryCircular:    CircularComplicationView(entry: entry)
         case .accessoryRectangular: RectangularComplicationView(entry: entry)
         case .accessoryInline:      InlineComplicationView(entry: entry)
+#if os(watchOS)
         case .accessoryCorner:      CornerComplicationView(entry: entry)
+#endif
         default:                    CircularComplicationView(entry: entry)
         }
     }

@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import time
 import uuid
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -12,6 +13,7 @@ from .config import AppConfig
 from .data_hygiene import filter_records
 from .identity import IdentityRegistry
 from .models import MemoryEntry, MemoryProfileFact, MemoryProposal, UserProfile
+from .persistence import append_jsonl, atomic_write_json
 
 
 def _now_iso() -> str:
@@ -48,13 +50,72 @@ class MemoryStore:
         self.proposals_path = self.root / "proposals.json"
         self.facts_path = self.root / "profile_facts.json"
 
+    def _log_path(self, path: Path) -> Path:
+        return path.with_name(f"{path.stem}_log.jsonl")
+
+    def _state_log_path(self, path: Path) -> Path:
+        return path.with_name(f"{path.stem}_state_log.jsonl")
+
     def _load_json(self, path: Path, default: object) -> object:
         if not path.exists():
+            return self._load_json_from_state_log(path, default)
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            if payload not in ({}, [], ""):
+                return payload
+            return self._load_json_from_state_log(path, default)
+        except (OSError, json.JSONDecodeError):
+            return self._load_json_from_state_log(path, default)
+
+    def _load_json_from_state_log(self, path: Path, default: object) -> object:
+        try:
+            state_log_path = self._state_log_path(path)
+            if not state_log_path.exists():
+                return self._load_json_from_log(path, default)
+            latest: object = default
+            for line in state_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                if "payload" in payload:
+                    latest = payload["payload"]
+            return latest
+        except (OSError, json.JSONDecodeError):
+            return self._load_json_from_log(path, default)
+
+    def _load_json_from_log(self, path: Path, default: object) -> object:
+        try:
+            log_path = self._log_path(path)
+            if not log_path.exists():
+                return default
+            latest: object = default
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                if "payload" in payload:
+                    latest = payload["payload"]
+            return latest
+        except (OSError, json.JSONDecodeError):
             return default
-        return json.loads(path.read_text(encoding="utf-8"))
 
     def _save_json(self, path: Path, payload: object) -> None:
-        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        saved_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        atomic_write_json(path, payload)
+        append_jsonl(
+            self._log_path(path),
+            {
+                "saved_at": saved_at,
+                "payload": payload,
+            },
+        )
+        append_jsonl(
+            self._state_log_path(path),
+            {
+                "saved_at": saved_at,
+                "payload": payload,
+            },
+        )
 
     def _entries(self) -> list[dict]:
         payload = self._load_json(self.entries_path, [])

@@ -79,6 +79,20 @@ struct PublishView: View {
                     launchControlCard(launch, reviewCount: ov.pendingReviewsCount)
                 }
 
+                if let workspace = ov.launchWorkspace {
+                    launchWorkspaceSection(workspace)
+                }
+
+                if let continuity = ov.continuity,
+                   continuity.profileFactCount > 0
+                    || continuity.pendingReviewPressure > 0
+                    || !continuity.activePlatforms.isEmpty
+                    || !continuity.guidanceLines.isEmpty
+                    || !continuity.recentProfileFacts.isEmpty
+                    || !continuity.recentFirstLight.isEmpty {
+                    continuitySection(continuity)
+                }
+
                 // ── Revenue banner ────────────────────────────────
                 revenueBanner(ov.revenueSummary)
 
@@ -213,6 +227,181 @@ struct PublishView: View {
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(green.opacity(0.15), lineWidth: 1))
     }
 
+    @ViewBuilder
+    private func launchWorkspaceSection(_ workspace: PublishLaunchWorkspace) -> some View {
+        PressSection(title: "Platform Readiness", icon: "shippingbox.fill", accent: green) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(workspace.title)
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        HStack(spacing: 6) {
+                            if !workspace.platform.isEmpty {
+                                badge(workspace.platform.replacingOccurrences(of: "_", with: " ").uppercased(), color: green)
+                            }
+                            if !workspace.assetStatus.isEmpty {
+                                badge(workspace.assetStatus.capitalized, color: assetStatusColor(workspace.assetStatus))
+                            }
+                        }
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text("\(workspace.checklistPercent)%")
+                            .font(.system(size: 28, weight: .bold).monospacedDigit())
+                            .foregroundStyle(workspace.checklistPercent >= 75 ? green : .orange)
+                        Text(workspace.checklistProgress.isEmpty ? "No checklist" : workspace.checklistProgress)
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if !workspace.platformFocus.isEmpty {
+                    Text(workspace.platformFocus)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                if !workspace.nextChecklistStep.isEmpty {
+                    Label(workspace.nextChecklistStep, systemImage: "arrowshape.right.fill")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.white)
+                }
+
+                if !workspace.assets.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("ASSET COVERAGE")
+                            .font(.system(size: 9, weight: .bold))
+                            .tracking(1.0)
+                            .foregroundStyle(.secondary)
+                        ForEach(workspace.assets) { asset in
+                            AssetSummaryRow(asset: asset, accent: green)
+                            if asset.id != workspace.assets.last?.id { Divider().opacity(0.2) }
+                        }
+                    }
+                }
+
+                if !workspace.checklist.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("CHECKLIST")
+                            .font(.system(size: 9, weight: .bold))
+                            .tracking(1.0)
+                            .foregroundStyle(.secondary)
+                        ForEach(workspace.checklist) { item in
+                            ChecklistRow(item: item, accent: green)
+                            if item.id != workspace.checklist.last?.id { Divider().opacity(0.2) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func assetStatusColor(_ status: String) -> Color {
+        switch status.lowercased() {
+        case "ready", "complete": return green
+        case "partial": return .orange
+        default: return .secondary
+        }
+    }
+
+    @ViewBuilder
+    private func continuitySection(_ continuity: PublishContinuity) -> some View {
+        PressSection(title: "Carry Forward", icon: "point.3.connected.trianglepath.dotted", accent: green) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 10) {
+                    metricPill("\(continuity.profileFactCount)", "Facts", tint: green)
+                    metricPill("\(continuity.pendingReviewPressure)", "Reviews", tint: .orange)
+                    metricPill("\(continuity.activePlatforms.count)", "Platforms", tint: .cyan)
+                }
+
+                if !continuity.launchFocus.isEmpty || !continuity.briefingStyle.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        if !continuity.launchFocus.isEmpty {
+                            Text(continuity.launchFocus)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.white)
+                        }
+                        if !continuity.briefingStyle.isEmpty {
+                            Text("Briefing style: \(continuity.briefingStyle.replacingOccurrences(of: "_", with: " ").capitalized)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                if !continuity.activePlatforms.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("ACTIVE PLATFORMS")
+                            .font(.system(size: 9, weight: .bold))
+                            .tracking(1.0)
+                            .foregroundStyle(.secondary)
+                        Text(continuity.activePlatforms.joined(separator: " • "))
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.74))
+                    }
+                }
+
+                if !continuity.guidanceLines.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("LAUNCH RHYTHM")
+                            .font(.system(size: 9, weight: .bold))
+                            .tracking(1.0)
+                            .foregroundStyle(.secondary)
+                        ForEach(continuity.guidanceLines, id: \.self) { line in
+                            Text("• \(line)")
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.72))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+
+                if !continuity.recentProfileFacts.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("DURABLE PATTERNS")
+                            .font(.system(size: 9, weight: .bold))
+                            .tracking(1.0)
+                            .foregroundStyle(.secondary)
+                        ForEach(continuity.recentProfileFacts) { fact in
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(fact.title)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                if !fact.summary.isEmpty {
+                                    Text(fact.summary)
+                                        .font(.caption)
+                                        .foregroundStyle(.white.opacity(0.72))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if !continuity.recentFirstLight.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("RECENT FIRST LIGHT")
+                            .font(.system(size: 9, weight: .bold))
+                            .tracking(1.0)
+                            .foregroundStyle(.secondary)
+                        ForEach(continuity.recentFirstLight) { moment in
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(moment.label)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                Text(moment.summary)
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.72))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Error
 
     private func errorView(_ msg: String) -> some View {
@@ -237,8 +426,16 @@ struct PublishView: View {
     private func approveReview(_ reviewId: String) async {
         reviewActionInFlight = reviewId
         do {
-            _ = try await AppleAPIClient.shared.approvePublishingReview(reviewId)
-            await load()
+            let result = try await AppleAPIClient.shared.approvePublishingReview(reviewId)
+            if result.status == "approved" {
+                await load()
+            } else if result.status == "staged_for_review" {
+                self.error = result.boundaryReason ?? "Publishing approval was staged for review."
+                await load()
+            } else if result.status == "blocked_by_boundary" {
+                self.error = result.boundaryReason ?? "Publishing approval was blocked by boundary policy."
+                await load()
+            }
         } catch {
             self.error = error.localizedDescription
         }
@@ -248,8 +445,16 @@ struct PublishView: View {
     private func requestRevision(_ reviewId: String) async {
         reviewActionInFlight = reviewId
         do {
-            _ = try await AppleAPIClient.shared.requestPublishingRevision(reviewId)
-            await load()
+            let result = try await AppleAPIClient.shared.requestPublishingRevision(reviewId)
+            if result.status == "needs_revision" {
+                await load()
+            } else if result.status == "staged_for_review" {
+                self.error = result.boundaryReason ?? "Publishing revision request was staged for review."
+                await load()
+            } else if result.status == "blocked_by_boundary" {
+                self.error = result.boundaryReason ?? "Publishing revision request was blocked by boundary policy."
+                await load()
+            }
         } catch {
             self.error = error.localizedDescription
         }
@@ -373,6 +578,26 @@ private struct ProjectRow: View {
                 Text(project.notes)
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(2)
+            }
+            if !project.checklistProgress.isEmpty {
+                HStack(spacing: 8) {
+                    Text(project.checklistProgress)
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(project.checklistPercent >= 75 ? green : .orange)
+                    Text("checklist")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("\(project.checklistPercent)%")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+            if !project.platformFocus.isEmpty {
+                Text(project.platformFocus)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
         }
@@ -536,6 +761,81 @@ private struct ReviewRow: View {
                     .tint(green)
                     .disabled(isActing)
             }
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+private struct AssetSummaryRow: View {
+    let asset: PublishAssetSummary
+    let accent: Color
+
+    private var statusColor: Color {
+        switch asset.status.lowercased() {
+        case "ready", "complete": return accent
+        case "partial": return .orange
+        default: return .secondary
+        }
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Circle()
+                .fill(statusColor.opacity(0.18))
+                .frame(width: 26, height: 26)
+                .overlay(
+                    Image(systemName: asset.status.lowercased() == "ready" || asset.status.lowercased() == "complete" ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(statusColor)
+                )
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(asset.title)
+                        .font(.subheadline)
+                        .foregroundStyle(.white)
+                    Spacer()
+                    Text("\(asset.itemCount)")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(statusColor)
+                }
+                Text(asset.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+private struct ChecklistRow: View {
+    let item: PublishChecklistItem
+    let accent: Color
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: item.completed ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(item.completed ? accent : .secondary)
+                .padding(.top, 1)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(item.label)
+                    .font(.subheadline)
+                    .foregroundStyle(.white)
+                HStack(spacing: 6) {
+                    Text("Step \(item.order)")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                    if item.completed, !item.completedAt.isEmpty {
+                        Text("·")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Text(item.completedAt.prefix(10))
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(accent)
+                    }
+                }
+            }
+            Spacer()
         }
         .padding(.vertical, 2)
     }

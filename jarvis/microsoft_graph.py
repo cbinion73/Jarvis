@@ -10,6 +10,7 @@ from urllib import error, parse, request
 
 from .accounts import PersonalAccount
 from .config import AppConfig
+from .persistence import append_jsonl, atomic_write_json
 
 
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
@@ -265,12 +266,91 @@ class MicrosoftGraphSupport:
         tenant = self.config.microsoft_authority or "common"
         return f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0"
 
-    def _load_pending_states(self) -> dict[str, dict[str, str]]:
-        if not self.pending_state_path.exists():
-            return {}
+    def _log_path_for(self, path: Path) -> Path:
+        return path.with_name(f"{path.stem}_log.jsonl")
+
+    def _state_log_path_for(self, path: Path) -> Path:
+        return path.with_name(f"{path.stem}_state_log.jsonl")
+
+    def _load_dict_snapshot(self, path: Path) -> dict[str, Any] | None:
+        if not path.exists():
+            payload = self._load_dict_from_state_log(path)
+            if payload is not None:
+                return payload
+            return self._load_dict_from_log(path)
         try:
-            payload = json.loads(self.pending_state_path.read_text(encoding="utf-8"))
+            payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
+            payload = self._load_dict_from_state_log(path)
+            if payload is not None:
+                return payload
+            return self._load_dict_from_log(path)
+        if isinstance(payload, dict):
+            return payload
+        payload = self._load_dict_from_state_log(path)
+        if payload is not None:
+            return payload
+        return self._load_dict_from_log(path)
+
+    def _load_dict_from_log(self, path: Path) -> dict[str, Any] | None:
+        log_path = self._log_path_for(path)
+        if not log_path.exists():
+            return None
+        latest: dict[str, Any] | None = None
+        try:
+            with log_path.open(encoding="utf-8") as handle:
+                for line in handle:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    payload = json.loads(line)
+                    record = payload.get("record")
+                    if isinstance(record, dict):
+                        latest = record
+        except (OSError, json.JSONDecodeError):
+            return None
+        return latest
+
+    def _load_dict_from_state_log(self, path: Path) -> dict[str, Any] | None:
+        log_path = self._state_log_path_for(path)
+        if not log_path.exists():
+            return None
+        latest: dict[str, Any] | None = None
+        try:
+            with log_path.open(encoding="utf-8") as handle:
+                for line in handle:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    payload = json.loads(line)
+                    record = payload.get("record")
+                    if isinstance(record, dict):
+                        latest = record
+        except (OSError, json.JSONDecodeError):
+            return None
+        return latest
+
+    def _save_dict_snapshot(self, path: Path, payload: dict[str, Any]) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        append_jsonl(
+            self._log_path_for(path),
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "record": payload,
+            },
+        )
+        append_jsonl(
+            self._state_log_path_for(path),
+            {
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+                "record": payload,
+            },
+        )
+        atomic_write_json(path, payload)
+
+    def _load_pending_states(self) -> dict[str, dict[str, str]]:
+        payload = self._load_dict_snapshot(self.pending_state_path)
+        if payload is None:
             return {}
         if not isinstance(payload, dict):
             return {}
@@ -281,8 +361,7 @@ class MicrosoftGraphSupport:
         return loaded
 
     def _save_pending_states(self) -> None:
-        self.pending_state_path.parent.mkdir(parents=True, exist_ok=True)
-        self.pending_state_path.write_text(json.dumps(self._pending_states, indent=2) + "\n", encoding="utf-8")
+        self._save_dict_snapshot(self.pending_state_path, self._pending_states)
 
     def _clear_pending_state(self, state: str) -> None:
         self._pending_states.pop(state, None)
@@ -303,11 +382,8 @@ class MicrosoftGraphSupport:
 
     def _load_token(self, account: PersonalAccount | None = None) -> dict[str, Any] | None:
         path = self._token_path_for(account)
-        if not path.exists():
-            return None
-        try:
-            token = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        token = self._load_dict_snapshot(path)
+        if token is None:
             return None
         if not isinstance(token, dict):
             return None
@@ -349,8 +425,7 @@ class MicrosoftGraphSupport:
         if expires_in > 0:
             token["expires_at"] = (datetime.now(timezone.utc) + timedelta(seconds=expires_in)).isoformat()
         path = self._token_path_for_account_id(account_id)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(token, indent=2) + "\n", encoding="utf-8")
+        self._save_dict_snapshot(path, token)
 
     def _token_request(self, payload: dict[str, str]) -> dict[str, Any]:
         body = parse.urlencode(payload).encode("utf-8")

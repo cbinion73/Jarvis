@@ -34,10 +34,18 @@ from urllib.parse import urlencode, urlparse, parse_qs
 
 import httpx
 
+from .persistence import append_jsonl, atomic_write_json
+
 _HEALTH_DIR   = Path.home() / ".jarvis" / "health"
 _CONFIG_PATH  = _HEALTH_DIR / "epic_config.json"
 _TOKEN_PATH   = _HEALTH_DIR / "epic_token.json"
 _STATE_PATH   = _HEALTH_DIR / "epic_pkce_state.json"  # temp during auth flow
+_CONFIG_LOG_PATH = _HEALTH_DIR / "epic_config_log.jsonl"
+_TOKEN_LOG_PATH = _HEALTH_DIR / "epic_token_log.jsonl"
+_STATE_LOG_PATH = _HEALTH_DIR / "epic_pkce_state_log.jsonl"
+_CONFIG_STATE_LOG_PATH = _HEALTH_DIR / "epic_config_state_log.jsonl"
+_TOKEN_STATE_LOG_PATH = _HEALTH_DIR / "epic_token_state_log.jsonl"
+_STATE_STATE_LOG_PATH = _HEALTH_DIR / "epic_pkce_state_state_log.jsonl"
 _lock = threading.Lock()
 
 DEFAULT_CONFIG = {
@@ -60,6 +68,10 @@ DEFAULT_CONFIG = {
 }
 
 
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
 # ---------------------------------------------------------------------------
 # Config + token helpers
 # ---------------------------------------------------------------------------
@@ -68,30 +80,118 @@ def load_config() -> dict:
     _HEALTH_DIR.mkdir(parents=True, exist_ok=True)
     try:
         if _CONFIG_PATH.exists():
-            stored = json.loads(_CONFIG_PATH.read_text())
+            stored = json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
             return {**DEFAULT_CONFIG, **stored}
     except Exception:
-        pass
+        replayed = _load_config_from_state_log()
+        if replayed:
+            return {**DEFAULT_CONFIG, **replayed}
+        return {**DEFAULT_CONFIG, **_load_config_from_log()}
+    if not _CONFIG_PATH.exists():
+        replayed = _load_config_from_state_log()
+        if replayed:
+            return {**DEFAULT_CONFIG, **replayed}
+        return {**DEFAULT_CONFIG, **_load_config_from_log()}
     return dict(DEFAULT_CONFIG)
 
 
 def save_config(cfg: dict) -> None:
     _HEALTH_DIR.mkdir(parents=True, exist_ok=True)
-    _CONFIG_PATH.write_text(json.dumps(cfg, indent=2))
+    atomic_write_json(_CONFIG_PATH, cfg)
+    append_jsonl(_CONFIG_LOG_PATH, {"saved_at": _now_iso(), "config": cfg})
+    append_jsonl(_CONFIG_STATE_LOG_PATH, {"saved_at": _now_iso(), "config": cfg})
+
+
+def _load_config_from_log() -> dict:
+    try:
+        if _CONFIG_LOG_PATH.exists():
+            latest: dict[str, Any] | None = None
+            for line in _CONFIG_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                config = payload.get("config")
+                if isinstance(config, dict):
+                    latest = dict(config)
+            return latest or {}
+    except Exception:
+        pass
+    return {}
+
+
+def _load_config_from_state_log() -> dict:
+    try:
+        if _CONFIG_STATE_LOG_PATH.exists():
+            latest: dict[str, Any] | None = None
+            for line in _CONFIG_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                config = payload.get("config")
+                if isinstance(config, dict):
+                    latest = dict(config)
+            return latest or {}
+    except Exception:
+        pass
+    return {}
 
 
 def _load_token() -> dict | None:
     try:
         if _TOKEN_PATH.exists():
-            return json.loads(_TOKEN_PATH.read_text())
+            return json.loads(_TOKEN_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        replayed = _load_token_from_state_log()
+        if replayed is not None:
+            return replayed
+        return _load_token_from_log()
+    if not _TOKEN_PATH.exists():
+        replayed = _load_token_from_state_log()
+        if replayed is not None:
+            return replayed
+        return _load_token_from_log()
+    return None
+
+
+def _save_token(token: dict) -> None:
+    atomic_write_json(_TOKEN_PATH, token)
+    append_jsonl(_TOKEN_LOG_PATH, {"saved_at": _now_iso(), "token": token})
+    append_jsonl(_TOKEN_STATE_LOG_PATH, {"saved_at": _now_iso(), "token": token})
+    _TOKEN_PATH.chmod(0o600)  # owner-only
+
+
+def _load_token_from_log() -> dict | None:
+    try:
+        if _TOKEN_LOG_PATH.exists():
+            latest: dict[str, Any] | None = None
+            for line in _TOKEN_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                token = payload.get("token")
+                if isinstance(token, dict):
+                    latest = dict(token)
+            return latest
     except Exception:
         pass
     return None
 
 
-def _save_token(token: dict) -> None:
-    _TOKEN_PATH.write_text(json.dumps(token, indent=2))
-    _TOKEN_PATH.chmod(0o600)  # owner-only
+def _load_token_from_state_log() -> dict | None:
+    try:
+        if _TOKEN_STATE_LOG_PATH.exists():
+            latest: dict[str, Any] | None = None
+            for line in _TOKEN_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                token = payload.get("token")
+                if isinstance(token, dict):
+                    latest = dict(token)
+            return latest
+    except Exception:
+        pass
+    return None
 
 
 def is_connected() -> bool:
@@ -127,7 +227,10 @@ def start_auth() -> str:
     state = secrets.token_urlsafe(16)
     # Store verifier + state for callback validation
     _HEALTH_DIR.mkdir(parents=True, exist_ok=True)
-    _STATE_PATH.write_text(json.dumps({"verifier": verifier, "state": state}))
+    state_payload = {"verifier": verifier, "state": state}
+    atomic_write_json(_STATE_PATH, state_payload)
+    append_jsonl(_STATE_LOG_PATH, {"saved_at": _now_iso(), "state_payload": state_payload})
+    append_jsonl(_STATE_STATE_LOG_PATH, {"saved_at": _now_iso(), "state_payload": state_payload})
     params = {
         "response_type": "code",
         "client_id":     cfg["client_id"],
@@ -148,8 +251,17 @@ def handle_callback(code: str, state: str) -> dict:
     """
     cfg = load_config()
     try:
-        stored = json.loads(_STATE_PATH.read_text())
+        if _STATE_PATH.exists():
+            stored = json.loads(_STATE_PATH.read_text(encoding="utf-8"))
+        else:
+            stored = _load_state_from_state_log()
+            if not stored:
+                stored = _load_state_from_log()
     except Exception:
+        stored = _load_state_from_state_log()
+        if not stored:
+            stored = _load_state_from_log()
+    if not stored:
         return {"ok": False, "error": "No pending auth state. Start auth again."}
     if stored.get("state") != state:
         return {"ok": False, "error": "State mismatch — possible CSRF."}
@@ -170,6 +282,40 @@ def handle_callback(code: str, state: str) -> dict:
         return {"ok": True, "patient_id": token.get("patient", ""), "scope": token.get("scope", "")}
     except Exception as exc:
         return {"ok": False, "error": str(exc)[:300]}
+
+
+def _load_state_from_log() -> dict | None:
+    try:
+        if _STATE_LOG_PATH.exists():
+            latest: dict[str, Any] | None = None
+            for line in _STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                state_payload = payload.get("state_payload")
+                if isinstance(state_payload, dict):
+                    latest = dict(state_payload)
+            return latest
+    except Exception:
+        pass
+    return None
+
+
+def _load_state_from_state_log() -> dict | None:
+    try:
+        if _STATE_STATE_LOG_PATH.exists():
+            latest: dict[str, Any] | None = None
+            for line in _STATE_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                state_payload = payload.get("state_payload")
+                if isinstance(state_payload, dict):
+                    latest = dict(state_payload)
+            return latest
+    except Exception:
+        pass
+    return None
 
 
 def _get_access_token() -> str | None:

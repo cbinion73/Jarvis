@@ -11,6 +11,8 @@ import Foundation
 /// JARVISEnvironment.current = .production
 /// ```
 public enum JARVISEnvironment {
+    private static let baseURLInfoKey = "JARVIS_BASE_URL"
+    private static let baseURLEnvKey = "JARVIS_BASE_URL"
 
     // MARK: - Target
 
@@ -29,6 +31,36 @@ public enum JARVISEnvironment {
     // MARK: - Derived URL
 
     public static var baseURL: URL {
-        URL(string: "https://jarvis.teambinion.org")!
+        if let override = configuredBaseURL() {
+            return override
+        }
+        return URL(string: "https://jarvis.teambinion.org")!
+    }
+
+    public static var isOverrideActive: Bool {
+        configuredBaseURL() != nil
+    }
+
+    public static var environmentLabel: String {
+        isOverrideActive ? "Local Override" : "Production"
+    }
+
+    public static var environmentSummary: String {
+        if isOverrideActive {
+            return "This app is temporarily pointed at a custom JARVIS backend for local runtime verification."
+        }
+        return "This app is locked to the live JARVIS production server."
+    }
+
+    private static func configuredBaseURL() -> URL? {
+        let bundleValue = Bundle.main.object(forInfoDictionaryKey: baseURLInfoKey) as? String
+        let envValue = ProcessInfo.processInfo.environment[baseURLEnvKey]
+        guard let candidate = (envValue?.isEmpty == false ? envValue : bundleValue)?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              !candidate.isEmpty
+        else {
+            return nil
+        }
+        return URL(string: candidate)
     }
 }

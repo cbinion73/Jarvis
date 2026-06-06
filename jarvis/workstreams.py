@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 import uuid
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+
+from .persistence import append_jsonl, atomic_write_json
 
 GENERIC_TRUTH_STATES = (
     "planned",
@@ -236,17 +239,72 @@ class AutonomousWorkstreamStore:
         self.approvals_path = self.root / "approvals.json"
         self.queue_path = self.root / "queue.json"
 
+    def _log_path(self, path: Path) -> Path:
+        return path.with_name(f"{path.stem}_log.jsonl")
+
+    def _state_log_path(self, path: Path) -> Path:
+        return path.with_name(f"{path.stem}_state_log.jsonl")
+
     def _load_json(self, path: Path, *, default: Any) -> Any:
         if not path.exists():
-            return deepcopy(default)
+            return self._load_json_from_state_log(path, default=default)
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            return deepcopy(default)
+            return self._load_json_from_state_log(path, default=default)
+        if payload in ({}, [], ""):
+            return self._load_json_from_state_log(path, default=default)
         return payload
 
+    def _load_json_from_state_log(self, path: Path, *, default: Any) -> Any:
+        try:
+            state_log_path = self._state_log_path(path)
+            if not state_log_path.exists():
+                return self._load_json_from_log(path, default=default)
+            latest: Any = deepcopy(default)
+            for line in state_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                if "payload" in payload:
+                    latest = payload["payload"]
+            return latest
+        except (OSError, json.JSONDecodeError):
+            return self._load_json_from_log(path, default=default)
+
+    def _load_json_from_log(self, path: Path, *, default: Any) -> Any:
+        try:
+            log_path = self._log_path(path)
+            if not log_path.exists():
+                return deepcopy(default)
+            latest: Any = deepcopy(default)
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                if "payload" in payload:
+                    latest = payload["payload"]
+            return latest
+        except (OSError, json.JSONDecodeError):
+            return deepcopy(default)
+
     def _save_json(self, path: Path, payload: Any) -> None:
-        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        saved_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        atomic_write_json(path, payload)
+        append_jsonl(
+            self._log_path(path),
+            {
+                "saved_at": saved_at,
+                "payload": payload,
+            },
+        )
+        append_jsonl(
+            self._state_log_path(path),
+            {
+                "saved_at": saved_at,
+                "payload": payload,
+            },
+        )
 
     def state(self) -> dict[str, Any]:
         payload = self._load_json(self.state_path, default={})

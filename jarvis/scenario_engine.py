@@ -19,6 +19,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_jsonl
+
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -26,6 +28,7 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _SCENARIOS_LOG_PATH = Path.home() / ".jarvis" / "health" / "scenarios.jsonl"
+_SCENARIOS_STATE_LOG_PATH = _SCENARIOS_LOG_PATH.with_name("scenarios_state_log.jsonl")
 _HEALTH_STATE_PATH  = Path.home() / ".jarvis" / "health" / "chris_health_state.json"
 
 _SCENARIOS_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -634,8 +637,16 @@ def save_scenario(result: ScenarioResult) -> None:
     _SCENARIOS_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
     entry = _result_to_dict(result)
     try:
-        with open(_SCENARIOS_LOG_PATH, "a") as f:
-            f.write(json.dumps(entry) + "\n")
+        records = get_saved_scenarios()
+        records.append(entry)
+        append_jsonl(
+            _SCENARIOS_STATE_LOG_PATH,
+            {
+                "saved_at": datetime.now().isoformat(),
+                "records": records,
+            },
+        )
+        atomic_write_jsonl(_SCENARIOS_LOG_PATH, records)
         log.debug("Saved scenario '%s' to %s", result.scenario_name, _SCENARIOS_LOG_PATH)
     except Exception as exc:
         log.error("Failed to save scenario: %s", exc)
@@ -649,26 +660,46 @@ def get_saved_scenarios() -> list[dict]:
         List of scenario result dicts, ordered oldest-first.
         Returns [] if log does not exist or is empty.
     """
-    if not _SCENARIOS_LOG_PATH.exists():
+    if _SCENARIOS_LOG_PATH.exists():
+        results = []
+        try:
+            with open(_SCENARIOS_LOG_PATH, encoding="utf-8") as f:
+                for line_num, line in enumerate(f, 1):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        results.append(json.loads(line))
+                    except json.JSONDecodeError as exc:
+                        log.warning("Skipping malformed scenario log line %d: %s", line_num, exc)
+            if results:
+                log.debug("Loaded %d saved scenarios from %s", len(results), _SCENARIOS_LOG_PATH)
+                return results
+        except Exception as exc:
+            log.error("Failed to read scenarios log: %s", exc)
+
+    if not _SCENARIOS_STATE_LOG_PATH.exists():
         log.debug("No scenarios log found at %s", _SCENARIOS_LOG_PATH)
         return []
 
-    results = []
     try:
-        with open(_SCENARIOS_LOG_PATH) as f:
-            for line_num, line in enumerate(f, 1):
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    results.append(json.loads(line))
-                except json.JSONDecodeError as exc:
-                    log.warning("Skipping malformed scenario log line %d: %s", line_num, exc)
+        latest: list[dict] = []
+        for line in _SCENARIOS_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            records = payload.get("records")
+            if isinstance(records, list):
+                latest = [dict(item) for item in records if isinstance(item, dict)]
+        log.debug("Replayed %d saved scenarios from %s", len(latest), _SCENARIOS_STATE_LOG_PATH)
+        return latest
     except Exception as exc:
-        log.error("Failed to read scenarios log: %s", exc)
-
-    log.debug("Loaded %d saved scenarios from %s", len(results), _SCENARIOS_LOG_PATH)
-    return results
+        log.error("Failed to replay scenarios log: %s", exc)
+        return []
 
 
 # ---------------------------------------------------------------------------

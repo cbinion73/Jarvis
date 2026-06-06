@@ -16,14 +16,19 @@ import json
 import logging
 import re
 import threading
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from .persistence import append_jsonl, atomic_write_json
 
 logger = logging.getLogger("jarvis.mychart_reader")
 
 _HEALTH_DIR = Path.home() / ".jarvis" / "health"
 _RECORDS_PATH = _HEALTH_DIR / "mychart_records.json"
+_RECORDS_LOG_PATH = _HEALTH_DIR / "mychart_records_log.jsonl"
+_RECORDS_STATE_LOG_PATH = _HEALTH_DIR / "mychart_records_state_log.jsonl"
 _lock = threading.Lock()
 
 MYCHART_BASE = "https://mychart.stelizabeth.com/MyChart"
@@ -49,17 +54,82 @@ def load_records() -> dict:
     """Load stored MyChart records."""
     try:
         if _RECORDS_PATH.exists():
-            return json.loads(_RECORDS_PATH.read_text(encoding="utf-8"))
+            payload = json.loads(_RECORDS_PATH.read_text(encoding="utf-8"))
+            if isinstance(payload, dict) and payload:
+                return payload
+    except Exception:
+        replayed = _load_records_from_state_log()
+        if replayed:
+            return replayed
+        return _load_records_from_log()
+    if not _RECORDS_PATH.exists():
+        replayed = _load_records_from_state_log()
+        if replayed:
+            return replayed
+        return _load_records_from_log()
+    replayed = _load_records_from_state_log()
+    if replayed:
+        return replayed
+    return {}
+
+
+def save_records(records: dict) -> dict:
+    """Save MyChart records to disk."""
+    _HEALTH_DIR.mkdir(parents=True, exist_ok=True)
+    records = dict(records)
+    records["last_updated"] = _now()
+    atomic_write_json(_RECORDS_PATH, records)
+    append_jsonl(
+        _RECORDS_LOG_PATH,
+        {
+            "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "records": records,
+        },
+    )
+    append_jsonl(
+        _RECORDS_STATE_LOG_PATH,
+        {
+            "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "records": records,
+        },
+    )
+    return records
+
+
+def _load_records_from_log() -> dict:
+    try:
+        if _RECORDS_LOG_PATH.exists():
+            latest: dict[str, Any] | None = None
+            for line in _RECORDS_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, dict):
+                    latest = dict(records)
+            if latest is not None:
+                return latest
     except Exception:
         pass
     return {}
 
 
-def save_records(records: dict) -> None:
-    """Save MyChart records to disk."""
-    _HEALTH_DIR.mkdir(parents=True, exist_ok=True)
-    records["last_updated"] = _now()
-    _RECORDS_PATH.write_text(json.dumps(records, indent=2), encoding="utf-8")
+def _load_records_from_state_log() -> dict:
+    try:
+        if _RECORDS_STATE_LOG_PATH.exists():
+            latest: dict[str, Any] | None = None
+            for line in _RECORDS_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, dict):
+                    latest = dict(records)
+            if latest is not None:
+                return latest
+    except Exception:
+        pass
+    return {}
 
 
 def parse_test_results(html: str) -> list[dict]:
@@ -122,7 +192,7 @@ def store_page_data(page_key: str, content: str, page_type: str = "html") -> dic
             records[page_key]["parsed"] = parse_medications(content)
         elif page_key == "conditions":
             records[page_key]["parsed"] = parse_conditions(content)
-        save_records(records)
+        records = save_records(records)
     return records
 
 

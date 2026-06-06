@@ -26,6 +26,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json, atomic_write_jsonl
+
 logger = logging.getLogger("jarvis.publishing_suite")
 
 # ---------------------------------------------------------------------------
@@ -169,26 +171,34 @@ class PublishingStore:
         self._revenue_path = self._root / "revenue_streams.json"
         self._posts_path = self._root / "social_posts.jsonl"
         self._calendar_path = self._root / "content_calendar.jsonl"
+        self._projects_log_path = self._projects_path.with_name("projects_log.jsonl")
+        self._revenue_log_path = self._revenue_path.with_name("revenue_streams_log.jsonl")
+        self._posts_log_path = self._posts_path.with_name("social_posts_state_log.jsonl")
+        self._calendar_log_path = self._calendar_path.with_name("content_calendar_state_log.jsonl")
+
+    def _json_log_path_for(self, path: Path) -> Path:
+        if path == self._projects_path:
+            return self._projects_log_path
+        if path == self._revenue_path:
+            return self._revenue_log_path
+        return path.with_name(f"{path.stem}_log.jsonl")
+
+    def _jsonl_log_path_for(self, path: Path) -> Path:
+        if path == self._posts_path:
+            return self._posts_log_path
+        if path == self._calendar_path:
+            return self._calendar_log_path
+        return path.with_name(f"{path.stem}_log.jsonl")
 
     # ------------------------------------------------------------------
     # Projects
     # ------------------------------------------------------------------
 
     def _load_projects(self) -> dict[str, dict]:
-        if not self._projects_path.exists():
-            return {}
-        try:
-            return json.loads(self._projects_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return {}
+        return self._load_json_dict(self._projects_path)
 
     def _save_projects(self, data: dict[str, dict]) -> None:
-        try:
-            self._projects_path.write_text(
-                json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
-            )
-        except OSError as exc:
-            logger.warning("Failed to save projects: %s", exc)
+        self._save_json_dict(self._projects_path, data, "projects")
 
     def save_project(self, project: PublishingProject) -> None:
         data = self._load_projects()
@@ -228,20 +238,10 @@ class PublishingStore:
     # ------------------------------------------------------------------
 
     def _load_revenue(self) -> dict[str, dict]:
-        if not self._revenue_path.exists():
-            return {}
-        try:
-            return json.loads(self._revenue_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return {}
+        return self._load_json_dict(self._revenue_path)
 
     def _save_revenue(self, data: dict[str, dict]) -> None:
-        try:
-            self._revenue_path.write_text(
-                json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
-            )
-        except OSError as exc:
-            logger.warning("Failed to save revenue streams: %s", exc)
+        self._save_json_dict(self._revenue_path, data, "revenue streams")
 
     def save_revenue_stream(self, stream: RevenueStream) -> None:
         data = self._load_revenue()
@@ -266,25 +266,10 @@ class PublishingStore:
     # ------------------------------------------------------------------
 
     def _load_posts(self) -> list[dict]:
-        if not self._posts_path.exists():
-            return []
-        posts = []
-        for line in self._posts_path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                posts.append(json.loads(line))
-            except json.JSONDecodeError:
-                pass
-        return posts
+        return self._load_jsonl(self._posts_path)
 
     def _save_posts(self, posts: list[dict]) -> None:
-        try:
-            lines = [json.dumps(p, ensure_ascii=False) for p in posts]
-            self._posts_path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
-        except OSError as exc:
-            logger.warning("Failed to save social posts: %s", exc)
+        self._save_jsonl(self._posts_path, posts, "social posts")
 
     def save_social_post(self, post: SocialPost) -> None:
         posts = self._load_posts()
@@ -328,25 +313,104 @@ class PublishingStore:
     # ------------------------------------------------------------------
 
     def _load_calendar(self) -> list[dict]:
-        if not self._calendar_path.exists():
-            return []
-        items = []
-        for line in self._calendar_path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                items.append(json.loads(line))
-            except json.JSONDecodeError:
-                pass
-        return items
+        return self._load_jsonl(self._calendar_path)
 
     def _save_calendar(self, items: list[dict]) -> None:
+        self._save_jsonl(self._calendar_path, items, "content calendar")
+
+    def _load_json_dict(self, path: Path) -> dict[str, dict]:
+        if path.exists():
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                if isinstance(payload, dict):
+                    return payload
+            except (OSError, json.JSONDecodeError):
+                pass
+        log_path = self._json_log_path_for(path)
+        if not log_path.exists():
+            return {}
         try:
-            lines = [json.dumps(item, ensure_ascii=False) for item in items]
-            self._calendar_path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+            latest: dict[str, dict] = {}
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                data = payload.get("data")
+                if isinstance(data, dict):
+                    latest = data
+            return latest
+        except OSError:
+            return {}
+
+    def _save_json_dict(self, path: Path, data: dict[str, dict], label: str) -> None:
+        try:
+            append_jsonl(
+                self._json_log_path_for(path),
+                {
+                    "saved_at": _now_iso(),
+                    "data": data,
+                },
+                ensure_ascii=False,
+            )
+            atomic_write_json(path, data, ensure_ascii=False)
         except OSError as exc:
-            logger.warning("Failed to save content calendar: %s", exc)
+            logger.warning("Failed to save %s: %s", label, exc)
+
+    def _load_jsonl(self, path: Path) -> list[dict]:
+        if path.exists():
+            try:
+                items = []
+                for line in path.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        item = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if isinstance(item, dict):
+                        items.append(item)
+                if items:
+                    return items
+            except OSError:
+                pass
+        log_path = self._jsonl_log_path_for(path)
+        if not log_path.exists():
+            return []
+        try:
+            latest: list[dict] = []
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+            return latest
+        except OSError:
+            return []
+
+    def _save_jsonl(self, path: Path, records: list[dict], label: str) -> None:
+        try:
+            append_jsonl(
+                self._jsonl_log_path_for(path),
+                {
+                    "saved_at": _now_iso(),
+                    "records": records,
+                },
+                ensure_ascii=False,
+            )
+            atomic_write_jsonl(path, records, ensure_ascii=False)
+        except OSError as exc:
+            logger.warning("Failed to save %s: %s", label, exc)
 
     def save_calendar_item(self, item: ContentCalendarItem) -> None:
         items = self._load_calendar()
@@ -448,25 +512,55 @@ class StanLeeAgent:
     def __init__(self, store: PublishingStore) -> None:
         self._store = store
         self._sessions_path = store._root / "writing_sessions.jsonl"
+        self._sessions_log_path = self._sessions_path.with_name("writing_sessions_state_log.jsonl")
 
     def _load_sessions(self) -> list[dict]:
-        if not self._sessions_path.exists():
-            return []
-        sessions = []
-        for line in self._sessions_path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line:
-                continue
+        if self._sessions_path.exists():
             try:
-                sessions.append(json.loads(line))
-            except json.JSONDecodeError:
+                sessions = []
+                for line in self._sessions_path.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        sessions.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        pass
+                if sessions:
+                    return sessions
+            except OSError:
                 pass
-        return sessions
+        return self._load_sessions_from_log()
+
+    def _load_sessions_from_log(self) -> list[dict]:
+        if not self._sessions_log_path.exists():
+            return []
+        try:
+            latest: list[dict] = []
+            for line in self._sessions_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+            return latest
+        except Exception:
+            return []
 
     def _save_session(self, session: dict) -> None:
         try:
-            with self._sessions_path.open("a", encoding="utf-8") as f:
-                f.write(json.dumps(session, ensure_ascii=False) + "\n")
+            records = self._load_sessions()
+            records.append(session)
+            atomic_write_jsonl(self._sessions_path, records, ensure_ascii=False)
+            append_jsonl(
+                self._sessions_log_path,
+                {
+                    "saved_at": _now_iso(),
+                    "records": records,
+                },
+                ensure_ascii=False,
+            )
         except OSError as exc:
             logger.warning("StanLeeAgent: failed to save session: %s", exc)
 
@@ -614,20 +708,46 @@ class RobbieRobertsonAgent:
     def __init__(self, store: PublishingStore) -> None:
         self._store = store
         self._checklist_path = store._root / "publishing_checklists.json"
+        self._checklist_log_path = self._checklist_path.with_name("publishing_checklists_log.jsonl")
 
     def _load_checklists(self) -> dict:
-        if not self._checklist_path.exists():
+        if self._checklist_path.exists():
+            try:
+                payload = json.loads(self._checklist_path.read_text(encoding="utf-8"))
+                if isinstance(payload, dict):
+                    return payload
+            except (OSError, json.JSONDecodeError):
+                pass
+        if not self._checklist_log_path.exists():
             return {}
         try:
-            return json.loads(self._checklist_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+            latest: dict[str, Any] = {}
+            for line in self._checklist_log_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                data = payload.get("checklists")
+                if isinstance(data, dict):
+                    latest = data
+            return latest
+        except OSError:
             return {}
 
     def _save_checklists(self, data: dict) -> None:
         try:
-            self._checklist_path.write_text(
-                json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+            append_jsonl(
+                self._checklist_log_path,
+                {
+                    "saved_at": _now_iso(),
+                    "checklists": data,
+                },
+                ensure_ascii=False,
             )
+            atomic_write_json(self._checklist_path, data, ensure_ascii=False)
         except OSError as exc:
             logger.warning("RobbieRobertsonAgent: failed to save checklists: %s", exc)
 
@@ -756,20 +876,46 @@ class LokiAgent:
     def __init__(self, store: PublishingStore) -> None:
         self._store = store
         self._launch_plans_path = store._root / "launch_plans.json"
+        self._launch_plans_log_path = self._launch_plans_path.with_name("launch_plans_log.jsonl")
 
     def _load_plans(self) -> dict:
-        if not self._launch_plans_path.exists():
+        if self._launch_plans_path.exists():
+            try:
+                payload = json.loads(self._launch_plans_path.read_text(encoding="utf-8"))
+                if isinstance(payload, dict):
+                    return payload
+            except (OSError, json.JSONDecodeError):
+                pass
+        if not self._launch_plans_log_path.exists():
             return {}
         try:
-            return json.loads(self._launch_plans_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+            latest: dict[str, Any] = {}
+            for line in self._launch_plans_log_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                data = payload.get("plans")
+                if isinstance(data, dict):
+                    latest = data
+            return latest
+        except OSError:
             return {}
 
     def _save_plans(self, data: dict) -> None:
         try:
-            self._launch_plans_path.write_text(
-                json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+            append_jsonl(
+                self._launch_plans_log_path,
+                {
+                    "saved_at": _now_iso(),
+                    "plans": data,
+                },
+                ensure_ascii=False,
             )
+            atomic_write_json(self._launch_plans_path, data, ensure_ascii=False)
         except OSError as exc:
             logger.warning("LokiAgent: failed to save launch plans: %s", exc)
 

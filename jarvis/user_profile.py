@@ -6,6 +6,8 @@ from pathlib import Path
 import json, threading
 from datetime import datetime, timezone
 
+from .persistence import append_jsonl, atomic_write_json
+
 PROFILES_DIR = Path("data/settings/profiles")
 _lock = threading.Lock()
 
@@ -44,22 +46,73 @@ def _profile_path(user_id: str) -> Path:
     safe = user_id.replace("/", "_").replace("..", "_")
     return PROFILES_DIR / f"{safe}.json"
 
+def _profile_log_path(user_id: str) -> Path:
+    path = _profile_path(user_id)
+    return path.with_name(f"{path.stem}_log.jsonl")
+
+def _profile_state_log_path(user_id: str) -> Path:
+    path = _profile_path(user_id)
+    return path.with_name(f"{path.stem}_state_log.jsonl")
+
 def load_profile(user_id: str) -> dict:
     """Load profile for user, merging with defaults for missing keys."""
     path = _profile_path(user_id)
     with _lock:
         if not path.exists():
-            return {**DEFAULT_PROFILE, "user_id": user_id}
+            return _load_profile_from_state_log(user_id)
         try:
             saved = json.loads(path.read_text(encoding="utf-8"))
-            # Deep merge: saved values win, defaults fill gaps
-            merged = {**DEFAULT_PROFILE, **saved, "user_id": user_id}
-            # Merge nested dicts
-            for key in ("notifications", "dashboard", "privacy"):
-                merged[key] = {**DEFAULT_PROFILE.get(key, {}), **saved.get(key, {})}
-            return merged
+            if isinstance(saved, dict) and saved:
+                return _merge_profile(saved, user_id)
+            return _load_profile_from_state_log(user_id)
         except Exception:
-            return {**DEFAULT_PROFILE, "user_id": user_id}
+            return _load_profile_from_state_log(user_id)
+
+def _merge_profile(saved: dict, user_id: str) -> dict:
+    merged = {**DEFAULT_PROFILE, **saved, "user_id": user_id}
+    for key in ("notifications", "dashboard", "privacy"):
+        merged[key] = {**DEFAULT_PROFILE.get(key, {}), **saved.get(key, {})}
+    return merged
+
+def _load_profile_from_state_log(user_id: str) -> dict:
+    path = _profile_state_log_path(user_id)
+    default = {**DEFAULT_PROFILE, "user_id": user_id}
+    if not path.exists():
+        return _load_profile_from_log(user_id)
+    try:
+        latest: dict = {}
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            records = payload.get("records")
+            if isinstance(records, dict):
+                latest = dict(records)
+        if latest:
+            return _merge_profile(latest, user_id)
+        return _load_profile_from_log(user_id)
+    except Exception:
+        return _load_profile_from_log(user_id)
+
+def _load_profile_from_log(user_id: str) -> dict:
+    path = _profile_log_path(user_id)
+    default = {**DEFAULT_PROFILE, "user_id": user_id}
+    if not path.exists():
+        return default
+    try:
+        latest: dict = {}
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            records = payload.get("records")
+            if isinstance(records, dict):
+                latest = dict(records)
+        if latest:
+            return _merge_profile(latest, user_id)
+        return default
+    except Exception:
+        return default
 
 def save_profile(user_id: str, updates: dict) -> dict:
     """Merge updates into existing profile and save."""
@@ -73,8 +126,26 @@ def save_profile(user_id: str, updates: dict) -> dict:
     current["updated_at"] = datetime.now(timezone.utc).isoformat()
     current["user_id"] = user_id
     path = _profile_path(user_id)
+    log_path = _profile_log_path(user_id)
+    state_log_path = _profile_state_log_path(user_id)
     with _lock:
-        path.write_text(json.dumps(current, indent=2, ensure_ascii=False), encoding="utf-8")
+        atomic_write_json(path, current, ensure_ascii=False)
+        append_jsonl(
+            log_path,
+            {
+                "saved_at": current["updated_at"],
+                "records": current,
+            },
+            ensure_ascii=False,
+        )
+        append_jsonl(
+            state_log_path,
+            {
+                "saved_at": current["updated_at"],
+                "records": current,
+            },
+            ensure_ascii=False,
+        )
     return current
 
 def get_all_profiles() -> dict[str, dict]:

@@ -47,6 +47,7 @@ JARVIS is a private intelligence chamber for the household — not a chatbot, no
 
 - [`docs/OLLAMA-SETUP.md`](docs/OLLAMA-SETUP.md) — install Ollama, pull models, verify the local model stack, RAM usage, troubleshooting
 - [`docs/JARVIS-APPLE-HANDOFF-PACK.md`](docs/JARVIS-APPLE-HANDOFF-PACK.md) — Apple platform integration details, JarvisKit design, handoff protocol
+- [`docs/agent-runtime-kernel.md`](docs/agent-runtime-kernel.md) — durable lifecycle, heartbeat, and supervision model for always-on agents
 - [`JarvisApple/HEALTH-API-CONTRACT.md`](JarvisApple/HEALTH-API-CONTRACT.md) — typed contract for health and watch data flowing from Apple devices to the JARVIS backend
 
 ---

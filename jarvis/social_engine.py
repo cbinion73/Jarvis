@@ -30,6 +30,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json, atomic_write_jsonl
+
 logger = logging.getLogger("jarvis.social_engine")
 
 # ---------------------------------------------------------------------------
@@ -143,27 +145,117 @@ class SocialEngineStore:
         self._posts_path = self._root / "posts.jsonl"
         self._schedules_path = self._root / "schedules.jsonl"
         self._engagement_path = self._root / "engagement.jsonl"
+        self._posts_log_path = self._posts_path.with_name("posts_log.jsonl")
+        self._posts_state_log_path = self._posts_path.with_name("posts_state_log.jsonl")
+        self._schedules_log_path = self._schedules_path.with_name("schedules_log.jsonl")
+        self._schedules_state_log_path = self._schedules_path.with_name("schedules_state_log.jsonl")
+        self._engagement_log_path = self._engagement_path.with_name("engagement_log.jsonl")
+        self._engagement_state_log_path = self._engagement_path.with_name("engagement_state_log.jsonl")
 
     # --- generic JSONL helpers ---
 
+    def _legacy_log_path_for(self, path: Path) -> Path:
+        if path == self._posts_path:
+            return self._posts_log_path
+        if path == self._schedules_path:
+            return self._schedules_log_path
+        if path == self._engagement_path:
+            return self._engagement_log_path
+        return path.with_name(f"{path.stem}_log.jsonl")
+
+    def _state_log_path_for(self, path: Path) -> Path:
+        if path == self._posts_path:
+            return self._posts_state_log_path
+        if path == self._schedules_path:
+            return self._schedules_state_log_path
+        if path == self._engagement_path:
+            return self._engagement_state_log_path
+        return path.with_name(f"{path.stem}_state_log.jsonl")
+
     def _load_jsonl(self, path: Path) -> list[dict]:
-        if not path.exists():
-            return []
-        records = []
-        for line in path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line:
-                continue
+        if path.exists():
+            records = []
             try:
-                records.append(json.loads(line))
-            except json.JSONDecodeError:
-                pass
-        return records
+                for line in path.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        record = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if isinstance(record, dict):
+                        records.append(record)
+            except OSError:
+                records = []
+            if records:
+                return records
+        records = self._load_jsonl_from_state_log(path)
+        if records:
+            return records
+        return self._load_jsonl_from_log(path)
+
+    def _load_jsonl_from_log(self, path: Path) -> list[dict]:
+        log_path = self._legacy_log_path_for(path)
+        if not log_path.exists():
+            return []
+        latest: list[dict] = []
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except OSError:
+            return []
+        return latest
+
+    def _load_jsonl_from_state_log(self, path: Path) -> list[dict]:
+        log_path = self._state_log_path_for(path)
+        if not log_path.exists():
+            return []
+        latest: list[dict] = []
+        try:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except OSError:
+            return []
+        return latest
 
     def _save_jsonl(self, path: Path, records: list[dict]) -> None:
         try:
-            lines = [json.dumps(r, ensure_ascii=False) for r in records]
-            path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+            append_jsonl(
+                self._legacy_log_path_for(path),
+                {
+                    "saved_at": _now_iso(),
+                    "records": records,
+                },
+                ensure_ascii=False,
+            )
+            append_jsonl(
+                self._state_log_path_for(path),
+                {
+                    "saved_at": _now_iso(),
+                    "records": records,
+                },
+                ensure_ascii=False,
+            )
+            atomic_write_jsonl(path, records, ensure_ascii=False)
         except OSError as exc:
             logger.warning("SocialEngineStore: failed to write %s: %s", path.name, exc)
 
@@ -1203,20 +1295,81 @@ class LokiAgent:
     def __init__(self, store: SocialEngineStore) -> None:
         self._store = store
         self._strategies_path = store._root / "launch_strategies.json"
+        self._strategies_log_path = self._strategies_path.with_name("launch_strategies_log.jsonl")
+        self._strategies_state_log_path = self._strategies_path.with_name("launch_strategies_state_log.jsonl")
 
     def _load_strategies(self) -> dict:
-        if not self._strategies_path.exists():
+        if self._strategies_path.exists():
+            try:
+                payload = json.loads(self._strategies_path.read_text(encoding="utf-8"))
+                if isinstance(payload, dict):
+                    return payload
+            except (OSError, json.JSONDecodeError):
+                pass
+        payload = self._load_strategies_from_state_log()
+        if payload:
+            return payload
+        return self._load_strategies_from_log()
+
+    def _load_strategies_from_log(self) -> dict:
+        if not self._strategies_log_path.exists():
             return {}
+        latest: dict[str, Any] = {}
         try:
-            return json.loads(self._strategies_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+            for line in self._strategies_log_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                data = payload.get("strategies")
+                if isinstance(data, dict):
+                    latest = data
+        except OSError:
             return {}
+        return latest
+
+    def _load_strategies_from_state_log(self) -> dict:
+        if not self._strategies_state_log_path.exists():
+            return {}
+        latest: dict[str, Any] = {}
+        try:
+            for line in self._strategies_state_log_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                data = payload.get("strategies")
+                if isinstance(data, dict):
+                    latest = data
+        except OSError:
+            return {}
+        return latest
 
     def _save_strategies(self, data: dict) -> None:
         try:
-            self._strategies_path.write_text(
-                json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+            append_jsonl(
+                self._strategies_log_path,
+                {
+                    "saved_at": _now_iso(),
+                    "strategies": data,
+                },
+                ensure_ascii=False,
             )
+            append_jsonl(
+                self._strategies_state_log_path,
+                {
+                    "saved_at": _now_iso(),
+                    "strategies": data,
+                },
+                ensure_ascii=False,
+            )
+            atomic_write_json(self._strategies_path, data, ensure_ascii=False)
         except OSError as exc:
             logger.warning("LokiAgent: failed to save strategies: %s", exc)
 

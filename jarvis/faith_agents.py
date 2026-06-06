@@ -14,9 +14,47 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .persistence import append_jsonl, atomic_write_json
+
 _log = logging.getLogger("jarvis.faith_agents")
 
 _DAILY_WORD_PATH = Path(__file__).parent.parent / "data" / "settings" / "faith_daily_word.json"
+_DAILY_WORD_LOG_PATH = _DAILY_WORD_PATH.with_name("faith_daily_word_log.jsonl")
+_DAILY_WORD_STATE_LOG_PATH = _DAILY_WORD_PATH.with_name("faith_daily_word_state_log.jsonl")
+
+
+def _load_daily_word_from_log() -> dict:
+    try:
+        if _DAILY_WORD_LOG_PATH.exists():
+            latest: dict | None = None
+            for line in _DAILY_WORD_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                result = payload.get("result")
+                if isinstance(result, dict):
+                    latest = dict(result)
+            return latest or {}
+    except Exception as exc:
+        _log.warning("faith daily_word cache replay failed: %s", exc)
+    return {}
+
+
+def _load_daily_word_from_state_log() -> dict:
+    try:
+        if _DAILY_WORD_STATE_LOG_PATH.exists():
+            latest: dict | None = None
+            for line in _DAILY_WORD_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                result = payload.get("result")
+                if isinstance(result, dict):
+                    latest = dict(result)
+            return latest or {}
+    except Exception as exc:
+        _log.warning("faith daily_word state replay failed: %s", exc)
+    return {}
 
 # ---------------------------------------------------------------------------
 # Agent roster
@@ -576,7 +614,7 @@ async def daily_word(runtime) -> dict:
         # Check cache
         if _DAILY_WORD_PATH.exists():
             try:
-                cached = json.loads(_DAILY_WORD_PATH.read_text())
+                cached = json.loads(_DAILY_WORD_PATH.read_text(encoding="utf-8"))
                 generated_at_str = cached.get("generated_at", "")
                 if generated_at_str:
                     generated_at = datetime.fromisoformat(generated_at_str)
@@ -585,6 +623,21 @@ async def daily_word(runtime) -> dict:
                         return cached
             except Exception as cache_exc:
                 _log.warning("faith daily_word cache read failed: %s", cache_exc)
+                cached = _load_daily_word_from_state_log() or _load_daily_word_from_log()
+                generated_at_str = cached.get("generated_at", "")
+                if generated_at_str:
+                    generated_at = datetime.fromisoformat(generated_at_str)
+                    age_hours = (now - generated_at).total_seconds() / 3600
+                    if age_hours < 23:
+                        return cached
+        else:
+            cached = _load_daily_word_from_state_log() or _load_daily_word_from_log()
+            generated_at_str = cached.get("generated_at", "")
+            if generated_at_str:
+                generated_at = datetime.fromisoformat(generated_at_str)
+                age_hours = (now - generated_at).total_seconds() / 3600
+                if age_hours < 23:
+                    return cached
 
         # Pick agent based on today's date
         agent_ids = list(FAITH_AGENTS.keys())
@@ -630,7 +683,9 @@ async def daily_word(runtime) -> dict:
         # Write cache
         try:
             _DAILY_WORD_PATH.parent.mkdir(parents=True, exist_ok=True)
-            _DAILY_WORD_PATH.write_text(json.dumps(result, indent=2))
+            atomic_write_json(_DAILY_WORD_PATH, result)
+            append_jsonl(_DAILY_WORD_LOG_PATH, {"saved_at": now.isoformat(), "result": result})
+            append_jsonl(_DAILY_WORD_STATE_LOG_PATH, {"saved_at": now.isoformat(), "result": result})
         except Exception as write_exc:
             _log.warning("faith daily_word cache write failed: %s", write_exc)
 

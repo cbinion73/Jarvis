@@ -103,7 +103,7 @@
         "kind": "live-domain-signal",
         "title": "Storm live weather posture",
         "summary": "Sunny",
-        "detail": "Temperature 73F \u00b7 alerts 0 \u00b7 visual unknown",
+        "detail": "Temperature 73F · alerts 0 · visual unknown",
         "timestamp": "2026-05-18T13:22:46.326857+00:00",
         "refs": [
           "/api/storm-weather"
@@ -163,7 +163,250 @@
       "This mission touches shared family flow and should stay visible in Mission Control."
     ],
     "created_at": "2026-05-18T13:22:46.325456+00:00",
-    "updated_at": "2026-05-18T13:22:47.583450+00:00"
+    "updated_at": "2026-05-18T13:22:47.583450+00:00",
+    "agent_work_states": {
+      "ambient-router": {
+        "agent_id": "ambient-router",
+        "mission_id": "mission-eda4da4ae0",
+        "role": "orchestrator",
+        "status": "active",
+        "ownership_mode": "lead",
+        "current_focus": "Keep the family ahead of tomorrow morning weather, school timing, and...",
+        "inbox": [
+          {
+            "entry_id": "13387c91-9beb-4832-8f7e-292f3d1fb683",
+            "kind": "mission-brief",
+            "status": "delivered",
+            "from_agent": "jarvis-orchestrator",
+            "to_agent": "ambient-router",
+            "subject": "Keep the family ahead of tomorrow morning weather, school timing, and...",
+            "summary": "You are attached to Keep the family ahead of tomorrow morning weather, school timing, and.... Keep continuity, ownership, and review posture explicit.",
+            "task_id": "",
+            "created_at": "2026-05-18T13:22:47.583450+00:00",
+            "acknowledged_at": ""
+          }
+        ],
+        "outbox": [],
+        "active_tasks": [
+          {
+            "task_id": "task-bac202c9d4",
+            "title": "Support mission continuity",
+            "status": "active",
+            "summary": "Advance keep the family ahead of tomorrow morning weather, school timing, and... without losing partial work or ownership clarity.",
+            "source": "mission-bootstrap",
+            "updated_at": "2026-05-18T13:22:47.583450+00:00",
+            "dependencies": [],
+            "handoff_id": ""
+          }
+        ],
+        "blocked_tasks": [],
+        "pending_reviews": [],
+        "recent_decisions": [
+          {
+            "decision_id": "27d337c3-7f6e-4628-9b7c-7518c49ab8c4",
+            "summary": "Mission accepted into workspace",
+            "rationale": "Mission dossier created and assigned.",
+            "task_id": "",
+            "created_at": "2026-05-18T13:22:47.583450+00:00"
+          }
+        ],
+        "current_hypotheses": [
+          {
+            "hypothesis_id": "562a2963-8a7e-416b-b450-c6bcc626a1b4",
+            "summary": "Keep the family ahead of tomorrow morning weather, school timing, and... likely needs Heimdall on core continuity.",
+            "confidence": "working",
+            "status": "active",
+            "task_id": "",
+            "created_at": "2026-05-18T13:22:47.583450+00:00",
+            "updated_at": "2026-05-18T13:22:47.583450+00:00"
+          }
+        ],
+        "last_handoff_at": "",
+        "updated_at": "2026-05-18T13:22:47.583450+00:00"
+      },
+      "storm": {
+        "agent_id": "storm",
+        "mission_id": "mission-eda4da4ae0",
+        "role": "weather-intelligence",
+        "status": "ready",
+        "ownership_mode": "supporting",
+        "current_focus": "Keep the family ahead of tomorrow morning weather, school timing, and...",
+        "inbox": [
+          {
+            "entry_id": "935532d8-d63c-4720-882d-bc59fd6e24a2",
+            "kind": "mission-brief",
+            "status": "delivered",
+            "from_agent": "jarvis-orchestrator",
+            "to_agent": "storm",
+            "subject": "Keep the family ahead of tomorrow morning weather, school timing, and...",
+            "summary": "You are attached to Keep the family ahead of tomorrow morning weather, school timing, and.... Keep continuity, ownership, and review posture explicit.",
+            "task_id": "",
+            "created_at": "2026-05-18T13:22:47.583450+00:00",
+            "acknowledged_at": ""
+          }
+        ],
+        "outbox": [],
+        "active_tasks": [],
+        "blocked_tasks": [],
+        "pending_reviews": [
+          {
+            "task_id": "task-a8a692ae28",
+            "title": "Review mission brief",
+            "status": "pending",
+            "summary": "Inspect the mission frame, constraints, and current evidence.",
+            "source": "mission-bootstrap",
+            "updated_at": "2026-05-18T13:22:47.583450+00:00",
+            "dependencies": [],
+            "handoff_id": ""
+          }
+        ],
+        "recent_decisions": [
+          {
+            "decision_id": "369c4055-8aea-4dfc-b5b4-e09845842088",
+            "summary": "Mission accepted into workspace",
+            "rationale": "Mission dossier created and assigned.",
+            "task_id": "",
+            "created_at": "2026-05-18T13:22:47.583450+00:00"
+          }
+        ],
+        "current_hypotheses": [
+          {
+            "hypothesis_id": "b0a0737f-d354-4cb7-a6fd-d9785c24eb9d",
+            "summary": "Keep the family ahead of tomorrow morning weather, school timing, and... likely needs Storm on weather continuity.",
+            "confidence": "working",
+            "status": "active",
+            "task_id": "",
+            "created_at": "2026-05-18T13:22:47.583450+00:00",
+            "updated_at": "2026-05-18T13:22:47.583450+00:00"
+          }
+        ],
+        "last_handoff_at": "",
+        "updated_at": "2026-05-18T13:22:47.583450+00:00"
+      },
+      "watchtower": {
+        "agent_id": "watchtower",
+        "mission_id": "mission-eda4da4ae0",
+        "role": "warning-posture",
+        "status": "ready",
+        "ownership_mode": "supporting",
+        "current_focus": "Keep the family ahead of tomorrow morning weather, school timing, and...",
+        "inbox": [
+          {
+            "entry_id": "81446961-0101-4127-a908-e7f4e33c6f30",
+            "kind": "mission-brief",
+            "status": "delivered",
+            "from_agent": "jarvis-orchestrator",
+            "to_agent": "watchtower",
+            "subject": "Keep the family ahead of tomorrow morning weather, school timing, and...",
+            "summary": "You are attached to Keep the family ahead of tomorrow morning weather, school timing, and.... Keep continuity, ownership, and review posture explicit.",
+            "task_id": "",
+            "created_at": "2026-05-18T13:22:47.583450+00:00",
+            "acknowledged_at": ""
+          }
+        ],
+        "outbox": [],
+        "active_tasks": [],
+        "blocked_tasks": [],
+        "pending_reviews": [
+          {
+            "task_id": "task-4bcedec89d",
+            "title": "Review mission brief",
+            "status": "pending",
+            "summary": "Inspect the mission frame, constraints, and current evidence.",
+            "source": "mission-bootstrap",
+            "updated_at": "2026-05-18T13:22:47.583450+00:00",
+            "dependencies": [],
+            "handoff_id": ""
+          }
+        ],
+        "recent_decisions": [
+          {
+            "decision_id": "f419f078-7275-48ab-83d1-324316055404",
+            "summary": "Mission accepted into workspace",
+            "rationale": "Mission dossier created and assigned.",
+            "task_id": "",
+            "created_at": "2026-05-18T13:22:47.583450+00:00"
+          }
+        ],
+        "current_hypotheses": [
+          {
+            "hypothesis_id": "26e0f678-1cd3-455a-8a6d-85dbd1e80f1c",
+            "summary": "Keep the family ahead of tomorrow morning weather, school timing, and... likely needs Moon Knight on family continuity.",
+            "confidence": "working",
+            "status": "active",
+            "task_id": "",
+            "created_at": "2026-05-18T13:22:47.583450+00:00",
+            "updated_at": "2026-05-18T13:22:47.583450+00:00"
+          }
+        ],
+        "last_handoff_at": "",
+        "updated_at": "2026-05-18T13:22:47.583450+00:00"
+      },
+      "family-logistics": {
+        "agent_id": "family-logistics",
+        "mission_id": "mission-eda4da4ae0",
+        "role": "support",
+        "status": "ready",
+        "ownership_mode": "supporting",
+        "current_focus": "Keep the family ahead of tomorrow morning weather, school timing, and...",
+        "inbox": [
+          {
+            "entry_id": "af2e87d9-564c-4a2c-b7ba-4eed88f9803f",
+            "kind": "mission-brief",
+            "status": "delivered",
+            "from_agent": "jarvis-orchestrator",
+            "to_agent": "family-logistics",
+            "subject": "Keep the family ahead of tomorrow morning weather, school timing, and...",
+            "summary": "You are attached to Keep the family ahead of tomorrow morning weather, school timing, and.... Keep continuity, ownership, and review posture explicit.",
+            "task_id": "",
+            "created_at": "2026-05-18T13:22:47.583450+00:00",
+            "acknowledged_at": ""
+          }
+        ],
+        "outbox": [],
+        "active_tasks": [],
+        "blocked_tasks": [],
+        "pending_reviews": [
+          {
+            "task_id": "task-25c8301d10",
+            "title": "Review mission brief",
+            "status": "pending",
+            "summary": "Inspect the mission frame, constraints, and current evidence.",
+            "source": "mission-bootstrap",
+            "updated_at": "2026-05-18T13:22:47.583450+00:00",
+            "dependencies": [],
+            "handoff_id": ""
+          }
+        ],
+        "recent_decisions": [
+          {
+            "decision_id": "3f2805ec-9877-4743-a57e-8ddf30f1712b",
+            "summary": "Mission accepted into workspace",
+            "rationale": "Mission dossier created and assigned.",
+            "task_id": "",
+            "created_at": "2026-05-18T13:22:47.583450+00:00"
+          }
+        ],
+        "current_hypotheses": [
+          {
+            "hypothesis_id": "98f52b70-afe5-4c36-a6a7-f9916b537f33",
+            "summary": "Keep the family ahead of tomorrow morning weather, school timing, and... likely needs Wasp on general continuity.",
+            "confidence": "working",
+            "status": "active",
+            "task_id": "",
+            "created_at": "2026-05-18T13:22:47.583450+00:00",
+            "updated_at": "2026-05-18T13:22:47.583450+00:00"
+          }
+        ],
+        "last_handoff_at": "",
+        "updated_at": "2026-05-18T13:22:47.583450+00:00"
+      }
+    },
+    "handoffs": [],
+    "delegations": [],
+    "escalations": [],
+    "ownership_transfers": [],
+    "duplicate_suppressions": []
   },
   {
     "mission_id": "mission-f63fd51ed3",
@@ -310,6 +553,249 @@
     },
     "family_impact": [],
     "created_at": "2026-05-18T13:23:17.052970+00:00",
-    "updated_at": "2026-05-18T13:23:17.056064+00:00"
+    "updated_at": "2026-05-18T13:23:17.056064+00:00",
+    "agent_work_states": {
+      "ambient-router": {
+        "agent_id": "ambient-router",
+        "mission_id": "mission-f63fd51ed3",
+        "role": "orchestrator",
+        "status": "active",
+        "ownership_mode": "lead",
+        "current_focus": "Help me design a unique 3d printed sculpture from a photo and build t...",
+        "inbox": [
+          {
+            "entry_id": "c70240c5-72a7-457e-b032-68fd4966bb2b",
+            "kind": "mission-brief",
+            "status": "delivered",
+            "from_agent": "jarvis-orchestrator",
+            "to_agent": "ambient-router",
+            "subject": "Help me design a unique 3d printed sculpture from a photo and build t...",
+            "summary": "You are attached to Help me design a unique 3d printed sculpture from a photo and build t.... Keep continuity, ownership, and review posture explicit.",
+            "task_id": "",
+            "created_at": "2026-05-18T13:23:17.056064+00:00",
+            "acknowledged_at": ""
+          }
+        ],
+        "outbox": [],
+        "active_tasks": [
+          {
+            "task_id": "task-deb9023054",
+            "title": "Support mission continuity",
+            "status": "active",
+            "summary": "Advance help me design a unique 3d printed sculpture from a photo and build t... without losing partial work or ownership clarity.",
+            "source": "mission-bootstrap",
+            "updated_at": "2026-05-18T13:23:17.056064+00:00",
+            "dependencies": [],
+            "handoff_id": ""
+          }
+        ],
+        "blocked_tasks": [],
+        "pending_reviews": [],
+        "recent_decisions": [
+          {
+            "decision_id": "49b92d5c-23a8-4796-9dbe-dfbd892b7620",
+            "summary": "Mission accepted into workspace",
+            "rationale": "Mission dossier created and assigned.",
+            "task_id": "",
+            "created_at": "2026-05-18T13:23:17.056064+00:00"
+          }
+        ],
+        "current_hypotheses": [
+          {
+            "hypothesis_id": "76e7ebae-cc4c-40b9-9d91-d8d6afcc29d5",
+            "summary": "Help me design a unique 3d printed sculpture from a photo and build t... likely needs Heimdall on core continuity.",
+            "confidence": "working",
+            "status": "active",
+            "task_id": "",
+            "created_at": "2026-05-18T13:23:17.056064+00:00",
+            "updated_at": "2026-05-18T13:23:17.056064+00:00"
+          }
+        ],
+        "last_handoff_at": "",
+        "updated_at": "2026-05-18T13:23:17.056064+00:00"
+      },
+      "workshop-watch": {
+        "agent_id": "workshop-watch",
+        "mission_id": "mission-f63fd51ed3",
+        "role": "maker-ops",
+        "status": "ready",
+        "ownership_mode": "supporting",
+        "current_focus": "Help me design a unique 3d printed sculpture from a photo and build t...",
+        "inbox": [
+          {
+            "entry_id": "919a05f2-8f36-45ec-a754-8e58dfc39ae8",
+            "kind": "mission-brief",
+            "status": "delivered",
+            "from_agent": "jarvis-orchestrator",
+            "to_agent": "workshop-watch",
+            "subject": "Help me design a unique 3d printed sculpture from a photo and build t...",
+            "summary": "You are attached to Help me design a unique 3d printed sculpture from a photo and build t.... Keep continuity, ownership, and review posture explicit.",
+            "task_id": "",
+            "created_at": "2026-05-18T13:23:17.056064+00:00",
+            "acknowledged_at": ""
+          }
+        ],
+        "outbox": [],
+        "active_tasks": [],
+        "blocked_tasks": [],
+        "pending_reviews": [
+          {
+            "task_id": "task-c6912f9590",
+            "title": "Review mission brief",
+            "status": "pending",
+            "summary": "Inspect the mission frame, constraints, and current evidence.",
+            "source": "mission-bootstrap",
+            "updated_at": "2026-05-18T13:23:17.056064+00:00",
+            "dependencies": [],
+            "handoff_id": ""
+          }
+        ],
+        "recent_decisions": [
+          {
+            "decision_id": "2ed4d203-55bb-4ec4-8265-ff7258217ff3",
+            "summary": "Mission accepted into workspace",
+            "rationale": "Mission dossier created and assigned.",
+            "task_id": "",
+            "created_at": "2026-05-18T13:23:17.056064+00:00"
+          }
+        ],
+        "current_hypotheses": [
+          {
+            "hypothesis_id": "3adfdece-26b2-4921-a0c4-037177f9b469",
+            "summary": "Help me design a unique 3d printed sculpture from a photo and build t... likely needs Hank on workshop continuity.",
+            "confidence": "working",
+            "status": "active",
+            "task_id": "",
+            "created_at": "2026-05-18T13:23:17.056064+00:00",
+            "updated_at": "2026-05-18T13:23:17.056064+00:00"
+          }
+        ],
+        "last_handoff_at": "",
+        "updated_at": "2026-05-18T13:23:17.056064+00:00"
+      },
+      "system-steward": {
+        "agent_id": "system-steward",
+        "mission_id": "mission-f63fd51ed3",
+        "role": "maintenance",
+        "status": "ready",
+        "ownership_mode": "supporting",
+        "current_focus": "Help me design a unique 3d printed sculpture from a photo and build t...",
+        "inbox": [
+          {
+            "entry_id": "92ac74a8-1078-43a8-81f4-115e274538c6",
+            "kind": "mission-brief",
+            "status": "delivered",
+            "from_agent": "jarvis-orchestrator",
+            "to_agent": "system-steward",
+            "subject": "Help me design a unique 3d printed sculpture from a photo and build t...",
+            "summary": "You are attached to Help me design a unique 3d printed sculpture from a photo and build t.... Keep continuity, ownership, and review posture explicit.",
+            "task_id": "",
+            "created_at": "2026-05-18T13:23:17.056064+00:00",
+            "acknowledged_at": ""
+          }
+        ],
+        "outbox": [],
+        "active_tasks": [],
+        "blocked_tasks": [],
+        "pending_reviews": [
+          {
+            "task_id": "task-a567ba5d83",
+            "title": "Review mission brief",
+            "status": "pending",
+            "summary": "Inspect the mission frame, constraints, and current evidence.",
+            "source": "mission-bootstrap",
+            "updated_at": "2026-05-18T13:23:17.056064+00:00",
+            "dependencies": [],
+            "handoff_id": ""
+          }
+        ],
+        "recent_decisions": [
+          {
+            "decision_id": "1f8e3ce0-3a1b-443e-af9b-a5eba3cbc005",
+            "summary": "Mission accepted into workspace",
+            "rationale": "Mission dossier created and assigned.",
+            "task_id": "",
+            "created_at": "2026-05-18T13:23:17.056064+00:00"
+          }
+        ],
+        "current_hypotheses": [
+          {
+            "hypothesis_id": "6a8120ba-d721-40ea-8e51-4becb7d96e22",
+            "summary": "Help me design a unique 3d printed sculpture from a photo and build t... likely needs HERBIE on system continuity.",
+            "confidence": "working",
+            "status": "active",
+            "task_id": "",
+            "created_at": "2026-05-18T13:23:17.056064+00:00",
+            "updated_at": "2026-05-18T13:23:17.056064+00:00"
+          }
+        ],
+        "last_handoff_at": "",
+        "updated_at": "2026-05-18T13:23:17.056064+00:00"
+      },
+      "task-workshop-111c9ca5": {
+        "agent_id": "task-workshop-111c9ca5",
+        "mission_id": "mission-f63fd51ed3",
+        "role": "support",
+        "status": "ready",
+        "ownership_mode": "supporting",
+        "current_focus": "Help me design a unique 3d printed sculpture from a photo and build t...",
+        "inbox": [
+          {
+            "entry_id": "5b851088-bdda-45d4-a182-e629faa9894a",
+            "kind": "mission-brief",
+            "status": "delivered",
+            "from_agent": "jarvis-orchestrator",
+            "to_agent": "task-workshop-111c9ca5",
+            "subject": "Help me design a unique 3d printed sculpture from a photo and build t...",
+            "summary": "You are attached to Help me design a unique 3d printed sculpture from a photo and build t.... Keep continuity, ownership, and review posture explicit.",
+            "task_id": "",
+            "created_at": "2026-05-18T13:23:17.056064+00:00",
+            "acknowledged_at": ""
+          }
+        ],
+        "outbox": [],
+        "active_tasks": [],
+        "blocked_tasks": [],
+        "pending_reviews": [
+          {
+            "task_id": "task-39bc6b23f3",
+            "title": "Review mission brief",
+            "status": "pending",
+            "summary": "Inspect the mission frame, constraints, and current evidence.",
+            "source": "mission-bootstrap",
+            "updated_at": "2026-05-18T13:23:17.056064+00:00",
+            "dependencies": [],
+            "handoff_id": ""
+          }
+        ],
+        "recent_decisions": [
+          {
+            "decision_id": "841c9868-02f2-4e42-908e-4736c984d930",
+            "summary": "Mission accepted into workspace",
+            "rationale": "Mission dossier created and assigned.",
+            "task_id": "",
+            "created_at": "2026-05-18T13:23:17.056064+00:00"
+          }
+        ],
+        "current_hypotheses": [
+          {
+            "hypothesis_id": "2dfe7e62-c219-44c3-a2e0-5c0c62a871e9",
+            "summary": "Help me design a unique 3d printed sculpture from a photo and build t... likely needs Mission Planner on workshop continuity.",
+            "confidence": "working",
+            "status": "active",
+            "task_id": "",
+            "created_at": "2026-05-18T13:23:17.056064+00:00",
+            "updated_at": "2026-05-18T13:23:17.056064+00:00"
+          }
+        ],
+        "last_handoff_at": "",
+        "updated_at": "2026-05-18T13:23:17.056064+00:00"
+      }
+    },
+    "handoffs": [],
+    "delegations": [],
+    "escalations": [],
+    "ownership_transfers": [],
+    "duplicate_suppressions": []
   }
 ]

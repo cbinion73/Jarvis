@@ -122,6 +122,16 @@ class AgentRuntimeKernelTests(unittest.TestCase):
         self.assertEqual(ambient["run"]["last_started_at"], legacy_last_run)
         self.assertEqual(ambient["lifecycle"]["current_state"], LIFECYCLE_RUNNING)
 
+    def test_replays_runtime_events_from_state_log_when_snapshot_is_blank(self) -> None:
+        now = datetime(2026, 6, 1, 12, 0, tzinfo=UTC)
+        self.kernel.apply_control("system-steward", "wake", actor="Chris", reason="Begin maintenance", recorded_at=now)
+        self.kernel.store.event_log_path.write_text("", encoding="utf-8")
+
+        replayed = self.kernel.store.list_events(agent_id="system-steward", limit=10)
+
+        self.assertTrue(replayed)
+        self.assertTrue(any(item["agent_id"] == "system-steward" and item["action"] == "wake" for item in replayed))
+
 
 if __name__ == "__main__":
     unittest.main()

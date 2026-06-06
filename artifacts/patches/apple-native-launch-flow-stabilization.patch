@@ -1,0 +1,130 @@
+diff --git a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/App.swift b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/App.swift
+index 8532cd4..1f1ddcb 100644
+--- a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/App.swift
++++ b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/App.swift
+@@ -35,3 +34,0 @@ struct JarvisPhoneApp: App {
+-        // HealthKit
+-        await HealthSyncManager.shared.requestPermissionsAndSync()
+-
+@@ -46,3 +42,0 @@ struct JarvisPhoneApp: App {
+-        // EventKit — calendar + reminders
+-        await EventKitSyncManager.shared.syncAll()
+-
+@@ -71 +64,0 @@ struct JarvisPhoneApp: App {
+-        Task { await EventKitSyncManager.shared.syncAll() }
+diff --git a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/AppDelegate.swift b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/AppDelegate.swift
+index 7c21a4c..c299512 100644
+--- a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/AppDelegate.swift
++++ b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/AppDelegate.swift
+@@ -11 +10,0 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
+-        requestNotificationPermission()
+@@ -63 +62 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
+-    private func requestNotificationPermission() {
++    func requestNotificationPermissionIfNeeded() {
+diff --git a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/EventSync/EventKitSyncManager.swift b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/EventSync/EventKitSyncManager.swift
+index 7adef36..1398b50 100644
+--- a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/EventSync/EventKitSyncManager.swift
++++ b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/EventSync/EventKitSyncManager.swift
+@@ -41,0 +42,9 @@ final class EventKitSyncManager: ObservableObject {
++    func requestAccessAndSync() async {
++        guard calendarStatus != .fullAccess || remindersStatus != .fullAccess else {
++            await syncAll()
++            return
++        }
++        await requestAccess()
++        await syncAll()
++    }
++
+@@ -44 +52,0 @@ final class EventKitSyncManager: ObservableObject {
+-            await requestAccess()
+diff --git a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Scenes/SettingsView.swift b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Scenes/SettingsView.swift
+index b1c1809..82f5718 100644
+--- a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Scenes/SettingsView.swift
++++ b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Scenes/SettingsView.swift
+@@ -2407,2 +2407,2 @@ struct SettingsView: View {
+-        await eventSync.syncAll()
++        await eventSync.requestAccessAndSync()
+         await refreshSystems()
+diff --git a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Speech/SpeechRecognitionManager.swift b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Speech/SpeechRecognitionManager.swift
+index 17a327a..71e77e6 100644
+--- a/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Speech/SpeechRecognitionManager.swift
++++ b/JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Speech/SpeechRecognitionManager.swift
+@@ -50 +51 @@ final class SpeechRecognitionManager: ObservableObject {
+-        Task { await checkAuthorization() }
++        refreshAuthorizationStatus()
+@@ -55,0 +57,5 @@ final class SpeechRecognitionManager: ObservableObject {
++    func refreshAuthorizationStatus() {
++        let speechStatus = SFSpeechRecognizer.authorizationStatus()
++        let audioStatus = AVAudioSession.sharedInstance().recordPermission
++        isAuthorized = (speechStatus == .authorized) && (audioStatus == .granted)
++    }
+@@ -73,17 +80,17 @@ final class SpeechRecognitionManager: ObservableObject {
+-    func startListening(onFinal: @escaping (String) -> Void) {
++    func startListening(onPartial: ((String) -> Void)? = nil, onFinal: @escaping (String) -> Void) {
+@@
+-            await self?.beginListening(onFinal: onFinal)
++            await self?.beginListening(onPartial: onPartial, onFinal: onFinal)
+@@
+-    private func beginListening(onFinal: @escaping (String) -> Void) async {
++    private func beginListening(onPartial: ((String) -> Void)? = nil, onFinal: @escaping (String) -> Void) async {
+@@
++        self.onPartial = onPartial
+@@
+-            try session.setCategory(.record, mode: .measurement, options: [.duckOthers])
++            try session.setCategory(
++                .playAndRecord,
++                mode: .voiceChat,
++                options: [.defaultToSpeaker, .allowBluetoothHFP, .duckOthers]
++            )
+@@
++                    self.onPartial?(transcript)
+@@
++        onPartial = nil
+@@
++        onPartial = nil
+diff --git a/JarvisApple/apps/ios/JarvisPhone/JarvisWatch/WatchViewModel.swift b/JarvisApple/apps/ios/JarvisPhone/JarvisWatch/WatchViewModel.swift
+index 25ac331..f59ba9d 100644
+--- a/JarvisApple/apps/ios/JarvisPhone/JarvisWatch/WatchViewModel.swift
++++ b/JarvisApple/apps/ios/JarvisPhone/JarvisWatch/WatchViewModel.swift
+@@ -1,8 +1,11 @@
+ import Foundation
+ import WatchConnectivity
+-import WatchKit
+ import WidgetKit
+ 
++#if canImport(WatchKit)
++import WatchKit
++#endif
++
+@@ -52 +55 @@ final class WatchViewModel: NSObject, ObservableObject {
+-            WKInterfaceDevice.current().play(.notification)
++            playWatchHaptic(.notification)
+@@ -139,0 +142,27 @@ final class WatchViewModel: NSObject, ObservableObject {
++enum JarvisWatchHaptic {
++    case click
++    case success
++    case notification
++}
++
++func playWatchHaptic(_ haptic: JarvisWatchHaptic) {
++#if canImport(WatchKit)
++    let watchHaptic: WKHapticType
++    switch haptic {
++    case .click:
++        watchHaptic = .click
++    case .success:
++        watchHaptic = .success
++    case .notification:
++        watchHaptic = .notification
++    }
++    WKInterfaceDevice.current().play(watchHaptic)
++#endif
++}
++
+@@ -166,4 +190,0 @@ extension WatchViewModel: @preconcurrency WCSessionDelegate {
+-
+-    nonisolated func sessionDidBecomeInactive(_ session: WCSession) {}
+-
+-    nonisolated func sessionDidDeactivate(_ session: WCSession) {
+-        session.activate()
+-    }

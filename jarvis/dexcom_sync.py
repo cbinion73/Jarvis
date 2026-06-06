@@ -32,6 +32,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 import httpx
+from .persistence import append_jsonl, atomic_write_json
 
 log = logging.getLogger(__name__)
 
@@ -73,6 +74,8 @@ _TREND_ARROWS = {
 # ---------------------------------------------------------------------------
 
 _TOKENS_PATH = Path.home() / ".jarvis" / "dexcom_tokens.json"
+_TOKENS_LOG_PATH = _TOKENS_PATH.with_name("dexcom_tokens_log.jsonl")
+_TOKENS_STATE_LOG_PATH = _TOKENS_PATH.with_name("dexcom_tokens_state_log.jsonl")
 _TOKENS_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
@@ -81,12 +84,64 @@ def _load_tokens() -> dict:
         try:
             return json.loads(_TOKENS_PATH.read_text())
         except Exception:
-            pass
+            return _load_tokens_from_state_log() or _load_tokens_from_log()
+    return _load_tokens_from_state_log() or _load_tokens_from_log()
+
+
+def _load_tokens_from_log() -> dict:
+    if not _TOKENS_LOG_PATH.exists():
+        return {}
+    latest: dict | None = None
+    try:
+        for line in _TOKENS_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            tokens = payload.get("tokens")
+            if isinstance(tokens, dict):
+                latest = tokens
+    except Exception:
+        return {}
+    if isinstance(latest, dict):
+        return latest
+    return {}
+
+
+def _load_tokens_from_state_log() -> dict:
+    if not _TOKENS_STATE_LOG_PATH.exists():
+        return {}
+    latest: dict | None = None
+    try:
+        for line in _TOKENS_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            tokens = payload.get("tokens")
+            if isinstance(tokens, dict):
+                latest = tokens
+    except Exception:
+        return {}
+    if isinstance(latest, dict):
+        return latest
     return {}
 
 
 def _save_tokens(tokens: dict) -> None:
-    _TOKENS_PATH.write_text(json.dumps(tokens, indent=2))
+    append_jsonl(
+        _TOKENS_LOG_PATH,
+        {
+            "saved_at": datetime.utcnow().isoformat(),
+            "tokens": tokens,
+        },
+    )
+    append_jsonl(
+        _TOKENS_STATE_LOG_PATH,
+        {
+            "saved_at": datetime.utcnow().isoformat(),
+            "tokens": tokens,
+        },
+    )
+    atomic_write_json(_TOKENS_PATH, tokens)
 
 
 # ---------------------------------------------------------------------------

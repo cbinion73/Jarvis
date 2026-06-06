@@ -28,13 +28,15 @@ public struct CalendarWorkflowEvent: Codable, Sendable, Identifiable {
     public let end: String
     public let location: String
     public let calendar: String
+    public let notes: String
+    public let url: String
     public let allDay: Bool
     public let minutesAway: Int?
     public let prepWindowOpen: Bool
     public let routeReady: Bool
 
     enum CodingKeys: String, CodingKey {
-        case id, title, start, end, location, calendar
+        case id, title, start, end, location, calendar, notes, url
         case allDay = "all_day"
         case minutesAway = "minutes_away"
         case prepWindowOpen = "prep_window_open"
@@ -72,15 +74,29 @@ public struct CalendarAttentionFlag: Codable, Sendable, Identifiable {
 }
 
 public struct CalendarRouteActionResult: Codable, Sendable {
+    public let requestId: String
     public let status: String
     public let eventId: String
     public let title: String
     public let location: String
     public let mapsURL: String
+    public let boundaryDecision: String?
+    public let boundaryReason: String?
+    public let trustZone: String?
+    public let authorityStage: String?
+    public let arenaStatus: String?
+    public let approvalMode: String?
 
     enum CodingKeys: String, CodingKey {
         case status, title, location
+        case requestId = "request_id"
         case eventId = "event_id"
         case mapsURL = "maps_url"
+        case boundaryDecision = "boundary_decision"
+        case boundaryReason = "boundary_reason"
+        case trustZone = "trust_zone"
+        case authorityStage = "authority_stage"
+        case arenaStatus = "arena_status"
+        case approvalMode = "approval_mode"
     }
 }

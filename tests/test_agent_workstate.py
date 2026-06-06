@@ -127,6 +127,42 @@ class AgentWorkStateTests(unittest.TestCase):
         self.assertGreaterEqual(summary["blocked_tasks"], 1)
         self.assertEqual(summary["duplicate_suppressions"], 1)
 
+    def test_mission_control_summary_includes_agent_society_health(self) -> None:
+        dossier = self.support.create_mission(
+            actor="Chris",
+            room="office",
+            request="Plan tomorrow's family weather, inbox posture, and delegated follow-through.",
+        )
+        mission_id = dossier["mission_id"]
+        selected_agents = dossier["selected_agents"]
+        lead_agent = selected_agents[0]
+        support_agent = selected_agents[1]
+
+        updated = self.support.create_agent_handoff(
+            mission_id,
+            from_agent=lead_agent,
+            to_agent=support_agent,
+            task_title="Own the next delegated review",
+            summary="Take over a bounded follow-through review and keep the current framing intact.",
+            partial_work="Lead agent already framed the mission and captured first-pass evidence.",
+            transfer_ownership=True,
+        )
+
+        control = self.support.mission_control_summary(actor="Chris", limit=12)
+        society = dict(control.get("agent_society") or {})
+        society_summary = dict(society.get("summary") or {})
+        agent_rows = list(society.get("agents") or [])
+        lane_rows = list(society.get("lanes") or [])
+
+        self.assertGreaterEqual(society_summary.get("active_agents", 0), 2)
+        self.assertGreaterEqual(society_summary.get("blocked_agents", 0), 1)
+        self.assertGreaterEqual(society_summary.get("pending_review_agents", 0), 1)
+        self.assertTrue(any(item.get("agent_id") == lead_agent for item in agent_rows))
+        self.assertTrue(any(int(item.get("blocked_tasks", 0) or 0) > 0 for item in agent_rows))
+        self.assertTrue(any(int(item.get("pending_reviews", 0) or 0) > 0 for item in agent_rows))
+        self.assertTrue(any(item.get("lane_id") for item in lane_rows))
+        self.assertEqual(updated["mission_id"], mission_id)
+
 
 if __name__ == "__main__":
     unittest.main()

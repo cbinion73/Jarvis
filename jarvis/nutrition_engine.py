@@ -25,6 +25,8 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from .persistence import append_jsonl, atomic_write_json, atomic_write_jsonl
+
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -32,7 +34,9 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 _HEALTH_DIR = Path.home() / ".jarvis" / "health"
 _LOG_PATH = _HEALTH_DIR / "nutrition_log.jsonl"
+_LOG_STATE_PATH = _LOG_PATH.with_name("nutrition_log_state_log.jsonl")
 _SUMMARY_PATH = _HEALTH_DIR / "nutrition_summary.json"
+_SUMMARY_LOG_PATH = _SUMMARY_PATH.with_name("nutrition_summary_log.jsonl")
 _HEALTH_STATE_CANDIDATES = [
     Path.home() / ".jarvis" / "health" / "health_state.json",
     Path.home() / ".jarvis" / "health_state.json",
@@ -127,24 +131,76 @@ def _read_log_for_date(target_date: str) -> dict | None:
     Scan the JSONL nutrition log and return the entry for target_date.
     Returns None if no entry found.
     """
-    if not _LOG_PATH.exists():
+    records = _load_log_records()
+    if not records:
         return None
     try:
-        with _lock:
-            with open(_LOG_PATH, encoding="utf-8") as fh:
-                for line in fh:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        entry = json.loads(line)
-                        if entry.get("date") == target_date:
-                            return entry
-                    except json.JSONDecodeError:
-                        continue
+        for entry in records:
+            if entry.get("date") == target_date:
+                return entry
     except Exception as exc:
         log.error("Error reading nutrition log: %s", exc)
     return None
+
+
+def _load_log_records() -> list[dict[str, Any]]:
+    if _LOG_PATH.exists():
+        try:
+            with _lock:
+                records: list[dict[str, Any]] = []
+                with open(_LOG_PATH, encoding="utf-8") as fh:
+                    for line in fh:
+                        stripped = line.strip()
+                        if not stripped:
+                            continue
+                        try:
+                            entry = json.loads(stripped)
+                        except json.JSONDecodeError:
+                            continue
+                        if isinstance(entry, dict):
+                            records.append(entry)
+                if records:
+                    return records
+        except Exception as exc:
+            log.warning("Could not read nutrition log snapshot: %s", exc)
+    return _load_log_records_from_state_log()
+
+
+def _load_log_records_from_state_log() -> list[dict[str, Any]]:
+    if not _LOG_STATE_PATH.exists():
+        return []
+    try:
+        latest_records: list[dict[str, Any]] = []
+        with _lock:
+            with open(_LOG_STATE_PATH, encoding="utf-8") as fh:
+                for line in fh:
+                    stripped = line.strip()
+                    if not stripped:
+                        continue
+                    try:
+                        payload = json.loads(stripped)
+                    except json.JSONDecodeError:
+                        continue
+                    records = payload.get("records")
+                    if isinstance(records, list):
+                        latest_records = [dict(item) for item in records if isinstance(item, dict)]
+        return latest_records
+    except Exception as exc:
+        log.warning("Could not replay nutrition log from append log: %s", exc)
+        return []
+
+
+def _persist_log_records(records: list[dict[str, Any]]) -> None:
+    _ensure_dirs()
+    with _lock:
+        append_jsonl(
+            _LOG_STATE_PATH,
+            {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "records": records,
+            },
+        )
+        atomic_write_jsonl(_LOG_PATH, records)
 
 
 def _write_log_entry(entry: dict) -> None:
@@ -152,33 +208,23 @@ def _write_log_entry(entry: dict) -> None:
     Upsert a daily log entry in the JSONL file.
     Replaces the existing line for that date if present; otherwise appends.
     """
-    _ensure_dirs()
     target_date = entry["date"]
-    lines: list[str] = []
+    records = _load_log_records()
+    updated_records: list[dict[str, Any]] = []
     replaced = False
 
+    for existing in records:
+        if existing.get("date") == target_date:
+            updated_records.append(entry)
+            replaced = True
+        else:
+            updated_records.append(existing)
+
+    if not replaced:
+        updated_records.append(entry)
+
     try:
-        with _lock:
-            if _LOG_PATH.exists():
-                with open(_LOG_PATH, encoding="utf-8") as fh:
-                    for line in fh:
-                        stripped = line.strip()
-                        if not stripped:
-                            continue
-                        try:
-                            existing = json.loads(stripped)
-                            if existing.get("date") == target_date:
-                                lines.append(json.dumps(entry))
-                                replaced = True
-                            else:
-                                lines.append(stripped)
-                        except json.JSONDecodeError:
-                            lines.append(stripped)
-
-            if not replaced:
-                lines.append(json.dumps(entry))
-
-            _LOG_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        _persist_log_records(updated_records)
     except Exception as exc:
         log.error("Error writing nutrition log: %s", exc)
         raise
@@ -501,15 +547,50 @@ def get_nutrition_7day_summary() -> dict:
     # Cache to disk
     try:
         _ensure_dirs()
-        _SUMMARY_PATH.write_text(
-            json.dumps({**result, "cached_at": datetime.now(timezone.utc).isoformat()},
-                       indent=2),
-            encoding="utf-8",
-        )
+        _save_cached_summary({**result, "cached_at": datetime.now(timezone.utc).isoformat()})
     except Exception as exc:
         log.warning("Could not cache nutrition summary: %s", exc)
 
     return result
+
+
+def get_cached_nutrition_summary() -> dict | None:
+    if _SUMMARY_PATH.exists():
+        try:
+            payload = json.loads(_SUMMARY_PATH.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                return payload
+        except Exception:
+            pass
+    return _load_cached_summary_from_log()
+
+
+def _save_cached_summary(summary: dict[str, Any]) -> None:
+    append_jsonl(
+        _SUMMARY_LOG_PATH,
+        {
+            "saved_at": datetime.now(timezone.utc).isoformat(),
+            "summary": summary,
+        },
+    )
+    atomic_write_json(_SUMMARY_PATH, summary)
+
+
+def _load_cached_summary_from_log() -> dict | None:
+    if not _SUMMARY_LOG_PATH.exists():
+        return None
+    latest: dict[str, Any] | None = None
+    try:
+        for line in _SUMMARY_LOG_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            summary = payload.get("summary")
+            if isinstance(summary, dict):
+                latest = summary
+    except Exception:
+        return None
+    return latest
 
 
 def assess_bariatric_micronutrients() -> BariatricNutritionStatus:

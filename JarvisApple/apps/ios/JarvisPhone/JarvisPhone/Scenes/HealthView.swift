@@ -159,6 +159,27 @@ struct HealthView: View {
                 }
                 .padding(.horizontal, 4)
 
+                if let continuity = s.continuity,
+                   continuity.profileFactCount > 0
+                    || !continuity.guidanceLines.isEmpty
+                    || !continuity.activeConditions.isEmpty
+                    || !continuity.recentFirstLight.isEmpty
+                    || !continuity.recentProfileFacts.isEmpty {
+                    continuityCard(continuity)
+                }
+
+                if !s.readinessFactors.isEmpty {
+                    readinessFactorsCard(s.readinessFactors)
+                }
+
+                if let thor = s.thorSnapshot {
+                    thorCard(thor)
+                }
+
+                if let completeness = s.completeness {
+                    completenessCard(completeness)
+                }
+
                 if !s.protocolItems.isEmpty {
                     guidanceCard(
                         title: "Protocol",
@@ -174,6 +195,15 @@ struct HealthView: View {
                         systemImage: "exclamationmark.triangle.fill",
                         tint: .yellow,
                         items: s.alerts.map { ($0.title, $0.detail ?? "", "high") }
+                    )
+                }
+
+                if !s.watchlist.isEmpty {
+                    guidanceCard(
+                        title: "Watchlist",
+                        systemImage: "stethoscope",
+                        tint: .pink,
+                        items: s.watchlist.map { ($0.title, $0.detail, $0.severity == "high" ? "high" : "normal") }
                     )
                 }
 
@@ -216,6 +246,242 @@ struct HealthView: View {
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(.yellow.opacity(0.12), in: Capsule())
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func continuityCard(_ continuity: HealthContinuity) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Carry Forward", systemImage: "heart.text.square.fill")
+                .font(.system(size: 11, weight: .bold))
+                .tracking(1.0)
+                .foregroundStyle(Color(red: 0.2, green: 0.9, blue: 0.5).opacity(0.95))
+
+            HStack(spacing: 10) {
+                miniStat("Facts", "\(continuity.profileFactCount)", tint: .green)
+                if !continuity.readinessLane.isEmpty {
+                    miniStat("Lane", continuity.readinessLane.replacingOccurrences(of: "_", with: " ").capitalized, tint: .cyan)
+                }
+                if !continuity.activeConditions.isEmpty {
+                    miniStat("Watch", "\(continuity.activeConditions.count)", tint: .pink)
+                }
+            }
+
+            if !continuity.recoveryFocus.isEmpty || !continuity.subjectDisplayName.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    if !continuity.recoveryFocus.isEmpty {
+                        Text("Recovery focus: \(continuity.recoveryFocus)")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                    }
+                    if !continuity.subjectDisplayName.isEmpty {
+                        Text("\(continuity.subjectDisplayName)'s durable health rhythm is informing today's posture.")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                }
+            }
+
+            if !continuity.guidanceLines.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Health Rhythm")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    ForEach(continuity.guidanceLines, id: \.self) { line in
+                        Text("• \(line)")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.72))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+
+            if !continuity.activeConditions.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Active Watch")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(continuity.activeConditions.joined(separator: " • "))
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.74))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            if !continuity.recentProfileFacts.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Durable Patterns")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    ForEach(continuity.recentProfileFacts) { fact in
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(fact.title)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                            if !fact.summary.isEmpty {
+                                Text(fact.summary)
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.72))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .padding(.bottom, 2)
+                    }
+                }
+            }
+
+            if !continuity.recentFirstLight.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Recent First Light")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    ForEach(continuity.recentFirstLight) { moment in
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(moment.label)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white)
+                            Text(moment.summary)
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.72))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func readinessFactorsCard(_ factors: [HealthReadinessFactor]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Readiness Factors", systemImage: "waveform.path.ecg.rectangle")
+                .font(.system(size: 11, weight: .bold))
+                .tracking(1.0)
+                .foregroundStyle(.cyan.opacity(0.95))
+
+            ForEach(factors) { factor in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(factor.label)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Spacer()
+                        if factor.missing {
+                            Text("Missing")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.yellow)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(.yellow.opacity(0.12), in: Capsule())
+                        } else if let score = factor.score {
+                            Text("\(score)")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.cyan)
+                        }
+                    }
+                    HStack {
+                        if let value = factor.value {
+                            Text(metricValue(value, metric: factor.metric))
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.7))
+                        }
+                        Spacer()
+                    }
+                    .padding(.bottom, 2)
+                }
+                if factor.id != factors.last?.id {
+                    Divider().opacity(0.14)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func thorCard(_ thor: HealthThorSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Thor Movement Posture", systemImage: "figure.strengthtraining.traditional")
+                .font(.system(size: 11, weight: .bold))
+                .tracking(1.0)
+                .foregroundStyle(.orange.opacity(0.95))
+
+            Text(thor.thorNote)
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.82))
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 10) {
+                miniStat("Streak", "\(thor.activityStreakDays)d", tint: .orange)
+                miniStat("Week", "\(thor.totalActiveMinutesWeek)m", tint: .green)
+                miniStat("Avg Steps", thor.avgDailySteps.formatted(), tint: .blue)
+            }
+
+            HStack(spacing: 8) {
+                Text(thor.readiness.replacingOccurrences(of: "_", with: " ").capitalized)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(.orange.opacity(0.12), in: Capsule())
+                if thor.needsRest {
+                    Text("Recovery day suggested")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.yellow)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(.yellow.opacity(0.12), in: Capsule())
+                }
+                Spacer()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func completenessCard(_ completeness: HealthCompletenessSummary) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Data Completeness", systemImage: "cross.case.circle.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .tracking(1.0)
+                    .foregroundStyle(.pink.opacity(0.95))
+                Spacer()
+                Text("\(completeness.totalScore) · \(completeness.grade)")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.white)
+            }
+
+            if !completeness.criticalGaps.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Critical gaps")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.pink.opacity(0.85))
+                    ForEach(completeness.criticalGaps, id: \.self) { gap in
+                        Text(gap)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.74))
+                    }
+                }
+            }
+
+            if !completeness.quickWins.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Quick wins")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.green.opacity(0.9))
+                    ForEach(completeness.quickWins, id: \.self) { item in
+                        Text(item)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.74))
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -287,6 +553,36 @@ struct HealthView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func miniStat(_ label: String, _ value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label.uppercased())
+                .font(.system(size: 9, weight: .bold))
+                .tracking(0.8)
+                .foregroundStyle(tint.opacity(0.8))
+            Text(value)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(.white)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func metricValue(_ value: Double, metric: String) -> String {
+        switch metric {
+        case "sleep_hours":
+            return String(format: "%.1f hrs", value)
+        case "hrv":
+            return "\(Int(value)) ms"
+        case "resting_hr":
+            return "\(Int(value)) bpm"
+        case "steps":
+            return Int(value).formatted() + " steps"
+        default:
+            return String(format: "%.0f", value)
+        }
     }
 
     // MARK: - Error
