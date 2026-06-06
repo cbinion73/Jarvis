@@ -1818,53 +1818,38 @@ body::after {{
 }}
 
 /* ═══════════════════════════════════════════════════════════════════
-   LEGACY — DESKTOP STORYBOARD
+   LEGACY — DESKTOP EXPERIENCE
 ═══════════════════════════════════════════════════════════════════ */
 .legacy-view {{
-  --legacy-ink: #05070d;
-  --legacy-panel: linear-gradient(180deg, rgba(13,18,28,0.96), rgba(7,10,17,0.98));
-  --legacy-stroke: rgba(198, 154, 94, 0.38);
-  --legacy-stroke-strong: rgba(225, 185, 122, 0.62);
   --legacy-gold: #d9b27a;
   --legacy-gold-soft: #a98559;
   --legacy-copy: #efe6d4;
   --legacy-copy-muted: rgba(239, 230, 212, 0.72);
-  --legacy-copy-faint: rgba(239, 230, 212, 0.48);
+  --legacy-copy-faint: rgba(239, 230, 212, 0.46);
+  --legacy-stroke: rgba(198, 154, 94, 0.34);
+  --legacy-stroke-strong: rgba(225, 185, 122, 0.66);
+  --legacy-panel: linear-gradient(180deg, rgba(13,18,28,0.96), rgba(7,10,17,0.98));
   --legacy-blue: #8cb8ff;
   --legacy-green: #8dd7a0;
-  --legacy-rose: #d89f93;
   position: relative;
-  padding: 8px 0 28px;
   color: var(--legacy-copy);
 }}
 .legacy-view::before {{
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 28px;
+  border-radius: 26px;
   background:
-    radial-gradient(circle at top left, rgba(214, 169, 102, 0.10), transparent 34%),
-    radial-gradient(circle at bottom right, rgba(120, 144, 214, 0.08), transparent 28%),
-    linear-gradient(180deg, rgba(7,10,16,0.42), rgba(7,10,16,0));
+    radial-gradient(circle at top left, rgba(214, 169, 102, 0.11), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(120, 144, 214, 0.09), transparent 28%);
   pointer-events: none;
 }}
-.legacy-view-header {{
+.legacy-header {{
   display: flex;
   justify-content: space-between;
+  gap: 18px;
   align-items: flex-start;
-  gap: 16px;
   margin-bottom: 20px;
-}}
-.legacy-title-wrap {{
-  max-width: 720px;
-}}
-.legacy-view .view-title {{
-  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  letter-spacing: 0.02em;
-  color: var(--legacy-copy);
-}}
-.legacy-view .view-title-line {{
-  background: linear-gradient(90deg, var(--legacy-gold), rgba(217,178,122,0));
 }}
 .legacy-kicker {{
   font-size: 11px;
@@ -1873,276 +1858,225 @@ body::after {{
   color: var(--legacy-gold-soft);
   margin-bottom: 10px;
 }}
+.legacy-view .view-title {{
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  letter-spacing: 0.02em;
+  color: var(--legacy-copy);
+}}
+.legacy-view .view-title-line {{
+  background: linear-gradient(90deg, var(--legacy-gold), rgba(217,178,122,0));
+}}
 .legacy-subtitle {{
+  max-width: 760px;
+  margin-top: 10px;
   font-size: 16px;
   line-height: 1.55;
   color: var(--legacy-copy-muted);
-  margin-top: 10px;
-  max-width: 760px;
 }}
 .legacy-motto {{
-  min-width: 260px;
+  max-width: 310px;
   padding: 14px 16px;
-  border: 1px solid var(--legacy-stroke);
   border-radius: 18px;
+  border: 1px solid var(--legacy-stroke);
   background: linear-gradient(180deg, rgba(20,24,34,0.92), rgba(11,14,22,0.98));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 22px 50px rgba(0,0,0,0.32);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
 }}
 .legacy-motto-mark {{
-  font-size: 18px;
   color: var(--legacy-gold);
+  font-size: 18px;
   margin-bottom: 8px;
 }}
 .legacy-motto strong {{
   display: block;
   font-size: 15px;
   line-height: 1.45;
-  color: var(--legacy-copy);
 }}
 .legacy-motto span {{
   display: block;
-  font-size: 12px;
-  color: var(--legacy-copy-faint);
   margin-top: 6px;
+  color: var(--legacy-copy-faint);
+  font-size: 12px;
 }}
-.legacy-story-nav {{
+.legacy-desktop-stage {{
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid var(--legacy-stroke);
+  background:
+    linear-gradient(180deg, rgba(16,21,31,0.98), rgba(6,8,14,0.99)),
+    radial-gradient(circle at top left, rgba(217,178,122,0.08), transparent 40%);
+  box-shadow: 0 28px 80px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.05);
+}}
+.legacy-desktop-stage::before {{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.03), transparent 32%),
+    repeating-linear-gradient(90deg, transparent 0 26px, rgba(255,255,255,0.014) 26px 27px);
+  pointer-events: none;
+}}
+.legacy-desktop-shell {{
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 238px minmax(0, 1fr);
+  min-height: 860px;
+}}
+.legacy-sidebar {{
+  padding: 18px 14px;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  background: linear-gradient(180deg, rgba(9,12,20,0.98), rgba(6,8,14,0.99));
+  display: flex;
+  flex-direction: column;
+}}
+.legacy-sidebar-top {{
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 12px 16px;
   margin-bottom: 18px;
-  border-radius: 18px;
-  border: 1px solid var(--legacy-stroke);
-  background: linear-gradient(180deg, rgba(15,19,28,0.92), rgba(9,12,19,0.98));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
 }}
-.legacy-story-nav-copy {{
+.legacy-sidebar-brand strong {{
+  display: block;
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  font-size: 30px;
+  color: var(--legacy-copy);
+}}
+.legacy-sidebar-brand span {{
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--legacy-gold-soft);
+}}
+.legacy-sidebar-mark {{
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--legacy-stroke);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--legacy-gold);
+}}
+.legacy-sidebar-nav {{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}}
+.legacy-sidebar-item {{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  color: var(--legacy-copy-faint);
+  font-size: 13px;
+}}
+.legacy-sidebar-item.active {{
+  background: rgba(217,178,122,0.09);
+  border-color: rgba(217,178,122,0.22);
+  color: var(--legacy-copy);
+}}
+.legacy-sidebar-foot {{
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}}
+.legacy-sidebar-user {{
+  font-size: 12px;
+  color: var(--legacy-copy-muted);
+}}
+.legacy-sidebar-user strong {{
+  display: block;
+  color: var(--legacy-copy);
+  margin-bottom: 4px;
+}}
+.legacy-main {{
+  padding: 18px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}}
+.legacy-topbar {{
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}}
+.legacy-topbar-copy {{
   min-width: 0;
 }}
-.legacy-story-nav-label {{
+.legacy-topbar-kicker {{
   font-size: 10px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--legacy-gold-soft);
   margin-bottom: 4px;
 }}
-.legacy-story-nav-title {{
-  font-size: 15px;
+.legacy-topbar-title {{
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  font-size: 30px;
   color: var(--legacy-copy);
 }}
-.legacy-story-nav-controls {{
+.legacy-topbar-subtitle {{
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--legacy-copy-muted);
+}}
+.legacy-nav {{
   display: flex;
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
 }}
-.legacy-story-nav-btn {{
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
+.legacy-nav-btn {{
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
   border: 1px solid var(--legacy-stroke);
   background: rgba(255,255,255,0.03);
   color: var(--legacy-copy);
-  font-size: 16px;
   cursor: pointer;
-  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
 }}
-.legacy-story-nav-btn:hover:not(:disabled) {{
-  transform: translateY(-1px);
-  border-color: var(--legacy-stroke-strong);
-  background: rgba(217,178,122,0.08);
-}}
-.legacy-story-nav-btn:disabled {{
+.legacy-nav-btn:disabled {{
   opacity: 0.4;
   cursor: default;
 }}
-.legacy-page-count {{
-  min-width: 88px;
+.legacy-nav-status {{
+  min-width: 110px;
   text-align: center;
+}}
+.legacy-nav-page {{
   font-size: 11px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--legacy-copy-faint);
 }}
-.legacy-grid {{
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 16px;
-  position: relative;
-  z-index: 1;
-}}
-.legacy-panel {{
-  grid-column: span 4;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  scroll-margin-top: 90px;
-}}
-.legacy-panel[data-legacy-page="4"],
-.legacy-panel[data-legacy-page="5"],
-.legacy-panel[data-legacy-page="6"] {{
-  grid-column: span 4;
-}}
-.legacy-panel.active .legacy-frame {{
-  border-color: var(--legacy-stroke-strong);
-  box-shadow: 0 28px 70px rgba(0,0,0,0.38), 0 0 0 1px rgba(217,178,122,0.10), inset 0 1px 0 rgba(255,255,255,0.06);
-  transform: translateY(-1px);
-}}
-.legacy-step {{
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
-  font-size: 24px;
+.legacy-nav-title {{
+  margin-top: 3px;
+  font-size: 14px;
   color: var(--legacy-copy);
 }}
-.legacy-step-index {{
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 1px solid var(--legacy-stroke-strong);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  color: var(--legacy-gold);
-}}
-.legacy-step-copy {{
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}}
-.legacy-step-copy strong {{
-  font-size: 22px;
-  font-weight: 500;
-}}
-.legacy-step-copy span {{
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--legacy-copy-muted);
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}}
-.legacy-frame {{
+.legacy-page-deck {{
   position: relative;
-  padding: 14px;
-  min-height: 430px;
-  border-radius: 24px;
-  border: 1px solid var(--legacy-stroke);
-  background:
-    linear-gradient(180deg, rgba(15,20,29,0.94), rgba(7,10,17,0.98)),
-    radial-gradient(circle at top, rgba(217,178,122,0.10), transparent 40%);
-  box-shadow: 0 24px 60px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.05);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-  overflow: hidden;
+  min-height: 0;
 }}
-.legacy-frame::before {{
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(135deg, rgba(255,255,255,0.03), transparent 30%),
-    repeating-linear-gradient(90deg, transparent 0 27px, rgba(255,255,255,0.016) 27px 28px);
-  pointer-events: none;
-}}
-.legacy-window-chrome {{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 12px;
-}}
-.legacy-window-dots {{
-  display: flex;
-  gap: 6px;
-}}
-.legacy-window-dots span {{
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-}}
-.legacy-window-dots span:nth-child(1) {{ background: #ff715f; }}
-.legacy-window-dots span:nth-child(2) {{ background: #ffbe2f; }}
-.legacy-window-dots span:nth-child(3) {{ background: #28c840; }}
-.legacy-window-label {{
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--legacy-copy-faint);
-}}
-.legacy-window-body {{
-  position: relative;
-  z-index: 1;
-  display: flex;
+.legacy-page {{
+  display: none;
   flex-direction: column;
   gap: 14px;
 }}
-.legacy-hero {{
-  display: grid;
-  grid-template-columns: 1.35fr 0.85fr;
-  gap: 12px;
+.legacy-page.active {{
+  display: flex;
 }}
-.legacy-hero-card,
-.legacy-column-card,
-.legacy-list-card,
-.legacy-mini-card,
-.legacy-summary-card {{
-  border-radius: 18px;
+.legacy-card,
+.legacy-panel-card,
+.legacy-info-card {{
+  border-radius: 20px;
   border: 1px solid rgba(255,255,255,0.08);
   background: rgba(255,255,255,0.025);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
-}}
-.legacy-hero-card {{
-  overflow: hidden;
-}}
-.legacy-hero-visual {{
-  min-height: 164px;
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  background:
-    linear-gradient(180deg, rgba(5,8,15,0.14), rgba(5,8,15,0.78)),
-    linear-gradient(140deg, rgba(221,180,120,0.18), rgba(41,55,90,0.16)),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='500' viewBox='0 0 800 500'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23304b72'/%3E%3Cstop offset='0.45' stop-color='%2363784a'/%3E%3Cstop offset='1' stop-color='%231f2430'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='800' height='500' fill='url(%23g)'/%3E%3Cpath d='M0 420 L160 250 L270 340 L410 150 L560 310 L680 210 L800 420 V500 H0 Z' fill='rgba(8,9,14,0.58)'/%3E%3Ccircle cx='632' cy='118' r='52' fill='rgba(255,209,148,0.42)'/%3E%3C/svg%3E") center/cover no-repeat;
-}}
-.legacy-hero-overline {{
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.7);
-}}
-.legacy-hero-headline {{
-  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
-  font-size: 30px;
-  line-height: 1.08;
-  color: #fff4e1;
-}}
-.legacy-hero-sub {{
-  max-width: 320px;
-  font-size: 13px;
-  line-height: 1.55;
-  color: rgba(255,255,255,0.82);
-}}
-.legacy-hero-button {{
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  width: fit-content;
-  padding: 8px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,227,190,0.35);
-  background: rgba(16,20,29,0.55);
-  color: #fff2dc;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}}
-.legacy-column-stack {{
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }}
 .legacy-card-heading {{
   display: flex;
@@ -2151,65 +2085,84 @@ body::after {{
   gap: 10px;
   margin-bottom: 10px;
 }}
-.legacy-card-title {{
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--legacy-copy-faint);
-}}
-.legacy-card-title strong {{
-  display: block;
-  font-size: 14px;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--legacy-copy);
-  margin-top: 4px;
-}}
-.legacy-metric-grid {{
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}}
-.legacy-metric {{
-  padding: 14px 14px 12px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.06);
-  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
-}}
-.legacy-metric-label {{
+.legacy-card-label {{
   font-size: 10px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--legacy-copy-faint);
-  margin-bottom: 8px;
 }}
-.legacy-metric-value {{
-  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
-  font-size: 28px;
+.legacy-card-label strong {{
+  display: block;
+  margin-top: 4px;
+  font-size: 15px;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--legacy-copy);
 }}
-.legacy-metric-value.accent {{
-  color: var(--legacy-gold);
+.legacy-home-grid {{
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.8fr);
+  gap: 14px;
 }}
-.legacy-metric-value.good {{
-  color: var(--legacy-green);
+.legacy-hero-card {{
+  overflow: hidden;
 }}
-.legacy-metric-value.soft {{
-  color: var(--legacy-blue);
+.legacy-hero-visual {{
+  min-height: 246px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background:
+    linear-gradient(180deg, rgba(5,8,15,0.18), rgba(5,8,15,0.78)),
+    linear-gradient(145deg, rgba(221,180,120,0.20), rgba(41,55,90,0.16)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='520' viewBox='0 0 900 520'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23304b72'/%3E%3Cstop offset='0.5' stop-color='%2363784a'/%3E%3Cstop offset='1' stop-color='%231d212d'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='900' height='520' fill='url(%23g)'/%3E%3Cpath d='M0 430 L170 250 L310 340 L470 155 L615 305 L742 208 L900 430 V520 H0 Z' fill='rgba(8,9,14,0.6)'/%3E%3Ccircle cx='705' cy='115' r='48' fill='rgba(255,209,148,0.38)'/%3E%3C/svg%3E") center/cover no-repeat;
 }}
-.legacy-mini-card {{
-  padding: 14px;
-}}
-.legacy-mini-copy {{
+.legacy-hero-overline {{
   font-size: 12px;
+  color: rgba(255,255,255,0.74);
+}}
+.legacy-hero-title {{
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  font-size: 40px;
+  line-height: 1.02;
+  color: #fff5e4;
+}}
+.legacy-hero-copy {{
+  max-width: 360px;
+  font-size: 14px;
   line-height: 1.6;
-  color: var(--legacy-copy-muted);
+  color: rgba(255,255,255,0.82);
+}}
+.legacy-hero-button {{
+  display: inline-flex;
+  width: fit-content;
+  padding: 9px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,227,190,0.34);
+  background: rgba(16,20,29,0.55);
+  color: #fff2dc;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}}
+.legacy-home-side {{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}}
+.legacy-stack-card,
+.legacy-detail-card {{
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.025);
 }}
 .legacy-pill-row,
-.legacy-tag-row {{
+.legacy-tag-cloud {{
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: 8px;
 }}
 .legacy-pill {{
   padding: 6px 10px;
@@ -2219,43 +2172,141 @@ body::after {{
   color: var(--legacy-copy);
   font-size: 11px;
 }}
-.legacy-capture {{
+.legacy-metric-row {{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}}
+.legacy-metric {{
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+}}
+.legacy-metric span {{
+  display: block;
+  margin-bottom: 8px;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--legacy-copy-faint);
+}}
+.legacy-metric strong {{
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  font-size: 30px;
+  color: var(--legacy-copy);
+}}
+.legacy-metric strong.accent {{ color: var(--legacy-gold); }}
+.legacy-metric strong.good {{ color: var(--legacy-green); }}
+.legacy-metric strong.soft {{ color: var(--legacy-blue); }}
+.legacy-content-grid {{
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.85fr);
+  gap: 14px;
+}}
+.legacy-panel-card,
+.legacy-info-card {{
   padding: 14px;
 }}
-.legacy-capture .chr-capture-type-row {{
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 14px;
+.legacy-list-wrap,
+.legacy-feed,
+.legacy-thread-list {{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 530px;
+  overflow-y: auto;
+  padding-right: 4px;
 }}
-.legacy-capture .chr-capture-type {{
-  padding: 10px 8px;
-  border-radius: 14px;
+.legacy-feed.compact {{
+  max-height: 420px;
+}}
+.legacy-panel-card #chronicle-list .chr-entry-card {{
+  position: relative;
+  margin: 0;
+  padding: 16px 16px 14px 22px;
+  border-radius: 18px;
   border: 1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015));
+}}
+.legacy-panel-card #chronicle-list .chr-entry-card::before {{
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 16px;
+  bottom: 16px;
+  width: 2px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--legacy-gold), rgba(217,178,122,0.1));
+}}
+.legacy-panel-card #chronicle-list .chr-entry-type-bar {{
+  display: none;
+}}
+.legacy-panel-card #chronicle-list .chr-entry-header,
+.legacy-panel-card #chronicle-list .chr-entry-body,
+.legacy-panel-card #chronicle-list .chr-entry-footer {{
+  padding-left: 10px;
+}}
+.legacy-panel-card #chronicle-list .chr-entry-title {{
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  font-size: 18px;
+  color: var(--legacy-copy);
+}}
+.legacy-panel-card #chronicle-list .chr-entry-type-pill {{
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: rgba(217,178,122,0.10);
+  color: var(--legacy-gold);
+}}
+.legacy-panel-card #chronicle-list .chr-entry-date,
+.legacy-panel-card #chronicle-list .chr-entry-body,
+.legacy-panel-card .chr-prayer-count,
+.legacy-panel-card .chr-rhythm-focus {{
+  color: var(--legacy-copy-faint);
+}}
+.legacy-panel-card .chr-passage {{
+  color: var(--legacy-gold-soft);
+}}
+.legacy-panel-card .chr-theme-tag {{
+  border-radius: 999px;
+  border-color: rgba(255,255,255,0.08);
+  color: var(--legacy-copy-faint);
+}}
+.legacy-panel-card #chr-prayer-list .chr-prayer-item,
+.legacy-panel-card #chr-rhythms-list .chr-rhythm-item {{
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  margin-bottom: 10px;
+  padding: 12px 14px;
   background: rgba(255,255,255,0.03);
-  color: var(--legacy-copy-muted);
-  font-size: 11px;
-  font-weight: 600;
-  text-align: center;
 }}
-.legacy-capture .chr-capture-type:hover {{
-  color: var(--legacy-copy);
-  border-color: rgba(217,178,122,0.32);
-  background: rgba(217,178,122,0.08);
+.legacy-panel-card #chr-prayer-list .chr-prayer-item:last-child,
+.legacy-panel-card #chr-rhythms-list .chr-rhythm-item:last-child {{
+  margin-bottom: 0;
 }}
-.legacy-capture .chr-capture-type.active {{
-  border-color: var(--legacy-stroke-strong);
-  background: rgba(217,178,122,0.14);
+.legacy-panel-card #chr-prayer-list .chr-prayer-cat {{
+  border-radius: 999px;
+  padding: 4px 8px;
+}}
+.legacy-panel-card #chr-prayer-list .chr-prayer-text,
+.legacy-panel-card #chr-rhythms-list .chr-rhythm-title {{
   color: var(--legacy-copy);
 }}
-.legacy-capture-grid {{
+.legacy-panel-card #chr-rhythms-list .chr-rhythm-cadence {{
+  border-radius: 999px;
+  color: var(--legacy-gold-soft);
+}}
+.legacy-panel-card #chr-rhythms-list .chr-rhythm-passage {{
+  color: var(--legacy-gold);
+}}
+.legacy-capture-page {{
   display: grid;
-  grid-template-columns: 1.25fr 0.75fr;
+  grid-template-columns: minmax(0, 1.15fr) minmax(270px, 0.85fr);
   gap: 14px;
 }}
 .legacy-dropzone {{
-  min-height: 206px;
-  border-radius: 18px;
+  min-height: 410px;
+  border-radius: 20px;
   border: 1px dashed rgba(140,184,255,0.36);
   background:
     linear-gradient(180deg, rgba(20,25,35,0.88), rgba(11,14,21,0.96)),
@@ -2264,46 +2315,72 @@ body::after {{
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 20px;
   text-align: center;
+  padding: 26px;
 }}
 .legacy-dropzone-icon {{
-  width: 64px;
-  height: 64px;
+  width: 68px;
+  height: 68px;
   border-radius: 50%;
-  border: 1px solid rgba(140,184,255,0.26);
+  border: 1px solid rgba(140,184,255,0.24);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
   color: var(--legacy-blue);
+  font-size: 24px;
   margin-bottom: 12px;
 }}
 .legacy-dropzone strong {{
-  display: block;
-  font-size: 16px;
-  color: var(--legacy-copy);
+  font-size: 17px;
 }}
 .legacy-dropzone span {{
   display: block;
-  margin-top: 6px;
-  font-size: 12px;
-  line-height: 1.5;
+  max-width: 330px;
+  margin-top: 8px;
   color: var(--legacy-copy-faint);
+  font-size: 12px;
+  line-height: 1.6;
 }}
-.legacy-capture-fields {{
+.legacy-capture-side {{
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+}}
+.legacy-input-card,
+.legacy-copy-card {{
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.025);
+}}
+.legacy-input-card .chr-capture-type-row {{
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}}
+.legacy-input-card .chr-capture-type {{
+  padding: 10px 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  color: var(--legacy-copy-muted);
+  text-align: center;
+}}
+.legacy-input-card .chr-capture-type.active {{
+  border-color: var(--legacy-stroke-strong);
+  background: rgba(217,178,122,0.14);
+  color: var(--legacy-copy);
 }}
 .legacy-field-label {{
   font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--legacy-copy-faint);
+  margin-bottom: 6px;
 }}
-.legacy-capture .chr-capture-input,
-.legacy-capture .chr-capture-passage,
+.legacy-input-card .chr-capture-input,
+.legacy-input-card .chr-capture-passage,
 .legacy-search-input {{
   width: 100%;
   border-radius: 12px;
@@ -2314,23 +2391,15 @@ body::after {{
   font-size: 13px;
   outline: none;
 }}
-.legacy-capture .chr-capture-input:focus,
-.legacy-capture .chr-capture-passage:focus,
-.legacy-search-input:focus {{
-  border-color: rgba(217,178,122,0.52);
-  box-shadow: 0 0 0 1px rgba(217,178,122,0.18);
-}}
-.legacy-capture-actions {{
+.legacy-actions {{
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 4px;
-}}
-.legacy-progress {{
-  flex: 1;
+  margin-top: 10px;
 }}
 .legacy-progress-track {{
+  width: 100%;
   height: 7px;
   border-radius: 999px;
   background: rgba(255,255,255,0.08);
@@ -2351,12 +2420,6 @@ body::after {{
   font-size: 12px;
   padding: 10px 14px;
   cursor: pointer;
-  transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
-}}
-.legacy-button:hover {{
-  background: rgba(217,178,122,0.16);
-  border-color: var(--legacy-stroke-strong);
-  transform: translateY(-1px);
 }}
 .legacy-search-wrap {{
   display: flex;
@@ -2379,167 +2442,42 @@ body::after {{
   box-shadow: none;
   padding: 0;
 }}
-.legacy-search-input:focus {{
-  box-shadow: none;
-}}
-.legacy-timeline {{
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-height: 312px;
-  overflow-y: auto;
-  padding-right: 4px;
-}}
-.legacy-panel #chronicle-list .chr-entry-card {{
-  position: relative;
-  padding: 16px 16px 14px 20px;
-  margin: 0;
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
-}}
-.legacy-panel #chronicle-list .chr-entry-card::before {{
-  content: "";
-  position: absolute;
-  left: 10px;
-  top: 18px;
-  bottom: 18px;
-  width: 2px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, var(--legacy-gold), rgba(217,178,122,0.1));
-}}
-.legacy-panel #chronicle-list .chr-entry-type-bar {{
-  display: none;
-}}
-.legacy-panel #chronicle-list .chr-entry-header {{
-  padding-left: 10px;
-  margin-bottom: 8px;
-  align-items: center;
-}}
-.legacy-panel #chronicle-list .chr-entry-type-pill {{
-  background: rgba(217,178,122,0.10);
-  color: var(--legacy-gold);
-  border-radius: 999px;
-  padding: 4px 8px;
-}}
-.legacy-panel #chronicle-list .chr-entry-title {{
-  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
-  font-size: 18px;
-  color: var(--legacy-copy);
-}}
-.legacy-panel #chronicle-list .chr-entry-date {{
-  color: var(--legacy-copy-faint);
-}}
-.legacy-panel #chronicle-list .chr-entry-body {{
-  padding-left: 10px;
-  color: var(--legacy-copy-muted);
-}}
-.legacy-panel #chronicle-list .chr-entry-footer {{
-  padding-left: 10px;
-}}
-.legacy-panel .chr-passage {{
-  color: var(--legacy-gold-soft);
-}}
-.legacy-panel .chr-theme-tag {{
-  border-radius: 999px;
-  border-color: rgba(255,255,255,0.08);
-  color: var(--legacy-copy-faint);
-}}
-.legacy-side-grid {{
+.legacy-grid-two {{
   display: grid;
-  grid-template-columns: 0.92fr 1.08fr;
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }}
-.legacy-side-column {{
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}}
-.legacy-feed {{
-  max-height: 320px;
-  overflow-y: auto;
-  padding-right: 4px;
-}}
-.legacy-feed.compact {{
-  max-height: 250px;
-}}
-.legacy-panel #chr-prayer-list .chr-prayer-item,
-.legacy-panel #chr-rhythms-list .chr-rhythm-item {{
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 16px;
-  margin-bottom: 10px;
-  padding: 12px 14px;
-  background: rgba(255,255,255,0.03);
-}}
-.legacy-panel #chr-prayer-list .chr-prayer-item:last-child,
-.legacy-panel #chr-rhythms-list .chr-rhythm-item:last-child {{
-  margin-bottom: 0;
-}}
-.legacy-panel #chr-prayer-list .chr-prayer-cat {{
-  border-radius: 999px;
-  padding: 4px 8px;
-}}
-.legacy-panel #chr-prayer-list .chr-prayer-text,
-.legacy-panel #chr-rhythms-list .chr-rhythm-title {{
-  color: var(--legacy-copy);
-}}
-.legacy-panel #chr-prayer-list .chr-prayer-count,
-.legacy-panel #chr-rhythms-list .chr-rhythm-focus {{
-  color: var(--legacy-copy-faint);
-}}
-.legacy-panel #chr-rhythms-list .chr-rhythm-cadence {{
-  border-radius: 999px;
-  color: var(--legacy-gold-soft);
-}}
-.legacy-panel #chr-rhythms-list .chr-rhythm-passage {{
-  color: var(--legacy-gold);
-}}
-.legacy-summary-card,
-.legacy-list-card,
-.legacy-column-card {{
-  padding: 14px;
-}}
-.legacy-list-card p,
-.legacy-summary-card p {{
+.legacy-copy-card p,
+.legacy-info-card p,
+.legacy-stack-card p,
+.legacy-detail-card p {{
   margin: 0;
   font-size: 12px;
   line-height: 1.6;
   color: var(--legacy-copy-muted);
 }}
-.legacy-summary-card strong {{
-  display: block;
-  margin-bottom: 8px;
-  font-size: 14px;
-  color: var(--legacy-copy);
-}}
-.legacy-list-points {{
+.legacy-points {{
   display: flex;
   flex-direction: column;
   gap: 10px;
 }}
-.legacy-list-point {{
+.legacy-point {{
   padding: 10px 12px;
   border-radius: 14px;
-  background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.03);
 }}
-.legacy-list-point strong {{
+.legacy-point strong {{
   display: block;
+  margin-bottom: 4px;
   font-size: 13px;
   color: var(--legacy-copy);
-  margin-bottom: 4px;
 }}
-.legacy-list-point span {{
+.legacy-point span {{
   display: block;
   font-size: 11px;
   line-height: 1.55;
   color: var(--legacy-copy-faint);
-}}
-.legacy-tag-cloud {{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }}
 .legacy-tag-cloud .tag-chip {{
   background: rgba(217,178,122,0.08);
@@ -2567,7 +2505,7 @@ body::after {{
   gap: 10px;
 }}
 .legacy-bubble {{
-  max-width: 86%;
+  max-width: 84%;
   padding: 12px 14px;
   border-radius: 16px;
   font-size: 12px;
@@ -2577,7 +2515,6 @@ body::after {{
   align-self: flex-end;
   background: rgba(217,178,122,0.16);
   border: 1px solid rgba(217,178,122,0.26);
-  color: var(--legacy-copy);
 }}
 .legacy-bubble.agent {{
   align-self: flex-start;
@@ -2588,9 +2525,7 @@ body::after {{
 .legacy-voice-footer {{
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
-  padding-top: 6px;
 }}
 .legacy-wave {{
   flex: 1;
@@ -2613,77 +2548,31 @@ body::after {{
   color: var(--legacy-gold);
   font-size: 11px;
 }}
-.legacy-principles {{
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 18px;
-}}
-.legacy-principle {{
-  padding: 14px;
-  border-radius: 18px;
-  border: 1px solid var(--legacy-stroke);
-  background: linear-gradient(180deg, rgba(13,18,28,0.92), rgba(8,11,18,0.98));
-}}
-.legacy-principle-mark {{
-  font-size: 24px;
-  color: var(--legacy-gold);
-  margin-bottom: 10px;
-}}
-.legacy-principle strong {{
-  display: block;
-  font-size: 14px;
-  color: var(--legacy-copy);
-  margin-bottom: 6px;
-}}
-.legacy-principle span {{
-  display: block;
-  font-size: 12px;
-  line-height: 1.55;
-  color: var(--legacy-copy-faint);
-}}
-@media (max-width: 1400px) {{
-  .legacy-grid {{
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }}
-  .legacy-panel {{
-    grid-column: span 3;
-  }}
-  .legacy-principles {{
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }}
-}}
-@media (max-width: 1100px) {{
-  .legacy-view-header,
-  .legacy-story-nav,
-  .legacy-hero,
-  .legacy-capture-grid,
-  .legacy-side-grid {{
-    grid-template-columns: 1fr;
-    flex-direction: column;
-  }}
-  .legacy-grid {{
+@media (max-width: 1200px) {{
+  .legacy-desktop-shell,
+  .legacy-home-grid,
+  .legacy-content-grid,
+  .legacy-capture-page,
+  .legacy-grid-two {{
     grid-template-columns: 1fr;
   }}
-  .legacy-panel {{
-    grid-column: span 1;
+  .legacy-sidebar {{
+    border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
   }}
-  .legacy-metric-grid {{
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }}
-  .legacy-principles {{
+  .legacy-metric-row {{
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }}
 }}
 @media (max-width: 760px) {{
-  .legacy-frame {{
-    min-height: auto;
+  .legacy-header,
+  .legacy-topbar,
+  .legacy-actions {{
+    flex-direction: column;
+    align-items: flex-start;
   }}
-  .legacy-capture .chr-capture-type-row {{
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }}
-  .legacy-metric-grid,
-  .legacy-principles {{
+  .legacy-input-card .chr-capture-type-row,
+  .legacy-metric-row {{
     grid-template-columns: 1fr;
   }}
 }}
@@ -7709,11 +7598,11 @@ body::after {{
 
   <!-- ── CHRONICLE ──────────────────────────────────────────── -->
   <div id="view-chronicle" class="view legacy-view">
-    <div class="view-header legacy-view-header">
-      <div class="legacy-title-wrap">
-        <div class="legacy-kicker">Concept Storyboard</div>
+    <div class="legacy-header">
+      <div>
+        <div class="legacy-kicker">Desktop Experience</div>
         <div class="view-title">LEGACY<div class="view-title-line"></div></div>
-        <div class="legacy-subtitle">Every moment matters. Every story deserves to be remembered. Legacy brings memory capture, family continuity, reflection, and voice-guided story building into one desktop operating room.</div>
+        <div class="legacy-subtitle">The actual desktop workspace for memory, family history, reflection, and voice-guided story building. One screen is active at a time, with arrows and page count carrying the experience forward.</div>
       </div>
       <div class="legacy-motto">
         <div class="legacy-motto-mark">✒</div>
@@ -7722,347 +7611,244 @@ body::after {{
       </div>
     </div>
 
-    <div class="legacy-story-nav">
-      <div class="legacy-story-nav-copy">
-        <div class="legacy-story-nav-label">Desktop Sequence</div>
-        <div class="legacy-story-nav-title" id="legacy-nav-title">1. Memory Hub</div>
-      </div>
-      <div class="legacy-story-nav-controls">
-        <button class="legacy-story-nav-btn" id="legacy-nav-prev" onclick="advanceLegacyPage(-1)" aria-label="Previous Legacy page">←</button>
-        <div class="legacy-page-count" id="legacy-page-count">Page 1 of 6</div>
-        <button class="legacy-story-nav-btn" id="legacy-nav-next" onclick="advanceLegacyPage(1)" aria-label="Next Legacy page">→</button>
-      </div>
-    </div>
+    <div class="legacy-desktop-stage">
+      <div class="legacy-desktop-shell">
+        <aside class="legacy-sidebar">
+          <div class="legacy-sidebar-top">
+            <div class="legacy-sidebar-brand">
+              <strong>JARVIS</strong>
+              <span>Legacy</span>
+            </div>
+            <div class="legacy-sidebar-mark">✦</div>
+          </div>
+          <div class="legacy-sidebar-nav">
+            <div class="legacy-sidebar-item active">⌂ Home</div>
+            <div class="legacy-sidebar-item">◌ Timeline</div>
+            <div class="legacy-sidebar-item">☰ Stories</div>
+            <div class="legacy-sidebar-item">◍ People</div>
+            <div class="legacy-sidebar-item">⌖ Places</div>
+            <div class="legacy-sidebar-item">✒ Themes</div>
+            <div class="legacy-sidebar-item">⌕ Search</div>
+            <div class="legacy-sidebar-item">☷ Archive</div>
+          </div>
+          <div class="legacy-sidebar-foot">
+            <div class="legacy-sidebar-user">
+              <strong>Chris</strong>
+              Pro Plan · Living story engine
+            </div>
+          </div>
+        </aside>
 
-    <div class="legacy-grid">
-      <section class="legacy-panel active" data-legacy-page="1" data-legacy-title="1. Memory Hub">
-        <div class="legacy-step">
-          <span class="legacy-step-index">1</span>
-          <div class="legacy-step-copy">
-            <strong>Memory Hub</strong>
-            <span>Your story center, with recent moments, living themes, and a reason to return.</span>
+        <main class="legacy-main">
+          <div class="legacy-topbar">
+            <div class="legacy-topbar-copy">
+              <div class="legacy-topbar-kicker">Desktop Sequence</div>
+              <div class="legacy-topbar-title" id="legacy-nav-title">1. Memory Hub</div>
+              <div class="legacy-topbar-subtitle" id="legacy-nav-subtitle">Your story center with recent moments, living themes, and the next reflection worth preserving.</div>
+            </div>
+            <div class="legacy-nav">
+              <button class="legacy-nav-btn" id="legacy-nav-prev" onclick="advanceLegacyPage(-1)" aria-label="Previous Legacy page">←</button>
+              <div class="legacy-nav-status">
+                <div class="legacy-nav-page" id="legacy-page-count">Page 1 of 6</div>
+                <div class="legacy-nav-title" id="legacy-page-label">Memory Hub</div>
+              </div>
+              <button class="legacy-nav-btn" id="legacy-nav-next" onclick="advanceLegacyPage(1)" aria-label="Next Legacy page">→</button>
+            </div>
           </div>
-        </div>
-        <div class="legacy-frame">
-          <div class="legacy-window-chrome">
-            <div class="legacy-window-dots"><span></span><span></span><span></span></div>
-            <div class="legacy-window-label">Legacy Home</div>
-          </div>
-          <div class="legacy-window-body">
-            <div class="legacy-hero">
-              <div class="legacy-hero-card">
-                <div class="legacy-hero-visual">
-                  <div class="legacy-hero-overline">Good evening, Chris.</div>
-                  <div>
-                    <div class="legacy-hero-headline">Your story is still unfolding.</div>
-                    <div class="legacy-hero-sub">Capture the moments that shaped today, then connect them to the threads that matter over time.</div>
+
+          <div class="legacy-page-deck">
+            <section class="legacy-page active" data-legacy-page="1">
+              <div class="legacy-home-grid">
+                <div class="legacy-card legacy-hero-card">
+                  <div class="legacy-hero-visual">
+                    <div class="legacy-hero-overline">Good evening, Chris.</div>
+                    <div>
+                      <div class="legacy-hero-title">Your story is still unfolding.</div>
+                      <div class="legacy-hero-copy">Capture the moments that shaped today, then connect them to the people, places, and reflections that matter over time.</div>
+                    </div>
+                    <div class="legacy-hero-button">Begin Reflection</div>
                   </div>
-                  <div class="legacy-hero-button">Begin Reflection</div>
+                </div>
+                <div class="legacy-home-side">
+                  <div class="legacy-stack-card">
+                    <div class="legacy-card-heading">
+                      <div class="legacy-card-label">Life Themes<strong>What keeps resurfacing</strong></div>
+                    </div>
+                    <div class="legacy-pill-row">
+                      <span class="legacy-pill">Family</span>
+                      <span class="legacy-pill">Faith</span>
+                      <span class="legacy-pill">Adventure</span>
+                      <span class="legacy-pill">Growth</span>
+                      <span class="legacy-pill">Gratitude</span>
+                    </div>
+                  </div>
+                  <div class="legacy-detail-card">
+                    <div class="legacy-card-heading">
+                      <div class="legacy-card-label">Prompt Lane<strong>Moments worth preserving</strong></div>
+                    </div>
+                    <p>You have open memory lanes around family trips, formative conversations, and the nights that brought clarity back into focus.</p>
+                  </div>
                 </div>
               </div>
-              <div class="legacy-column-stack">
-                <div class="legacy-column-card" style="padding:14px;">
+              <div class="legacy-metric-row">
+                <div class="legacy-metric"><span>Entries</span><strong id="chronicle-total">—</strong></div>
+                <div class="legacy-metric"><span>Active Prayer</span><strong class="accent" id="chr-active-prayers">—</strong></div>
+                <div class="legacy-metric"><span>Answered</span><strong class="good" id="chr-answered-prayers">—</strong></div>
+                <div class="legacy-metric"><span>Rhythms</span><strong class="soft" id="chr-rhythms-count">—</strong></div>
+              </div>
+            </section>
+
+            <section class="legacy-page" data-legacy-page="2">
+              <div class="legacy-capture-page">
+                <div class="legacy-card legacy-dropzone">
+                  <div class="legacy-dropzone-icon">☁</div>
+                  <strong>Add the moment</strong>
+                  <span>Drop photos, voice notes, or a few written lines. Legacy will organize the memory, themes, and relationships around it.</span>
+                </div>
+                <div class="legacy-capture-side">
+                  <div class="legacy-input-card">
+                    <div class="legacy-card-heading">
+                      <div class="legacy-card-label">Capture Intake<strong>Bring the memory in cleanly</strong></div>
+                    </div>
+                    <div class="chr-capture-type-row" id="chr-capture-types">
+                      <button class="chr-capture-type active" data-type="note" onclick="setChrCaptureType(this,'note')">Note</button>
+                      <button class="chr-capture-type" data-type="gratitude" onclick="setChrCaptureType(this,'gratitude')">Gratitude</button>
+                      <button class="chr-capture-type" data-type="prayer" onclick="setChrCaptureType(this,'prayer')">Prayer</button>
+                      <button class="chr-capture-type" data-type="insight" onclick="setChrCaptureType(this,'insight')">Insight</button>
+                      <button class="chr-capture-type" data-type="milestone" onclick="setChrCaptureType(this,'milestone')">Milestone</button>
+                    </div>
+                    <div>
+                      <div class="legacy-field-label">Reflection</div>
+                      <input class="chr-capture-input" id="chr-capture-input" type="text" placeholder="What happened, and why does it matter?" onkeydown="if(event.key==='Enter')chrQuickCapture()">
+                    </div>
+                    <div style="margin-top:10px;">
+                      <div class="legacy-field-label">Scripture or anchor passage</div>
+                      <input class="chr-capture-passage" id="chr-capture-passage" type="text" placeholder="Passage, place, or anchor thought">
+                    </div>
+                    <div class="legacy-actions">
+                      <div style="flex:1;">
+                        <div class="legacy-field-label">Intake Progress</div>
+                        <div class="legacy-progress-track"><div class="legacy-progress-fill"></div></div>
+                      </div>
+                      <button class="legacy-button" onclick="chrQuickCapture()">Capture Memory</button>
+                    </div>
+                  </div>
+                  <div class="legacy-copy-card">
+                    <div class="legacy-card-heading">
+                      <div class="legacy-card-label">What JARVIS Does<strong>Intake synthesis</strong></div>
+                    </div>
+                    <p>The note is sorted into people, themes, places, and follow-up prompts so it can become part of a longer story instead of a disconnected entry.</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="legacy-page" data-legacy-page="3">
+              <div class="legacy-search-wrap">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4"></circle><path d="M11 11l3 3"></path></svg>
+                <input class="legacy-search-input" type="text" placeholder="Search stories, passages, places, and themes…" id="chronicle-search" oninput="searchChronicle(this.value)">
+              </div>
+              <div class="legacy-content-grid">
+                <div class="legacy-panel-card">
                   <div class="legacy-card-heading">
-                    <div class="legacy-card-title">Life Themes<strong>What keeps resurfacing</strong></div>
-                    <span style="font-size:11px;color:var(--legacy-copy-faint);">Live</span>
+                    <div class="legacy-card-label">Timeline<strong>Story Thread</strong></div>
                   </div>
-                  <div class="legacy-pill-row">
-                    <span class="legacy-pill">Family</span>
-                    <span class="legacy-pill">Faith</span>
-                    <span class="legacy-pill">Adventure</span>
-                    <span class="legacy-pill">Growth</span>
-                    <span class="legacy-pill">Gratitude</span>
+                  <div class="legacy-list-wrap" id="chronicle-list">
+                    <div class="chr-entry-card"><div class="skel" style="height:12px;width:60%;margin-bottom:8px;"></div><div class="skel" style="height:10px;width:85%;"></div></div>
+                    <div class="chr-entry-card"><div class="skel" style="height:12px;width:45%;margin-bottom:8px;"></div><div class="skel" style="height:10px;width:70%;"></div></div>
                   </div>
                 </div>
-                <div class="legacy-mini-card">
+                <div class="legacy-info-card">
                   <div class="legacy-card-heading">
-                    <div class="legacy-card-title">Next Prompt<strong>Moments worth preserving</strong></div>
+                    <div class="legacy-card-label">Context<strong>What the thread means</strong></div>
                   </div>
-                  <div class="legacy-mini-copy">You have story gaps around family trips, formative conversations, and the moments that re-centered this season.</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="legacy-metric-grid">
-              <div class="legacy-metric">
-                <div class="legacy-metric-label">Entries</div>
-                <div class="legacy-metric-value" id="chronicle-total">—</div>
-              </div>
-              <div class="legacy-metric">
-                <div class="legacy-metric-label">Active Prayer</div>
-                <div class="legacy-metric-value accent" id="chr-active-prayers">—</div>
-              </div>
-              <div class="legacy-metric">
-                <div class="legacy-metric-label">Answered</div>
-                <div class="legacy-metric-value good" id="chr-answered-prayers">—</div>
-              </div>
-              <div class="legacy-metric">
-                <div class="legacy-metric-label">Rhythms</div>
-                <div class="legacy-metric-value soft" id="chr-rhythms-count">—</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="legacy-panel" data-legacy-page="2" data-legacy-title="2. Capture & Intake">
-        <div class="legacy-step">
-          <span class="legacy-step-index">2</span>
-          <div class="legacy-step-copy">
-            <strong>Capture &amp; Intake</strong>
-            <span>Bring in notes, prayer, gratitude, and context while the moment is still alive.</span>
-          </div>
-        </div>
-        <div class="legacy-frame">
-          <div class="legacy-window-chrome">
-            <div class="legacy-window-dots"><span></span><span></span><span></span></div>
-            <div class="legacy-window-label">New Memory</div>
-          </div>
-          <div class="legacy-window-body legacy-capture">
-            <div class="chr-capture-type-row" id="chr-capture-types">
-              <button class="chr-capture-type active" data-type="note" onclick="setChrCaptureType(this,'note')">Note</button>
-              <button class="chr-capture-type" data-type="gratitude" onclick="setChrCaptureType(this,'gratitude')">Gratitude</button>
-              <button class="chr-capture-type" data-type="prayer" onclick="setChrCaptureType(this,'prayer')">Prayer</button>
-              <button class="chr-capture-type" data-type="insight" onclick="setChrCaptureType(this,'insight')">Insight</button>
-              <button class="chr-capture-type" data-type="milestone" onclick="setChrCaptureType(this,'milestone')">Milestone</button>
-            </div>
-            <div class="legacy-capture-grid">
-              <div class="legacy-dropzone">
-                <div class="legacy-dropzone-icon">☁</div>
-                <strong>Add the moment</strong>
-                <span>Drop photos, voice notes, or a few written lines. Legacy will organize the memory, themes, and relationships around it.</span>
-              </div>
-              <div class="legacy-capture-fields">
-                <div>
-                  <div class="legacy-field-label">Reflection</div>
-                  <input class="chr-capture-input" id="chr-capture-input" type="text" placeholder="What happened, and why does it matter?" onkeydown="if(event.key==='Enter')chrQuickCapture()">
-                </div>
-                <div>
-                  <div class="legacy-field-label">Scripture or anchor passage</div>
-                  <input class="chr-capture-passage" id="chr-capture-passage" type="text" placeholder="Passage, place, or anchor thought">
-                </div>
-                <div class="legacy-summary-card">
-                  <strong>Intake Progress</strong>
-                  <p>Capture is being sorted into people, themes, places, and follow-up prompts so it can become part of a longer story instead of a disconnected note.</p>
-                  <div class="legacy-progress">
-                    <div class="legacy-progress-track"><div class="legacy-progress-fill"></div></div>
+                  <div class="legacy-points">
+                    <div class="legacy-point"><strong>Story Themes</strong><span>Adventure, family bond, nature, gratitude, and the moments that slow life down enough to be felt.</span></div>
+                    <div class="legacy-point"><strong>People in This Story</strong><span>Mom, Dad, Emma, Alex, and the family conversations that keep resurfacing.</span></div>
+                    <div class="legacy-point"><strong>Story Summary</strong><span>Legacy is treating these entries as one connected chapter rather than several isolated notes.</span></div>
                   </div>
                 </div>
               </div>
-            </div>
-            <div class="legacy-capture-actions">
-              <div class="legacy-mini-copy">JARVIS will preserve the note, then suggest the right story thread, family lane, and reflection path.</div>
-              <button class="legacy-button" onclick="chrQuickCapture()">Capture Memory</button>
-            </div>
-          </div>
-        </div>
-      </section>
+            </section>
 
-      <section class="legacy-panel" data-legacy-page="3" data-legacy-title="3. Story Thread & Timeline">
-        <div class="legacy-step">
-          <span class="legacy-step-index">3</span>
-          <div class="legacy-step-copy">
-            <strong>Story Thread</strong>
-            <span>See how moments connect across time, people, and themes instead of living as isolated notes.</span>
-          </div>
-        </div>
-        <div class="legacy-frame">
-          <div class="legacy-window-chrome">
-            <div class="legacy-window-dots"><span></span><span></span><span></span></div>
-            <div class="legacy-window-label">Our Story Thread</div>
-          </div>
-          <div class="legacy-window-body">
-            <div class="legacy-search-wrap">
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4"></circle><path d="M11 11l3 3"></path></svg>
-              <input class="legacy-search-input" type="text" placeholder="Search stories, passages, places, and themes…" id="chronicle-search" oninput="searchChronicle(this.value)">
-            </div>
-            <div class="legacy-side-grid">
-              <div class="legacy-list-card">
-                <div class="legacy-card-heading">
-                  <div class="legacy-card-title">Timeline<strong>Recent entries</strong></div>
-                </div>
-                <div class="legacy-timeline" id="chronicle-list">
-                  <div class="chr-entry-card"><div class="skel" style="height:12px;width:60%;margin-bottom:8px;"></div><div class="skel" style="height:10px;width:85%;"></div></div>
-                  <div class="chr-entry-card"><div class="skel" style="height:12px;width:45%;margin-bottom:8px;"></div><div class="skel" style="height:10px;width:70%;"></div></div>
-                </div>
-              </div>
-              <div class="legacy-side-column">
-                <div class="legacy-summary-card">
-                  <strong>Story Summary</strong>
-                  <p>Legacy highlights the chapters forming around family bonds, faith, gratitude, travel, and the conversations that changed the meaning of a day.</p>
-                </div>
-                <div class="legacy-list-card">
+            <section class="legacy-page" data-legacy-page="4">
+              <div class="legacy-grid-two">
+                <div class="legacy-panel-card">
                   <div class="legacy-card-heading">
-                    <div class="legacy-card-title">Story Themes<strong>Cross-thread signals</strong></div>
-                  </div>
-                  <div class="legacy-tag-row">
-                    <span class="legacy-pill">Adventure</span>
-                    <span class="legacy-pill">Family Bond</span>
-                    <span class="legacy-pill">Nature</span>
-                    <span class="legacy-pill">Gratitude</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="legacy-panel" data-legacy-page="4" data-legacy-title="4. Family History & Archive">
-        <div class="legacy-step">
-          <span class="legacy-step-index">4</span>
-          <div class="legacy-step-copy">
-            <strong>Family History</strong>
-            <span>Turn continuity into a living archive with themes, evidence, and the questions worth researching.</span>
-          </div>
-        </div>
-        <div class="legacy-frame">
-          <div class="legacy-window-chrome">
-            <div class="legacy-window-dots"><span></span><span></span><span></span></div>
-            <div class="legacy-window-label">Legacy Archive</div>
-          </div>
-          <div class="legacy-window-body">
-            <div class="legacy-side-grid">
-              <div class="legacy-side-column">
-                <div class="legacy-list-card">
-                  <div class="legacy-card-heading">
-                    <div class="legacy-card-title">Family Lines<strong>Open lanes</strong></div>
+                    <div class="legacy-card-label">Family Lines<strong>Open lanes and recurring signals</strong></div>
                   </div>
                   <div class="legacy-tag-cloud tag-cloud" id="tag-cloud">
                     <div class="skel" style="height:24px;width:60px;border-radius:99px;"></div>
                     <div class="skel" style="height:24px;width:80px;border-radius:99px;"></div>
                   </div>
+                  <div class="legacy-points" style="margin-top:14px;">
+                    <div class="legacy-point"><strong>Missing origin stories</strong><span>Which milestones still need to be told by the people who lived them?</span></div>
+                    <div class="legacy-point"><strong>Timeline gaps</strong><span>Where do place, date, and relationship threads still need evidence before they become part of the record?</span></div>
+                    <div class="legacy-point"><strong>Faith continuity</strong><span>Which reflections from the Chronicle faith app should bridge into this wider family archive?</span></div>
+                  </div>
                 </div>
-                <div class="legacy-list-card">
+                <div class="legacy-panel-card legacy-pattern-wrap">
                   <div class="legacy-card-heading">
-                    <div class="legacy-card-title">Open Research Questions<strong>What still needs context</strong></div>
+                    <div class="legacy-card-label">Evidence Ledger<strong>30-day patterning</strong></div>
                   </div>
-                  <div class="legacy-list-points">
-                    <div class="legacy-list-point"><strong>Missing origin stories</strong><span>Which family milestones still lack a recorded telling from the people who lived them?</span></div>
-                    <div class="legacy-list-point"><strong>Timeline gaps</strong><span>Where do place, date, and relationship threads need better evidence before they become part of the record?</span></div>
-                    <div class="legacy-list-point"><strong>Faith continuity</strong><span>Which reflections from the Chronicle faith app should bridge into this broader family archive?</span></div>
+                  <div id="chr-patterns">
+                    <div class="skel" style="height:80px;border-radius:8px;"></div>
                   </div>
                 </div>
               </div>
-              <div class="legacy-list-card legacy-pattern-wrap">
-                <div class="legacy-card-heading">
-                  <div class="legacy-card-title">Evidence Ledger<strong>30-day patterning</strong></div>
-                </div>
-                <div id="chr-patterns">
-                  <div class="skel" style="height:80px;border-radius:8px;"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+            </section>
 
-      <section class="legacy-panel" data-legacy-page="5" data-legacy-title="5. Reflection & Synthesis">
-        <div class="legacy-step">
-          <span class="legacy-step-index">5</span>
-          <div class="legacy-step-copy">
-            <strong>Narrative Synthesis</strong>
-            <span>Weave memory into meaning with rhythms, recurring themes, and the beginnings of a chapter draft.</span>
-          </div>
-        </div>
-        <div class="legacy-frame">
-          <div class="legacy-window-chrome">
-            <div class="legacy-window-dots"><span></span><span></span><span></span></div>
-            <div class="legacy-window-label">Chapter Builder</div>
-          </div>
-          <div class="legacy-window-body">
-            <div class="legacy-side-grid">
-              <div class="legacy-summary-card">
-                <strong>A chapter emerges</strong>
-                <p>Legacy turns repeated moments into chapter candidates so you can see what this season is really about: faith under pressure, family delight, gratitude, resilience, and the meaning behind ordinary days.</p>
-                <div class="legacy-list-point" style="margin-top:12px;">
-                  <strong>Suggested title</strong>
-                  <span>A Place That Shaped Us</span>
+            <section class="legacy-page" data-legacy-page="5">
+              <div class="legacy-content-grid">
+                <div class="legacy-info-card">
+                  <div class="legacy-card-heading">
+                    <div class="legacy-card-label">Narrative Synthesis<strong>A chapter emerges</strong></div>
+                  </div>
+                  <div class="legacy-points">
+                    <div class="legacy-point"><strong>Suggested Title</strong><span>A Place That Shaped Us</span></div>
+                    <div class="legacy-point"><strong>This Chapter</strong><span>The mountain, the conversation, the quiet ride home, and the moment everything slowed down enough to be felt.</span></div>
+                    <div class="legacy-point"><strong>Why It Matters</strong><span>Legacy is turning repeated moments into chapter candidates so meaning accumulates over time rather than disappearing into fragments.</span></div>
+                  </div>
                 </div>
-                <div class="legacy-list-point" style="margin-top:10px;">
-                  <strong>This chapter</strong>
-                  <span>The mountain, the conversation, the quiet ride home, and the moment everything slowed down enough to be felt.</span>
+                <div class="legacy-panel-card">
+                  <div class="legacy-card-heading">
+                    <div class="legacy-card-label">Formation Rhythms<strong>Recurring practices</strong></div>
+                    <button class="legacy-button" type="button" onclick="openBibleStudyModal()">Open Study</button>
+                  </div>
+                  <div class="legacy-feed compact" id="chr-rhythms-list">
+                    <div style="padding:16px;color:var(--text-3);font-size:12px;">Loading…</div>
+                  </div>
                 </div>
               </div>
-              <div class="legacy-list-card">
-                <div class="legacy-card-heading">
-                  <div class="legacy-card-title">Formation Rhythms<strong>Recurring practices</strong></div>
-                  <button class="legacy-button" type="button" onclick="openBibleStudyModal()">Open Study</button>
-                </div>
-                <div class="legacy-feed compact" id="chr-rhythms-list">
-                  <div style="padding:16px;color:var(--text-3);font-size:12px;">Loading…</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+            </section>
 
-      <section class="legacy-panel" data-legacy-page="6" data-legacy-title="6. Voice Consultation">
-        <div class="legacy-step">
-          <span class="legacy-step-index">6</span>
-          <div class="legacy-step-copy">
-            <strong>Voice Consultation</strong>
-            <span>Talk to Legacy hands-free about the memory, the family, and the story you want to keep alive.</span>
-          </div>
-        </div>
-        <div class="legacy-frame">
-          <div class="legacy-window-chrome">
-            <div class="legacy-window-dots"><span></span><span></span><span></span></div>
-            <div class="legacy-window-label">Legacy Voice</div>
-          </div>
-          <div class="legacy-window-body">
-            <div class="legacy-voice-thread">
-              <div class="legacy-bubble user">Tell me about the moments this family will still care about in ten years.</div>
-              <div class="legacy-bubble agent">I’m seeing a thread around shared trips, gratitude after hard seasons, and the conversations that made ordinary days feel formative. I can build a reflection, a story chapter, or a family archive entry from those signals.</div>
-              <div class="legacy-list-card">
-                <div class="legacy-card-heading">
-                  <div class="legacy-card-title">Active Prayer &amp; Context<strong>Signals in motion</strong></div>
+            <section class="legacy-page" data-legacy-page="6">
+              <div class="legacy-content-grid">
+                <div class="legacy-info-card">
+                  <div class="legacy-card-heading">
+                    <div class="legacy-card-label">Voice Consultation<strong>Legacy Voice</strong></div>
+                  </div>
+                  <div class="legacy-voice-thread">
+                    <div class="legacy-bubble user">Tell me about the moments this family will still care about in ten years.</div>
+                    <div class="legacy-bubble agent">I’m seeing a thread around shared trips, gratitude after hard seasons, and the conversations that made ordinary days feel formative. I can build a reflection, a story chapter, or a family archive entry from those signals.</div>
+                    <div class="legacy-voice-footer">
+                      <div class="legacy-wave"></div>
+                      <div class="legacy-voice-chip">Listening</div>
+                    </div>
+                  </div>
                 </div>
-                <div class="legacy-feed" id="chr-prayer-list">
-                  <div style="padding:16px;color:var(--text-3);font-size:12px;">Loading…</div>
+                <div class="legacy-panel-card">
+                  <div class="legacy-card-heading">
+                    <div class="legacy-card-label">Active Prayer &amp; Context<strong>Signals in motion</strong></div>
+                  </div>
+                  <div class="legacy-feed" id="chr-prayer-list">
+                    <div style="padding:16px;color:var(--text-3);font-size:12px;">Loading…</div>
+                  </div>
                 </div>
               </div>
-              <div class="legacy-voice-footer">
-                <div class="legacy-wave"></div>
-                <div class="legacy-voice-chip">Listening</div>
-              </div>
-            </div>
+            </section>
           </div>
-        </div>
-      </section>
-    </div>
-
-    <div class="legacy-principles">
-      <div class="legacy-principle">
-        <div class="legacy-principle-mark">📖</div>
-        <strong>Your life, beautifully preserved</strong>
-        <span>Capture moments big and small so the story remains human, not just logged.</span>
-      </div>
-      <div class="legacy-principle">
-        <div class="legacy-principle-mark">🌳</div>
-        <strong>Generations connected</strong>
-        <span>Honor the past, surface the present, and build continuity the family can carry forward.</span>
-      </div>
-      <div class="legacy-principle">
-        <div class="legacy-principle-mark">♡</div>
-        <strong>Meaning over time</strong>
-        <span>Legacy turns repeated moments into insight, gratitude, and a clearer sense of what mattered.</span>
-      </div>
-      <div class="legacy-principle">
-        <div class="legacy-principle-mark">✒</div>
-        <strong>Intelligent storytelling</strong>
-        <span>Theme tracking, chapter synthesis, and voice consultation work as one narrative engine.</span>
-      </div>
-      <div class="legacy-principle">
-        <div class="legacy-principle-mark">🔒</div>
-        <strong>Private &amp; secure</strong>
-        <span>Your memories stay yours, with a path for faith insights to bridge in intentionally.</span>
-      </div>
-      <div class="legacy-principle">
-        <div class="legacy-principle-mark">✦</div>
-        <strong>Living story engine</strong>
-        <span>The archive keeps evolving as reflection, family history, and future memories continue to arrive.</span>
+        </main>
       </div>
     </div>
   </div>
@@ -13033,33 +12819,60 @@ function renderPatterns(p) {{
 
 let legacyStoryboardPage = 1;
 const LEGACY_STORYBOARD_TITLES = {{
-  1: '1. Memory Hub',
-  2: '2. Capture & Intake',
-  3: '3. Story Thread & Timeline',
-  4: '4. Family History & Archive',
-  5: '5. Reflection & Synthesis',
-  6: '6. Voice Consultation',
+  1: {{
+    title: '1. Memory Hub',
+    label: 'Memory Hub',
+    subtitle: 'Your story center with recent moments, living themes, and the next reflection worth preserving.',
+  }},
+  2: {{
+    title: '2. Capture & Intake',
+    label: 'Capture & Intake',
+    subtitle: 'Bring in notes, prayer, gratitude, and context while the moment is still alive.',
+  }},
+  3: {{
+    title: '3. Story Thread & Timeline',
+    label: 'Story Thread',
+    subtitle: 'See how moments connect across time, people, and themes instead of living as isolated notes.',
+  }},
+  4: {{
+    title: '4. Family History & Archive',
+    label: 'Family History',
+    subtitle: 'Turn continuity into a living archive with themes, evidence, and the questions worth researching.',
+  }},
+  5: {{
+    title: '5. Reflection & Synthesis',
+    label: 'Narrative Synthesis',
+    subtitle: 'Weave memory into meaning with rhythms, recurring themes, and the beginnings of a chapter draft.',
+  }},
+  6: {{
+    title: '6. Voice Consultation',
+    label: 'Voice Consultation',
+    subtitle: 'Talk to Legacy hands-free about the memory, the family, and the story you want to keep alive.',
+  }},
 }};
 
-function syncLegacyStoryboard(scrollIntoView = false) {{
-  const panels = Array.from(document.querySelectorAll('#view-chronicle .legacy-panel'));
+function syncLegacyStoryboard() {{
+  const panels = Array.from(document.querySelectorAll('#view-chronicle .legacy-page'));
   if (!panels.length) return;
   const pageCount = panels.length;
   legacyStoryboardPage = Math.max(1, Math.min(legacyStoryboardPage, pageCount));
 
   panels.forEach((panel, idx) => {{
-    const isActive = idx + 1 === legacyStoryboardPage;
-    panel.classList.toggle('active', isActive);
-    if (isActive && scrollIntoView) {{
-      panel.scrollIntoView({{ behavior: 'smooth', block: 'nearest', inline: 'nearest' }});
-    }}
+    panel.classList.toggle('active', idx + 1 === legacyStoryboardPage);
   }});
 
   const title = document.getElementById('legacy-nav-title');
-  if (title) title.textContent = LEGACY_STORYBOARD_TITLES[legacyStoryboardPage] || `Page ${{legacyStoryboardPage}}`;
+  const pageMeta = LEGACY_STORYBOARD_TITLES[legacyStoryboardPage];
+  if (title) title.textContent = pageMeta?.title || `Page ${{legacyStoryboardPage}}`;
+
+  const subtitle = document.getElementById('legacy-nav-subtitle');
+  if (subtitle) subtitle.textContent = pageMeta?.subtitle || '';
 
   const count = document.getElementById('legacy-page-count');
   if (count) count.textContent = `Page ${{legacyStoryboardPage}} of ${{pageCount}}`;
+
+  const label = document.getElementById('legacy-page-label');
+  if (label) label.textContent = pageMeta?.label || `Page ${{legacyStoryboardPage}}`;
 
   const prev = document.getElementById('legacy-nav-prev');
   const next = document.getElementById('legacy-nav-next');
@@ -13069,7 +12882,7 @@ function syncLegacyStoryboard(scrollIntoView = false) {{
 
 function advanceLegacyPage(delta) {{
   legacyStoryboardPage += delta;
-  syncLegacyStoryboard(true);
+  syncLegacyStoryboard();
 }}
 
 async function loadChronicle() {{
@@ -13080,7 +12893,7 @@ async function loadChronicle() {{
     renderChronicle(data);
     loadChronicleContext();
     loadPatterns();
-    syncLegacyStoryboard(false);
+    syncLegacyStoryboard();
   }} catch(e) {{ console.error('loadChronicle failed', e); }}
 }}
 
