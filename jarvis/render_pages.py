@@ -796,33 +796,107 @@ def render_publish_module_page(payload: dict) -> str:
   <style>
     :root {{
       color-scheme: dark;
-      --bg: #07111b;
-      --bg-2: #0d1824;
-      --panel: rgba(10, 21, 34, 0.88);
-      --line: rgba(121, 216, 255, 0.14);
+      --bg: #060c14;
+      --bg-2: #0a121c;
+      --panel: rgba(11, 20, 31, 0.9);
+      --panel-strong: rgba(15, 23, 35, 0.96);
+      --line: rgba(221, 173, 94, 0.14);
       --text: #eaf6ff;
       --muted: #9bb7cd;
+      --accent: #ddad5e;
+      --accent-soft: rgba(221, 173, 94, 0.14);
+      --cyan-soft: rgba(121, 216, 255, 0.1);
     }}
     * {{ box-sizing: border-box; }}
     body {{
       margin: 0;
+      min-height: 100vh;
       font-family: "SF Pro Display", "Segoe UI", sans-serif;
       background:
-        radial-gradient(circle at top, rgba(121, 216, 255, 0.18), transparent 36%),
-        linear-gradient(180deg, #050b13 0%, var(--bg) 42%, var(--bg-2) 100%);
+        radial-gradient(circle at top left, rgba(221, 173, 94, 0.14), transparent 24%),
+        radial-gradient(circle at top right, rgba(121, 216, 255, 0.08), transparent 24%),
+        linear-gradient(180deg, #03070d 0%, var(--bg) 42%, var(--bg-2) 100%);
       color: var(--text);
     }}
-    .shell {{ max-width: 1340px; margin: 0 auto; padding: 36px 24px 60px; }}
+    .shell {{ max-width: 1440px; margin: 0 auto; padding: 24px 24px 60px; }}
+    .topbar {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+      padding: 14px 18px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: rgba(7, 13, 21, 0.76);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+    }}
+    .topbar strong {{
+      display: block;
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }}
+    .topbar span {{
+      display: block;
+      color: var(--muted);
+      margin-top: 4px;
+    }}
     .hero {{
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+      gap: 18px;
       padding: 28px;
       border: 1px solid var(--line);
-      border-radius: 28px;
-      background: linear-gradient(180deg, rgba(11, 24, 38, 0.94), rgba(8, 17, 28, 0.9));
-      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+      border-radius: 30px;
+      background: linear-gradient(180deg, rgba(10, 18, 28, 0.96), rgba(7, 14, 23, 0.94));
+      box-shadow: 0 24px 56px rgba(0, 0, 0, 0.3);
     }}
-    .eyebrow {{ color: #79d8ff; letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
+    .eyebrow {{
+      color: var(--accent);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(221, 173, 94, 0.2);
+      background: rgba(221, 173, 94, 0.07);
+    }}
+    .eyebrow::before {{
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: currentColor;
+      box-shadow: 0 0 14px currentColor;
+    }}
     h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
+    h2 {{ margin-top: 0; }}
     p {{ color: var(--muted); line-height: 1.6; }}
+    .hero-side {{
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }}
+    .hero-note {{
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }}
+    .hero-note strong {{
+      display: block;
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }}
     .stats {{
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -846,6 +920,7 @@ def render_publish_module_page(payload: dict) -> str:
     .span-4 {{ grid-column: span 4; }}
     .span-6 {{ grid-column: span 6; }}
     .span-8 {{ grid-column: span 8; }}
+    .span-12 {{ grid-column: span 12; }}
     ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
     li {{
       padding: 12px 14px;
@@ -868,6 +943,20 @@ def render_publish_module_page(payload: dict) -> str:
       text-decoration: none;
       font: inherit;
       cursor: pointer;
+    }}
+    .rail {{
+      background: var(--panel-strong);
+    }}
+    .rail-header {{
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--line);
+    }}
+    .rail-label {{
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
     }}
     input {{
       width: 100%;
@@ -907,51 +996,73 @@ def render_publish_module_page(payload: dict) -> str:
     }}
     .status-note {{ min-height: 1.3em; color: var(--muted); margin-top: 10px; }}
     @media (max-width: 980px) {{
-      .span-4, .span-6, .span-8 {{ grid-column: span 12; }}
+      .hero {{ grid-template-columns: 1fr; }}
+      .span-4, .span-6, .span-8, .span-12 {{ grid-column: span 12; }}
     }}
   </style>
 </head>
 <body>
   <main class="shell">
-    <section class="hero">
-      <div class="eyebrow">Level 3 Core Module</div>
-      <h1>JARVIS Publish</h1>
-      <p>A dedicated publishing workspace inside JARVIS with live project, launch, calendar, and social posture. This turns Publish into a visible app module instead of an API-only seam.</p>
+    <section class="topbar">
+      <div>
+        <strong>JARVIS Publish</strong>
+        <span>Ghostwritr Publish Handoff with live launch posture, editorial readiness, and downstream supervision continuity.</span>
+      </div>
       <div class="actions">
         <a href="/command-center">Back to Command Center</a>
         <button type="button" id="refresh-publish">Refresh Publish State</button>
       </div>
-      <div class="stats">
-        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
-        <div class="stat"><span>Projects</span><strong id="hero-projects">0</strong></div>
-        <div class="stat"><span>Pending Reviews</span><strong id="hero-reviews">0</strong></div>
-        <div class="stat"><span>Scheduled Posts</span><strong id="hero-posts">0</strong></div>
+    </section>
+    <section class="hero">
+      <div>
+        <div class="eyebrow">Meaningful Data Concept</div>
+        <h1>Launch Ops Hub</h1>
+        <p>A publish workspace modeled after the handoff-style mockups: live project posture, readiness pressure, chapter and calendar flow, and connected launch operations without losing the real JARVIS/Ghostwritr data seam.</p>
+        <div class="stats">
+          <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
+          <div class="stat"><span>Projects</span><strong id="hero-projects">0</strong></div>
+          <div class="stat"><span>Pending Reviews</span><strong id="hero-reviews">0</strong></div>
+          <div class="stat"><span>Scheduled Posts</span><strong id="hero-posts">0</strong></div>
+        </div>
+        <p class="status-note" id="publish-status-note">Loading publish module state…</p>
       </div>
-      <p class="status-note" id="publish-status-note">Loading publish module state…</p>
+      <div class="hero-side">
+        <div class="hero-note">
+          <strong>Handoff State</strong>
+          <div id="handoff-state-copy">Publish continuity is hydrating from the live backend.</div>
+        </div>
+        <div class="hero-note">
+          <strong>Connected Launch Ops</strong>
+          <div id="launch-ops-copy">Ghostwritr package, social queue, and revenue signals will appear here once payload state hydrates.</div>
+        </div>
+      </div>
     </section>
     <div class="layout">
-      <section class="panel span-8">
-        <h2>Launch Control</h2>
-        <ul id="launch-control-list"></ul>
-      </section>
-      <section class="panel span-4">
-        <h2>Module Status</h2>
+      <section class="panel rail span-4">
+        <div class="rail-header">
+          <div class="rail-label">Ghostwritr Workspace</div>
+          <h2>Publish handoff rail</h2>
+        </div>
         <ul id="module-status-list"></ul>
       </section>
+      <section class="panel span-8">
+        <h2>Launch Ops Lane</h2>
+        <ul id="launch-control-list"></ul>
+      </section>
       <section class="panel span-6">
-        <h2>Projects</h2>
+        <h2>Validation &amp; Readiness</h2>
         <ul id="project-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>Content Calendar</h2>
+        <h2>Chapter &amp; Calendar Readiness</h2>
         <ul id="calendar-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>Social Queue</h2>
+        <h2>Connected Launch Ops</h2>
         <ul id="social-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>Revenue Signals</h2>
+        <h2>Supervisor Strip</h2>
         <ul id="revenue-list"></ul>
       </section>
       <section class="panel span-6">
@@ -973,6 +1084,10 @@ def render_publish_module_page(payload: dict) -> str:
         <p class="status-note" id="create-project-note">Create a small draft to verify the module can write real publishing state.</p>
       </section>
       <section class="panel span-6">
+        <h2>Recent Publish Continuity</h2>
+        <ul id="recent-activity-list"></ul>
+      </section>
+      <section class="panel span-12">
         <h2>Payload Preview</h2>
         <pre id="payload-preview"></pre>
       </section>
@@ -992,6 +1107,7 @@ def render_publish_module_page(payload: dict) -> str:
     const calendarList = document.getElementById("calendar-list");
     const socialList = document.getElementById("social-list");
     const revenueList = document.getElementById("revenue-list");
+    const recentActivityList = document.getElementById("recent-activity-list");
     const payloadPreview = document.getElementById("payload-preview");
 
     function esc(value) {{
@@ -1032,9 +1148,11 @@ def render_publish_module_page(payload: dict) -> str:
       heroReviews.textContent = String(payload.review_count || 0);
       heroPosts.textContent = String(payload.scheduled_post_count || 0);
       statusNote.textContent = payload.summary || "No publish summary captured yet.";
+      document.getElementById("handoff-state-copy").textContent = launch.next_action || payload.what_became_real || "No handoff signal yet.";
+      document.getElementById("launch-ops-copy").textContent = payload.remains_partial || "Connected launch ops are fully live.";
 
       moduleStatusList.innerHTML = [
-        li("Availability", payload.available ? "Publishing data is live." : "Publishing data is unavailable; the screen is running in fallback mode."),
+        li("Workspace Status", payload.available ? "Publishing data is live." : "Publishing data is unavailable; the screen is running in fallback mode."),
         li("What Became Real", payload.what_became_real || "No publish seam note recorded yet."),
         li("What Remains Partial", payload.remains_partial || "No partial work recorded."),
         li("Proof API", "/api/publish/module", "/api/publishing/status"),
@@ -1061,12 +1179,23 @@ def render_publish_module_page(payload: dict) -> str:
         : '<li><strong>No social queue yet.</strong><span>Draft or scheduled posts will appear here.</span></li>';
 
       revenueList.innerHTML = [
-        li("Monthly Estimate", String(revenue.monthly_estimate_total ?? 0)),
-        li("Active Streams", String(revenue.active_stream_count ?? 0)),
-        li("Attention Flags", String(revenue.attention_count ?? 0)),
+        li("Monthly Estimate", String(revenue.monthly_estimate_total ?? 0), "Revenue posture across active publishing streams"),
+        li("Active Streams", String(revenue.active_stream_count ?? 0), "Live monetization channels under supervision"),
+        li("Attention Flags", String(revenue.attention_count ?? 0), "Launch integrity or commercial pressure signals"),
       ].join("");
+      recentActivityList.innerHTML = (Array.isArray(payload.recent_activity) ? payload.recent_activity : []).length
+        ? payload.recent_activity.map((item) => li(item.title || "Publish action", item.subtitle || item.actor || "Operator continuity", item.detail || item.route_label || "")).join("")
+        : '<li><strong>No publish continuity recorded yet.</strong><span>Create a draft project and publish-side activity will appear here.</span></li>';
 
       payloadPreview.textContent = JSON.stringify(payload, null, 2);
+    }}
+
+    async function recordOperatorAction(payload) {{
+      await fetch("/api/activity/operator-action", {{
+        method: "POST",
+        headers: {{ "Content-Type": "application/json" }},
+        body: JSON.stringify(payload),
+      }});
     }}
 
     async function refreshPublishState() {{
@@ -1099,6 +1228,20 @@ def render_publish_module_page(payload: dict) -> str:
         if (!response.ok) {{
           throw new Error(payload.detail || payload.error || "Create project failed");
         }}
+        await recordOperatorAction({{
+          actor: "Chris",
+          domain: "publish",
+          action: "Create Draft Project",
+          title: payload.title || payload.project_id || "Draft project",
+          detail: `Created publish draft on ${{payload.platform || "unspecified platform"}}`,
+          why_now: "Publish module created a draft handoff asset from the live route.",
+          result_summary: "Publish continuity updated with a new draft project.",
+          route: "/publish",
+          route_label: "Open Publish",
+          related_kind: "publishing-project",
+          related_label: payload.title || payload.project_id || "Draft project",
+          succeeded: true,
+        }});
         projectNote.textContent = `Created draft project: ${{payload.title || payload.project_id || "project"}}.`;
         await refreshPublishState();
       }} catch (error) {{
@@ -5120,12 +5263,15 @@ def render_progress_module_page(payload: dict) -> str:
   <style>
     :root {{
       color-scheme: dark;
-      --bg: #071018;
-      --bg-2: #091522;
+      --bg: #050d16;
+      --bg-2: #091420;
       --panel: rgba(9, 20, 33, 0.92);
+      --panel-2: rgba(11, 22, 36, 0.96);
       --line: rgba(121, 216, 255, 0.14);
       --text: #edf7ff;
       --muted: #9eb8cb;
+      --accent: #52c9ff;
+      --accent-soft: rgba(82, 201, 255, 0.1);
     }}
     * {{ box-sizing: border-box; }}
     body {{
@@ -6365,8 +6511,8 @@ def render_huddle_module_page(payload: dict) -> str:
   <style>
     :root {{
       color-scheme: dark;
-      --bg: #06101a;
-      --bg-2: #0a1521;
+      --bg: #050d16;
+      --bg-2: #09131d;
       --panel: rgba(8, 20, 33, 0.92);
       --line: rgba(121, 216, 255, 0.14);
       --text: #edf7ff;
@@ -6374,6 +6520,8 @@ def render_huddle_module_page(payload: dict) -> str:
       --good: #9ce7bf;
       --warn: #ffd37d;
       --alert: #ff9d9d;
+      --accent: #79d8ff;
+      --amber: #ddb66a;
     }}
     * {{ box-sizing: border-box; }}
     body {{
@@ -6384,18 +6532,85 @@ def render_huddle_module_page(payload: dict) -> str:
         linear-gradient(180deg, #040b12 0%, var(--bg) 44%, var(--bg-2) 100%);
       color: var(--text);
     }}
-    .shell {{ max-width: 1400px; margin: 0 auto; padding: 36px 24px 60px; }}
+    .shell {{ max-width: 1480px; margin: 0 auto; padding: 24px 24px 60px; }}
+    .topbar {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+      padding: 14px 18px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: rgba(7, 13, 21, 0.76);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 16px 42px rgba(0, 0, 0, 0.22);
+    }}
+    .topbar strong {{
+      display: block;
+      color: var(--amber);
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }}
+    .topbar span {{
+      display: block;
+      color: var(--muted);
+      margin-top: 4px;
+    }}
     .hero {{
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+      gap: 18px;
       padding: 28px;
       border: 1px solid var(--line);
-      border-radius: 28px;
+      border-radius: 30px;
       background: linear-gradient(180deg, rgba(10, 22, 35, 0.96), rgba(7, 16, 27, 0.92));
-      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+      box-shadow: 0 24px 56px rgba(0, 0, 0, 0.3);
     }}
-    .eyebrow {{ color: #79d8ff; letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
+    .eyebrow {{
+      color: var(--accent);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(121, 216, 255, 0.18);
+      background: rgba(121, 216, 255, 0.08);
+    }}
+    .eyebrow::before {{
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: currentColor;
+      box-shadow: 0 0 14px currentColor;
+    }}
     h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
     h2 {{ margin-top: 0; }}
     p {{ color: var(--muted); line-height: 1.6; }}
+    .hero-side {{
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }}
+    .hero-note {{
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }}
+    .hero-note strong {{
+      display: block;
+      color: var(--amber);
+      margin-bottom: 8px;
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }}
     .stats {{
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -6421,6 +6636,7 @@ def render_huddle_module_page(payload: dict) -> str:
     .span-6 {{ grid-column: span 6; }}
     .span-7 {{ grid-column: span 7; }}
     .span-8 {{ grid-column: span 8; }}
+    .span-12 {{ grid-column: span 12; }}
     ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
     li {{
       padding: 12px 14px;
@@ -6469,51 +6685,70 @@ def render_huddle_module_page(payload: dict) -> str:
     }}
     .status-note {{ min-height: 1.3em; color: var(--muted); margin-top: 10px; }}
     @media (max-width: 980px) {{
-      .span-4, .span-5, .span-6, .span-7, .span-8 {{ grid-column: span 12; }}
+      .hero {{ grid-template-columns: 1fr; }}
+      .span-4, .span-5, .span-6, .span-7, .span-8, .span-12 {{ grid-column: span 12; }}
     }}
   </style>
 </head>
 <body>
   <main class="shell">
-    <section class="hero">
-      <div class="eyebrow">Level 3 Core Module</div>
-      <h1>JARVIS Huddle</h1>
-      <p>A dedicated Huddle workspace inside JARVIS with live standups, approvals, blockers, runtime posture, ready dossiers, party-mode state, and idea capture. This promotes Huddle out of the mission-control shell path into a real app module.</p>
+    <section class="topbar">
+      <div>
+        <strong>Desktop Huddle Intelligence</strong>
+        <span>Agent chamber, party-mode problem solving, mission board pressure, and delegation continuity guided by the live Huddle state.</span>
+      </div>
       <div class="actions">
         <a href="/command-center">Back to Command Center</a>
         <button type="button" id="refresh-huddle">Refresh Huddle State</button>
         <button type="button" id="start-party-mode">Start Overnight Research</button>
       </div>
-      <div class="stats">
-        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
-        <div class="stat"><span>Active Work</span><strong id="hero-active-work">0</strong></div>
-        <div class="stat"><span>Approvals</span><strong id="hero-approvals">0</strong></div>
-        <div class="stat"><span>Ready Dossiers</span><strong id="hero-dossiers">0</strong></div>
-        <div class="stat"><span>Queued Ideas</span><strong id="hero-ideas">0</strong></div>
+    </section>
+    <section class="hero">
+      <div>
+        <div class="eyebrow">Concept Storyboard</div>
+        <h1>Agent Council Chamber</h1>
+        <p>A Huddle command surface shaped by the mockup references: live standups, approvals and blockers, overnight research control, dossier readiness, and idea intake, all still backed by the real module payloads.</p>
+        <div class="stats">
+          <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
+          <div class="stat"><span>Active Work</span><strong id="hero-active-work">0</strong></div>
+          <div class="stat"><span>Approvals</span><strong id="hero-approvals">0</strong></div>
+          <div class="stat"><span>Ready Dossiers</span><strong id="hero-dossiers">0</strong></div>
+          <div class="stat"><span>Queued Ideas</span><strong id="hero-ideas">0</strong></div>
+        </div>
+        <p class="status-note" id="huddle-status-note">Loading huddle module state…</p>
       </div>
-      <p class="status-note" id="huddle-status-note">Loading huddle module state…</p>
+      <div class="hero-side">
+        <div class="hero-note">
+          <strong>Party Mode Problem Solve</strong>
+          <div id="party-mode-copy">The live overnight research controller will surface here after payload hydration.</div>
+        </div>
+        <div class="hero-note">
+          <strong>Delegate Back To Agents</strong>
+          <div id="delegate-copy">Recent huddle continuity and delegation pressure will appear here once actions are recorded.</div>
+        </div>
+      </div>
     </section>
     <div class="layout">
       <section class="panel span-8">
-        <h2>Agent Standups</h2>
+        <h2>Agent Report-In &amp; Mission Board</h2>
         <ul id="reports-list"></ul>
       </section>
       <section class="panel span-4">
-        <h2>Module Status</h2>
+        <h2>Module &amp; Chamber Status</h2>
         <ul id="module-status-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>Approvals &amp; Blockers</h2>
+        <h2>Approvals Needed</h2>
         <ul id="approvals-list"></ul>
         <div style="height: 14px;"></div>
         <ul id="blockers-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>Runtime &amp; Party Mode</h2>
+        <h2>Runtime &amp; Problem Solve</h2>
         <ul id="runtime-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>Ready Dossiers</h2>
+        <h2>Resolution &amp; Delegate Back Out</h2>
         <ul id="dossiers-list"></ul>
       </section>
       <section class="panel span-6">
@@ -6536,6 +6771,10 @@ def render_huddle_module_page(payload: dict) -> str:
         <pre id="idea-output">Awaiting idea capture.</pre>
       </section>
       <section class="panel span-12">
+        <h2>Recent Huddle Continuity</h2>
+        <ul id="recent-activity-list"></ul>
+      </section>
+      <section class="panel span-12">
         <h2>Payload Preview</h2>
         <pre id="payload-preview"></pre>
       </section>
@@ -6556,6 +6795,7 @@ def render_huddle_module_page(payload: dict) -> str:
     const blockersList = document.getElementById("blockers-list");
     const runtimeList = document.getElementById("runtime-list");
     const dossiersList = document.getElementById("dossiers-list");
+    const recentActivityList = document.getElementById("recent-activity-list");
     const ideaOutput = document.getElementById("idea-output");
     const payloadPreview = document.getElementById("payload-preview");
 
@@ -6588,6 +6828,10 @@ def render_huddle_module_page(payload: dict) -> str:
       heroDossiers.textContent = String(payload.ready_dossier_count || 0);
       heroIdeas.textContent = String(queuedIdeas);
       statusNote.textContent = payload.summary || "No huddle summary captured yet.";
+      document.getElementById("party-mode-copy").textContent = party.status ? `Party mode is ${{party.status}}.` : "Party mode is idle.";
+      document.getElementById("delegate-copy").textContent = payload.highlights && payload.highlights.length
+        ? payload.highlights.slice(0, 2).join(" | ")
+        : "No delegation highlights have been surfaced yet.";
 
       moduleStatusList.innerHTML = [
         li("What Became Real", payload.what_became_real || "No huddle seam note recorded yet."),
@@ -6622,8 +6866,19 @@ def render_huddle_module_page(payload: dict) -> str:
         item.executive_summary || item.first_action || "No summary available.",
         `confidence ${{item.confidence_score || 0}} · updated ${{item.updated_at || "unknown"}}`
       )).join("") || '<li><strong>No ready dossiers.</strong><span>Start overnight research or research an idea to generate dossier output.</span></li>';
+      recentActivityList.innerHTML = (Array.isArray(payload.recent_activity) ? payload.recent_activity : []).length
+        ? payload.recent_activity.map((item) => li(item.title || "Huddle action", item.subtitle || item.actor || "Operator continuity", item.detail || item.route_label || "")).join("")
+        : '<li><strong>No huddle continuity recorded yet.</strong><span>Start overnight research or capture an idea to begin the continuity trail.</span></li>';
 
       payloadPreview.textContent = JSON.stringify(payload, null, 2);
+    }}
+
+    async function recordOperatorAction(payload) {{
+      await fetch("/api/activity/operator-action", {{
+        method: "POST",
+        headers: {{ "Content-Type": "application/json" }},
+        body: JSON.stringify(payload),
+      }});
     }}
 
     async function refreshHuddleState() {{
@@ -6643,6 +6898,20 @@ def render_huddle_module_page(payload: dict) -> str:
       try {{
         const response = await fetch("/api/party-mode/start", {{ method: "POST" }});
         const payload = await response.json();
+        await recordOperatorAction({{
+          actor: "Chris",
+          domain: "huddle",
+          action: "Start Overnight Research",
+          title: "Party Mode",
+          detail: payload.status === "started" ? "Party mode started from Huddle." : "Party mode already running during Huddle action.",
+          why_now: "Huddle module launched a real overnight research cycle.",
+          result_summary: `Party mode status: ${{payload.status || "unknown"}}`,
+          route: "/huddle-center",
+          route_label: "Open Huddle",
+          related_kind: "party-mode",
+          related_label: "Overnight research",
+          succeeded: true,
+        }});
         statusNote.textContent = payload.status === "started"
           ? "Party mode started."
           : payload.status === "already_running"
@@ -6667,6 +6936,20 @@ def render_huddle_module_page(payload: dict) -> str:
           }}),
         }});
         const payload = await response.json();
+        await recordOperatorAction({{
+          actor: "Chris",
+          domain: "huddle",
+          action: "Capture Huddle Idea",
+          title: payload.idea ? payload.idea.text || "Idea captured" : "Idea capture",
+          detail: payload.idea ? `Captured idea in ${{payload.idea.domain || "general"}} domain.` : "Idea capture returned without a full idea payload.",
+          why_now: "Huddle module pushed a new idea into the live research inbox.",
+          result_summary: "Huddle continuity updated with a captured idea.",
+          route: "/huddle-center",
+          route_label: "Open Huddle",
+          related_kind: "idea",
+          related_label: payload.idea ? payload.idea.text || payload.idea.id || "Idea" : "Idea",
+          succeeded: true,
+        }});
         ideaOutput.textContent = JSON.stringify(payload, null, 2);
         ideaNote.textContent = payload.idea ? "Idea captured in the live inbox." : "Idea capture returned without an idea payload.";
         document.getElementById("idea-text").value = "";
@@ -7672,18 +7955,85 @@ def render_navigation_module_page(payload: dict) -> str:
         linear-gradient(180deg, #040b12 0%, var(--bg) 44%, var(--bg-2) 100%);
       color: var(--text);
     }}
-    .shell {{ max-width: 1400px; margin: 0 auto; padding: 36px 24px 60px; }}
+    .shell {{ max-width: 1480px; margin: 0 auto; padding: 24px 24px 60px; }}
+    .topbar {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+      padding: 14px 18px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: rgba(7, 13, 21, 0.76);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 16px 42px rgba(0, 0, 0, 0.22);
+    }}
+    .topbar strong {{
+      display: block;
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }}
+    .topbar span {{
+      display: block;
+      color: var(--muted);
+      margin-top: 4px;
+    }}
     .hero {{
+      display: grid;
+      grid-template-columns: minmax(0, 1.18fr) minmax(300px, 0.82fr);
+      gap: 18px;
       padding: 28px;
       border: 1px solid var(--line);
-      border-radius: 28px;
+      border-radius: 30px;
       background: linear-gradient(180deg, rgba(10, 22, 35, 0.96), rgba(7, 16, 27, 0.92));
-      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+      box-shadow: 0 24px 56px rgba(0, 0, 0, 0.3);
     }}
-    .eyebrow {{ color: #79d8ff; letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
+    .eyebrow {{
+      color: var(--accent);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(82, 201, 255, 0.18);
+      background: rgba(82, 201, 255, 0.08);
+    }}
+    .eyebrow::before {{
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: currentColor;
+      box-shadow: 0 0 14px currentColor;
+    }}
     h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
     h2 {{ margin-top: 0; }}
     p {{ color: var(--muted); line-height: 1.6; }}
+    .hero-side {{
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }}
+    .hero-note {{
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }}
+    .hero-note strong {{
+      display: block;
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }}
     .stats {{
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -7755,39 +8105,58 @@ def render_navigation_module_page(payload: dict) -> str:
     }}
     .status-note {{ min-height: 1.3em; color: var(--muted); margin-top: 10px; }}
     @media (max-width: 980px) {{
+      .hero {{ grid-template-columns: 1fr; }}
       .span-4, .span-6, .span-8, .span-12 {{ grid-column: span 12; }}
     }}
   </style>
 </head>
 <body>
   <main class="shell">
-    <section class="hero">
-      <div class="eyebrow">Level 3 Core Module</div>
-      <h1>JARVIS Navigation</h1>
-      <p>A dedicated navigation workspace inside JARVIS with persisted route state, saved locations, route-weather preview, and along-route stop intelligence. This promotes Navigation out of the generic shell surface into a real route-aware module.</p>
+    <section class="topbar">
+      <div>
+        <strong>Navigation Desktop Experience</strong>
+        <span>Command-center routing, smart stops, and voice consultation inspired by the desktop and phone JPG storyboards.</span>
+      </div>
       <div class="actions">
         <a href="/command-center">Back to Command Center</a>
         <button type="button" id="refresh-navigation">Refresh Navigation State</button>
       </div>
-      <div class="stats">
-        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
-        <div class="stat"><span>Saved Locations</span><strong id="hero-locations">0</strong></div>
-        <div class="stat"><span>Favorites</span><strong id="hero-favorites">0</strong></div>
-        <div class="stat"><span>Recent Destinations</span><strong id="hero-recent">0</strong></div>
+    </section>
+    <section class="hero">
+      <div>
+        <div class="eyebrow">Concept Storyboard</div>
+        <h1>Navigation Command Center</h1>
+        <p>A route-aware module with persisted state, live route-weather intelligence, smart stops, and voice-ready consultation, using the JPG look and feel while keeping the actual JARVIS navigation payloads and mutation flow underneath.</p>
+        <div class="stats">
+          <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
+          <div class="stat"><span>Saved Locations</span><strong id="hero-locations">0</strong></div>
+          <div class="stat"><span>Favorites</span><strong id="hero-favorites">0</strong></div>
+          <div class="stat"><span>Recent Destinations</span><strong id="hero-recent">0</strong></div>
+        </div>
+        <p class="status-note" id="navigation-status-note">Loading navigation module state…</p>
       </div>
-      <p class="status-note" id="navigation-status-note">Loading navigation module state…</p>
+      <div class="hero-side">
+        <div class="hero-note">
+          <strong>Live Route Intelligence Workspace</strong>
+          <div id="route-intel-copy">Persisted route posture and route-weather insight will appear here after hydration.</div>
+        </div>
+        <div class="hero-note">
+          <strong>Voice Navigation Consultation</strong>
+          <div id="voice-copy">Route continuity will feed the voice guidance summary once route previews are recorded.</div>
+        </div>
+      </div>
     </section>
     <div class="layout">
       <section class="panel span-4">
-        <h2>Module Status</h2>
+        <h2>Navigation Command Rail</h2>
         <ul id="module-status-list"></ul>
       </section>
       <section class="panel span-8">
-        <h2>Saved Locations</h2>
+        <h2>Saved Places &amp; Route Context</h2>
         <ul id="locations-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>Route Preview</h2>
+        <h2>Live Route Intelligence Workspace</h2>
         <form id="navigation-route-form">
           <label>Origin
             <input id="navigation-origin" placeholder="Home">
@@ -7804,14 +8173,18 @@ def render_navigation_module_page(payload: dict) -> str:
         <pre id="navigation-route-output">Awaiting route preview.</pre>
       </section>
       <section class="panel span-6">
-        <h2>Current Navigation State</h2>
+        <h2>Travel Orchestration &amp; Planning</h2>
         <ul id="state-list"></ul>
       </section>
       <section class="panel span-6">
-        <h2>Stop Categories</h2>
+        <h2>Smart Stops Along Route Studio</h2>
         <ul id="stops-list"></ul>
       </section>
       <section class="panel span-6">
+        <h2>Recent Route Continuity</h2>
+        <ul id="recent-activity-list"></ul>
+      </section>
+      <section class="panel span-12">
         <h2>Payload Preview</h2>
         <pre id="payload-preview"></pre>
       </section>
@@ -7828,6 +8201,7 @@ def render_navigation_module_page(payload: dict) -> str:
     const locationsList = document.getElementById("locations-list");
     const stateList = document.getElementById("state-list");
     const stopsList = document.getElementById("stops-list");
+    const recentActivityList = document.getElementById("recent-activity-list");
     const payloadPreview = document.getElementById("payload-preview");
 
     function esc(value) {{
@@ -7853,6 +8227,10 @@ def render_navigation_module_page(payload: dict) -> str:
       heroFavorites.textContent = String((state.favorite_destinations || []).length);
       heroRecent.textContent = String((state.recent_destinations || []).length);
       statusNote.textContent = payload.summary || "No navigation summary captured yet.";
+      document.getElementById("route-intel-copy").textContent = preview.summary || "No live route preview is persisted yet.";
+      document.getElementById("voice-copy").textContent = preview.hazard_active
+        ? "Weather or hazard pressure is active on the current route."
+        : "Voice guidance is clear for the current route posture.";
 
       document.getElementById("navigation-origin").value = (state.last_route || {{}}).origin || "";
       document.getElementById("navigation-destination").value = (state.last_route || {{}}).destination || "";
@@ -7882,9 +8260,20 @@ def render_navigation_module_page(payload: dict) -> str:
         `${{(section.items || []).length}} stop suggestion(s)`,
         (section.items || []).slice(0, 2).map((item) => item.name).join(" | ")
       )).join("") || '<li><strong>No stop suggestions yet.</strong><span>Run a route preview to load along-route stops.</span></li>';
+      recentActivityList.innerHTML = (Array.isArray(payload.recent_activity) ? payload.recent_activity : []).length
+        ? payload.recent_activity.map((item) => li(item.title || "Navigation action", item.subtitle || item.actor || "Operator continuity", item.detail || item.route_label || "")).join("")
+        : '<li><strong>No route continuity recorded yet.</strong><span>Preview a route and the live travel history will appear here.</span></li>';
 
       document.getElementById("navigation-route-output").textContent = JSON.stringify(preview, null, 2);
       payloadPreview.textContent = JSON.stringify(payload, null, 2);
+    }}
+
+    async function recordOperatorAction(payload) {{
+      await fetch("/api/activity/operator-action", {{
+        method: "POST",
+        headers: {{ "Content-Type": "application/json" }},
+        body: JSON.stringify(payload),
+      }});
     }}
 
     async function refreshNavigationState() {{
@@ -7914,6 +8303,20 @@ def render_navigation_module_page(payload: dict) -> str:
           }}),
         }});
         const payload = await response.json();
+        await recordOperatorAction({{
+          actor: "Chris",
+          domain: "navigation",
+          action: "Preview Route Intelligence",
+          title: `${{payload.origin || "Origin"}} -> ${{payload.destination || "Destination"}}`,
+          detail: payload.summary || "Route preview refreshed from Navigation Center.",
+          why_now: "Navigation module persisted a fresh route preview and stop intelligence snapshot.",
+          result_summary: `Smart stop sections: ${{Array.isArray(payload.sections) ? payload.sections.length : 0}}`,
+          route: "/navigation-center",
+          route_label: "Open Navigation",
+          related_kind: "route-preview",
+          related_label: payload.destination || "Route",
+          succeeded: true,
+        }});
         document.getElementById("navigation-route-output").textContent = JSON.stringify(payload, null, 2);
         note.textContent = payload.summary || "Route preview loaded.";
         await refreshNavigationState();

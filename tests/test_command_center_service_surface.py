@@ -619,16 +619,24 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertEqual(chronicle_snapshot["proof_paths"]["module_api"], "/api/chronicle/module")
         self.assertIn("JARVIS Navigation", navigation_html)
         self.assertIn("Preview Route Intelligence", navigation_html)
+        self.assertIn("Navigation Command Center", navigation_html)
+        self.assertIn("Recent Route Continuity", navigation_html)
+        self.assertIn("/api/activity/operator-action", navigation_html)
         self.assertIn("status", navigation_snapshot)
         self.assertIn("navigation_state", navigation_snapshot)
+        self.assertIn("recent_activity", navigation_snapshot)
         self.assertIn("proof_paths", navigation_snapshot)
         self.assertEqual(navigation_snapshot["proof_paths"]["module_route"], "/navigation-center")
         self.assertEqual(navigation_snapshot["proof_paths"]["module_api"], "/api/navigation/module")
         self.assertIn("JARVIS Publish", publish_html)
         self.assertIn("Quick Draft Project", publish_html)
         self.assertIn("Refresh Publish State", publish_html)
+        self.assertIn("Launch Ops Hub", publish_html)
+        self.assertIn("Recent Publish Continuity", publish_html)
+        self.assertIn("/api/activity/operator-action", publish_html)
         self.assertIn("status", publish_snapshot)
         self.assertIn("projects", publish_snapshot)
+        self.assertIn("recent_activity", publish_snapshot)
         self.assertIn("proof_paths", publish_snapshot)
         self.assertEqual(publish_snapshot["proof_paths"]["module_route"], "/publish")
         self.assertEqual(publish_snapshot["proof_paths"]["module_api"], "/api/publish/module")
@@ -644,8 +652,12 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("JARVIS Huddle", huddle_html)
         self.assertIn("Start Overnight Research", huddle_html)
         self.assertIn("Capture Huddle Idea", huddle_html)
+        self.assertIn("Agent Council Chamber", huddle_html)
+        self.assertIn("Recent Huddle Continuity", huddle_html)
+        self.assertIn("/api/activity/operator-action", huddle_html)
         self.assertIn("status", huddle_snapshot)
         self.assertIn("reports", huddle_snapshot)
+        self.assertIn("recent_activity", huddle_snapshot)
         self.assertIn("proof_paths", huddle_snapshot)
         self.assertEqual(huddle_snapshot["proof_paths"]["module_route"], "/huddle-center")
         self.assertEqual(huddle_snapshot["proof_paths"]["module_api"], "/api/huddle/module")
@@ -750,6 +762,67 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         activity_payload = self._json_body(activity_response)
         self.assertTrue(any(item.get("entry_type") == "operator-action" for item in activity_payload))
         self.assertTrue(any(item.get("related_kind") == "recovery-case" for item in activity_payload))
+
+    def test_module_activity_continuity_populates_publish_huddle_and_navigation_payloads(self) -> None:
+        asyncio.run(
+            self._route("/api/activity/operator-action", "POST")(
+                {
+                    "actor": "Chris",
+                    "domain": "publish",
+                    "action": "Create Draft Project",
+                    "detail": "Created publish draft from module route.",
+                    "why_now": "Publish continuity smoke test.",
+                    "result_summary": "Draft created",
+                    "route": "/publish",
+                    "route_label": "Open Publish",
+                    "related_kind": "publishing-project",
+                    "related_label": "Test launch draft",
+                    "succeeded": True,
+                }
+            )
+        )
+        asyncio.run(
+            self._route("/api/activity/operator-action", "POST")(
+                {
+                    "actor": "Chris",
+                    "domain": "huddle",
+                    "action": "Start Overnight Research",
+                    "detail": "Started party mode from module route.",
+                    "why_now": "Huddle continuity smoke test.",
+                    "result_summary": "Party mode started",
+                    "route": "/huddle-center",
+                    "route_label": "Open Huddle",
+                    "related_kind": "party-mode",
+                    "related_label": "Overnight research",
+                    "succeeded": True,
+                }
+            )
+        )
+        asyncio.run(
+            self._route("/api/activity/operator-action", "POST")(
+                {
+                    "actor": "Chris",
+                    "domain": "navigation",
+                    "action": "Preview Route Intelligence",
+                    "detail": "Persisted route preview from module route.",
+                    "why_now": "Navigation continuity smoke test.",
+                    "result_summary": "Route preview refreshed",
+                    "route": "/navigation-center",
+                    "route_label": "Open Navigation",
+                    "related_kind": "route-preview",
+                    "related_label": "Springfield",
+                    "succeeded": True,
+                }
+            )
+        )
+
+        publish_snapshot = self._json_body(asyncio.run(self._route("/api/publish/module", "GET")()))
+        huddle_snapshot = self._json_body(asyncio.run(self._route("/api/huddle/module", "GET")()))
+        navigation_snapshot = self._json_body(asyncio.run(self._route("/api/navigation/module", "GET")()))
+
+        self.assertTrue(any(item.get("title") == "Create Draft Project" for item in publish_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("title") == "Start Overnight Research" for item in huddle_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("title") == "Preview Route Intelligence" for item in navigation_snapshot["recent_activity"]))
 
 
 if __name__ == "__main__":

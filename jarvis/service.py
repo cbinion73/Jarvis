@@ -1087,6 +1087,43 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_storm_route_weather(origin: str, destination: str) -> JSONResponse:
         return _json(runtime.storm_route_weather(origin, destination))
 
+    def _module_recent_activity(*, route: str, domain: str, limit: int = 4) -> list[dict[str, Any]]:
+        audit = AuditLog(DEFAULT_AUDIT_ROOT)
+        rows: list[dict[str, Any]] = []
+        scan_limit = max(limit * 8, 24)
+        for item in audit.list_recent(limit=scan_limit):
+            if not isinstance(item, dict):
+                continue
+            item_route = str(item.get("related_route") or item.get("route") or "").strip()
+            item_domain = str(item.get("domain") or "").strip()
+            if route and item_route != route and domain and item_domain != domain:
+                continue
+            if route and not domain and item_route != route:
+                continue
+            if domain and not route and item_domain != domain:
+                continue
+            entry_type = str(item.get("entry_type") or "").strip()
+            title = str(item.get("action") or item.get("title") or item.get("detail") or entry_type or "activity").strip()
+            if not title:
+                title = "activity"
+            rows.append(
+                {
+                    "entry_type": entry_type,
+                    "timestamp": str(item.get("timestamp") or ""),
+                    "title": title,
+                    "subtitle": str(item.get("why_now") or item.get("detail") or item_domain or item.get("actor") or "").strip(),
+                    "detail": str(item.get("result_summary") or item.get("detail") or "").strip(),
+                    "actor": str(item.get("actor") or "").strip(),
+                    "related_kind": str(item.get("related_kind") or "").strip(),
+                    "related_label": str(item.get("related_label") or "").strip(),
+                    "route_label": str(item.get("route_label") or "").strip(),
+                    "route": item_route,
+                }
+            )
+            if len(rows) >= limit:
+                break
+        return rows
+
     async def _build_navigation_module_payload() -> dict[str, Any]:
         generated_at = ""
         try:
@@ -1106,6 +1143,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "navigation_state": {},
             "saved_locations": [],
             "route_preview": {"summary": "", "hazard_active": False, "sections": []},
+            "recent_activity": [],
             "proof_paths": {
                 "module_route": "/navigation-center",
                 "module_api": "/api/navigation/module",
@@ -1166,6 +1204,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 f"{len((state.get('favorite_destinations') or [])) if isinstance(state, dict) else 0} favorite destination(s), "
                 f"and a persisted route preview surface."
             )
+        payload["recent_activity"] = _module_recent_activity(route="/navigation-center", domain="navigation")
         if payload["errors"] and payload["status"] == "Useful":
             payload["remains_partial"] = "Some navigation sources still failed to hydrate; inspect the payload preview for details."
         return payload
@@ -5732,6 +5771,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "queued_count": 0,
                 "recent": [],
             },
+            "recent_activity": [],
             "proof_paths": {
                 "module_route": "/huddle-center",
                 "module_api": "/api/huddle/module",
@@ -5883,6 +5923,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 payload["status"] = "Wired"
                 payload["remains_partial"] = "The dedicated Huddle screen is live, but no standup reports were available in this runtime."
 
+        payload["recent_activity"] = _module_recent_activity(route="/huddle-center", domain="huddle")
         if payload["errors"] and payload["status"] == "Useful":
             payload["remains_partial"] = "Some huddle sources still failed to hydrate; inspect the payload preview for details."
         return payload
@@ -6844,6 +6885,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "attention_count": 0,
             },
             "launch_control": {"active_project": None, "next_action": "Publishing sources are not initialised yet."},
+            "recent_activity": [],
             "proof_paths": {
                 "module_route": "/publish",
                 "module_api": "/api/publish/module",
@@ -6863,6 +6905,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 payload["errors"].append(f"ghostwritr_bridge: {exc}")
 
         if pub is None:
+            payload["recent_activity"] = _module_recent_activity(route="/publish", domain="publish")
             return payload
 
         payload["status"] = "Useful"
@@ -6914,6 +6957,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         except Exception as exc:
             payload["errors"].append(f"launch_control: {exc}")
 
+        payload["recent_activity"] = _module_recent_activity(route="/publish", domain="publish")
         if payload["errors"]:
             payload["remains_partial"] = "Some publishing sources still failed to hydrate; see errors in the payload preview."
         return payload
