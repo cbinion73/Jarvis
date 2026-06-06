@@ -1953,6 +1953,79 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_progress_module() -> JSONResponse:
         return _json(await _build_progress_module_payload())
 
+    def _recovery_related_routes(target_kind: str, *, route: str = "/recovery-center") -> list[dict[str, str]]:
+        normalized = str(target_kind).strip().lower() or "recovery"
+        candidates: list[tuple[str, str]] = [("Open Recovery Center", str(route).strip() or "/recovery-center")]
+        if normalized == "approval":
+            candidates.extend(
+                [
+                    ("Open Approval Queue", "/approval-queue"),
+                    ("Open Supervision Snapshot", "/supervision-snapshot"),
+                    ("Open Activity Feed", "/activity-center"),
+                ]
+            )
+        elif normalized == "integration":
+            candidates.extend(
+                [
+                    ("Open Supervision Snapshot", "/supervision-snapshot"),
+                    ("Open Activity Feed", "/activity-center"),
+                    ("Open Command Center", "/command-center"),
+                ]
+            )
+        elif normalized == "failure":
+            candidates.extend(
+                [
+                    ("Open Activity Feed", "/activity-center"),
+                    ("Open Progress Center", "/progress-center"),
+                    ("Open Command Center", "/command-center"),
+                ]
+            )
+        else:
+            candidates.extend(
+                [
+                    ("Open Activity Feed", "/activity-center"),
+                    ("Open Command Center", "/command-center"),
+                ]
+            )
+        deduped: list[dict[str, str]] = []
+        seen: set[str] = set()
+        for label, candidate_route in candidates:
+            final_route = str(candidate_route).strip() or "/command-center"
+            if final_route in seen:
+                continue
+            seen.add(final_route)
+            deduped.append({"label": label, "route": final_route})
+        return deduped
+
+    def _decorate_recovery_action(entry: dict[str, Any]) -> dict[str, Any]:
+        item = dict(entry or {})
+        item["related_routes"] = _recovery_related_routes(
+            str(item.get("target_kind", "")).strip(),
+            route=str(item.get("route", "")).strip() or "/recovery-center",
+        )
+        return item
+
+    def _decorate_recovery_surface_item(item: dict[str, Any], target_kind: str) -> dict[str, Any]:
+        surface_item = dict(item or {})
+        surface_item["related_routes"] = _recovery_related_routes(
+            target_kind,
+            route=str(surface_item.get("route", "")).strip() or "/recovery-center",
+        )
+        return surface_item
+
+    def _recovery_bridge_summary(limit: int = 6, target_kinds: Sequence[str] | None = None) -> dict[str, Any]:
+        summary = RecoveryActionStore(DEFAULT_AUDIT_ROOT).summary(limit=max(limit, 8))
+        recent = [_decorate_recovery_action(item) for item in list(summary.get("recent") or []) if isinstance(item, dict)]
+        if target_kinds:
+            allowed = {str(kind).strip().lower() for kind in target_kinds if str(kind).strip()}
+            recent = [item for item in recent if str(item.get("target_kind", "")).strip().lower() in allowed]
+        recent = recent[: max(1, limit)]
+        return {
+            "count": len(recent),
+            "recent": recent,
+            "proof_paths": dict(summary.get("proof_paths") or {}),
+        }
+
     async def _build_supervision_module_payload() -> dict[str, Any]:
         snapshot = build_supervision_snapshot()
         lane = dict(snapshot.get("lane") or {})
@@ -1961,6 +2034,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         what_needs_me = list(snapshot.get("what_needs_me") or [])
         memory = dict(snapshot.get("memory") or {})
         registry = dict(snapshot.get("registry") or {})
+        recovery_bridge = _recovery_bridge_summary(limit=5, target_kinds=("approval", "integration", "failure", "recovery"))
         issue_count = sum(1 for item in integrations if not bool(item.get("ok")))
         summary = str((snapshot.get("return_brief") or {}).get("summary", "")).strip() or (
             "Supervision Snapshot now has a dedicated module route with live lane posture, approval attention, integration issues, and memory cues inside JARVIS."
@@ -1980,12 +2054,14 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "registry": registry,
             "integrations": integrations,
             "what_needs_me": what_needs_me,
+            "recovery_bridge": recovery_bridge,
             "counts": {
                 "needs_review_count": len(what_needs_me),
                 "pending_approval_count": len(attention_queue),
                 "integration_issue_count": issue_count,
                 "memory_proposal_count": int(memory.get("proposal_count", 0) or 0),
                 "registered_agent_count": int(registry.get("agent_count", 0) or 0),
+                "recovery_bridge_count": int(recovery_bridge.get("count", 0) or 0),
             },
             "proof_paths": {
                 "module_route": "/supervision-snapshot",
@@ -1994,6 +2070,8 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "approval_queue_route": "/approval-queue",
                 "approval_queue_api": "/api/approval/module",
                 "command_center_route": "/command-center",
+                "recovery_route": "/recovery-center",
+                "recovery_action_api": "/api/recovery/action",
             },
         }
 
@@ -2002,6 +2080,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         pending = list(snapshot.get("pending") or [])
         history = list(snapshot.get("history") or [])
         what_needs_me = list(snapshot.get("what_needs_me") or [])
+        recovery_bridge = _recovery_bridge_summary(limit=4, target_kinds=("approval",))
         high_risk_pending_count = sum(1 for item in pending if str(item.get("risk_tier", "")).lower() in {"high", "critical"})
         approval_ready_count = sum(
             1
@@ -2026,11 +2105,13 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "pending": pending,
             "history": history,
             "what_needs_me": what_needs_me,
+            "recovery_bridge": recovery_bridge,
             "counts": {
                 "pending_count": len(pending),
                 "history_count": len(history),
                 "high_risk_pending_count": high_risk_pending_count,
                 "approval_ready_count": approval_ready_count,
+                "recovery_bridge_count": int(recovery_bridge.get("count", 0) or 0),
             },
             "proof_paths": {
                 "module_route": "/approval-queue",
@@ -2041,6 +2122,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "submit_api": "/api/approvals/submit",
                 "command_center_route": "/command-center",
                 "recovery_route": "/recovery-center",
+                "recovery_action_api": "/api/recovery/action",
             },
             "errors": [],
         }
@@ -2056,14 +2138,30 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def _build_recovery_module_payload() -> dict[str, Any]:
         command_center = build_command_center_index()
         failure_recovery = dict(command_center.get("failure_recovery") or {})
-        pending_approvals = list(command_center.get("pending_approvals") or [])
+        pending_approvals = [
+            _decorate_recovery_surface_item(item, "approval")
+            for item in list(command_center.get("pending_approvals") or [])
+            if isinstance(item, dict)
+        ]
         activity_feed = list(command_center.get("activity_feed") or [])
-        recovery_actions = RecoveryActionStore(DEFAULT_AUDIT_ROOT).summary(limit=8)
+        recovery_actions = _recovery_bridge_summary(limit=8)
         supervision_snapshot = build_supervision_snapshot()
         approval_snapshot = build_approval_queue_snapshot()
-        action_items = list(failure_recovery.get("action_items") or [])
-        failing_integrations = list(failure_recovery.get("failing_integrations") or [])
-        recent_failures = list(failure_recovery.get("recent_failures") or [])
+        action_items = [
+            _decorate_recovery_surface_item(item, "recovery")
+            for item in list(failure_recovery.get("action_items") or [])
+            if isinstance(item, dict)
+        ]
+        failing_integrations = [
+            _decorate_recovery_surface_item(item, "integration")
+            for item in list(failure_recovery.get("failing_integrations") or [])
+            if isinstance(item, dict)
+        ]
+        recent_failures = [
+            _decorate_recovery_surface_item(item, "failure")
+            for item in list(failure_recovery.get("recent_failures") or [])
+            if isinstance(item, dict)
+        ]
         summary = "Failure & Recovery now has a dedicated module route with live recovery posture, pending approval gates, and recent failure signals inside JARVIS."
 
         if action_items:
@@ -2073,13 +2171,17 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 f"and {int(failure_recovery.get('integration_issue_count', 0) or 0)} integration issue(s)."
             )
 
+        failure_recovery["action_items"] = action_items
+        failure_recovery["failing_integrations"] = failing_integrations
+        failure_recovery["recent_failures"] = recent_failures
+
         payload: dict[str, Any] = {
             "generated_at": command_center.get("generated_at", ""),
             "available": True,
             "status": "Useful" if (action_items or pending_approvals or failing_integrations or recent_failures) else "Wired",
             "summary": summary,
-            "what_became_real": "Failure & Recovery is now a standalone app module instead of only a command-center and progress-dashboard posture summary.",
-            "remains_partial": "Automated remediation still needs follow-on slices, but retry and stabilization actions are now durably represented inside the recovery route.",
+            "what_became_real": "Failure & Recovery is now a standalone app module with durable retry and stabilization actions plus visible continuity into the linked approval, supervision, activity, and command-center routes.",
+            "remains_partial": "Automated remediation still needs follow-on slices, but retry and stabilization actions are now durably represented across the recovery stack.",
             "failure_recovery": failure_recovery,
             "pending_approvals": pending_approvals,
             "activity_feed": activity_feed,

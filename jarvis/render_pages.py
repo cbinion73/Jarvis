@@ -2033,6 +2033,10 @@ def render_recovery_module_page(payload: dict) -> str:
         <div id="failure-list"></div>
       </section>
       <section class="panel span-12">
+        <h2>Recovery Continuity</h2>
+        <div id="recovery-bridge-list"></div>
+      </section>
+      <section class="panel span-12">
         <h2>Recovery Action Journal</h2>
         <div id="recovery-journal-list"></div>
       </section>
@@ -2060,6 +2064,7 @@ def render_recovery_module_page(payload: dict) -> str:
     const approvalList = document.getElementById("approval-list");
     const integrationList = document.getElementById("integration-list");
     const failureList = document.getElementById("failure-list");
+    const recoveryBridgeList = document.getElementById("recovery-bridge-list");
     const recoveryJournalList = document.getElementById("recovery-journal-list");
     const proofList = document.getElementById("proof-list");
     const recoveryDetail = document.getElementById("recovery-detail");
@@ -2088,6 +2093,13 @@ def render_recovery_module_page(payload: dict) -> str:
       return items.length
         ? items.map(renderItem).join("")
         : `<div class="entry-card"><strong>${{esc(emptyTitle)}}</strong><span>${{esc(emptyDetail)}}</span></div>`;
+    }}
+
+    function routeLinks(routes) {{
+      const entries = Array.isArray(routes) ? routes : [];
+      return entries.map((item) => `
+        <a href="${{esc(item.route || "/command-center")}}">${{esc(item.label || "Open Route")}}</a>
+      `).join("");
     }}
 
     async function recordRecoveryAction(entry) {{
@@ -2166,6 +2178,7 @@ def render_recovery_module_page(payload: dict) -> str:
       const title = item.title || item.name || item.request_id || "Recovery item";
       const summary = item.detail || item.description || item.summary || "No recovery detail recorded.";
       const route = item.route || (payload.proof_paths || {{}}).supervision_route || "/supervision-snapshot";
+      const relatedRoutes = Array.isArray(item.related_routes) ? item.related_routes : [];
       recoveryDetail.innerHTML = `
         <div class="entry-card">
           <strong>${{esc(title)}}</strong>
@@ -2184,6 +2197,7 @@ def render_recovery_module_page(payload: dict) -> str:
           </div>
           <div class="action-row">
             <a href="${{esc(route)}}">Open Recovery View</a>
+            ${{routeLinks(relatedRoutes)}}
             ${{item.request_id ? `<button type="button" data-approve-id="${{esc(item.request_id)}}">Approve Recovery Gate</button>` : ""}}
             ${{item.request_id ? `<button type="button" class="alt" data-reject-id="${{esc(item.request_id)}}">Reject Recovery Gate</button>` : ""}}
             <button type="button" data-recovery-action="retry" data-recovery-kind="${{esc(item.request_id ? "approval" : item.name ? "integration" : "failure")}}" data-recovery-label="${{esc(title)}}" data-recovery-detail="${{esc(summary)}}">Stage Retry</button>
@@ -2243,6 +2257,7 @@ def render_recovery_module_page(payload: dict) -> str:
             <span>${{esc(item.detail || "No recovery detail recorded.")}}</span>
             <div class="action-row">
               <button type="button" data-select-kind="action" data-select-index="${{esc(String(index))}}">Inspect Recovery Item</button>
+              ${{routeLinks(item.related_routes)}}
             </div>
           </div>
         `,
@@ -2264,6 +2279,7 @@ def render_recovery_module_page(payload: dict) -> str:
               <button type="button" data-select-kind="approval" data-select-index="${{esc(String(index))}}">Inspect Recovery Gate</button>
               <button type="button" data-approve-id="${{esc(item.request_id || "")}}">Approve Recovery Gate</button>
               <button type="button" class="alt" data-reject-id="${{esc(item.request_id || "")}}">Reject</button>
+              ${{routeLinks(item.related_routes)}}
             </div>
           </div>
         `,
@@ -2279,6 +2295,7 @@ def render_recovery_module_page(payload: dict) -> str:
             <span>${{esc(item.detail || "Integration needs review.")}}</span>
             <div class="action-row">
               <button type="button" data-select-kind="integration" data-select-index="${{esc(String(index))}}">Inspect Integration</button>
+              ${{routeLinks(item.related_routes)}}
             </div>
           </div>
         `,
@@ -2296,11 +2313,33 @@ def render_recovery_module_page(payload: dict) -> str:
             <div class="action-row">
               <button type="button" data-select-kind="failure" data-select-index="${{esc(String(index))}}">Inspect Failure Signal</button>
               <button type="button" data-recovery-action="retry" data-recovery-kind="failure" data-recovery-label="${{esc(item.title || "Failure Signal")}}" data-recovery-detail="${{esc(item.detail || "No failure detail recorded.")}}">Stage Retry</button>
+              ${{routeLinks(item.related_routes)}}
             </div>
           </div>
         `,
         "No recent failure signals.",
         "Recent runtime failures and rollback signals will appear here."
+      );
+
+      const recoveryBridge = ((payload.recovery_actions || {{}}).recent) || [];
+      recoveryBridgeList.innerHTML = listOrEmpty(
+        recoveryBridge,
+        (item) => `
+          <div class="entry-card">
+            <strong>${{esc(item.target_label || "Recovery continuity item")}}</strong>
+            <span>${{esc(item.detail || "Recovery continuity recorded.")}}</span>
+            <div class="chips">
+              ${{chip(item.target_kind || "recovery", "steady")}}
+              ${{chip(item.action_type || "review", "steady")}}
+              ${{chip(item.status || "queued")}}
+            </div>
+            <div class="action-row">
+              ${{routeLinks(item.related_routes)}}
+            </div>
+          </div>
+        `,
+        "No recovery continuity recorded yet.",
+        "Durable recovery actions will surface here with links back into the related approval, supervision, activity, and command-center routes."
       );
 
       const recoveryActions = ((payload.recovery_actions || {{}}).recent) || [];
@@ -2314,6 +2353,9 @@ def render_recovery_module_page(payload: dict) -> str:
               ${{chip(item.action_type || "review", "steady")}}
               ${{chip(item.status || "queued")}}
               ${{item.saved_at ? chip(item.saved_at, "steady") : ""}}
+            </div>
+            <div class="action-row">
+              ${{routeLinks(item.related_routes)}}
             </div>
           </div>
         `,
@@ -4184,6 +4226,10 @@ def render_approval_module_page(payload: dict) -> str:
         <h2>Needs Review</h2>
         <ul id="needs-review-list"></ul>
       </section>
+      <section class="panel span-12">
+        <h2>Recovery Continuity</h2>
+        <div id="recovery-bridge-list" class="entry-list"></div>
+      </section>
       <section class="panel span-8">
         <h2>Proof Paths</h2>
         <ul id="proof-list"></ul>
@@ -4209,6 +4255,7 @@ def render_approval_module_page(payload: dict) -> str:
     const historyList = document.getElementById("history-list");
     const detailEl = document.getElementById("approval-detail");
     const needsReviewEl = document.getElementById("needs-review-list");
+    const recoveryBridgeEl = document.getElementById("recovery-bridge-list");
     const proofEl = document.getElementById("proof-list");
     const payloadPreview = document.getElementById("payload-preview");
     const statusNote = document.getElementById("approval-status-note");
@@ -4229,6 +4276,11 @@ def render_approval_module_page(payload: dict) -> str:
 
     function chip(label) {{
       return `<span class="chip">${{esc(label)}}</span>`;
+    }}
+
+    function routeLinks(routes) {{
+      const entries = Array.isArray(routes) ? routes : [];
+      return entries.map((item) => `<a href="${{esc(item.route || "/command-center")}}">${{esc(item.label || "Open Route")}}</a>`).join("");
     }}
 
     function filteredPending(payload) {{
@@ -4381,6 +4433,24 @@ def render_approval_module_page(payload: dict) -> str:
       needsReviewEl.innerHTML = Array.isArray(payload.what_needs_me) && payload.what_needs_me.length
         ? payload.what_needs_me.map((item) => li(item.title || "Approval review", item.detail || "Needs operator review.", item.command || "")).join("")
         : `<li><strong>No urgent approval work.</strong><span>Nothing currently needs a human decision.</span></li>`;
+
+      const recoveryBridge = ((payload.recovery_bridge || {{}}).recent) || [];
+      recoveryBridgeEl.innerHTML = recoveryBridge.length
+        ? recoveryBridge.map((item) => `
+            <div class="entry-card">
+              <strong>${{esc(item.target_label || "Recovery action")}}</strong>
+              <span>${{esc(item.detail || "Recovery continuity recorded.")}}</span>
+              <div class="chips">
+                ${{chip(item.action_type || "review")}}
+                ${{chip(item.status || "queued")}}
+                ${{chip(item.target_kind || "approval")}}
+              </div>
+              <div class="action-row">
+                ${{routeLinks(item.related_routes)}}
+              </div>
+            </div>
+          `).join("")
+        : `<div class="entry-card"><strong>No recovery continuity recorded.</strong><span>Recovery actions linked to approvals will surface here with routes back to the failure and supervision stack.</span></div>`;
 
       document.querySelectorAll("[data-select-kind]").forEach((button) => {{
         button.addEventListener("click", () => {{
@@ -4642,6 +4712,10 @@ def render_supervision_module_page(payload: dict) -> str:
         <ul id="proof-list"></ul>
       </section>
       <section class="panel span-12">
+        <h2>Recovery Continuity</h2>
+        <div id="recovery-bridge-list" class="entry-list"></div>
+      </section>
+      <section class="panel span-12">
         <h2>Payload Preview</h2>
         <pre id="payload-preview"></pre>
       </section>
@@ -4663,6 +4737,7 @@ def render_supervision_module_page(payload: dict) -> str:
     const integrationList = document.getElementById("integration-list");
     const laneResidueEl = document.getElementById("lane-residue-list");
     const registryMemoryEl = document.getElementById("registry-memory-list");
+    const recoveryBridgeEl = document.getElementById("recovery-bridge-list");
     const proofEl = document.getElementById("proof-list");
     const payloadPreview = document.getElementById("payload-preview");
     const statusNote = document.getElementById("supervision-status-note");
@@ -4683,6 +4758,11 @@ def render_supervision_module_page(payload: dict) -> str:
 
     function chip(label) {{
       return `<span class="chip">${{esc(label)}}</span>`;
+    }}
+
+    function routeLinks(routes) {{
+      const entries = Array.isArray(routes) ? routes : [];
+      return entries.map((item) => `<a href="${{esc(item.route || "/command-center")}}">${{esc(item.label || "Open Route")}}</a>`).join("");
     }}
 
     function selectedAttention(payload) {{
@@ -4812,6 +4892,24 @@ def render_supervision_module_page(payload: dict) -> str:
         li("Registered Agents", String(registry.agent_count || 0), Array.isArray(registry.domains) ? registry.domains.join(", ") : ""),
         li("Memory Entries", String(memory.entry_count || 0), Array.isArray(memory.latest_entry_titles) ? memory.latest_entry_titles.join(", ") : ""),
       ].join("");
+
+      const recoveryBridge = ((payload.recovery_bridge || {{}}).recent) || [];
+      recoveryBridgeEl.innerHTML = recoveryBridge.length
+        ? recoveryBridge.map((item) => `
+            <div class="entry-card">
+              <strong>${{esc(item.target_label || "Recovery continuity item")}}</strong>
+              <span>${{esc(item.detail || "Recovery continuity recorded.")}}</span>
+              <div class="chips">
+                ${{chip(item.target_kind || "recovery")}}
+                ${{chip(item.action_type || "review")}}
+                ${{chip(item.status || "queued")}}
+              </div>
+              <div class="action-row">
+                ${{routeLinks(item.related_routes)}}
+              </div>
+            </div>
+          `).join("")
+        : `<div class="entry-card"><strong>No recovery continuity recorded.</strong><span>Retry and stabilization actions will surface here with links into the related routes once the failure stack is exercised.</span></div>`;
 
       document.querySelectorAll("[data-select-index]").forEach((button) => {{
         button.addEventListener("click", () => {{
