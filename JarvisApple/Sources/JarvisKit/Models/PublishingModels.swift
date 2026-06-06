@@ -638,6 +638,7 @@ public struct HuddlePartyModeActionResult: Codable, Sendable {
     public let authorityStage: String?
     public let arenaStatus: String?
     public let approvalMode: String?
+    public let focus: HuddleProgressFocus?
 
     enum CodingKeys: String, CodingKey {
         case status
@@ -649,6 +650,35 @@ public struct HuddlePartyModeActionResult: Codable, Sendable {
         case authorityStage = "authority_stage"
         case arenaStatus = "arena_status"
         case approvalMode = "approval_mode"
+        case focus
+    }
+}
+
+public struct HuddleApprovalActionResult: Codable, Sendable {
+    public let status: String
+    public let workId: String
+    public let title: String
+    public let focus: HuddleProgressFocus?
+
+    enum CodingKeys: String, CodingKey {
+        case status
+        case workId = "work_id"
+        case title
+        case focus
+    }
+}
+
+public struct HuddleProgressFocus: Codable, Equatable, Sendable {
+    public let module: String
+    public let reason: String
+    public let route: String
+    public let savedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case module
+        case reason
+        case route
+        case savedAt = "saved_at"
     }
 }
 

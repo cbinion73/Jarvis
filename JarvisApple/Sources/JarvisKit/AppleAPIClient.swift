@@ -689,6 +689,28 @@ public final class AppleAPIClient: Sendable {
         try await post("/api/apple/huddle/party-mode/start", body: EmptyBody())
     }
 
+    public func approveHuddleDecision(_ workId: String, actor: String = "chris", note: String = "") async throws -> HuddleApprovalActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let note: String
+        }
+        return try await post(
+            "/api/apple/huddle/approvals/\(workId)/approve",
+            body: Body(actor: actor, note: note)
+        )
+    }
+
+    public func rejectHuddleDecision(_ workId: String, actor: String = "chris", note: String = "") async throws -> HuddleApprovalActionResult {
+        struct Body: Encodable {
+            let actor: String
+            let note: String
+        }
+        return try await post(
+            "/api/apple/huddle/approvals/\(workId)/reject",
+            body: Body(actor: actor, note: note)
+        )
+    }
+
     public func stageStewardshipLaneReview(_ laneId: String, actor: String = "chris", note: String = "") async throws -> StewardshipLaneActionResult {
         struct Body: Encodable {
             let actor: String

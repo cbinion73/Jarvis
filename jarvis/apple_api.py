@@ -938,6 +938,106 @@ def _save_chronicle_study_entry(*, actor: str, title: str, passage: str, notes: 
     return {"captured": True, "entry_id": entry_id, "focus": focus}
 
 
+def _record_huddle_progress_focus(
+    *,
+    actor: str,
+    action: str,
+    detail: str,
+    why_now: str,
+    result_summary: str,
+    related_kind: str,
+    related_label: str,
+) -> dict[str, Any]:
+    _record_operator_action(
+        actor=actor,
+        domain="huddle",
+        action=action,
+        detail=detail,
+        why_now=why_now,
+        result_summary=result_summary,
+        route="/huddle-center",
+        route_label="Open Huddle",
+        related_kind=related_kind,
+        related_label=related_label,
+        succeeded=True,
+    )
+    return ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module="Huddle",
+        reason=detail,
+        route="/huddle-center",
+        actor=actor,
+    )
+
+
+def _serialize_huddle_work_item(item: Any) -> dict[str, Any]:
+    from dataclasses import asdict, is_dataclass
+
+    if isinstance(item, dict):
+        return dict(item)
+    if is_dataclass(item):
+        return asdict(item)
+    payload = {}
+    for key in ("work_id", "title", "request", "status", "priority", "created_at", "updated_at"):
+        value = getattr(item, key, None)
+        if value is not None:
+            payload[key] = value
+    if payload:
+        return payload
+    if hasattr(item, "__dict__"):
+        return dict(vars(item))
+    return {"value": str(item)}
+
+
+def _resolve_huddle_approval(*, work_id: str, action: str, actor: str, note: str = "") -> dict[str, Any]:
+    from .agent_work import get_all_stores
+
+    action_key = str(action or "").strip().lower()
+    if action_key not in {"approve", "reject"}:
+        raise ValueError("Unsupported huddle approval action.")
+
+    updated_item: Any | None = None
+    for store in get_all_stores().values():
+        item = store.get(work_id)
+        if item is None:
+            continue
+        if action_key == "approve":
+            store.mark_approved(work_id, approved_by="Chris")
+        else:
+            store.mark_rejected(work_id, reason=note or "Declined from JarvisPhone Huddle.")
+        updated_item = store.get(work_id)
+        break
+
+    if updated_item is None:
+        raise KeyError("Huddle approval work item not found.")
+
+    updated = _serialize_huddle_work_item(updated_item)
+    title = str(updated.get("title") or updated.get("request") or work_id).strip() or work_id
+    status = str(updated.get("status") or ("approved" if action_key == "approve" else "rejected")).strip() or (
+        "approved" if action_key == "approve" else "rejected"
+    )
+    detail = note or (
+        f"Huddle approved {title} from the native alignment lane."
+        if action_key == "approve"
+        else f"Huddle rejected {title} from the native alignment lane."
+    )
+    focus = _record_huddle_progress_focus(
+        actor=actor,
+        action="Approve Huddle Decision" if action_key == "approve" else "Reject Huddle Decision",
+        detail=detail,
+        why_now="The native Huddle screen resolved a live approval item without dropping back to the web route.",
+        result_summary=f"Huddle approval moved to {status}.",
+        related_kind="huddle-approval",
+        related_label=title,
+    )
+    return {
+        "status": status,
+        "work_id": work_id,
+        "title": title,
+        "focus": focus,
+        "item": updated,
+    }
+
+
 async def _timeboxed_to_thread(
     func: Any,
     *args: Any,
@@ -11450,6 +11550,15 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         ctrl = get_party_controller(runtime)
         status = ctrl.get_status()
         if status.get("status") == "running":
+            focus = _record_huddle_progress_focus(
+                actor="chris",
+                action="Start Huddle Party Mode",
+                detail="Huddle confirmed the overnight research lane is already running.",
+                why_now="The native Huddle screen checked and reaffirmed the live overnight orchestration lane.",
+                result_summary="Party mode was already running.",
+                related_kind="party-mode",
+                related_label="Overnight Orchestration",
+            )
             return _ok(
                 {
                     "status": "already_running",
@@ -11461,6 +11570,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                     "authority_stage": "sandbox_live",
                     "arena_status": "active",
                     "approval_mode": "stage_and_alert",
+                    "focus": focus,
                 }
             )
         request_id = str(uuid.uuid4())
@@ -11520,6 +11630,15 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             )
 
         await asyncio.to_thread(ctrl.start, True)
+        focus = _record_huddle_progress_focus(
+            actor="chris",
+            action="Start Huddle Party Mode",
+            detail="Huddle launched the overnight research cycle from the native alignment lane.",
+            why_now="The iPhone Huddle screen started a real overnight orchestration loop and promoted that work into shared continuity.",
+            result_summary="Party mode started from the phone Huddle lane.",
+            related_kind="party-mode",
+            related_label="Overnight Orchestration",
+        )
         return _ok(
             {
                 "request_id": request_id,
@@ -11531,8 +11650,21 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 "authority_stage": authority_stage,
                 "arena_status": arena_status,
                 "approval_mode": approval_mode,
+                "focus": focus,
             }
         )
+
+    @app.post("/api/apple/huddle/approvals/{work_id}/approve")
+    async def apple_huddle_approve(work_id: str, payload: dict[str, Any]):
+        actor = str(payload.get("actor") or payload.get("actor_id") or "chris").strip() or "chris"
+        note = str(payload.get("note") or "").strip()
+        return _ok(_resolve_huddle_approval(work_id=work_id, action="approve", actor=actor, note=note))
+
+    @app.post("/api/apple/huddle/approvals/{work_id}/reject")
+    async def apple_huddle_reject(work_id: str, payload: dict[str, Any]):
+        actor = str(payload.get("actor") or payload.get("actor_id") or "chris").strip() or "chris"
+        note = str(payload.get("note") or "").strip()
+        return _ok(_resolve_huddle_approval(work_id=work_id, action="reject", actor=actor, note=note))
 
     # ── Forge 3-D models ──────────────────────────────────────────────────────
 

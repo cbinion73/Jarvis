@@ -6,13 +6,33 @@ import JarvisKit
 
 struct HuddleView: View {
 
+    private struct HuddleStoryboardStage: Identifiable {
+        let id: String
+        let number: String
+        let title: String
+        let detail: String
+    }
+
     @State private var overview: HuddleOverview?
     @State private var isLoading  = false
     @State private var error: String?
     @State private var isStartingPartyMode = false
     @State private var partyModeMessage = ""
+    @State private var approvalActionMessage = ""
+    @State private var approvalActionInFlightID: String?
 
     private let teal = Color(red: 0.15, green: 0.75, blue: 0.75)
+
+    private var storyboardStages: [HuddleStoryboardStage] {
+        [
+            .init(id: "hub", number: "1", title: "Alignment Hub", detail: "People, priorities, and what needs a decision."),
+            .init(id: "agenda", number: "2", title: "Shared Agenda", detail: "Topics, prep, and huddle pressure."),
+            .init(id: "decision", number: "3", title: "Decision Room", detail: "Tradeoffs, confidence, and next moves."),
+            .init(id: "status", number: "4", title: "Group Status", detail: "Availability, blockers, and ownership."),
+            .init(id: "plan", number: "5", title: "Action Plan", detail: "What JARVIS will monitor next."),
+            .init(id: "voice", number: "6", title: "Voice Huddle", detail: "Hands-free summary and follow-through."),
+        ]
+    }
 
     var body: some View {
         NavigationStack {
@@ -66,6 +86,7 @@ struct HuddleView: View {
     private func contentView(_ ov: HuddleOverview) -> some View {
         ScrollView {
             VStack(spacing: 14) {
+                conceptHeader
 
                 // ── Summary strip ─────────────────────────────────
                 HStack(spacing: 14) {
@@ -94,7 +115,13 @@ struct HuddleView: View {
                 if !ov.approvals.isEmpty {
                     HuddleSection(title: "Awaiting Approval", icon: "checklist.checked", accent: .orange) {
                         ForEach(ov.approvals) { approval in
-                            ApprovalRow(approval: approval)
+                            ApprovalRow(
+                                approval: approval,
+                                actionMessage: approvalActionInFlightID == approval.id ? "" : approvalActionMessage,
+                                isWorking: approvalActionInFlightID == approval.id,
+                                onApprove: { Task { await approveDecision(approval) } },
+                                onReject: { Task { await rejectDecision(approval) } }
+                            )
                             if approval.id != ov.approvals.last?.id { Divider().opacity(0.2) }
                         }
                     }
@@ -274,6 +301,37 @@ struct HuddleView: View {
         isStartingPartyMode = false
     }
 
+    private func approveDecision(_ approval: HuddleApproval) async {
+        approvalActionInFlightID = approval.id
+        approvalActionMessage = ""
+        do {
+            let result = try await AppleAPIClient.shared.approveHuddleDecision(approval.workId)
+            approvalActionMessage = result.status.capitalized == "Approved"
+                ? "Decision approved."
+                : result.status.replacingOccurrences(of: "_", with: " ").capitalized
+            await load()
+        } catch {
+            self.error = error.localizedDescription
+        }
+        approvalActionInFlightID = nil
+    }
+
+    private func rejectDecision(_ approval: HuddleApproval) async {
+        approvalActionInFlightID = approval.id
+        approvalActionMessage = ""
+        do {
+            let result = try await AppleAPIClient.shared.rejectHuddleDecision(
+                approval.workId,
+                note: "Declined from the native Huddle lane."
+            )
+            approvalActionMessage = result.status.replacingOccurrences(of: "_", with: " ").capitalized
+            await load()
+        } catch {
+            self.error = error.localizedDescription
+        }
+        approvalActionInFlightID = nil
+    }
+
     private func partyModeTitle(_ status: String) -> String {
         switch status.lowercased() {
         case "running": return "Agents Working Overnight"
@@ -377,6 +435,101 @@ struct HuddleView: View {
                 }
             }
         }
+    }
+
+    private var conceptHeader: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("JARVIS")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .tracking(2.0)
+                        .foregroundStyle(teal.opacity(0.92))
+                    Text("Huddle")
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text("Concept storyboard with live standups, decisions, and follow-through.")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.68))
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "person.3.fill")
+                            .font(.caption.bold())
+                            .foregroundStyle(teal)
+                        Text("ALIGNED TOGETHER")
+                            .font(.caption2.weight(.semibold))
+                            .tracking(1.1)
+                            .foregroundStyle(.white.opacity(0.72))
+                    }
+                    Text("One source of truth. Shared momentum.")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.48))
+                }
+            }
+
+            heroAlignmentCard
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(storyboardStages) { stage in
+                        storyboardCard(stage)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+
+            HStack(spacing: 10) {
+                capabilityPill(title: "Decisions", detail: "Better decisions")
+                capabilityPill(title: "Accountability", detail: "Follow-through")
+                capabilityPill(title: "Voice", detail: "Hands-free huddle")
+            }
+        }
+    }
+
+    private var heroAlignmentCard: some View {
+        let headline = overview?.reports.first?.summary.isEmpty == false
+            ? overview?.reports.first?.summary
+            : "Here’s what needs our alignment."
+        let huddleTitle = overview?.approvals.first?.title.isEmpty == false
+            ? overview?.approvals.first?.title
+            : "Today’s Huddle"
+
+        return ZStack(alignment: .bottomLeading) {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.03, green: 0.14, blue: 0.14),
+                    Color(red: 0.02, green: 0.08, blue: 0.09),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Good morning, Chris.")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text(huddleTitle ?? "Huddle")
+                    .font(.title3.bold())
+                    .foregroundStyle(.white)
+                Text(headline ?? "")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.76))
+                    .lineLimit(3)
+                HStack(spacing: 8) {
+                    summaryChip(title: "Agents", value: "\(overview?.reports.count ?? 0)")
+                    summaryChip(title: "Approvals", value: "\(overview?.approvalsCount ?? 0)")
+                    summaryChip(title: "Blockers", value: "\(overview?.blockers.count ?? 0)")
+                }
+            }
+            .padding(18)
+        }
+        .frame(maxWidth: .infinity, minHeight: 170, alignment: .bottomLeading)
+        .clipShape(RoundedRectangle(cornerRadius: 22))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(.white.opacity(0.08), lineWidth: 1)
+        )
     }
 }
 
@@ -671,6 +824,10 @@ private struct AgentReportRow: View {
 
 private struct ApprovalRow: View {
     let approval: HuddleApproval
+    let actionMessage: String
+    let isWorking: Bool
+    let onApprove: () -> Void
+    let onReject: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -706,7 +863,96 @@ private struct ApprovalRow: View {
                     .foregroundStyle(.white.opacity(0.8))
                     .fixedSize(horizontal: false, vertical: true)
             }
+
+            HStack(spacing: 8) {
+                Button {
+                    onApprove()
+                } label: {
+                    Label(isWorking ? "Working…" : "Approve", systemImage: "checkmark.circle.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+                .disabled(isWorking || approval.workId.isEmpty)
+
+                Button {
+                    onReject()
+                } label: {
+                    Label("Reject", systemImage: "xmark.circle.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(.orange)
+                .disabled(isWorking || approval.workId.isEmpty)
+            }
+
+            if !actionMessage.isEmpty && !isWorking {
+                Text(actionMessage)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
         }
+    }
+}
+
+private extension HuddleView {
+    private func storyboardCard(_ stage: HuddleStoryboardStage) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(stage.number)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.black)
+                    .frame(width: 22, height: 22)
+                    .background(teal, in: Circle())
+                Text(stage.title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.92))
+            }
+            Text(stage.detail)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.6))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(width: 158, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(.white.opacity(0.05), lineWidth: 1)
+        )
+    }
+
+    private func capabilityPill(title: String, detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(teal.opacity(0.9))
+            Text(detail)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.68))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(.white.opacity(0.05), lineWidth: 1)
+        )
+    }
+
+    private func summaryChip(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white)
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.58))
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
     }
 }
 
