@@ -507,6 +507,7 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Inspect Recovery Item", recovery_html)
         self.assertIn("Recovery Continuity", recovery_html)
         self.assertIn("Recovery Action Journal", recovery_html)
+        self.assertIn("Execute Recovery Gate", recovery_html)
         self.assertIn("Stage Retry", recovery_html)
         self.assertIn("Mark Stabilized", recovery_html)
         self.assertIn("/api/recovery/action", recovery_html)

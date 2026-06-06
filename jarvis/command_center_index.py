@@ -1421,7 +1421,7 @@ def _level3_checklist(
             "status": "Open",
             "status_class": "steady",
             "area": "Failure Recovery Stack",
-            "why_open": "Failure, approval, and supervision routes now share durable recovery continuity, but they still stop short of deeper automated remediation and richer execution loops.",
+            "why_open": "Failure, approval, and supervision routes now share durable continuity and recovery-gate execution, but they still stop short of deeper automated remediation and richer non-approval execution loops.",
             "live_signal": f"{issue_count} integration issue(s) and {approval_count} pending approval gate(s) still define the live failure posture.",
             "exact_files": [
                 "jarvis/service.py",
@@ -1430,7 +1430,7 @@ def _level3_checklist(
                 "tests/test_command_center_service_surface.py",
             ],
             "proof_routes": ["/recovery-center", "/approval-queue", "/supervision-snapshot"],
-            "next_slice": "Deepen automated remediation and per-target execution flows now that durable recovery continuity is visible across Recovery, Approval Queue, and Supervision Snapshot.",
+            "next_slice": "Deepen automated remediation and non-approval recovery execution flows now that durable recovery continuity and approval-gate execution are visible across Recovery, Approval Queue, and Supervision Snapshot.",
         },
         {
             "title": "Runtime Hydration Reliability for Partial Modules",
@@ -2043,8 +2043,8 @@ def _seam_tracker(
             "branch": branch,
             "worktree": "primary worktree",
             "surface_path": "/recovery-center",
-            "what_became_real": "Failure and recovery now has a dedicated route with recovery detail, pending approval gates, direct recovery-gate approval actions, a durable retry or stabilization journal, and visible continuity into Approval Queue, Supervision Snapshot, Activity Feed, and Command Center.",
-            "remains_partial": "Automated remediation and deeper per-target execution flows still need follow-on slices.",
+            "what_became_real": "Failure and recovery now has a dedicated route with recovery detail, pending approval gates, direct recovery-gate approval and execution actions, a durable retry or stabilization journal, and visible continuity into Approval Queue, Supervision Snapshot, Activity Feed, and Command Center.",
+            "remains_partial": "Automated remediation and deeper non-approval execution flows still need follow-on slices.",
             "tests": [
                 "tests/test_command_center_index.py",
                 "tests/test_command_center_service_surface.py",

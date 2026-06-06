@@ -2115,13 +2115,14 @@ def render_recovery_module_page(payload: dict) -> str:
       return response.json().catch(() => ({{}}));
     }}
 
-    async function stageRecoveryAction(actionType, targetKind, targetLabel, detail) {{
+    async function stageRecoveryAction(actionType, targetKind, targetLabel, detail, targetId = "") {{
       actionNote.textContent = `${{actionType === "retry" ? "Staging retry" : "Marking stabilized"}} for ${{targetLabel}}…`;
       try {{
         await recordRecoveryAction({{
           action_type: actionType,
           target_kind: targetKind,
           target_label: targetLabel,
+          target_id: targetId,
           detail,
           route: "/recovery-center",
           status: actionType === "retry" ? "queued" : "stabilized",
@@ -2199,8 +2200,9 @@ def render_recovery_module_page(payload: dict) -> str:
             <a href="${{esc(route)}}">Open Recovery View</a>
             ${{routeLinks(relatedRoutes)}}
             ${{item.request_id ? `<button type="button" data-approve-id="${{esc(item.request_id)}}">Approve Recovery Gate</button>` : ""}}
+            ${{item.request_id ? `<button type="button" data-execute-id="${{esc(item.request_id)}}" data-execute-label="${{esc(title)}}" data-execute-detail="${{esc(summary)}}">Execute Recovery Gate</button>` : ""}}
             ${{item.request_id ? `<button type="button" class="alt" data-reject-id="${{esc(item.request_id)}}">Reject Recovery Gate</button>` : ""}}
-            <button type="button" data-recovery-action="retry" data-recovery-kind="${{esc(item.request_id ? "approval" : item.name ? "integration" : "failure")}}" data-recovery-label="${{esc(title)}}" data-recovery-detail="${{esc(summary)}}">Stage Retry</button>
+            <button type="button" data-recovery-action="retry" data-recovery-kind="${{esc(item.request_id ? "approval" : item.name ? "integration" : "failure")}}" data-recovery-label="${{esc(title)}}" data-recovery-detail="${{esc(summary)}}" data-recovery-target-id="${{esc(item.request_id || "")}}">Stage Retry</button>
             <button type="button" class="alt" data-recovery-action="stabilize" data-recovery-kind="${{esc(item.request_id ? "approval" : item.name ? "integration" : "failure")}}" data-recovery-label="${{esc(title)}}" data-recovery-detail="${{esc(summary)}}">Mark Stabilized</button>
           </div>
         </div>
@@ -2219,13 +2221,26 @@ def render_recovery_module_page(payload: dict) -> str:
           }});
         }});
       }});
+      document.querySelectorAll("[data-execute-id]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          resolveApproval(
+            button.getAttribute("data-execute-id") || "",
+            "execute",
+            button.getAttribute("data-execute-label") || "Recovery gate",
+            button.getAttribute("data-execute-detail") || "Recovery execution requested."
+          ).catch((error) => {{
+            actionNote.textContent = `Execute failed: ${{String(error)}}`;
+          }});
+        }});
+      }});
       document.querySelectorAll("[data-recovery-action]").forEach((button) => {{
         button.addEventListener("click", () => {{
           stageRecoveryAction(
             button.getAttribute("data-recovery-action") || "retry",
             button.getAttribute("data-recovery-kind") || "recovery",
             button.getAttribute("data-recovery-label") || "Recovery item",
-            button.getAttribute("data-recovery-detail") || "Recovery action requested."
+            button.getAttribute("data-recovery-detail") || "Recovery action requested.",
+            button.getAttribute("data-recovery-target-id") || ""
           ).catch((error) => {{
             actionNote.textContent = `Recovery action failed: ${{String(error)}}`;
           }});
@@ -2278,6 +2293,7 @@ def render_recovery_module_page(payload: dict) -> str:
             <div class="action-row">
               <button type="button" data-select-kind="approval" data-select-index="${{esc(String(index))}}">Inspect Recovery Gate</button>
               <button type="button" data-approve-id="${{esc(item.request_id || "")}}">Approve Recovery Gate</button>
+              <button type="button" data-execute-id="${{esc(item.request_id || "")}}" data-execute-label="${{esc(item.title || item.request_id || "Recovery Gate")}}" data-execute-detail="${{esc(item.description || "Recovery-gated execution requested.")}}">Execute Recovery Gate</button>
               <button type="button" class="alt" data-reject-id="${{esc(item.request_id || "")}}">Reject</button>
               ${{routeLinks(item.related_routes)}}
             </div>
@@ -2312,7 +2328,7 @@ def render_recovery_module_page(payload: dict) -> str:
             <div class="chips">${{item.timestamp ? chip(item.timestamp, "steady") : ""}}</div>
             <div class="action-row">
               <button type="button" data-select-kind="failure" data-select-index="${{esc(String(index))}}">Inspect Failure Signal</button>
-              <button type="button" data-recovery-action="retry" data-recovery-kind="failure" data-recovery-label="${{esc(item.title || "Failure Signal")}}" data-recovery-detail="${{esc(item.detail || "No failure detail recorded.")}}">Stage Retry</button>
+              <button type="button" data-recovery-action="retry" data-recovery-kind="failure" data-recovery-label="${{esc(item.title || "Failure Signal")}}" data-recovery-detail="${{esc(item.detail || "No failure detail recorded.")}}" data-recovery-target-id="">Stage Retry</button>
               ${{routeLinks(item.related_routes)}}
             </div>
           </div>
@@ -2334,6 +2350,7 @@ def render_recovery_module_page(payload: dict) -> str:
               ${{chip(item.status || "queued")}}
             </div>
             <div class="action-row">
+              ${{item.target_kind === "approval" && item.target_id ? `<button type="button" data-execute-id="${{esc(item.target_id)}}" data-execute-label="${{esc(item.target_label || "Recovery Gate")}}" data-execute-detail="${{esc(item.detail || "Recovery execution requested.")}}">Execute Recovery Gate</button>` : ""}}
               ${{routeLinks(item.related_routes)}}
             </div>
           </div>
@@ -2355,6 +2372,7 @@ def render_recovery_module_page(payload: dict) -> str:
               ${{item.saved_at ? chip(item.saved_at, "steady") : ""}}
             </div>
             <div class="action-row">
+              ${{item.target_kind === "approval" && item.target_id ? `<button type="button" data-execute-id="${{esc(item.target_id)}}" data-execute-label="${{esc(item.target_label || "Recovery Gate")}}" data-execute-detail="${{esc(item.detail || "Recovery execution requested.")}}">Execute Recovery Gate</button>` : ""}}
               ${{routeLinks(item.related_routes)}}
             </div>
           </div>
@@ -2390,13 +2408,26 @@ def render_recovery_module_page(payload: dict) -> str:
           }});
         }});
       }});
+      document.querySelectorAll("[data-execute-id]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          resolveApproval(
+            button.getAttribute("data-execute-id") || "",
+            "execute",
+            button.getAttribute("data-execute-label") || "Recovery gate",
+            button.getAttribute("data-execute-detail") || "Recovery execution requested."
+          ).catch((error) => {{
+            actionNote.textContent = `Execute failed: ${{String(error)}}`;
+          }});
+        }});
+      }});
       document.querySelectorAll("[data-recovery-action]").forEach((button) => {{
         button.addEventListener("click", () => {{
           stageRecoveryAction(
             button.getAttribute("data-recovery-action") || "retry",
             button.getAttribute("data-recovery-kind") || "recovery",
             button.getAttribute("data-recovery-label") || "Recovery item",
-            button.getAttribute("data-recovery-detail") || "Recovery action requested."
+            button.getAttribute("data-recovery-detail") || "Recovery action requested.",
+            button.getAttribute("data-recovery-target-id") || ""
           ).catch((error) => {{
             actionNote.textContent = `Recovery action failed: ${{String(error)}}`;
           }});
@@ -2418,31 +2449,79 @@ def render_recovery_module_page(payload: dict) -> str:
       }}
     }}
 
-    async function resolveApproval(requestId, action) {{
+    async function resolveApproval(requestId, action, targetLabel = "", targetDetail = "") {{
       if (!requestId) return;
-      actionNote.textContent = `${{action === "approve" ? "Approving" : "Rejecting"}} recovery gate ${{requestId}}…`;
+      const actionVerb = action === "approve" ? "Approving" : action === "execute" ? "Executing" : "Rejecting";
+      actionNote.textContent = `${{actionVerb}} recovery gate ${{requestId}}…`;
       const endpoint = action === "approve"
         ? `/api/approvals/${{encodeURIComponent(requestId)}}/approve`
-        : `/api/approvals/${{encodeURIComponent(requestId)}}/reject`;
+        : action === "execute"
+          ? `/api/approvals/${{encodeURIComponent(requestId)}}/execute`
+          : `/api/approvals/${{encodeURIComponent(requestId)}}/reject`;
       const body = action === "approve"
         ? {{ approved_by: "Chris" }}
-        : {{ reason: "Needs more recovery review", rejected_by: "Chris" }};
+        : action === "reject"
+          ? {{ reason: "Needs more recovery review", rejected_by: "Chris" }}
+          : undefined;
       try {{
         const response = await fetch(endpoint, {{
           method: "POST",
-          headers: {{ "Content-Type": "application/json" }},
-          body: JSON.stringify(body),
+          headers: body ? {{ "Content-Type": "application/json" }} : {{}},
+          body: body ? JSON.stringify(body) : undefined,
         }});
         const payload = await response.json();
         if (!response.ok) {{
           throw new Error(payload.detail || payload.error || `${{action}} failed`);
         }}
+        const recoveryLabel = targetLabel || `Recovery gate ${{requestId}}`;
+        const recoveryDetail = targetDetail || `Recovery gate ${{requestId}} ${{
+          action === "execute" ? "execution requested" : action
+        }}.`;
+        const status = String(payload.status || action || "recorded");
+        await recordRecoveryAction({{
+          action_type: action,
+          target_kind: "approval",
+          target_label: recoveryLabel,
+          target_id: requestId,
+          detail: recoveryDetail,
+          route: "/recovery-center",
+          status,
+        }});
+        await fetch("/api/activity/operator-action", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            actor: "Chris",
+            domain: "recovery",
+            action: action === "approve"
+              ? "Approve Recovery Gate"
+              : action === "execute"
+                ? "Execute Recovery Gate"
+                : "Reject Recovery Gate",
+            title: recoveryLabel,
+            status,
+            detail: `Action succeeded: ${{endpoint}}`,
+            why_now: recoveryDetail,
+            result_summary: action === "execute"
+              ? `Recovery gate executed for ${{recoveryLabel}}.`
+              : action === "approve"
+                ? `Recovery gate approved for ${{recoveryLabel}}.`
+                : `Recovery gate rejected for ${{recoveryLabel}}.`,
+            route: "/recovery-center",
+            route_label: "Open Recovery Center",
+            related_kind: "recovery",
+            related_label: recoveryLabel,
+            succeeded: true,
+          }}),
+        }}).catch(() => null);
         actionNote.textContent = action === "approve"
           ? `Approved recovery gate ${{requestId}}.`
-          : `Rejected recovery gate ${{requestId}}.`;
+          : action === "execute"
+            ? `Executed recovery gate ${{requestId}}.`
+            : `Rejected recovery gate ${{requestId}}.`;
         await refreshRecoveryState();
       }} catch (error) {{
-        actionNote.textContent = `${{action === "approve" ? "Approve" : "Reject"}} failed: ${{String(error)}}`;
+        actionNote.textContent = `${{action === "approve" ? "Approve" : action === "execute" ? "Execute" : "Reject"}} failed: ${{String(error)}}`;
       }}
     }}
 
