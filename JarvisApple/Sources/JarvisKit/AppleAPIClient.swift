@@ -541,6 +541,26 @@ public final class AppleAPIClient: Sendable {
         return response.status == "recorded"
     }
 
+    @discardableResult
+    public func updateCatalystMissionStatus(
+        _ missionId: String,
+        status: String,
+        note: String = "",
+        actor: String = "chris"
+    ) async throws -> Bool {
+        struct Body: Encodable {
+            let status: String
+            let note: String
+            let actor: String
+        }
+        struct Response: Decodable { let status: String }
+        let response: Response = try await post(
+            "/api/apple/catalyst/missions/\(missionId)/status",
+            body: Body(status: status, note: note, actor: actor)
+        )
+        return response.status == "recorded"
+    }
+
     // MARK: - Chronicle
 
     public func fetchChronicle() async throws -> ChronicleOverview {

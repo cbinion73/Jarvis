@@ -50,6 +50,13 @@ class _StubRuntime:
             }
         ]
 
+    def mission_control_snapshot(self, actor_name: str = "Chris") -> dict:
+        return {
+            "summary": {},
+            "active_missions": [],
+            "pending_approvals": [],
+        }
+
 
 class CatalystOpsAppleAPITests(unittest.TestCase):
     def setUp(self) -> None:
@@ -96,8 +103,10 @@ class CatalystOpsAppleAPITests(unittest.TestCase):
 
         self.assertEqual(overview["current_focus"]["module"], "Recovery")
         self.assertEqual(overview["counts"]["approval_count"], 1)
+        self.assertEqual(overview["counts"]["mission_count"], 0)
         self.assertEqual(overview["recovery_cases"][0]["next_action_type"], "retry")
         self.assertEqual(overview["approvals"][0]["title"], "Approve storm comms handoff")
+        self.assertEqual(overview["recent_activity"][0]["related_route"], "/command-center")
 
     def test_focus_approval_and_recovery_actions_persist_continuity(self) -> None:
         runtime = _StubRuntime(Path("data"))
@@ -136,6 +145,48 @@ class CatalystOpsAppleAPITests(unittest.TestCase):
         self.assertIn("Set Catalyst Focus", titles)
         self.assertIn("Approve Catalyst Approval", titles)
         self.assertIn("Execute Catalyst Recovery Loop", titles)
+
+    def test_update_catalyst_mission_status_records_shared_focus(self) -> None:
+        class _MissionRuntime(_StubRuntime):
+            def update_mission_status(self, mission_id: str, status: str, *, note: str = "") -> dict:
+                return {
+                    "mission_id": mission_id,
+                    "title": "Morning route recovery",
+                    "status": status,
+                    "request": "Stabilize the commute surfaces",
+                }
+
+            def mission_control_snapshot(self, actor_name: str = "Chris") -> dict:
+                return {
+                    "summary": {},
+                    "active_missions": [
+                        {
+                            "mission_id": "mission-1",
+                            "title": "Morning route recovery",
+                            "brief": "Stabilize the commute surfaces before departure.",
+                            "status": "queued",
+                            "lane": "next",
+                            "next_step": "Retry route hydration.",
+                        }
+                    ],
+                    "pending_approvals": [],
+                }
+
+        from jarvis.apple_api import _update_catalyst_mission_status
+
+        result = _update_catalyst_mission_status(
+            _MissionRuntime(Path("data")),
+            mission_id="mission-1",
+            status="active",
+            actor="chris",
+            note="Catalyst moved the mission into the now lane.",
+        )
+
+        self.assertEqual(result["status"], "recorded")
+        summary = ProgressFocusStore(Path("data/logs")).summary(limit=4)
+        self.assertEqual(summary["latest"]["module"], "Mission Board")
+        recent = AuditLog(Path("data/logs")).list_recent(limit=3, entry_type="operator-action")
+        self.assertEqual(recent[0]["action"], "Move Catalyst Mission to Now")
 
 
 if __name__ == "__main__":

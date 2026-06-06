@@ -2932,19 +2932,33 @@
           "next_action_label": "Execute Retry Loop"
         }
       ],
+      "missions": [
+        {
+          "mission_id": "mission-1",
+          "title": "Morning route recovery",
+          "brief": "Stabilize the commute surfaces before family departure windows open.",
+          "status": "queued",
+          "lane": "next",
+          "next_step": "Retry route hydration and confirm weather continuity.",
+          "route": "/mission-board"
+        }
+      ],
       "recent_activity": [
         {
           "title": "Set Catalyst Focus",
           "detail": "Catalyst moved the shared progress focus to Recovery.",
           "route_label": "Open Recovery",
-          "actor": "chris"
+          "actor": "chris",
+          "related_route": "/recovery-center",
+          "related_kind": "progress-focus"
         }
       ],
       "counts": {
         "approval_count": 1,
         "recovery_case_count": 1,
         "recent_activity_count": 1,
-        "focus_history_count": 3
+        "focus_history_count": 3,
+        "mission_count": 1
       }
     }
   },

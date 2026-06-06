@@ -258,6 +258,8 @@ def _build_catalyst_ops_overview(runtime: Any) -> dict[str, Any]:
     recovery_cases = RecoveryCaseStore(_ACTIVITY_AUDIT_ROOT).list_cases()
     approvals = list(runtime.list_pending_approvals() or [])
     activity = AuditLog(_ACTIVITY_AUDIT_ROOT).list_recent(limit=8)
+    mission_snapshot = runtime.mission_control_snapshot("Chris")
+    active_missions = list(mission_snapshot.get("active_missions") or [])
 
     latest_focus = dict(focus_summary.get("latest") or {})
     current_focus = {
@@ -308,8 +310,27 @@ def _build_catalyst_ops_overview(runtime: Any) -> dict[str, Any]:
                 "detail": str(item.get("detail") or item.get("result_summary") or "").strip(),
                 "route_label": str(item.get("route_label") or item.get("related_route") or "").strip(),
                 "actor": str(item.get("actor") or "").strip(),
+                "related_route": str(item.get("related_route") or item.get("route") or "/command-center").strip() or "/command-center",
+                "related_kind": str(item.get("related_kind") or item.get("entry_type") or "").strip(),
             }
             for item in activity[:6]
+            if isinstance(item, dict)
+        ],
+        "missions": [
+            {
+                "mission_id": str(item.get("mission_id") or "").strip(),
+                "title": str(item.get("title") or item.get("request") or "Mission").strip() or "Mission",
+                "brief": str(item.get("brief") or item.get("request") or "No mission brief captured yet.").strip() or "No mission brief captured yet.",
+                "status": str(item.get("status") or "active").strip() or "active",
+                "lane": str(item.get("lane") or "").strip() or (
+                    "completed"
+                    if str(item.get("status") or "").strip().lower() == "completed"
+                    else "now"
+                ),
+                "next_step": str(item.get("next_step") or "Review mission brief").strip() or "Review mission brief",
+                "route": "/mission-board",
+            }
+            for item in active_missions[:3]
             if isinstance(item, dict)
         ],
         "counts": {
@@ -317,6 +338,7 @@ def _build_catalyst_ops_overview(runtime: Any) -> dict[str, Any]:
             "recovery_case_count": len(recovery_cases),
             "recent_activity_count": len(activity),
             "focus_history_count": int(focus_summary.get("history_count", 0) or 0),
+            "mission_count": len(active_missions),
         },
     }
 
@@ -417,6 +439,31 @@ def _execute_catalyst_recovery_case(*, case_id: str, actor: str, action_type: st
         actor=actor,
     )
     return {"status": "recorded", "case": case, "action": action_entry, "focus": focus}
+
+
+def _update_catalyst_mission_status(runtime: Any, *, mission_id: str, status: str, actor: str, note: str = "") -> dict[str, Any]:
+    updated = runtime.update_mission_status(mission_id, status, note=note)
+    title = str(updated.get("title") or updated.get("request") or mission_id).strip() or mission_id
+    _record_operator_action(
+        actor=actor,
+        domain="catalyst",
+        action="Move Catalyst Mission to Now" if status == "active" else "Complete Catalyst Mission",
+        detail=note or f"Catalyst updated mission {title} to {status}.",
+        why_now="The native iPhone ops studio moved mission board state without dropping into the hosted route.",
+        result_summary=f"Mission board status now {status}.",
+        route="/mission-board",
+        route_label="Open Mission Board",
+        related_kind="mission",
+        related_label=title,
+        succeeded=True,
+    )
+    focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module="Mission Board",
+        reason=note or f"Catalyst advanced mission board status for {title}.",
+        route="/mission-board",
+        actor=actor,
+    )
+    return {"status": "recorded", "mission": updated, "focus": focus}
 
 
 async def _timeboxed_to_thread(
@@ -10020,6 +10067,25 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _ok(result)
+
+    @app.post("/api/apple/catalyst/missions/{mission_id}/status")
+    async def apple_catalyst_mission_status(mission_id: str, payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        status = str(payload.get("status") or "active").strip() or "active"
+        note = str(payload.get("note") or "").strip()
+        try:
+            result = await asyncio.to_thread(
+                _update_catalyst_mission_status,
+                runtime,
+                mission_id=mission_id,
+                status=status,
+                actor=actor,
+                note=note,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
         return _ok(result)
 
     # ── Chronicle overview ────────────────────────────────────────────────────

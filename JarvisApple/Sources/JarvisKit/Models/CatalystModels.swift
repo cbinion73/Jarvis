@@ -249,6 +249,8 @@ public struct CatalystOpsActivityEntry: Codable, Equatable, Identifiable, Sendab
     public let detail: String
     public let routeLabel: String
     public let actor: String
+    public let relatedRoute: String
+    public let relatedKind: String
 
     public var id: String { "\(title)|\(detail)|\(routeLabel)|\(actor)" }
 
@@ -257,6 +259,30 @@ public struct CatalystOpsActivityEntry: Codable, Equatable, Identifiable, Sendab
         case detail
         case routeLabel = "route_label"
         case actor
+        case relatedRoute = "related_route"
+        case relatedKind = "related_kind"
+    }
+}
+
+public struct CatalystMissionEntry: Codable, Equatable, Identifiable, Sendable {
+    public let missionId: String
+    public let title: String
+    public let brief: String
+    public let status: String
+    public let lane: String
+    public let nextStep: String
+    public let route: String
+
+    public var id: String { missionId }
+
+    enum CodingKeys: String, CodingKey {
+        case missionId = "mission_id"
+        case title
+        case brief
+        case status
+        case lane
+        case nextStep = "next_step"
+        case route
     }
 }
 
@@ -265,12 +291,14 @@ public struct CatalystOpsCounts: Codable, Equatable, Sendable {
     public let recoveryCaseCount: Int
     public let recentActivityCount: Int
     public let focusHistoryCount: Int
+    public let missionCount: Int
 
     enum CodingKeys: String, CodingKey {
         case approvalCount = "approval_count"
         case recoveryCaseCount = "recovery_case_count"
         case recentActivityCount = "recent_activity_count"
         case focusHistoryCount = "focus_history_count"
+        case missionCount = "mission_count"
     }
 }
 
@@ -281,6 +309,7 @@ public struct CatalystOpsOverview: Codable, Equatable, Sendable {
     public let approvals: [CatalystApprovalEntry]
     public let recoveryCases: [CatalystRecoveryCaseEntry]
     public let recentActivity: [CatalystOpsActivityEntry]
+    public let missions: [CatalystMissionEntry]
     public let counts: CatalystOpsCounts
 
     enum CodingKeys: String, CodingKey {
@@ -290,6 +319,7 @@ public struct CatalystOpsOverview: Codable, Equatable, Sendable {
         case approvals
         case recoveryCases = "recovery_cases"
         case recentActivity = "recent_activity"
+        case missions
         case counts
     }
 }

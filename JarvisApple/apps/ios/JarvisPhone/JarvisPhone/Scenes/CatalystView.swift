@@ -495,6 +495,19 @@ struct CatalystView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 8) {
+                        Text("Mission Board")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.88))
+                        if opsOverview.missions.isEmpty {
+                            opsEmptyCard("No active missions are waiting in the native studio right now.")
+                        } else {
+                            ForEach(opsOverview.missions.prefix(3)) { mission in
+                                opsMissionRow(mission)
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
                         Text("Recent Continuity")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.white.opacity(0.88))
@@ -502,13 +515,29 @@ struct CatalystView: View {
                             opsEmptyCard("Native ops actions will echo back here when they run.")
                         } else {
                             ForEach(opsOverview.recentActivity.prefix(4)) { entry in
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(entry.title)
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.white)
-                                    Text([entry.detail, entry.routeLabel].filter { !$0.isEmpty }.joined(separator: " · "))
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
+                                HStack(alignment: .top, spacing: 10) {
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(entry.title)
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.white)
+                                        Text([entry.detail, entry.routeLabel].filter { !$0.isEmpty }.joined(separator: " · "))
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    Button {
+                                        Task { await promoteActivityEntry(entry) }
+                                    } label: {
+                                        Text("Promote")
+                                            .font(.caption2.weight(.semibold))
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 8)
+                                            .background(blue.opacity(0.85), in: Capsule())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .disabled(actionInFlight != nil)
+                                    .opacity(actionInFlight != nil ? 0.7 : 1.0)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(10)
@@ -677,6 +706,42 @@ struct CatalystView: View {
         }
     }
 
+    private func updateCatalystMission(_ mission: CatalystMissionEntry, status: String, note: String) async {
+        actionInFlight = "mission:\(mission.id)"
+        let verb = status == "completed" ? "Completing" : "Moving"
+        opsMessage = "\(verb) \(mission.title)…"
+        defer { actionInFlight = nil }
+        do {
+            _ = try await AppleAPIClient.shared.updateCatalystMissionStatus(
+                mission.missionId,
+                status: status,
+                note: note
+            )
+            await loadOpsStudio()
+            opsMessage = "\(mission.title) updated to \(status)."
+        } catch {
+            opsMessage = "Unable to update mission \(mission.title): \(error.localizedDescription)"
+        }
+    }
+
+    private func promoteActivityEntry(_ entry: CatalystOpsActivityEntry) async {
+        actionInFlight = "activity:\(entry.id)"
+        let target = moduleName(for: entry)
+        opsMessage = "Promoting \(entry.title) into shared focus…"
+        defer { actionInFlight = nil }
+        do {
+            _ = try await AppleAPIClient.shared.saveCatalystProgressFocus(
+                module: target,
+                route: entry.relatedRoute.isEmpty ? "/activity-center" : entry.relatedRoute,
+                reason: entry.detail.isEmpty ? "Catalyst promoted a recent activity event into shared focus." : entry.detail
+            )
+            await loadOpsStudio()
+            opsMessage = "Shared focus now points at \(target)."
+        } catch {
+            opsMessage = "Unable to promote activity focus: \(error.localizedDescription)"
+        }
+    }
+
     private func opsBadge(title: String, detail: String, tint: Color) -> some View {
         VStack(alignment: .trailing, spacing: 4) {
             Text(title)
@@ -804,6 +869,75 @@ struct CatalystView: View {
         }
         .padding(10)
         .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func opsMissionRow(_ mission: CatalystMissionEntry) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(mission.title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text("\(mission.lane.capitalized) · \(mission.status)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text(mission.brief)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary.opacity(0.9))
+                Text("Next: \(mission.nextStep)")
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+            Spacer()
+            Button {
+                Task {
+                    if mission.lane == "now" || mission.status.lowercased() == "active" {
+                        await updateCatalystMission(
+                            mission,
+                            status: "completed",
+                            note: "Catalyst marked the mission complete from the native ops studio."
+                        )
+                    } else {
+                        await updateCatalystMission(
+                            mission,
+                            status: "active",
+                            note: "Catalyst moved the mission into the now lane from the native ops studio."
+                        )
+                    }
+                }
+            } label: {
+                Text(mission.lane == "now" || mission.status.lowercased() == "active" ? "Complete" : "Move to Now")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(.orange.opacity(0.78), in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .disabled(actionInFlight != nil)
+            .opacity(actionInFlight != nil ? 0.7 : 1.0)
+        }
+        .padding(10)
+        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func moduleName(for entry: CatalystOpsActivityEntry) -> String {
+        let route = entry.relatedRoute.lowercased()
+        let kind = entry.relatedKind.lowercased()
+        if route == "/approval-queue" || kind.contains("approval") { return "Approval Queue" }
+        if route == "/recovery-center" || kind.contains("recovery") || kind.contains("failure") { return "Recovery" }
+        if route == "/mission-board" || kind.contains("mission") { return "Mission Board" }
+        if route == "/agent-ops-center" || kind.contains("agent") { return "Agent Ops" }
+        if route == "/briefing-center" || kind.contains("brief") { return "Daily Brief" }
+        if route == "/chronicle-center" || kind.contains("chronicle") { return "Chronicle" }
+        if route == "/health-center" || kind.contains("health") { return "Health" }
+        if route == "/navigation-center" || kind.contains("navigation") || kind.contains("route") { return "Navigation" }
+        if route == "/publish" || kind.contains("publish") { return "Publish" }
+        if route == "/settings-center" || kind.contains("settings") { return "Settings" }
+        if route == "/huddle-center" || kind.contains("huddle") { return "Huddle" }
+        if route == "/supervision-snapshot" || kind.contains("supervision") { return "Supervision" }
+        if route == "/progress-center" || kind.contains("progress") { return "Progress" }
+        if route == "/activity-center" || kind.contains("activity") { return "Activity Feed" }
+        return "Command Center"
     }
 }
 
