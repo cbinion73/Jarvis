@@ -2032,6 +2032,10 @@ def render_recovery_module_page(payload: dict) -> str:
         <h2>Recent Failure Signals</h2>
         <div id="failure-list"></div>
       </section>
+      <section class="panel span-12">
+        <h2>Recovery Action Journal</h2>
+        <div id="recovery-journal-list"></div>
+      </section>
       <section class="panel span-8">
         <h2>Proof Paths</h2>
         <ul id="proof-list"></ul>
@@ -2056,6 +2060,7 @@ def render_recovery_module_page(payload: dict) -> str:
     const approvalList = document.getElementById("approval-list");
     const integrationList = document.getElementById("integration-list");
     const failureList = document.getElementById("failure-list");
+    const recoveryJournalList = document.getElementById("recovery-journal-list");
     const proofList = document.getElementById("proof-list");
     const recoveryDetail = document.getElementById("recovery-detail");
     const payloadPreview = document.getElementById("payload-preview");
@@ -2083,6 +2088,60 @@ def render_recovery_module_page(payload: dict) -> str:
       return items.length
         ? items.map(renderItem).join("")
         : `<div class="entry-card"><strong>${{esc(emptyTitle)}}</strong><span>${{esc(emptyDetail)}}</span></div>`;
+    }}
+
+    async function recordRecoveryAction(entry) {{
+      const response = await fetch("/api/recovery/action", {{
+        method: "POST",
+        headers: {{ "Content-Type": "application/json" }},
+        body: JSON.stringify(entry || {{}}),
+      }});
+      if (!response.ok) {{
+        const payload = await response.json().catch(() => ({{}}));
+        throw new Error(payload.detail || payload.error || "Recovery action record failed");
+      }}
+      return response.json().catch(() => ({{}}));
+    }}
+
+    async function stageRecoveryAction(actionType, targetKind, targetLabel, detail) {{
+      actionNote.textContent = `${{actionType === "retry" ? "Staging retry" : "Marking stabilized"}} for ${{targetLabel}}…`;
+      try {{
+        await recordRecoveryAction({{
+          action_type: actionType,
+          target_kind: targetKind,
+          target_label: targetLabel,
+          detail,
+          route: "/recovery-center",
+          status: actionType === "retry" ? "queued" : "stabilized",
+        }});
+        await fetch("/api/activity/operator-action", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            actor: "Chris",
+            domain: "recovery",
+            action: actionType === "retry" ? "Stage Recovery Retry" : "Mark Recovery Stabilized",
+            title: targetLabel,
+            status: actionType === "retry" ? "queued" : "stabilized",
+            detail: "Action succeeded: /api/recovery/action",
+            why_now: detail,
+            result_summary: actionType === "retry"
+              ? `Recovery retry staged for ${{targetLabel}}.`
+              : `Recovery item marked stabilized for ${{targetLabel}}.`,
+            route: "/recovery-center",
+            route_label: "Open Recovery Center",
+            related_kind: "recovery",
+            related_label: targetLabel,
+            succeeded: true,
+          }}),
+        }}).catch(() => null);
+        actionNote.textContent = actionType === "retry"
+          ? `Staged retry for ${{targetLabel}}.`
+          : `Marked ${{targetLabel}} as stabilized.`;
+        await refreshRecoveryState();
+      }} catch (error) {{
+        actionNote.textContent = `Recovery action failed: ${{String(error)}}`;
+      }}
     }}
 
     function selectedItem(payload) {{
@@ -2127,6 +2186,8 @@ def render_recovery_module_page(payload: dict) -> str:
             <a href="${{esc(route)}}">Open Recovery View</a>
             ${{item.request_id ? `<button type="button" data-approve-id="${{esc(item.request_id)}}">Approve Recovery Gate</button>` : ""}}
             ${{item.request_id ? `<button type="button" class="alt" data-reject-id="${{esc(item.request_id)}}">Reject Recovery Gate</button>` : ""}}
+            <button type="button" data-recovery-action="retry" data-recovery-kind="${{esc(item.request_id ? "approval" : item.name ? "integration" : "failure")}}" data-recovery-label="${{esc(title)}}" data-recovery-detail="${{esc(summary)}}">Stage Retry</button>
+            <button type="button" class="alt" data-recovery-action="stabilize" data-recovery-kind="${{esc(item.request_id ? "approval" : item.name ? "integration" : "failure")}}" data-recovery-label="${{esc(title)}}" data-recovery-detail="${{esc(summary)}}">Mark Stabilized</button>
           </div>
         </div>
       `;
@@ -2141,6 +2202,18 @@ def render_recovery_module_page(payload: dict) -> str:
         button.addEventListener("click", () => {{
           resolveApproval(button.getAttribute("data-reject-id") || "", "reject").catch((error) => {{
             actionNote.textContent = `Reject failed: ${{String(error)}}`;
+          }});
+        }});
+      }});
+      document.querySelectorAll("[data-recovery-action]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          stageRecoveryAction(
+            button.getAttribute("data-recovery-action") || "retry",
+            button.getAttribute("data-recovery-kind") || "recovery",
+            button.getAttribute("data-recovery-label") || "Recovery item",
+            button.getAttribute("data-recovery-detail") || "Recovery action requested."
+          ).catch((error) => {{
+            actionNote.textContent = `Recovery action failed: ${{String(error)}}`;
           }});
         }});
       }});
@@ -2222,11 +2295,30 @@ def render_recovery_module_page(payload: dict) -> str:
             <div class="chips">${{item.timestamp ? chip(item.timestamp, "steady") : ""}}</div>
             <div class="action-row">
               <button type="button" data-select-kind="failure" data-select-index="${{esc(String(index))}}">Inspect Failure Signal</button>
+              <button type="button" data-recovery-action="retry" data-recovery-kind="failure" data-recovery-label="${{esc(item.title || "Failure Signal")}}" data-recovery-detail="${{esc(item.detail || "No failure detail recorded.")}}">Stage Retry</button>
             </div>
           </div>
         `,
         "No recent failure signals.",
         "Recent runtime failures and rollback signals will appear here."
+      );
+
+      const recoveryActions = ((payload.recovery_actions || {{}}).recent) || [];
+      recoveryJournalList.innerHTML = listOrEmpty(
+        recoveryActions,
+        (item) => `
+          <div class="entry-card">
+            <strong>${{esc(item.target_label || "Recovery action")}}</strong>
+            <span>${{esc(item.detail || "Recovery action recorded.")}}</span>
+            <div class="chips">
+              ${{chip(item.action_type || "review", "steady")}}
+              ${{chip(item.status || "queued")}}
+              ${{item.saved_at ? chip(item.saved_at, "steady") : ""}}
+            </div>
+          </div>
+        `,
+        "No recovery actions recorded yet.",
+        "Stage retries or mark items stabilized to build a durable recovery execution history."
       );
 
       proofList.innerHTML = Object.entries(proofs).map(([key, value]) => li(key, value)).join("");
@@ -2253,6 +2345,18 @@ def render_recovery_module_page(payload: dict) -> str:
         button.addEventListener("click", () => {{
           resolveApproval(button.getAttribute("data-reject-id") || "", "reject").catch((error) => {{
             actionNote.textContent = `Reject failed: ${{String(error)}}`;
+          }});
+        }});
+      }});
+      document.querySelectorAll("[data-recovery-action]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          stageRecoveryAction(
+            button.getAttribute("data-recovery-action") || "retry",
+            button.getAttribute("data-recovery-kind") || "recovery",
+            button.getAttribute("data-recovery-label") || "Recovery item",
+            button.getAttribute("data-recovery-detail") || "Recovery action requested."
+          ).catch((error) => {{
+            actionNote.textContent = `Recovery action failed: ${{String(error)}}`;
           }});
         }});
       }});

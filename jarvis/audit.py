@@ -266,6 +266,88 @@ class ProgressSnapshotStore:
         }
 
 
+class RecoveryActionStore:
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self.root.mkdir(parents=True, exist_ok=True)
+        self.current_path = self.root / "recovery_actions.json"
+        self.history_path = self.root / "recovery_actions_log.jsonl"
+        self.history_state_log_path = self.root / "recovery_actions_state_log.jsonl"
+
+    def _load_actions(self) -> list[dict]:
+        if not self.current_path.exists():
+            return self._load_actions_from_state_log()
+        try:
+            payload = json.loads(self.current_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return self._load_actions_from_state_log()
+        if isinstance(payload, list):
+            return [dict(item) for item in payload if isinstance(item, dict)]
+        return self._load_actions_from_state_log()
+
+    def _load_actions_from_state_log(self) -> list[dict]:
+        if not self.history_state_log_path.exists():
+            return []
+        latest: list[dict] = []
+        try:
+            for line in self.history_state_log_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                records = payload.get("records")
+                if isinstance(records, list):
+                    latest = [dict(item) for item in records if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            return []
+        return latest
+
+    def record_action(
+        self,
+        *,
+        action_type: str,
+        target_kind: str,
+        target_label: str,
+        detail: str,
+        route: str = "/recovery-center",
+        status: str = "queued",
+    ) -> dict:
+        records = self._load_actions()
+        entry = {
+            "entry_type": "recovery-action",
+            "action_type": str(action_type).strip() or "review",
+            "target_kind": str(target_kind).strip() or "recovery",
+            "target_label": str(target_label).strip() or "Recovery item",
+            "detail": str(detail).strip() or "Recovery action recorded.",
+            "route": str(route).strip() or "/recovery-center",
+            "status": str(status).strip() or "queued",
+            "saved_at": datetime.now(timezone.utc).isoformat(),
+        }
+        records.append(entry)
+        records = records[-40:]
+        atomic_write_json(self.current_path, records)
+        atomic_write_jsonl(self.history_path, records)
+        append_jsonl(
+            self.history_state_log_path,
+            {
+                "saved_at": entry["saved_at"],
+                "records": records,
+            },
+        )
+        return entry
+
+    def summary(self, limit: int = 8) -> dict:
+        actions = self._load_actions()
+        recent = list(reversed(actions[-max(1, limit):]))
+        return {
+            "count": len(actions),
+            "recent": recent,
+            "proof_paths": {
+                "current": str(self.current_path),
+                "history": str(self.history_path),
+            },
+        }
+
+
 class ApprovalStore:
     def __init__(self, root: Path) -> None:
         self.root = root

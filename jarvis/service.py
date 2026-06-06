@@ -40,7 +40,7 @@ except Exception:  # pragma: no cover
     def _render_glass_shell(runtime, initial_packet=""):  # type: ignore[misc]
         return render_voice_shell(runtime, initial_packet=initial_packet)
 from .apple_api import _register_apple_api
-from .audit import AuditLog, ProgressSnapshotStore
+from .audit import AuditLog, ProgressSnapshotStore, RecoveryActionStore
 from . import layout_engine as _layout_engine
 
 try:
@@ -2058,6 +2058,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         failure_recovery = dict(command_center.get("failure_recovery") or {})
         pending_approvals = list(command_center.get("pending_approvals") or [])
         activity_feed = list(command_center.get("activity_feed") or [])
+        recovery_actions = RecoveryActionStore(DEFAULT_AUDIT_ROOT).summary(limit=8)
         supervision_snapshot = build_supervision_snapshot()
         approval_snapshot = build_approval_queue_snapshot()
         action_items = list(failure_recovery.get("action_items") or [])
@@ -2078,10 +2079,11 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "status": "Useful" if (action_items or pending_approvals or failing_integrations or recent_failures) else "Wired",
             "summary": summary,
             "what_became_real": "Failure & Recovery is now a standalone app module instead of only a command-center and progress-dashboard posture summary.",
-            "remains_partial": "Deeper automated remediation, richer retry workflows, and broader cross-module recovery continuity still need follow-on slices.",
+            "remains_partial": "Automated remediation still needs follow-on slices, but retry and stabilization actions are now durably represented inside the recovery route.",
             "failure_recovery": failure_recovery,
             "pending_approvals": pending_approvals,
             "activity_feed": activity_feed,
+            "recovery_actions": recovery_actions,
             "supervision_snapshot": supervision_snapshot,
             "approval_snapshot": approval_snapshot,
             "counts": {
@@ -2090,10 +2092,12 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "pending_approval_gates": int(failure_recovery.get("pending_approval_count", 0) or 0),
                 "dirty_count": int(failure_recovery.get("dirty_count", 0) or 0),
                 "action_count": len(action_items),
+                "recorded_recovery_actions": int(recovery_actions.get("count", 0) or 0),
             },
             "proof_paths": {
                 "module_route": "/recovery-center",
                 "module_api": "/api/recovery/module",
+                "recovery_action_api": "/api/recovery/action",
                 "supervision_route": "/supervision-snapshot",
                 "supervision_api": "/api/supervision-snapshot",
                 "approval_queue_route": "/approval-queue",
@@ -2107,6 +2111,19 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/recovery/module")
     async def api_recovery_module() -> JSONResponse:
         return _json(await _build_recovery_module_payload())
+
+    @app.post("/api/recovery/action")
+    async def api_record_recovery_action(payload: dict[str, Any]) -> JSONResponse:
+        store = RecoveryActionStore(DEFAULT_AUDIT_ROOT)
+        entry = store.record_action(
+            action_type=str(payload.get("action_type", "")).strip(),
+            target_kind=str(payload.get("target_kind", "")).strip(),
+            target_label=str(payload.get("target_label", "")).strip(),
+            detail=str(payload.get("detail", "")).strip(),
+            route=str(payload.get("route", "")).strip() or "/recovery-center",
+            status=str(payload.get("status", "")).strip() or "queued",
+        )
+        return _json(entry, status_code=201)
 
     async def _build_mission_board_module_payload() -> dict[str, Any]:
         command_center = build_command_center_index()
