@@ -14,6 +14,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
     private let needsTemplate = CPListTemplate(title: "Needs You", sections: [])
     private let routeTemplate = CPListTemplate(title: "Route", sections: [])
     private let publishTemplate = CPListTemplate(title: "Publish", sections: [])
+    private let opsTemplate = CPListTemplate(title: "Ops", sections: [])
 
     private var pendingNeeds: [NeedsItem] = []
     private var navigationChoices: [CarPlayNavigationChoice] = []
@@ -24,6 +25,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
     private var routeCurrentItemSelectable = false
     private var publishQueue: [CarPlayPublishQueueEntry] = []
     private var publishReviews: [PublishReview] = []
+    private var opsOverview: CarPlayOpsOverview?
 
     init(interfaceController: CPInterfaceController) {
         self.interfaceController = interfaceController
@@ -35,12 +37,14 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
         needsTemplate.tabImage = UIImage(systemName: "exclamationmark.circle.fill")
         routeTemplate.tabImage = UIImage(systemName: "map.fill")
         publishTemplate.tabImage = UIImage(systemName: "doc.richtext.fill")
+        opsTemplate.tabImage = UIImage(systemName: "square.grid.2x2.fill")
 
         needsTemplate.delegate = self
         routeTemplate.delegate = self
         publishTemplate.delegate = self
+        opsTemplate.delegate = self
 
-        let tab = CPTabBarTemplate(templates: [briefTemplate, needsTemplate, routeTemplate, publishTemplate])
+        let tab = CPTabBarTemplate(templates: [briefTemplate, needsTemplate, routeTemplate, publishTemplate, opsTemplate])
         tabBar = tab
         interfaceController.setRootTemplate(tab, animated: false, completion: nil)
 
@@ -61,7 +65,8 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
         async let needs = loadNeeds()
         async let route = loadNavigation()
         async let publish = loadPublishing()
-        _ = await (briefing, needs, route, publish)
+        async let ops = loadOps()
+        _ = await (briefing, needs, route, publish, ops)
     }
 
     private func loadBriefing() async {
@@ -319,6 +324,123 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
         }
     }
 
+    private func loadOps() async {
+        do {
+            let overview = try await client.fetchCarPlayOps()
+            opsOverview = overview
+
+            var sections: [CPListSection] = []
+
+            let currentFocus = overview.currentFocus
+            let commandItem = CPListItem(
+                text: "Operational Command Deck",
+                detailText: "\(overview.counts.approvalCount) approvals · \(overview.counts.recoveryCaseCount) recovery cases · \(overview.agentSummary.awakeCount) agents awake"
+            )
+            commandItem.setImage(
+                UIImage(systemName: "gauge.with.dots.needle.67percent")?
+                    .withTintColor(.systemIndigo, renderingMode: .alwaysOriginal)
+            )
+            let focusItem = CPListItem(
+                text: "Shared Focus: \(currentFocus.module)",
+                detailText: currentFocus.reason.isEmpty ? "Shared progress continuity is active." : currentFocus.reason
+            )
+            focusItem.setImage(
+                UIImage(systemName: "scope")?
+                    .withTintColor(.systemOrange, renderingMode: .alwaysOriginal)
+            )
+            sections.append(CPListSection(items: [commandItem, focusItem], header: "Command Chamber", sectionIndexTitle: nil))
+
+            let focusItems = overview.focusCandidates.map { candidate in
+                let item = CPListItem(text: candidate.label, detailText: candidate.module)
+                item.setImage(
+                    UIImage(systemName: "arrow.up.forward.app.fill")?
+                        .withTintColor(.systemBlue, renderingMode: .alwaysOriginal)
+                )
+                return item
+            }
+            sections.append(CPListSection(items: focusItems, header: "Focus Lanes", sectionIndexTitle: nil))
+
+            let recoveryItems: [CPListItem]
+            if overview.recoveryCases.isEmpty {
+                let item = CPListItem(text: "Recovery stack is steady", detailText: "No durable cases need attention right now.")
+                item.setImage(
+                    UIImage(systemName: "checkmark.shield.fill")?
+                        .withTintColor(.systemGreen, renderingMode: .alwaysOriginal)
+                )
+                recoveryItems = [item]
+            } else {
+                recoveryItems = overview.recoveryCases.prefix(4).map { entry in
+                    let countLabel = entry.executionCount > 0 ? " · \(entry.executionCount)x run" : ""
+                    let item = CPListItem(text: "\(entry.statusLabel): \(entry.title)", detailText: entry.detail + countLabel)
+                    item.setImage(
+                        UIImage(systemName: entry.statusLabel == "Resolved" ? "checkmark.circle.fill" : "waveform.path.ecg")?
+                            .withTintColor(entry.statusLabel == "Resolved" ? .systemGreen : .systemOrange, renderingMode: .alwaysOriginal)
+                    )
+                    return item
+                }
+            }
+            sections.append(CPListSection(items: recoveryItems, header: "Recovery", sectionIndexTitle: nil))
+
+            let approvalItems: [CPListItem]
+            if overview.approvals.isEmpty {
+                let item = CPListItem(text: "Approval lane is clear", detailText: "Nothing is waiting for a review tap.")
+                item.setImage(
+                    UIImage(systemName: "checkmark.circle.fill")?
+                        .withTintColor(.systemGreen, renderingMode: .alwaysOriginal)
+                )
+                approvalItems = [item]
+            } else {
+                approvalItems = overview.approvals.prefix(4).map { approval in
+                    let item = CPListItem(text: approval.title, detailText: "\(approval.agent) · \(approval.risk.capitalized) risk")
+                    item.setImage(riskImage(for: approval.risk))
+                    return item
+                }
+            }
+            sections.append(CPListSection(items: approvalItems, header: "Approvals", sectionIndexTitle: nil))
+
+            let missionHeadline = overview.missionSummary.headline.isEmpty
+                ? "\(overview.missionSummary.activeCount) active mission(s) are flowing through JARVIS."
+                : overview.missionSummary.headline
+            let missionItem = CPListItem(
+                text: "Mission Pressure",
+                detailText: missionHeadline
+            )
+            missionItem.setImage(
+                UIImage(systemName: "flag.2.crossed.fill")?
+                    .withTintColor(.systemRed, renderingMode: .alwaysOriginal)
+            )
+            let agentItem = CPListItem(
+                text: "Agent Posture",
+                detailText: "\(overview.agentSummary.awakeCount) awake · \(overview.agentSummary.blockedCount) blocked · \(overview.agentSummary.totalCount) tracked"
+            )
+            agentItem.setImage(
+                UIImage(systemName: "person.3.fill")?
+                    .withTintColor(.systemTeal, renderingMode: .alwaysOriginal)
+            )
+            sections.append(CPListSection(items: [missionItem, agentItem], header: "Mission & Agents", sectionIndexTitle: nil))
+
+            let activityItems: [CPListItem]
+            if overview.recentActivity.isEmpty {
+                activityItems = [CPListItem(text: "No recent continuity yet", detailText: "Ops actions will echo back here when they happen.")]
+            } else {
+                activityItems = overview.recentActivity.prefix(4).map { entry in
+                    let item = CPListItem(text: entry.title, detailText: [entry.detail, entry.routeLabel].filter { !$0.isEmpty }.joined(separator: " · "))
+                    item.setImage(
+                        UIImage(systemName: "clock.arrow.circlepath")?
+                            .withTintColor(.systemGray, renderingMode: .alwaysOriginal)
+                    )
+                    return item
+                }
+            }
+            sections.append(CPListSection(items: activityItems, header: "Recent Continuity", sectionIndexTitle: nil))
+
+            opsTemplate.updateSections(sections)
+        } catch {
+            let item = CPListItem(text: "Couldn't load ops deck", detailText: error.localizedDescription)
+            opsTemplate.updateSections([CPListSection(items: [item])])
+        }
+    }
+
     private func icon(for source: CarPlayNavigationChoice.Source) -> UIImage? {
         let name: String
         let tint: UIColor
@@ -395,6 +517,14 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
             return
         }
 
+        if listTemplate === opsTemplate {
+            Task {
+                await handleOpsSelection(indexPath: indexPath)
+                completionHandler()
+            }
+            return
+        }
+
         completionHandler()
     }
 
@@ -453,6 +583,16 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
         }
         let stop = activeRouteStops[indexPath.item]
         presentStopDetail(stop)
+    }
+
+    private func handleOpsSelection(indexPath: (section: Int, item: Int)) async {
+        guard let overview = opsOverview else { return }
+        let focusSectionIndex = opsTemplate.sections.firstIndex { $0.header == "Focus Lanes" }
+        guard let focusSectionIndex, indexPath.section == focusSectionIndex, indexPath.item < overview.focusCandidates.count else {
+            return
+        }
+        let candidate = overview.focusCandidates[indexPath.item]
+        presentOpsFocusAlert(for: candidate)
     }
 
     private func mergeRecentDestinations(_ destination: String, into existing: [String]) -> [String] {
@@ -598,5 +738,26 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
             actions: [approveAction, reviseAction, cancelAction]
         )
         interfaceController.presentTemplate(alert, animated: true) { _, _ in completion() }
+    }
+
+    private func presentOpsFocusAlert(for candidate: CarPlayOpsFocusCandidate) {
+        let applyAction = CPAlertAction(title: "Set Focus", style: .default) { [weak self] _ in
+            guard let self else { return }
+            Task {
+                let reason = "CarPlay elevated \(candidate.module) as the next live operating focus."
+                try? await self.client.saveCarPlayOpsFocus(
+                    module: candidate.module,
+                    route: candidate.route,
+                    reason: reason
+                )
+                await self.loadOps()
+            }
+        }
+        let cancelAction = CPAlertAction(title: "Close", style: .cancel) { _ in }
+        let alert = CPAlertTemplate(
+            titleVariants: [candidate.label, "Promote \(candidate.module) into shared progress focus?"],
+            actions: [applyAction, cancelAction]
+        )
+        interfaceController.presentTemplate(alert, animated: true, completion: nil)
     }
 }

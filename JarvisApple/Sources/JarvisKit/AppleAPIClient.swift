@@ -286,6 +286,28 @@ public final class AppleAPIClient: Sendable {
         try await get("/api/apple/needs")
     }
 
+    public func fetchCarPlayOps() async throws -> CarPlayOpsOverview {
+        try await get("/api/apple/carplay/ops")
+    }
+
+    public func saveCarPlayOpsFocus(
+        module: String,
+        route: String,
+        reason: String,
+        actor: String = "chris"
+    ) async throws -> CarPlayProgressFocus {
+        struct Body: Encodable {
+            let module: String
+            let route: String
+            let reason: String
+            let actor: String
+        }
+        return try await post(
+            "/api/apple/carplay/ops/focus",
+            body: Body(module: module, route: route, reason: reason, actor: actor)
+        )
+    }
+
     // MARK: - Voice
 
     /// Send a text command and receive an agent response.

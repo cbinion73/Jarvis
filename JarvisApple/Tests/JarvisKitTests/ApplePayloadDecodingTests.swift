@@ -66,6 +66,7 @@ struct ApplePayloadDecodingTests {
         try decode(EventTimelineOverview.self, from: payloads, key: "/api/apple/events/recent", decoder: decoder)
         try decode(AppleWeatherOverview.self, from: payloads, key: "/api/apple/weather", decoder: decoder)
         try decode(NavigationLocationsOverview.self, from: payloads, key: "/api/apple/navigation/locations", decoder: decoder)
+        try decode(CarPlayOpsOverview.self, from: payloads, key: "/api/apple/carplay/ops", decoder: decoder)
         try decode(
             NavigationRouteOverview.self,
             from: payloads,

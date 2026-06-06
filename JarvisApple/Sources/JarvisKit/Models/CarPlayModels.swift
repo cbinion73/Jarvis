@@ -1,5 +1,150 @@
 import Foundation
 
+public struct CarPlayProgressFocus: Codable, Equatable, Sendable {
+    public let module: String
+    public let reason: String
+    public let route: String
+    public let savedAt: String
+
+    public init(module: String, reason: String, route: String, savedAt: String) {
+        self.module = module
+        self.reason = reason
+        self.route = route
+        self.savedAt = savedAt
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case module
+        case reason
+        case route
+        case savedAt = "saved_at"
+    }
+}
+
+public struct CarPlayOpsFocusCandidate: Codable, Equatable, Identifiable, Sendable {
+    public let module: String
+    public let route: String
+    public let label: String
+
+    public var id: String { "\(module)|\(route)|\(label)" }
+}
+
+public struct CarPlayApprovalEntry: Codable, Equatable, Identifiable, Sendable {
+    public let requestId: String
+    public let title: String
+    public let agent: String
+    public let risk: String
+    public let actionClass: String
+
+    public var id: String { requestId }
+
+    enum CodingKeys: String, CodingKey {
+        case requestId = "request_id"
+        case title
+        case agent
+        case risk
+        case actionClass = "action_class"
+    }
+}
+
+public struct CarPlayRecoveryCaseEntry: Codable, Equatable, Identifiable, Sendable {
+    public let caseId: String
+    public let title: String
+    public let statusLabel: String
+    public let detail: String
+    public let executionCount: Int
+    public let relatedRoute: String
+
+    public var id: String { caseId }
+
+    enum CodingKeys: String, CodingKey {
+        case caseId = "case_id"
+        case title
+        case statusLabel = "status_label"
+        case detail
+        case executionCount = "execution_count"
+        case relatedRoute = "related_route"
+    }
+}
+
+public struct CarPlayActivityEntry: Codable, Equatable, Identifiable, Sendable {
+    public let title: String
+    public let detail: String
+    public let routeLabel: String
+    public let actor: String
+
+    public var id: String { "\(title)|\(detail)|\(actor)|\(routeLabel)" }
+
+    enum CodingKeys: String, CodingKey {
+        case title
+        case detail
+        case routeLabel = "route_label"
+        case actor
+    }
+}
+
+public struct CarPlayMissionSummary: Codable, Equatable, Sendable {
+    public let activeCount: Int
+    public let pendingApprovals: Int
+    public let headline: String
+
+    enum CodingKeys: String, CodingKey {
+        case activeCount = "active_count"
+        case pendingApprovals = "pending_approvals"
+        case headline
+    }
+}
+
+public struct CarPlayAgentSummary: Codable, Equatable, Sendable {
+    public let awakeCount: Int
+    public let blockedCount: Int
+    public let totalCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case awakeCount = "awake_count"
+        case blockedCount = "blocked_count"
+        case totalCount = "total_count"
+    }
+}
+
+public struct CarPlayOpsCounts: Codable, Equatable, Sendable {
+    public let approvalCount: Int
+    public let recoveryCaseCount: Int
+    public let recentActivityCount: Int
+    public let recoveryActionCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case approvalCount = "approval_count"
+        case recoveryCaseCount = "recovery_case_count"
+        case recentActivityCount = "recent_activity_count"
+        case recoveryActionCount = "recovery_action_count"
+    }
+}
+
+public struct CarPlayOpsOverview: Codable, Equatable, Sendable {
+    public let generatedAt: String
+    public let currentFocus: CarPlayProgressFocus
+    public let focusCandidates: [CarPlayOpsFocusCandidate]
+    public let approvals: [CarPlayApprovalEntry]
+    public let recoveryCases: [CarPlayRecoveryCaseEntry]
+    public let recentActivity: [CarPlayActivityEntry]
+    public let missionSummary: CarPlayMissionSummary
+    public let agentSummary: CarPlayAgentSummary
+    public let counts: CarPlayOpsCounts
+
+    enum CodingKeys: String, CodingKey {
+        case generatedAt = "generated_at"
+        case currentFocus = "current_focus"
+        case focusCandidates = "focus_candidates"
+        case approvals
+        case recoveryCases = "recovery_cases"
+        case recentActivity = "recent_activity"
+        case missionSummary = "mission_summary"
+        case agentSummary = "agent_summary"
+        case counts
+    }
+}
+
 public struct CarPlayNavigationChoice: Equatable, Identifiable, Sendable {
     public enum Source: String, Equatable, Sendable {
         case saved

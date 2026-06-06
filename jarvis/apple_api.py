@@ -42,9 +42,10 @@ from urllib.parse import quote
 
 from fastapi import FastAPI, HTTPException
 
-from .audit import AuditLog
+from .audit import AuditLog, ProgressFocusStore, RecoveryActionStore
 from .nav_bridge import NavBridge, haversine, min_distance_to_route, sample_route_points
 from .persistence import append_jsonl as persistence_append_jsonl, atomic_write_json
+from .recovery_cases import RecoveryCaseStore
 from .settings import LOCATION_SETTINGS_PATH, VoiceSettingsStore
 
 logger = logging.getLogger(__name__)
@@ -69,6 +70,13 @@ _CHRONICLE_PRAYER_ACTIVITY_PATH = Path.home() / ".jarvis" / "chronicle" / "praye
 _CHRONICLE_PRAYER_ACTIVITY_LOG_PATH = _CHRONICLE_PRAYER_ACTIVITY_PATH.with_name("prayer_activity_log.jsonl")
 _CHRONICLE_ANSWERED_PRAYERS_PATH = Path.home() / ".jarvis" / "chronicle" / "answered_prayers.jsonl"
 _ACTIVITY_AUDIT_ROOT = Path("data/logs")
+_CARPLAY_OPS_FOCUS_CANDIDATES = [
+    {"module": "Progress", "route": "/progress-center", "label": "Progress Focus"},
+    {"module": "Recovery", "route": "/recovery-center", "label": "Recovery Loop"},
+    {"module": "Approval Queue", "route": "/approval-queue", "label": "Approvals"},
+    {"module": "Mission Board", "route": "/mission-board", "label": "Mission Pressure"},
+    {"module": "Agent Ops", "route": "/agent-ops-center", "label": "Agent Operations"},
+]
 
 _NAV_STOP_LABELS = {
     "food": "Food",
@@ -138,6 +146,103 @@ def _record_operator_action(
         )
     except Exception as exc:
         logger.warning("apple_api operator action log failed: %s", exc)
+
+
+def _build_carplay_ops_overview(runtime: Any) -> dict[str, Any]:
+    focus_summary = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).summary(limit=5)
+    recovery_cases = RecoveryCaseStore(_ACTIVITY_AUDIT_ROOT).list_cases()
+    recovery_actions = RecoveryActionStore(_ACTIVITY_AUDIT_ROOT).summary(limit=4)
+    approvals = list(runtime.list_pending_approvals() or [])
+    activity = AuditLog(_ACTIVITY_AUDIT_ROOT).list_recent(limit=6)
+    mission_snapshot = runtime.mission_control_snapshot("Chris")
+    agent_snapshot = runtime.background_agent_status(recent_activity=activity)
+
+    latest_focus = dict(focus_summary.get("latest") or {})
+    active_missions = list(mission_snapshot.get("active_missions") or [])
+    agent_statuses = list(agent_snapshot.get("statuses") or [])
+
+    return {
+        "generated_at": _ts(),
+        "current_focus": {
+            "module": str(latest_focus.get("module") or "Progress").strip() or "Progress",
+            "reason": str(latest_focus.get("reason") or "No shared focus recorded yet.").strip() or "No shared focus recorded yet.",
+            "route": str(latest_focus.get("route") or "/progress-center").strip() or "/progress-center",
+            "saved_at": str(latest_focus.get("saved_at") or "").strip(),
+        },
+        "focus_candidates": deepcopy(_CARPLAY_OPS_FOCUS_CANDIDATES),
+        "approvals": [
+            {
+                "request_id": str(item.get("request_id") or "").strip(),
+                "title": str(item.get("request") or item.get("title") or "Approval").strip() or "Approval",
+                "agent": str(item.get("agent") or item.get("agent_label") or "Unknown agent").strip() or "Unknown agent",
+                "risk": str(item.get("risk_tier") or item.get("risk") or "medium").strip() or "medium",
+                "action_class": str(item.get("action_class") or "").strip(),
+            }
+            for item in approvals[:5]
+            if isinstance(item, dict)
+        ],
+        "recovery_cases": [
+            {
+                "case_id": str(item.get("case_id") or "").strip(),
+                "title": str(item.get("title") or "Recovery case").strip() or "Recovery case",
+                "status_label": str(item.get("status_label") or item.get("status") or "Open").strip() or "Open",
+                "detail": str(item.get("detail") or "").strip(),
+                "execution_count": int(item.get("execution_count", 0) or 0),
+                "related_route": str(item.get("related_route") or "/recovery-center").strip() or "/recovery-center",
+            }
+            for item in recovery_cases[:5]
+            if isinstance(item, dict)
+        ],
+        "recent_activity": [
+            {
+                "title": str(item.get("action") or item.get("entry_type") or "Activity").strip() or "Activity",
+                "detail": str(item.get("detail") or item.get("result_summary") or "").strip(),
+                "route_label": str(item.get("route_label") or item.get("related_route") or "").strip(),
+                "actor": str(item.get("actor") or "").strip(),
+            }
+            for item in activity[:6]
+            if isinstance(item, dict)
+        ],
+        "mission_summary": {
+            "active_count": len(active_missions),
+            "pending_approvals": len(list(mission_snapshot.get("pending_approvals") or [])),
+            "headline": str(mission_snapshot.get("summary", {}).get("headline") or "").strip(),
+        },
+        "agent_summary": {
+            "awake_count": len([item for item in agent_statuses if str(item.get("status") or "").strip().lower() == "awake"]),
+            "blocked_count": len([item for item in agent_statuses if str(item.get("status") or "").strip().lower() == "blocked"]),
+            "total_count": len(agent_statuses),
+        },
+        "counts": {
+            "approval_count": len(approvals),
+            "recovery_case_count": len(recovery_cases),
+            "recent_activity_count": len(activity),
+            "recovery_action_count": int(recovery_actions.get("count", 0) or 0),
+        },
+    }
+
+
+def _save_carplay_ops_focus(*, module: str, route: str, actor: str, reason: str) -> dict[str, Any]:
+    entry = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module=module,
+        reason=reason,
+        route=route,
+        actor=actor,
+    )
+    _record_operator_action(
+        actor=actor,
+        domain="carplay",
+        action="Set CarPlay Ops Focus",
+        detail=f"CarPlay promoted {module} into the shared progress focus lane.",
+        why_now="A CarPlay operational selection raised the next Level 3 focus directly from the dashboard.",
+        result_summary=f"Shared progress focus now points at {module}.",
+        route=route,
+        route_label=f"Open {module}",
+        related_kind="progress-focus",
+        related_label=module,
+        succeeded=True,
+    )
+    return entry
 
 
 async def _timeboxed_to_thread(
@@ -5560,6 +5665,32 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             "home_aggregate": home_aggregate,
         }
         return _ok(data)
+
+    @app.get("/api/apple/carplay/ops")
+    async def apple_carplay_ops():
+        overview = await asyncio.to_thread(_build_carplay_ops_overview, runtime)
+        return _ok(overview)
+
+    @app.post("/api/apple/carplay/ops/focus")
+    async def apple_carplay_ops_focus(payload: dict):
+        module = str(payload.get("module") or "").strip()
+        route = str(payload.get("route") or "").strip()
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        reason = str(payload.get("reason") or "").strip()
+        if not module:
+            raise HTTPException(status_code=400, detail="module is required")
+        if not route:
+            raise HTTPException(status_code=400, detail="route is required")
+        if not reason:
+            reason = f"CarPlay promoted {module} into the shared progress focus lane."
+        entry = await asyncio.to_thread(
+            _save_carplay_ops_focus,
+            module=module,
+            route=route,
+            actor=actor,
+            reason=reason,
+        )
+        return _ok(entry)
 
     @app.get("/api/apple/while-you-were-away")
     async def apple_while_you_were_away(actor: str = "chris"):
