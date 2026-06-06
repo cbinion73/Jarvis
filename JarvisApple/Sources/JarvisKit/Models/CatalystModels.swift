@@ -286,12 +286,70 @@ public struct CatalystMissionEntry: Codable, Equatable, Identifiable, Sendable {
     }
 }
 
+public struct CatalystAgentOpsEntry: Codable, Equatable, Identifiable, Sendable {
+    public let agentId: String
+    public let name: String
+    public let status: String
+    public let statusClass: String
+    public let assignment: String
+    public let purpose: String
+    public let module: String
+    public let attentionReason: String
+    public let lastActivity: String
+    public let relatedRoute: String
+    public let queueActionLabel: String
+
+    public var id: String { agentId }
+
+    enum CodingKeys: String, CodingKey {
+        case agentId = "agent_id"
+        case name
+        case status
+        case statusClass = "status_class"
+        case assignment
+        case purpose
+        case module
+        case attentionReason = "attention_reason"
+        case lastActivity = "last_activity"
+        case relatedRoute = "related_route"
+        case queueActionLabel = "queue_action_label"
+    }
+}
+
+public struct CatalystSupervisionEntry: Codable, Equatable, Identifiable, Sendable {
+    public let requestId: String
+    public let title: String
+    public let agent: String
+    public let risk: String
+    public let detail: String
+    public let actionType: String
+    public let relatedRoute: String
+    public let approveLabel: String
+    public let rejectLabel: String
+
+    public var id: String { requestId }
+
+    enum CodingKeys: String, CodingKey {
+        case requestId = "request_id"
+        case title
+        case agent
+        case risk
+        case detail
+        case actionType = "action_type"
+        case relatedRoute = "related_route"
+        case approveLabel = "approve_label"
+        case rejectLabel = "reject_label"
+    }
+}
+
 public struct CatalystOpsCounts: Codable, Equatable, Sendable {
     public let approvalCount: Int
     public let recoveryCaseCount: Int
     public let recentActivityCount: Int
     public let focusHistoryCount: Int
     public let missionCount: Int
+    public let agentOpsCount: Int
+    public let supervisionCount: Int
 
     enum CodingKeys: String, CodingKey {
         case approvalCount = "approval_count"
@@ -299,6 +357,8 @@ public struct CatalystOpsCounts: Codable, Equatable, Sendable {
         case recentActivityCount = "recent_activity_count"
         case focusHistoryCount = "focus_history_count"
         case missionCount = "mission_count"
+        case agentOpsCount = "agent_ops_count"
+        case supervisionCount = "supervision_count"
     }
 }
 
@@ -308,6 +368,8 @@ public struct CatalystOpsOverview: Codable, Equatable, Sendable {
     public let focusCandidates: [CatalystOpsFocusCandidate]
     public let approvals: [CatalystApprovalEntry]
     public let recoveryCases: [CatalystRecoveryCaseEntry]
+    public let agentOps: [CatalystAgentOpsEntry]
+    public let supervisionItems: [CatalystSupervisionEntry]
     public let recentActivity: [CatalystOpsActivityEntry]
     public let missions: [CatalystMissionEntry]
     public let counts: CatalystOpsCounts
@@ -318,6 +380,8 @@ public struct CatalystOpsOverview: Codable, Equatable, Sendable {
         case focusCandidates = "focus_candidates"
         case approvals
         case recoveryCases = "recovery_cases"
+        case agentOps = "agent_ops"
+        case supervisionItems = "supervision_items"
         case recentActivity = "recent_activity"
         case missions
         case counts

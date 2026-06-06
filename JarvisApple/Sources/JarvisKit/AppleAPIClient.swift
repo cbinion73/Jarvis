@@ -542,6 +542,39 @@ public final class AppleAPIClient: Sendable {
     }
 
     @discardableResult
+    public func queueCatalystAgentRun(
+        _ agentId: String,
+        actor: String = "chris"
+    ) async throws -> Bool {
+        struct Body: Encodable { let actor: String }
+        struct Response: Decodable { let status: String }
+        let response: Response = try await post(
+            "/api/apple/catalyst/agents/\(agentId)/queue-run",
+            body: Body(actor: actor)
+        )
+        return response.status == "queued"
+    }
+
+    @discardableResult
+    public func resolveCatalystSupervision(
+        _ requestId: String,
+        action: String,
+        reason: String = "",
+        actor: String = "chris"
+    ) async throws -> Bool {
+        struct Body: Encodable {
+            let reason: String
+            let actor: String
+        }
+        struct Response: Decodable { let status: String }
+        let response: Response = try await post(
+            "/api/apple/catalyst/supervision/\(requestId)/\(action)",
+            body: Body(reason: reason, actor: actor)
+        )
+        return response.status == "approved" || response.status == "rejected"
+    }
+
+    @discardableResult
     public func updateCatalystMissionStatus(
         _ missionId: String,
         status: String,

@@ -254,12 +254,23 @@ def _save_carplay_ops_focus(*, module: str, route: str, actor: str, reason: str)
 
 
 def _build_catalyst_ops_overview(runtime: Any) -> dict[str, Any]:
+    from .command_center_index import _agent_ops_roster
+    from .supervision_snapshot import build_supervision_snapshot
+
     focus_summary = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).summary(limit=6)
     recovery_cases = RecoveryCaseStore(_ACTIVITY_AUDIT_ROOT).list_cases()
     approvals = list(runtime.list_pending_approvals() or [])
     activity = AuditLog(_ACTIVITY_AUDIT_ROOT).list_recent(limit=8)
     mission_snapshot = runtime.mission_control_snapshot("Chris")
     active_missions = list(mission_snapshot.get("active_missions") or [])
+    agent_roster = _agent_ops_roster()
+    supervision_snapshot = build_supervision_snapshot()
+    agent_items = [dict(item) for item in list(agent_roster.get("items") or []) if isinstance(item, dict)]
+    supervision_items = [
+        dict(item)
+        for item in list(supervision_snapshot.get("attention_queue") or [])
+        if isinstance(item, dict)
+    ]
 
     latest_focus = dict(focus_summary.get("latest") or {})
     current_focus = {
@@ -304,6 +315,38 @@ def _build_catalyst_ops_overview(runtime: Any) -> dict[str, Any]:
             for item in recovery_cases[:4]
             if isinstance(item, dict)
         ],
+        "agent_ops": [
+            {
+                "agent_id": str(item.get("agent_id") or "").strip(),
+                "name": str(item.get("name") or item.get("agent_id") or "Agent").strip() or "Agent",
+                "status": str(item.get("status") or "unknown").strip() or "unknown",
+                "status_class": str(item.get("status_class") or "steady").strip() or "steady",
+                "assignment": str(item.get("assignment") or "unassigned").strip() or "unassigned",
+                "purpose": str(item.get("purpose") or "No purpose recorded.").strip() or "No purpose recorded.",
+                "module": str(item.get("module") or item.get("domain") or "general").strip() or "general",
+                "attention_reason": str(item.get("attention_reason") or "").strip(),
+                "last_activity": str(item.get("last_activity") or "not recorded").strip() or "not recorded",
+                "related_route": "/agent-ops-center",
+                "queue_action_label": "Queue Run",
+            }
+            for item in agent_items[:4]
+            if str(item.get("agent_id") or "").strip()
+        ],
+        "supervision_items": [
+            {
+                "request_id": str(item.get("request_id") or "").strip(),
+                "title": str(item.get("title") or "Supervision review").strip() or "Supervision review",
+                "agent": str(item.get("agent_label") or item.get("actor_id") or "Unknown agent").strip() or "Unknown agent",
+                "risk": str(item.get("risk_tier") or "medium").strip() or "medium",
+                "detail": str(item.get("why_now") or "Needs supervision review.").strip() or "Needs supervision review.",
+                "action_type": str(item.get("action_type") or "").strip(),
+                "related_route": "/supervision-snapshot",
+                "approve_label": "Approve",
+                "reject_label": "Reject",
+            }
+            for item in supervision_items[:4]
+            if str(item.get("request_id") or "").strip()
+        ],
         "recent_activity": [
             {
                 "title": str(item.get("action") or item.get("entry_type") or "Activity").strip() or "Activity",
@@ -339,6 +382,8 @@ def _build_catalyst_ops_overview(runtime: Any) -> dict[str, Any]:
             "recent_activity_count": len(activity),
             "focus_history_count": int(focus_summary.get("history_count", 0) or 0),
             "mission_count": len(active_missions),
+            "agent_ops_count": len(agent_items),
+            "supervision_count": len(supervision_items),
         },
     }
 
@@ -464,6 +509,104 @@ def _update_catalyst_mission_status(runtime: Any, *, mission_id: str, status: st
         actor=actor,
     )
     return {"status": "recorded", "mission": updated, "focus": focus}
+
+
+def _queue_catalyst_agent_run(*, agent_id: str, actor: str) -> dict[str, Any]:
+    from .scheduler import get_scheduler
+
+    scheduler = get_scheduler()
+    if scheduler is None:
+        raise RuntimeError("Scheduler not initialised")
+    item = scheduler.force_run(agent_id)
+    if item is None:
+        raise KeyError("Unknown agent")
+
+    detail = f"Catalyst queued agent {agent_id} from the native ops studio."
+    _record_operator_action(
+        actor=actor,
+        domain="catalyst",
+        action="Queue Catalyst Agent Run",
+        detail=detail,
+        why_now="The native iPhone ops studio elevated an agent run without leaving the phone workflow.",
+        result_summary=f"{agent_id} is queued for execution.",
+        route="/agent-ops-center",
+        route_label="Open Agent Ops",
+        related_kind="agent-run",
+        related_label=agent_id,
+        succeeded=True,
+    )
+    focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module="Agent Ops",
+        reason=detail,
+        route="/agent-ops-center",
+        actor=actor,
+    )
+    return {
+        "status": "queued",
+        "agent_id": agent_id,
+        "item_id": str(getattr(item, "item_id", "") or ""),
+        "focus": focus,
+    }
+
+
+def _resolve_catalyst_supervision_item(
+    runtime: Any,
+    *,
+    request_id: str,
+    action: str,
+    actor: str,
+    reason: str = "",
+) -> dict[str, Any]:
+    action_key = str(action or "").strip().lower()
+    if action_key not in {"approve", "reject"}:
+        raise ValueError("Unsupported supervision action.")
+
+    from .supervision_snapshot import build_supervision_snapshot
+
+    supervision_snapshot = build_supervision_snapshot()
+    attention_items = [
+        dict(item)
+        for item in list(supervision_snapshot.get("attention_queue") or [])
+        if isinstance(item, dict)
+    ]
+    target = next((item for item in attention_items if str(item.get("request_id") or "").strip() == request_id.strip()), None)
+    status = "approved" if action_key == "approve" else "rejected"
+    updated = runtime.approval_store.update_status(request_id, status)
+    if updated is None:
+        raise KeyError("Supervision request not found.")
+
+    title = str((target or {}).get("title") or updated.get("request") or updated.get("title") or request_id).strip() or request_id
+    detail = reason or (
+        f"Catalyst approved {title} from the native supervision lane."
+        if action_key == "approve"
+        else f"Catalyst rejected {title} from the native supervision lane."
+    )
+    _record_operator_action(
+        actor=actor,
+        domain="catalyst",
+        action="Approve Catalyst Supervision Review" if action_key == "approve" else "Reject Catalyst Supervision Review",
+        detail=detail,
+        why_now="The native iPhone supervision lane resolved a bounded-autonomy review item.",
+        result_summary=f"Supervision review moved to {status}.",
+        route="/supervision-snapshot",
+        route_label="Open Supervision",
+        related_kind="supervision-review",
+        related_label=title,
+        succeeded=True,
+    )
+    focus = ProgressFocusStore(_ACTIVITY_AUDIT_ROOT).save_focus(
+        module="Supervision",
+        reason=detail,
+        route="/supervision-snapshot",
+        actor=actor,
+    )
+    return {
+        "status": status,
+        "request_id": request_id,
+        "title": title,
+        "focus": focus,
+        "request": updated,
+    }
 
 
 async def _timeboxed_to_thread(
@@ -10062,6 +10205,42 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 actor=actor,
                 action_type=action_type,
                 note=note,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _ok(result)
+
+    @app.post("/api/apple/catalyst/agents/{agent_id}/queue-run")
+    async def apple_catalyst_agent_queue(agent_id: str, payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        try:
+            result = await asyncio.to_thread(
+                _queue_catalyst_agent_run,
+                agent_id=agent_id,
+                actor=actor,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except RuntimeError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        return _ok(result)
+
+    @app.post("/api/apple/catalyst/supervision/{request_id}/{action}")
+    async def apple_catalyst_supervision_action(request_id: str, action: str, payload: dict | None = None):
+        payload = payload if isinstance(payload, dict) else {}
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        reason = str(payload.get("reason") or "").strip()
+        try:
+            result = await asyncio.to_thread(
+                _resolve_catalyst_supervision_item,
+                runtime,
+                request_id=request_id,
+                action=action,
+                actor=actor,
+                reason=reason,
             )
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc

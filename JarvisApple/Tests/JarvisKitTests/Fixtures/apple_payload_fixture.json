@@ -2919,23 +2919,51 @@
           "related_route": "/approval-queue"
         }
       ],
-      "recovery_cases": [
-        {
-          "case_id": "recovery-1",
-          "title": "Weather relay drift",
+    "recovery_cases": [
+      {
+        "case_id": "recovery-1",
+        "title": "Weather relay drift",
           "status": "investigating",
           "status_label": "Investigating",
           "detail": "Apple weather relay needs a retry before the commute surface opens.",
           "execution_count": 2,
           "related_route": "/recovery-center",
-          "next_action_type": "retry",
-          "next_action_label": "Execute Retry Loop"
-        }
-      ],
-      "missions": [
-        {
-          "mission_id": "mission-1",
-          "title": "Morning route recovery",
+        "next_action_type": "retry",
+        "next_action_label": "Execute Retry Loop"
+      }
+    ],
+    "agent_ops": [
+      {
+        "agent_id": "sam-wilson",
+        "name": "Sam Wilson",
+        "status": "running",
+        "status_class": "accepted",
+        "assignment": "Morning mobility",
+        "purpose": "Keep route, briefing, and family departure surfaces aligned.",
+        "module": "navigation",
+        "attention_reason": "Mission pressure is elevated ahead of departure.",
+        "last_activity": "2026-06-01T07:58:00Z",
+        "related_route": "/agent-ops-center",
+        "queue_action_label": "Queue Run"
+      }
+    ],
+    "supervision_items": [
+      {
+        "request_id": "approval-1",
+        "title": "Approve storm comms handoff",
+        "agent": "Sam Wilson",
+        "risk": "high",
+        "detail": "The handoff needs a bounded review before the route opens.",
+        "action_type": "handoff",
+        "related_route": "/supervision-snapshot",
+        "approve_label": "Approve",
+        "reject_label": "Reject"
+      }
+    ],
+    "missions": [
+      {
+        "mission_id": "mission-1",
+        "title": "Morning route recovery",
           "brief": "Stabilize the commute surfaces before family departure windows open.",
           "status": "queued",
           "lane": "next",
@@ -2953,15 +2981,17 @@
           "related_kind": "progress-focus"
         }
       ],
-      "counts": {
-        "approval_count": 1,
-        "recovery_case_count": 1,
-        "recent_activity_count": 1,
-        "focus_history_count": 3,
-        "mission_count": 1
-      }
+    "counts": {
+      "approval_count": 1,
+      "recovery_case_count": 1,
+      "recent_activity_count": 1,
+      "focus_history_count": 3,
+      "mission_count": 1,
+      "agent_ops_count": 1,
+      "supervision_count": 1
     }
-  },
+  }
+},
   "/api/apple/chronicle": {
     "ok": true,
     "data": {

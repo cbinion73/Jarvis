@@ -4,11 +4,14 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from jarvis.apple_api import (
     _approve_catalyst_approval,
     _build_catalyst_ops_overview,
     _execute_catalyst_recovery_case,
+    _queue_catalyst_agent_run,
+    _resolve_catalyst_supervision_item,
     _save_catalyst_progress_focus,
 )
 from jarvis.audit import AuditLog, ProgressFocusStore
@@ -107,6 +110,8 @@ class CatalystOpsAppleAPITests(unittest.TestCase):
         self.assertEqual(overview["recovery_cases"][0]["next_action_type"], "retry")
         self.assertEqual(overview["approvals"][0]["title"], "Approve storm comms handoff")
         self.assertEqual(overview["recent_activity"][0]["related_route"], "/command-center")
+        self.assertIn("agent_ops", overview)
+        self.assertIn("supervision_items", overview)
 
     def test_focus_approval_and_recovery_actions_persist_continuity(self) -> None:
         runtime = _StubRuntime(Path("data"))
@@ -187,6 +192,53 @@ class CatalystOpsAppleAPITests(unittest.TestCase):
         self.assertEqual(summary["latest"]["module"], "Mission Board")
         recent = AuditLog(Path("data/logs")).list_recent(limit=3, entry_type="operator-action")
         self.assertEqual(recent[0]["action"], "Move Catalyst Mission to Now")
+
+    def test_queue_agent_run_and_supervision_action_record_shared_focus(self) -> None:
+        runtime = _StubRuntime(Path("data"))
+
+        class _QueuedItem:
+            item_id = "queued-1"
+
+        class _StubScheduler:
+            def force_run(self, agent_id: str) -> _QueuedItem | None:
+                if agent_id == "sam-wilson":
+                    return _QueuedItem()
+                return None
+
+        supervision_snapshot = {
+            "attention_queue": [
+                {
+                    "request_id": "approval-1",
+                    "title": "Approve storm comms handoff",
+                    "agent_label": "Sam Wilson",
+                    "risk_tier": "high",
+                    "why_now": "The handoff needs a bounded review before the route opens.",
+                    "action_type": "handoff",
+                }
+            ]
+        }
+
+        with patch("jarvis.scheduler.get_scheduler", return_value=_StubScheduler()):
+            queued = _queue_catalyst_agent_run(agent_id="sam-wilson", actor="chris")
+        self.assertEqual(queued["status"], "queued")
+        self.assertEqual(queued["agent_id"], "sam-wilson")
+
+        with patch("jarvis.supervision_snapshot.build_supervision_snapshot", return_value=supervision_snapshot):
+            result = _resolve_catalyst_supervision_item(
+                runtime,
+                request_id="approval-1",
+                action="reject",
+                actor="chris",
+                reason="Catalyst wants a safer plan before this handoff executes.",
+            )
+
+        self.assertEqual(result["status"], "rejected")
+        summary = ProgressFocusStore(Path("data/logs")).summary(limit=5)
+        self.assertEqual(summary["latest"]["module"], "Supervision")
+        recent = AuditLog(Path("data/logs")).list_recent(limit=4, entry_type="operator-action")
+        titles = [item.get("action") for item in recent]
+        self.assertIn("Queue Catalyst Agent Run", titles)
+        self.assertIn("Reject Catalyst Supervision Review", titles)
 
 
 if __name__ == "__main__":

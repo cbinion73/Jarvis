@@ -436,6 +436,8 @@ struct CatalystView: View {
                         VStack(alignment: .trailing, spacing: 6) {
                             opsMetricPill(label: "approvals", value: opsOverview.counts.approvalCount)
                             opsMetricPill(label: "recovery", value: opsOverview.counts.recoveryCaseCount)
+                            opsMetricPill(label: "agents", value: opsOverview.counts.agentOpsCount)
+                            opsMetricPill(label: "supervision", value: opsOverview.counts.supervisionCount)
                         }
                     }
 
@@ -501,6 +503,32 @@ struct CatalystView: View {
                         } else {
                             ForEach(opsOverview.recoveryCases.prefix(3)) { entry in
                                 opsRecoveryRow(entry)
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Agent Ops")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.88))
+                        if opsOverview.agentOps.isEmpty {
+                            opsEmptyCard("No agent runs need a native push right now.")
+                        } else {
+                            ForEach(opsOverview.agentOps.prefix(3)) { agent in
+                                opsAgentRow(agent)
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Supervision")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.88))
+                        if opsOverview.supervisionItems.isEmpty {
+                            opsEmptyCard("No supervision reviews are staged in the native lane right now.")
+                        } else {
+                            ForEach(opsOverview.supervisionItems.prefix(3)) { item in
+                                opsSupervisionRow(item)
                             }
                         }
                     }
@@ -717,6 +745,40 @@ struct CatalystView: View {
         }
     }
 
+    private func queueCatalystAgentRun(_ agent: CatalystAgentOpsEntry) async {
+        actionInFlight = "agent:\(agent.id)"
+        opsMessage = "Queueing \(agent.name)…"
+        defer { actionInFlight = nil }
+        do {
+            _ = try await AppleAPIClient.shared.queueCatalystAgentRun(agent.agentId)
+            await loadOpsStudio()
+            opsMessage = "\(agent.name) is queued for execution."
+        } catch {
+            opsMessage = "Unable to queue \(agent.name): \(error.localizedDescription)"
+        }
+    }
+
+    private func resolveCatalystSupervision(_ item: CatalystSupervisionEntry, action: String) async {
+        actionInFlight = "supervision:\(item.id):\(action)"
+        let verb = action == "approve" ? item.approveLabel : item.rejectLabel
+        opsMessage = "\(verb) \(item.title)…"
+        defer { actionInFlight = nil }
+        do {
+            let reason = action == "approve"
+                ? "Catalyst approved \(item.title) from the native supervision lane."
+                : "Catalyst rejected \(item.title) from the native supervision lane to request a safer path."
+            _ = try await AppleAPIClient.shared.resolveCatalystSupervision(
+                item.requestId,
+                action: action,
+                reason: reason
+            )
+            await loadOpsStudio()
+            opsMessage = "\(verb) finished for \(item.title)."
+        } catch {
+            opsMessage = "Unable to update supervision review: \(error.localizedDescription)"
+        }
+    }
+
     private func updateCatalystMission(_ mission: CatalystMissionEntry, status: String, note: String) async {
         actionInFlight = "mission:\(mission.id)"
         let verb = status == "completed" ? "Completing" : "Moving"
@@ -877,6 +939,89 @@ struct CatalystView: View {
             .buttonStyle(.plain)
             .disabled(actionInFlight != nil)
             .opacity(actionInFlight != nil ? 0.7 : 1.0)
+        }
+        .padding(10)
+        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func opsAgentRow(_ agent: CatalystAgentOpsEntry) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(agent.name)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text("\(agent.status.capitalized) · \(agent.assignment)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text(agent.purpose)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary.opacity(0.9))
+                Text(agent.attentionReason.isEmpty ? "Last activity: \(agent.lastActivity)" : agent.attentionReason)
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+            Spacer()
+            Button {
+                Task { await queueCatalystAgentRun(agent) }
+            } label: {
+                Text(agent.queueActionLabel)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(Color(red: 0.44, green: 0.72, blue: 1.0).opacity(0.8), in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .disabled(actionInFlight != nil)
+            .opacity(actionInFlight != nil ? 0.7 : 1.0)
+        }
+        .padding(10)
+        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func opsSupervisionRow(_ item: CatalystSupervisionEntry) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(item.title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text("\(item.agent) · \(item.risk.capitalized) risk")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text(item.detail)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary.opacity(0.9))
+            }
+            Spacer()
+            HStack(spacing: 8) {
+                Button {
+                    Task { await resolveCatalystSupervision(item, action: "approve") }
+                } label: {
+                    Text(item.approveLabel)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(Color(red: 0.7, green: 0.6, blue: 1.0).opacity(0.85), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(actionInFlight != nil)
+                .opacity(actionInFlight != nil ? 0.7 : 1.0)
+
+                Button {
+                    Task { await resolveCatalystSupervision(item, action: "reject") }
+                } label: {
+                    Text(item.rejectLabel)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(.white.opacity(0.14), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(actionInFlight != nil)
+                .opacity(actionInFlight != nil ? 0.7 : 1.0)
+            }
         }
         .padding(10)
         .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
