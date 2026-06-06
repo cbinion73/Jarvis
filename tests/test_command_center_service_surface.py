@@ -631,9 +631,12 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Capture Chronicle Note", chronicle_html)
         self.assertIn("Living story engine", chronicle_html)
         self.assertIn("Chronicle tracks", chronicle_html)
+        self.assertIn("Recent Chronicle Continuity", chronicle_html)
+        self.assertIn("/api/activity/operator-action", chronicle_html)
 
         self.assertIn("status", chronicle_snapshot)
         self.assertIn("timeline", chronicle_snapshot)
+        self.assertIn("recent_activity", chronicle_snapshot)
         self.assertIn("proof_paths", chronicle_snapshot)
         self.assertEqual(chronicle_snapshot["proof_paths"]["module_route"], "/chronicle-center")
         self.assertEqual(chronicle_snapshot["proof_paths"]["module_api"], "/api/chronicle/module")
@@ -921,6 +924,30 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
 
         self.assertTrue(any(item.get("title") == "Move Mission to Now" for item in mission_board_snapshot["recent_activity"]))
         self.assertTrue(any(item.get("related_label") == "weather-family" for item in mission_board_snapshot["recent_activity"]))
+
+    def test_chronicle_activity_populates_chronicle_continuity(self) -> None:
+        asyncio.run(
+            self._route("/api/activity/operator-action", "POST")(
+                {
+                    "actor": "Chris",
+                    "domain": "chronicle",
+                    "action": "Capture Chronicle Note",
+                    "detail": "Chronicle reflection captured into the live timeline.",
+                    "why_now": "Chronicle continuity smoke test.",
+                    "result_summary": "Chronicle note captured.",
+                    "route": "/chronicle-center",
+                    "route_label": "Open Chronicle",
+                    "related_kind": "chronicle-entry",
+                    "related_label": "gratitude in the middle of fatigue",
+                    "succeeded": True,
+                }
+            )
+        )
+
+        chronicle_snapshot = self._json_body(asyncio.run(self._route("/api/chronicle/module", "GET")()))
+
+        self.assertTrue(any(item.get("title") == "Capture Chronicle Note" for item in chronicle_snapshot["recent_activity"]))
+        self.assertTrue(any(item.get("related_label") == "gratitude in the middle of fatigue" for item in chronicle_snapshot["recent_activity"]))
 
     def test_open_loop_action_populates_daily_brief_continuity(self) -> None:
         self.runtime.apply_open_loop_action = lambda actor_name, **kwargs: {

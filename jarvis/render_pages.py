@@ -7570,6 +7570,10 @@ def render_chronicle_module_page(payload: dict) -> str:
         <ul id="timeline-list"></ul>
       </section>
       <section class="panel span-6">
+        <h2>Recent Chronicle Continuity</h2>
+        <ul id="recent-activity-list"></ul>
+      </section>
+      <section class="panel span-6">
         <h2>Insights</h2>
         <ul id="insights-list"></ul>
       </section>
@@ -7591,6 +7595,7 @@ def render_chronicle_module_page(payload: dict) -> str:
     const morningContextList = document.getElementById("morning-context-list");
     const themesList = document.getElementById("themes-list");
     const timelineList = document.getElementById("timeline-list");
+    const recentActivityList = document.getElementById("recent-activity-list");
     const insightsList = document.getElementById("insights-list");
     const payloadPreview = document.getElementById("payload-preview");
 
@@ -7644,6 +7649,9 @@ def render_chronicle_module_page(payload: dict) -> str:
         item.reflection || item.note || "No reflection text available.",
         `${{item.actor || "unknown"}} · ${{item.timestamp || "undated"}}`
       )).join("") || '<li><strong>No Chronicle entries yet.</strong><span>Capture a note to seed the timeline.</span></li>';
+      recentActivityList.innerHTML = (Array.isArray(payload.recent_activity) ? payload.recent_activity : []).length
+        ? payload.recent_activity.map((item) => li(item.title || "Chronicle action", item.subtitle || item.actor || "Operator continuity", item.detail || item.route_label || "")).join("")
+        : '<li><strong>No Chronicle continuity recorded yet.</strong><span>Generate a devotional, prepare a family devotional, or capture a note to start the route-level continuity trail.</span></li>';
 
       insightsList.innerHTML = insights.slice(0, 6).map((item) => li(
         item.title || item.theme || "Insight",
@@ -7666,6 +7674,14 @@ def render_chronicle_module_page(payload: dict) -> str:
       }}
     }}
 
+    async function recordOperatorAction(payload) {{
+      await fetch("/api/activity/operator-action", {{
+        method: "POST",
+        headers: {{ "Content-Type": "application/json" }},
+        body: JSON.stringify(payload),
+      }});
+    }}
+
     async function submitDevotional(event) {{
       event.preventDefault();
       const note = document.getElementById("chronicle-devotional-note");
@@ -7682,7 +7698,22 @@ def render_chronicle_module_page(payload: dict) -> str:
         }});
         const payload = await response.json();
         document.getElementById("chronicle-devotional-output").textContent = payload.output_text || "(No devotional pause returned.)";
+        await recordOperatorAction({{
+          actor: document.getElementById("chronicle-actor").value || "Chris",
+          domain: "chronicle",
+          action: "Generate Devotional Pause",
+          title: document.getElementById("chronicle-theme").value || "Chronicle devotional",
+          detail: payload.output_text ? "Chronicle devotional pause generated from the live module." : "Chronicle devotional request returned without devotional copy.",
+          why_now: "Chronicle generated a devotional pause directly from the route-level operator flow.",
+          result_summary: payload.output_text ? "Devotional pause generated." : "Devotional request completed without devotional copy.",
+          route: "/chronicle-center",
+          route_label: "Open Chronicle",
+          related_kind: "devotional",
+          related_label: document.getElementById("chronicle-theme").value || "Chronicle devotional",
+          succeeded: true,
+        }});
         note.textContent = "Devotional pause generated.";
+        await refreshChronicleState();
       }} catch (error) {{
         note.textContent = `Devotional request failed: ${{String(error)}}`;
       }}
@@ -7704,7 +7735,22 @@ def render_chronicle_module_page(payload: dict) -> str:
         }});
         const payload = await response.json();
         document.getElementById("family-devotional-output").textContent = payload.output_text || "(No family devotional returned.)";
+        await recordOperatorAction({{
+          actor: document.getElementById("chronicle-actor").value || "Chris",
+          domain: "chronicle",
+          action: "Prepare Family Devotional",
+          title: document.getElementById("family-devotional-theme").value || "Family devotional",
+          detail: payload.output_text ? "Family devotional prepared from Chronicle." : "Family devotional request returned without devotional copy.",
+          why_now: "Chronicle prepared a family devotional directly from the route-level operator flow.",
+          result_summary: payload.output_text ? "Family devotional prepared." : "Family devotional request completed without devotional copy.",
+          route: "/chronicle-center",
+          route_label: "Open Chronicle",
+          related_kind: "family-devotional",
+          related_label: document.getElementById("family-devotional-theme").value || "Family devotional",
+          succeeded: true,
+        }});
         note.textContent = "Family devotional prepared.";
+        await refreshChronicleState();
       }} catch (error) {{
         note.textContent = `Family devotional failed: ${{String(error)}}`;
       }}
@@ -7726,6 +7772,20 @@ def render_chronicle_module_page(payload: dict) -> str:
         }});
         const payload = await response.json();
         document.getElementById("chronicle-capture-output").textContent = JSON.stringify(payload, null, 2);
+        await recordOperatorAction({{
+          actor: document.getElementById("chronicle-actor").value || "Chris",
+          domain: "chronicle",
+          action: "Capture Chronicle Note",
+          title: document.getElementById("chronicle-capture-theme").value || "Chronicle reflection",
+          detail: "Chronicle reflection captured into the live timeline.",
+          why_now: "Chronicle captured a reflection directly from the route-level operator flow.",
+          result_summary: "Chronicle note captured.",
+          route: "/chronicle-center",
+          route_label: "Open Chronicle",
+          related_kind: "chronicle-entry",
+          related_label: document.getElementById("chronicle-capture-theme").value || "Chronicle reflection",
+          succeeded: true,
+        }});
         note.textContent = "Chronicle note captured.";
         document.getElementById("chronicle-note").value = "";
         await refreshChronicleState();

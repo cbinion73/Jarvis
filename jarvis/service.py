@@ -6724,7 +6724,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "available": True,
             "status": "Useful",
             "summary": "Chronicle now has a dedicated module route with live devotional, capture, continuity, and bridge posture.",
-            "what_became_real": "Chronicle is now represented as a dedicated app module instead of a shell-only packet.",
+            "what_became_real": "Chronicle is now represented as a dedicated app module with visible route-owned continuity instead of a shell-only packet.",
             "remains_partial": "Deeper Chronicle review workflows, richer study surfaces, and broader external handoff continuity still need follow-on slices.",
             "entry_count": 0,
             "pending_entry_count": 0,
@@ -6733,6 +6733,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "morning_context": {},
             "workflow_status": {},
             "insights": [],
+            "recent_activity": [],
             "bridge_status": "not_loaded",
             "bridge_note": "Chronicle bridge is not initialised in this runtime.",
             "proof_paths": {
@@ -6742,6 +6743,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "capture_api": "/api/chronicle-capture",
                 "devotional_api": "/api/devotional-pause",
                 "family_devotional_api": "/api/family-devotional",
+                "activity_api": "/api/activity/operator-action",
             },
             "errors": [],
         }
@@ -6800,6 +6802,8 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             if not payload["timeline"]:
                 payload["status"] = "Wired"
                 payload["remains_partial"] = "The dedicated Chronicle screen is live, but no Chronicle entries were available in this runtime."
+
+        payload["recent_activity"] = _module_recent_activity(route="/chronicle-center", domain="chronicle")
 
         if payload["errors"] and payload["status"] == "Useful":
             payload["remains_partial"] = "Some Chronicle sources still failed to hydrate; inspect the payload preview for details."
