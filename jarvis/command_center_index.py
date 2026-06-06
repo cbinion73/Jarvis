@@ -1093,7 +1093,13 @@ def _mission_task_board() -> dict[str, Any]:
 
 
 def _agent_ops_roster() -> dict[str, Any]:
-    registry_payload = json.loads((REPO_ROOT / "data" / "agents" / "jarvis_agent_registry.v1.json").read_text())
+    registry_path = REPO_ROOT / "data" / "agents" / "jarvis_agent_registry.v1.json"
+    try:
+        registry_payload = json.loads(registry_path.read_text())
+    except FileNotFoundError:
+        registry_payload = {"agents": []}
+    except json.JSONDecodeError:
+        registry_payload = {"agents": []}
     runtime_path = REPO_ROOT / "data" / "agents" / "runtime_kernel_state.json"
     try:
         runtime_payload = json.loads(runtime_path.read_text())
