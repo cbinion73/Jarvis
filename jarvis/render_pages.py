@@ -1274,7 +1274,7 @@ def render_catalyst_workspace_page(runtime: JarvisRuntime, page: str) -> str:
 
 def render_publish_module_page(payload: dict) -> str:
     raw_json = json.dumps(payload, indent=2)
-    return f"""<!doctype html>
+    return _apply_module_surface_chrome(f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -1905,12 +1905,219 @@ def render_publish_module_page(payload: dict) -> str:
   </script>
 </body>
 </html>
+""", "/publish")
+
+
+MODULE_SURFACE_LINKS = [
+    ("/briefing-center", "Brief"),
+    ("/command-center", "Command"),
+    ("/progress-center", "Progress"),
+    ("/activity-center", "Activity"),
+    ("/recovery-center", "Recovery"),
+    ("/agent-ops-center", "Agent Ops"),
+    ("/mission-board", "Mission"),
+    ("/approval-queue", "Approvals"),
+    ("/supervision-snapshot", "Supervision"),
+    ("/settings-center", "Settings"),
+    ("/health-center", "Health"),
+    ("/huddle-center", "Huddle"),
+    ("/chronicle-center", "Legacy"),
+    ("/navigation-center", "Navigation"),
+    ("/publish", "Publish"),
+]
+
+
+def _module_surface_overrides(active_route: str) -> str:
+    nav = "".join(
+        f'<a class="module-chip{" active" if route == active_route else ""}" href="{route}">{label}</a>'
+        for route, label in MODULE_SURFACE_LINKS
+    )
+    return f"""
+<style>
+  body.module-surface {{
+    background:
+      radial-gradient(circle at top left, rgba(217, 178, 122, 0.11), transparent 30%),
+      radial-gradient(circle at top right, rgba(121, 216, 255, 0.08), transparent 28%),
+      linear-gradient(180deg, #040912 0%, #07111d 46%, #091522 100%) !important;
+    color: #edf7ff !important;
+    font-family: "SF Pro Display", "Segoe UI", sans-serif !important;
+  }}
+  .module-surface::before {{
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(135deg, rgba(255,255,255,0.03), transparent 34%);
+    opacity: 0.9;
+  }}
+  .module-chrome {{
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    padding: 14px 18px 0;
+    backdrop-filter: blur(18px);
+  }}
+  .module-rail {{
+    max-width: 1480px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 14px 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    background: rgba(7, 13, 21, 0.8);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.24);
+  }}
+  .module-brand {{
+    min-width: 180px;
+  }}
+  .module-brand strong {{
+    display: block;
+    color: #d9b27a;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }}
+  .module-brand span {{
+    display: block;
+    color: #9eb8cb;
+    font-size: 13px;
+  }}
+  .module-chip-row {{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }}
+  .module-chip {{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    color: #a7c5dc !important;
+    text-decoration: none;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }}
+  .module-chip.active {{
+    border-color: rgba(217,178,122,0.28);
+    background: rgba(217,178,122,0.12);
+    color: #f2e7d4 !important;
+  }}
+  .module-surface .shell {{
+    position: relative;
+    z-index: 1;
+    max-width: 1480px !important;
+    margin: 0 auto !important;
+    padding: 22px 24px 60px !important;
+  }}
+  .module-surface .hero,
+  .module-surface .topbar,
+  .module-surface .panel,
+  .module-surface .stat,
+  .module-surface .glance-card,
+  .module-surface .storyboard-step,
+  .module-surface .hero-note {{
+    border-color: rgba(255,255,255,0.08) !important;
+    background: linear-gradient(180deg, rgba(11, 20, 31, 0.94), rgba(8, 15, 24, 0.94)) !important;
+    box-shadow: 0 20px 44px rgba(0, 0, 0, 0.24) !important;
+    backdrop-filter: blur(14px);
+  }}
+  .module-surface .hero,
+  .module-surface .topbar {{
+    border-radius: 26px !important;
+  }}
+  .module-surface .panel,
+  .module-surface .stat,
+  .module-surface .glance-card,
+  .module-surface .storyboard-step,
+  .module-surface .hero-note {{
+    border-radius: 20px !important;
+  }}
+  .module-surface h1 {{
+    letter-spacing: -0.04em !important;
+  }}
+  .module-surface h2 {{
+    font-size: 18px !important;
+    letter-spacing: -0.03em !important;
+  }}
+  .module-surface p,
+  .module-surface li span,
+  .module-surface .topbar span,
+  .module-surface .subtitle,
+  .module-surface .status-note,
+  .module-surface label {{
+    color: #9eb8cb !important;
+  }}
+  .module-surface a,
+  .module-surface button {{
+    border-radius: 999px !important;
+  }}
+  .module-surface button,
+  .module-surface .actions a,
+  .module-surface .topbar a,
+  .module-surface .route-links a,
+  .module-surface a[href="/command-center"] {{
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    background: linear-gradient(135deg, rgba(217,178,122,0.16), rgba(121,216,255,0.10)) !important;
+    color: #edf7ff !important;
+    text-decoration: none !important;
+  }}
+  .module-surface input,
+  .module-surface select,
+  .module-surface textarea,
+  .module-surface pre {{
+    border-color: rgba(255,255,255,0.08) !important;
+    background: rgba(4, 12, 20, 0.92) !important;
+    color: #edf7ff !important;
+  }}
+  .module-surface li {{
+    border-color: rgba(255,255,255,0.08) !important;
+    background: rgba(255,255,255,0.03) !important;
+  }}
+  @media (max-width: 980px) {{
+    .module-rail {{
+      flex-direction: column;
+      align-items: flex-start;
+    }}
+    .module-chip-row {{
+      justify-content: flex-start;
+    }}
+    .module-surface .shell {{
+      padding-top: 18px !important;
+    }}
+  }}
+</style>
+<div class="module-chrome">
+  <div class="module-rail">
+    <div class="module-brand">
+      <strong>JARVIS Desktop Modules</strong>
+      <span>Unified standalone routes under one web design system</span>
+    </div>
+    <div class="module-chip-row">
+      {nav}
+    </div>
+  </div>
+</div>
 """
+
+
+def _apply_module_surface_chrome(html: str, active_route: str) -> str:
+    if "<body>" in html:
+        html = html.replace("<body>", "<body class=\"module-surface\">" + _module_surface_overrides(active_route), 1)
+    return html
 
 
 def render_agent_ops_module_page(payload: dict) -> str:
     raw_json = json.dumps(payload, indent=2)
-    return f"""<!doctype html>
+    return _apply_module_surface_chrome(f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -2655,12 +2862,12 @@ def render_agent_ops_module_page(payload: dict) -> str:
   </script>
 </body>
 </html>
-"""
+""", "/agent-ops-center")
 
 
 def render_recovery_module_page(payload: dict) -> str:
     raw_json = json.dumps(payload, indent=2)
-    return f"""<!doctype html>
+    return _apply_module_surface_chrome(f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -3646,12 +3853,12 @@ def render_recovery_module_page(payload: dict) -> str:
   </script>
 </body>
 </html>
-"""
+""", "/recovery-center")
 
 
 def render_mission_board_module_page(payload: dict) -> str:
     raw_json = json.dumps(payload, indent=2)
-    return f"""<!doctype html>
+    return _apply_module_surface_chrome(f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -4778,12 +4985,12 @@ def render_mission_board_module_page(payload: dict) -> str:
   </script>
 </body>
 </html>
-"""
+""", "/mission-board")
 
 
 def render_activity_module_page(payload: dict) -> str:
     raw_json = json.dumps(payload, indent=2)
-    return f"""<!doctype html>
+    return _apply_module_surface_chrome(f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -5316,12 +5523,12 @@ def render_activity_module_page(payload: dict) -> str:
   </script>
 </body>
 </html>
-"""
+""", "/activity-center")
 
 
 def render_approval_module_page(payload: dict) -> str:
     raw_json = json.dumps(payload, indent=2)
-    return f"""<!doctype html>
+    return _apply_module_surface_chrome(f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -5838,12 +6045,12 @@ def render_approval_module_page(payload: dict) -> str:
   </script>
 </body>
 </html>
-"""
+""", "/approval-queue")
 
 
 def render_supervision_module_page(payload: dict) -> str:
     raw_json = json.dumps(payload, indent=2)
-    return f"""<!doctype html>
+    return _apply_module_surface_chrome(f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -6369,12 +6576,12 @@ def render_supervision_module_page(payload: dict) -> str:
   </script>
 </body>
 </html>
-"""
+""", "/supervision-snapshot")
 
 
 def render_progress_module_page(payload: dict) -> str:
     raw_json = json.dumps(payload, indent=2)
-    return f"""<!doctype html>
+    return _apply_module_surface_chrome(f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -6946,12 +7153,12 @@ def render_progress_module_page(payload: dict) -> str:
   </script>
 </body>
 </html>
-"""
+""", "/progress-center")
 
 
 def render_daily_brief_module_page(payload: dict) -> str:
     raw_json = json.dumps(payload, indent=2)
-    return f"""<!doctype html>
+    return _apply_module_surface_chrome(f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -7320,12 +7527,12 @@ def render_daily_brief_module_page(payload: dict) -> str:
   </script>
 </body>
 </html>
-"""
+""", "/briefing-center")
 
 
 def render_health_module_page(payload: dict) -> str:
     raw_json = json.dumps(payload, indent=2)
-    return f"""<!doctype html>
+    return _apply_module_surface_chrome(f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -8105,12 +8312,12 @@ def render_health_module_page(payload: dict) -> str:
   </script>
 </body>
 </html>
-"""
+""", "/health-center")
 
 
 def render_huddle_module_page(payload: dict) -> str:
     raw_json = json.dumps(payload, indent=2)
-    return f"""<!doctype html>
+    return _apply_module_surface_chrome(f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -8619,12 +8826,12 @@ def render_huddle_module_page(payload: dict) -> str:
   </script>
 </body>
 </html>
-"""
+""", "/huddle-center")
 
 
 def render_chronicle_module_page(payload: dict) -> str:
     raw_json = json.dumps(payload, indent=2)
-    return f"""<!doctype html>
+    return _apply_module_surface_chrome(f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -9324,12 +9531,12 @@ def render_chronicle_module_page(payload: dict) -> str:
   </script>
 </body>
 </html>
-"""
+""", "/chronicle-center")
 
 
 def render_settings_module_page(payload: dict) -> str:
     raw_json = json.dumps(payload, indent=2)
-    return f"""<!doctype html>
+    return _apply_module_surface_chrome(f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -10094,12 +10301,12 @@ def render_settings_module_page(payload: dict) -> str:
   </script>
 </body>
 </html>
-"""
+""", "/settings-center")
 
 
 def render_navigation_module_page(payload: dict) -> str:
     raw_json = json.dumps(payload, indent=2)
-    return f"""<!doctype html>
+    return _apply_module_surface_chrome(f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -10642,7 +10849,7 @@ def render_navigation_module_page(payload: dict) -> str:
   </script>
 </body>
 </html>
-"""
+""", "/navigation-center")
 
 
 def render_agent_hierarchy_page(runtime: JarvisRuntime) -> str:

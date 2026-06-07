@@ -6697,6 +6697,7 @@ body::after {{
     <a class="nav-route-link" href="/progress-center"><span>Progress Center</span><code>/progress-center</code></a>
     <a class="nav-route-link" href="/activity-center"><span>Activity Feed</span><code>/activity-center</code></a>
     <a class="nav-route-link" href="/recovery-center"><span>Recovery Center</span><code>/recovery-center</code></a>
+    <a class="nav-route-link" href="/publish"><span>Publish</span><code>/publish</code></a>
     <a class="nav-route-link" href="/agent-ops-center"><span>Agent Ops</span><code>/agent-ops-center</code></a>
     <a class="nav-route-link" href="/mission-board"><span>Mission Board</span><code>/mission-board</code></a>
     <a class="nav-route-link" href="/approval-queue"><span>Approval Queue</span><code>/approval-queue</code></a>
