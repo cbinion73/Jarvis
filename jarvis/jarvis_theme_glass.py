@@ -8552,20 +8552,20 @@ body::after {{
               </div>
               <div class="faith-bridge-grid">
                 <div class="faith-card faith-focus-card">
-                  <strong>Legacy Bridge</strong>
-                  <p id="faith-legacy-status">Loading Legacy spiritual continuity…</p>
+                  <strong>Chronicle Connection</strong>
+                  <p id="faith-chronicle-status">Checking Chronicle app handoff…</p>
                 </div>
                 <div class="faith-card faith-focus-card">
-                  <strong>Active Prayers</strong>
-                  <p id="faith-legacy-prayers">—</p>
+                  <strong>Study Flow</strong>
+                  <p id="faith-chronicle-study">—</p>
                 </div>
                 <div class="faith-card faith-focus-card">
-                  <strong>Recent Reflections</strong>
-                  <p id="faith-legacy-reflections">—</p>
+                  <strong>Prayer Flow</strong>
+                  <p id="faith-chronicle-prayer">—</p>
                 </div>
                 <div class="faith-card faith-focus-card">
-                  <strong>Formation Insights</strong>
-                  <p id="faith-legacy-insights">—</p>
+                  <strong>Capture Flow</strong>
+                  <p id="faith-chronicle-capture">—</p>
                 </div>
               </div>
             </section>
@@ -8614,8 +8614,8 @@ body::after {{
                     </div>
                   </div>
                   <div class="faith-action-row">
-                    <button class="faith-action-btn primary" type="button" onclick="captureFaithPrayer()">Send Prayer to Legacy</button>
-                    <button class="faith-action-btn muted" type="button" onclick="openLegacyFromFaith('prayer')">Open Legacy Prayer Lane</button>
+                    <button class="faith-action-btn primary" type="button" onclick="captureFaithPrayer()">Start Prayer in Chronicle</button>
+                    <button class="faith-action-btn muted" type="button" onclick="openChronicleFromFaith('prayer')">Open Chronicle</button>
                   </div>
                 </div>
                 <div class="faith-card">
@@ -8644,8 +8644,8 @@ body::after {{
                     <span class="verse-number">7</span>And the peace of God, which surpasses all understanding, will guard your hearts and your minds in Christ Jesus.
                   </div>
                   <div class="faith-action-row">
-                    <button class="faith-action-btn primary" type="button" onclick="queueFaithReflection()">Queue Reflection in Legacy</button>
-                    <button class="faith-action-btn muted" type="button" onclick="openLegacyFromFaith('study')">Open Legacy Study Flow</button>
+                    <button class="faith-action-btn primary" type="button" onclick="queueFaithReflection()">Open Study in Chronicle</button>
+                    <button class="faith-action-btn muted" type="button" onclick="openChronicleFromFaith('study')">Open Chronicle Study</button>
                   </div>
                 </div>
                 <div class="faith-side-stack">
@@ -8720,7 +8720,7 @@ body::after {{
                     <div class="faith-mini-row"><span>Answered prayers</span><strong>7</strong></div>
                   </div>
                   <div class="faith-action-row">
-                    <button class="faith-action-btn muted" type="button" onclick="captureFaithGratitude()">Capture Gratitude in Legacy</button>
+                    <button class="faith-action-btn muted" type="button" onclick="captureFaithGratitude()">Send Gratitude to Chronicle</button>
                   </div>
                 </div>
               </div>
@@ -8755,7 +8755,7 @@ body::after {{
                   </div>
                   <p>Create one shared gratitude list, one short family prayer before dinner, and one Scripture moment that turns the evening toward peace.</p>
                   <div class="faith-action-row">
-                    <button class="faith-action-btn muted" type="button" onclick="openLegacyFromFaith('family')">Open Legacy Family Archive</button>
+                    <button class="faith-action-btn muted" type="button" onclick="openChronicleFromFaith('formation')">Open Chronicle Formation Timeline</button>
                   </div>
                 </div>
               </div>
@@ -8770,7 +8770,7 @@ body::after {{
                       <div class="faith-chat-name" id="faith-chat-name">—</div>
                       <div class="faith-chat-domain" id="faith-chat-domain">—</div>
                     </div>
-                    <button class="faith-action-btn muted" type="button" style="margin-left:auto;" onclick="saveFaithConversationToLegacy()">Save to Legacy</button>
+                    <button class="faith-action-btn muted" type="button" style="margin-left:auto;" onclick="saveFaithConversationToChronicle()">Send to Chronicle</button>
                     <button class="btn btn-sm" type="button" onclick="closeFaithChat()">Close</button>
                   </div>
                   <div class="faith-chat-passage-row">
@@ -13683,8 +13683,7 @@ async function loadBriefing() {{
 let _faithAgents = [];
 let _faithActiveAgent = null;
 let _faithMessages = [];
-let _faithChronicleContext = null;
-let _faithChronicleInsights = [];
+const CHRONICLE_APP_URL = 'https://chronicle.teambinion.org';
 let faithStoryboardPage = 1;
 const FAITH_STORYBOARD_TITLES = {{
   1: {{
@@ -13788,92 +13787,95 @@ async function loadFaith() {{
 
 async function loadFaithChronicleBridge() {{
   try {{
-    const [ctxRes, insightsRes, statusRes] = await Promise.all([
-      fetch('/api/chronicle/morning-context'),
-      fetch('/api/chronicle/insights'),
-      fetch('/api/chronicle/status'),
-    ]);
+    const res = await fetch('/api/chronicle/capabilities');
+    const payload = res.ok ? await res.json() : {{}};
+    const capabilities = payload.capabilities || {{}};
 
-    const ctx = ctxRes.ok ? await ctxRes.json() : {{}};
-    const insightsPayload = insightsRes.ok ? await insightsRes.json() : {{}};
-    const status = statusRes.ok ? await statusRes.json() : {{}};
-
-    _faithChronicleContext = ctx || {{}};
-    _faithChronicleInsights = Array.isArray(insightsPayload.insights) ? insightsPayload.insights : [];
-
-    const legacyStatus = document.getElementById('faith-legacy-status');
-    if (legacyStatus) {{
-      const bridgeReady = status && Object.keys(status).length > 0;
-      legacyStatus.textContent = bridgeReady
-        ? 'Faith is connected to Legacy capture, prayer, reflection, and formation memory.'
-        : 'Legacy bridge is live, but continuity status has not fully hydrated yet.';
+    const statusEl = document.getElementById('faith-chronicle-status');
+    if (statusEl) {{
+      statusEl.textContent = Object.keys(capabilities).length
+        ? 'Faith can launch, delegate, and embed work into the Chronicle app.'
+        : 'Chronicle capability manifest is not available right now.';
     }}
 
-    const prayersEl = document.getElementById('faith-legacy-prayers');
-    if (prayersEl) {{
-      const prayerCount = Number(ctx.active_prayer_count || ctx.prayer_count || 0);
-      prayersEl.textContent = prayerCount ? `${{prayerCount}} active prayer threads are already flowing into Legacy.` : 'No active prayer threads were returned yet.';
-    }}
+    const studyEl = document.getElementById('faith-chronicle-study');
+    if (studyEl) studyEl.textContent = capabilities.study_passage ? 'Passage study and theme tracing can open in Chronicle.' : 'Study handoff unavailable.';
 
-    const reflectionsEl = document.getElementById('faith-legacy-reflections');
-    if (reflectionsEl) {{
-      const reflections = Array.isArray(ctx.recent_reflections) ? ctx.recent_reflections.filter(Boolean) : [];
-      reflectionsEl.textContent = reflections.length ? reflections.slice(0, 2).join(' | ') : 'No recent Legacy reflections yet.';
-    }}
+    const prayerEl = document.getElementById('faith-chronicle-prayer');
+    if (prayerEl) prayerEl.textContent = capabilities.prayer_session ? 'Prayer sessions can be launched in Chronicle.' : 'Prayer handoff unavailable.';
 
-    const insightsEl = document.getElementById('faith-legacy-insights');
-    if (insightsEl) {{
-      insightsEl.textContent = _faithChronicleInsights.length
-        ? `${{_faithChronicleInsights.length}} formation insights are available in Legacy.`
-        : 'No formation insights are available yet.';
-    }}
+    const captureEl = document.getElementById('faith-chronicle-capture');
+    if (captureEl) captureEl.textContent = capabilities.record_spiritual_event ? 'Reflections, gratitude, and faith conversations can be delegated into Chronicle.' : 'Capture handoff unavailable.';
   }} catch (e) {{
     console.warn('faith chronicle bridge', e);
   }}
 }}
 
-function openLegacyFromFaith(mode) {{
-  if (mode === 'prayer') {{
-    showToast('Opening Legacy prayer lane…', 'success');
-  }} else if (mode === 'study') {{
-    showToast('Opening Legacy study flow…', 'success');
-  }} else if (mode === 'family') {{
-    showToast('Opening Legacy family archive…', 'success');
-  }}
-  switchView('chronicle');
+async function sendFaithToChronicle({{ capability, intentFamily, mode = 'launch', context = {{}}, successMessage = 'Sent to Chronicle', openApp = true }}) {{
+  const res = await fetch('/api/chronicle/handoff', {{
+    method: 'POST',
+    headers: {{ 'Content-Type': 'application/json' }},
+    body: JSON.stringify({{
+      source_system: 'jarvis',
+      capability,
+      intent_family: intentFamily,
+      mode,
+      actor: {{ actor_id: 'chris', role: 'primary_user' }},
+      context
+    }})
+  }});
+  const payload = await res.json();
+  if (!res.ok) throw new Error(payload.detail || 'Chronicle handoff failed');
+  if (openApp) window.open(CHRONICLE_APP_URL, '_blank', 'noopener');
+  showToast(successMessage, 'success');
+  return payload;
+}}
+
+function openChronicleFromFaith(mode) {{
+  const modeMap = {{
+    prayer: {{ capability: 'prayer_session', intentFamily: 'faith.prayer', mode: 'launch', context: {{ prompt: document.getElementById('faith-brief-intention')?.textContent?.trim() || 'Prayer intention from Faith' }} }},
+    study: {{ capability: 'study_passage', intentFamily: 'faith.study', mode: 'launch', context: {{ passage: document.getElementById('faith-scripture-title')?.textContent?.trim() || '', prompt: document.getElementById('faith-insight-copy')?.textContent?.trim() || '' }} }},
+    formation: {{ capability: 'spiritual_timeline', intentFamily: 'faith.formation', mode: 'launch', context: {{ range: '90d' }} }},
+  }};
+  const selected = modeMap[mode] || modeMap.study;
+  sendFaithToChronicle({{
+    ...selected,
+    successMessage: 'Opening Chronicle…',
+    openApp: true,
+  }}).catch(() => {{
+    showToast('Could not open Chronicle handoff', 'warning');
+  }});
 }}
 
 async function captureFaithPrayer() {{
   const concern = document.getElementById('faith-brief-intention')?.textContent?.trim() || 'Prayer intention from Faith';
   try {{
-    const res = await fetch('/api/chronicle/capture/prayer', {{
-      method: 'POST',
-      headers: {{ 'Content-Type': 'application/json' }},
-      body: JSON.stringify({{ actor_id: 'chris', concern }})
+    await sendFaithToChronicle({{
+      capability: 'prayer_session',
+      intentFamily: 'faith.prayer',
+      mode: 'launch',
+      context: {{ prompt: concern }},
+      successMessage: 'Prayer session opened in Chronicle',
+      openApp: true,
     }});
-    const payload = await res.json();
-    if (!res.ok) throw new Error(payload.detail || 'Prayer capture failed');
-    showToast('Prayer sent to Legacy', 'success');
-    loadFaithChronicleBridge();
   }} catch (e) {{
-    showToast('Could not send prayer to Legacy', 'warning');
+    showToast('Could not start Chronicle prayer session', 'warning');
   }}
 }}
 
 async function captureFaithGratitude() {{
   const text = document.getElementById('faith-dw-body')?.textContent?.trim() || 'Grateful for the quiet mercies of today.';
   try {{
-    const res = await fetch('/api/chronicle/capture/gratitude', {{
-      method: 'POST',
-      headers: {{ 'Content-Type': 'application/json' }},
-      body: JSON.stringify({{ text }})
+    await sendFaithToChronicle({{
+      capability: 'record_spiritual_event',
+      intentFamily: 'faith.capture',
+      mode: 'delegate',
+      context: {{ theme: 'gratitude', prompt: text }},
+      successMessage: 'Gratitude sent to Chronicle',
+      openApp: false,
     }});
-    const payload = await res.json();
-    if (!res.ok) throw new Error(payload.detail || 'Gratitude capture failed');
-    showToast(payload.captured ? 'Gratitude captured in Legacy' : 'No gratitude pattern was detected', payload.captured ? 'success' : 'warning');
-    loadFaithChronicleBridge();
   }} catch (e) {{
-    showToast('Could not capture gratitude in Legacy', 'warning');
+    showToast('Could not send gratitude to Chronicle', 'warning');
   }}
 }}
 
@@ -13881,44 +13883,45 @@ async function queueFaithReflection() {{
   const context = {{
     passage: document.getElementById('faith-scripture-title')?.textContent?.trim() || '',
     insight: document.getElementById('faith-insight-copy')?.textContent?.trim() || '',
-    prompt: 'Carry the current Faith reflection into Legacy for continuity.'
+    prompt: 'Carry the current Faith reflection into Chronicle for continuity.'
   }};
   try {{
-    const res = await fetch('/api/chronicle/daily-reflection', {{
-      method: 'POST',
-      headers: {{ 'Content-Type': 'application/json' }},
-      body: JSON.stringify({{ actor_id: 'chris', context }})
+    await sendFaithToChronicle({{
+      capability: 'study_passage',
+      intentFamily: 'faith.study',
+      mode: 'launch',
+      context: {{
+        passage: context.passage,
+        prompt: context.insight || context.prompt,
+      }},
+      successMessage: 'Study opened in Chronicle',
+      openApp: true,
     }});
-    const payload = await res.json();
-    if (!res.ok) throw new Error(payload.detail || 'Reflection queue failed');
-    showToast('Reflection queued in Legacy', 'success');
-    loadFaithChronicleBridge();
   }} catch (e) {{
-    showToast('Could not queue reflection in Legacy', 'warning');
+    showToast('Could not open Chronicle study flow', 'warning');
   }}
 }}
 
-async function saveFaithConversationToLegacy() {{
+async function saveFaithConversationToChronicle() {{
   if (!_faithActiveAgent || !_faithMessages.length) {{
     showToast('Start a faith conversation first', 'warning');
     return;
   }}
   const note = _faithMessages.map(m => `${{m.role === 'user' ? 'You' : _faithActiveAgent.name}}: ${{m.content}}`).join('\n\n');
   try {{
-    const res = await fetch('/api/chronicle-capture', {{
-      method: 'POST',
-      headers: {{ 'Content-Type': 'application/json' }},
-      body: JSON.stringify({{
-        actor: 'Chris',
-        theme: `Faith conversation: ${{_faithActiveAgent.title}}`,
-        note
-      }})
+    await sendFaithToChronicle({{
+      capability: 'record_spiritual_event',
+      intentFamily: 'faith.capture',
+      mode: 'delegate',
+      context: {{
+        theme: `faith-conversation-${{(_faithActiveAgent.title || 'guide').toLowerCase().replace(/\\s+/g, '-')}}`,
+        prompt: note,
+      }},
+      successMessage: 'Conversation sent to Chronicle',
+      openApp: false,
     }});
-    const payload = await res.json();
-    if (!res.ok) throw new Error(payload.detail || 'Conversation capture failed');
-    showToast('Conversation saved to Legacy', 'success');
   }} catch (e) {{
-    showToast('Could not save conversation to Legacy', 'warning');
+    showToast('Could not send conversation to Chronicle', 'warning');
   }}
 }}
 
