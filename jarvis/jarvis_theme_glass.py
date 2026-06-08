@@ -1654,167 +1654,879 @@ body::after {{
   50%      {{ opacity: 0.4; }}
 }}
 
-/* ── Faith Agents ─────────────────────────────────────────────────────── */
-.faith-roster {{
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
+/* ═══════════════════════════════════════════════════════════════════
+   FAITH — DESKTOP EXPERIENCE
+═══════════════════════════════════════════════════════════════════ */
+.faith-view {{
+  --faith-gold: #ddb37a;
+  --faith-gold-soft: #ab8350;
+  --faith-ink: #05070b;
+  --faith-shell: #0a0d13;
+  --faith-panel: rgba(11, 16, 23, 0.94);
+  --faith-panel-soft: rgba(18, 24, 34, 0.88);
+  --faith-border: rgba(221, 179, 122, 0.28);
+  --faith-border-strong: rgba(221, 179, 122, 0.54);
+  --faith-text: #f3eadb;
+  --faith-muted: #b7a58f;
+  --faith-dim: #87725b;
+  --faith-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+}}
+.faith-view .view-title {{
+  color: var(--faith-text);
+}}
+.faith-header {{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 22px;
+}}
+.faith-kicker {{
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--faith-gold-soft);
   margin-bottom: 8px;
 }}
-.faith-agent-card {{
-  background: var(--surface);
-  border: 1px solid var(--border);
+.faith-subtitle {{
+  max-width: 780px;
+  color: var(--faith-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}}
+.faith-motto {{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  min-width: 260px;
+  border: 1px solid var(--faith-border);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(13,18,28,.95), rgba(8,11,17,.92));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}}
+.faith-motto-mark {{
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 1px solid var(--faith-border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--faith-gold);
+  font-size: 24px;
+  flex-shrink: 0;
+}}
+.faith-motto strong {{
+  display: block;
+  color: var(--faith-gold);
+  font-size: 16px;
+  margin-bottom: 4px;
+}}
+.faith-motto span {{
+  color: var(--faith-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}}
+.faith-desktop-stage {{
+  border: 1px solid var(--faith-border);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top right, rgba(221,179,122,.08), transparent 28%),
+    linear-gradient(180deg, rgba(7,10,15,.98), rgba(4,6,11,.98));
+  box-shadow: var(--faith-shadow);
+  overflow: hidden;
+}}
+.faith-desktop-shell {{
+  display: grid;
+  grid-template-columns: 228px minmax(0, 1fr);
+  min-height: 900px;
+}}
+.faith-sidebar {{
+  padding: 22px 18px 18px;
+  border-right: 1px solid var(--faith-border);
+  background:
+    linear-gradient(180deg, rgba(9,12,18,.98), rgba(5,8,13,.96));
+  display: flex;
+  flex-direction: column;
+}}
+.faith-sidebar-top {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}}
+.faith-sidebar-brand strong {{
+  display: block;
+  color: var(--faith-text);
+  font-size: 26px;
+  letter-spacing: 0.03em;
+}}
+.faith-sidebar-brand span {{
+  display: block;
+  color: var(--faith-gold);
+  font-size: 14px;
+  margin-top: 3px;
+}}
+.faith-sidebar-mark {{
+  color: var(--faith-gold);
+  font-size: 20px;
+}}
+.faith-sidebar-nav {{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}}
+.faith-sidebar-item {{
+  border: 1px solid transparent;
   border-radius: 12px;
+  padding: 11px 12px;
+  color: var(--faith-muted);
+  font-size: 13px;
+  background: rgba(255,255,255,.02);
+}}
+.faith-sidebar-item.active {{
+  border-color: var(--faith-border-strong);
+  background: linear-gradient(180deg, rgba(80,56,31,.35), rgba(22,18,13,.65));
+  color: var(--faith-text);
+}}
+.faith-sidebar-foot {{
+  margin-top: auto;
+  border-top: 1px solid rgba(221,179,122,.15);
+  padding-top: 16px;
+}}
+.faith-sidebar-user {{
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.03);
+  color: var(--faith-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}}
+.faith-sidebar-user strong {{
+  display: block;
+  color: var(--faith-text);
+  font-size: 14px;
+}}
+.faith-main {{
+  padding: 24px;
+  background:
+    linear-gradient(180deg, rgba(5,7,11,.98), rgba(6,9,14,.98)),
+    radial-gradient(circle at center, rgba(221,179,122,.04), transparent 55%);
+}}
+.faith-topbar {{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 22px;
+}}
+.faith-topbar-kicker {{
+  color: var(--faith-gold-soft);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}}
+.faith-topbar-title {{
+  color: var(--faith-text);
+  font-size: 26px;
+  margin-top: 4px;
+}}
+.faith-topbar-subtitle {{
+  color: var(--faith-muted);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-top: 6px;
+  max-width: 700px;
+}}
+.faith-nav {{
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 18px;
+  border: 1px solid var(--faith-border);
+  background: rgba(255,255,255,.02);
+}}
+.faith-nav-btn {{
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--faith-border-strong);
+  background: rgba(255,255,255,.03);
+  color: var(--faith-gold);
+  font-size: 18px;
+  cursor: pointer;
+}}
+.faith-nav-btn:disabled {{
+  opacity: 0.35;
+  cursor: default;
+}}
+.faith-nav-status {{
+  text-align: center;
+  min-width: 132px;
+}}
+.faith-nav-page {{
+  color: var(--faith-gold);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}}
+.faith-nav-title {{
+  color: var(--faith-text);
+  font-size: 14px;
+  margin-top: 2px;
+}}
+.faith-page-deck {{
+  position: relative;
+}}
+.faith-page {{
+  display: none;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+}}
+.faith-page.active {{
+  display: grid;
+}}
+.faith-card {{
+  border: 1px solid var(--faith-border);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(13,17,24,.96), rgba(8,11,17,.92));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+  padding: 18px;
+}}
+.faith-card-heading {{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}}
+.faith-card-label {{
+  color: var(--faith-gold);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}}
+.faith-card-label strong {{
+  display: block;
+  color: var(--faith-text);
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 18px;
+  margin-top: 5px;
+}}
+.faith-chip {{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(221,179,122,.18);
+  color: var(--faith-muted);
+  font-size: 11px;
+  background: rgba(255,255,255,.03);
+}}
+.faith-sanctuary-grid {{
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 18px;
+}}
+.faith-hero-card {{
+  min-height: 360px;
+  overflow: hidden;
+  position: relative;
+}}
+.faith-hero-card::before {{
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(5,7,11,.18), rgba(5,7,11,.85)),
+    radial-gradient(circle at center, rgba(255,208,120,.2), transparent 42%);
+}}
+.faith-hero-visual {{
+  position: relative;
+  z-index: 1;
+  min-height: 320px;
+  border-radius: 18px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background:
+    linear-gradient(180deg, rgba(17,16,14,.16), rgba(17,16,14,.66)),
+    url('https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&w=1200&q=80') center/cover;
+}}
+.faith-hero-overline {{
+  color: rgba(255,244,226,.92);
+  font-size: 15px;
+}}
+.faith-hero-title {{
+  color: #fff5e5;
+  font-size: 40px;
+  line-height: 1.03;
+  max-width: 500px;
+}}
+.faith-hero-copy {{
+  margin-top: 12px;
+  color: rgba(255,239,215,.88);
+  font-size: 15px;
+  max-width: 520px;
+  line-height: 1.65;
+}}
+.faith-hero-button {{
+  display: inline-flex;
+  width: fit-content;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,236,208,.45);
+  color: #fff4de;
+  background: rgba(12,10,7,.42);
+  font-size: 13px;
+}}
+.faith-side-stack {{
+  display: grid;
+  gap: 18px;
+}}
+.faith-stat-stack {{
+  display: grid;
+  gap: 12px;
+}}
+.faith-stat-card {{
+  border: 1px solid rgba(221,179,122,.18);
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: rgba(255,255,255,.02);
+}}
+.faith-stat-card span {{
+  display: block;
+  color: var(--faith-dim);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}}
+.faith-stat-card strong {{
+  display: block;
+  color: var(--faith-text);
+  font-size: 28px;
+  margin-top: 8px;
+}}
+.faith-stat-card em {{
+  display: block;
+  color: var(--faith-muted);
+  font-style: normal;
+  font-size: 12px;
+  margin-top: 6px;
+}}
+.faith-focus-grid {{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}}
+.faith-focus-card p,
+.faith-note-card p,
+.faith-brief-copy,
+.faith-scripture-card p,
+.faith-reflection-card li,
+.faith-journal-card p,
+.faith-family-card p {{
+  color: var(--faith-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}}
+.faith-focus-card strong,
+.faith-note-card strong,
+.faith-scripture-card strong,
+.faith-reflection-card strong,
+.faith-journal-card strong,
+.faith-family-card strong {{
+  color: var(--faith-text);
+  display: block;
+  font-size: 16px;
+  margin-bottom: 8px;
+}}
+.faith-brief-grid,
+.faith-scripture-grid,
+.faith-journal-grid,
+.faith-family-grid,
+.faith-voice-grid {{
+  display: grid;
+  gap: 18px;
+}}
+.faith-brief-grid {{
+  grid-template-columns: minmax(0, 1fr) 320px;
+}}
+.faith-brief-player {{
+  min-height: 380px;
+}}
+.faith-audio-halo {{
+  width: 168px;
+  height: 168px;
+  border-radius: 50%;
+  margin: 8px auto 18px;
+  border: 1px solid rgba(221,179,122,.34);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--faith-gold);
+  font-size: 44px;
+  background: radial-gradient(circle, rgba(221,179,122,.18), rgba(221,179,122,.03) 55%, transparent 70%);
+  box-shadow: 0 0 0 16px rgba(221,179,122,.04), 0 0 0 32px rgba(221,179,122,.02);
+}}
+.faith-player-meta {{
+  text-align: center;
+}}
+.faith-player-meta strong {{
+  display: block;
+  color: var(--faith-text);
+  font-size: 30px;
+}}
+.faith-player-meta span {{
+  display: block;
+  color: var(--faith-muted);
+  margin-top: 8px;
+  font-size: 14px;
+}}
+.faith-player-bar {{
+  margin-top: 18px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.07);
+  overflow: hidden;
+}}
+.faith-player-bar::after {{
+  content: '';
+  display: block;
+  width: 42%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--faith-gold-soft), var(--faith-gold));
+}}
+.faith-player-actions {{
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+}}
+.faith-player-btn {{
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(221,179,122,.24);
+  color: var(--faith-gold);
+}}
+.faith-summary-list {{
+  display: grid;
+  gap: 10px;
+}}
+.faith-summary-item {{
+  border: 1px solid rgba(221,179,122,.16);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,.02);
+}}
+.faith-summary-item span {{
+  display: block;
+  color: var(--faith-dim);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}}
+.faith-summary-item strong {{
+  display: block;
+  color: var(--faith-text);
+  margin-top: 5px;
+  font-size: 14px;
+}}
+.faith-summary-item em {{
+  display: block;
+  color: #85d7a9;
+  font-style: normal;
+  font-size: 12px;
+  margin-top: 6px;
+}}
+.faith-scripture-grid {{
+  grid-template-columns: minmax(0, 1.1fr) 330px;
+}}
+.faith-scripture-body {{
+  color: #f6ead3;
+  font-size: 18px;
+  line-height: 1.95;
+}}
+.faith-scripture-body .verse-number {{
+  color: var(--faith-gold);
+  margin-right: 10px;
+  font-size: 16px;
+}}
+.faith-reflection-list {{
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 10px;
+}}
+.faith-journal-grid {{
+  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.1fr) 280px;
+}}
+.faith-journal-list {{
+  display: grid;
+  gap: 12px;
+}}
+.faith-journal-entry {{
+  border: 1px solid rgba(221,179,122,.16);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,.02);
+}}
+.faith-journal-entry strong {{
+  color: var(--faith-text);
+  display: block;
+  font-size: 15px;
+}}
+.faith-journal-entry span {{
+  color: var(--faith-dim);
+  display: block;
+  font-size: 11px;
+  margin-top: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}}
+.faith-journal-entry p {{
+  color: var(--faith-muted);
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+}}
+.faith-tag-row {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}}
+.faith-family-grid {{
+  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1fr) 280px;
+}}
+.faith-chat-panel {{
+  padding: 0;
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid var(--faith-border);
+  background: linear-gradient(180deg, rgba(13,17,24,.96), rgba(8,11,17,.92));
+}}
+.faith-chat-header {{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(221,179,122,.16);
+}}
+.faith-chat-avatar {{
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #000;
+  flex-shrink: 0;
+}}
+.faith-chat-name {{
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--faith-text);
+}}
+.faith-chat-domain {{
+  font-size: 11px;
+  color: var(--faith-muted);
+}}
+.faith-chat-passage-row {{
+  padding: 10px 18px;
+  border-bottom: 1px solid rgba(221,179,122,.16);
+}}
+.faith-chat-passage-input,
+.faith-chat-textarea {{
+  width: 100%;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(221,179,122,.18);
+  border-radius: 12px;
+  color: var(--faith-text);
+  outline: none;
+  font-family: inherit;
+}}
+.faith-chat-passage-input {{
+  font-size: 12px;
+  padding: 8px 10px;
+}}
+.faith-chat-textarea {{
+  font-size: 13px;
+  padding: 10px 12px;
+  resize: none;
+}}
+.faith-chat-passage-input:focus,
+.faith-chat-textarea:focus {{
+  border-color: var(--faith-border-strong);
+}}
+.faith-chat-messages {{
+  height: 430px;
+  overflow-y: auto;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}}
+.faith-chat-bubble {{
+  max-width: 84%;
+  padding: 11px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}}
+.faith-chat-bubble.user {{
+  align-self: flex-end;
+  background: linear-gradient(180deg, #8f6839, #684c28);
+  color: #fff8ec;
+  border-radius: 14px 14px 4px 14px;
+}}
+.faith-chat-bubble.agent {{
+  align-self: flex-start;
+  background: rgba(255,255,255,.05);
+  color: var(--faith-text);
+  border-radius: 4px 14px 14px 14px;
+  border: 1px solid rgba(221,179,122,.14);
+}}
+.faith-chat-bubble.agent strong {{
+  color: var(--faith-text);
+}}
+.faith-chat-bubble.agent em {{
+  color: var(--faith-muted);
+}}
+.faith-chat-input-row {{
+  display: flex;
+  gap: 10px;
+  padding: 12px 18px 18px;
+  border-top: 1px solid rgba(221,179,122,.16);
+}}
+.faith-send-btn {{
+  align-self: flex-end;
+  height: 42px;
+  padding: 0 18px;
+}}
+.faith-typing {{
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(255,255,255,.06);
+  border-radius: 4px 14px 14px 14px;
+  width: fit-content;
+  border: 1px solid rgba(221,179,122,.14);
+}}
+.faith-typing-dot {{
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--faith-muted);
+  animation: faithDotPulse 1.2s ease-in-out infinite;
+}}
+.faith-typing-dot:nth-child(2) {{
+  animation-delay: .2s;
+}}
+.faith-typing-dot:nth-child(3) {{
+  animation-delay: .4s;
+}}
+.faith-roster {{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}}
+.faith-agent-card {{
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(221,179,122,.18);
+  border-radius: 16px;
   padding: 16px;
   cursor: pointer;
   transition: border-color .18s, transform .15s, box-shadow .18s;
   position: relative;
   overflow: hidden;
-  backdrop-filter: blur(18px);
 }}
 .faith-agent-card::before {{
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: var(--agent-color, var(--hue));
-  border-radius: 12px 12px 0 0;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 2px;
+  background: var(--agent-color, var(--faith-gold));
 }}
 .faith-agent-card:hover {{
-  border-color: var(--agent-color, var(--hue));
+  border-color: var(--agent-color, var(--faith-gold));
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  box-shadow: 0 16px 28px rgba(0,0,0,.26);
 }}
 .faith-agent-card.active {{
-  border-color: var(--agent-color, var(--hue));
-  box-shadow: 0 0 0 1px var(--agent-color, var(--hue)), 0 8px 24px rgba(0,0,0,.4);
+  border-color: var(--agent-color, var(--faith-gold));
+  box-shadow: 0 0 0 1px var(--agent-color, var(--faith-gold)), 0 16px 28px rgba(0,0,0,.28);
 }}
 .faith-agent-avatar {{
-  width: 44px; height: 44px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
-  background: var(--agent-color, var(--hue));
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700; color: #000;
-  margin-bottom: 10px;
-  opacity: .9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 12px;
 }}
 .faith-agent-name {{
-  font-size: 14px; font-weight: 700; color: var(--text-1);
-  margin-bottom: 2px;
+  color: var(--faith-text);
+  font-size: 15px;
+  font-weight: 700;
 }}
 .faith-agent-title {{
-  font-size: 10px; color: var(--agent-color, var(--hue));
-  text-transform: uppercase; letter-spacing: .06em;
-  margin-bottom: 6px;
+  color: var(--agent-color, var(--faith-gold));
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin: 5px 0 7px;
 }}
 .faith-agent-desc {{
-  font-size: 11px; color: var(--text-3); line-height: 1.45;
+  color: var(--faith-muted);
+  font-size: 12px;
+  line-height: 1.55;
 }}
-
-/* Daily Word banner */
 .faith-daily-word {{
-  padding: 16px 20px;
-  border-left: 3px solid var(--hue);
+  padding: 0;
+  border: none;
+  display: block;
+}}
+.faith-daily-word .faith-card-heading {{
+  margin-bottom: 10px;
 }}
 .faith-dw-header {{
-  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
 }}
 .faith-dw-agent {{
-  font-size: 12px; font-weight: 700; color: var(--text-1);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--faith-text);
 }}
 .faith-dw-tag {{
-  font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em;
-  background: rgba(255,255,255,.07); padding: 2px 8px; border-radius: 20px;
+  font-size: 10px;
+  color: var(--faith-muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  background: rgba(255,255,255,.05);
+  padding: 3px 8px;
+  border-radius: 20px;
 }}
 .faith-dw-body {{
-  font-size: 14px; color: var(--text-2); line-height: 1.6; margin-bottom: 6px;
+  font-size: 16px;
+  color: var(--faith-text);
+  line-height: 1.7;
+  margin-bottom: 8px;
 }}
 .faith-dw-passage {{
-  font-size: 11px; color: var(--text-3); font-style: italic;
+  font-size: 12px;
+  color: var(--faith-gold);
+  font-style: italic;
 }}
-
-/* Faith Chat Panel */
-.faith-chat-panel {{
-  padding: 0; overflow: hidden;
+.faith-mini-list {{
+  display: grid;
+  gap: 10px;
 }}
-.faith-chat-header {{
-  display: flex; align-items: center; gap: 12px;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
+.faith-mini-row {{
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(221,179,122,.12);
+  background: rgba(255,255,255,.02);
 }}
-.faith-chat-avatar {{
-  width: 38px; height: 38px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 700; color: #000; flex-shrink: 0;
+.faith-mini-row span {{
+  color: var(--faith-muted);
+  font-size: 12px;
 }}
-.faith-chat-name {{
-  font-size: 14px; font-weight: 700; color: var(--text-1);
+.faith-mini-row strong {{
+  color: var(--faith-text);
+  font-size: 12px;
 }}
-.faith-chat-domain {{
-  font-size: 11px; color: var(--text-3);
+.faith-voice-grid {{
+  grid-template-columns: minmax(0, 1fr) 290px;
+  align-items: start;
 }}
-.faith-chat-passage-row {{
-  padding: 10px 18px;
-  border-bottom: 1px solid var(--border);
+.faith-side-panel {{
+  border: 1px solid rgba(221,179,122,.18);
+  border-radius: 20px;
+  background: rgba(255,255,255,.02);
+  padding: 16px;
 }}
-.faith-chat-passage-input {{
-  width: 100%; background: rgba(255,255,255,.04);
-  border: 1px solid var(--border); border-radius: 8px;
-  color: var(--text-2); font-size: 12px; padding: 6px 10px;
-  outline: none;
+.faith-side-panel strong {{
+  display: block;
+  color: var(--faith-gold);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
 }}
-.faith-chat-passage-input:focus {{
-  border-color: var(--hue);
+.faith-side-panel p,
+.faith-side-panel li {{
+  color: var(--faith-muted);
+  font-size: 13px;
+  line-height: 1.6;
 }}
-.faith-chat-messages {{
-  height: 340px; overflow-y: auto;
-  padding: 16px 18px;
-  display: flex; flex-direction: column; gap: 12px;
+.faith-side-panel ul {{
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
 }}
-.faith-chat-bubble {{
-  max-width: 82%; padding: 10px 14px; border-radius: 12px;
-  font-size: 13px; line-height: 1.55; white-space: pre-wrap;
-}}
-.faith-chat-bubble.user {{
-  align-self: flex-end;
-  background: var(--hue);
-  color: #fff; border-radius: 12px 12px 2px 12px;
-}}
-.faith-chat-bubble.agent {{
-  align-self: flex-start;
-  background: rgba(255,255,255,.08);
-  color: var(--text-1); border-radius: 2px 12px 12px 12px;
-  border: 1px solid var(--border);
-}}
-.faith-chat-bubble.agent strong {{ color: var(--text-1); }}
-.faith-chat-bubble.agent em {{ color: var(--text-3); }}
-.faith-chat-input-row {{
-  display: flex; gap: 8px; padding: 10px 18px;
-  border-top: 1px solid var(--border);
-}}
-.faith-chat-textarea {{
-  flex: 1; background: rgba(255,255,255,.04);
-  border: 1px solid var(--border); border-radius: 8px;
-  color: var(--text-1); font-size: 13px; padding: 8px 12px;
-  resize: none; outline: none; font-family: inherit;
-}}
-.faith-chat-textarea:focus {{ border-color: var(--hue); }}
-.faith-send-btn {{ align-self: flex-end; height: 38px; padding: 0 16px; }}
-.faith-typing {{
-  display: flex; gap: 4px; align-items: center; padding: 10px 14px;
-  background: rgba(255,255,255,.08); border-radius: 2px 12px 12px 12px;
-  width: fit-content; border: 1px solid var(--border);
-}}
-.faith-typing-dot {{
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--text-3);
-  animation: faithDotPulse 1.2s ease-in-out infinite;
-}}
-.faith-typing-dot:nth-child(2) {{ animation-delay: .2s; }}
-.faith-typing-dot:nth-child(3) {{ animation-delay: .4s; }}
 @keyframes faithDotPulse {{
   0%,80%,100% {{ opacity:.25; transform:scale(.8); }}
   40% {{ opacity:1; transform:scale(1); }}
+}}
+@media (max-width: 1180px) {{
+  .faith-desktop-shell,
+  .faith-sanctuary-grid,
+  .faith-brief-grid,
+  .faith-scripture-grid,
+  .faith-journal-grid,
+  .faith-family-grid,
+  .faith-voice-grid,
+  .faith-focus-grid {{
+    grid-template-columns: 1fr;
+  }}
+  .faith-sidebar {{
+    display: none;
+  }}
+  .faith-roster {{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }}
+  .faith-header,
+  .faith-topbar {{
+    flex-direction: column;
+    align-items: flex-start;
+  }}
+}}
+@media (max-width: 720px) {{
+  .faith-main {{
+    padding: 16px;
+  }}
+  .faith-hero-title {{
+    font-size: 30px;
+  }}
+  .faith-roster {{
+    grid-template-columns: 1fr;
+  }}
 }}
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -7605,49 +8317,375 @@ body::after {{
   </div>
 
   <!-- ── FAITH ──────────────────────────────────────────────── -->
-  <div id="view-faith" class="view">
-    <div class="view-header">
-      <div class="view-title">FAITH<div class="view-title-line"></div></div>
-      <div class="view-subtitle" id="faith-subtitle">Your council of 11 — Scripture · Prayer · Formation · Apologetics</div>
-    </div>
-
-    <!-- Daily Word banner -->
-    <div class="faith-daily-word card" id="faith-daily-word" style="margin-bottom:20px;display:none;">
-      <div class="faith-dw-header">
-        <span class="faith-dw-agent" id="faith-dw-agent">—</span>
-        <span class="faith-dw-tag" id="faith-dw-tag">Daily Word</span>
+  <div id="view-faith" class="view faith-view">
+    <div class="faith-header">
+      <div>
+        <div class="faith-kicker">Desktop Experience</div>
+        <div class="view-title">FAITH<div class="view-title-line"></div></div>
+        <div class="faith-subtitle" id="faith-subtitle">A real desktop faith workspace for sanctuary, Scripture, prayer, family discipleship, and voice-guided spiritual counsel. One screen is active at a time, with arrows and a page count guiding the journey.</div>
       </div>
-      <div class="faith-dw-body" id="faith-dw-body">—</div>
-      <div class="faith-dw-passage" id="faith-dw-passage"></div>
-    </div>
-
-    <!-- Agent roster grid -->
-    <div class="section-label" style="margin-bottom:12px;">Your Council</div>
-    <div class="faith-roster" id="faith-roster">
-      <div class="skel" style="height:120px;border-radius:12px;"></div>
-      <div class="skel" style="height:120px;border-radius:12px;"></div>
-      <div class="skel" style="height:120px;border-radius:12px;"></div>
-    </div>
-
-    <!-- Chat panel (hidden until agent selected) -->
-    <div class="faith-chat-panel card" id="faith-chat-panel" style="display:none;margin-top:24px;">
-      <div class="faith-chat-header">
-        <div class="faith-chat-avatar" id="faith-chat-avatar"></div>
+      <div class="faith-motto">
+        <div class="faith-motto-mark">🕊</div>
         <div>
-          <div class="faith-chat-name" id="faith-chat-name">—</div>
-          <div class="faith-chat-domain" id="faith-chat-domain">—</div>
+          <strong>Walk daily with wisdom.</strong>
+          <span>Rooted in faith. Guided by love.</span>
         </div>
-        <button class="btn btn-sm" style="margin-left:auto;" onclick="closeFaithChat()">✕ Close</button>
       </div>
-      <div class="faith-chat-passage-row">
-        <input class="faith-chat-passage-input" id="faith-chat-passage" type="text" placeholder="Passage (optional — e.g. John 1:14)…">
-      </div>
-      <div class="faith-chat-messages" id="faith-chat-messages"></div>
-      <div class="faith-chat-input-row">
-        <textarea class="faith-chat-textarea" id="faith-chat-input" rows="2"
-          placeholder="Ask anything…"
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey){{event.preventDefault();faithSend();}}"></textarea>
-        <button class="btn btn-hue btn-sm faith-send-btn" onclick="faithSend()" id="faith-send-btn">Send</button>
+    </div>
+
+    <div class="faith-desktop-stage">
+      <div class="faith-desktop-shell">
+        <aside class="faith-sidebar">
+          <div class="faith-sidebar-top">
+            <div class="faith-sidebar-brand">
+              <strong>JARVIS</strong>
+              <span>Faith</span>
+            </div>
+            <div class="faith-sidebar-mark">✦</div>
+          </div>
+          <div class="faith-sidebar-nav">
+            <div class="faith-sidebar-item active">⌂ Sanctuary</div>
+            <div class="faith-sidebar-item">✞ Bible</div>
+            <div class="faith-sidebar-item">♡ Prayer</div>
+            <div class="faith-sidebar-item">✎ Journal</div>
+            <div class="faith-sidebar-item">◉ Family</div>
+            <div class="faith-sidebar-item">⌛ Liturgy</div>
+            <div class="faith-sidebar-item">⌕ Discover</div>
+            <div class="faith-sidebar-item">☷ Saved</div>
+            <div class="faith-sidebar-item">⚙ Settings</div>
+          </div>
+          <div class="faith-sidebar-foot">
+            <div class="faith-sidebar-user">
+              <strong>Chris</strong>
+              Child of God
+            </div>
+          </div>
+        </aside>
+
+        <main class="faith-main">
+          <div class="faith-topbar">
+            <div class="faith-topbar-copy">
+              <div class="faith-topbar-kicker">Desktop Sequence</div>
+              <div class="faith-topbar-title" id="faith-nav-title">1. Faith Sanctuary Hub</div>
+              <div class="faith-topbar-subtitle" id="faith-nav-subtitle">Open the sanctuary: Scripture, focus, prayer rhythms, and the next faithful step for today.</div>
+            </div>
+            <div class="faith-nav">
+              <button class="faith-nav-btn" id="faith-nav-prev" onclick="advanceFaithPage(-1)" aria-label="Previous Faith page">←</button>
+              <div class="faith-nav-status">
+                <div class="faith-nav-page" id="faith-page-count">Page 1 of 6</div>
+                <div class="faith-nav-title" id="faith-page-label">Sanctuary Hub</div>
+              </div>
+              <button class="faith-nav-btn" id="faith-nav-next" onclick="advanceFaithPage(1)" aria-label="Next Faith page">→</button>
+            </div>
+          </div>
+
+          <div class="faith-page-deck">
+            <section class="faith-page active" data-faith-page="1">
+              <div class="faith-sanctuary-grid">
+                <div class="faith-card faith-hero-card">
+                  <div class="faith-hero-visual">
+                    <div class="faith-hero-overline">Good evening, Chris. The Lord is near to the brokenhearted.</div>
+                    <div>
+                      <div class="faith-hero-title">Be still, and know that I am God.</div>
+                      <div class="faith-hero-copy">Let today open with presence, Scripture, prayer, and the grace to walk slowly enough to notice what God is doing.</div>
+                    </div>
+                    <div class="faith-hero-button">Read Full Chapter</div>
+                  </div>
+                </div>
+                <div class="faith-side-stack">
+                  <div class="faith-card">
+                    <div class="faith-card-heading">
+                      <div class="faith-card-label">Prayer Pulse<strong>Today’s spiritual cadence</strong></div>
+                    </div>
+                    <div class="faith-stat-stack">
+                      <div class="faith-stat-card">
+                        <span>Prayer Requests</span>
+                        <strong id="faith-stat-requests">12</strong>
+                        <em>Open requests for today</em>
+                      </div>
+                      <div class="faith-stat-card">
+                        <span>Answered Prayer</span>
+                        <strong id="faith-stat-answered">5</strong>
+                        <em>Recent gratitude moments</em>
+                      </div>
+                      <div class="faith-stat-card">
+                        <span>Spiritual Rhythm</span>
+                        <strong id="faith-stat-streak">7</strong>
+                        <em>Days in the Word</em>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="faith-card faith-note-card">
+                    <div class="faith-card-heading">
+                      <div class="faith-card-label">JARVIS Encouragement<strong>Carry the day gently</strong></div>
+                    </div>
+                    <p>You’ve been carrying a lot. Let today be a day of rest, renewed focus, and small acts of obedience that keep your heart soft.</p>
+                  </div>
+                </div>
+              </div>
+              <div class="faith-focus-grid">
+                <div class="faith-card faith-focus-card">
+                  <div class="faith-card-heading">
+                    <div class="faith-card-label">Today’s Focus<strong>Rest in God’s presence</strong></div>
+                  </div>
+                  <p>Take a slower pace, entrust what feels heavy, and let prayer frame the decisions ahead.</p>
+                </div>
+                <div class="faith-card faith-focus-card">
+                  <div class="faith-card-heading">
+                    <div class="faith-card-label">Devotion Prompt<strong>What is God inviting you to release?</strong></div>
+                  </div>
+                  <p>Notice where anxiety is tightening your grip, then hand that concern over in prayer before acting.</p>
+                </div>
+                <div class="faith-card faith-focus-card">
+                  <div class="faith-card-heading">
+                    <div class="faith-card-label">Spiritual Rhythm<strong>Abide in the Word</strong></div>
+                  </div>
+                  <p>Keep a short prayer running through the day and revisit your passage before the evening closes.</p>
+                </div>
+              </div>
+            </section>
+
+            <section class="faith-page" data-faith-page="2">
+              <div class="faith-brief-grid">
+                <div class="faith-card faith-brief-player">
+                  <div class="faith-card-heading">
+                    <div class="faith-card-label">Morning Spiritual Brief<strong>JARVIS Morning Brief</strong></div>
+                    <span class="faith-chip">Live</span>
+                  </div>
+                  <div class="faith-audio-halo">〰</div>
+                  <div class="faith-player-meta">
+                    <strong>Good morning, Chris.</strong>
+                    <span>Let’s begin your day in God’s truth.</span>
+                  </div>
+                  <div class="faith-player-bar"></div>
+                  <div class="faith-player-actions">
+                    <div class="faith-player-btn">↺</div>
+                    <div class="faith-player-btn">❚❚</div>
+                    <div class="faith-player-btn">↻</div>
+                  </div>
+                  <div class="faith-card faith-daily-word" id="faith-daily-word" style="margin-top:22px;">
+                    <div class="faith-card-heading">
+                      <div class="faith-card-label">Today’s Word<strong>Carry this into the day</strong></div>
+                    </div>
+                    <div class="faith-dw-header">
+                      <span class="faith-dw-agent" id="faith-dw-agent">—</span>
+                      <span class="faith-dw-tag" id="faith-dw-tag">Daily Word</span>
+                    </div>
+                    <div class="faith-dw-body" id="faith-dw-body">—</div>
+                    <div class="faith-dw-passage" id="faith-dw-passage"></div>
+                  </div>
+                  <div class="faith-focus-grid" style="margin-top:22px;">
+                    <div class="faith-card faith-focus-card">
+                      <strong>Today’s Scripture</strong>
+                      <p id="faith-brief-scripture">Philippians 4:6-7. Bring your requests to God with thanksgiving.</p>
+                    </div>
+                    <div class="faith-card faith-focus-card">
+                      <strong>Prayer Intention</strong>
+                      <p id="faith-brief-intention">Peace over anxiety and wisdom in decisions.</p>
+                    </div>
+                    <div class="faith-card faith-focus-card">
+                      <strong>Today’s Action</strong>
+                      <p>Take a 20-minute walk and thank God for three graces you almost missed.</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="faith-card">
+                  <div class="faith-card-heading">
+                    <div class="faith-card-label">Overnight Summary<strong>How your heart arrived</strong></div>
+                  </div>
+                  <div class="faith-summary-list">
+                    <div class="faith-summary-item"><span>Sleep</span><strong>7h 12m · Good recovery</strong><em>Ready</em></div>
+                    <div class="faith-summary-item"><span>Reflection</span><strong>Psalm 46 · Peace in God</strong><em>Centered</em></div>
+                    <div class="faith-summary-item"><span>Prayer</span><strong>3 answered · 2 new</strong><em>Held</em></div>
+                    <div class="faith-summary-item"><span>Heart</span><strong>Gratitude rising</strong><em>Open</em></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="faith-page" data-faith-page="3">
+              <div class="faith-scripture-grid">
+                <div class="faith-card faith-scripture-card">
+                  <div class="faith-card-heading">
+                    <div class="faith-card-label">Scripture Reflection Workspace<strong id="faith-scripture-title">Philippians 4:6-7</strong></div>
+                    <span class="faith-chip" id="faith-scripture-translation">Reflection</span>
+                  </div>
+                  <div class="faith-scripture-body" id="faith-scripture-body">
+                    <span class="verse-number">6</span>Do not be anxious about anything, but in everything by prayer and supplication with thanksgiving let your requests be made known to God.<br><br>
+                    <span class="verse-number">7</span>And the peace of God, which surpasses all understanding, will guard your hearts and your minds in Christ Jesus.
+                  </div>
+                </div>
+                <div class="faith-side-stack">
+                  <div class="faith-card faith-reflection-card">
+                    <div class="faith-card-heading">
+                      <div class="faith-card-label">JARVIS Insight<strong>Prayer shifts the focus</strong></div>
+                    </div>
+                    <p id="faith-insight-copy">Paul connects prayer with peace. Thanksgiving turns the heart from control toward trust.</p>
+                  </div>
+                  <div class="faith-card faith-reflection-card">
+                    <div class="faith-card-heading">
+                      <div class="faith-card-label">Reflection Prompts<strong>Carry these into prayer</strong></div>
+                    </div>
+                    <ul class="faith-reflection-list">
+                      <li>What are you anxious about right now?</li>
+                      <li>How can prayer change your perspective?</li>
+                      <li>What would peace from God look like today?</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="faith-page" data-faith-page="4">
+              <div class="faith-journal-grid">
+                <div class="faith-card faith-journal-card">
+                  <div class="faith-card-heading">
+                    <div class="faith-card-label">Prayer Journal<strong>Recent entries</strong></div>
+                  </div>
+                  <div class="faith-journal-list">
+                    <div class="faith-journal-entry">
+                      <strong>Peace for Emma’s exams</strong>
+                      <span>Today · High</span>
+                      <p>Lord, give her focus and calm.</p>
+                    </div>
+                    <div class="faith-journal-entry">
+                      <strong>Wisdom in a decision</strong>
+                      <span>Yesterday · Medium</span>
+                      <p>Help me discern the right path.</p>
+                    </div>
+                    <div class="faith-journal-entry">
+                      <strong>Strength for recovery</strong>
+                      <span>May 23 · High</span>
+                      <p>Healing and peace for the road ahead.</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="faith-card faith-journal-card">
+                  <div class="faith-card-heading">
+                    <div class="faith-card-label">Entry Details<strong>Peace for Emma’s exams</strong></div>
+                  </div>
+                  <p>Lord, give Emma clarity, calm, and strong focus as she prepares for her exams. Guard her heart from worry and fill her with confidence in You.</p>
+                  <div class="faith-tag-row">
+                    <span class="faith-chip">Family</span>
+                    <span class="faith-chip">Exams</span>
+                    <span class="faith-chip">Peace</span>
+                  </div>
+                  <div class="faith-card" style="margin-top:18px;">
+                    <div class="faith-card-heading">
+                      <div class="faith-card-label">JARVIS Insight<strong>Patterns worth noticing</strong></div>
+                    </div>
+                    <p>You often pray for peace before important moments. Keep trusting God to meet your family in the pressure, not only after it passes.</p>
+                  </div>
+                </div>
+                <div class="faith-card faith-journal-card">
+                  <div class="faith-card-heading">
+                    <div class="faith-card-label">Spiritual Patterns<strong>Last 30 days</strong></div>
+                  </div>
+                  <div class="faith-mini-list">
+                    <div class="faith-mini-row"><span>Prayer consistency</span><strong>16-day rhythm</strong></div>
+                    <div class="faith-mini-row"><span>Gratitude entries</span><strong>14</strong></div>
+                    <div class="faith-mini-row"><span>Answered prayers</span><strong>7</strong></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="faith-page" data-faith-page="5">
+              <div class="faith-family-grid">
+                <div class="faith-card faith-family-card">
+                  <div class="faith-card-heading">
+                    <div class="faith-card-label">Family Faith Center<strong>Household guidance</strong></div>
+                  </div>
+                  <p>Strengthen the home with shared prayer, gentle reminders, and rhythms that keep Christ at the center of the week.</p>
+                  <div class="faith-mini-list" style="margin-top:14px;">
+                    <div class="faith-mini-row"><span>Prayer requests</span><strong>2 urgent · 4 steady</strong></div>
+                    <div class="faith-mini-row"><span>Family devotion</span><strong>Tonight · 7:00 PM</strong></div>
+                    <div class="faith-mini-row"><span>Household reminder</span><strong>Church together · Sunday</strong></div>
+                  </div>
+                </div>
+                <div class="faith-card">
+                  <div class="faith-card-heading">
+                    <div class="faith-card-label">Your Council<strong>Choose a guide for the conversation</strong></div>
+                  </div>
+                  <div class="faith-roster" id="faith-roster">
+                    <div class="skel" style="height:132px;border-radius:16px;"></div>
+                    <div class="skel" style="height:132px;border-radius:16px;"></div>
+                    <div class="skel" style="height:132px;border-radius:16px;"></div>
+                  </div>
+                </div>
+                <div class="faith-card faith-family-card">
+                  <div class="faith-card-heading">
+                    <div class="faith-card-label">Household Liturgy<strong>What to nurture this week</strong></div>
+                  </div>
+                  <p>Create one shared gratitude list, one short family prayer before dinner, and one Scripture moment that turns the evening toward peace.</p>
+                </div>
+              </div>
+            </section>
+
+            <section class="faith-page" data-faith-page="6">
+              <div class="faith-voice-grid">
+                <div class="faith-chat-panel" id="faith-chat-panel" style="display:none;">
+                  <div class="faith-chat-header">
+                    <div class="faith-chat-avatar" id="faith-chat-avatar"></div>
+                    <div>
+                      <div class="faith-chat-name" id="faith-chat-name">—</div>
+                      <div class="faith-chat-domain" id="faith-chat-domain">—</div>
+                    </div>
+                    <button class="btn btn-sm" style="margin-left:auto;" onclick="closeFaithChat()">Close</button>
+                  </div>
+                  <div class="faith-chat-passage-row">
+                    <input class="faith-chat-passage-input" id="faith-chat-passage" type="text" placeholder="Passage (optional — e.g. John 1:14)…">
+                  </div>
+                  <div class="faith-chat-messages" id="faith-chat-messages"></div>
+                  <div class="faith-chat-input-row">
+                    <textarea class="faith-chat-textarea" id="faith-chat-input" rows="3"
+                      placeholder="Ask anything about your faith…"
+                      onkeydown="if(event.key==='Enter'&&!event.shiftKey){{event.preventDefault();faithSend();}}"></textarea>
+                    <button class="btn btn-hue btn-sm faith-send-btn" onclick="faithSend()" id="faith-send-btn">Send</button>
+                  </div>
+                </div>
+                <div class="faith-chat-panel" id="faith-chat-shell-placeholder">
+                  <div class="faith-chat-header">
+                    <div class="faith-chat-avatar" style="background:#ddb37a;">✦</div>
+                    <div>
+                      <div class="faith-chat-name">Voice Faith Consultation</div>
+                      <div class="faith-chat-domain">Select a guide from Your Council to begin.</div>
+                    </div>
+                  </div>
+                  <div class="faith-chat-messages" style="height:430px;justify-content:center;">
+                    <div style="text-align:center;color:var(--faith-muted);font-size:13px;line-height:1.7;max-width:420px;margin:auto;">
+                      Open a conversation with a faith guide and ask about a passage, a prayer burden, or the question you are carrying today.
+                    </div>
+                  </div>
+                </div>
+                <div class="faith-side-stack">
+                  <div class="faith-side-panel">
+                    <strong>Context</strong>
+                    <p>Spiritual readiness: 82%. Recent focus: peace and trust. Prayer streak: 18 days.</p>
+                  </div>
+                  <div class="faith-side-panel">
+                    <strong>Today’s Guidance</strong>
+                    <p>Breathe. Pray. Trust. God is with you in the concern, not only after it is resolved.</p>
+                  </div>
+                  <div class="faith-side-panel">
+                    <strong>Related</strong>
+                    <ul>
+                      <li>Verses on peace</li>
+                      <li>Prayers for anxiety</li>
+                      <li>Worship for rest</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="faith-focus-grid" style="margin-top:18px;">
+            <div class="faith-card faith-focus-card"><strong>Scripture Centered</strong><p>Rooted in God’s Word. Guided by truth.</p></div>
+            <div class="faith-card faith-focus-card"><strong>Prayer Driven</strong><p>Turn to God in every moment. He hears.</p></div>
+            <div class="faith-card faith-focus-card"><strong>Family Focused</strong><p>Strengthen your home through faith together.</p></div>
+          </div>
+        </main>
       </div>
     </div>
   </div>
@@ -12505,8 +13543,76 @@ async function loadBriefing() {{
 let _faithAgents = [];
 let _faithActiveAgent = null;
 let _faithMessages = [];
+let faithStoryboardPage = 1;
+const FAITH_STORYBOARD_TITLES = {{
+  1: {{
+    title: '1. Faith Sanctuary Hub',
+    label: 'Sanctuary Hub',
+    subtitle: 'Open the sanctuary: Scripture, focus, prayer rhythms, and the next faithful step for today.',
+  }},
+  2: {{
+    title: '2. Morning Spiritual Brief',
+    label: 'Morning Brief',
+    subtitle: 'Start with a guided brief that gathers prayer, Scripture, and the tone of the heart into one moment.',
+  }},
+  3: {{
+    title: '3. Scripture Reflection Workspace',
+    label: 'Scripture Reflection',
+    subtitle: 'Read the passage, surface the insight, and keep the reflection prompts close enough to pray through.',
+  }},
+  4: {{
+    title: '4. Prayer Journal & Spiritual Life Archive',
+    label: 'Prayer Journal',
+    subtitle: 'Track prayer requests, answered moments, and the patterns that reveal how God has been shaping the journey.',
+  }},
+  5: {{
+    title: '5. Family Faith & Household Liturgy',
+    label: 'Family Faith',
+    subtitle: 'Bring the family into shared prayer, devotions, and rhythms that keep the household spiritually connected.',
+  }},
+  6: {{
+    title: '6. Voice Faith Consultation',
+    label: 'Voice Consultation',
+    subtitle: 'Choose a faith guide and carry the conversation hands-free through prayer, counsel, and Scripture.',
+  }},
+}};
+
+function syncFaithStoryboard() {{
+  const panels = Array.from(document.querySelectorAll('#view-faith .faith-page'));
+  if (!panels.length) return;
+  const pageCount = panels.length;
+  faithStoryboardPage = Math.max(1, Math.min(faithStoryboardPage, pageCount));
+
+  panels.forEach((panel, idx) => {{
+    panel.classList.toggle('active', idx + 1 === faithStoryboardPage);
+  }});
+
+  const pageMeta = FAITH_STORYBOARD_TITLES[faithStoryboardPage];
+  const title = document.getElementById('faith-nav-title');
+  if (title) title.textContent = pageMeta?.title || `Page ${{faithStoryboardPage}}`;
+
+  const subtitle = document.getElementById('faith-nav-subtitle');
+  if (subtitle) subtitle.textContent = pageMeta?.subtitle || '';
+
+  const count = document.getElementById('faith-page-count');
+  if (count) count.textContent = `Page ${{faithStoryboardPage}} of ${{pageCount}}`;
+
+  const label = document.getElementById('faith-page-label');
+  if (label) label.textContent = pageMeta?.label || `Page ${{faithStoryboardPage}}`;
+
+  const prev = document.getElementById('faith-nav-prev');
+  const next = document.getElementById('faith-nav-next');
+  if (prev) prev.disabled = faithStoryboardPage === 1;
+  if (next) next.disabled = faithStoryboardPage === pageCount;
+}}
+
+function advanceFaithPage(delta) {{
+  faithStoryboardPage += delta;
+  syncFaithStoryboard();
+}}
 
 async function loadFaith() {{
+  syncFaithStoryboard();
   // Load daily word
   try {{
     const dw = await fetch('/api/faith/daily-word').then(r => r.json());
@@ -12515,7 +13621,15 @@ async function loadFaith() {{
       document.getElementById('faith-dw-body').textContent = dw.word;
       document.getElementById('faith-dw-passage').textContent = dw.passage || '';
       const banner = document.getElementById('faith-daily-word');
-      if (banner) {{ banner.style.display = ''; banner.style.borderColor = dw.color || 'var(--hue)'; }}
+      if (banner) banner.style.borderColor = dw.color || 'var(--hue)';
+      const briefScripture = document.getElementById('faith-brief-scripture');
+      if (briefScripture && dw.passage) briefScripture.textContent = dw.passage + '. ' + dw.word;
+      const scriptureTitle = document.getElementById('faith-scripture-title');
+      if (scriptureTitle && dw.passage) scriptureTitle.textContent = dw.passage;
+      const scriptureBody = document.getElementById('faith-scripture-body');
+      if (scriptureBody) scriptureBody.innerHTML = `<span class="verse-number">✦</span>${{escHtml(dw.word)}}`;
+      const insightCopy = document.getElementById('faith-insight-copy');
+      if (insightCopy) insightCopy.textContent = `${{dw.agent_name}} is calling you toward prayerful attention, not anxious control.`;
     }}
   }} catch(e) {{ console.warn('faith daily word', e); }}
 
@@ -12553,6 +13667,8 @@ function openFaithChat(agentId) {{
   if (!agent) return;
   _faithActiveAgent = agent;
   _faithMessages = [];
+  faithStoryboardPage = 6;
+  syncFaithStoryboard();
 
   // Update card highlight
   renderFaithRoster();
@@ -12568,6 +13684,8 @@ function openFaithChat(agentId) {{
   // Show panel + clear messages
   const panel = document.getElementById('faith-chat-panel');
   if (panel) panel.style.display = '';
+  const placeholder = document.getElementById('faith-chat-shell-placeholder');
+  if (placeholder) placeholder.style.display = 'none';
   faithRenderMessages();
 
   // Scroll to chat
@@ -12579,6 +13697,8 @@ function closeFaithChat() {{
   _faithMessages = [];
   const panel = document.getElementById('faith-chat-panel');
   if (panel) panel.style.display = 'none';
+  const placeholder = document.getElementById('faith-chat-shell-placeholder');
+  if (placeholder) placeholder.style.display = '';
   renderFaithRoster();
 }}
 
