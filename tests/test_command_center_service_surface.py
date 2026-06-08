@@ -2211,6 +2211,30 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertEqual(chat_payload["agent_id"], "paul")
         self.assertIn("no faith response was returned", chat_payload["detail"].lower())
 
+    def test_agents_routes_expose_module_and_roster(self) -> None:
+        module_payload = self._json_body(asyncio.run(self._route("/api/agents/module", "GET")()))
+        roster_payload = self._json_body(asyncio.run(self._route("/api/agents/roster", "GET")()))
+
+        self.assertTrue(module_payload["available"])
+        self.assertIn("status", module_payload)
+        self.assertIn("roster", module_payload)
+        self.assertIn("activity_feed", module_payload)
+        self.assertIn("pending_requests", module_payload)
+        self.assertIn("collaboration", module_payload)
+        self.assertIn("trust", module_payload)
+        self.assertIn("specializations", module_payload)
+        self.assertIn("performance", module_payload)
+        self.assertIn("runtime", module_payload)
+        self.assertIn("proof_paths", module_payload)
+        self.assertEqual(module_payload["proof_paths"]["module_route"], "/agents")
+        self.assertEqual(module_payload["proof_paths"]["module_api"], "/api/agents/module")
+        self.assertEqual(module_payload["proof_paths"]["roster_api"], "/api/agents/roster")
+        self.assertGreaterEqual(len(module_payload["roster"]["items"]), 1)
+
+        self.assertTrue(roster_payload["available"])
+        self.assertGreaterEqual(roster_payload["count"], 1)
+        self.assertGreaterEqual(len(roster_payload["agents"]), 1)
+
     def test_open_loop_action_populates_daily_brief_continuity(self) -> None:
         self.runtime.apply_open_loop_action = lambda actor_name, **kwargs: {
             "ok": True,

@@ -22798,16 +22798,17 @@ body::after {{
       </div>
 
       <div class="agents-sequence-bar">
-        <div class="agents-sequence-copy">
-          <strong id="agents-nav-title">Agents Board</strong>
-          <span id="agents-nav-subtitle">Council, activity, trust, deployment, and staff performance are all visible in one desktop operating surface.</span>
-        </div>
-        <div class="agents-sequence-controls">
-          <button id="agents-nav-prev" class="agents-sequence-btn" type="button" onclick="advanceAgentsPage(-1)">←</button>
-          <div class="agents-sequence-page">
-            <div id="agents-page-count">Page 1 of 1</div>
-            <div id="agents-page-label">Agents Board</div>
-          </div>
+            <div class="agents-sequence-copy">
+              <strong id="agents-nav-title">Agents Board</strong>
+              <span id="agents-nav-subtitle">Council, activity, trust, deployment, and staff performance are all visible in one desktop operating surface.</span>
+            </div>
+            <div class="agents-sequence-controls">
+              <button id="agents-refresh-button" class="agents-sequence-btn" type="button" onclick="refreshAgentsDesktop()">↺</button>
+              <button id="agents-nav-prev" class="agents-sequence-btn" type="button" onclick="advanceAgentsPage(-1)">←</button>
+              <div class="agents-sequence-page">
+                <div id="agents-page-count">Page 1 of 1</div>
+                <div id="agents-page-label">Agents Board</div>
+              </div>
           <button id="agents-nav-next" class="agents-sequence-btn" type="button" onclick="advanceAgentsPage(1)">→</button>
         </div>
       </div>
@@ -22820,18 +22821,18 @@ body::after {{
             <span>AGENTS</span>
           </div>
           <div class="agents-side-nav">
-            <div class="agents-side-link active">Command</div>
-            <div class="agents-side-link">Daily Brief</div>
-            <div class="agents-side-link">Mission Board</div>
-            <div class="agents-side-link">Approvals</div>
-            <div class="agents-side-link">Supervision</div>
-            <div class="agents-side-link">Activity</div>
-            <div class="agents-side-link">Foundry</div>
-            <div class="agents-side-link">Publish</div>
-            <div class="agents-side-link">Legacy</div>
-            <div class="agents-side-link">Navigation</div>
-            <div class="agents-side-link">Health</div>
-            <div class="agents-side-link">Settings</div>
+            <div class="agents-side-link active" onclick="agentsOpenRoute('command', 'Open Command', 'Opening the command surface from Agents.')">Command</div>
+            <div class="agents-side-link" onclick="agentsOpenRoute('overview', 'Open Daily Brief', 'Opening Daily Brief from Agents.')">Daily Brief</div>
+            <div class="agents-side-link" onclick="agentsOpenRoute('mission', 'Open Mission Board', 'Opening Mission Board from Agents.')">Mission Board</div>
+            <div class="agents-side-link" onclick="agentsOpenRoute('approvals', 'Open Approvals', 'Opening Approvals from Agents.')">Approvals</div>
+            <div class="agents-side-link" onclick="agentsOpenRoute('supervision', 'Open Supervision', 'Opening Supervision from Agents.')">Supervision</div>
+            <div class="agents-side-link" onclick="agentsOpenRoute('activity', 'Open Activity', 'Opening Activity from Agents.')">Activity</div>
+            <div class="agents-side-link" onclick="agentsOpenRoute('workshop', 'Open Workshop', 'Opening Workshop from Agents.')">Workshop</div>
+            <div class="agents-side-link" onclick="agentsOpenRoute('publish', 'Open Publish', 'Opening Publish from Agents.')">Publish</div>
+            <div class="agents-side-link" onclick="agentsOpenRoute('chronicle', 'Open Legacy', 'Opening Legacy from Agents.')">Legacy</div>
+            <div class="agents-side-link" onclick="agentsOpenRoute('navigation', 'Open Navigation', 'Opening Navigation from Agents.')">Navigation</div>
+            <div class="agents-side-link" onclick="agentsOpenRoute('health', 'Open Health', 'Opening Health from Agents.')">Health</div>
+            <div class="agents-side-link" onclick="agentsOpenRoute('settings', 'Open Settings', 'Opening Settings from Agents.')">Settings</div>
           </div>
           <div class="agents-sidebar-foot">
             <div class="agents-status-card">
@@ -22839,6 +22840,7 @@ body::after {{
               <span id="agent-roster-count">— agents online in the council roster.</span>
               <span id="agents-sidebar-sync">System sync loading…</span>
               <span id="agents-sidebar-updated">Last update: —</span>
+              <span id="agents-runtime-note">Loading live Agents context…</span>
             </div>
             <div class="agents-status-card">
               <strong>Agent OS Overview</strong>
@@ -22886,17 +22888,18 @@ body::after {{
                   </div>
                   <div class="agents-detail-quote" id="agents-detail-quote">“Keeping the system aligned, the team moving, and the operator focused on what only he can do.”</div>
                   <div class="agents-tab-row">
-                    <div class="agents-tab active">Overview</div>
-                    <div class="agents-tab">Capabilities</div>
-                    <div class="agents-tab">Boundaries</div>
-                    <div class="agents-tab">Relationship</div>
-                    <div class="agents-tab">History</div>
+                    <div class="agents-tab active" data-agent-tab="overview" onclick="agentsSelectDetailTab('overview')">Overview</div>
+                    <div class="agents-tab" data-agent-tab="capabilities" onclick="agentsSelectDetailTab('capabilities')">Capabilities</div>
+                    <div class="agents-tab" data-agent-tab="boundaries" onclick="agentsSelectDetailTab('boundaries')">Boundaries</div>
+                    <div class="agents-tab" data-agent-tab="relationship" onclick="agentsSelectDetailTab('relationship')">Relationship</div>
+                    <div class="agents-tab" data-agent-tab="history" onclick="agentsSelectDetailTab('history')">History</div>
                   </div>
                   <div class="agents-detail-grid">
                     <div class="agents-detail-list agents-list-feed one-col" id="agents-detail-overview"></div>
                     <div class="agents-detail-card" style="padding:14px;">
                       <strong>Current Recommendation</strong>
                       <span id="agents-detail-recommendation">Loading recommendation…</span>
+                      <div id="agents-detail-actions" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;"></div>
                       <div class="agents-action-link" onclick="filterAgents('Command')">View full profile →</div>
                     </div>
                   </div>
@@ -25917,8 +25920,8 @@ const HOME_LOCATION_LABEL = {_home_location_label_js};
 const HOME_QUIET_START = {_home_quiet_start_js};
 const HOME_QUIET_END = {_home_quiet_end_js};
 
-/* ── Agent roster (56 operatives) ── */
-const AGENTS = [
+/* ── Legacy agent catalog (preserved for older non-live surfaces) ── */
+const LEGACY_AGENT_CATALOG = [
   {{id:'nick-fury',       name:'NICK FURY',        title:'Director',             domain:'Command',       status:'active'}},
   {{id:'iron-man',        name:'IRON MAN',          title:'Engineering Lead',     domain:'Engineering',   status:'active'}},
   {{id:'captain-america', name:'CAPTAIN AMERICA',   title:'Operations Chief',     domain:'Operations',    status:'standby'}},
@@ -25976,10 +25979,6 @@ const AGENTS = [
   {{id:'nova',            name:'NOVA',              title:'Speed Ops',            domain:'Operations',    status:'standby'}},
   {{id:'makkari',         name:'MAKKARI',           title:'Data Transfer',        domain:'Engineering',   status:'standby'}},
 ];
-// NOTE: AGENTS is seeded above as a fallback. loadAgentRoster() replaces it
-// with the live unified roster from /api/agents/roster on every Agents tab visit.
-// Any agent registered from Chronicle, Ghostwritr, Catalyst, or a future system
-// will automatically appear here without code changes.
 
 /* Domain → left-border CSS class
    Covers both the original PascalCase values (from the hardcoded array)
@@ -26460,8 +26459,7 @@ function loadViewData(name) {{
     case 'agents':
       loadAgentsDesktop();
       _agentsRefreshTimer = setInterval(() => {{
-        loadLiveAgents();
-        loadAgentsCommandCenter();
+        refreshAgentsDesktop(true);
       }}, 30000);
       break;
     case 'huddle':       loadHuddle(); loadPassiveIncomePipeline(); loadDossiers(); loadPartyStatus(); loadIdeaInbox(); break;
@@ -35369,8 +35367,10 @@ async function completeTask(taskId) {{
 let _agentsRefreshTimer = null;
 let _agentsRuntime = null;
 let _agentsCenter = null;
-let _selectedAgentId = 'pepper-potts';
-let agentsStoryboardPage = 1;
+let _agentsModule = null;
+let _selectedAgentId = '';
+let _agentsDetailTab = 'overview';
+let _agentsRequestSerial = 0;
 
 const AGENTS_STORYBOARD_TITLES = {{
   1: {{
@@ -35381,75 +35381,30 @@ const AGENTS_STORYBOARD_TITLES = {{
 }};
 
 /* ═══════════════════════════════════════════════════════════════
-   UNIVERSAL AGENT ROSTER
-   Fetches from /api/agents/roster which merges life_agents.json +
-   external_agents.json (Chronicle, Ghostwritr, Catalyst, future).
-   Any POST to /api/agents/register immediately appears here.
+   AGENTS DESKTOP EXPERIENCE
 ═══════════════════════════════════════════════════════════════ */
-async function loadAgentRoster() {{
-  try {{
-    const res = await fetch('/api/agents/roster');
-    if (!res.ok) {{ console.warn('loadAgentRoster', res.status); return; }}
-    const d = await res.json();
-    const incoming = d.agents || [];
-    if (!incoming.length) return;
+const AGENTS = [];
 
-    // Normalize domain to a DOMAIN_CLASS key
-    const domNorm = s => {{
-      if (!s) return 'Operations';
-      const mapped = DOMAIN_CLASS[s];
-      if (mapped) return s;  // known key
-      // Title-case fallback
-      return s.charAt(0).toUpperCase() + s.slice(1);
-    }};
-
-    // Build a merged array: API data takes priority, fallback keeps existing
-    const existingById = {{}};
-    AGENTS.forEach(a => {{ existingById[a.id] = a; }});
-
-    const merged = incoming.map(a => ({{
-      id:     a.id,
-      name:   a.name || a.id.toUpperCase(),
-      title:  a.title || '',
-      domain: domNorm(a.domain),
-      tier:   a.tier || 'execution',
-      status: existingById[a.id]?.status || a.status || 'standby',
-      source: a.source || 'jarvis',
-      purpose: a.purpose || '',
-      module: a.module || '',
-      authority_stage: a.authority_stage || '',
-      assignment: a.assignment || '',
-      mission_roles: a.mission_roles || [],
-      attention_reason: a.attention_reason || '',
-      maturity: a.maturity || '',
-    }}));
-
-    // Splice in any locally-known agents the API didn't return (graceful fallback)
-    const mergedIds = new Set(merged.map(a => a.id));
-    AGENTS.forEach(a => {{ if (!mergedIds.has(a.id)) merged.push(a); }});
-
-    AGENTS.length = 0;
-    merged.forEach(a => AGENTS.push(a));
-
-    syncAgentsStoryboard();
-    renderAgents(currentFilter);
-    _updateRosterSourceBadge(d.count || AGENTS.length);
-  }} catch(e) {{ console.error('loadAgentRoster failed', e); }}
+function agentsRuntimeNote(text) {{
+  setEl('agents-runtime-note', text || 'Agents is live.');
 }}
 
-function _updateRosterSourceBadge(count) {{
-  const el = document.getElementById('agent-roster-count');
-  if (el) el.textContent = count + ' agents';
+async function agentsReadJson(response) {{
+  try {{
+    return await response.json();
+  }} catch (_error) {{
+    return null;
+  }}
 }}
 
-async function loadLiveAgents() {{
+async function agentsFetchJson(url, options = undefined) {{
   try {{
-    const res = await fetch('/api/agents');
-    if (!res.ok) return;
-    const d = await res.json();
-    _agentsRuntime = d;
-    renderLiveAgents(d);
-  }} catch(e) {{ console.error('live agents failed', e); }}
+    const response = await fetch(url, options);
+    const payload = await agentsReadJson(response);
+    return {{ ok: response.ok, status: response.status, payload }};
+  }} catch (error) {{
+    return {{ ok: false, status: 0, payload: null, error }};
+  }}
 }}
 
 function relTime(iso) {{
@@ -35464,97 +35419,65 @@ function relTime(iso) {{
   return sign + h + 'h ' + (m > 0 ? m + 'm ' : '') + (diff >= 0 ? 'ago' : '');
 }}
 
-function renderLiveAgents(d) {{
-  const ovCountEl = document.getElementById('active-agents-count');
-  if (ovCountEl) ovCountEl.textContent = (d.awake_count ?? 0) + ' awake';
-  const statEl = document.getElementById('stat-agents');
-  if (statEl) statEl.textContent = d.awake_count ?? 0;
-  const syncEl = document.getElementById('agents-sidebar-sync');
-  if (syncEl) {{
-    const mode = (d.active_mode || 'normal').replace(/-/g, ' ');
-    const quiet = d.quiet_hours_active ? ' · quiet hours active' : '';
-    syncEl.textContent = 'Mode: ' + mode + quiet;
-  }}
-  const updatedEl = document.getElementById('agents-sidebar-updated');
-  if (updatedEl) updatedEl.textContent = 'Last update: ' + (d.last_tick_at ? relTime(d.last_tick_at) : '—');
-  renderAgents(currentFilter);
-}}
-
-function toggleRoster() {{
-  renderAgents('all');
-}}
-
-function syncAgentsStoryboard() {{
-  const meta = AGENTS_STORYBOARD_TITLES[1];
-  const count = document.getElementById('agents-page-count');
-  if (count) count.textContent = 'Page 1 of 1';
-  const label = document.getElementById('agents-page-label');
-  if (label) label.textContent = meta.label;
-  const title = document.getElementById('agents-nav-title');
-  if (title) title.textContent = meta.title;
-  const subtitle = document.getElementById('agents-nav-subtitle');
-  if (subtitle) subtitle.textContent = meta.subtitle;
-  const prev = document.getElementById('agents-nav-prev');
-  const next = document.getElementById('agents-nav-next');
-  if (prev) prev.disabled = true;
-  if (next) next.disabled = true;
-  syncDesktopCardSequence('agents');
-}}
-
-function advanceAgentsPage(delta) {{
-  agentsStoryboardPage = Math.max(1, Math.min(1, agentsStoryboardPage + delta));
-  syncAgentsStoryboard();
-}}
-
-async function loadAgentsCommandCenter() {{
-  try {{
-    const res = await fetch('/api/command-center');
-    if (!res.ok) return;
-    const data = await res.json();
-    _agentsCenter = data || {{}};
-    renderAgents(currentFilter);
-  }} catch(e) {{ console.error('loadAgentsCommandCenter failed', e); }}
-}}
-
-async function loadAgentsDesktop() {{
-  syncAgentsStoryboard();
-  await Promise.allSettled([
-    loadAgentRoster(),
-    loadAgentsCommandCenter(),
-    loadLiveAgents(),
-  ]);
-  syncDesktopCardSequence('agents');
-}}
-
-function _agentsRosterItems() {{
-  return ((_agentsCenter || {{}}).agent_ops_roster || {{}}).items || [];
-}}
-
-function _agentsRuntimeStatuses() {{
-  return ((_agentsRuntime || {{}}).statuses || []);
-}}
-
 function _titleCaseWords(value) {{
   return String(value || '')
     .replace(/[-_]/g, ' ')
-    .replace(/\b\w/g, c => c.toUpperCase());
+    .replace(/\b\w/g, c => c.toUpperCase())
+    .trim();
+}}
+
+function _updateRosterSourceBadge(count) {{
+  const el = document.getElementById('agent-roster-count');
+  if (el) el.textContent = count + ' agents in the live council roster.';
+}}
+
+function _agentsRosterItems() {{
+  return ((_agentsModule || {{}}).roster || {{}}).items || AGENTS;
+}}
+
+function _agentsPendingItems() {{
+  return ((_agentsModule || {{}}).pending_requests || []);
+}}
+
+function _agentsActivityItems() {{
+  return ((_agentsModule || {{}}).activity_feed || []);
+}}
+
+function _agentsTrustRows() {{
+  return (((_agentsModule || {{}}).trust || {{}}).rows || []);
+}}
+
+function _agentsSpecializations() {{
+  return (_agentsModule || {{}}).specializations || [];
+}}
+
+function _agentsPerformance() {{
+  return (_agentsModule || {{}}).performance || {{}};
+}}
+
+function _agentsRuntimeState() {{
+  return (((_agentsModule || {{}}).runtime || {{}}).background || _agentsRuntime || {{}});
+}}
+
+function _agentsSupportedActions() {{
+  return ((((_agentsModule || {{}}).runtime || {{}}).supported_actions) || []);
+}}
+
+function _statusCounts() {{
+  const counts = {{ active: 0, watching: 0, waiting: 0, blocked: 0, offline: 0 }};
+  _agentsRosterItems().forEach(agent => {{
+    const category = String(agent?.status || 'offline').toLowerCase();
+    counts[category] = (counts[category] || 0) + 1;
+  }});
+  return counts;
 }}
 
 function _agentLookup(agentId) {{
-  const base = AGENTS.find(a => a.id === agentId) || null;
-  const roster = _agentsRosterItems().find(a => a.agent_id === agentId || a.id === agentId) || null;
-  const runtime = _agentsRuntimeStatuses().find(a => a.agent_id === agentId || a.id === agentId) || null;
-  return {{ base, roster, runtime }};
+  return _agentsRosterItems().find(a => (a.agent_id || a.id) === agentId) || null;
 }}
 
 function agentStatusMeta(agent) {{
-  const {{ roster, runtime }} = _agentLookup(agent.id);
-  const sourceState = String(runtime?.state || roster?.status || agent.status || 'offline').toLowerCase();
-  let category = 'offline';
-  if (['awake', 'running', 'active', 'accepted'].includes(sourceState)) category = 'active';
-  else if (['steady', 'idle', 'watching', 'standby', 'fresh'].includes(sourceState)) category = 'watching';
-  else if (['attention', 'waiting', 'awaiting', 'review'].includes(sourceState)) category = 'waiting';
-  else if (['blocked', 'hold', 'error'].includes(sourceState)) category = 'blocked';
+  const category = String(agent?.status || 'offline').toLowerCase();
   const labelMap = {{
     active: 'Active',
     watching: 'Watching',
@@ -35565,17 +35488,15 @@ function agentStatusMeta(agent) {{
   return {{
     category,
     label: labelMap[category] || 'Offline',
-    roster,
-    runtime,
-    purpose: roster?.purpose || agent.purpose || '',
-    assignment: roster?.assignment || agent.assignment || '',
-    attentionReason: runtime?.reason || roster?.attention_reason || agent.attention_reason || '',
-    authority: roster?.authority_stage || agent.authority_stage || 'bounded',
-    missionRoles: roster?.mission_roles || agent.mission_roles || [],
-    maturity: roster?.maturity || agent.maturity || '',
-    lastActivity: roster?.last_activity || runtime?.last_run_at || '',
-    module: roster?.module || agent.module || agent.domain || '',
-    title: roster?.purpose ? agent.title || _titleCaseWords(roster.module || agent.domain) : agent.title || '',
+    purpose: agent?.purpose || '',
+    assignment: agent?.assignment || '',
+    attentionReason: agent?.attention_reason || '',
+    authority: agent?.authority_stage || agent?.autonomy_posture || 'bounded autonomy',
+    missionRoles: agent?.mission_roles || [],
+    maturity: agent?.maturity || '',
+    lastActivity: agent?.last_activity || '',
+    module: agent?.module || agent?.domain || '',
+    title: agent?.title || '',
   }};
 }}
 
@@ -35587,22 +35508,259 @@ function _avatarGlyph(name) {{
 }}
 
 function _agentDomainLabel(agent) {{
-  const {{ roster }} = _agentLookup(agent.id);
-  return _titleCaseWords(roster?.domain || agent.domain || 'Operations');
+  return _titleCaseWords(agent?.domain || 'Operations');
 }}
 
-function _statusCounts() {{
-  const counts = {{ active: 0, watching: 0, waiting: 0, blocked: 0, offline: 0 }};
-  AGENTS.forEach(agent => {{
-    const category = agentStatusMeta(agent).category;
-    counts[category] = (counts[category] || 0) + 1;
+function agentsSelectDetailTab(tabName) {{
+  _agentsDetailTab = String(tabName || 'overview').toLowerCase();
+  document.querySelectorAll('[data-agent-tab]').forEach(node => {{
+    node.classList.toggle('active', node.getAttribute('data-agent-tab') === _agentsDetailTab);
   }});
-  return counts;
+  const selected = _agentLookup(_selectedAgentId) || _agentsRosterItems()[0] || null;
+  if (selected) renderAgentDetail(selected);
 }}
 
 function selectAgent(agentId) {{
   _selectedAgentId = agentId;
   renderAgents(currentFilter);
+}}
+
+function syncAgentsStoryboard() {{
+  const meta = AGENTS_STORYBOARD_TITLES[1];
+  const label = document.getElementById('agents-page-label');
+  if (label) label.textContent = meta.label;
+  const title = document.getElementById('agents-nav-title');
+  if (title) title.textContent = meta.title;
+  const subtitle = document.getElementById('agents-nav-subtitle');
+  if (subtitle) subtitle.textContent = meta.subtitle;
+  syncDesktopCardSequence('agents');
+}}
+
+function advanceAgentsPage(delta) {{
+  stepDesktopCardSequence('agents', delta);
+}}
+
+async function agentsRecordAction(payload) {{
+  await fetch('/api/activity/operator-action', {{
+    method: 'POST',
+    headers: {{ 'Content-Type': 'application/json' }},
+    body: JSON.stringify({{
+      actor: 'Chris',
+      domain: 'agent-ops',
+      route: '/agent-ops-center',
+      route_label: 'Open Agent Ops',
+      related_kind: payload.related_kind || 'agent',
+      related_label: payload.related_label || payload.title || 'Agent',
+      succeeded: payload.succeeded !== false,
+      ...payload,
+    }}),
+  }});
+}}
+
+function agentsRouteName(name) {{
+  const raw = String(name || '').trim().toLowerCase();
+  if (raw === 'command') return 'chat';
+  if (raw === 'daily-brief') return 'overview';
+  if (raw === 'legacy') return 'chronicle';
+  if (raw === 'activity-feed') return 'activity';
+  if (raw === 'agent-ops') return 'agents';
+  if (raw === 'publish') return 'publishing';
+  if (raw === 'mission-board') return 'mission';
+  if (raw === 'approvals') return 'approvals';
+  if (raw === 'supervision') return 'supervision';
+  if (raw === 'activity') return 'activity';
+  if (raw === 'workshop') return 'workshop';
+  if (raw === 'chronicle') return 'chronicle';
+  if (raw === 'navigation') return 'navigate';
+  if (raw === 'health') return 'health';
+  if (raw === 'settings') return 'settings';
+  return raw || 'agents';
+}}
+
+async function agentsOpenRoute(name, label = 'Open Related Surface', detail = '') {{
+  const viewName = agentsRouteName(name);
+  agentsRuntimeNote(`Opening ${{label}}…`);
+  try {{
+    await agentsRecordAction({{
+      action: label,
+      title: label,
+      detail: detail || `Agents opened ${{label}}.`,
+      why_now: 'Agents routed a live staff workflow into the related surface.',
+      result_summary: `${{label}} opened from Agents.`,
+      related_kind: 'route',
+      related_label: label,
+      route: viewName === 'agents' ? '/agent-ops-center' : '/' + viewName,
+      route_label: label,
+    }});
+  }} catch (_error) {{
+    // Non-blocking continuity logging only.
+  }}
+  switchView(viewName);
+}}
+
+async function agentsApplyApprovalAction(requestId, action, title) {{
+  agentsRuntimeNote(`${{action}} ${{title}}…`);
+  try {{
+    const payload = action === 'approve'
+      ? {{ approved_by: 'chris' }}
+      : {{ rejected_by: 'chris', reason: 'Rejected from Agents.' }};
+    const response = await fetch(`/api/approvals/${{encodeURIComponent(requestId)}}/${{action}}`, {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify(payload),
+    }});
+    const result = await agentsReadJson(response);
+    if (!response.ok) throw new Error(result?.detail || `HTTP ${{response.status}}`);
+    await agentsRecordAction({{
+      action: `${{action}} approval`,
+      title,
+      detail: `Agents ${{action}}d approval "${{title}}".`,
+      why_now: 'Agents resolved a live approval handoff.',
+      result_summary: `Approval action completed: ${{action}}.`,
+      related_kind: 'approval',
+      related_label: title,
+      route: '/approval-queue',
+      route_label: 'Open Approvals',
+    }});
+    if (typeof showToast === 'function') showToast(`${{title}} ${{action}}d`, action === 'approve' ? 'success' : 'info');
+    await refreshAgentsDesktop(true);
+  }} catch (error) {{
+    agentsRuntimeNote(`Approval action failed: ${{String(error)}}`);
+    if (typeof showToast === 'function') showToast('Approval action failed', 'error');
+  }}
+}}
+
+async function agentsApplyWorkAction(workId, action, title) {{
+  agentsRuntimeNote(`${{action}} ${{title}}…`);
+  try {{
+    const endpoint = action === 'approve' ? 'approve' : 'reject';
+    const response = await fetch(`/api/agent-work/${{endpoint}}/${{encodeURIComponent(workId)}}`, {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: action === 'reject' ? JSON.stringify({{ reason: 'Rejected from Agents.' }}) : undefined,
+    }});
+    const result = await agentsReadJson(response);
+    if (!response.ok) throw new Error(result?.detail || `HTTP ${{response.status}}`);
+    await agentsRecordAction({{
+      action: `${{action}} agent work`,
+      title,
+      detail: `Agents ${{action}}d proposed work "${{title}}".`,
+      why_now: 'Agents resolved a proposed work handoff from the council board.',
+      result_summary: `Proposed work ${{action}}d.`,
+      related_kind: 'agent-work',
+      related_label: title,
+      route: '/catalyst',
+      route_label: 'Open Work',
+    }});
+    if (typeof showToast === 'function') showToast(`${{title}} ${{action}}d`, action === 'approve' ? 'success' : 'info');
+    await refreshAgentsDesktop(true);
+  }} catch (error) {{
+    agentsRuntimeNote(`Work action failed: ${{String(error)}}`);
+    if (typeof showToast === 'function') showToast('Agent work action failed', 'error');
+  }}
+}}
+
+async function agentsApplyRuntimeControl(action, agentId = _selectedAgentId) {{
+  const agent = _agentLookup(agentId);
+  const label = agent?.name || agentId || 'agent';
+  agentsRuntimeNote(`${{_titleCaseWords(action)}} ${{label}}…`);
+  try {{
+    const endpoint = action === 'heartbeat' ? '/api/agent-runtime/heartbeat' : '/api/agent-runtime/control';
+    const body = action === 'heartbeat'
+      ? {{ agent_id: agentId, actor: 'Chris', note: 'Recorded from Agents desktop.' }}
+      : {{ agent_id: agentId, action, actor: 'Chris', reason: 'Triggered from Agents desktop.' }};
+    const response = await fetch(endpoint, {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify(body),
+    }});
+    const result = await agentsReadJson(response);
+    if (!response.ok) throw new Error(result?.detail || `HTTP ${{response.status}}`);
+    await agentsRecordAction({{
+      action: `Agent ${{action}}`,
+      title: label,
+      detail: `Agents applied ${{action}} to ${{label}}.`,
+      why_now: 'Agents applied a runtime control to the selected staff lane.',
+      result_summary: `Runtime control applied: ${{action}}.`,
+      related_kind: 'agent-control',
+      related_label: label,
+      route: '/agent-ops-center',
+      route_label: 'Open Agent Ops',
+    }});
+    if (typeof showToast === 'function') showToast(`${{_titleCaseWords(action)}} sent to ${{label}}`, 'success');
+    await refreshAgentsDesktop(true);
+  }} catch (error) {{
+    agentsRuntimeNote(`Runtime control failed: ${{String(error)}}`);
+    if (typeof showToast === 'function') showToast('Runtime control failed', 'error');
+  }}
+}}
+
+async function loadAgentRoster() {{
+  const response = await agentsFetchJson('/api/agents/roster');
+  if (!response.ok) return;
+  const incoming = Array.isArray(response.payload?.agents) ? response.payload.agents : [];
+  AGENTS.length = 0;
+  incoming.forEach(item => AGENTS.push(dictClone(item)));
+  _updateRosterSourceBadge(incoming.length);
+}}
+
+function dictClone(value) {{
+  return JSON.parse(JSON.stringify(value || {{}}));
+}}
+
+async function loadLiveAgents() {{
+  return refreshAgentsDesktop(true);
+}}
+
+async function loadAgentsCommandCenter() {{
+  return refreshAgentsDesktop(true);
+}}
+
+function _agentsSelectedAgent() {{
+  return _agentLookup(_selectedAgentId) || _agentsRosterItems()[0] || null;
+}}
+
+function _agentsDetailRows(agent) {{
+  const reviews = Array.isArray(agent?.recent_decisions) ? agent.recent_decisions : [];
+  const decisionRows = reviews.map(item => [item.title || item.action || 'Decision', item.result_summary || item.summary || item.detail || 'Decision recorded.']);
+  const relationshipRows = [
+    ['Lane', agent?.lane_id || agent?.module || 'No lane surfaced'],
+    ['Escalation Target', agent?.escalation_target || 'Chris'],
+    ['Trust Zone', agent?.trust_zone || 'Not surfaced'],
+    ['Source', agent?.source_label || 'Agent runtime'],
+    ['Current Mission Roles', (agent?.mission_roles || []).length ? agent.mission_roles.map(_titleCaseWords).join(', ') : 'None surfaced'],
+  ];
+  return {{
+    overview: [
+      ['Domain', _agentDomainLabel(agent)],
+      ['Primary Focus', agent?.purpose || agent?.assignment || 'No current focus surfaced'],
+      ['Decision Style', _titleCaseWords(agent?.autonomy_posture || agent?.authority_stage || 'bounded autonomy')],
+      ['Authority Level', _titleCaseWords(agent?.authority_stage || 'bounded')],
+      ['Working On', agent?.current_focus || agent?.assignment || agent?.attention_reason || 'No active assignment surfaced'],
+    ],
+    capabilities: [
+      ['Mission Roles', (agent?.mission_roles || []).length ? agent.mission_roles.map(_titleCaseWords).join(', ') : 'No live role list surfaced'],
+      ['Allowed Tools', (agent?.allowed_tools || []).length ? agent.allowed_tools.map(_titleCaseWords).join(', ') : 'Not exposed'],
+      ['Cadence', agent?.cadence_minutes ? `${{agent.cadence_minutes}} min cadence` : 'Cadence not surfaced'],
+      ['Foreground Policy', _titleCaseWords(agent?.foreground_policy || 'Not surfaced')],
+      ['Background Policy', _titleCaseWords(agent?.background_policy || 'Not surfaced')],
+    ],
+    boundaries: [
+      ['Trust Zone', agent?.trust_zone || 'Not surfaced'],
+      ['Approval Mode', _titleCaseWords(agent?.approval_mode || 'Not surfaced')],
+      ['Must Stage', (agent?.must_stage_actions || []).length ? agent.must_stage_actions.map(_titleCaseWords).join(', ') : 'None listed'],
+      ['Must Escalate', (agent?.must_escalate_actions || []).length ? agent.must_escalate_actions.map(_titleCaseWords).join(', ') : 'None listed'],
+      ['Forbidden', (agent?.forbidden_actions || []).length ? agent.forbidden_actions.map(_titleCaseWords).join(', ') : 'No hard forbiddens exposed'],
+    ],
+    relationship: relationshipRows,
+    history: decisionRows.length ? decisionRows : [
+      ['Last Activity', agent?.last_activity ? relTime(agent.last_activity) : 'No last activity surfaced'],
+      ['Last Handoff', agent?.last_handoff_at ? relTime(agent.last_handoff_at) : 'No handoff surfaced'],
+      ['Heartbeat', _titleCaseWords(agent?.heartbeat_status || 'Unknown')],
+      ['Health', _titleCaseWords(agent?.health_status || 'Unknown')],
+      ['Usage', agent?.usage_count ? `${{agent.usage_count}} recorded run(s)` : 'No usage history surfaced'],
+    ],
+  }};
 }}
 
 function renderAgentDetail(agent) {{
@@ -35616,21 +35774,17 @@ function renderAgentDetail(agent) {{
   setEl('agents-detail-title', agent.title || _agentDomainLabel(agent));
   setEl('agents-detail-status', meta.label + ' · ' + _agentDomainLabel(agent));
   setEl('agents-detail-quote', meta.attentionReason || meta.purpose || 'No current narrative available.');
-  setEl('agents-detail-recommendation', meta.category === 'waiting'
+  const recommendation = meta.category === 'waiting'
     ? 'You have a decision or approval pending here. Clearing this lane likely unlocks downstream execution.'
     : meta.category === 'blocked'
       ? 'This lane needs intervention or dependency relief before it can move again.'
-      : 'Keep this lane moving with clear priority, bounded authority, and minimal interruption.');
+      : meta.assignment || 'Keep this lane moving with clear priority, bounded authority, and minimal interruption.';
+  setEl('agents-detail-recommendation', recommendation);
 
   const overview = document.getElementById('agents-detail-overview');
   if (!overview) return;
-  const items = [
-    ['Domain', _agentDomainLabel(agent)],
-    ['Primary Focus', meta.purpose || meta.assignment || 'Maintaining mission alignment.'],
-    ['Decision Style', meta.authority ? _titleCaseWords(meta.authority) : 'Bounded autonomy'],
-    ['Authority Level', meta.authority ? _titleCaseWords(meta.authority) : 'Bounded'],
-    ['Working On', meta.assignment || meta.attentionReason || 'No active assignment surfaced'],
-  ];
+  const rowsByTab = _agentsDetailRows(agent);
+  const items = rowsByTab[_agentsDetailTab] || rowsByTab.overview;
   overview.innerHTML = items.map(([label, value]) => `
     <div class="agents-list-row">
       <div>
@@ -35639,48 +35793,75 @@ function renderAgentDetail(agent) {{
       </div>
     </div>
   `).join('');
+
+  const actions = document.getElementById('agents-detail-actions');
+  if (actions) {{
+    const supported = new Set(_agentsSupportedActions());
+    const buttons = [];
+    if (supported.has('wake')) buttons.push(`<button class="${{commandActionButtonClass('approve')}}" type="button" onclick='agentsApplyRuntimeControl("wake", ${{JSON.stringify(agent.agent_id || agent.id)}})'>Wake</button>`);
+    if (supported.has('pause')) buttons.push(`<button class="${{commandActionButtonClass('watch')}}" type="button" onclick='agentsApplyRuntimeControl("pause", ${{JSON.stringify(agent.agent_id || agent.id)}})'>Pause</button>`);
+    if (supported.has('resume')) buttons.push(`<button class="${{commandActionButtonClass('good')}}" type="button" onclick='agentsApplyRuntimeControl("resume", ${{JSON.stringify(agent.agent_id || agent.id)}})'>Resume</button>`);
+    buttons.push(`<button class="${{commandActionButtonClass('low')}}" type="button" onclick='agentsApplyRuntimeControl("heartbeat", ${{JSON.stringify(agent.agent_id || agent.id)}})'>Heartbeat</button>`);
+    actions.innerHTML = buttons.join('');
+  }}
 }}
 
 function renderAgentsActivityFeed() {{
   const el = document.getElementById('agents-activity-feed');
   if (!el) return;
-  const items = ((_agentsCenter || {{}}).activity_feed || []).slice(0, 5);
+  const items = _agentsActivityItems().slice(0, 5);
   if (!items.length) {{
-    el.innerHTML = '<div class="agents-list-row"><div><strong>No activity yet</strong><span>Agent activity will surface here once command center updates land.</span></div></div>';
+    el.innerHTML = '<div class="agents-list-row"><div><strong>No activity yet</strong><span>Agent activity will surface here once live command-center or agent continuity updates land.</span></div></div>';
     return;
   }}
-  el.innerHTML = items.map(item => `
-    <div class="agents-list-row">
-      <div>
-        <strong>${{escHtml(item.actor || item.title || 'JARVIS')}}</strong>
-        <span>${{escHtml(item.result || item.detail || item.subtitle || 'Update received.')}}</span>
+  el.innerHTML = items.map(item => {{
+    const route = item.related_route || item.route || '/activity-center';
+    const label = item.route_label || 'Open Context';
+    return `
+      <div class="agents-list-row">
+        <div>
+          <strong>${{escHtml(item.actor || item.title || 'JARVIS')}}</strong>
+          <span>${{escHtml(item.result || item.detail || item.subtitle || 'Update received.')}}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
+          <div class="agents-list-meta">${{escHtml(relTime(item.timestamp))}}</div>
+          <button class="${{commandActionButtonClass(item.result || 'watch')}}" type="button" onclick='agentsOpenRoute(${{JSON.stringify(route.replace(/^\\//, ""))}}, ${{JSON.stringify(label)}}, ${{JSON.stringify(item.detail || item.result || "")}})'>${{escHtml(label)}}</button>
+        </div>
       </div>
-      <div class="agents-list-meta">${{escHtml(relTime(item.timestamp))}}</div>
-    </div>
-  `).join('');
+    `;
+  }}).join('');
 }}
 
 function renderAgentsPending() {{
   const el = document.getElementById('agents-pending-list');
   if (!el) return;
-  const approvals = ((_agentsCenter || {{}}).pending_approvals || []);
-  const recovery = (((_agentsCenter || {{}}).failure_recovery || {{}}).action_items || []);
-  const items = approvals.length ? approvals.slice(0, 5) : recovery.slice(0, 5);
+  const items = _agentsPendingItems().slice(0, 5);
   if (!items.length) {{
-    el.innerHTML = '<div class="agents-list-row"><div><strong>No open handoffs</strong><span>No pending approvals or intervention items are surfaced right now.</span></div></div>';
+    el.innerHTML = '<div class="agents-list-row"><div><strong>No open handoffs</strong><span>No pending approvals, proposed work, or intervention items are surfaced right now.</span></div></div>';
     return;
   }}
   el.innerHTML = items.map(item => {{
-    const title = item.title || item.name || 'Pending decision';
-    const detail = item.detail || item.summary || item.result || 'Needs your direction.';
-    const owner = item.owner || item.agent || item.actor || 'JARVIS';
+    const buttons = [];
+    if (item.kind === 'approval' && item.request_id) {{
+      buttons.push(`<button class="${{commandActionButtonClass('approve')}}" type="button" onclick='agentsApplyApprovalAction(${{JSON.stringify(item.request_id)}}, "approve", ${{JSON.stringify(item.title || "Approval")}})'>Approve</button>`);
+      buttons.push(`<button class="${{commandActionButtonClass('reject')}}" type="button" onclick='agentsApplyApprovalAction(${{JSON.stringify(item.request_id)}}, "reject", ${{JSON.stringify(item.title || "Approval")}})'>Reject</button>`);
+    }} else if (item.kind === 'proposed-work' && item.work_id) {{
+      buttons.push(`<button class="${{commandActionButtonClass('approve')}}" type="button" onclick='agentsApplyWorkAction(${{JSON.stringify(item.work_id)}}, "approve", ${{JSON.stringify(item.title || "Proposed work")}})'>Approve</button>`);
+      buttons.push(`<button class="${{commandActionButtonClass('reject')}}" type="button" onclick='agentsApplyWorkAction(${{JSON.stringify(item.work_id)}}, "reject", ${{JSON.stringify(item.title || "Proposed work")}})'>Reject</button>`);
+    }}
+    if (item.route) {{
+      buttons.push(`<button class="${{commandActionButtonClass(item.urgency)}}" type="button" onclick='agentsOpenRoute(${{JSON.stringify(String(item.route || "").replace(/^\\//, ""))}}, ${{JSON.stringify(item.route_label || "Open Context")}}, ${{JSON.stringify(item.detail || "")}})'>${{escHtml(item.route_label || 'Open Context')}}</button>`);
+    }}
     return `
       <div class="agents-list-row">
         <div>
-          <strong>${{escHtml(title)}}</strong>
-          <span>${{escHtml(detail)}}</span>
+          <strong>${{escHtml(item.title || 'Pending request')}}</strong>
+          <span>${{escHtml(item.detail || 'Needs your direction.')}}</span>
         </div>
-        <div class="agents-list-meta">${{escHtml(owner)}}</div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;max-width:45%;">
+          <div class="agents-list-meta">${{escHtml(item.owner || 'JARVIS')}}${{item.urgency ? ' · ' + escHtml(_titleCaseWords(item.urgency)) : ''}}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">${{buttons.join('')}}</div>
+        </div>
       </div>
     `;
   }}).join('');
@@ -35690,7 +35871,10 @@ function renderAgentsCollaborationMap(filtered) {{
   const map = document.getElementById('agents-collab-map');
   const legend = document.getElementById('agents-collab-legend');
   if (!map || !legend) return;
-  const nodes = filtered.slice(0, 6);
+  const collaboration = ((_agentsModule || {{}}).collaboration || {{}}).items || [];
+  const tracedIds = collaboration.map(item => item.agent_id).filter(Boolean);
+  let nodes = filtered.filter(agent => tracedIds.includes(agent.agent_id || agent.id)).slice(0, 6);
+  if (!nodes.length) nodes = filtered.slice(0, 6);
   const positions = [
     {{ left: '50%', top: '12%' }},
     {{ left: '78%', top: '30%' }},
@@ -35706,35 +35890,33 @@ function renderAgentsCollaborationMap(filtered) {{
     const angle = idx * (360 / Math.max(nodes.length, 1));
     map.innerHTML += `
       <div class="agents-collab-line" style="height:98px;transform: translate(-50%, 0) rotate(${{angle}}deg);"></div>
-      <div class="agents-collab-node" style="left:${{pos.left}};top:${{pos.top}};transform:translate(-50%,-50%);border-color:${{meta.category === 'blocked' ? 'rgba(248,113,113,0.4)' : meta.category === 'waiting' ? 'rgba(245,158,11,0.4)' : 'rgba(212,154,61,0.25)'}};">
-        <div>${{escHtml(agent.name.split(' ')[0])}}</div>
+      <div class="agents-collab-node" title="${{escHtml(agent.assignment || agent.purpose || agent.name)}}" style="left:${{pos.left}};top:${{pos.top}};transform:translate(-50%,-50%);border-color:${{meta.category === 'blocked' ? 'rgba(248,113,113,0.4)' : meta.category === 'waiting' ? 'rgba(245,158,11,0.4)' : 'rgba(212,154,61,0.25)'}};">
+        <div>${{escHtml((agent.name || '').split(' ')[0] || 'Agent')}}</div>
       </div>
     `;
   }});
+  const traceCount = ((_agentsModule || {{}}).collaboration || {{}}).trace_count || 0;
+  const reviewCount = ((_agentsModule || {{}}).collaboration || {{}}).review_count || 0;
   legend.innerHTML = [
-    '<span><span style="color:#9ae6b4;">●</span> Working Together</span>',
-    '<span><span style="color:#7dd3fc;">●</span> Hand-off</span>',
-    '<span><span style="color:#f5c76a;">●</span> Waiting</span>',
+    `<span><span style="color:#9ae6b4;">●</span> ${{traceCount}} recent trace${{traceCount === 1 ? '' : 's'}}</span>`,
+    `<span><span style="color:#7dd3fc;">●</span> ${{nodes.length}} visible collaborator${{nodes.length === 1 ? '' : 's'}}</span>`,
+    `<span><span style="color:#f5c76a;">●</span> ${{reviewCount}} review${{reviewCount === 1 ? '' : 's'}}</span>`,
   ].join('');
 }}
 
 function renderAgentsTrustPanel() {{
   const el = document.getElementById('agents-trust-panel');
   if (!el) return;
-  const recovery = ((_agentsCenter || {{}}).failure_recovery || {{}});
-  const counts = _statusCounts();
-  const rows = [
-    ['Autonomy Posture', counts.blocked > 2 ? 'Tighter review recommended' : 'Bounded autonomy'],
-    ['Trust Level (Overall)', counts.blocked > 3 ? 'Needs attention' : 'High'],
-    ['Escalation Rules', (recovery.integration_issue_count || 0) > 0 ? 'Strict' : 'Normal'],
-    ['Human Review Required', String((recovery.pending_approval_count || 0) + (counts.waiting || 0)) + ' decision types'],
-    ['Recent Overrides', String(recovery.recent_failure_count || 0) + ' in recent recovery window'],
-  ];
-  el.innerHTML = rows.map(([title, value]) => `
+  const rows = _agentsTrustRows();
+  if (!rows.length) {{
+    el.innerHTML = '<div class="agents-list-row"><div><strong>No supervision posture surfaced</strong><span>Agent trust and supervision data is currently unavailable.</span></div></div>';
+    return;
+  }}
+  el.innerHTML = rows.map(row => `
     <div class="agents-list-row">
       <div>
-        <strong>${{escHtml(title)}}</strong>
-        <span>${{escHtml(value)}}</span>
+        <strong>${{escHtml(row.title || 'Trust signal')}}</strong>
+        <span>${{escHtml(row.value || row.detail || 'Unavailable')}}</span>
       </div>
     </div>
   `).join('');
@@ -35743,16 +35925,16 @@ function renderAgentsTrustPanel() {{
 function renderAgentsSpecializations() {{
   const el = document.getElementById('agents-specializations');
   if (!el) return;
-  const counts = new Map();
-  AGENTS.forEach(agent => {{
-    const label = _agentDomainLabel(agent);
-    counts.set(label, (counts.get(label) || 0) + 1);
-  }});
-  const items = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10);
-  el.innerHTML = items.map(([label, count]) => `
+  const items = _agentsSpecializations().slice(0, 10);
+  if (!items.length) {{
+    el.innerHTML = '<div class="agents-specialization-card"><strong>No specializations surfaced</strong><span>The live registry has not exposed any specialization lanes yet.</span></div>';
+    return;
+  }}
+  el.innerHTML = items.map(item => `
     <div class="agents-specialization-card">
-      <strong>${{escHtml(label)}}</strong>
-      <span>${{count}} agent${{count === 1 ? '' : 's'}} covering this lane.</span>
+      <strong>${{escHtml(item.label || 'Operations')}}</strong>
+      <span>${{item.count || 0}} agent${{item.count === 1 ? '' : 's'}} covering this lane.</span>
+      <span style="margin-top:8px;display:block;color:rgba(255,255,255,0.58);">${{escHtml((item.roles || []).join(', ') || 'Roles not surfaced')}}</span>
     </div>
   `).join('');
 }}
@@ -35760,38 +35942,52 @@ function renderAgentsSpecializations() {{
 function renderAgentsCreatePanel() {{
   const el = document.getElementById('agents-create-panel');
   if (!el) return;
-  const registry = ((_agentsCenter || {{}}).registry || {{}});
-  const cards = [
-    ['Create Custom Agent', 'Define a new role for your system.'],
-    ['Clone & Modify Agent', 'Start from a proven archetype.'],
-    ['Import Agent Blueprint', String(registry.agent_count || 0) + ' registry contracts available.'],
-    ['Promote Working Draft', 'Move a task agent into a durable lane.'],
-  ];
-  el.innerHTML = cards.map(([title, copy]) => `
+  const selected = _agentsSelectedAgent();
+  const supported = new Set(_agentsSupportedActions());
+  const registryContracts = ((((_agentsModule || {{}}).runtime || {{}}).registry || {{}}).agents || []).length || _agentsRosterItems().length;
+  const buttons = [
+    supported.has('wake') ? `<button class="${{commandActionButtonClass('approve')}}" type="button" onclick='agentsApplyRuntimeControl("wake", ${{JSON.stringify(selected?.agent_id || "")}})'>Wake Agent</button>` : '',
+    supported.has('pause') ? `<button class="${{commandActionButtonClass('watch')}}" type="button" onclick='agentsApplyRuntimeControl("pause", ${{JSON.stringify(selected?.agent_id || "")}})'>Pause Agent</button>` : '',
+    supported.has('resume') ? `<button class="${{commandActionButtonClass('good')}}" type="button" onclick='agentsApplyRuntimeControl("resume", ${{JSON.stringify(selected?.agent_id || "")}})'>Resume Agent</button>` : '',
+    `<button class="${{commandActionButtonClass('low')}}" type="button" onclick='agentsApplyRuntimeControl("heartbeat", ${{JSON.stringify(selected?.agent_id || "")}})'>Record Heartbeat</button>`,
+  ].filter(Boolean);
+  const selectedName = selected?.name || 'selected agent';
+  el.innerHTML = `
     <div class="agents-create-card">
-      <strong>${{escHtml(title)}}</strong>
-      <span>${{escHtml(copy)}}</span>
+      <strong>Selected Lane</strong>
+      <span>${{escHtml(selectedName)}}${{selected?.assignment ? ' · ' + escHtml(selected.assignment) : ''}}</span>
     </div>
-  `).join('');
+    <div class="agents-create-card">
+      <strong>Runtime Controls</strong>
+      <span>Use bounded live controls when the selected lane needs a nudge, pause, resume, or heartbeat.</span>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">${{buttons.join('')}}</div>
+    </div>
+    <div class="agents-create-card">
+      <strong>Registry Contracts</strong>
+      <span>${{escHtml(String(registryContracts))}} contract(s) are visible.</span>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
+        <button class="${{commandActionButtonClass('watch')}}" type="button" onclick='agentsOpenRoute("supervision", "Open Supervision", "Opening supervision from Agents create panel.")'>Open Supervision</button>
+        <button class="${{commandActionButtonClass('low')}}" type="button" onclick='agentsOpenRoute("settings", "Open Settings", "Opening settings from Agents create panel.")'>Open Settings</button>
+      </div>
+    </div>
+  `;
 }}
 
 function renderAgentsPerformance() {{
   const el = document.getElementById('agents-performance-panel');
   if (!el) return;
-  const runtime = _agentsRuntime || {{}};
-  const recovery = ((_agentsCenter || {{}}).failure_recovery || {{}});
-  const counts = _statusCounts();
+  const perf = _agentsPerformance();
   const cards = [
-    ['Tasks Completed', String((runtime.awake_count || 0) + (runtime.idle_count || 0)), 'Active lanes in the runtime loop.'],
-    ['Success Rate', counts.blocked > 0 ? Math.max(68, 100 - counts.blocked * 8) + '%' : '94%', counts.blocked > 0 ? 'Intervention pressure detected.' : 'Excellent'],
-    ['Avg. Response Time', runtime.last_tick_at ? relTime(runtime.last_tick_at) : '2.3 min', 'Recent runtime freshness.'],
-    ['Value Delivered', '$' + String(Math.max(18420, (runtime.awake_count || 0) * 1024)).replace(/\B(?=(\d{3})+(?!\d))/g, ','), 'Estimated impact'],
+    ['Work Items', perf.work_items || 0, 'Live agent-work items across the current stores.'],
+    ['Proposed Review', perf.proposed_work || 0, 'Proposed work awaiting your review.'],
+    ['Approved Work', perf.approved_work || 0, 'Approved work items already moved forward.'],
+    ['Supervision Traces', perf.supervision_traces || 0, perf.runtime_freshness ? `Freshness: ${{relTime(perf.runtime_freshness)}}` : 'Runtime freshness unavailable.'],
   ];
   el.innerHTML = cards.map(([title, value, copy]) => `
     <div class="agents-performance-card">
       <strong>${{escHtml(title)}}</strong>
       <span>${{escHtml(String(value))}}</span>
-      <div class="agents-progress"><div class="agents-progress-fill" style="width:${{title === 'Success Rate' ? (parseInt(String(value), 10) || 80) : title === 'Tasks Completed' ? Math.min(100, (runtime.awake_count || 0) * 10) : 72}}%;"></div></div>
+      <div class="agents-progress"><div class="agents-progress-fill" style="width:${{Math.min(100, Math.max(18, Number(value) || 0 ? 18 + (Number(value) % 82) : 24))}}%;"></div></div>
       <span style="margin-top:10px;display:block;">${{escHtml(copy)}}</span>
     </div>
   `).join('');
@@ -35800,21 +35996,142 @@ function renderAgentsPerformance() {{
 function renderAgentsFooter() {{
   const el = document.getElementById('agents-footer-strip');
   if (!el) return;
-  const cards = [
-    ['Bounded Autonomy', 'Power with boundaries. Trust with oversight.'],
-    ['Clear Responsibility', 'Every agent has a lane. No overlap. No gaps.'],
-    ['Continuous Learning', 'Agents learn, adapt, and get better daily.'],
-    ['Human Authority', 'You lead. JARVIS executes.'],
-    ['Aligned to Mission', 'Every action ties back to your mission.'],
-    ['Protect What Matters', 'Agents guard your time, family, and calling.'],
-    ['Agents Online', String((_agentsRuntime || {{}}).awake_count || 0) + ' active · ' + String(_statusCounts().watching || 0) + ' watching · ' + String(_statusCounts().waiting || 0) + ' waiting'],
-  ];
-  el.innerHTML = cards.map(([title, copy]) => `
+  const cards = ((_agentsModule || {{}}).footer || []);
+  el.innerHTML = cards.map(item => `
     <div class="agents-footer-card">
-      <strong>${{escHtml(title)}}</strong>
-      <span>${{escHtml(copy)}}</span>
+      <strong>${{escHtml(item.title || 'Agents Online')}}</strong>
+      <span>${{escHtml(item.copy || '')}}</span>
     </div>
   `).join('');
+}}
+
+function renderAgents(filter) {{
+  currentFilter = filter || 'all';
+  const grid = document.getElementById('agents-council-grid');
+  if (!grid) return;
+
+  const roster = _agentsRosterItems();
+  let filtered = roster;
+  if (filter === 'active') {{
+    filtered = roster.filter(a => String(a.status || '').toLowerCase() === 'active');
+  }} else if (filter !== 'all') {{
+    filtered = roster.filter(a => a.domain === filter || _agentDomainLabel(a) === filter);
+  }}
+
+  const counts = _statusCounts();
+  setEl('agents-chip-active', counts.active);
+  setEl('agents-chip-watching', counts.watching);
+  setEl('agents-chip-waiting', counts.waiting);
+  setEl('agents-chip-blocked', counts.blocked);
+  setEl('agents-chip-offline', counts.offline);
+
+  const perf = _agentsPerformance();
+  setEl('agents-stat-active', `${{counts.active}} / ${{roster.length}}`);
+  setEl('agents-stat-tasks', String(perf.work_items || 0));
+  setEl('agents-stat-review', String(_agentsPendingItems().length || 0));
+  setEl('agents-stat-decisions', String((_agentsPendingItems().filter(item => ['approval', 'recovery'].includes(item.kind)).length) || 0));
+  setEl('agents-stat-health', `${{perf.health_score || 0}}%`);
+
+  if (!_selectedAgentId || !roster.some(a => (a.agent_id || a.id) === _selectedAgentId)) {{
+    _selectedAgentId = (((_agentsModule || {{}}).roster || {{}}).selected_agent_id) || filtered[0]?.agent_id || roster[0]?.agent_id || '';
+  }}
+
+  if (!filtered.length) {{
+    grid.innerHTML = '<div class="agents-council-card active"><div class="agents-council-copy">No live agents are visible in the current runtime.</div></div>';
+  }} else {{
+    grid.innerHTML = filtered.map(agent => {{
+      const meta = agentStatusMeta(agent);
+      const active = (agent.agent_id || agent.id) === _selectedAgentId ? ' active' : '';
+      return `
+        <div class="agents-council-card${{active}}" onclick="selectAgent('${{escHtml(agent.agent_id || agent.id)}}')">
+          <div class="agents-council-head">
+            <div class="agents-avatar ${{meta.category}}">${{escHtml(_avatarGlyph(agent.name))}}</div>
+            <div class="agents-council-meta">
+              <strong>${{escHtml(agent.name)}}</strong>
+              <span>${{escHtml(agent.title || _agentDomainLabel(agent))}}</span>
+            </div>
+          </div>
+          <span class="agents-badge ${{meta.category}}">${{escHtml(meta.label)}}</span>
+          <div class="agents-council-copy">${{escHtml(meta.attentionReason || meta.assignment || meta.purpose || 'Maintaining readiness across this lane.')}}</div>
+          <div class="agents-council-icons">
+            <span>${{escHtml(_agentDomainLabel(agent))}}</span>
+            <span>·</span>
+            <span>${{escHtml(meta.module || 'mission')}}</span>
+            <span>·</span>
+            <span>${{escHtml((meta.missionRoles || []).slice(0, 1).map(_titleCaseWords).join('') || 'staff')}}</span>
+          </div>
+        </div>
+      `;
+    }}).join('');
+  }}
+
+  const selected = _agentsSelectedAgent();
+  if (selected) renderAgentDetail(selected);
+  renderAgentsActivityFeed();
+  renderAgentsPending();
+  renderAgentsCollaborationMap(filtered);
+  renderAgentsTrustPanel();
+  renderAgentsSpecializations();
+  renderAgentsCreatePanel();
+  renderAgentsPerformance();
+  renderAgentsFooter();
+}}
+
+function filterAgents(domain) {{
+  renderAgents(domain);
+}}
+
+function updateActiveCounts() {{
+  const active = _agentsRosterItems().filter(a => String(a.status || '').toLowerCase() === 'active').length;
+  const countEl = document.getElementById('active-count');
+  if (countEl) countEl.textContent = '▲ ' + active + ' ACTIVE';
+  const statEl = document.getElementById('stat-agents');
+  if (statEl) statEl.textContent = active;
+}}
+
+async function refreshAgentsDesktop(forceLive = false) {{
+  const requestId = ++_agentsRequestSerial;
+  agentsRuntimeNote(forceLive ? 'Refreshing live Agents surfaces…' : 'Loading Agents surface…');
+  try {{
+    const response = await agentsFetchJson('/api/agents/module');
+    if (!response.ok) throw new Error(response.payload?.detail || response.error || `HTTP ${{response.status}}`);
+    if (requestId !== _agentsRequestSerial) return;
+    _agentsModule = response.payload || {{}};
+    _agentsCenter = {{
+      agent_ops_roster: dictClone((_agentsModule || {{}}).roster || {{}}),
+      activity_feed: dictClone((_agentsModule || {{}}).activity_feed || []),
+      pending_approvals: dictClone((_agentsModule || {{}}).pending_requests || []),
+      failure_recovery: {{ action_items: dictClone((_agentsModule || {{}}).pending_requests || []) }},
+      registry: dictClone((((_agentsModule || {{}}).runtime || {{}}).registry || {{}})),
+    }};
+    _agentsRuntime = dictClone((((_agentsModule || {{}}).runtime || {{}}).background || {{}}));
+    AGENTS.length = 0;
+    _agentsRosterItems().forEach(item => AGENTS.push(dictClone(item)));
+    _updateRosterSourceBadge(_agentsRosterItems().length);
+    const background = _agentsRuntimeState();
+    const syncEl = document.getElementById('agents-sidebar-sync');
+    if (syncEl) {{
+      const mode = _titleCaseWords(background.active_mode || 'normal');
+      const quiet = background.quiet_hours_active ? ' · quiet hours active' : '';
+      syncEl.textContent = 'Mode: ' + mode + quiet;
+    }}
+    const updatedEl = document.getElementById('agents-sidebar-updated');
+    if (updatedEl) updatedEl.textContent = 'Last update: ' + (_agentsModule?.generated_at ? relTime(_agentsModule.generated_at) : '—');
+    const notes = (_agentsModule?.availability_notes || []).filter(Boolean);
+    agentsRuntimeNote(notes.length ? notes.join(' • ') : (_agentsModule?.summary || 'Agents is live and connected.'));
+    syncAgentsStoryboard();
+    renderAgents(currentFilter);
+  }} catch (error) {{
+    if (requestId !== _agentsRequestSerial) return;
+    agentsRuntimeNote(`Agents unavailable: ${{String(error)}}`);
+    renderAgents(currentFilter);
+  }}
+}}
+
+async function loadAgentsDesktop() {{
+  syncAgentsStoryboard();
+  await refreshAgentsDesktop(false);
+  syncDesktopCardSequence('agents');
 }}
 
 /* ═══════════════════════════════════════════════════════════════
@@ -41663,11 +41980,16 @@ function handlePacket(pkt) {{
       break;
     case 'agent_roster_updated':
       // A new agent was registered from any external system — reload the roster
-      if (currentView === 'agents') loadAgentRoster();
+      if (currentView === 'agents') refreshAgentsDesktop(true);
       break;
     case 'agent_status': {{
-      const agent = AGENTS.find(a => a.id === pkt.agent_id);
-      if (agent) {{ agent.status = pkt.status; renderAgents(currentFilter); updateActiveCounts(); }}
+      const agent = AGENTS.find(a => (a.agent_id || a.id) === pkt.agent_id);
+      if (agent) {{
+        agent.status = pkt.status;
+        agent.status_label = _titleCaseWords(pkt.status);
+        renderAgents(currentFilter);
+        updateActiveCounts();
+      }}
       break;
     }}
     case 'kdp.2fa_required':

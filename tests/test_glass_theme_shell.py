@@ -123,6 +123,23 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("/api/chronicle/update-prayer", html)
         self.assertIn("Faith is live and connected.", html)
 
+    def test_render_glass_shell_wires_agents_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="agents-refresh-button"', html)
+        self.assertIn('id="agents-runtime-note"', html)
+        self.assertIn("function refreshAgentsDesktop(", html)
+        self.assertIn("function agentsApplyApprovalAction(", html)
+        self.assertIn("function agentsApplyWorkAction(", html)
+        self.assertIn("function agentsApplyRuntimeControl(", html)
+        self.assertIn("function agentsOpenRoute(", html)
+        self.assertIn("/api/agents/module", html)
+        self.assertIn("/api/agents/roster", html)
+        self.assertIn("/api/agent-runtime/control", html)
+        self.assertIn("/api/agent-runtime/heartbeat", html)
+        self.assertIn("/api/agent-work/approve/", html)
+        self.assertIn("/api/agent-work/reject/", html)
+
     def test_render_glass_shell_wires_desktop_card_sequence_controller(self) -> None:
         html = render_glass_shell(self.runtime)
 

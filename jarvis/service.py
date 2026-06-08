@@ -1814,6 +1814,45 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         )
         return _json(result, status_code=201)
 
+    @app.get("/api/agents/module")
+    async def api_agents_module() -> JSONResponse:
+        return _json(await _build_agents_module_payload())
+
+    @app.get("/api/agents/roster")
+    async def api_agents_roster() -> JSONResponse:
+        payload = await _build_agents_module_payload()
+        items = [
+            {
+                "id": str(item.get("agent_id", "")).strip(),
+                "name": str(item.get("name", "")).strip(),
+                "title": str(item.get("title", "")).strip(),
+                "domain": str(item.get("domain", "")).strip(),
+                "status": str(item.get("status", "")).strip(),
+                "source": str(item.get("source_kind", "")).strip() or "jarvis",
+                "purpose": str(item.get("purpose", "")).strip(),
+                "module": str(item.get("module", "")).strip(),
+                "authority_stage": str(item.get("authority_stage", "")).strip(),
+                "last_activity": str(item.get("last_activity", "")).strip(),
+                "attention_reason": str(item.get("attention_reason", "")).strip(),
+                "mission_roles": list(item.get("mission_roles") or []),
+                "capabilities": list(item.get("capabilities") or []),
+                "agent_id": str(item.get("agent_id", "")).strip(),
+                "assignment": str(item.get("assignment", "")).strip(),
+                "domain_group": str(item.get("domain_group", "")).strip(),
+                "current_recommendation": str(item.get("current_recommendation", "")).strip(),
+            }
+            for item in list((payload.get("roster") or {}).get("items") or [])
+            if isinstance(item, dict)
+        ]
+        return _json(
+            {
+                "available": bool(items),
+                "count": len(items),
+                "agents": items,
+                "availability_notes": list(payload.get("availability_notes") or []),
+            }
+        )
+
     @app.get("/api/agents/{agent_id}")
     async def api_task_agent(agent_id: str) -> JSONResponse:
         profile = await asyncio.to_thread(runtime.task_agent_profile, agent_id)
@@ -3783,6 +3822,438 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/agent-ops/module")
     async def api_agent_ops_module() -> JSONResponse:
         return _json(await _build_agent_ops_module_payload())
+
+    async def _build_agents_module_payload() -> dict[str, Any]:
+        command_center = build_command_center_index()
+        agent_ops = await _build_agent_ops_module_payload()
+        roster = dict(agent_ops.get("agent_ops_roster") or {})
+        roster_items = [
+            dict(item)
+            for item in list(roster.get("items") or [])
+            if isinstance(item, dict)
+        ]
+        registry_snapshot = dict(agent_ops.get("registry") or {})
+        registry_agents = [
+            dict(item)
+            for item in list(registry_snapshot.get("agents") or [])
+            if isinstance(item, dict)
+        ]
+        runtime_snapshot = dict(agent_ops.get("agent_runtime") or {})
+        runtime_agents = dict(runtime_snapshot.get("agents") or {})
+        background_snapshot = dict(agent_ops.get("background_agents") or {})
+        background_agents = dict(background_snapshot.get("agents") or {})
+        scheduler_status = dict(agent_ops.get("scheduler_status") or {})
+        agent_reviews = {
+            str(agent_id).strip(): dict(review or {})
+            for agent_id, review in dict(agent_ops.get("agent_reviews") or {}).items()
+            if str(agent_id).strip()
+        }
+        recent_activity = _module_recent_activity(route="/agent-ops-center", domain="agent-ops", limit=8)
+        activity_feed = [
+            dict(item)
+            for item in list(command_center.get("activity_feed") or [])
+            if isinstance(item, dict)
+        ]
+        list_pending_approvals = getattr(runtime, "list_pending_approvals", None)
+        list_agent_supervision_contracts = getattr(runtime, "list_agent_supervision_contracts", None)
+        list_supervision_traces = getattr(runtime, "list_supervision_traces", None)
+        list_supervision_reviews = getattr(runtime, "list_supervision_reviews", None)
+
+        approvals_source = list_pending_approvals() if callable(list_pending_approvals) else []
+        contracts_source = list_agent_supervision_contracts() if callable(list_agent_supervision_contracts) else []
+        traces_source = list_supervision_traces(limit=24) if callable(list_supervision_traces) else []
+        reviews_source = list_supervision_reviews(limit=24) if callable(list_supervision_reviews) else []
+
+        approvals = [
+            dict(item)
+            for item in list(approvals_source or [])
+            if isinstance(item, dict)
+        ]
+        contracts = [
+            dict(item)
+            for item in list(contracts_source or [])
+            if isinstance(item, dict)
+        ]
+        traces = [
+            dict(item)
+            for item in list(traces_source or [])
+            if isinstance(item, dict)
+        ]
+        reviews = [
+            dict(item)
+            for item in list(reviews_source or [])
+            if isinstance(item, dict)
+        ]
+
+        try:
+            from .agent_work import get_all_proposed, get_all_stores
+            from dataclasses import asdict as _asdict
+
+            work_items = []
+            for store in get_all_stores().values():
+                work_items.extend(store.all_items())
+            work_items.sort(key=lambda item: getattr(item, "updated_at", ""), reverse=True)
+            work_payload = [_asdict(item) for item in work_items[:100]]
+            proposed_payload = [dict(item) for item in get_all_proposed()]
+        except Exception as exc:
+            work_payload = []
+            proposed_payload = []
+            agent_ops.setdefault("errors", []).append(f"agent_work: {exc}")
+
+        registry_by_id = {
+            str(item.get("agent_id", "")).strip(): item
+            for item in registry_agents
+            if str(item.get("agent_id", "")).strip()
+        }
+        contracts_by_id = {
+            str(item.get("agent_id", "")).strip(): item
+            for item in contracts
+            if str(item.get("agent_id", "")).strip()
+        }
+        contracts_by_label = {
+            str(item.get("label", "")).strip().lower(): item
+            for item in contracts
+            if str(item.get("label", "")).strip()
+        }
+
+        def _title_case_words(value: object) -> str:
+            raw = str(value or "").strip()
+            if not raw:
+                return ""
+            return " ".join(word.capitalize() for word in raw.replace("_", " ").replace("-", " ").split())
+
+        def _normalize_status(value: object) -> str:
+            raw = str(value or "").strip().lower()
+            if raw in {"active", "running", "awake"}:
+                return "active"
+            if raw in {"steady", "idle", "watching", "standby", "fresh"}:
+                return "watching"
+            if raw in {"attention", "waiting", "awaiting", "review"}:
+                return "waiting"
+            if raw in {"blocked", "hold", "error", "failed", "degraded"}:
+                return "blocked"
+            return "offline"
+
+        def _status_label(category: str) -> str:
+            return {
+                "active": "Active",
+                "watching": "Watching",
+                "waiting": "Waiting",
+                "blocked": "Blocked",
+                "offline": "Offline",
+            }.get(category, "Offline")
+
+        normalized_roster: list[dict[str, Any]] = []
+        availability_notes: list[str] = []
+        for item in roster_items:
+            agent_id = str(item.get("agent_id", "")).strip()
+            if not agent_id:
+                continue
+            registry_item = dict(registry_by_id.get(agent_id) or {})
+            runtime_item = dict(runtime_agents.get(agent_id) or {})
+            background_item = dict(background_agents.get(agent_id) or {})
+            contract = dict(
+                contracts_by_id.get(agent_id)
+                or contracts_by_label.get(str(item.get("name", "")).strip().lower())
+                or contracts_by_label.get(str(registry_item.get("label", "")).strip().lower())
+                or {}
+            )
+            review = dict(agent_reviews.get(agent_id) or {})
+            lifecycle = dict(runtime_item.get("lifecycle") or {})
+            runtime_contract = dict(runtime_item.get("contract") or {})
+
+            category = _normalize_status(
+                lifecycle.get("current_state")
+                or background_item.get("state")
+                or item.get("status")
+            )
+            title = (
+                _title_case_words(
+                    registry_item.get("primary_domain")
+                    or item.get("domain")
+                    or review.get("mission_title")
+                    or item.get("module")
+                )
+                or str(item.get("source_label", "")).strip()
+                or "Agent"
+            )
+            normalized = {
+                "id": agent_id,
+                "agent_id": agent_id,
+                "name": str(item.get("name", "")).strip() or str(registry_item.get("label", "")).strip() or agent_id,
+                "title": title,
+                "domain": _title_case_words(item.get("domain") or registry_item.get("primary_domain") or item.get("module") or "operations"),
+                "status": category,
+                "status_label": _status_label(category),
+                "status_class": str(item.get("status_class", "")).strip() or category,
+                "source_label": str(item.get("source_label", "")).strip() or ("Task Agent" if bool(item.get("is_task_agent")) else "Core Agent"),
+                "source_kind": str(item.get("source_kind", "")).strip() or ("task-agent" if bool(item.get("is_task_agent")) else "core-agent"),
+                "purpose": str(item.get("purpose", "")).strip() or str(registry_item.get("purpose", "")).strip() or str(runtime_contract.get("mission", "")).strip(),
+                "assignment": str(review.get("current_focus", "")).strip() or str(item.get("assignment", "")).strip() or str(runtime_contract.get("role", "")).strip(),
+                "attention_reason": str(item.get("attention_reason", "")).strip() or str(background_item.get("attention_mode", "")).strip() or str(lifecycle.get("pause_reason", "")).strip() or str(lifecycle.get("wake_reason", "")).strip(),
+                "authority_stage": str(item.get("authority_stage", "")).strip() or str(contract.get("authority_stage", "")).strip() or str(registry_item.get("autonomy_posture", "")).strip(),
+                "autonomy_posture": str(registry_item.get("autonomy_posture", "")).strip() or str(runtime_contract.get("authority_boundary", "")).strip(),
+                "trust_zone": str(contract.get("trust_zone_id", "")).strip() or str(registry_item.get("trust_zone", "")).strip() or str(runtime_contract.get("trust_zone", "")).strip(),
+                "lane_id": str(contract.get("lane_id", "")).strip() or str(runtime_contract.get("lane_owner", "")).strip(),
+                "module": str(item.get("module", "")).strip() or str(registry_item.get("primary_domain", "")).strip(),
+                "mission_roles": list(item.get("mission_roles") or registry_item.get("mission_roles") or runtime_contract.get("mission_roles") or []),
+                "allowed_tools": list(registry_item.get("allowed_tools") or runtime_contract.get("allowed_tools") or []),
+                "allowed_without_approval": list(contract.get("allowed_without_approval") or []),
+                "must_stage_actions": list(contract.get("must_stage_actions") or []),
+                "must_escalate_actions": list(contract.get("must_escalate_actions") or []),
+                "forbidden_actions": list(contract.get("forbidden_actions") or []),
+                "reversible_actions": list(contract.get("reversible_actions") or []),
+                "approval_mode": str(contract.get("approval_mode", "")).strip(),
+                "escalation_target": str(contract.get("escalation_target", "")).strip() or str(runtime_contract.get("escalation_target", "")).strip(),
+                "foreground_policy": str(registry_item.get("foreground_policy", "")).strip(),
+                "background_policy": str(registry_item.get("background_policy", "")).strip(),
+                "quiet_hours_behavior": str(contract.get("quiet_hours_behavior", "")).strip() or str(registry_item.get("quiet_hours_behavior", "")).strip(),
+                "cadence_minutes": int(registry_item.get("cadence_minutes", 0) or runtime_contract.get("cadence_minutes", 0) or 0),
+                "heartbeat_status": str(background_item.get("heartbeat_status", "")).strip() or str((runtime_item.get("heartbeat") or {}).get("status", "")).strip(),
+                "health_status": str(background_item.get("health_status", "")).strip() or str((runtime_item.get("health") or {}).get("status", "")).strip(),
+                "last_activity": str(item.get("last_activity", "")).strip() or str(background_item.get("last_run_at", "")).strip(),
+                "last_handoff_at": str(review.get("last_handoff_at", "")).strip(),
+                "last_used_at": str(review.get("last_used_at", "")).strip(),
+                "updated_at": str(review.get("updated_at", "")).strip() or str(background_item.get("last_run_at", "")).strip(),
+                "current_focus": str(review.get("current_focus", "")).strip(),
+                "active_tasks": int(review.get("active_tasks", 0) or 0),
+                "blocked_tasks": int(review.get("blocked_tasks", 0) or 0),
+                "pending_reviews": int(review.get("pending_reviews", 0) or 0),
+                "recent_decisions": list(review.get("recent_decisions") or []),
+                "usage_count": int(review.get("usage_count", 0) or 0),
+                "success_count": int(review.get("success_count", 0) or 0),
+                "success_rate": str(review.get("success_rate", "")).strip(),
+                "is_task_agent": bool(item.get("is_task_agent")),
+                "promotion_candidate": bool(item.get("promotion_candidate")),
+            }
+            if not normalized["purpose"]:
+                availability_notes.append(f"{normalized['name']} has no purpose contract surfaced yet.")
+            normalized_roster.append(normalized)
+
+        normalized_roster.sort(
+            key=lambda item: (
+                {"blocked": 0, "waiting": 1, "active": 2, "watching": 3, "offline": 4}.get(item.get("status", "offline"), 5),
+                str(item.get("name", "")).lower(),
+            )
+        )
+
+        status_counts = {"active": 0, "watching": 0, "waiting": 0, "blocked": 0, "offline": 0}
+        for item in normalized_roster:
+            status_counts[item["status"]] = int(status_counts.get(item["status"], 0) or 0) + 1
+
+        def _urgency_rank(value: object) -> int:
+            raw = str(value or "").strip().lower()
+            if raw in {"critical", "high", "urgent", "blocked"}:
+                return 0
+            if raw in {"medium", "review", "pending"}:
+                return 1
+            return 2
+
+        pending_requests: list[dict[str, Any]] = []
+        for item in approvals[:8]:
+            request_id = str(item.get("request_id", "")).strip() or str(item.get("id", "")).strip()
+            pending_requests.append(
+                {
+                    "kind": "approval",
+                    "request_id": request_id,
+                    "title": str(item.get("title", "")).strip() or "Pending approval",
+                    "detail": str(item.get("summary", "")).strip() or str(item.get("detail", "")).strip() or "Awaiting review.",
+                    "owner": str(item.get("owner", "")).strip() or str(item.get("actor", "")).strip() or "JARVIS",
+                    "urgency": str(item.get("urgency", "")).strip() or "medium",
+                    "route": "/approval-queue",
+                    "route_label": "Review",
+                }
+            )
+        for item in proposed_payload[:8]:
+            pending_requests.append(
+                {
+                    "kind": "proposed-work",
+                    "work_id": str(item.get("work_id", "")).strip(),
+                    "title": str(item.get("title", "")).strip() or "Proposed work",
+                    "detail": str(item.get("idea", "")).strip() or str(item.get("research", "")).strip() or "Awaiting your approval.",
+                    "owner": str(item.get("agent_id", "")).strip() or "Agent",
+                    "urgency": "medium",
+                    "route": "/catalyst",
+                    "route_label": "Open Work",
+                }
+            )
+        for item in list(((command_center.get("failure_recovery") or {}).get("action_items") or []))[:8]:
+            pending_requests.append(
+                {
+                    "kind": "recovery",
+                    "title": str(item.get("title", "")).strip() or str(item.get("name", "")).strip() or "Recovery item",
+                    "detail": str(item.get("detail", "")).strip() or str(item.get("summary", "")).strip() or "Needs intervention.",
+                    "owner": str(item.get("owner", "")).strip() or "System",
+                    "urgency": str(item.get("urgency", "")).strip() or "high",
+                    "route": "/supervision-snapshot",
+                    "route_label": "Open Recovery View",
+                }
+            )
+        pending_requests.sort(key=lambda item: (_urgency_rank(item.get("urgency")), str(item.get("title", "")).lower()))
+
+        activity_items = recent_activity + activity_feed
+        deduped_activity: list[dict[str, Any]] = []
+        seen_activity: set[str] = set()
+        for item in activity_items:
+            key = str(item.get("event_id", "")).strip() or str(item.get("timestamp", "")).strip() + "|" + str(item.get("title", "")).strip()
+            if not key or key in seen_activity:
+                continue
+            seen_activity.add(key)
+            deduped_activity.append(dict(item))
+
+        specialization_counts: dict[str, dict[str, Any]] = {}
+        for item in normalized_roster:
+            domain = str(item.get("domain", "")).strip() or "Operations"
+            bucket = specialization_counts.setdefault(domain, {"label": domain, "count": 0, "roles": set()})
+            bucket["count"] += 1
+            for role in list(item.get("mission_roles") or [])[:3]:
+                clean_role = str(role).strip()
+                if clean_role:
+                    bucket["roles"].add(_title_case_words(clean_role))
+        specializations = [
+            {
+                "label": payload["label"],
+                "count": payload["count"],
+                "roles": sorted(payload["roles"])[:4],
+            }
+            for payload in specialization_counts.values()
+        ]
+        specializations.sort(key=lambda item: (-int(item["count"]), str(item["label"]).lower()))
+
+        collaboration_items = [
+            {
+                "agent_id": str(item.get("agent_id", "")).strip(),
+                "lane_id": str(item.get("lane_id", "")).strip(),
+                "requested_outcome": str(item.get("requested_outcome", "")).strip(),
+                "resolution": str(item.get("resolution", "")).strip() or "observe",
+                "authority_stage": str(item.get("authority_stage", "")).strip(),
+                "trust_zone_id": str(item.get("trust_zone_id", "")).strip(),
+            }
+            for item in traces[:12]
+            if str(item.get("agent_id", "")).strip()
+        ]
+
+        health_score = 100
+        visible_count = max(1, len(normalized_roster))
+        health_score -= int(round((status_counts["blocked"] / visible_count) * 30))
+        health_score -= int(round((status_counts["waiting"] / visible_count) * 12))
+        if dict(scheduler_status).get("error"):
+            health_score -= 8
+        health_score = max(38, min(98, health_score))
+
+        runtime_freshness = str(background_snapshot.get("last_tick_at", "")).strip() or str(runtime_snapshot.get("generated_at", "")).strip()
+        performance = {
+            "work_items": len(work_payload),
+            "proposed_work": len(proposed_payload),
+            "approved_work": len([item for item in work_payload if str(item.get("status", "")).strip().lower() == "approved"]),
+            "supervision_traces": len(traces),
+            "runtime_freshness": runtime_freshness,
+            "health_score": health_score,
+        }
+        trust_rows = [
+            {"title": "Autonomy Posture", "value": "Bounded autonomy", "detail": f"{status_counts['blocked']} blocked, {status_counts['waiting']} waiting."},
+            {"title": "Trust Level (Overall)", "value": "High" if health_score >= 80 else "Needs attention", "detail": f"Derived from live runtime posture: {health_score}%."},
+            {"title": "Escalation Rules", "value": "Strict" if traces else "Normal", "detail": f"{len(contracts)} contract(s), {len(traces)} recent trace(s)."},
+            {"title": "Human Review Required", "value": str(len(pending_requests[:12])) + " decision types", "detail": f"{len(approvals)} approvals and {len(proposed_payload)} proposed work items surfaced."},
+            {"title": "Recent Overrides", "value": str(len(reviews)), "detail": "Supervision reviews recorded recently." if reviews else "No recent supervision reviews recorded."},
+        ]
+        footer = [
+            {"title": "Bounded Autonomy", "copy": "Power with boundaries. Trust with oversight."},
+            {"title": "Clear Responsibility", "copy": "Every live agent has a lane, domain, and runtime posture."},
+            {"title": "Continuous Learning", "copy": f"{len(traces)} recent supervision trace(s) and {len(reviews)} review item(s) are shaping doctrine."},
+            {"title": "Human Authority", "copy": f"{len(pending_requests)} surfaced item(s) still require your judgment."},
+            {"title": "Aligned to Mission", "copy": f"{len(specializations)} specialization lane(s) are visible in the council."},
+            {"title": "Protect What Matters", "copy": "Agents guard time, family, operations, and stewardship."},
+            {"title": "Agents Online", "copy": f"{status_counts['active']} active · {status_counts['watching']} watching · {status_counts['waiting']} waiting"},
+        ]
+
+        selected_agent_id = ""
+        for item in normalized_roster:
+            if item.get("status") in {"blocked", "waiting", "active"}:
+                selected_agent_id = str(item.get("agent_id", "")).strip()
+                break
+        if not selected_agent_id and normalized_roster:
+            selected_agent_id = str(normalized_roster[0].get("agent_id", "")).strip()
+
+        merged_availability_notes: list[str] = []
+        seen_notes: set[str] = set()
+        for note in list(agent_ops.get("errors") or []) + list(availability_notes or []):
+            text = str(note or "").strip()
+            if not text or text in seen_notes:
+                continue
+            seen_notes.add(text)
+            merged_availability_notes.append(text)
+            if len(merged_availability_notes) >= 8:
+                break
+
+        payload: dict[str, Any] = {
+            "generated_at": command_center.get("generated_at", ""),
+            "available": bool(normalized_roster),
+            "status": "Useful" if normalized_roster else "Wired",
+            "summary": (
+                f"Agents loaded {len(normalized_roster)} live roster item(s), {status_counts['active']} active, "
+                f"{status_counts['waiting']} waiting, {status_counts['blocked']} blocked, and {len(pending_requests)} surfaced request(s)."
+            ),
+            "what_became_real": "Agents is now driven by the live registry, runtime kernel, supervision traces, work queues, and command-center continuity instead of a seeded fictional council.",
+            "remains_partial": "Some agents still lack deep per-agent contracts or current work focus, so those cards now show honest partial-state messaging instead of invented output.",
+            "roster": {
+                "item_count": len(normalized_roster),
+                "counts": status_counts,
+                "items": normalized_roster,
+                "selected_agent_id": selected_agent_id,
+            },
+            "activity_feed": deduped_activity[:10],
+            "pending_requests": pending_requests[:12],
+            "collaboration": {
+                "items": collaboration_items,
+                "trace_count": len(traces),
+                "review_count": len(reviews),
+            },
+            "trust": {
+                "rows": trust_rows,
+                "contracts": contracts[:12],
+                "traces": traces[:12],
+                "reviews": reviews[:12],
+            },
+            "specializations": specializations[:10],
+            "performance": performance,
+            "footer": footer,
+            "runtime": {
+                "registry": registry_snapshot,
+                "background": background_snapshot,
+                "agent_runtime": runtime_snapshot,
+                "scheduler_status": scheduler_status,
+                "supported_actions": list(runtime_snapshot.get("supported_actions") or []),
+            },
+            "work": {
+                "items": work_payload[:24],
+                "proposed": proposed_payload[:24],
+            },
+            "availability_notes": merged_availability_notes,
+            "recent_activity": recent_activity,
+            "proof_paths": {
+                "module_route": "/agents",
+                "module_api": "/api/agents/module",
+                "roster_api": "/api/agents/roster",
+                "agent_ops_api": "/api/agent-ops/module",
+                "registry_api": "/api/agent-registry",
+                "background_agents_api": "/api/agents",
+                "agent_runtime_api": "/api/agent-runtime",
+                "agent_work_api": "/api/agent-work",
+                "agent_work_proposed_api": "/api/agent-work/proposed",
+                "agent_supervision_contracts_api": "/api/agent-supervision/contracts",
+                "agent_supervision_traces_api": "/api/agent-supervision/traces",
+                "agent_supervision_reviews_api": "/api/agent-supervision/reviews",
+                "activity_api": "/api/activity/operator-action",
+                "runtime_control_api": "/api/agent-runtime/control",
+                "runtime_heartbeat_api": "/api/agent-runtime/heartbeat",
+            },
+        }
+        if not normalized_roster:
+            payload["status"] = "Wired"
+            payload["summary"] = "Agents routes are live, but the roster did not hydrate in this runtime."
+            payload["remains_partial"] = "Registry/runtime sources are reachable, but no visible roster items are currently available."
+        return payload
 
     @app.get("/api/first-light")
     async def api_first_light(
