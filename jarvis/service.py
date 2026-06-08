@@ -2044,6 +2044,50 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             }
         )
 
+    @app.get("/api/news")
+    async def api_news(force: bool = False) -> JSONResponse:
+        from datetime import datetime, timezone
+        from .rss_briefing import fetch_finance_news, fetch_world_news
+
+        try:
+            world, finance = await asyncio.gather(
+                asyncio.to_thread(fetch_world_news, 12),
+                asyncio.to_thread(fetch_finance_news, 12),
+            )
+            world = list(world or [])
+            finance = list(finance or [])
+            sources_hit = sorted(
+                {
+                    str(item.get("source", "")).strip()
+                    for item in [*world, *finance]
+                    if str(item.get("source", "")).strip()
+                }
+            )
+            return _json(
+                {
+                    "world": world,
+                    "finance": finance,
+                    "total": len(world) + len(finance),
+                    "sources_hit": sources_hit,
+                    "fetched_at": datetime.now(timezone.utc).isoformat(),
+                    "live": bool(world or finance),
+                    "forced": bool(force),
+                }
+            )
+        except Exception as exc:
+            return _json(
+                {
+                    "world": [],
+                    "finance": [],
+                    "total": 0,
+                    "sources_hit": [],
+                    "fetched_at": datetime.now(timezone.utc).isoformat(),
+                    "live": False,
+                    "forced": bool(force),
+                    "error": str(exc),
+                }
+            )
+
     async def _build_daily_brief_module_payload(actor_name: str = "Chris") -> dict[str, Any]:
         from datetime import datetime, timezone
 

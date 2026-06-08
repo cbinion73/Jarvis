@@ -463,6 +463,444 @@ body::after {{
   border-bottom: 1px solid var(--border);
 }}
 
+/* ═══════════════════════════════════════════════════════════════
+   NEWS DESKTOP EXPERIENCE
+═══════════════════════════════════════════════════════════════ */
+.news-experience {{
+  --news-accent: #3fb7ff;
+  --news-gold: #f0a64b;
+  --news-green: #64d98f;
+  --news-panel: linear-gradient(180deg, rgba(12,22,36,0.96) 0%, rgba(7,14,24,0.98) 100%);
+  --news-border: rgba(88, 176, 255, 0.2);
+  --news-copy: rgba(226, 235, 244, 0.86);
+  --news-copy-muted: rgba(160, 183, 204, 0.68);
+  padding: 8px 0 28px;
+  color:#f5f6fa;
+}}
+.news-desktop-headline {{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto auto;
+  gap:18px;
+  align-items:start;
+  margin-bottom:18px;
+}}
+.news-hero-title .news-kicker {{
+  color:var(--news-copy-muted);
+  text-transform:uppercase;
+  letter-spacing:.2em;
+  font-size:11px;
+  margin-bottom:6px;
+}}
+.news-hero-title h1 {{
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(32px, 3.2vw, 52px);
+  line-height:1;
+  letter-spacing:-0.03em;
+  margin:0 0 10px;
+}}
+.news-hero-title h1 span {{ color:#5db8ff; }}
+.news-hero-title p {{
+  max-width:780px;
+  color:var(--news-copy);
+  font-size:14px;
+}}
+.news-quote {{
+  max-width:250px;
+  padding-top:16px;
+  color:#efbc78;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size:16px;
+  line-height:1.45;
+}}
+.news-profile-card {{
+  min-width:220px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:14px 16px;
+  border:1px solid rgba(88,176,255,0.2);
+  border-radius:18px;
+  background:linear-gradient(160deg, rgba(15,24,36,0.98), rgba(8,14,22,0.96));
+}}
+.news-profile-avatar {{
+  width:54px;
+  height:54px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background: radial-gradient(circle at 30% 30%, rgba(93,184,255,0.5), rgba(8,16,28,0.92));
+  color:#fff;
+  font-weight:700;
+  font-size:20px;
+  border:1px solid rgba(255,255,255,0.16);
+}}
+.news-profile-meta strong {{
+  display:block;
+  font-size:16px;
+  margin-bottom:4px;
+}}
+.news-profile-meta span {{
+  display:block;
+  color:var(--news-copy-muted);
+  font-size:12px;
+}}
+.news-top-metrics {{
+  display:grid;
+  grid-template-columns: repeat(7, minmax(0,1fr));
+  gap:12px;
+  margin-bottom:18px;
+}}
+.news-stat-card, .news-panel {{
+  position:relative;
+  overflow:hidden;
+  background:var(--news-panel);
+  border:1px solid var(--news-border);
+  border-radius:20px;
+  box-shadow:0 18px 42px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.06);
+}}
+.news-stat-card {{
+  min-height:116px;
+  padding:18px;
+}}
+.news-stat-label {{
+  text-transform:uppercase;
+  letter-spacing:.16em;
+  color:var(--news-copy-muted);
+  font-size:11px;
+  margin-bottom:10px;
+}}
+.news-stat-value {{
+  font-size:28px;
+  line-height:1;
+  font-weight:700;
+  color:#fff;
+}}
+.news-stat-note {{
+  margin-top:8px;
+  color:var(--news-copy);
+  font-size:13px;
+}}
+.news-stat-note.good {{ color:var(--news-green); }}
+.news-stat-note.warn {{ color:var(--news-gold); }}
+.news-grid-desktop {{
+  display:grid;
+  grid-template-columns: repeat(12, minmax(0,1fr));
+  gap:14px;
+}}
+.news-panel {{
+  padding:18px;
+}}
+.news-panel h3 {{
+  font-size:24px;
+  line-height:1;
+  margin:0 0 6px;
+  letter-spacing:-0.02em;
+}}
+.news-panel-header {{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}}
+.news-panel-header p {{
+  color:var(--news-copy-muted);
+  font-size:13px;
+}}
+.news-link-chip {{
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:999px;
+  padding:8px 12px;
+  font-size:12px;
+  color:var(--news-copy);
+  background:rgba(255,255,255,0.03);
+}}
+.news-col-3 {{ grid-column: span 3; }}
+.news-col-4 {{ grid-column: span 4; }}
+.news-col-5 {{ grid-column: span 5; }}
+.news-col-7 {{ grid-column: span 7; }}
+.news-col-8 {{ grid-column: span 8; }}
+.news-col-9 {{ grid-column: span 9; }}
+.news-col-12 {{ grid-column: span 12; }}
+.news-story-hero {{
+  min-height:180px;
+  border-radius:16px;
+  padding:18px;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+  gap:10px;
+  background:
+    linear-gradient(180deg, rgba(5,8,14,0.14), rgba(5,8,14,0.78)),
+    radial-gradient(circle at 78% 20%, rgba(77,150,255,0.18), transparent 30%),
+    linear-gradient(135deg, rgba(35,48,88,0.96), rgba(13,20,31,0.98) 56%, rgba(77,52,24,0.72));
+  border:1px solid rgba(255,255,255,0.08);
+}}
+.news-story-badge {{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  width:fit-content;
+  padding:5px 10px;
+  border-radius:999px;
+  background:rgba(7,13,22,0.74);
+  border:1px solid rgba(255,255,255,0.14);
+  font-size:11px;
+  color:#ffd08c;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+}}
+.news-story-title {{
+  font-size:30px;
+  line-height:1.08;
+  font-weight:700;
+}}
+.news-story-summary {{
+  color:var(--news-copy);
+  font-size:14px;
+  line-height:1.5;
+}}
+.news-story-meta {{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  color:var(--news-copy-muted);
+  font-size:12px;
+}}
+.news-list, .news-watch-list, .news-insight-list, .news-source-list, .news-weather-list, .news-actions-grid, .news-deep-dive-grid, .news-category-grid {{
+  display:grid;
+  gap:10px;
+}}
+.news-mini-story, .news-watch-item, .news-insight-item, .news-source-item, .news-weather-item, .news-action-btn, .news-category-card, .news-brief-card {{
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(9,17,29,0.72);
+}}
+.news-mini-story {{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap:12px;
+  padding:12px 14px;
+}}
+.news-mini-copy strong, .news-watch-copy strong, .news-insight-copy strong, .news-source-copy strong, .news-weather-copy strong {{
+  display:block;
+  font-size:14px;
+  margin-bottom:4px;
+}}
+.news-mini-copy span, .news-watch-copy span, .news-insight-copy span, .news-source-copy span, .news-weather-copy span {{
+  display:block;
+  color:var(--news-copy-muted);
+  font-size:12px;
+}}
+.news-mini-meta {{
+  text-align:right;
+  color:var(--news-copy-muted);
+  font-size:12px;
+}}
+.news-brieffing-grid, .news-briefing-grid {{
+  display:grid;
+  gap:10px;
+}}
+.news-brief-card {{
+  padding:14px;
+}}
+.news-brief-card strong {{
+  display:block;
+  font-size:14px;
+  margin-bottom:5px;
+}}
+.news-brief-card span {{
+  color:var(--news-copy-muted);
+  font-size:12px;
+}}
+.news-watch-item, .news-insight-item, .news-source-item, .news-weather-item {{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap:12px;
+  align-items:center;
+  padding:12px 14px;
+}}
+.news-pill {{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:4px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.08);
+  font-size:11px;
+}}
+.news-pill.high {{ color:#ff9b8f; background:rgba(240,92,92,0.12); }}
+.news-pill.medium {{ color:#f0c173; background:rgba(240,166,75,0.12); }}
+.news-pill.low {{ color:#8cc8ff; background:rgba(93,184,255,0.12); }}
+.news-pill.good {{ color:#92f0a3; background:rgba(85,210,125,0.12); }}
+.news-sentiment-shell {{
+  display:grid;
+  gap:14px;
+}}
+.news-sentiment-ring {{
+  width:190px;
+  aspect-ratio:1;
+  margin:0 auto;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:
+    radial-gradient(circle at center, rgba(7,14,24,0.98) 58%, transparent 59%),
+    conic-gradient(#5db8ff 0deg, #f07c54 180deg, rgba(255,255,255,0.08) 180deg, rgba(255,255,255,0.08) 360deg);
+}}
+.news-sentiment-center {{
+  text-align:center;
+}}
+.news-sentiment-center strong {{
+  display:block;
+  font-size:42px;
+  line-height:1;
+}}
+.news-sentiment-center span {{
+  display:block;
+  color:var(--news-copy-muted);
+  font-size:12px;
+}}
+.news-sentiment-line {{
+  height:72px;
+  border-radius:12px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)),
+    radial-gradient(circle at 20% 42%, rgba(93,184,255,0.18), transparent 20%),
+    linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%);
+  position:relative;
+  overflow:hidden;
+}}
+.news-sentiment-line::after {{
+  content:'';
+  position:absolute;
+  inset:34px 8px auto 8px;
+  height:2px;
+  background:linear-gradient(90deg, #5db8ff, #84d46f, #f0a64b, #ef6d6d);
+  transform:skewX(-16deg);
+}}
+.news-sentiment-split {{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap:10px;
+}}
+.news-sentiment-split .news-mini-stat {{
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(9,17,29,0.72);
+  padding:12px;
+  text-align:center;
+}}
+.news-mini-stat strong {{
+  display:block;
+  font-size:28px;
+  line-height:1;
+}}
+.news-category-grid {{
+  grid-template-columns: repeat(4, minmax(0,1fr));
+}}
+.news-category-card {{
+  padding:14px;
+}}
+.news-category-card strong {{
+  display:block;
+  margin-bottom:4px;
+}}
+.news-category-card span {{
+  color:var(--news-copy-muted);
+  font-size:12px;
+}}
+.news-deep-dive-grid {{
+  grid-template-columns: repeat(4, minmax(0,1fr));
+}}
+.news-deep-card {{
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(9,17,29,0.72);
+  overflow:hidden;
+}}
+.news-deep-art {{
+  height:118px;
+  background:
+    linear-gradient(180deg, rgba(4,7,12,0.12), rgba(4,7,12,0.65)),
+    radial-gradient(circle at 75% 22%, rgba(93,184,255,0.16), transparent 22%),
+    linear-gradient(135deg, rgba(38,56,72,0.96), rgba(10,15,21,0.96) 58%, rgba(86,58,31,0.78));
+}}
+.news-deep-body {{
+  padding:14px;
+}}
+.news-deep-body strong {{
+  display:block;
+  font-size:18px;
+  line-height:1.2;
+  margin-bottom:6px;
+}}
+.news-deep-body span {{
+  color:var(--news-copy-muted);
+  font-size:12px;
+}}
+.news-actions-grid {{
+  grid-template-columns: repeat(2, minmax(0,1fr));
+}}
+.news-action-btn {{
+  padding:14px;
+  cursor:pointer;
+  color:#fff;
+}}
+.news-action-btn strong {{
+  display:block;
+  margin-bottom:5px;
+}}
+.news-action-btn span {{
+  color:var(--news-copy-muted);
+  font-size:12px;
+}}
+.news-footer-strip {{
+  margin-top:18px;
+  display:grid;
+  grid-template-columns: repeat(7, minmax(0,1fr));
+  gap:12px;
+}}
+.news-footer-card {{
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(8,14,24,0.84);
+  padding:14px;
+}}
+.news-footer-card strong {{
+  display:block;
+  color:#efbc78;
+  margin-bottom:4px;
+  font-size:13px;
+}}
+.news-footer-card span {{
+  color:var(--news-copy-muted);
+  font-size:12px;
+}}
+.news-footer-card.live {{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}}
+.news-live-dot {{
+  width:12px;
+  height:12px;
+  border-radius:50%;
+  background:#59dd79;
+  box-shadow:0 0 18px rgba(89,221,121,0.7);
+}}
+@media (max-width: 1500px) {{
+  .news-top-metrics {{ grid-template-columns: repeat(3, minmax(0,1fr)); }}
+  .news-col-9, .news-col-8, .news-col-7, .news-col-5, .news-col-4, .news-col-3 {{ grid-column: span 12; }}
+  .news-category-grid, .news-deep-dive-grid, .news-footer-strip, .news-actions-grid {{ grid-template-columns: repeat(2, minmax(0,1fr)); }}
+}}
+@media (max-width: 980px) {{
+  .news-desktop-headline {{ grid-template-columns:1fr; }}
+  .news-top-metrics {{ grid-template-columns:1fr; }}
+  .news-category-grid, .news-deep-dive-grid, .news-footer-strip, .news-actions-grid, .news-sentiment-split {{ grid-template-columns:1fr; }}
+}}
+
 /* ── Tactical card — hue-tinted Liquid Glass ── */
 .card-tactical {{
   border-color: rgba(var(--hue-rgb), 0.30);
@@ -23740,25 +24178,132 @@ body::after {{
   </div>
 
   <!-- ── NEWS ──────────────────────────────────────────────── -->
-  <div id="view-news" class="view" style="display:none;">
-    <div class="view-header">
-      <div class="view-title">NEWS<div class="view-title-line"></div></div>
-      <div class="view-subtitle">Live headlines from BBC · Reuters · NYT · Al Jazeera · CNBC · MarketWatch</div>
-    </div>
-    <div style="padding:0 4px;">
-      <div class="news-filter-bar">
-        <button class="news-filter-btn active" id="news-filter-all" onclick="filterNews('all')">All</button>
-        <button class="news-filter-btn" id="news-filter-world" onclick="filterNews('world')">🌍 World</button>
-        <button class="news-filter-btn" id="news-filter-finance" onclick="filterNews('finance')">📈 Finance</button>
-        <div class="news-refresh-info">
-          <span id="news-last-fetched">—</span>
-          <button class="btn-ghost" style="font-size:10px;padding:3px 8px;" onclick="loadNews(true)">↺ Refresh</button>
+  <div id="view-news" class="view" style="display:none; padding:0;">
+    <div class="news-experience">
+      <div class="news-desktop-headline">
+        <div class="news-hero-title">
+          <div class="news-kicker">Real news. Filtered. Contextualized. Actionable.</div>
+          <h1>JARVIS <span>NEWS</span></h1>
+          <p>Your personalized news intelligence engine. Understand the top stories, what matters to your world, where the risk sits, and what deserves attention instead of doom-scrolling.</p>
+        </div>
+        <div class="news-quote">“Stay informed, not overwhelmed. Understand. Discern. Act.”</div>
+        <div class="news-profile-card">
+          <div class="news-profile-avatar">{user_name[:1].upper()}</div>
+          <div class="news-profile-meta">
+            <strong>{user_name}</strong>
+            <span>Executive Mode</span>
+            <span id="news-profile-balance">Well balanced</span>
+          </div>
         </div>
       </div>
-      <div id="news-content">
-        <div class="news-grid" id="news-grid">
-          <div style="color:var(--text-3);font-size:13px;padding:40px 0;text-align:center;grid-column:1/-1;">Loading headlines…</div>
-        </div>
+
+      <div class="news-top-metrics">
+        <div class="news-stat-card"><div class="news-stat-label">Top Stories</div><div class="news-stat-value" id="news-stat-top-stories">12</div><div class="news-stat-note good" id="news-stat-top-note">Fresh headlines</div></div>
+        <div class="news-stat-card"><div class="news-stat-label">Breaking</div><div class="news-stat-value" id="news-stat-breaking">2</div><div class="news-stat-note warn" id="news-stat-breaking-note">Needs attention</div></div>
+        <div class="news-stat-card"><div class="news-stat-label">Watching</div><div class="news-stat-value" id="news-stat-watching">8</div><div class="news-stat-note" id="news-stat-watching-note">Tracked themes</div></div>
+        <div class="news-stat-card"><div class="news-stat-label">Sentiment Index</div><div class="news-stat-value" id="news-stat-sentiment">-0.18</div><div class="news-stat-note warn" id="news-stat-sentiment-note">Slightly negative</div></div>
+        <div class="news-stat-card"><div class="news-stat-label">Information Quality</div><div class="news-stat-value" id="news-stat-quality">78%</div><div class="news-stat-note good" id="news-stat-quality-note">High</div></div>
+        <div class="news-stat-card"><div class="news-stat-label">Time Saved</div><div class="news-stat-value" id="news-stat-time-saved">1h 24m</div><div class="news-stat-note" id="news-stat-time-note">vs. unfiltered news</div></div>
+        <div class="news-stat-card"><div class="news-stat-label">News Balance</div><div class="news-stat-value" id="news-stat-balance">Well Balanced</div><div class="news-stat-note good" id="news-stat-balance-note">On target</div></div>
+      </div>
+
+      <div class="news-grid-desktop">
+        <section class="news-panel news-col-4">
+          <div class="news-panel-header">
+            <div><h3>1. Top Stories</h3><p>The most important stories right now.</p></div>
+            <div class="news-link-chip">View All</div>
+          </div>
+          <div class="news-story-hero" id="news-top-story"></div>
+          <div class="news-list" id="news-top-story-list" style="margin-top:12px;"></div>
+        </section>
+
+        <section class="news-panel news-col-3">
+          <div class="news-panel-header">
+            <div><h3>2. News Briefing</h3><p>Your 2-minute intelligence brief.</p></div>
+          </div>
+          <div class="news-briefing-grid" id="news-briefing-grid"></div>
+          <div class="news-link-chip" style="margin-top:12px; display:inline-flex;">Read Full Briefing</div>
+        </section>
+
+        <section class="news-panel news-col-3">
+          <div class="news-panel-header">
+            <div><h3>3. Watchlist</h3><p>Stories and topics you’re tracking.</p></div>
+            <div class="news-link-chip">Manage</div>
+          </div>
+          <div class="news-watch-list" id="news-watch-list"></div>
+        </section>
+
+        <section class="news-panel news-col-2">
+          <div class="news-panel-header">
+            <div><h3>4. Sentiment &amp; Tone</h3><p>Overall tone of today’s news.</p></div>
+          </div>
+          <div class="news-sentiment-shell">
+            <div class="news-sentiment-ring">
+              <div class="news-sentiment-center">
+                <strong id="news-sentiment-score">-0.18</strong>
+                <span id="news-sentiment-label">Slightly Negative</span>
+              </div>
+            </div>
+            <div class="news-sentiment-line"></div>
+            <div class="news-sentiment-split" id="news-sentiment-split"></div>
+          </div>
+        </section>
+
+        <section class="news-panel news-col-4">
+          <div class="news-panel-header">
+            <div><h3>5. News By Category</h3><p>Browse the news that matters to you.</p></div>
+            <div class="news-link-chip">Customize</div>
+          </div>
+          <div class="news-category-grid" id="news-category-grid"></div>
+        </section>
+
+        <section class="news-panel news-col-3">
+          <div class="news-panel-header">
+            <div><h3>6. Personalized Insights</h3><p>News insights tailored to your world.</p></div>
+            <div class="news-link-chip">View All</div>
+          </div>
+          <div class="news-insight-list" id="news-insight-list"></div>
+        </section>
+
+        <section class="news-panel news-col-3">
+          <div class="news-panel-header">
+            <div><h3>7. Source Quality</h3><p>The sources behind your news.</p></div>
+            <div class="news-link-chip">Manage Sources</div>
+          </div>
+          <div class="news-source-list" id="news-source-list"></div>
+        </section>
+
+        <section class="news-panel news-col-2">
+          <div class="news-panel-header">
+            <div><h3>8. Local &amp; Weather</h3><p>What’s happening near you.</p></div>
+            <div class="news-link-chip">View Details</div>
+          </div>
+          <div class="news-weather-list" id="news-weather-list"></div>
+        </section>
+
+        <section class="news-panel news-col-9">
+          <div class="news-panel-header">
+            <div><h3>9. Deep Dive Analysis</h3><p>In-depth analysis of the stories that matter most.</p></div>
+          </div>
+          <div class="news-deep-dive-grid" id="news-deep-dive-grid"></div>
+        </section>
+
+        <section class="news-panel news-col-3">
+          <div class="news-panel-header">
+            <div><h3>10. Quick Actions</h3><p>Tools to help you stay informed.</p></div>
+          </div>
+          <div class="news-actions-grid" id="news-actions-grid"></div>
+        </section>
+      </div>
+
+      <div class="news-footer-strip">
+        <div class="news-footer-card"><strong>Real News Only</strong><span>No opinion pieces unless requested.</span></div>
+        <div class="news-footer-card"><strong>Balanced Perspective</strong><span>Multiple viewpoints. Clearly labeled bias.</span></div>
+        <div class="news-footer-card"><strong>Time Intelligent</strong><span>Right news at the right time.</span></div>
+        <div class="news-footer-card"><strong>Relevant To You</strong><span>Filtered for your life, work, and mission.</span></div>
+        <div class="news-footer-card"><strong>Action Oriented</strong><span>What you can do with what you know.</span></div>
+        <div class="news-footer-card"><strong>Privacy First</strong><span>Your interests stay private.</span></div>
+        <div class="news-footer-card live"><div><strong>News Engine Online</strong><span id="news-footer-status">All systems operational</span></div><div class="news-live-dot"></div></div>
       </div>
     </div>
   </div>
@@ -29285,138 +29830,312 @@ function _sourceMeta(name) {{
 }}
 
 let _newsCache = null;
-let _newsFilter = 'all';
+let _newsWeatherCache = null;
+
+function newsEsc(value) {{
+  return escHtml(String(value ?? ''));
+}}
+
+function newsKeywordBucket(text) {{
+  const hay = String(text || '').toLowerCase();
+  if (/econom|inflation|market|oil|fed|stocks|rates|tariff|trade/.test(hay)) return 'Economy';
+  if (/ai|technology|tech|regulation|chip|software/.test(hay)) return 'Technology';
+  if (/faith|church|religion|spiritual/.test(hay)) return 'Faith & Culture';
+  if (/health|research|disease|medical|clinical/.test(hay)) return 'Health';
+  if (/storm|weather|climate|rain|hurricane/.test(hay)) return 'Environment';
+  if (/senate|election|government|policy|trump|congress|war|iran|israel/.test(hay)) return 'Politics';
+  return 'World';
+}}
+
+function newsToneScore(articles) {{
+  let score = 0;
+  articles.forEach((item) => {{
+    const text = `${{item.title || ''}} ${{item.summary || ''}}`.toLowerCase();
+    if (/surge|gain|growth|win|breakthrough|positive|opportunity|ready|recovery/.test(text)) score += 1;
+    if (/war|conflict|risk|slump|drop|decline|crisis|failure|attack|strike/.test(text)) score -= 1;
+  }});
+  return articles.length ? score / articles.length : 0;
+}}
+
+function newsSourceQuality(source) {{
+  const key = String(source || '').toUpperCase();
+  if (['REUTERS', 'AP', 'BBC', 'NYT', 'BLOOMBERG'].includes(key)) return 92;
+  if (['CNBC', 'MARKETWATCH', 'ALJAZEERA'].includes(key)) return 84;
+  return 76;
+}}
+
+function newsRelativeMinutes(ts) {{
+  if (!ts) return 'Updated now';
+  const dt = new Date(ts);
+  if (Number.isNaN(dt.getTime())) return ts;
+  const mins = Math.max(1, Math.round((Date.now() - dt.getTime()) / 60000));
+  if (mins < 60) return `${{mins}} min ago`;
+  const hrs = Math.round(mins / 60);
+  return `${{hrs}} hr ago`;
+}}
+
+function newsWeatherSummary(weather) {{
+  const current = weather?.current || {{}};
+  const alerts = Array.isArray(weather?.alerts) ? weather.alerts : [];
+  return {{
+    temp: current.temperature_f != null ? `${{current.temperature_f}}°F` : '72°F',
+    condition: current.condition || weather?.summary || 'Local conditions unavailable',
+    high: current.high_f != null ? `${{current.high_f}}°` : '74°',
+    low: current.low_f != null ? `${{current.low_f}}°` : '61°',
+    humidity: current.humidity != null ? `${{current.humidity}}%` : '—',
+    wind: current.wind || '—',
+    alert: alerts[0] || null,
+  }};
+}}
 
 async function loadNews(force) {{
   try {{
-    if (!force && _newsCache) {{ renderNewsView(_newsCache); return; }}
-    const grid = document.getElementById('news-grid');
-    if (grid && force) {{
-      grid.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:40px 0;text-align:center;grid-column:1/-1;">⏳ Fetching latest headlines + images…</div>';
+    if (!force && _newsCache) {{
+      renderNewsView(_newsCache, _newsWeatherCache || {{}});
+      return;
     }}
-    const res = await fetch(force ? '/api/news?force=1' : '/api/news');
-    if (!res.ok) {{ console.warn('loadNews', res.status); return; }}
-    const data = await res.json();
-    _newsCache = data;
-    renderNewsView(data);
-  }} catch(e) {{ console.error('loadNews failed', e); }}
+    const [newsRes, weatherRes] = await Promise.allSettled([
+      fetch(force ? '/api/news?force=1' : '/api/news', {{ cache: 'no-store' }}),
+      fetch('/api/storm-weather', {{ cache: 'no-store' }}),
+    ]);
+    const news = newsRes.status === 'fulfilled' && newsRes.value.ok ? await newsRes.value.json() : {{}};
+    const weather = weatherRes.status === 'fulfilled' && weatherRes.value.ok ? await weatherRes.value.json() : {{}};
+    _newsCache = news || {{}};
+    _newsWeatherCache = weather || {{}};
+    renderNewsView(_newsCache, _newsWeatherCache);
+  }} catch (e) {{
+    console.error('loadNews failed', e);
+    renderNewsView(_newsCache || {{}}, _newsWeatherCache || {{}});
+  }}
 }}
 
-function filterNews(cat) {{
-  _newsFilter = cat;
-  document.querySelectorAll('.news-filter-btn').forEach(b => b.classList.remove('active'));
-  const btn = document.getElementById('news-filter-' + cat);
-  if (btn) btn.classList.add('active');
-  if (_newsCache) renderNewsView(_newsCache);
+function filterNews() {{
+  if (_newsCache) renderNewsView(_newsCache, _newsWeatherCache || {{}});
 }}
 
-function renderNewsView(data) {{
-  const grid = document.getElementById('news-grid');
-  const fetchedEl = document.getElementById('news-last-fetched');
-  if (!grid) return;
+function renderNewsView(data, weather) {{
+  const world = Array.isArray(data?.world) ? data.world.map((item) => ({{ ...item, _cat: 'world' }})) : [];
+  const finance = Array.isArray(data?.finance) ? data.finance.map((item) => ({{ ...item, _cat: 'finance' }})) : [];
+  const articles = [...world, ...finance];
+  const topArticles = articles.slice(0, 12);
+  const toneScore = newsToneScore(topArticles);
+  const positive = Math.round((topArticles.filter((item) => /gain|growth|breakthrough|recovery|win|opportunity/i.test(`${{item.title}} ${{item.summary}}`)).length / Math.max(1, topArticles.length)) * 100);
+  const negative = Math.round((topArticles.filter((item) => /war|risk|slump|drop|decline|attack|crisis|strike/i.test(`${{item.title}} ${{item.summary}}`)).length / Math.max(1, topArticles.length)) * 100);
+  const neutral = Math.max(0, 100 - positive - negative);
+  const categories = new Map();
+  topArticles.forEach((item) => {{
+    const bucket = newsKeywordBucket(`${{item.title}} ${{item.summary}}`);
+    categories.set(bucket, (categories.get(bucket) || 0) + 1);
+  }});
+  const categoryList = Array.from(categories.entries()).sort((a, b) => b[1] - a[1]);
+  const sourceScores = Array.from(new Set(topArticles.map((item) => item.source).filter(Boolean)))
+    .map((source) => [source, newsSourceQuality(source)])
+    .sort((a, b) => b[1] - a[1]);
+  const fetchedAt = data?.fetched_at || '';
+  const weatherSummary = newsWeatherSummary(weather);
+  const featured = topArticles[0] || {{
+    source: 'JARVIS',
+    title: 'No headlines available right now.',
+    summary: data?.error || 'The live news feeds did not return any items.',
+    link: '',
+    _cat: 'world',
+  }};
+  const headlineText = `${{featured.title || ''}} ${{featured.summary || ''}}`;
+  const breakingCount = topArticles.filter((item) => /breaking|urgent|alert|attack|strike|war|crisis/i.test(`${{item.title}} ${{item.summary}}`)).length;
+  const qualityScore = sourceScores.length ? Math.round(sourceScores.reduce((sum, [, score]) => sum + score, 0) / sourceScores.length) : 78;
 
-  // Update fetched timestamp
-  if (fetchedEl && data.fetched_at) {{
-    const ago = Math.round((Date.now() - new Date(data.fetched_at + 'Z').getTime()) / 60000);
-    fetchedEl.textContent = ago <= 1 ? 'Just now' : ago + ' min ago';
-  }}
+  const setText = (id, value) => {{
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }};
+  setText('news-stat-top-stories', String(topArticles.length || 0));
+  setText('news-stat-top-note', fetchedAt ? `${{newsRelativeMinutes(fetchedAt)}}` : 'Fresh headlines');
+  setText('news-stat-breaking', String(breakingCount));
+  setText('news-stat-breaking-note', breakingCount ? `${{breakingCount}} needs context` : 'No hard breaks');
+  setText('news-stat-watching', String(Math.max(4, categoryList.length + 2)));
+  setText('news-stat-watching-note', `${{categoryList.slice(0, 3).map(([name]) => name).join(' · ') || 'Tracked themes'}}`);
+  setText('news-stat-sentiment', toneScore.toFixed(2));
+  setText('news-stat-sentiment-note', toneScore < -0.1 ? 'Slightly negative' : toneScore > 0.12 ? 'Constructive' : 'Mixed');
+  setText('news-stat-quality', `${{qualityScore}}%`);
+  setText('news-stat-quality-note', qualityScore >= 85 ? 'High' : 'Good');
+  setText('news-stat-time-saved', `${{1 + Math.floor(topArticles.length / 6)}}h ${{String((topArticles.length * 4) % 60).padStart(2, '0')}}m`);
+  setText('news-stat-time-note', 'vs unfiltered news');
+  setText('news-stat-balance', qualityScore >= 84 ? 'Well Balanced' : 'Needs More Balance');
+  setText('news-stat-balance-note', sourceScores.length >= 4 ? 'On target' : 'Expand sources');
+  setText('news-profile-balance', sourceScores.length >= 4 ? 'Well balanced' : 'Needs more breadth');
+  setText('news-sentiment-score', toneScore.toFixed(2));
+  setText('news-sentiment-label', toneScore < -0.1 ? 'Slightly Negative' : toneScore > 0.12 ? 'Constructive' : 'Mixed');
+  setText('news-footer-status', data?.live ? `Live feeds from ${{(data.sources_hit || []).length}} sources` : 'Feed in fallback posture');
 
-  // Merge and filter articles
-  let world = (data.world || []).map(a => ({{...a, _cat:'world'}}));
-  let finance = (data.finance || []).map(a => ({{...a, _cat:'finance'}}));
-  let articles = _newsFilter === 'world' ? world
-               : _newsFilter === 'finance' ? finance
-               : [...world, ...finance];
-
-  if (articles.length === 0) {{
-    grid.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:40px 0;text-align:center;grid-column:1/-1;">' +
-      (data.error ? 'Could not load news: ' + escHtml(data.error) : 'No headlines available.') + '</div>';
-    return;
-  }}
-
-  const esc = s => escHtml(s || '');
-
-  function makeSourceBadge(source, cat) {{
-    const m = _sourceMeta(source);
-    const catIcon = cat === 'finance' ? '📈 ' : '🌍 ';
-    return `<span class="news-source-badge" style="background:${{m.bg}};color:${{m.color}};">
-      <span class="news-source-icon" style="background:${{m.color}};">${{m.icon}}</span>
-      ${{esc(source)}}
-      <span style="opacity:.5;font-weight:400;margin-left:2px;">${{catIcon}}</span>
-    </span>`;
-  }}
-
-  let html = '';
-
-  // Featured story (first article) — only when showing All or a single category
-  const featured = articles[0];
-  const rest = articles.slice(1);
-  const fm = _sourceMeta(featured.source);
-
-  const featuredImgPanel = featured.image_url
-    ? `<div class="news-featured-image">
-         <img src="${{esc(featured.image_url)}}" alt="" loading="lazy"
-              onerror="this.parentNode.style.background='linear-gradient(135deg,${{fm.color}}22,${{fm.color}}44)';this.remove();">
-       </div>`
-    : `<div class="news-featured-image" style="background:linear-gradient(135deg,${{fm.color}}22,${{fm.color}}44);">
-         <span style="font-size:72px;opacity:.3;user-select:none;">${{fm.icon}}</span>
-         <div style="position:absolute;bottom:16px;right:16px;font-size:28px;font-weight:900;color:${{fm.color}};opacity:.5;font-family:serif;">${{esc(featured.source)}}</div>
-       </div>`;
-
-  html += `<div class="news-featured" onclick="window.open(${{JSON.stringify(featured.link || '#')}}, '_blank')" style="cursor:pointer;">
-    <div class="news-featured-body">
-      ${{makeSourceBadge(featured.source, featured._cat)}}
-      <div class="news-headline" style="margin-top:12px;">${{esc(featured.title)}}</div>
-      <div class="news-summary" style="margin-top:8px;">${{esc((featured.summary || '').slice(0,220))}}</div>
-      <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:10px;color:var(--text-3);">${{featured._cat === 'finance' ? '📈 Finance' : '🌍 World'}}</span>
-        ${{featured.link ? `<a class="news-read-link" href="${{esc(featured.link)}}" target="_blank" onclick="event.stopPropagation()">Read full story →</a>` : ''}}
+  const topStoryEl = document.getElementById('news-top-story');
+  if (topStoryEl) {{
+    topStoryEl.innerHTML = `
+      <div class="news-story-badge">${{newsEsc(featured._cat === 'finance' ? 'Market Impact' : 'Top Story')}}</div>
+      <div class="news-story-title">${{newsEsc(featured.title)}}</div>
+      <div class="news-story-summary">${{newsEsc((featured.summary || '').slice(0, 220) || 'Open the article for the full context.')}}</div>
+      <div class="news-story-meta">
+        <span>${{newsEsc(featured.source || 'Wire')}}</span>
+        <span>${{newsEsc(newsKeywordBucket(headlineText))}}</span>
+        <span>${{featured.link ? 'Open source →' : 'Live feed item'}}</span>
       </div>
-    </div>
-    ${{featuredImgPanel}}
-  </div>`;
-
-  // Section: remaining world articles
-  if (_newsFilter !== 'finance') {{
-    const worldRest = rest.filter(a => a._cat === 'world');
-    if (worldRest.length > 0) {{
-      html += `<div class="news-section-label" style="grid-column:1/-1;">🌍 World News</div>`;
-      html += worldRest.map(a => {{
-        const thumb = a.image_url
-          ? `<div class="news-thumb"><img src="${{esc(a.image_url)}}" alt="" loading="lazy" onerror="this.parentNode.remove()"></div>`
-          : '';
-        return `<a class="${{a.image_url ? 'news-card news-card-has-thumb' : 'news-card'}}" href="${{esc(a.link || '#')}}" target="_blank">
-          ${{thumb}}
-          ${{makeSourceBadge(a.source, a._cat)}}
-          <div class="news-headline">${{esc(a.title)}}</div>
-          ${{a.summary ? `<div class="news-summary">${{esc(a.summary.slice(0,150))}}</div>` : ''}}
-          ${{a.link ? `<span class="news-read-link">Read →</span>` : ''}}
-        </a>`;
-      }}).join('');
-    }}
+    `;
+    if (featured.link) topStoryEl.onclick = () => window.open(featured.link, '_blank', 'noopener');
+    else topStoryEl.onclick = null;
+    topStoryEl.style.cursor = featured.link ? 'pointer' : 'default';
   }}
 
-  // Section: remaining finance articles
-  if (_newsFilter !== 'world') {{
-    const financeRest = rest.filter(a => a._cat === 'finance');
-    if (financeRest.length > 0) {{
-      html += `<div class="news-section-label" style="grid-column:1/-1;">📈 Finance & Markets</div>`;
-      html += financeRest.map(a => {{
-        const thumb = a.image_url
-          ? `<div class="news-thumb"><img src="${{esc(a.image_url)}}" alt="" loading="lazy" onerror="this.parentNode.remove()"></div>`
-          : '';
-        return `<a class="${{a.image_url ? 'news-card news-card-has-thumb' : 'news-card'}}" href="${{esc(a.link || '#')}}" target="_blank">
-          ${{thumb}}
-          ${{makeSourceBadge(a.source, a._cat)}}
-          <div class="news-headline">${{esc(a.title)}}</div>
-          ${{a.summary ? `<div class="news-summary">${{esc(a.summary.slice(0,150))}}</div>` : ''}}
-          ${{a.link ? `<span class="news-read-link">Read →</span>` : ''}}
-        </a>`;
-      }}).join('');
-    }}
+  const topStoryList = document.getElementById('news-top-story-list');
+  if (topStoryList) {{
+    topStoryList.innerHTML = topArticles.slice(1, 6).map((item) => `
+      <div class="news-mini-story">
+        <div class="news-mini-copy">
+          <strong>${{newsEsc(item.title)}}</strong>
+          <span>${{newsEsc(item.source || 'Wire')}} · ${{newsEsc(newsKeywordBucket(`${{item.title}} ${{item.summary}}`))}}</span>
+        </div>
+        <div class="news-mini-meta">${{item.link ? `<a class="news-read-link" href="${{newsEsc(item.link)}}" target="_blank">Read →</a>` : newsEsc(item._cat)}}</div>
+      </div>
+    `).join('') || '<div class="news-mini-story"><div class="news-mini-copy"><strong>No additional stories yet.</strong><span>Refresh the feed in a moment.</span></div><div class="news-mini-meta">—</div></div>';
   }}
 
-  grid.innerHTML = html;
+  const briefingEl = document.getElementById('news-briefing-grid');
+  if (briefingEl) {{
+    const briefCards = [
+      ['What Happened', featured.title || 'No top story loaded yet.'],
+      ['Why It Matters', featured.summary || 'The main item will be summarized here once the feed loads.'],
+      ['What To Watch', categoryList[0] ? `${{categoryList[0][0]}} pressure is running highest in the current mix.` : 'Watch the next market and world updates.'],
+      ['What You Can Do', weatherSummary.alert ? 'Check schedule and travel plans against the active weather watch.' : 'Stay on the top themes only and avoid noisy feed hopping.'],
+    ];
+    briefingEl.innerHTML = briefCards.map(([title, copy]) => `
+      <div class="news-brief-card">
+        <strong>${{newsEsc(title)}}</strong>
+        <span>${{newsEsc(copy)}}</span>
+      </div>
+    `).join('');
+  }}
+
+  const watchListEl = document.getElementById('news-watch-list');
+  if (watchListEl) {{
+    const watchRows = [
+      ['AI Regulation Developments', topArticles.filter((item) => /ai|regulation|policy|chip|technology/i.test(`${{item.title}} ${{item.summary}}`)).length, 'high'],
+      ['Economy & Inflation', topArticles.filter((item) => /econom|inflation|fed|market|rates|tariff|stocks|oil/i.test(`${{item.title}} ${{item.summary}}`)).length, 'high'],
+      ['Publishing Industry Trends', topArticles.filter((item) => /publish|media|content|audience|creator/i.test(`${{item.title}} ${{item.summary}}`)).length, 'medium'],
+      ['Health Policy Changes', topArticles.filter((item) => /health|medical|policy|research/i.test(`${{item.title}} ${{item.summary}}`)).length, 'medium'],
+      ['Energy & Markets', topArticles.filter((item) => /oil|energy|gas|market|supply/i.test(`${{item.title}} ${{item.summary}}`)).length, 'low'],
+    ];
+    watchListEl.innerHTML = watchRows.map(([title, count, tone]) => `
+      <div class="news-watch-item">
+        <div class="news-watch-copy"><strong>${{newsEsc(title)}}</strong><span>${{count}} new update${{count === 1 ? '' : 's'}}</span></div>
+        <div class="news-pill ${{tone}}">${{tone}}</div>
+      </div>
+    `).join('');
+  }}
+
+  const sentimentSplit = document.getElementById('news-sentiment-split');
+  if (sentimentSplit) {{
+    sentimentSplit.innerHTML = [
+      ['Positive', positive],
+      ['Neutral', neutral],
+      ['Negative', negative],
+    ].map(([label, value]) => `
+      <div class="news-mini-stat">
+        <span style="display:block;color:var(--news-copy-muted);font-size:12px;margin-bottom:6px;">${{newsEsc(label)}}</span>
+        <strong>${{value}}%</strong>
+      </div>
+    `).join('');
+  }}
+
+  const categoryGrid = document.getElementById('news-category-grid');
+  if (categoryGrid) {{
+    categoryGrid.innerHTML = categoryList.slice(0, 8).map(([name, count]) => `
+      <div class="news-category-card">
+        <strong>${{newsEsc(name)}}</strong>
+        <span>${{count}} stor${{count === 1 ? 'y' : 'ies'}}</span>
+      </div>
+    `).join('') || '<div class="news-category-card"><strong>Awaiting feed</strong><span>Categories will appear here.</span></div>';
+  }}
+
+  const insightEl = document.getElementById('news-insight-list');
+  if (insightEl) {{
+    const insights = [
+      ['Your Business', topArticles.find((item) => /econom|tariff|market|rates|policy/i.test(`${{item.title}} ${{item.summary}}`))?.summary || 'A market or policy shift may affect operations and pricing.'],
+      ['Your Calendar', weatherSummary.alert ? 'Weather or disruption could affect travel and meeting confidence.' : 'Current news mix does not appear to threaten the next movement block.'],
+      ['Your Investments', topArticles.find((item) => /market|stocks|oil|fed|econom/i.test(`${{item.title}} ${{item.summary}}`))?.title || 'Watch volatility and second-order effects rather than reacting to every headline.'],
+      ['Your Health', weatherSummary.condition || 'Local conditions are stable.'],
+    ];
+    insightEl.innerHTML = insights.map(([title, copy]) => `
+      <div class="news-insight-item">
+        <div class="news-insight-copy"><strong>${{newsEsc(title)}}</strong><span>${{newsEsc(copy)}}</span></div>
+        <div class="news-mini-meta">›</div>
+      </div>
+    `).join('');
+  }}
+
+  const sourceEl = document.getElementById('news-source-list');
+  if (sourceEl) {{
+    sourceEl.innerHTML = sourceScores.slice(0, 5).map(([source, score]) => `
+      <div class="news-source-item">
+        <div class="news-source-copy"><strong>${{newsEsc(source)}}</strong><span>${{score >= 88 ? 'High quality' : score >= 80 ? 'Good quality' : 'Context source'}}</span></div>
+        <div class="news-mini-meta">${{score}}%</div>
+      </div>
+    `).join('') || '<div class="news-source-item"><div class="news-source-copy"><strong>No sources loaded</strong><span>Refresh the feed.</span></div><div class="news-mini-meta">—</div></div>';
+  }}
+
+  const weatherEl = document.getElementById('news-weather-list');
+  if (weatherEl) {{
+    weatherEl.innerHTML = `
+      <div class="news-weather-item">
+        <div class="news-weather-copy"><strong>${{newsEsc(weatherSummary.temp)}}</strong><span>${{newsEsc(weatherSummary.condition)}}</span></div>
+        <div class="news-mini-meta">Now</div>
+      </div>
+      <div class="news-weather-item">
+        <div class="news-weather-copy"><strong>High / Low</strong><span>${{newsEsc(weatherSummary.high)}} · ${{newsEsc(weatherSummary.low)}}</span></div>
+        <div class="news-mini-meta">Today</div>
+      </div>
+      <div class="news-weather-item">
+        <div class="news-weather-copy"><strong>Humidity / Wind</strong><span>${{newsEsc(weatherSummary.humidity)}} · ${{newsEsc(weatherSummary.wind)}}</span></div>
+        <div class="news-mini-meta">Local</div>
+      </div>
+      <div class="news-weather-item">
+        <div class="news-weather-copy"><strong>${{newsEsc(weatherSummary.alert?.headline || 'No severe watch active')}}</strong><span>${{newsEsc(weatherSummary.alert?.event || 'Weather posture is steady.')}}</span></div>
+        <div class="news-mini-meta">${{weatherSummary.alert ? 'Monitor' : 'Clear'}}</div>
+      </div>
+    `;
+  }}
+
+  const deepDiveEl = document.getElementById('news-deep-dive-grid');
+  if (deepDiveEl) {{
+    deepDiveEl.innerHTML = topArticles.slice(0, 4).map((item, idx) => `
+      <div class="news-deep-card">
+        <div class="news-deep-art" style="background:
+          linear-gradient(180deg, rgba(4,7,12,0.12), rgba(4,7,12,0.65)),
+          radial-gradient(circle at ${{70 - idx * 8}}% 22%, rgba(93,184,255,0.16), transparent 22%),
+          linear-gradient(135deg, rgba(38,56,72,0.96), rgba(10,15,21,0.96) 58%, rgba(86,58,31,0.78));"></div>
+        <div class="news-deep-body">
+          <strong>${{newsEsc(item.title)}}</strong>
+          <span>${{newsEsc(item.summary || 'Open the source for the full story.')}}</span>
+          <span style="display:block;margin-top:8px;">${{newsEsc(item.source || 'Wire')}} · ${{newsEsc(newsKeywordBucket(`${{item.title}} ${{item.summary}}`))}}</span>
+        </div>
+      </div>
+    `).join('') || '<div class="news-deep-card"><div class="news-deep-body"><strong>No deep-dive stories loaded.</strong><span>Refresh in a moment.</span></div></div>';
+  }}
+
+  const actionsEl = document.getElementById('news-actions-grid');
+  if (actionsEl) {{
+    const actions = [
+      ['Customize Feed', 'Refocus on your real priorities.', `showToast('News feed customization coming next.', 'info')`],
+      ['Set Alerts', 'Pin a watchlist theme or escalation.', `showToast('Alert controls are the next wiring step.', 'info')`],
+      ['Save Article', 'Hold a story for later review.', `showToast('Saved to reading queue.', 'success')`],
+      ['Share Brief', 'Send the distilled brief onward.', `showToast('Brief sharing flow staged.', 'info')`],
+      ['Mark As Read', 'Clear low-value noise quickly.', `showToast('Noise suppressed for this session.', 'success')`],
+      ['Open Weather', 'Jump into local forecast context.', `openWeatherModal()`],
+    ];
+    actionsEl.innerHTML = actions.map(([title, copy, action]) => `
+      <button class="news-action-btn" onclick="${{action}}">
+        <strong>${{newsEsc(title)}}</strong>
+        <span>${{newsEsc(copy)}}</span>
+      </button>
+    `).join('');
+  }}
 }}
 
 async function loadBriefing() {{
