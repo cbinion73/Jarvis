@@ -7986,6 +7986,602 @@ body::after {{
 /* ═══════════════════════════════════════════════════════════════════
    CHAT CONVERSATION
 ═══════════════════════════════════════════════════════════════════ */
+.command-view {{
+  --cmd-gold: #e7a64d;
+  --cmd-gold-soft: #b57a2f;
+  --cmd-ink: #08101a;
+  --cmd-panel: rgba(10, 15, 23, 0.96);
+  --cmd-panel-soft: rgba(16, 22, 32, 0.92);
+  --cmd-border: rgba(231, 166, 77, 0.2);
+  --cmd-border-strong: rgba(231, 166, 77, 0.36);
+  --cmd-copy: #f6efe3;
+  --cmd-muted: #bcae95;
+  --cmd-dim: #7f7363;
+  --cmd-shadow: 0 32px 80px rgba(0, 0, 0, 0.42);
+}}
+.command-view .view-title {{
+  color: var(--cmd-copy);
+}}
+.command-header {{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 22px;
+}}
+.command-kicker {{
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--cmd-gold-soft);
+  margin-bottom: 8px;
+}}
+.command-subtitle {{
+  max-width: 840px;
+  color: var(--cmd-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}}
+.command-motto {{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  min-width: 300px;
+  border: 1px solid var(--cmd-border);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(13,18,28,.95), rgba(8,11,17,.92));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}}
+.command-motto-mark {{
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 1px solid var(--cmd-border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cmd-gold);
+  font-size: 24px;
+  flex-shrink: 0;
+}}
+.command-motto strong {{
+  display: block;
+  color: var(--cmd-gold);
+  font-size: 16px;
+  margin-bottom: 4px;
+}}
+.command-motto span {{
+  color: var(--cmd-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}}
+.command-desktop-stage {{
+  border: 1px solid var(--cmd-border);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top right, rgba(231,166,77,.08), transparent 28%),
+    linear-gradient(180deg, rgba(7,10,15,.98), rgba(4,6,11,.98));
+  box-shadow: var(--cmd-shadow);
+  overflow: hidden;
+}}
+.command-desktop-shell {{
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  min-height: 920px;
+}}
+.command-sidebar {{
+  padding: 22px 18px 18px;
+  border-right: 1px solid var(--cmd-border);
+  background: linear-gradient(180deg, rgba(9,12,18,.98), rgba(5,8,13,.96));
+  display: flex;
+  flex-direction: column;
+}}
+.command-sidebar-orb {{
+  width: 92px;
+  height: 92px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  border: 1px solid var(--cmd-border-strong);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(65,170,255,0.36), rgba(12,40,64,0.06) 45%, transparent 72%),
+    rgba(255,255,255,0.02);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8fd3ff;
+  font-size: 34px;
+  box-shadow: 0 0 40px rgba(65,170,255,0.16);
+}}
+.command-sidebar-brand {{
+  text-align: center;
+  margin-bottom: 18px;
+}}
+.command-sidebar-brand strong {{
+  display: block;
+  color: var(--cmd-copy);
+  font-size: 28px;
+  letter-spacing: 0.05em;
+}}
+.command-sidebar-brand span {{
+  display: block;
+  color: var(--cmd-gold);
+  font-size: 13px;
+  margin-top: 4px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}}
+.command-sidebar-nav {{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}}
+.command-sidebar-item {{
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 11px 12px;
+  color: var(--cmd-muted);
+  font-size: 13px;
+  background: rgba(255,255,255,.02);
+}}
+.command-sidebar-item.active {{
+  border-color: var(--cmd-border-strong);
+  background: linear-gradient(180deg, rgba(231,166,77,.18), rgba(94,58,15,.14));
+  color: var(--cmd-copy);
+}}
+.command-sidebar-foot {{
+  margin-top: auto;
+  display: grid;
+  gap: 12px;
+}}
+.command-status-card {{
+  border: 1px solid var(--cmd-border);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(255,255,255,0.02);
+}}
+.command-status-card strong {{
+  display: block;
+  color: var(--cmd-copy);
+  font-size: 12px;
+  margin-bottom: 10px;
+}}
+.command-status-card span {{
+  display: block;
+  color: var(--cmd-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}}
+.command-status-card .command-status-link {{
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--cmd-gold);
+  font-size: 11px;
+  cursor: pointer;
+}}
+.command-main {{
+  padding: 22px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}}
+.command-topbar {{
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(360px, .9fr) minmax(280px, .75fr) 220px;
+  gap: 16px;
+  align-items: stretch;
+}}
+.command-chipbar,
+.command-profile-card,
+.command-quote-card {{
+  border: 1px solid var(--cmd-border);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(13,18,28,.95), rgba(8,11,17,.92));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}}
+.command-chipbar {{
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}}
+.command-chipbar strong {{
+  color: var(--cmd-copy);
+  font-size: 28px;
+  letter-spacing: -0.04em;
+}}
+.command-chipbar strong span {{
+  color: var(--cmd-gold);
+}}
+.command-chiprow {{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}}
+.command-chip {{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  color: var(--cmd-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}}
+.command-chip b {{
+  color: var(--cmd-copy);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+}}
+.command-quote-card {{
+  padding: 18px;
+}}
+.command-quote-card blockquote {{
+  margin: 0;
+  color: var(--cmd-gold);
+  font-family: "Georgia", serif;
+  font-size: 22px;
+  line-height: 1.5;
+}}
+.command-quote-card p {{
+  margin: 10px 0 0;
+  color: var(--cmd-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}}
+.command-profile-card {{
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}}
+.command-profile-avatar {{
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  border: 1px solid var(--cmd-border-strong);
+  background: linear-gradient(135deg, rgba(231,166,77,.26), rgba(63,103,170,.18));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: var(--cmd-copy);
+}}
+.command-profile-card strong {{
+  display: block;
+  color: var(--cmd-copy);
+  font-size: 16px;
+}}
+.command-profile-card span {{
+  display: block;
+  color: var(--cmd-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}}
+.command-grid {{
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+}}
+.command-card {{
+  border-radius: 22px;
+  border: 1px solid var(--cmd-border);
+  background: linear-gradient(180deg, rgba(10,15,23,.96), rgba(6,9,14,.94));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  overflow: hidden;
+}}
+.command-card-inner {{
+  padding: 18px 18px 20px;
+}}
+.command-card-header {{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}}
+.command-card-number {{
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cmd-gold);
+  margin-bottom: 6px;
+}}
+.command-card-header h3 {{
+  margin: 0;
+  color: var(--cmd-copy);
+  font-size: 20px;
+  letter-spacing: 0.01em;
+}}
+.command-card-header p {{
+  margin: 4px 0 0;
+  color: var(--cmd-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}}
+.command-span-12 {{ grid-column: span 12; }}
+.command-span-9 {{ grid-column: span 9; }}
+.command-span-8 {{ grid-column: span 8; }}
+.command-span-6 {{ grid-column: span 6; }}
+.command-span-4 {{ grid-column: span 4; }}
+.command-span-3 {{ grid-column: span 3; }}
+.command-presence-grid,
+.command-truth-grid,
+.command-split-grid,
+.command-mini-grid {{
+  display: grid;
+  gap: 12px;
+}}
+.command-presence-grid {{
+  grid-template-columns: 144px 1fr;
+  align-items: center;
+}}
+.command-presence-ring {{
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  margin: 0 auto;
+  border: 12px solid rgba(49,151,255,0.18);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #89c7ff;
+  font-size: 38px;
+}}
+.command-presence-copy strong {{
+  display: block;
+  color: var(--cmd-copy);
+  font-size: 28px;
+  margin-bottom: 8px;
+}}
+.command-presence-copy span {{
+  display: block;
+  color: var(--cmd-muted);
+  font-size: 14px;
+  line-height: 1.65;
+}}
+.command-data-table {{
+  margin-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}}
+.command-data-row {{
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}}
+.command-data-row:last-child {{
+  border-bottom: none;
+}}
+.command-data-row label {{
+  color: var(--cmd-dim);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}}
+.command-data-row span {{
+  color: var(--cmd-copy);
+  font-size: 13px;
+  text-align: right;
+}}
+.command-action-btn {{
+  width: 100%;
+  margin-top: 14px;
+  border: 1px solid var(--cmd-border-strong);
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: var(--cmd-gold);
+  background: linear-gradient(180deg, rgba(231,166,77,.16), rgba(93,57,18,.16));
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}}
+.command-truth-grid {{
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}}
+.command-truth-tile,
+.command-row,
+.command-action-tile,
+.command-mini-card,
+.command-decision-row,
+.command-health-row,
+.command-supervision-box {{
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.028);
+}}
+.command-truth-tile,
+.command-action-tile,
+.command-mini-card,
+.command-supervision-box {{
+  padding: 14px;
+}}
+.command-truth-tile strong,
+.command-row strong,
+.command-action-tile strong,
+.command-mini-card strong,
+.command-decision-row strong,
+.command-health-row strong,
+.command-supervision-box strong {{
+  display: block;
+  color: var(--cmd-copy);
+}}
+.command-truth-tile strong {{
+  font-size: 14px;
+  margin-bottom: 6px;
+}}
+.command-truth-tile span,
+.command-row span,
+.command-action-tile span,
+.command-mini-card span,
+.command-decision-row span,
+.command-health-row span,
+.command-supervision-box span {{
+  color: var(--cmd-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}}
+.command-summary-box {{
+  margin-top: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(231,166,77,0.16);
+  padding: 14px;
+  background: rgba(255,255,255,0.02);
+}}
+.command-summary-box strong {{
+  display: block;
+  color: var(--cmd-copy);
+  margin-bottom: 6px;
+  font-size: 13px;
+}}
+.command-summary-box span {{
+  color: var(--cmd-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}}
+.command-section-link {{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--cmd-gold);
+  font-size: 11px;
+  margin-top: 10px;
+  cursor: pointer;
+}}
+.command-decision-table,
+.command-activity-list,
+.command-family-list,
+.command-follow-list {{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}}
+.command-decision-row,
+.command-row,
+.command-health-row {{
+  padding: 12px 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}}
+.command-row-meta {{
+  flex-shrink: 0;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--cmd-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}}
+.command-badge {{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--cmd-muted);
+}}
+.command-badge.high {{ color: #f6b15d; border-color: rgba(231,166,77,0.28); }}
+.command-badge.low {{ color: #89c7ff; border-color: rgba(89,157,255,0.28); }}
+.command-action-grid {{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}}
+.command-action-tile {{
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease;
+}}
+.command-action-tile:hover {{
+  transform: translateY(-2px);
+  border-color: var(--cmd-border-strong);
+}}
+.command-mini-grid {{
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}}
+.command-route-map {{
+  height: 170px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 65% 30%, rgba(231,166,77,0.14), transparent 18%),
+    linear-gradient(135deg, rgba(18,24,34,0.96), rgba(8,12,18,0.94));
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.06);
+}}
+.command-route-map::before {{
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: .36;
+  background-image:
+    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+  background-size: 36px 36px;
+}}
+.command-route-map svg {{
+  position: absolute;
+  inset: 16px;
+  width: calc(100% - 32px);
+  height: calc(100% - 32px);
+}}
+.command-trace-shell {{
+  margin-top: 6px;
+}}
+.command-trace-shell .chat-area {{
+  padding: 0;
+  min-height: 200px;
+  max-height: 360px;
+}}
+.command-trace-shell .chat-empty {{
+  padding: 30px 18px;
+}}
+@media (max-width: 1680px) {{
+  .command-topbar {{
+    grid-template-columns: 1fr 1fr;
+  }}
+  .command-grid {{
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }}
+  .command-span-9, .command-span-8, .command-span-6, .command-span-4, .command-span-3 {{
+    grid-column: span 8;
+  }}
+}}
+@media (max-width: 1120px) {{
+  .command-desktop-shell {{
+    grid-template-columns: 1fr;
+  }}
+  .command-sidebar {{
+    border-right: none;
+    border-bottom: 1px solid var(--cmd-border);
+  }}
+  .command-topbar,
+  .command-grid,
+  .command-truth-grid,
+  .command-action-grid,
+  .command-mini-grid,
+  .command-presence-grid,
+  .command-split-grid {{
+    grid-template-columns: 1fr;
+  }}
+  .command-span-12, .command-span-9, .command-span-8, .command-span-6, .command-span-4, .command-span-3 {{
+    grid-column: span 1;
+  }}
+}}
 .chat-area {{
   display: flex;
   flex-direction: column;
@@ -11630,24 +12226,142 @@ body::after {{
 <main class="main">
 
   <!-- ── CHAT ────────────────────────────────────────────── -->
-  <div id="view-chat" class="view">
-    <div class="view-header">
-      <div class="view-title">CHAT <div class="view-title-line"></div></div>
-      <div class="view-subtitle">Direct channel to JARVIS</div>
-    </div>
-    <div id="chat-area" class="chat-area">
-      <!-- messages appear here -->
-      <div class="chat-empty" id="chat-empty">
-        <div class="chat-empty-icon">🤖</div>
-        <div class="chat-empty-text">JARVIS Agent — build, troubleshoot, run code</div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:20px;">
-          <button class="glass-btn" style="font-size:12px;padding:8px 14px;" onclick="setCmd('What is the current state of the JARVIS codebase?');sendCmd();">🔍 Codebase status</button>
-          <button class="glass-btn" style="font-size:12px;padding:8px 14px;" onclick="setCmd('Run the JARVIS test suite and fix any failures');sendCmd();">🧪 Run tests</button>
-          <button class="glass-btn" style="font-size:12px;padding:8px 14px;" onclick="setCmd('Show me recent git changes and summarize what was built');sendCmd();">📋 Recent changes</button>
-          <button class="glass-btn" style="font-size:12px;padding:8px 14px;" onclick="setCmd('Check which services are running and their health');sendCmd();">🌡 Service health</button>
-          <button class="glass-btn" style="font-size:12px;padding:8px 14px;" onclick="setCmd('Search the JARVIS codebase for TODO and FIXME comments');sendCmd();">📌 Find TODOs</button>
+  <div id="view-chat" class="view command-view">
+    <div class="command-header">
+      <div>
+        <div class="command-kicker">Desktop Experience</div>
+        <div class="view-title">COMMAND<div class="view-title-line"></div></div>
+        <div class="command-subtitle">Executive control, life operating posture, decision authority, and the real work that moves because you touched it. Command keeps the transcript alive, but the page now behaves like an actual desktop operating board.</div>
+      </div>
+      <div class="command-motto">
+        <div class="command-motto-mark">✦</div>
+        <div>
+          <strong>Lead with wisdom. Act with clarity.</strong>
+          <span>JARVIS protects what matters and moves what moves you.</span>
         </div>
-        <div style="margin-top:16px;font-size:11px;color:rgba(255,255,255,0.25);">slash commands: /clear /memory /context /tools /restart /undo</div>
+      </div>
+    </div>
+
+    <div class="command-desktop-stage">
+      <div class="command-desktop-shell">
+        <aside class="command-sidebar">
+          <div class="command-sidebar-orb">✦</div>
+          <div class="command-sidebar-brand">
+            <strong>JARVIS</strong>
+            <span>Command</span>
+          </div>
+          <div class="command-sidebar-nav">
+            <div class="command-sidebar-item active">⌂ Command</div>
+            <div class="command-sidebar-item">☀ Daily Brief</div>
+            <div class="command-sidebar-item">▣ Mission Board</div>
+            <div class="command-sidebar-item">◎ Agent Ops</div>
+            <div class="command-sidebar-item">☑ Approvals</div>
+            <div class="command-sidebar-item">⟡ Supervision</div>
+            <div class="command-sidebar-item">✦ Foundry</div>
+            <div class="command-sidebar-item">⇢ Publish</div>
+            <div class="command-sidebar-item">❖ Legacy</div>
+            <div class="command-sidebar-item">⚑ Huddle</div>
+            <div class="command-sidebar-item">🧭 Navigation</div>
+            <div class="command-sidebar-item">♥ Health</div>
+            <div class="command-sidebar-item">⌂ Home</div>
+            <div class="command-sidebar-item">⚙ Systems</div>
+            <div class="command-sidebar-item">⛭ Forge</div>
+          </div>
+          <div class="command-sidebar-foot">
+            <div class="command-status-card">
+              <strong>System Status</strong>
+              <span id="command-system-status">Loading command posture…</span>
+              <div class="command-status-link" onclick="switchView('notifications')">System Overview →</div>
+            </div>
+          </div>
+        </aside>
+
+        <main class="command-main">
+          <div class="command-topbar">
+            <div class="command-chipbar">
+              <div class="command-kicker">Executive Operating System</div>
+              <strong>JARVIS <span>COMMAND</span></strong>
+              <div class="command-chiprow">
+                <div class="command-chip">Operational Mode <b id="command-mode-chip">Focus Block</b></div>
+                <div class="command-chip">Interruption Posture <b id="command-interruption-chip">Low</b></div>
+                <div class="command-chip">Trust Level <b id="command-trust-chip">Elevated</b></div>
+                <div class="command-chip">Autonomy <b id="command-autonomy-chip">Bounded</b></div>
+                <div class="command-chip">Watch State <b id="command-watch-chip">Normal</b></div>
+              </div>
+            </div>
+            <div class="command-quote-card">
+              <blockquote id="command-quote">“Lead with wisdom. Act with clarity.”</blockquote>
+              <p id="command-quote-copy">JARVIS protects what matters and moves what moves you.</p>
+            </div>
+            <div class="command-profile-card">
+              <div class="command-profile-avatar">👤</div>
+              <div>
+                <strong id="command-profile-name">Chris</strong>
+                <span id="command-profile-role">Executive / Builder</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="command-grid">
+            <section class="command-card command-span-4"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">1. Command Presence</div><h3>Know your state. Set your posture.</h3><p>Command starts with how you are entering the day, what lane you are protecting, and what interruption budget you are permitting.</p></div></div><div class="command-presence-grid"><div class="command-presence-ring">➤</div><div class="command-presence-copy"><strong id="command-presence-title">Focus Block Mode</strong><span id="command-presence-copy">Loading command presence…</span></div></div><div class="command-data-table"><div class="command-data-row"><label>Primary Lane</label><span id="command-presence-lane">—</span></div><div class="command-data-row"><label>Location</label><span id="command-presence-location">—</span></div><div class="command-data-row"><label>Time Window</label><span id="command-presence-window">—</span></div><div class="command-data-row"><label>Next Hard Stop</label><span id="command-presence-stop">—</span></div></div><button class="command-action-btn" onclick="switchView('overview')">Change Mode →</button></div></section>
+
+            <section class="command-card command-span-4"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">2. Truth Surface</div><h3>The real state of your world.</h3><p>Reality first. Command should surface what changed, what is blocked, and what is quietly moving without theatrics.</p></div></div><div class="command-truth-grid" id="command-truth-grid"></div><div class="command-summary-box"><strong>System Summary</strong><span id="command-truth-summary">Loading reality posture…</span></div><div class="command-section-link" onclick="window.location.href='/command-center'">Full reality map →</div></div></section>
+
+            <section class="command-card command-span-4"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">3. Decision Spine</div><h3>What requires your authority.</h3><p>Approvals, surfaced needs, and strategic choices should gather here without forcing you into ten different routes.</p></div></div><div class="command-decision-table" id="command-decision-list"></div><div class="command-section-link" onclick="switchView('approvals')">View all decision gates →</div></div></section>
+
+            <section class="command-card command-span-3"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">Command Actions</div><h3>Direct. Delegate. Override.</h3></div></div><div class="command-activity-list" id="command-actions-list"></div></div></section>
+
+            <section class="command-card command-span-3"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">4. Direct Action Console</div><h3>Move the world.</h3><p>Launch fast, useful work from the command deck without leaving the page.</p></div></div><div class="command-action-grid" id="command-direct-actions"></div><div class="command-section-link" onclick="switchView('workshop')">View all action lanes →</div></div></section>
+
+            <section class="command-card command-span-3"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">5. While You Were Away</div><h3>Continuity. Progress. Preparedness.</h3></div></div><div class="command-activity-list" id="command-away-list"></div><div class="command-section-link" onclick="window.location.href='/activity-center'">View full overnight report →</div></div></section>
+
+            <section class="command-card command-span-3"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">6. Movement & Route</div><h3>Your day in motion.</h3></div></div><div class="command-mini-grid"><div class="command-route-map"><svg viewBox="0 0 260 160" preserveAspectRatio="none"><path d="M28 136 C50 120 62 86 104 88 C142 90 154 54 184 46 C202 41 218 26 230 18" stroke="rgba(78,162,255,0.92)" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="8 9"></path><circle cx="28" cy="136" r="9" fill="#e7a64d"></circle><circle cx="230" cy="18" r="9" fill="#8ed6ff"></circle></svg></div><div class="command-mini-grid" style="grid-template-columns:1fr;"><div class="command-mini-card"><strong id="command-route-next">Next move</strong><span id="command-route-next-copy">Loading route posture…</span></div><div class="command-mini-card"><strong id="command-route-traffic">Traffic</strong><span id="command-route-weather">Loading conditions…</span></div></div></div><div class="command-section-link" onclick="switchView('navigate')">Open full calendar →</div></div></section>
+
+            <section class="command-card command-span-3"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">7. Family & Household</div><h3>What matters at home.</h3></div></div><div class="command-family-list" id="command-family-list"></div><div class="command-section-link" onclick="switchView('calendar')">View household hub →</div></div></section>
+
+            <section class="command-card command-span-4"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">8. Foundry & Creative Momentum</div><h3>Protect and prioritize your creative work.</h3></div></div><div class="command-split-grid" style="grid-template-columns:1.1fr .9fr;"><div class="command-activity-list" id="command-foundry-list"></div><div class="command-mini-card"><strong>Today's Creative Focus</strong><span id="command-foundry-focus">Loading high-leverage asset…</span><div class="command-section-link" style="margin-top:12px;" onclick="switchView('workshop')">Open Foundry dashboard →</div></div></div></div></section>
+
+            <section class="command-card command-span-4"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">9. Health & Recovery</div><h3>Protect the operator.</h3></div></div><div class="command-activity-list" id="command-health-list"></div><div class="command-section-link" onclick="switchView('health')">Open health dashboard →</div></div></section>
+
+            <section class="command-card command-span-4"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">10. Follow-Through Lane</div><h3>Keep today from dissolving.</h3></div></div><div class="command-follow-list" id="command-follow-list"></div><div class="command-section-link" onclick="switchView('notifications')">View all open loops →</div></div></section>
+
+            <section class="command-card command-span-3"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">11. Supervision & Trust</div><h3>Agents. Rules. Confidence.</h3></div></div><div class="command-supervision-box"><strong id="command-supervision-score">92%</strong><span id="command-supervision-copy">Overall command confidence</span></div><div class="command-mini-grid" id="command-supervision-grid"></div><div class="command-section-link" onclick="window.location.href='/supervision-snapshot'">Open supervision center →</div></div></section>
+
+            <section class="command-card command-span-3"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">12. Mode Shaper</div><h3>Set the tone. Shape the system.</h3></div></div><div class="command-action-grid" id="command-mode-grid"></div></div></section>
+
+            <section class="command-card command-span-3"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">13. Strategic Overview</div><h3>The long view, always in sight.</h3></div></div><div class="command-mini-grid" id="command-strategy-grid"></div><div class="command-section-link" onclick="window.location.href='/progress-center'">Open strategic cockpit →</div></div></section>
+
+            <section class="command-card command-span-3"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">14. Next Best Move</div><h3>If everything else fails away.</h3></div></div><div class="command-mini-card"><strong id="command-next-title">Loading next move…</strong><span id="command-next-copy">JARVIS is evaluating the best next step.</span><button class="command-action-btn" id="command-next-button" onclick="switchView('notifications')">Begin Now →</button></div></div></section>
+
+            <section class="command-card command-span-12"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">15. Command Reminder</div><h3>Anchor for the day.</h3></div></div><div class="command-mini-card"><strong id="command-reminder-title">Wisdom is knowing what matters.</strong><span id="command-reminder-copy">Courage is doing it anyway. Love is why you do it for.</span></div></div></section>
+          </div>
+
+          <div class="command-card command-trace-shell">
+            <div class="command-card-inner">
+              <div class="command-card-header">
+                <div>
+                  <div class="command-card-number">Live Command Trace</div>
+                  <h3>Direct channel to JARVIS</h3>
+                  <p>The desktop board sets posture. The transcript below keeps the actual work visible when you run commands.</p>
+                </div>
+              </div>
+              <div id="chat-area" class="chat-area">
+                <div class="chat-empty" id="chat-empty">
+                  <div class="chat-empty-icon">🤖</div>
+                  <div class="chat-empty-text">JARVIS Agent — build, troubleshoot, run code</div>
+                  <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:20px;">
+                    <button class="glass-btn" style="font-size:12px;padding:8px 14px;" onclick="setCmd('What is the current state of the JARVIS codebase?');sendCmd();">🔍 Codebase status</button>
+                    <button class="glass-btn" style="font-size:12px;padding:8px 14px;" onclick="setCmd('Run the JARVIS test suite and fix any failures');sendCmd();">🧪 Run tests</button>
+                    <button class="glass-btn" style="font-size:12px;padding:8px 14px;" onclick="setCmd('Show me recent git changes and summarize what was built');sendCmd();">📋 Recent changes</button>
+                    <button class="glass-btn" style="font-size:12px;padding:8px 14px;" onclick="setCmd('Check which services are running and their health');sendCmd();">🌡 Service health</button>
+                    <button class="glass-btn" style="font-size:12px;padding:8px 14px;" onclick="setCmd('Search the JARVIS codebase for TODO and FIXME comments');sendCmd();">📌 Find TODOs</button>
+                  </div>
+                  <div style="margin-top:16px;font-size:11px;color:rgba(255,255,255,0.25);">slash commands: /clear /memory /context /tools /restart /undo</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   </div>
@@ -16682,6 +17396,7 @@ function loadViewData(name) {{
   if (_agentsRefreshTimer) {{ clearInterval(_agentsRefreshTimer); _agentsRefreshTimer = null; }}
 
   switch (name) {{
+    case 'chat':         loadCommandDesktop(); break;
     case 'overview':     loadLayoutState(); break;
     case 'forge':        forgeInit(); break;
     case 'agents':
@@ -18951,6 +19666,222 @@ function dailyBriefFormatDayTime(iso) {{
 
 function dailyBriefFormatDateLong() {{
   return new Date().toLocaleDateString([], {{ weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }});
+}}
+
+function commandQuickAction(text) {{
+  setCmd(text);
+  sendCmd();
+}}
+
+function commandBadge(priority) {{
+  const raw = String(priority || '').toLowerCase();
+  return raw === 'critical' || raw === 'high' ? 'high' : raw === 'low' ? 'low' : '';
+}}
+
+function renderCommandDesktop(data) {{
+  const name = dailyBriefName();
+  const home = data.command?.home_overview || {{}};
+  const needs = data.command?.needs_cockpit || {{}};
+  const activity = Array.isArray(data.command?.activity_feed) ? data.command.activity_feed : [];
+  const approvals = Array.isArray(data.command?.pending_approvals) ? data.command.pending_approvals : [];
+  const roster = data.command?.agent_ops_roster || {{}};
+  const progress = data.command?.progress_dashboard || {{}};
+  const recovery = data.command?.failure_recovery || {{}};
+  const memory = data.command?.memory || {{}};
+  const modules = data.command?.core_modules || {{}};
+  const timeline = data.command?.timeline_preview || {{}};
+  const openLoops = data.command?.open_loop_inspector || {{}};
+  const projects = Array.isArray(data.projects) ? data.projects : [];
+  const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+  const reminders = Array.isArray(data.reminders?.open_items) ? data.reminders.open_items : [];
+  const calendar = (data.home && data.home.calendar) || {{}};
+  const upcoming = Array.isArray(calendar.upcoming_3_days) ? calendar.upcoming_3_days : [];
+  const health = data.health || {{}};
+  const readiness = health.readiness || {{}};
+  const metrics = health.metrics || {{}};
+  const onlineUsers = Array.isArray(data.onlineUsers) ? data.onlineUsers : [];
+  const topNeed = home.top_need || {{}};
+  const focusProject = projects[0] || null;
+  const focusTask = tasks[0] || null;
+  const activeAgent = home.active_agent || {{}};
+
+  const setText = (id, value) => {{ const el = document.getElementById(id); if (el) el.textContent = value; }};
+  setText('command-profile-name', name);
+  setText('command-profile-role', 'Executive / Builder');
+  setText('command-system-status', home.system_state?.detail || home.summary || 'Command posture is loading.');
+  setText('command-mode-chip', focusProject ? 'Focus Block' : 'Review Mode');
+  setText('command-interruption-chip', tasks.filter(t => String(t.priority).toLowerCase() === 'high').length ? 'Guarded' : 'Low');
+  setText('command-trust-chip', approvals.length ? 'Elevated' : 'Stable');
+  setText('command-autonomy-chip', roster.counts?.blocked ? 'Bounded' : 'Assisted');
+  setText('command-watch-chip', recovery.integration_issue_count ? 'Alerted' : 'Normal');
+  setText('command-quote', 'Lead with wisdom. Act with clarity.');
+  setText('command-quote-copy', home.summary || 'JARVIS protects what matters and moves what moves you.');
+
+  setText('command-presence-title', focusProject ? 'Focus Block Mode' : 'Command Review');
+  setText('command-presence-copy', focusProject ? `Deep work is centered on ${{focusProject.title || 'the lead project'}}. ${{home.system_state?.detail || ''}}` : (home.headline || 'Command is surveying the day.'));
+  setText('command-presence-lane', focusProject?.title || focusTask?.title || 'Executive stewardship');
+  setText('command-presence-location', upcoming[0]?.location || 'Home Office');
+  setText('command-presence-window', upcoming[0]?.start_time ? `${{dailyBriefFormatDayTime(upcoming[0].start_time)}} onward` : 'This morning');
+  setText('command-presence-stop', upcoming[1]?.title || 'Family lunch');
+
+  const truthEl = document.getElementById('command-truth-grid');
+  if (truthEl) {{
+    const truthItems = [
+      ['What Changed', `${{activity.length}} recent motion item${{activity.length === 1 ? '' : 's'}}.`],
+      ['At Risk', `${{recovery.integration_issue_count || 0}} integration issue${{recovery.integration_issue_count === 1 ? '' : 's'}} require attention.`],
+      ['Ready to Move', `${{home.actions?.length || 0}} immediate action lane${{(home.actions?.length || 0) === 1 ? '' : 's'}} are staged.`],
+      ['Blocked', `${{roster.counts?.blocked || 0}} agents are blocked right now.`],
+      ['Quietly Moving', `${{projects.length || 0}} project lane${{projects.length === 1 ? '' : 's'}} continue in the background.`],
+      ['Completed', `${{progress.counts?.useful || 0}} visible module${{progress.counts?.useful === 1 ? '' : 's'}} are currently useful.`],
+    ];
+    truthEl.innerHTML = truthItems.map(([title, copy]) => `<div class="command-truth-tile"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('');
+  }}
+  setText('command-truth-summary', home.summary || 'JARVIS is gathering the real state of your world.');
+
+  const decisionEl = document.getElementById('command-decision-list');
+  if (decisionEl) {{
+    const items = (needs.items || []).slice(0, 6);
+    decisionEl.innerHTML = items.length ? items.map(item => `<div class="command-decision-row"><div><strong>${{escHtml(item.title || 'Decision gate')}}</strong><span>${{escHtml(item.detail || item.action_hint || '')}}</span></div><div class="command-row-meta"><div class="command-badge ${{commandBadge(item.urgency)}}">${{escHtml(String(item.urgency || 'normal'))}}</div><div style="margin-top:8px;">${{escHtml(item.route_label || 'Review')}}</div></div></div>`).join('') : '<div class="command-decision-row"><div><strong>No surfaced decision gates</strong><span>Your current command queue is clear.</span></div><div class="command-row-meta">Clear</div></div>';
+  }}
+
+  const actionsEl = document.getElementById('command-actions-list');
+  if (actionsEl) {{
+    const routeActions = Array.isArray(home.actions) ? home.actions : [];
+    const merged = routeActions.length ? routeActions : [
+      {{ label: 'Open Recovery View', route: '/supervision-snapshot', detail: 'Inspect current system needs.' }},
+      {{ label: 'Open Mission Board', route: '/mission-board', detail: 'See what is in motion.' }},
+      {{ label: 'Open Daily Brief', route: '/briefing-center', detail: 'Re-center the day.' }},
+      {{ label: 'Open Activity Feed', route: '/activity-center', detail: 'Review recent motion.' }},
+    ];
+    actionsEl.innerHTML = merged.slice(0, 7).map(item => `<div class="command-row"><div><strong>${{escHtml(item.label || 'Open route')}}</strong><span>${{escHtml(item.detail || '')}}</span></div><div class="command-row-meta" style="cursor:pointer;" onclick="window.location.href='${{escHtml(item.route || '/command-center')}}'">Open</div></div>`).join('');
+  }}
+
+  const directActionsEl = document.getElementById('command-direct-actions');
+  if (directActionsEl) {{
+    const directItems = [
+      ['Launch Devotional Sequence', 'Publish launch plan for the current devotional asset.'],
+      ['Queue Agent Mission', 'Research what gaps remain in the top need.'],
+      ['Start Creative Sprint', focusProject ? `Advance ${{focusProject.title}}` : 'Open a 90 minute focused build window.'],
+      ['Schedule Family Time', 'Protect tonight in the calendar and household posture.'],
+      ['Wake Foundry Concept Lab', 'Surface the strongest asset to build next.'],
+      ['Send Priority Message', 'Draft a direct message for the most important relationship today.'],
+      ['Open Recovery Loop', 'Review sleep, stress, and health signals.'],
+      ['Lock Distraction Shield', 'Guard the current focus block until the hard stop.'],
+    ];
+    directActionsEl.innerHTML = directItems.map(([title, copy]) => `<div class="command-action-tile" onclick="commandQuickAction('${{String(copy).replace(/'/g, "\\'")}}')"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('');
+  }}
+
+  const awayEl = document.getElementById('command-away-list');
+  if (awayEl) {{
+    awayEl.innerHTML = activity.slice(0, 6).map(item => `<div class="command-row"><div><strong>${{escHtml(item.title || item.entry_type || 'Recent motion')}}</strong><span>${{escHtml(item.detail || item.subtitle || '')}}</span></div><div class="command-row-meta">${{escHtml(item.timestamp ? dailyBriefFormatDayTime(item.timestamp) : 'recent')}}</div></div>`).join('') || '<div class="command-row"><div><strong>No overnight motion</strong><span>Continuity will collect here as JARVIS and the agents move.</span></div><div class="command-row-meta">Quiet</div></div>';
+  }}
+
+  setText('command-route-next', upcoming[0]?.title || 'No next route pressure');
+  setText('command-route-next-copy', upcoming[0]?.location || 'The day is local for now.');
+  setText('command-route-traffic', upcoming[0]?.start_time ? `Leave by ${{dailyBriefFormatDayTime(upcoming[0].start_time)}}` : 'Traffic light');
+  setText('command-route-weather', upcoming.length ? `${{upcoming.length}} calendar movement lane(s) are active.` : 'No route-sensitive commitments yet.');
+
+  const familyEl = document.getElementById('command-family-list');
+  if (familyEl) {{
+    const familyRows = onlineUsers.slice(0, 4).map(person => `<div class="command-row"><div><strong>${{escHtml(person.name)}}</strong><span>${{escHtml(person.detail || 'Active on a connected device.')}}</span></div><div class="command-badge low">Online</div></div>`);
+    const reminderRows = reminders.filter(item => /family|home|household|school|soccer|emma|liam|kids|girls/i.test(`${{item.title || ''}} ${{item.list || ''}}`)).slice(0, 4).map(item => `<div class="command-row"><div><strong>${{escHtml(item.title || 'Household item')}}</strong><span>${{escHtml(item.list || 'Family coordination')}}</span></div><div class="command-badge">${{escHtml(item.minutes_away != null ? `${{item.minutes_away}}m` : 'Open')}}</div></div>`);
+    familyEl.innerHTML = (familyRows.length ? familyRows : reminderRows).join('') || '<div class="command-row"><div><strong>Household posture is steady</strong><span>No urgent family disruptions are surfaced.</span></div><div class="command-badge low">Steady</div></div>';
+  }}
+
+  const foundryEl = document.getElementById('command-foundry-list');
+  if (foundryEl) {{
+    foundryEl.innerHTML = projects.slice(0, 4).map(project => `<div class="command-row"><div><strong>${{escHtml(project.title || 'Active asset')}}</strong><span>${{escHtml(project.category || project.status || 'In motion')}} · ${{escHtml((project.track || 'ops').toUpperCase())}}</span></div><div class="command-row-meta">${{escHtml(project.progress_pct != null ? `${{project.progress_pct}}%` : 'Live')}}</div></div>`).join('') || '<div class="command-row"><div><strong>No active Foundry lane</strong><span>Wake Foundry from the command deck when you need it.</span></div><div class="command-row-meta">Idle</div></div>';
+  }}
+  setText('command-foundry-focus', focusProject ? `Finish ${{focusProject.title}}. It is still the highest leverage asset to move.` : 'Choose one durable asset and stay with it until it becomes shippable.');
+
+  const healthEl = document.getElementById('command-health-list');
+  if (healthEl) {{
+    const rows = [
+      ['Sleep Score', metrics.sleep_hours ? `${{metrics.sleep_hours.toFixed(1)}}h` : '—', metrics.sleep_hours >= 7 ? 'Good recovery window.' : 'Recovery may need protection.'],
+      ['Readiness', readiness.score != null ? String(readiness.score) : '—', readiness.grade || 'Awaiting readiness signal.'],
+      ['HRV', metrics.hrv != null ? `${{metrics.hrv}} ms` : '—', metrics.hrv != null ? 'Autonomic balance posture.' : 'No live HRV yet.'],
+      ['Stress Trend', metrics.stress_load != null ? String(metrics.stress_load) : '—', metrics.stress_load != null ? 'Keep the afternoon light if needed.' : 'No stress trend yet.'],
+    ];
+    healthEl.innerHTML = rows.map(([title, value, copy]) => `<div class="command-health-row"><div><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div><div class="command-row-meta">${{escHtml(value)}}</div></div>`).join('');
+  }}
+
+  const followEl = document.getElementById('command-follow-list');
+  if (followEl) {{
+    const followSource = tasks.length ? tasks.slice(0, 5) : (openLoops.proactive_surface || []).slice(0, 5);
+    followEl.innerHTML = followSource.length ? followSource.map(item => `<div class="command-row"><div><strong>${{escHtml(item.title || 'Open loop')}}</strong><span>${{escHtml(item.status || item.proactive_reason || item.detail || 'Needs follow-through.')}}</span></div><div class="command-badge ${{commandBadge(item.priority)}}">${{escHtml(String(item.priority || 'open'))}}</div></div>`).join('') : '<div class="command-row"><div><strong>No follow-through lane is open</strong><span>You are clear to stay on the main mission.</span></div><div class="command-badge low">Clear</div></div>';
+  }}
+
+  const agentCount = roster.counts?.running || 0;
+  const blockedCount = roster.counts?.blocked || 0;
+  const confidence = Math.max(62, Math.min(96, 94 - recovery.integration_issue_count * 6 - blockedCount * 2 + agentCount));
+  setText('command-supervision-score', `${{confidence}}%`);
+  setText('command-supervision-copy', blockedCount ? 'Autonomy is healthy, but some lanes are waiting on repair.' : 'Agent trust is strong and bounded.');
+  const supervisionEl = document.getElementById('command-supervision-grid');
+  if (supervisionEl) {{
+    const supItems = [
+      ['Active Agents', `${{agentCount}}`, `${{roster.item_count || 0}} visible`],
+      ['Autonomy Health', blockedCount ? 'Guarded' : 'High', `${{blockedCount}} blocked`],
+      ['Memory Posture', `${{memory.entry_count || 0}} entries`, `${{memory.proposal_count || 0}} proposals pending`],
+      ['Recovery Posture', `${{recovery.integration_issue_count || 0}} issues`, `dirty lane ${{recovery.dirty_count || 0}}`],
+    ];
+    supervisionEl.innerHTML = supItems.map(([title, value, copy]) => `<div class="command-supervision-box"><strong>${{escHtml(value)}}</strong><span>${{escHtml(title)}} · ${{escHtml(copy)}}</span></div>`).join('');
+  }}
+
+  const modeGrid = document.getElementById('command-mode-grid');
+  if (modeGrid) {{
+    const modeItems = ['First Light', 'Focus Block', 'Family Stewardship', 'Travel / Navigate', 'Writing Sprint', 'Launch Window', 'Health Recovery', 'Workshop / Forge'];
+    modeGrid.innerHTML = modeItems.map(item => `<div class="command-action-tile" onclick="commandQuickAction('Set command posture around ${{item.replace(/'/g, "\\'")}} and tell me what changes')"><strong>${{escHtml(item)}}</strong><span>Shape the system around this mode.</span></div>`).join('');
+  }}
+
+  const strategyEl = document.getElementById('command-strategy-grid');
+  if (strategyEl) {{
+    const strategyItems = [
+      ['Mission Alignment', progress.summary || 'No strategic summary yet.'],
+      ['Quarterly Priorities', `${{projects.length || 0}} active project lanes`],
+      ['Long-Term Assets', `${{modules.item_count || 0}} useful core modules`],
+      ['Hosted Readiness', recovery.integration_issue_count ? 'Deployment posture needs repair' : 'Hosted path is ready'],
+    ];
+    strategyEl.innerHTML = strategyItems.map(([title, copy]) => `<div class="command-mini-card"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('');
+  }}
+
+  setText('command-next-title', topNeed.title || focusTask?.title || 'Choose the next real move');
+  setText('command-next-copy', topNeed.detail || focusTask?.status || 'JARVIS is looking for the next move with the highest leverage and lowest confusion.');
+  const nextBtn = document.getElementById('command-next-button');
+  if (nextBtn) nextBtn.onclick = () => {{
+    if (topNeed.route) window.location.href = topNeed.route;
+    else if (focusTask) commandQuickAction(`Help me resolve ${{focusTask.title}}`);
+    else switchView('notifications');
+  }};
+  setText('command-reminder-title', 'Wisdom is knowing what matters.');
+  setText('command-reminder-copy', 'Courage is doing it anyway. Love is why you do it for.');
+}}
+
+async function loadCommandDesktop() {{
+  const [command, home, tasksPayload, projectsPayload, remindersPayload, health, devicesPayload] = await Promise.all([
+    _fetchJsonSafe('/api/command-center'),
+    _fetchJsonSafe('/api/home/dashboard'),
+    _fetchJsonSafe('/api/tasks'),
+    _fetchJsonSafe('/api/home/projects?status=active'),
+    _fetchJsonSafe('/api/apple/reminders/state'),
+    _fetchJsonSafe('/api/health/summary'),
+    _fetchJsonSafe('/api/connected-devices'),
+  ]);
+  const devices = Array.isArray(devicesPayload?.devices) ? devicesPayload.devices : [];
+  const now = Date.now();
+  const familyLookup = {{ chris: 'Chris', rebekah: 'Rebekah', caleb: 'Caleb', anna: 'Anna' }};
+  const onlineUsers = [...new Set(devices.filter(d => d.owner_user_id && d.last_seen_at && (now - new Date(d.last_seen_at).getTime()) < 10 * 60 * 1000).map(d => d.owner_user_id))].map(uid => ({{
+    name: familyLookup[uid] || uid,
+    detail: 'Connected and active in the last ten minutes.',
+  }}));
+  renderCommandDesktop({{
+    command: command || {{}},
+    home: home || {{}},
+    tasks: tasksPayload?.tasks || [],
+    projects: projectsPayload?.projects || [],
+    reminders: remindersPayload?.data || {{}},
+    health: health || {{}},
+    onlineUsers,
+  }});
 }}
 
 // ---------------------------------------------------------------------------
