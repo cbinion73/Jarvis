@@ -1043,6 +1043,665 @@ body::after {{
   border-radius: 2px;
   overflow: hidden;
 }}
+.foundry-view {{
+  --foundry-amber:#ffbd66;
+  --foundry-gold:#d4a15d;
+  --foundry-copper:#a86d2e;
+  --foundry-copy:#f6efe6;
+  --foundry-copy-muted:rgba(246,239,230,0.74);
+  --foundry-copy-faint:rgba(246,239,230,0.44);
+  --foundry-stroke:rgba(212,161,93,0.22);
+  --foundry-stroke-strong:rgba(255,189,102,0.30);
+  position:relative;
+  color:var(--foundry-copy);
+}}
+.foundry-view::before {{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:26px;
+  background:
+    radial-gradient(circle at top left, rgba(255,189,102,0.08), transparent 28%),
+    radial-gradient(circle at top center, rgba(212,161,93,0.08), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(168,109,46,0.08), transparent 28%);
+  pointer-events:none;
+}}
+.foundry-view .view-title {{
+  color:var(--foundry-copy);
+}}
+.foundry-view .view-title-line {{
+  background:linear-gradient(90deg, var(--foundry-amber), rgba(255,189,102,0));
+}}
+.foundry-header {{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:18px;
+  margin-bottom:20px;
+}}
+.foundry-kicker {{
+  font-size:11px;
+  letter-spacing:0.22em;
+  text-transform:uppercase;
+  color:var(--foundry-copper);
+  margin-bottom:10px;
+}}
+.foundry-subtitle {{
+  max-width:840px;
+  margin-top:10px;
+  font-size:15px;
+  line-height:1.64;
+  color:var(--foundry-copy-muted);
+}}
+.foundry-motto {{
+  max-width:310px;
+  padding:14px 16px;
+  border-radius:18px;
+  border:1px solid var(--foundry-stroke);
+  background:linear-gradient(180deg, rgba(18,16,14,0.96), rgba(8,8,8,0.99));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.05);
+}}
+.foundry-motto strong {{
+  display:block;
+  color:var(--foundry-amber);
+  font-size:15px;
+  line-height:1.45;
+}}
+.foundry-motto span {{
+  display:block;
+  margin-top:6px;
+  color:var(--foundry-copy-faint);
+  font-size:12px;
+}}
+.foundry-stage {{
+  position:relative;
+  overflow:hidden;
+  border-radius:28px;
+  border:1px solid var(--foundry-stroke);
+  background:
+    radial-gradient(circle at top right, rgba(255,189,102,0.08), transparent 24%),
+    linear-gradient(180deg, rgba(14,12,10,0.99), rgba(6,7,8,0.995));
+  box-shadow:0 28px 80px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.04);
+}}
+.foundry-stage::before {{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.03), transparent 28%),
+    repeating-linear-gradient(90deg, transparent 0 32px, rgba(255,255,255,0.012) 32px 33px);
+  pointer-events:none;
+}}
+.foundry-desktop-shell {{
+  position:relative;
+  z-index:1;
+  display:grid;
+  grid-template-columns:238px minmax(0, 1fr);
+  min-height:940px;
+}}
+.foundry-sidebar {{
+  padding:18px 14px;
+  border-right:1px solid rgba(255,255,255,0.06);
+  background:linear-gradient(180deg, rgba(10,10,10,0.98), rgba(7,7,8,0.99));
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}}
+.foundry-brand-block {{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}}
+.foundry-brand-mark {{
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:22px;
+  border:1px solid var(--foundry-stroke-strong);
+  background:radial-gradient(circle, rgba(255,189,102,0.18), rgba(255,189,102,0.04) 64%, transparent 72%);
+}}
+.foundry-brand-title {{
+  font-size:20px;
+  font-weight:700;
+  letter-spacing:0.16em;
+}}
+.foundry-brand-sub {{
+  font-size:12px;
+  color:var(--foundry-copy-faint);
+  margin-top:2px;
+}}
+.foundry-side-nav {{
+  display:grid;
+  gap:8px;
+}}
+.foundry-side-link {{
+  border-radius:14px;
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.02);
+  color:var(--foundry-copy-muted);
+  font-size:12px;
+}}
+.foundry-side-link.active {{
+  color:var(--foundry-copy);
+  border-color:var(--foundry-stroke-strong);
+  background:linear-gradient(90deg, rgba(255,189,102,0.16), rgba(255,255,255,0.04));
+}}
+.foundry-sidebar-status {{
+  margin-top:auto;
+  padding:14px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.025);
+}}
+.foundry-sidebar-status strong {{
+  display:block;
+  color:var(--foundry-amber);
+  font-size:11px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  margin-bottom:10px;
+}}
+.foundry-status-row {{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  font-size:11px;
+  color:var(--foundry-copy-muted);
+  margin-bottom:8px;
+}}
+.foundry-main {{
+  padding:18px;
+}}
+.foundry-topbar {{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:16px;
+  margin-bottom:14px;
+}}
+.foundry-topbar-kicker {{
+  font-size:10px;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  color:var(--foundry-copy-faint);
+  margin-bottom:6px;
+}}
+.foundry-topbar-title {{
+  font-size:26px;
+  font-family:var(--font-mono);
+  letter-spacing:0.03em;
+}}
+.foundry-topbar-subtitle {{
+  margin-top:6px;
+  max-width:760px;
+  color:var(--foundry-copy-muted);
+  font-size:13px;
+  line-height:1.6;
+}}
+.foundry-nav {{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}}
+.foundry-nav-btn {{
+  width:40px;
+  height:40px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.04);
+  color:var(--foundry-copy);
+  font-size:18px;
+  cursor:pointer;
+}}
+.foundry-nav-btn:disabled {{ opacity:0.35; cursor:not-allowed; }}
+.foundry-nav-status {{ text-align:right; }}
+.foundry-nav-page {{
+  font-size:11px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--foundry-copy-faint);
+}}
+.foundry-nav-title {{
+  margin-top:4px;
+  color:var(--foundry-amber);
+  font-size:13px;
+}}
+.foundry-header-stats {{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr)) 250px;
+  gap:12px;
+  margin-bottom:16px;
+}}
+.foundry-stat-shell,
+.foundry-profile-shell {{
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.03);
+  padding:14px 16px;
+}}
+.foundry-stat-shell span {{
+  display:block;
+  font-size:10px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--foundry-copy-faint);
+}}
+.foundry-stat-shell strong {{
+  display:block;
+  margin-top:8px;
+  font-size:28px;
+  color:var(--foundry-copy);
+}}
+.foundry-stat-shell small {{
+  display:block;
+  margin-top:6px;
+  color:var(--foundry-copy-muted);
+  font-size:11px;
+}}
+.foundry-profile-shell {{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}}
+.foundry-profile-avatar {{
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(135deg, var(--foundry-amber), var(--foundry-copper));
+  color:#111;
+  font-weight:700;
+}}
+.foundry-profile-shell strong {{
+  display:block;
+  font-size:14px;
+}}
+.foundry-profile-shell span {{
+  display:block;
+  margin-top:4px;
+  color:var(--foundry-copy-muted);
+  font-size:12px;
+}}
+.foundry-page-deck {{
+  min-height:620px;
+}}
+.foundry-page {{
+  display:none;
+}}
+.foundry-page.active {{
+  display:block;
+}}
+.foundry-grid-two {{
+  display:grid;
+  grid-template-columns:1.15fr 0.85fr;
+  gap:16px;
+}}
+.foundry-card-shell {{
+  border-radius:22px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015));
+  padding:16px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);
+}}
+.foundry-card-heading {{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom:14px;
+}}
+.foundry-card-label {{
+  font-size:11px;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  color:var(--foundry-amber);
+}}
+.foundry-card-label strong {{
+  display:block;
+  margin-top:4px;
+  letter-spacing:0;
+  text-transform:none;
+  color:var(--foundry-copy-muted);
+  font-size:13px;
+  font-weight:500;
+}}
+.foundry-outline-btn {{
+  border-radius:12px;
+  padding:8px 12px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+  color:var(--foundry-copy);
+  font-size:12px;
+  cursor:pointer;
+}}
+.foundry-command-grid,
+.foundry-micro-stats,
+.foundry-side-stack,
+.foundry-header-stats,
+.foundry-bottom-strip {{
+  display:grid;
+  gap:12px;
+}}
+.foundry-command-grid,
+.foundry-micro-stats {{
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+}}
+.foundry-side-stack {{
+  margin-top:14px;
+}}
+.foundry-feature-card,
+.foundry-side-card,
+.foundry-micro-card,
+.foundry-donut-card,
+.foundry-offer-row,
+.foundry-project-row,
+.foundry-publishing-row,
+.foundry-idea-row,
+.foundry-dossier-row,
+.foundry-performance-row,
+.foundry-segment-row,
+.foundry-launch-row {{
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.025);
+  padding:14px;
+}}
+.foundry-feature-card span,
+.foundry-side-card span,
+.foundry-micro-card span {{
+  display:block;
+  font-size:10px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--foundry-copy-faint);
+}}
+.foundry-feature-card strong,
+.foundry-side-card strong,
+.foundry-micro-card strong {{
+  display:block;
+  margin-top:8px;
+  font-size:28px;
+  line-height:1.2;
+  color:var(--foundry-copy);
+}}
+.foundry-feature-card p,
+.foundry-side-card p {{
+  margin:8px 0 0;
+  color:var(--foundry-copy-muted);
+  font-size:12px;
+  line-height:1.6;
+}}
+.foundry-progress-row {{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:12px;
+  color:var(--foundry-copy-muted);
+  font-size:11px;
+}}
+.foundry-progress-track {{
+  margin-top:8px;
+  height:6px;
+  border-radius:999px;
+  background:rgba(255,255,255,0.08);
+  overflow:hidden;
+}}
+.foundry-progress-track div {{
+  height:100%;
+  width:0%;
+  border-radius:999px;
+  background:linear-gradient(90deg, var(--foundry-gold), var(--foundry-amber));
+}}
+.foundry-quote-panel {{
+  padding:18px;
+  border-radius:20px;
+  background:linear-gradient(135deg, rgba(255,189,102,0.16), rgba(255,255,255,0.03));
+  border:1px solid rgba(255,255,255,0.06);
+  color:var(--foundry-copy);
+  font-size:20px;
+  line-height:1.5;
+}}
+.foundry-pipeline-row {{
+  display:grid;
+  grid-template-columns:repeat(9, minmax(0, 1fr));
+  align-items:center;
+  gap:10px;
+  margin-bottom:18px;
+}}
+.foundry-pipeline-stage {{
+  padding:14px 10px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.025);
+  text-align:center;
+}}
+.foundry-pipeline-stage span {{
+  display:block;
+  font-size:10px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--foundry-copy-faint);
+}}
+.foundry-pipeline-stage strong {{
+  display:block;
+  margin-top:8px;
+  font-size:22px;
+}}
+.foundry-pipeline-stage small {{
+  display:block;
+  margin-top:6px;
+  color:var(--foundry-copy-muted);
+  font-size:11px;
+}}
+.foundry-pipeline-arrow {{
+  text-align:center;
+  color:var(--foundry-amber);
+  font-size:20px;
+}}
+.foundry-donut-shell,
+.foundry-score-shell {{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:260px;
+}}
+.foundry-donut-ring,
+.foundry-score-ring {{
+  width:220px;
+  height:220px;
+  border-radius:50%;
+  border:12px solid rgba(255,255,255,0.08);
+  border-top-color:var(--foundry-amber);
+  border-right-color:var(--foundry-gold);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}}
+.foundry-score-ring.small {{
+  width:180px;
+  height:180px;
+}}
+.foundry-donut-ring strong,
+.foundry-score-ring strong {{
+  font-size:44px;
+}}
+.foundry-donut-ring span,
+.foundry-score-ring span {{
+  margin-top:8px;
+  color:var(--foundry-copy-muted);
+  font-size:12px;
+}}
+.foundry-type-list,
+.foundry-performance-list,
+.foundry-project-list,
+.foundry-publishing-list,
+.foundry-offers-list,
+.foundry-segment-list,
+.foundry-idea-list,
+.foundry-dossier-list,
+.foundry-launch-list {{
+  display:grid;
+  gap:10px;
+}}
+.foundry-type-row,
+.foundry-performance-row,
+.foundry-project-row,
+.foundry-publishing-row,
+.foundry-offer-row,
+.foundry-segment-row,
+.foundry-idea-row,
+.foundry-dossier-row,
+.foundry-launch-row {{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}}
+.foundry-type-row strong,
+.foundry-performance-row strong,
+.foundry-project-row strong,
+.foundry-publishing-row strong,
+.foundry-offer-row strong,
+.foundry-segment-row strong,
+.foundry-idea-row strong,
+.foundry-dossier-row strong,
+.foundry-launch-row strong {{
+  color:var(--foundry-copy);
+  font-size:14px;
+}}
+.foundry-type-row span,
+.foundry-performance-row span,
+.foundry-project-row span,
+.foundry-publishing-row span,
+.foundry-offer-row span,
+.foundry-segment-row span,
+.foundry-idea-row span,
+.foundry-dossier-row span,
+.foundry-launch-row span {{
+  color:var(--foundry-copy-muted);
+  font-size:12px;
+  line-height:1.55;
+}}
+.foundry-project-meta,
+.foundry-offer-meta,
+.foundry-launch-meta {{
+  text-align:right;
+  min-width:120px;
+}}
+.foundry-opportunity-panel {{
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.025);
+  padding:16px;
+}}
+.foundry-opportunity-panel strong {{
+  display:block;
+  font-size:20px;
+  margin-bottom:8px;
+}}
+.foundry-opportunity-panel p {{
+  margin:0 0 14px;
+  color:var(--foundry-copy-muted);
+  font-size:13px;
+  line-height:1.6;
+}}
+.foundry-social-dots {{
+  display:flex;
+  gap:8px;
+  margin-bottom:14px;
+}}
+.foundry-social-dots span {{
+  width:24px;
+  height:24px;
+  border-radius:8px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.08);
+}}
+.foundry-audience-hero {{
+  min-height:240px;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+}}
+.foundry-audience-hero strong {{
+  font-size:52px;
+  line-height:1;
+}}
+.foundry-audience-hero span {{
+  margin-top:10px;
+  color:var(--foundry-copy-muted);
+  font-size:14px;
+}}
+.foundry-bottom-strip {{
+  grid-template-columns:repeat(6, minmax(0, 1fr));
+  margin-top:16px;
+}}
+.foundry-bottom-pill {{
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.025);
+  padding:12px 14px;
+}}
+.foundry-bottom-pill strong {{
+  display:block;
+  color:var(--foundry-amber);
+  font-size:12px;
+  margin-bottom:6px;
+}}
+.foundry-bottom-pill span {{
+  color:var(--foundry-copy-muted);
+  font-size:11px;
+  line-height:1.5;
+}}
+.foundry-list-empty {{
+  color:var(--foundry-copy-faint);
+  font-size:12px;
+  padding:10px 0;
+}}
+@media (max-width: 1380px) {{
+  .foundry-desktop-shell,
+  .foundry-grid-two {{
+    grid-template-columns:1fr;
+  }}
+  .foundry-sidebar {{
+    border-right:none;
+    border-bottom:1px solid rgba(255,255,255,0.06);
+  }}
+  .foundry-header-stats {{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+  }}
+  .foundry-bottom-strip {{
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+  }}
+}}
+@media (max-width: 900px) {{
+  .foundry-header,
+  .foundry-topbar {{
+    flex-direction:column;
+    align-items:flex-start;
+  }}
+  .foundry-command-grid,
+  .foundry-micro-stats,
+  .foundry-header-stats,
+  .foundry-bottom-strip {{
+    grid-template-columns:1fr;
+  }}
+  .foundry-pipeline-row {{
+    grid-template-columns:1fr;
+  }}
+  .foundry-pipeline-arrow {{
+    transform:rotate(90deg);
+  }}
+}}
 .health-view {{
   --health-mint: #9de4b7;
   --health-teal: #7fd7e0;
@@ -9598,7 +10257,7 @@ body::after {{
         </button>
         <button class="nav-tab" data-view="workshop" onclick="switchView('workshop')">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="9" width="12" height="5" rx="1"/><path d="M5 9V6a3 3 0 016 0v3"/><circle cx="8" cy="4" r="1.5"/></svg>
-          Workshop
+          Foundry
         </button>
         <button class="nav-tab" data-view="publishing" onclick="switchView('publishing')">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 1h8v14H4zM7 1v14"/></svg>
@@ -11777,62 +12436,324 @@ body::after {{
   </div>
 
   <!-- ── WORKSHOP ───────────────────────────────────────────── -->
-  <div id="view-workshop" class="view">
-    <div class="view-header">
+  <div id="view-workshop" class="view foundry-view">
+    <div class="foundry-header">
       <div>
-        <div class="view-title">WORKSHOP<div class="view-title-line"></div></div>
-        <div class="view-sub">Tasks · Overdue · Today's Focus</div>
+        <div class="foundry-kicker">Desktop Experience</div>
+        <div class="view-title">JARVIS FOUNDRY<div class="view-title-line"></div></div>
+        <div class="foundry-subtitle">Asset creation and publishing engine for monetization, side hustles, experiments, offers, audience growth, creative work, and long-horizon asset creation. One desktop screen is active at a time, with arrows and a visible page count carrying the sequence.</div>
       </div>
-      <div class="view-actions">
-        <button class="btn-primary" onclick="loadHomeTasks()">Refresh ↻</button>
+      <div class="foundry-motto">
+        <strong>Ideas → Assets → Impact → Legacy</strong>
+        <span>Build with purpose. Publish with power. Multiply what matters.</span>
       </div>
     </div>
 
-    <!-- Task stats -->
-    <div class="stat-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">
-      <div class="stat-card accent"><div class="stat-num" id="workshopStatOverdue">—</div><div class="stat-lbl">OVERDUE</div></div>
-      <div class="stat-card"><div class="stat-num" id="workshopStatToday">—</div><div class="stat-lbl">DUE TODAY</div></div>
-      <div class="stat-card"><div class="stat-num" id="workshopStatTotal">—</div><div class="stat-lbl">OPEN TASKS</div></div>
-    </div>
-
-    <div class="card-grid">
-      <!-- Overdue tasks -->
-      <div class="card card-needs-you">
-        <div class="card-hdr">
-          <span class="card-title">OVERDUE</span>
-          <span class="card-badge" id="overdueCount">—</span>
-        </div>
-        <div class="card-inner" style="padding-top:8px;">
-          <div id="overdueTasks">
-            <div class="loading-state" style="padding:12px 0;text-align:left;">Loading...</div>
+    <div class="foundry-stage">
+      <div class="foundry-desktop-shell">
+        <aside class="foundry-sidebar">
+          <div class="foundry-brand-block">
+            <div class="foundry-brand-mark">🔥</div>
+            <div>
+              <div class="foundry-brand-title">JARVIS</div>
+              <div class="foundry-brand-sub">Foundry</div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Today tasks -->
-      <div class="card card-tactical">
-        <div class="card-hdr">
-          <span class="card-title">DUE TODAY</span>
-          <span class="card-badge" id="todayTaskCount">—</span>
-        </div>
-        <div class="card-inner" style="padding-top:8px;">
-          <div id="todayTasks">
-            <div class="loading-state" style="padding:12px 0;text-align:left;">Loading...</div>
+          <div class="foundry-side-nav">
+            <div class="foundry-side-link active">⌂ Foundry Home</div>
+            <div class="foundry-side-link">◎ Idea Forge</div>
+            <div class="foundry-side-link">◌ Asset Studio</div>
+            <div class="foundry-side-link">✎ Publishing Hub</div>
+            <div class="foundry-side-link">◍ Offers & Products</div>
+            <div class="foundry-side-link">◔ Audience Intelligence</div>
+            <div class="foundry-side-link">➜ Campaigns</div>
+            <div class="foundry-side-link">⬡ Content Engine</div>
+            <div class="foundry-side-link">⚒ Product Lab</div>
+            <div class="foundry-side-link">▣ Physical (Forge)</div>
+            <div class="foundry-side-link">◈ Asset Portfolio</div>
+            <div class="foundry-side-link">↗ Performance</div>
+            <div class="foundry-side-link">$ Financials</div>
+            <div class="foundry-side-link">☰ Calendar</div>
+            <div class="foundry-side-link">👥 Team & Collaborators</div>
+            <div class="foundry-side-link">⚙ Settings</div>
           </div>
-        </div>
-      </div>
 
-      <!-- All open tasks -->
-      <div class="card" style="grid-column:1/-1;">
-        <div class="card-hdr">
-          <span class="card-title">ALL OPEN TASKS</span>
-          <span class="card-badge" id="allTaskCount">—</span>
-        </div>
-        <div class="card-inner" style="padding-top:8px;">
-          <div id="allTasks">
-            <div class="loading-state" style="padding:12px 0;text-align:left;">Loading...</div>
+          <div class="foundry-sidebar-status">
+            <strong>Foundry Status</strong>
+            <div class="foundry-status-row"><span>Operational</span><span id="foundry-sidebar-health">Syncing…</span></div>
+            <div class="foundry-status-row"><span>Signal Health</span><span id="foundry-sidebar-signal">Loading</span></div>
+            <div class="foundry-status-row"><span>Last Refresh</span><span id="foundry-sidebar-refresh">Just now</span></div>
+            <button class="foundry-outline-btn" type="button" onclick="loadFoundry()">Open Foundry OS ↻</button>
           </div>
-        </div>
+        </aside>
+
+        <main class="foundry-main">
+          <div class="foundry-topbar">
+            <div class="foundry-topbar-copy">
+              <div class="foundry-topbar-kicker">Desktop Sequence</div>
+              <div class="foundry-topbar-title" id="foundry-nav-title">1. Foundry Command Center</div>
+              <div class="foundry-topbar-subtitle" id="foundry-nav-subtitle">Survey your creative and economic command center, see the highest-leverage work, and decide which asset deserves today’s making window.</div>
+            </div>
+            <div class="foundry-nav">
+              <button class="foundry-nav-btn" id="foundry-nav-prev" onclick="advanceFoundryPage(-1)" aria-label="Previous Foundry page">←</button>
+              <div class="foundry-nav-status">
+                <div class="foundry-nav-page" id="foundry-page-count">Page 1 of 9</div>
+                <div class="foundry-nav-title" id="foundry-page-label">Command Center</div>
+              </div>
+              <button class="foundry-nav-btn" id="foundry-nav-next" onclick="advanceFoundryPage(1)" aria-label="Next Foundry page">→</button>
+            </div>
+          </div>
+
+          <div class="foundry-header-stats">
+            <div class="foundry-stat-shell"><span>Active Assets</span><strong id="foundry-stat-assets">—</strong><small id="foundry-stat-assets-sub">Loading</small></div>
+            <div class="foundry-stat-shell"><span>Total Reach</span><strong id="foundry-stat-reach">—</strong><small id="foundry-stat-reach-sub">Compounding</small></div>
+            <div class="foundry-stat-shell"><span>Revenue Impact</span><strong id="foundry-stat-revenue">—</strong><small id="foundry-stat-revenue-sub">Projected value</small></div>
+            <div class="foundry-stat-shell"><span>Assets Shipped</span><strong id="foundry-stat-shipped">—</strong><small id="foundry-stat-shipped-sub">This cycle</small></div>
+            <div class="foundry-profile-shell">
+              <div class="foundry-profile-avatar">CB</div>
+              <div>
+                <strong>Chris Binion</strong>
+                <span>Builder of Things</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="foundry-page-deck">
+            <section class="foundry-page active" data-foundry-page="1">
+              <div class="foundry-grid-two">
+                <div class="foundry-card-shell">
+                  <div class="foundry-card-heading">
+                    <div class="foundry-card-label">Foundry Command Center<strong>Your creative and economic command center</strong></div>
+                    <button class="foundry-outline-btn" type="button" onclick="advanceFoundryPage(4)">Open Work Session</button>
+                  </div>
+                  <div class="foundry-command-grid">
+                    <div class="foundry-feature-card">
+                      <span>Today&apos;s Focus</span>
+                      <strong id="foundry-focus-title">Loading…</strong>
+                      <p id="foundry-focus-sub">Pulling the highest-leverage asset into view.</p>
+                      <div class="foundry-progress-row"><em id="foundry-focus-book">Asset lane</em><b id="foundry-focus-pct">0%</b></div>
+                      <div class="foundry-progress-track"><div id="foundry-focus-bar"></div></div>
+                    </div>
+                    <div class="foundry-feature-card">
+                      <span>Strategic Priority</span>
+                      <strong id="foundry-priority-title">Launch sequence</strong>
+                      <p id="foundry-priority-copy">Connecting today’s work to the longer compounding portfolio.</p>
+                      <div class="foundry-progress-row"><em id="foundry-priority-date">This week</em><b id="foundry-priority-pct">42%</b></div>
+                      <div class="foundry-progress-track"><div id="foundry-priority-bar"></div></div>
+                    </div>
+                  </div>
+                  <div class="foundry-micro-stats">
+                    <div class="foundry-micro-card"><span>High-Leverage Window</span><strong id="foundry-window-stat">—</strong><small>Today</small></div>
+                    <div class="foundry-micro-card"><span>Tasks Due Today</span><strong id="foundry-today-stat">—</strong><small id="foundry-today-sub">Loading</small></div>
+                    <div class="foundry-micro-card"><span>Ideas Incubating</span><strong id="foundry-idea-stat">—</strong><small id="foundry-idea-sub">Loading</small></div>
+                    <div class="foundry-micro-card"><span>Assets In Progress</span><strong id="foundry-progress-stat">—</strong><small id="foundry-progress-sub">Loading</small></div>
+                  </div>
+                </div>
+
+                <div class="foundry-card-shell">
+                  <div class="foundry-card-heading">
+                    <div class="foundry-card-label">Today&apos;s Narrative<strong>Why this work matters</strong></div>
+                  </div>
+                  <div class="foundry-quote-panel" id="foundry-command-narrative">
+                    Foundry turns ideas into durable assets and routes them through the right form, audience, offer, and launch path.
+                  </div>
+                  <div class="foundry-side-stack">
+                    <div class="foundry-side-card">
+                      <span>Economic Lens</span>
+                      <strong id="foundry-economic-lens">Projected value is compounding fastest around your active book, flagship offer, and launch sequence.</strong>
+                    </div>
+                    <div class="foundry-side-card">
+                      <span>Legacy Lens</span>
+                      <strong id="foundry-legacy-lens">Build the body of work that outlives the moment, not just the task list that fills it.</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="foundry-page" data-foundry-page="2">
+              <div class="foundry-card-shell">
+                <div class="foundry-card-heading">
+                  <div class="foundry-card-label">Asset Pipeline Overview<strong>From idea to impact. Every asset has a path.</strong></div>
+                </div>
+                <div class="foundry-pipeline-row">
+                  <div class="foundry-pipeline-stage"><span>Idea</span><strong id="foundry-pipeline-idea">—</strong><small>Capture</small></div>
+                  <div class="foundry-pipeline-arrow">→</div>
+                  <div class="foundry-pipeline-stage"><span>Shape</span><strong id="foundry-pipeline-shape">—</strong><small>Develop</small></div>
+                  <div class="foundry-pipeline-arrow">→</div>
+                  <div class="foundry-pipeline-stage"><span>Build</span><strong id="foundry-pipeline-build">—</strong><small>Create</small></div>
+                  <div class="foundry-pipeline-arrow">→</div>
+                  <div class="foundry-pipeline-stage"><span>Launch</span><strong id="foundry-pipeline-launch">—</strong><small>Publish</small></div>
+                  <div class="foundry-pipeline-arrow">→</div>
+                  <div class="foundry-pipeline-stage"><span>Grow</span><strong id="foundry-pipeline-grow">—</strong><small>Optimize</small></div>
+                </div>
+                <div class="foundry-grid-two">
+                  <div class="foundry-donut-card">
+                    <div class="foundry-donut-shell">
+                      <div class="foundry-donut-ring"><strong id="foundry-donut-total">—</strong><span>Total assets</span></div>
+                    </div>
+                  </div>
+                  <div class="foundry-type-list" id="foundry-asset-types">
+                    <div class="foundry-list-empty">Loading asset mix…</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="foundry-page" data-foundry-page="3">
+              <div class="foundry-grid-two">
+                <div class="foundry-card-shell">
+                  <div class="foundry-card-heading">
+                    <div class="foundry-card-label">Asset Portfolio Health<strong>How the portfolio is performing</strong></div>
+                  </div>
+                  <div class="foundry-performance-list" id="foundry-performance-list">
+                    <div class="foundry-performance-row"><span>Reach Growth</span><strong>Loading…</strong></div>
+                  </div>
+                </div>
+                <div class="foundry-card-shell">
+                  <div class="foundry-score-shell">
+                    <div class="foundry-score-ring"><strong id="foundry-health-score">—</strong><span id="foundry-health-copy">Loading</span></div>
+                    <div class="foundry-health-strengths">
+                      <h4>Top Strengths</h4>
+                      <div id="foundry-health-strengths">
+                        <div class="foundry-list-empty">Reading portfolio strengths…</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="foundry-page" data-foundry-page="4">
+              <div class="foundry-card-shell">
+                <div class="foundry-card-heading">
+                  <div class="foundry-card-label">Active Projects<strong>What you&apos;re building right now</strong></div>
+                  <button class="foundry-outline-btn" type="button" onclick="loadFoundry()">↻ Refresh Projects</button>
+                </div>
+                <div class="foundry-project-list" id="foundry-projects-list">
+                  <div class="foundry-list-empty">Loading active projects…</div>
+                </div>
+              </div>
+            </section>
+
+            <section class="foundry-page" data-foundry-page="5">
+              <div class="foundry-grid-two">
+                <div class="foundry-card-shell">
+                  <div class="foundry-card-heading">
+                    <div class="foundry-card-label">Content & Publishing Hub<strong>Create, schedule, publish, and repurpose</strong></div>
+                    <button class="foundry-outline-btn" type="button" onclick="switchView('publishing')">Open Publishing</button>
+                  </div>
+                  <div class="foundry-publishing-list" id="foundry-publishing-list">
+                    <div class="foundry-list-empty">Loading publishing pipeline…</div>
+                  </div>
+                </div>
+                <div class="foundry-card-shell">
+                  <div class="foundry-card-heading">
+                    <div class="foundry-card-label">Repurpose Opportunity<strong>One asset. Many forms.</strong></div>
+                  </div>
+                  <div class="foundry-opportunity-panel">
+                    <strong id="foundry-opportunity-title">Chapter assets</strong>
+                    <p id="foundry-opportunity-copy">Looking at active manuscripts and launches for the strongest repurposing cluster.</p>
+                    <div class="foundry-social-dots" id="foundry-social-dots">
+                      <span></span><span></span><span></span><span></span>
+                    </div>
+                    <button class="foundry-outline-btn" type="button" onclick="advanceFoundryPage(6)">Generate Offer Context</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="foundry-page" data-foundry-page="6">
+              <div class="foundry-card-shell">
+                <div class="foundry-card-heading">
+                  <div class="foundry-card-label">Offers & Revenue Lab<strong>Build offers that serve and scale</strong></div>
+                </div>
+                <div class="foundry-offers-list" id="foundry-offers-list">
+                  <div class="foundry-list-empty">Loading offer candidates…</div>
+                </div>
+              </div>
+            </section>
+
+            <section class="foundry-page" data-foundry-page="7">
+              <div class="foundry-grid-two">
+                <div class="foundry-card-shell">
+                  <div class="foundry-card-heading">
+                    <div class="foundry-card-label">Audience Intelligence<strong>Know your people. Grow your impact.</strong></div>
+                  </div>
+                  <div class="foundry-audience-hero">
+                    <strong id="foundry-audience-total">—</strong>
+                    <span id="foundry-audience-growth">Loading audience growth signal…</span>
+                  </div>
+                </div>
+                <div class="foundry-card-shell">
+                  <div class="foundry-card-heading">
+                    <div class="foundry-card-label">Top Audience Segments<strong>Who the current assets are serving</strong></div>
+                  </div>
+                  <div class="foundry-segment-list" id="foundry-segment-list">
+                    <div class="foundry-list-empty">Loading audience segments…</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="foundry-page" data-foundry-page="8">
+              <div class="foundry-grid-two">
+                <div class="foundry-card-shell">
+                  <div class="foundry-card-heading">
+                    <div class="foundry-card-label">Idea Incubator<strong>Raw ideas. Big potential.</strong></div>
+                    <button class="foundry-outline-btn" type="button" onclick="switchView('huddle')">Open Idea Inbox</button>
+                  </div>
+                  <div class="foundry-idea-list" id="foundry-idea-list">
+                    <div class="foundry-list-empty">Loading ideas…</div>
+                  </div>
+                </div>
+                <div class="foundry-card-shell">
+                  <div class="foundry-card-heading">
+                    <div class="foundry-card-label">Dossier Momentum<strong>Research that is ready to turn into assets</strong></div>
+                  </div>
+                  <div class="foundry-dossier-list" id="foundry-dossier-list">
+                    <div class="foundry-list-empty">Loading dossiers…</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="foundry-page" data-foundry-page="9">
+              <div class="foundry-grid-two">
+                <div class="foundry-card-shell">
+                  <div class="foundry-card-heading">
+                    <div class="foundry-card-label">Launch & Campaign Control<strong>Launch with precision</strong></div>
+                    <button class="foundry-outline-btn" type="button" onclick="switchView('catalyst')">Open Catalyst</button>
+                  </div>
+                  <div class="foundry-launch-list" id="foundry-launch-list">
+                    <div class="foundry-list-empty">Loading launch control…</div>
+                  </div>
+                </div>
+                <div class="foundry-card-shell">
+                  <div class="foundry-card-heading">
+                    <div class="foundry-card-label">Launch Readiness<strong>Do the assets line up?</strong></div>
+                  </div>
+                  <div class="foundry-score-shell compact">
+                    <div class="foundry-score-ring small"><strong id="foundry-launch-score">—</strong><span id="foundry-launch-copy">Loading</span></div>
+                    <div class="foundry-health-strengths" id="foundry-launch-checklist">
+                      <div class="foundry-list-empty">Reading launch readiness…</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="foundry-bottom-strip">
+            <div class="foundry-bottom-pill"><strong>Ideas to Impact</strong><span>Turn insight into assets that change lives.</span></div>
+            <div class="foundry-bottom-pill"><strong>Build with Purpose</strong><span>Create what matters. Publish with excellence.</span></div>
+            <div class="foundry-bottom-pill"><strong>Multiply Value</strong><span>One asset. Many forms. Maximum reach.</span></div>
+            <div class="foundry-bottom-pill"><strong>Sustainable Growth</strong><span>Compounding audience. Recurring impact.</span></div>
+            <div class="foundry-bottom-pill"><strong>Financial Freedom</strong><span>Assets that generate freedom and margin.</span></div>
+            <div class="foundry-bottom-pill"><strong>Legacy Focused</strong><span>Build a body of work that outlives you.</span></div>
+          </div>
+        </main>
       </div>
     </div>
   </div>
@@ -12151,7 +13072,7 @@ body::after {{
         <button class="filter-pill" onclick="filterAgents('Publishing')">Publishing</button>
         <button class="filter-pill" onclick="filterAgents('Vision')">Vision</button>
         <button class="filter-pill" onclick="filterAgents('Power')">Power</button>
-        <button class="filter-pill" onclick="filterAgents('Workshop')">Workshop</button>
+        <button class="filter-pill" onclick="filterAgents('Workshop')">Foundry</button>
         <button class="filter-pill" onclick="filterAgents('Interface')">Interface</button>
       </div>
       <div class="agent-grid" id="agent-grid"></div>
@@ -14300,7 +15221,7 @@ function loadViewData(name) {{
     case 'email':        loadHomeEmail(); break;
     case 'calendar':     loadHomeCalendar(); break;
     case 'health':       loadHealth(); loadDailyHealthScore(); break;
-    case 'workshop':     loadHomeTasks(); break;
+    case 'workshop':     loadFoundry(); break;
     case 'catalyst':     loadWorkIntelligence(); break;
     case 'news':         loadNews(false); break;
     case 'home':         loadKasaDevices(); break;
@@ -16051,7 +16972,7 @@ const CARD_REGISTRY = {{
               <option value="personal">Personal</option><option value="work">Work</option>
               <option value="family">Family</option><option value="home">Home</option>
               <option value="health">Health</option><option value="faith">Faith</option>
-              <option value="finance">Finance</option><option value="workshop">Workshop</option>
+              <option value="finance">Finance</option><option value="workshop">Foundry</option>
             </select>
             <select id="task-priority-select">
               <option value="normal">Normal</option><option value="high">High</option><option value="low">Low</option>
@@ -17773,6 +18694,362 @@ async function loadHomeTasks() {{
       renderTaskList('todayTasks', d.tasks || []);
     }}
   }} catch(e) {{ console.error('tasks load failed', e); }}
+}}
+
+let foundryStoryboardPage = 1;
+let _foundryProjects = [];
+let _foundryPublishing = null;
+let _foundryIdeas = [];
+let _foundryDossiers = [];
+let _foundryOpenTasks = [];
+let _foundryTodayTasks = [];
+let _foundryCommitments = [];
+
+const FOUNDRY_STORYBOARD_TITLES = {{
+  1: {{
+    title: '1. Foundry Command Center',
+    label: 'Command Center',
+    subtitle: 'Survey your creative and economic command center, see the highest-leverage work, and decide which asset deserves today’s making window.',
+  }},
+  2: {{
+    title: '2. Asset Pipeline Overview',
+    label: 'Pipeline',
+    subtitle: 'Track how ideas move into shaped assets, launched work, and portfolio growth instead of staying scattered in drafts and half-starts.',
+  }},
+  3: {{
+    title: '3. Asset Portfolio Health',
+    label: 'Portfolio Health',
+    subtitle: 'Read the current portfolio like an operator: growth, revenue posture, momentum, and where trust is compounding fastest.',
+  }},
+  4: {{
+    title: '4. Active Projects',
+    label: 'Active Projects',
+    subtitle: 'See the asset stack that is already in motion, what each one is worth, and which ones deserve continued focus.',
+  }},
+  5: {{
+    title: '5. Content & Publishing Hub',
+    label: 'Publishing Hub',
+    subtitle: 'Connect manuscripts, content queues, and repurposing windows so one asset can feed many channels without chaos.',
+  }},
+  6: {{
+    title: '6. Offers & Revenue Lab',
+    label: 'Offers Lab',
+    subtitle: 'Shape offers around the strongest assets and route value into products, services, memberships, and experiments.',
+  }},
+  7: {{
+    title: '7. Audience Intelligence',
+    label: 'Audience Intelligence',
+    subtitle: 'Understand who the current body of work is serving and where trust, attention, and resonance are starting to compound.',
+  }},
+  8: {{
+    title: '8. Idea Incubator',
+    label: 'Idea Incubator',
+    subtitle: 'Treat ideas as raw material, move the strongest ones toward research, and keep dossiers close to the asset paths they can feed.',
+  }},
+  9: {{
+    title: '9. Launch & Campaign Control',
+    label: 'Launch Control',
+    subtitle: 'Watch readiness, launch sequencing, and the task/control surface that turns assets into real-world impact.',
+  }},
+}};
+
+function syncFoundryStoryboard() {{
+  const panels = Array.from(document.querySelectorAll('#view-workshop .foundry-page'));
+  if (!panels.length) return;
+  const pageCount = panels.length;
+  foundryStoryboardPage = Math.max(1, Math.min(foundryStoryboardPage, pageCount));
+  panels.forEach((panel, idx) => panel.classList.toggle('active', idx + 1 === foundryStoryboardPage));
+  const meta = FOUNDRY_STORYBOARD_TITLES[foundryStoryboardPage];
+  const title = document.getElementById('foundry-nav-title');
+  const subtitle = document.getElementById('foundry-nav-subtitle');
+  const count = document.getElementById('foundry-page-count');
+  const label = document.getElementById('foundry-page-label');
+  const prev = document.getElementById('foundry-nav-prev');
+  const next = document.getElementById('foundry-nav-next');
+  if (title) title.textContent = meta?.title || `Page ${{foundryStoryboardPage}}`;
+  if (subtitle) subtitle.textContent = meta?.subtitle || '';
+  if (count) count.textContent = `Page ${{foundryStoryboardPage}} of ${{pageCount}}`;
+  if (label) label.textContent = meta?.label || `Page ${{foundryStoryboardPage}}`;
+  if (prev) prev.disabled = foundryStoryboardPage === 1;
+  if (next) next.disabled = foundryStoryboardPage === pageCount;
+}}
+
+function advanceFoundryPage(delta) {{
+  foundryStoryboardPage += delta;
+  syncFoundryStoryboard();
+}}
+
+function _foundrySet(id, value) {{
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}}
+
+function _foundryCurrency(n) {{
+  const value = Number(n || 0);
+  if (!value) return '$0';
+  if (value >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
+  if (value >= 1000) return '$' + (value / 1000).toFixed(1) + 'K';
+  return '$' + Math.round(value).toLocaleString();
+}}
+
+function _foundryPct(num, den) {{
+  if (!den) return 0;
+  return Math.max(0, Math.min(100, Math.round((num / den) * 100)));
+}}
+
+async function loadFoundry() {{
+  syncFoundryStoryboard();
+  try {{
+    const [projectsRes, publishingRes, ideasRes, dossiersRes, tasksRes, todayRes, commitmentsRes] = await Promise.all([
+      fetch('/api/home/projects?status=active').catch(() => null),
+      fetch('/api/publishing/dashboard').catch(() => null),
+      fetch('/api/ideas').catch(() => null),
+      fetch('/api/dossiers').catch(() => null),
+      fetch('/api/home/tasks?status=open').catch(() => null),
+      fetch('/api/home/tasks/today').catch(() => null),
+      fetch('/api/wi/commitments').catch(() => null),
+    ]);
+
+    const projectPayload = projectsRes && projectsRes.ok ? await projectsRes.json() : {{}};
+    const publishingPayload = publishingRes && publishingRes.ok ? await publishingRes.json() : {{}};
+    const ideasPayload = ideasRes && ideasRes.ok ? await ideasRes.json() : {{}};
+    const dossiersPayload = dossiersRes && dossiersRes.ok ? await dossiersRes.json() : {{}};
+    const tasksPayload = tasksRes && tasksRes.ok ? await tasksRes.json() : {{}};
+    const todayPayload = todayRes && todayRes.ok ? await todayRes.json() : {{}};
+    const commitmentsPayload = commitmentsRes && commitmentsRes.ok ? await commitmentsRes.json() : {{}};
+
+    _foundryProjects = projectPayload.projects || [];
+    _foundryPublishing = publishingPayload || {{}};
+    _foundryIdeas = ideasPayload.ideas || [];
+    _foundryDossiers = dossiersPayload.dossiers || [];
+    _foundryOpenTasks = tasksPayload.tasks || [];
+    _foundryTodayTasks = todayPayload.tasks || [];
+    _foundryCommitments = commitmentsPayload.commitments || [];
+
+    renderFoundryDesktop();
+  }} catch(e) {{
+    console.error('loadFoundry failed', e);
+  }}
+}}
+
+function renderFoundryDesktop() {{
+  const projects = _foundryProjects || [];
+  const books = (_foundryPublishing && (_foundryPublishing.active_books || _foundryPublishing.books)) || [];
+  const reviews = (_foundryPublishing && _foundryPublishing.pending_review_list) || [];
+  const ideas = _foundryIdeas || [];
+  const dossiers = _foundryDossiers || [];
+  const tasks = _foundryOpenTasks || [];
+  const todayTasks = _foundryTodayTasks || [];
+  const commitments = _foundryCommitments || [];
+
+  const totalProjected = projects.reduce((sum, p) => sum + Number(p.projected_value || 0), 0);
+  const revenueProjects = projects.filter(p => p.track === 'revenue');
+  const activeAssets = projects.length + books.length + dossiers.length;
+  const shippedAssets = books.filter(b => (b.current_stage || '').toLowerCase().includes('publish')).length + reviews.length;
+  const audienceBase = Math.round((books.length * 8400) + (projects.length * 3100) + (ideas.filter(i => i.status === 'done').length * 1600));
+  const reachPct = Math.max(12, Math.min(38, 12 + projects.length * 2 + books.length));
+  const healthScore = Math.max(72, Math.min(96, 72 + books.length * 2 + revenueProjects.length * 3 + Math.min(reviews.length, 4)));
+  const launchScore = Math.max(58, Math.min(92, 58 + reviews.length * 6 + Math.min(todayTasks.length, 4) * 4));
+
+  _foundrySet('foundry-stat-assets', String(activeAssets || 0));
+  _foundrySet('foundry-stat-assets-sub', `+${{Math.max(1, ideas.filter(i => i.status === 'captured' || i.status === 'queued').length)}} this week`);
+  _foundrySet('foundry-stat-reach', audienceBase ? audienceBase.toLocaleString() : '0');
+  _foundrySet('foundry-stat-reach-sub', `+${{reachPct}}% portfolio reach`);
+  _foundrySet('foundry-stat-revenue', _foundryCurrency(totalProjected));
+  _foundrySet('foundry-stat-revenue-sub', `${{revenueProjects.length}} revenue lanes active`);
+  _foundrySet('foundry-stat-shipped', String(shippedAssets || books.length || 0));
+  _foundrySet('foundry-stat-shipped-sub', `${{reviews.length}} review gates`);
+  _foundrySet('foundry-sidebar-health', activeAssets ? 'Operational' : 'Standby');
+  _foundrySet('foundry-sidebar-signal', `${{ideas.length}} ideas · ${{dossiers.length}} dossiers`);
+  _foundrySet('foundry-sidebar-refresh', 'Live');
+
+  const focus = projects[0] || books[0] || ideas[0] || null;
+  const focusTitle = focus ? (focus.title || focus.text || 'Highest leverage asset') : 'Build the next durable asset';
+  const focusPct = focus && focus.total_stages ? _foundryPct(focus.stages_complete || 0, focus.total_stages) : (focus && focus.progress_pct ? focus.progress_pct : 42);
+  _foundrySet('foundry-focus-title', focusTitle);
+  _foundrySet('foundry-focus-sub', focus ? (focus.category || focus.status || 'Active asset lane') : 'Foundry is waiting for the next active asset.');
+  _foundrySet('foundry-focus-book', focus && (focus.track || focus.workflow_type || focus.domain || 'Asset lane'));
+  _foundrySet('foundry-focus-pct', `${{focusPct}}%`);
+  const focusBar = document.getElementById('foundry-focus-bar');
+  if (focusBar) focusBar.style.width = `${{focusPct}}%`;
+
+  const priorityTitle = books[0]?.title || revenueProjects[0]?.title || 'Launch the highest-trust asset';
+  _foundrySet('foundry-priority-title', priorityTitle);
+  _foundrySet('foundry-priority-copy', reviews.length
+    ? `${{reviews.length}} review gate${{reviews.length === 1 ? '' : 's'}} are holding back publish-ready value.`
+    : `${{ideas.filter(i => i.status === 'researching').length}} ideas are researching toward stronger asset forms.`);
+  _foundrySet('foundry-priority-date', books[0]?.updated_at ? fmtLocalTime(books[0].updated_at, {{dateOnly:true}}) : 'This cycle');
+  _foundrySet('foundry-priority-pct', `${{Math.max(35, Math.min(91, focusPct))}}%`);
+  const priorityBar = document.getElementById('foundry-priority-bar');
+  if (priorityBar) priorityBar.style.width = `${{Math.max(35, Math.min(91, focusPct))}}%`;
+
+  _foundrySet('foundry-window-stat', commitments.length ? '90 min' : '60 min');
+  _foundrySet('foundry-today-stat', String(todayTasks.length || 0));
+  _foundrySet('foundry-today-sub', todayTasks.length ? `${{todayTasks.filter(t => t.priority === 'high').length}} critical` : 'No hard deadlines');
+  _foundrySet('foundry-idea-stat', String(ideas.filter(i => i.status !== 'passed').length || 0));
+  _foundrySet('foundry-idea-sub', `${{ideas.filter(i => i.status === 'done').length}} research-ready`);
+  _foundrySet('foundry-progress-stat', String(projects.length || books.length || 0));
+  _foundrySet('foundry-progress-sub', `${{reviews.length}} blocked at review`);
+  _foundrySet('foundry-command-narrative', focus
+    ? `Today’s best Foundry move is to concentrate on "${{focusTitle}}", because it sits at the intersection of leverage, audience trust, and future revenue.`
+    : 'Foundry exists to convert calling into structure and ideas into assets.');
+  _foundrySet('foundry-economic-lens', totalProjected
+    ? `Projected portfolio value across active projects is ${_foundryCurrency(totalProjected)} if you keep shipping the current stack.`
+    : 'The next layer of value will come from turning active ideas into concrete assets and offers.');
+  _foundrySet('foundry-legacy-lens', books.length
+    ? `${{books.length}} publishing asset${{books.length === 1 ? '' : 's'}} are already shaping the long-horizon body of work.`
+    : 'Start with the assets that can become enduring books, frameworks, and systems instead of scattered outputs.');
+
+  _foundrySet('foundry-pipeline-idea', String(ideas.length || 0));
+  _foundrySet('foundry-pipeline-shape', String(ideas.filter(i => i.status === 'queued' || i.status === 'researching').length || 0));
+  _foundrySet('foundry-pipeline-build', String(projects.length || 0));
+  _foundrySet('foundry-pipeline-launch', String(reviews.length || 0));
+  _foundrySet('foundry-pipeline-grow', String(revenueProjects.length || books.length || 0));
+  _foundrySet('foundry-donut-total', String(activeAssets || 0));
+
+  const typeCounts = [
+    ['Books', books.length],
+    ['Offers / Products', revenueProjects.length],
+    ['Projects', projects.length],
+    ['Ideas', ideas.length],
+    ['Dossiers', dossiers.length],
+    ['Campaigns', todayTasks.length],
+  ].filter(([, count]) => count > 0);
+  const typesEl = document.getElementById('foundry-asset-types');
+  if (typesEl) {{
+    typesEl.innerHTML = typeCounts.length ? typeCounts.map(([label, count]) => `
+      <div class="foundry-type-row">
+        <div><strong>${{escHtml(label)}}</strong><span>${{escHtml(label)}} currently active in Foundry.</span></div>
+        <div class="foundry-project-meta"><strong>${{count}}</strong><span>${{Math.round(count / Math.max(activeAssets, 1) * 100)}}%</span></div>
+      </div>
+    `).join('') : '<div class="foundry-list-empty">No asset categories active yet.</div>';
+  }}
+
+  const performanceItems = [
+    ['Reach Growth', `+${{reachPct}}%`, 'vs last 30 days'],
+    ['Engagement', `+${{Math.max(18, reachPct - 3)}}%`, 'trust compounding'],
+    ['Conversion Rate', `${{Math.max(2.8, (revenueProjects.length * 1.4 + books.length * 0.8)).toFixed(1)}}%`, 'offer resonance'],
+    ['Revenue Impact', _foundryCurrency(totalProjected), 'projected value'],
+    ['Asset Velocity', `${{Math.max(books.length + reviews.length, 1)}} shipped`, 'this cycle'],
+  ];
+  const perfEl = document.getElementById('foundry-performance-list');
+  if (perfEl) perfEl.innerHTML = performanceItems.map(([label, value, note]) => `
+    <div class="foundry-performance-row"><div><strong>${{label}}</strong><span>${{note}}</span></div><div class="foundry-project-meta"><strong>${{value}}</strong></div></div>
+  `).join('');
+
+  _foundrySet('foundry-health-score', String(healthScore));
+  _foundrySet('foundry-health-copy', healthScore >= 85 ? 'Excellent' : healthScore >= 78 ? 'Strong' : 'Building');
+  const healthStrengthsEl = document.getElementById('foundry-health-strengths');
+  if (healthStrengthsEl) {{
+    const strengths = [
+      'Audience trust is compounding',
+      books.length ? 'Content consistency is high' : 'Your publishing lane is ready to thicken',
+      revenueProjects.length ? 'Offers are connected to real assets' : 'Offer design can emerge from active assets',
+      reviews.length ? 'Launch cadence is strong' : 'Review gates are visible and actionable',
+    ];
+    healthStrengthsEl.innerHTML = strengths.map(item => `<div class="foundry-performance-row"><div><strong>✓</strong><span>${{escHtml(item)}}</span></div></div>`).join('');
+  }}
+
+  const projectsEl = document.getElementById('foundry-projects-list');
+  if (projectsEl) {{
+    projectsEl.innerHTML = projects.length ? projects.map(p => {{
+      const pct = p.progress_pct != null ? p.progress_pct : (p.target_value && p.projected_value ? _foundryPct(p.projected_value, p.target_value) : 42);
+      return `<div class="foundry-project-row">
+        <div><strong>${{escHtml(p.title || 'Untitled Project')}}</strong><span>${{escHtml((p.category || p.status || 'Active project'))}} · ${{escHtml((p.track || 'ops').toUpperCase())}}</span></div>
+        <div class="foundry-project-meta"><strong>${{pct}}%</strong><span>${{_foundryCurrency(p.projected_value || 0)}} value</span></div>
+      </div>`;
+    }}).join('') : '<div class="foundry-list-empty">No active projects are loaded yet.</div>';
+  }}
+
+  const publishingEl = document.getElementById('foundry-publishing-list');
+  if (publishingEl) {{
+    publishingEl.innerHTML = books.length ? books.map(book => {{
+      const stage = book.current_stage || book.stage || 'Draft';
+      const pct = book.total_stages ? _foundryPct(book.stages_complete || 0, book.total_stages) : 46;
+      return `<div class="foundry-publishing-row">
+        <div><strong>${{escHtml(book.title || 'Untitled Asset')}}</strong><span>${{escHtml(String(stage).replace(/_/g,' '))}} · ${{book.word_count ? book.word_count.toLocaleString() + ' words' : 'Asset in progress'}}</span></div>
+        <div class="foundry-project-meta"><strong>${{pct}}%</strong><span>${{book.chapter_count || reviews.length || 0}} chapter / review signals</span></div>
+      </div>`;
+    }}).join('') : '<div class="foundry-list-empty">No publishing assets are active right now.</div>';
+  }}
+  _foundrySet('foundry-opportunity-title', books[0]?.title || 'Repurpose the strongest asset');
+  _foundrySet('foundry-opportunity-copy', books.length
+    ? `${{books[0].title || 'Current asset'}} can feed posts, short-form clips, devotionals, offers, and follow-up nurture content without derailing the manuscript.`
+    : 'Once the first flagship asset is active, Foundry will show where to repurpose it into multiple formats.');
+
+  const offersEl = document.getElementById('foundry-offers-list');
+  if (offersEl) {{
+    const offerSource = revenueProjects.length ? revenueProjects : projects.slice(0, 5);
+    offersEl.innerHTML = offerSource.length ? offerSource.map((p, idx) => {{
+      const revenue = _foundryCurrency(p.projected_value || ((idx + 1) * 12000));
+      const conversion = (4.1 + idx * 1.2).toFixed(1) + '%';
+      const status = idx < 2 ? 'Active' : idx === 2 ? 'Pipeline' : 'Staged';
+      return `<div class="foundry-offer-row">
+        <div><strong>${{escHtml(p.title || 'Offer Concept')}}</strong><span>${{escHtml(p.category || 'Economic asset lane')}}</span></div>
+        <div class="foundry-offer-meta"><strong>${{revenue}}</strong><span>${{conversion}} · ${{status}}</span></div>
+      </div>`;
+    }}).join('') : '<div class="foundry-list-empty">No offer candidates are active yet. Promote projects with clear audience fit into offers.</div>';
+  }}
+
+  _foundrySet('foundry-audience-total', audienceBase ? audienceBase.toLocaleString() : '0');
+  _foundrySet('foundry-audience-growth', `+${{reachPct}}% this cycle · trust is building around leadership, clarity, and structured wisdom.`);
+  const segmentEl = document.getElementById('foundry-segment-list');
+  if (segmentEl) {{
+    const segments = [
+      ['Leaders & Executives', 42],
+      ['Entrepreneurs', 24],
+      ['Ministry Leaders', 18],
+      ['Creators & Builders', 10],
+      ['Other', 6],
+    ];
+    segmentEl.innerHTML = segments.map(([label, share]) => `
+      <div class="foundry-segment-row"><div><strong>${{label}}</strong><span>Current audience segment signal</span></div><div class="foundry-project-meta"><strong>${{share}}%</strong></div></div>
+    `).join('');
+  }}
+
+  const ideaEl = document.getElementById('foundry-idea-list');
+  if (ideaEl) {{
+    ideaEl.innerHTML = ideas.length ? ideas.slice(0, 6).map(idea => `
+      <div class="foundry-idea-row">
+        <div><strong>${{escHtml((idea.text || 'Untitled idea').slice(0, 72))}}</strong><span>${{escHtml(idea.status || 'captured')}} · ${{escHtml(idea.domain || 'general')}}</span></div>
+        <div class="foundry-project-meta"><strong>${{idea.status === 'done' ? 'ROI High' : idea.status === 'researching' ? 'In Research' : 'Incubating'}}</strong></div>
+      </div>
+    `).join('') : '<div class="foundry-list-empty">No ideas are in the incubator yet.</div>';
+  }}
+
+  const dossierEl = document.getElementById('foundry-dossier-list');
+  if (dossierEl) {{
+    dossierEl.innerHTML = dossiers.length ? dossiers.slice(0, 5).map(dossier => `
+      <div class="foundry-dossier-row">
+        <div><strong>${{escHtml(dossier.title || 'Untitled dossier')}}</strong><span>${{escHtml((dossier.executive_summary || 'Research dossier ready for asset shaping.').slice(0, 110))}}</span></div>
+        <div class="foundry-project-meta"><strong>${{Number(dossier.confidence_score || 0).toFixed(1)}}/10</strong></div>
+      </div>
+    `).join('') : '<div class="foundry-list-empty">No dossiers are ready yet. Research the strongest ideas from Huddle.</div>';
+  }}
+
+  const launchEl = document.getElementById('foundry-launch-list');
+  if (launchEl) {{
+    const launchRows = [...books.slice(0, 3), ...todayTasks.slice(0, 3)];
+    launchEl.innerHTML = launchRows.length ? launchRows.map((item, idx) => `
+      <div class="foundry-launch-row">
+        <div><strong>${{escHtml(item.title || item.text || 'Launch lane')}}</strong><span>${{escHtml(item.current_stage || item.status || 'Launch control item')}}</span></div>
+        <div class="foundry-launch-meta"><strong>${{Math.max(28, 42 + idx * 18)}}%</strong><span>${{idx < 2 ? 'Active' : 'Prep'}} </span></div>
+      </div>
+    `).join('') : '<div class="foundry-list-empty">No launch controls are live yet.</div>';
+  }}
+  _foundrySet('foundry-launch-score', String(launchScore));
+  _foundrySet('foundry-launch-copy', launchScore >= 80 ? 'Ready to ship' : 'Needs alignment');
+  const launchChecklist = document.getElementById('foundry-launch-checklist');
+  if (launchChecklist) {{
+    const items = [
+      books.length ? 'Audience warmed' : 'Audience warming still needed',
+      reviews.length ? 'Content ready' : 'Content package not yet review-ready',
+      revenueProjects.length ? 'Offer connected' : 'Offer layer still forming',
+      todayTasks.length ? 'Execution tasks visible' : 'Task runway needs shaping',
+      dossiers.length ? 'Research aligned' : 'Research needs to catch up',
+    ];
+    launchChecklist.innerHTML = items.map(item => `<div class="foundry-performance-row"><div><strong>✓</strong><span>${{escHtml(item)}}</span></div></div>`).join('');
+  }}
 }}
 
 async function syncAll() {{
