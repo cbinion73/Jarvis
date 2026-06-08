@@ -19814,7 +19814,7 @@ function renderFoundryDesktop() {{
     ? `Today’s best Foundry move is to concentrate on "${{focusTitle}}", because it sits at the intersection of leverage, audience trust, and future revenue.`
     : 'Foundry exists to convert calling into structure and ideas into assets.');
   _foundrySet('foundry-economic-lens', totalProjected
-    ? `Projected portfolio value across active projects is ${_foundryCurrency(totalProjected)} if you keep shipping the current stack.`
+    ? `Projected portfolio value across active projects is ${{_foundryCurrency(totalProjected)}} if you keep shipping the current stack.`
     : 'The next layer of value will come from turning active ideas into concrete assets and offers.');
   _foundrySet('foundry-legacy-lens', books.length
     ? `${{books.length}} publishing asset${{books.length === 1 ? '' : 's'}} are already shaping the long-horizon body of work.`
